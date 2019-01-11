@@ -20,6 +20,7 @@ import logging
 import os
 import shutil
 import getpass
+import sys
 from project_item import ProjectItem
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
@@ -49,12 +50,16 @@ class Tool(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Tool"
+        self.source_file_model = QStandardItemModel()
+        self.populate_source_file_model(None)
         self.input_file_model = QStandardItemModel()
         self.populate_input_file_model(None)
         self.opt_input_file_model = QStandardItemModel()
         self.populate_opt_input_file_model(None)
         self.output_file_model = QStandardItemModel()
         self.populate_output_file_model(None)
+        self.template_model = QStandardItemModel()
+        self.populate_template_model(False)
         self.source_files = list()
         self._tool_template = None
         self._tool_template_index = None
@@ -84,7 +89,7 @@ class Tool(ProjectItem):
         s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
         s[self._toolbox.ui.pushButton_tool_execute.clicked] = self.execute
         s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
-        s[self._toolbox.ui.checkBox_execution_mode.stateChanged] = self.work_checkbox_state_changed
+        s[self._toolbox.ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
         return s
 
     def activate(self):
@@ -103,9 +108,7 @@ class Tool(ProjectItem):
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_tool_name.setText(self.name)
-        self._toolbox.ui.treeView_input_files.setModel(self.input_file_model)
-        self._toolbox.ui.treeView_opt_input_files.setModel(self.opt_input_file_model)
-        self._toolbox.ui.treeView_output_files.setModel(self.output_file_model)
+        self._toolbox.ui.treeView_template.setModel(self.template_model)
         if not self._tool_template_index:
             self._toolbox.ui.comboBox_tool.setCurrentIndex(0)
             self.set_tool_template(None)
@@ -113,9 +116,10 @@ class Tool(ProjectItem):
             self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool temp model
             tool_template = self._toolbox.tool_template_model.tool_template(self._tool_template_index.row())
             self.set_tool_template(tool_template)
-        exec_work_state = Qt.Checked if self.execute_in_work else Qt.Unchecked
-        self._toolbox.ui.checkBox_execution_mode.setCheckState(exec_work_state)
-        self.work_checkbox_state_changed(exec_work_state)
+        if self.execute_in_work:
+            self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+        else:
+            self._toolbox.ui.radioButton_execute_in_source.setChecked(True)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -123,33 +127,12 @@ class Tool(ProjectItem):
             self._tool_template_index = None
         else:
             self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
-        self.execute_in_work = True if self._toolbox.ui.checkBox_execution_mode.isChecked() else False
+        self.execute_in_work = True if self._toolbox.ui.radioButton_execute_in_work.isChecked() else False
 
-    @Slot(int, name="work_checkbox_state_changed")
-    def work_checkbox_state_changed(self, state):
-        """Slot for handling the use work directory check box state changed signal.
-        Args:
-            state (int): New state of the checkbox (0: Qt.Unchecked, 2: Qt.Checked)
-        """
-        if state == 0:  # Qt.Unchecked
-            self.execute_in_work = False
-            if not self.tool_template():
-                self._toolbox.ui.checkBox_execution_mode.setText("Source directory")
-                return
-            if not self.tool_template().execute_in_work:
-                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Source directory (template default)")
-            else:
-                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Source directory")
-        else:  # Qt.Checked
-            self.execute_in_work = True
-            if not self.tool_template():
-                self._toolbox.ui.checkBox_execution_mode.setText("Work directory")
-                return
-            if self.tool_template().execute_in_work:
-                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Work directory (template default)")
-            else:
-                self._toolbox.ui.checkBox_execution_mode.setText("Executing in Work directory")
-        return
+    @Slot(bool, name="update_execution_mode")
+    def update_execution_mode(self, checked):
+        """Slot for execute in work radio button toggled signal."""
+        self.execute_in_work = checked
 
     @Slot(int, name="update_tool_template")
     def update_tool_template(self, row):
@@ -181,19 +164,27 @@ class Tool(ProjectItem):
         """Update Tool UI to show Tool template details."""
         if not self.tool_template():
             self._toolbox.ui.lineEdit_tool_args.setText("")
-            self._toolbox.ui.lineEdit_main_program.setText("")
+            self.populate_source_file_model(None)
             self.populate_input_file_model(None)
             self.populate_opt_input_file_model(None)
             self.populate_output_file_model(None)
-            self._toolbox.ui.checkBox_execution_mode.setCheckState(Qt.Checked)
+            self.populate_template_model(populate=False)
+            self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
         else:
             self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
-            self._toolbox.ui.lineEdit_main_program.setText(self.tool_template().main_prgm)
+            self.populate_source_file_model(self.tool_template().includes)
             self.populate_input_file_model(self.tool_template().inputfiles)
             self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
             self.populate_output_file_model(self.tool_template().outputfiles)
+            self.populate_template_model(populate=True)
+            self.execute_in_work = self.tool_template().execute_in_work
+            if self.execute_in_work:
+                self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+            else:
+                self._toolbox.ui.radioButton_execute_in_source.setChecked(True)
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
         self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
+        self._toolbox.ui.treeView_template.expandAll()
 
     @Slot(bool, name="open_results")
     def open_results(self, checked=False):
@@ -231,6 +222,14 @@ class Tool(ProjectItem):
     @Slot(name="open_tool_main_program_file")
     def open_tool_main_program_file(self):
         self._toolbox.open_tool_main_program_file(self._tool_template_index)
+
+    @Slot(name="open_tool_main_directory")
+    def open_tool_main_directory(self):
+        """Open directory where the Tool template main program is located in file explorer."""
+        if not self.tool_template():
+            return
+        dir_url = "file:///" + self.tool_template().path
+        self._toolbox.open_anchor(QUrl(dir_url, QUrl.TolerantMode))
 
     def tool_template(self):
         """Returns Tool template."""
@@ -704,10 +703,12 @@ class Tool(ProjectItem):
                 self.instance.julia_repl_command = r'cd("{}");'\
                     r'include("{}")'.format(mod_work_dir, self.tool_template().main_prgm)
         elif self.tool_template().tooltype == "executable":
-            # self.instance.program = "powershell"
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
-            # self.instance.args.append(batch_path)
-            self.instance.program = batch_path
+            if not sys.platform == "win32":
+                self.instance.program = "sh"
+                self.instance.args.append(batch_path)
+            else:
+                self.instance.program = batch_path
             self.append_instance_args()  # Append Tool specific cmd line args into args list
 
     def append_instance_args(self):
@@ -717,11 +718,23 @@ class Tool(ProjectItem):
             # Tool template cmdline args is a space delimited string. Add them to a list.
             self.instance.args += self.tool_template().cmdline_args.split(" ")
 
+    def populate_source_file_model(self, items):
+        """Add required source files (includes) into a model.
+        If items is None or an empty list, model is cleared."""
+        self.source_file_model.clear()
+        # self.source_file_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setFlags(~Qt.ItemIsEditable)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
+                self.source_file_model.appendRow(qitem)
+
     def populate_input_file_model(self, items):
         """Add required Tool input files into a model.
         If items is None or an empty list, model is cleared."""
         self.input_file_model.clear()
-        self.input_file_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
+        # self.input_file_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -733,7 +746,7 @@ class Tool(ProjectItem):
         """Add optional Tool template files into a model.
         If items is None or an empty list, model is cleared."""
         self.opt_input_file_model.clear()
-        self.opt_input_file_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
+        # self.opt_input_file_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -745,13 +758,61 @@ class Tool(ProjectItem):
         """Add Tool output files into a model.
          If items is None or an empty list, model is cleared."""
         self.output_file_model.clear()
-        self.output_file_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
+        # self.output_file_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.output_file_model.appendRow(qitem)
+
+    def populate_template_model(self, populate):
+        """Add all tool template specs to a single QTreeView.
+        If items is None or an empty list, model is cleared.
+
+        Args:
+            populate (bool): False to clear model, True to populate.
+        """
+        self.template_model.clear()
+        self.template_model.setHorizontalHeaderItem(0, QStandardItem("Template specification"))  # Add header
+        # Add category items
+        source_file_category_item = QStandardItem("Source files")
+        input_category_item = QStandardItem("Input files")
+        opt_input_category_item = QStandardItem("Optional input files")
+        output_category_item = QStandardItem("Output files")
+        self.template_model.appendRow(source_file_category_item)
+        self.template_model.appendRow(input_category_item)
+        self.template_model.appendRow(opt_input_category_item)
+        self.template_model.appendRow(output_category_item)
+        if populate:
+            if self.source_file_model.rowCount() > 0:
+                for row in range(self.source_file_model.rowCount()):
+                    text = self.source_file_model.item(row).data(Qt.DisplayRole)
+                    qitem = QStandardItem(text)
+                    qitem.setFlags(~Qt.ItemIsEditable)
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(text)), Qt.DecorationRole)
+                    source_file_category_item.appendRow(qitem)
+            if self.input_file_model.rowCount() > 0:
+                for row in range(self.input_file_model.rowCount()):
+                    text = self.input_file_model.item(row).data(Qt.DisplayRole)
+                    qitem = QStandardItem(text)
+                    qitem.setFlags(~Qt.ItemIsEditable)
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(text)), Qt.DecorationRole)
+                    input_category_item.appendRow(qitem)
+            if self.opt_input_file_model.rowCount() > 0:
+                for row in range(self.opt_input_file_model.rowCount()):
+                    text = self.opt_input_file_model.item(row).data(Qt.DisplayRole)
+                    qitem = QStandardItem(text)
+                    qitem.setFlags(~Qt.ItemIsEditable)
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(text)), Qt.DecorationRole)
+                    opt_input_category_item.appendRow(qitem)
+            if self.output_file_model.rowCount() > 0:
+                for row in range(self.output_file_model.rowCount()):
+                    text = self.output_file_model.item(row).data(Qt.DisplayRole)
+                    qitem = QStandardItem(text)
+                    qitem.setFlags(~Qt.ItemIsEditable)
+                    qitem.setData(QFileIconProvider().icon(QFileInfo(text)), Qt.DecorationRole)
+                    output_category_item.appendRow(qitem)
 
     def update_name_label(self):
         """Update Tool tab name label. Used only when renaming project items."""

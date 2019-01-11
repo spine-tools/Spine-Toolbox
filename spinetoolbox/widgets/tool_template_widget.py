@@ -22,13 +22,15 @@ import logging
 import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QStyle, QFileIconProvider
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, \
+    QStyle, QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
-from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS
+from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, \
+    TOOL_TYPES, REQUIRED_KEYS, INVALID_FILENAME_CHARS
 from helpers import busy_effect
-from widgets.custom_menus import AddIncludesPopupMenu
+from widgets.custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
 class ToolTemplateWidget(QWidget):
@@ -59,7 +61,6 @@ class ToolTemplateWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # init ui
-        self.ui.toolButton_add_main_program.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.ui.toolButton_add_source_files.setIcon(self.style().standardIcon(QStyle.SP_FileLinkIcon))
         self.ui.toolButton_add_source_dirs.setIcon(self.style().standardIcon(QStyle.SP_FileDialogNewFolder))
         self.ui.toolButton_minus_source_files.setIcon(self.style().standardIcon(QStyle.SP_DialogDiscardButton))
@@ -115,11 +116,14 @@ class ToolTemplateWidget(QWidget):
         self.add_source_files_popup_menu = AddIncludesPopupMenu(self)
         self.ui.toolButton_add_source_files.setMenu(self.add_source_files_popup_menu)
         self.ui.toolButton_add_source_files.setStyleSheet('QToolButton::menu-indicator { image: none; }')
+        # Add create new or add existing main program popup menu
+        self.add_main_prgm_popup_menu = CreateMainProgramPopupMenu(self)
+        self.ui.toolButton_add_main_program.setMenu(self.add_main_prgm_popup_menu)
+        self.ui.toolButton_add_source_files.setStyleSheet('QToolButton::menu-indicator { image: none; }')
         self.connect_signals()
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.toolButton_add_main_program.clicked.connect(self.browse_main_program)
         self.ui.toolButton_add_source_files.clicked.connect(self.show_add_source_files_dialog)
         self.ui.toolButton_add_source_dirs.clicked.connect(self.show_add_source_dirs_dialog)
         self.ui.lineEdit_main_program.file_dropped.connect(self.set_main_program_path)
@@ -134,6 +138,11 @@ class ToolTemplateWidget(QWidget):
         self.ui.toolButton_minus_outputfiles.clicked.connect(self.remove_outputfiles)
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
+        # Enable removing items from QTreeViews by pressing the Delete key
+        self.ui.treeView_sourcefiles.del_key_pressed.connect(self.remove_source_files_with_del)
+        self.ui.treeView_inputfiles.del_key_pressed.connect(self.remove_inputfiles_with_del)
+        self.ui.treeView_inputfiles_opt.del_key_pressed.connect(self.remove_inputfiles_opt_with_del)
+        self.ui.treeView_outputfiles.del_key_pressed.connect(self.remove_outputfiles_with_del)
 
     def populate_sourcefile_list(self, items):
         """List source files in QTreeView.
@@ -188,7 +197,7 @@ class ToolTemplateWidget(QWidget):
     def browse_main_program(self, checked=False):
         """Open file browser where user can select the path of the main program file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self._toolbox, "Add main program file", APPLICATION_PATH, "*.*")
+        answer = QFileDialog.getOpenFileName(self, "Add existing main program file", APPLICATION_PATH, "*.*")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
@@ -199,6 +208,50 @@ class ToolTemplateWidget(QWidget):
         """Set main program file and folder path."""
         folder_path = os.path.split(file_path)[0]
         self.program_path = os.path.abspath(folder_path)
+        # Update UI
+        self.ui.lineEdit_main_program.setText(file_path)
+        self.ui.label_mainpath.setText(self.program_path)
+
+    @Slot(name="new_main_program_file")
+    def new_main_program_file(self):
+        """Create a new blank main program file. Let user decide the file name and location."""
+        msg = "Main program file name?"
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QInputDialog.getText(self, "New main program", msg,
+                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        file_name = answer[0]
+        if not file_name:  # Cancel button clicked
+            return
+        if file_name.strip() == "":
+            return
+        # Check that file name has no invalid chars
+        if any(True for x in file_name if x in INVALID_FILENAME_CHARS):
+            msg = "File name <b>{0}</b> contains invalid characters.".format(file_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self, "Creating file failed", msg)
+            return
+        # Let user select the directory where the new main program is saved.
+        dir_msg = "Please choose a directory where the main program file is saved"
+        # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+        main_dir = QFileDialog.getExistingDirectory(self, dir_msg, APPLICATION_PATH, QFileDialog.ShowDirsOnly)
+        if not main_dir:  # Cancel button clicked
+            return
+        # Make new file
+        file_path = os.path.abspath(os.path.join(main_dir, file_name))
+        if os.path.exists(file_path):
+            msg = "File <b>{0}</b> already exists.".format(file_name)
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self, "Creating file failed", msg)
+            return
+        try:
+            with open(file_path, "w") as fp:
+                logging.debug("Created file:{0}".format(file_path))
+        except OSError:
+            msg = "Please check directory permissions."
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self, "Creating file failed", msg)
+            return
+        self.program_path = os.path.abspath(main_dir)
         # Update UI
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
@@ -301,19 +354,19 @@ class ToolTemplateWidget(QWidget):
             if not res:
                 self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
+    @Slot(name="remove_source_files_with_del")
+    def remove_source_files_with_del(self):
+        """Support for deleting items with the Delete key."""
+        self.remove_source_files()
+
     @Slot(bool, name="remove_source_files")
     def remove_source_files(self, checked=False):
         """Remove selected source files from include list.
-        Removes all files if nothing is selected.
+        Do not remove anything if there are no items selected.
         """
         indexes = self.ui.treeView_sourcefiles.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.sourcefiles_model.clear()
-            self.sourcefiles_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
-            if self.ui.lineEdit_main_program.text().strip() == "":
-                self.program_path = None
-                self.ui.label_mainpath.clear()
-            self.statusbar.showMessage("All source files removed", 3000)
+            self.statusbar.showMessage("Please select the source files to remove", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -344,16 +397,19 @@ class ToolTemplateWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_model.appendRow(qitem)
 
+    @Slot(name="remove_inputfiles_with_del")
+    def remove_inputfiles_with_del(self):
+        """Support for deleting items with the Delete key."""
+        self.remove_inputfiles()
+
     @Slot(bool, name="remove_inputfiles")
     def remove_inputfiles(self, checked=False):
         """Remove selected input files from list.
-        Removes all files if nothing is selected.
+        Do not remove anything if there are no items selected.
         """
         indexes = self.ui.treeView_inputfiles.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.inputfiles_model.clear()
-            self.inputfiles_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
-            self.statusbar.showMessage("All input files removed", 3000)
+            self.statusbar.showMessage("Please select the input files to remove", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -381,16 +437,19 @@ class ToolTemplateWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.inputfiles_opt_model.appendRow(qitem)
 
+    @Slot(name="remove_inputfiles_opt_with_del")
+    def remove_inputfiles_opt_with_del(self):
+        """Support for deleting items with the Delete key."""
+        self.remove_inputfiles_opt()
+
     @Slot(bool, name="remove_inputfiles_opt")
     def remove_inputfiles_opt(self, checked=False):
         """Remove selected optional input files from list.
-        Removes all files if nothing is selected.
+        Do not remove anything if there are no items selected.
         """
         indexes = self.ui.treeView_inputfiles_opt.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.inputfiles_opt_model.clear()
-            self.inputfiles_opt_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
-            self.statusbar.showMessage("All optional input files removed", 3000)
+            self.statusbar.showMessage("Please select the optional input files to remove", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -417,16 +476,19 @@ class ToolTemplateWidget(QWidget):
         qitem.setData(QFileIconProvider().icon(QFileInfo(file_name)), Qt.DecorationRole)
         self.outputfiles_model.appendRow(qitem)
 
+    @Slot(name="remove_outputfiles_with_del")
+    def remove_outputfiles_with_del(self):
+        """Support for deleting items with the Delete key."""
+        self.remove_outputfiles()
+
     @Slot(bool, name="remove_outputfiles")
     def remove_outputfiles(self, checked=False):
         """Remove selected output files from list.
-        Removes all files if nothing is selected.
+        Do not remove anything if there are no items selected.
         """
         indexes = self.ui.treeView_outputfiles.selectedIndexes()
         if not indexes:  # Nothing selected
-            self.outputfiles_model.clear()
-            self.outputfiles_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
-            self.statusbar.showMessage("All output files removed", 3000)
+            self.statusbar.showMessage("Please select the output files to remove", 3000)
         else:
             rows = [ind.row() for ind in indexes]
             rows.sort(reverse=True)
@@ -459,7 +521,8 @@ class ToolTemplateWidget(QWidget):
         self.definition["inputfiles"] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
         self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
         self.definition["outputfiles"] = [i.text() for i in self.outputfiles_model.findItems("", flags)]
-        self.definition["cmdline_args"] = self.ui.lineEdit_args.text()
+        # Strip whitespace from args before saving it to JSON
+        self.definition["cmdline_args"] = " ".join(self.ui.lineEdit_args.text().split())
         for k in REQUIRED_KEYS:
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k), 3000)

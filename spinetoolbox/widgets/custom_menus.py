@@ -75,9 +75,17 @@ class ProjectItemContextMenu(CustomContextMenu):
         super().__init__(parent)
         if not index.isValid():
             # If no item at index
+            if not self._parent.project():
+                return
+            self.add_action("Open project directory...")
+            self.exec_(position)
             return
         if not index.parent().isValid():
+            if not self._parent.project():
+                return
             # If index is at a category item
+            self.add_action("Open project directory...")
+            self.exec_(position)
             return
         d = self._parent.project_item_model.project_item(index)
         if d.item_type == "Data Connection":
@@ -85,6 +93,8 @@ class ProjectItemContextMenu(CustomContextMenu):
         elif d.item_type == "Data Store":
             self.add_action("Open tree view...")
             self.add_action("Open graph view...")
+            self.add_action("Open tabular view...")
+            self.addSeparator()
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
             self.add_action("Execute")
@@ -99,7 +109,7 @@ class ProjectItemContextMenu(CustomContextMenu):
             else:
                 enabled = True
             self.add_action("Edit Tool template", enabled=enabled)
-            self.add_action("Open main program file", enabled=enabled)
+            self.add_action("Edit main program file...", enabled=enabled)
         elif d.item_type == "View":
             pass
         else:
@@ -107,7 +117,7 @@ class ProjectItemContextMenu(CustomContextMenu):
             return
         self.addSeparator()
         self.add_action("Rename")
-        self.add_action("Remove Item")
+        self.add_action("Remove item")
         self.exec_(position)
 
 
@@ -125,7 +135,7 @@ class LinkContextMenu(CustomContextMenu):
         super().__init__(parent)
         if not index.isValid():
             return
-        self.add_action("Remove Connection")
+        self.add_action("Remove connection")
         if parallel_link:
             self.add_action("Send to bottom")
         self.exec_(position)
@@ -150,10 +160,102 @@ class ToolTemplateContextMenu(CustomContextMenu):
             # Don't show menu when clicking on No tool
             return
         self.add_action("Edit Tool template")
-        self.add_action("Remove Tool template")
+        self.add_action("Edit main program file...")
+        self.add_action("Open main program directory...")
+        self.add_action("Open Tool template definition file...")
         self.addSeparator()
-        self.add_action("Open main program file")
-        self.add_action("Open definition file")
+        self.add_action("Remove Tool template")
+        self.exec_(position)
+
+
+class DcRefContextMenu(CustomContextMenu):
+    """Context menu class for references view in Data Connection properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            # If no item at index
+            self.add_action("Add reference(s)")
+            self.add_action("Remove reference(s)")
+            self.add_action("Copy reference(s) to project")
+        else:
+            self.add_action("Edit...")
+            self.add_action("Open containing directory...")
+            self.addSeparator()
+            self.add_action("Add reference(s)")
+            self.add_action("Remove reference(s)")
+            self.add_action("Copy reference(s) to project")
+        self.exec_(position)
+
+
+class DcDataContextMenu(CustomContextMenu):
+    """Context menu class for data view in Data Connection properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            # If no item at index
+            self.add_action("New file...")
+            self.addSeparator()
+            self.add_action("Open Spine Datapackage Editor")
+            self.add_action("Open directory...")
+        else:
+            self.add_action("Edit...")
+            self.add_action("New file...")
+            self.add_action("Remove file(s)")
+            self.addSeparator()
+            self.add_action("Open Spine Datapackage Editor")
+            self.add_action("Open directory...")
+        self.exec_(position)
+
+
+class ToolPropertiesContextMenu(CustomContextMenu):
+    """Common context menu class for all Tool QTreeViews in Tool properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        self.add_action("Edit Tool template")
+        self.add_action("Edit main program file...")
+        self.add_action("Open main program directory...")
+        self.add_action("Open Tool template definition file...")
+        self.addSeparator()
+        self.add_action("Open directory...")
+        self.exec_(position)
+
+
+class ViewPropertiesContextMenu(CustomContextMenu):
+    """Context menu class for the references tree view of the View project item properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            # If no item at index
+            return
+        self.add_action("Open graph view")
         self.exec_(position)
 
 
@@ -340,7 +442,7 @@ class CustomPopupMenu(QMenu):
 
 
 class AddToolTemplatePopupMenu(CustomPopupMenu):
-    """Popup menu class for add tool template button.
+    """Popup menu class for add Tool template button.
 
     Attributes:
         parent (QWidget): parent widget (ToolboxUI)
@@ -348,7 +450,7 @@ class AddToolTemplatePopupMenu(CustomPopupMenu):
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
-        # Open empty Tool Template Form
+        # Open empty Tool template Form
         self.add_action("New", self._parent.show_tool_template_form)
         # Add an existing Tool template from file to project
         self.add_action("Add existing...", self._parent.open_tool_template)
@@ -365,8 +467,9 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
         super().__init__(parent)
         enabled = True if tool.tool_template() else False
         self.add_action("Edit Tool template", tool.edit_tool_template, enabled=enabled)
+        self.add_action("Edit main program file...", tool.open_tool_main_program_file, enabled=enabled)
+        self.add_action("Open main program directory...", tool.open_tool_main_directory, enabled=enabled)
         self.add_action("Open definition file", tool.open_tool_template_file, enabled=enabled)
-        self.add_action("Open main program file", tool.open_tool_main_program_file, enabled=enabled)
         self.addSeparator()
         self.add_action("New Tool template", self._parent.show_tool_template_form)
         self.add_action("Add Tool template...", self._parent.open_tool_template)
@@ -386,6 +489,21 @@ class AddIncludesPopupMenu(CustomPopupMenu):
         self.add_action("New file", self._parent.new_source_file)
         self.addSeparator()
         self.add_action("Open files...", self._parent.show_add_source_files_dialog)
+
+
+class CreateMainProgramPopupMenu(CustomPopupMenu):
+    """Popup menu class for add main program QToolButton in Tool Template editor.
+
+    Attributes:
+        parent (QWidget): Parent widget (ToolTemplateWidget)
+    """
+    def __init__(self, parent):
+        """Class constructor."""
+        super().__init__(parent)
+        self._parent = parent
+        # Open a tool template file
+        self.add_action("Make new main program", self._parent.new_main_program_file)
+        self.add_action("Select existing main program", self._parent.browse_main_program)
 
 
 class FilterMenu(QMenu):
