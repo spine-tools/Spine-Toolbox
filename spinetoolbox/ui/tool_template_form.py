@@ -23,7 +23,7 @@ class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
         Form.setWindowModality(QtCore.Qt.ApplicationModal)
-        Form.resize(600, 743)
+        Form.resize(600, 760)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Minimum)
         sizePolicy.setHorizontalStretch(0)
         sizePolicy.setVerticalStretch(0)
@@ -75,7 +75,7 @@ class Ui_Form(object):
         self.verticalLayout_5.addWidget(self.textEdit_description)
         self.horizontalLayout_6 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_6.setObjectName("horizontalLayout_6")
-        self.lineEdit_main_program = QtWidgets.QLineEdit(Form)
+        self.lineEdit_main_program = CustomQLineEdit(Form)
         self.lineEdit_main_program.setClearButtonEnabled(True)
         self.lineEdit_main_program.setObjectName("lineEdit_main_program")
         self.horizontalLayout_6.addWidget(self.lineEdit_main_program)
@@ -430,5 +430,6 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
+from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 import resources_icons_rc

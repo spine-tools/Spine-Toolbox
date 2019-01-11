@@ -126,6 +126,7 @@ class ToolTemplateWidget(QWidget):
         """Connect signals to slots."""
         self.ui.toolButton_add_source_files.clicked.connect(self.show_add_source_files_dialog)
         self.ui.toolButton_add_source_dirs.clicked.connect(self.show_add_source_dirs_dialog)
+        self.ui.lineEdit_main_program.file_dropped.connect(self.set_main_program_path)
         self.ui.treeView_sourcefiles.files_dropped.connect(self.add_dropped_includes)
         self.ui.treeView_sourcefiles.doubleClicked.connect(self.open_includes_file)
         self.ui.toolButton_minus_source_files.clicked.connect(self.remove_source_files)
@@ -200,6 +201,11 @@ class ToolTemplateWidget(QWidget):
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
+        self.set_main_program_path(file_path)
+
+    @Slot("QString", name="set_main_program_path")
+    def set_main_program_path(self, file_path):
+        """Set main program file and folder path."""
         folder_path = os.path.split(file_path)[0]
         self.program_path = os.path.abspath(folder_path)
         # Update UI
@@ -502,11 +508,16 @@ class ToolTemplateWidget(QWidget):
         self.definition["tooltype"] = self.ui.comboBox_tooltype.currentText().lower()
         flags = Qt.MatchContains
         # Check that main program file is valid before saving it
-        if not os.path.isfile(self.ui.lineEdit_main_program.text().strip()):
+        main_program = self.ui.lineEdit_main_program.text().strip()
+        if not os.path.isfile(main_program):
             self.statusbar.showMessage("Main program file is not valid", 6000)
             return
+        # Fix for issue #241
+        folder_path, file_path = os.path.split(main_program)
+        self.program_path = os.path.abspath(folder_path)
+        self.ui.label_mainpath.setText(self.program_path)
         self.definition["execute_in_work"] = True if self.ui.checkBox_execute_in_work.isChecked() else False
-        self.definition["includes"] = [os.path.split(self.ui.lineEdit_main_program.text().strip())[1]]
+        self.definition["includes"] = [file_path]
         self.definition["includes"] += [i.text() for i in self.sourcefiles_model.findItems("", flags)]
         self.definition["inputfiles"] = [i.text() for i in self.inputfiles_model.findItems("", flags)]
         self.definition["inputfiles_opt"] = [i.text() for i in self.inputfiles_opt_model.findItems("", flags)]
