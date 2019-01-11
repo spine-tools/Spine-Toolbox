@@ -16,6 +16,7 @@ Classes for package managers.
 :date:   10.1.2019
 """
 
+import sys
 import qsubprocess
 from PySide2.QtCore import QObject, Signal, Slot
 from config import JULIA_EXECUTABLE
@@ -30,97 +31,85 @@ class SpineModelPackageManager(QObject):
     def __init__(self, toolbox):
         super().__init__(toolbox)
         self._toolbox = toolbox
-        self.installation_process = None
-        self.check_process = None
-        self.check_stage = None
         julia_dir = self._toolbox._config.get("settings", "julia_path")
         if not julia_dir == '':
             julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
         else:
             julia_exe = JULIA_EXECUTABLE
         self.julia_program = "{0}".format(julia_exe)
+        self.py_call_python_program = None
 
-    def check(self):
-        self.check_stage = 'Checking if SpineModel.jl is installed'
+    def spine_model_installed_check(self):
         program = self.julia_program
         args = list()
         args.append("-e")
-        args.append("try using SpineModel; println(ARGS[1]) catch; println(ARGS[2]) end;")
-        args.append("True")
-        args.append("False")
-        self.check_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
-        self.check_process.subprocess_finished_signal.connect(self._handle_spine_model_check_advanced)
-        self.check_process.start_process()
+        args.append("try using Pkg catch; end; println(Pkg.installed(ARGS[1]));")
+        args.append("SpineModel")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        return q_process
 
-    @Slot(int, name="_handle_spine_model_check_finished")
-    def _handle_spine_model_check_advanced(self, ret):
-        """Run when current stage of check process has finished.
+    def py_call_program_check(self):
+        program = self.julia_program
+        args = list()
+        args.append("-e")
+        args.append("using PyCall; println(PyCall.pyprogramname);")
+        args.append("")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        return q_process
 
-        Args:
-            ret (int): Return code given by QSubProcess instance
-        """
-        if self.check_process.process_failed:
-            self.msg.emit("\tCheck failed. Make sure that Julia is correctly installed and try again.")
-            self.check_finished.emit()
-            return
-        if self.check_stage == 'Checking if SpineModel.jl is installed':
-            self.msg.emit("SpineModel is correctly installed.")
-            self.check_stage = 'Finding PyCall.pyprogramname'
-            program = self.julia_program
-            args = list()
-            args.append("-e")
-            args.append("try using PyCall; println(PyCall.pyprogramname) catch; println(ARGS[1]) end;")
-            args.append("Not installed")
-            self.check_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
-            self.check_process.subprocess_finished_signal.connect(self._handle_spine_model_check_advanced)
-            self.check_process.start_process()
-        elif self.check_stage == 'Finding PyCall.pyprogramname':
-            pyprogramname = self.check_process.output
-            if pyprogramname == 'Not installed':
-                self.msg.emit("PyCall is not installed.")
-                self.check_finished.emit()
-                return
-            self.msg.emit("PyCall is configured to use the python program at \n\t{0}".format(pyprogramname))
-            self.check_stage = "Checking if spinedatabase_api is installed"
-            program = pyprogramname
-            args = list()
-            args.append("-m")
-            args.append("pip")
-            args.append("show")
-            args.append("spinedatabase_api")
-            self.check_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
-            self.check_process.subprocess_finished_signal.connect(self._handle_spine_model_check_advanced)
-            self.check_process.start_process()
-        elif self.check_stage == 'Checking if spinedatabase_api is installed':
-            check_process_output = self.check_process.output
-            if not check_process_output:
-                self.msg.emit("spinedatabase is not installed in PyCall's python.")
-                self.check_finished.emit()
-                return
-            self.msg.emit("spinedatabase is correctly installed in PyCall's python")
-            self.check_finished.emit()
+    def spinedatabase_api_installed_check(self):
+        program = self.py_call_python_program
+        args = list()
+        args.append("-m")
+        args.append("pip")
+        args.append("show")
+        args.append("spinedatabase_api")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        return q_process
 
-    def install(self):
+    def install_spine_model(self):
         program = self.julia_program
         args = list()
         args.append("-e")
         args.append("try using Pkg catch; end; Pkg.clone(ARGS[1], ARGS[2]);")
         args.append("https://github.com/Spine-project/Spine-Model.git")
         args.append("SpineModel")
-        self.installation_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
-        self.installation_process.subprocess_finished_signal.connect(self._handle_spine_model_installation_finished)
-        self.installation_process.start_process()
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        return q_process
 
-    @Slot(int, name="_handle_spine_model_installation_finished")
-    def _handle_spine_model_installation_finished(self, ret):
-        """Run when installation process has finished.
+    def install_py_call(self):
+        program = self.julia_program
+        args = list()
+        args.append("-e")
+        args.append("try using Pkg catch; end; Pkg.add(ARGS[1]);")
+        args.append("PyCall")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        return q_process
 
-        Args:
-            ret (int): Return code given by QSubProcess instance
-        """
-        if self.installation_process.process_failed:
-            self.msg.emit("\tInstallation failed. Make sure that Julia is correctly installed and try again.")
-            self.check_finished.emit()
-            return
-        self.msg.emit("SpineModel.jl was successfully installed")
-        self.installation_finished.emit()
+    def install_spinedatabase_api(self):
+        program = self.py_call_python_program
+        args = list()
+        args.append("-m")
+        args.append("pip")
+        args.append("install")
+        args.append("git+https://github.com/Spine-project/Spine-Database-API.git")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        return q_process
+
+    def reconfigure_py_call(self):
+        program = self.julia_program
+        args = list()
+        args.append("-e")
+        args.append("using PyCall; ENV[ARGS[1]] = ARGS[2]; try using Pkg catch; end; Pkg.build(ARGS[3])")
+        args.append("PYTHON")
+        args.append(sys.executable)
+        args.append("PyCall")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        return q_process
