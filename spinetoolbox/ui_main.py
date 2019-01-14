@@ -1369,7 +1369,7 @@ class ToolboxUI(QMainWindow):
     @Slot(name="remove_refs_with_del_key")
     def remove_refs_with_del_key(self):
         """Slot that removes selected references from the currently selected Data Connection.
-        Used when removing DC references by pressing `Qt.Key_Delete."""
+        Used when removing DC references by pressing the Delete key on keyboard (Qt.Key_Delete)."""
         cur_index = self.ui.treeView_project.currentIndex()  # Find selected dc index
         if not cur_index.isValid():
             return
@@ -1381,8 +1381,7 @@ class ToolboxUI(QMainWindow):
     @Slot(name="remove_data_with_del_key")
     def remove_data_with_del_key(self):
         """Slot that removes selected data files from the currently selected Data Connection.
-        Used when removing DC data files by pressing `Qt.Key_Delete."""
-        # Get selected Data Connection from project item model
+        Used when removing DC data files by pressing the Delete key on keyboard (Qt.Key_Delete)."""
         cur_index = self.ui.treeView_project.currentIndex()  # Find selected dc index
         if not cur_index.isValid():
             return
@@ -1392,10 +1391,10 @@ class ToolboxUI(QMainWindow):
         dc.remove_files()
 
     def close_view_forms(self):
-        """Close all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in Data Stores and Views.
-        This ensures that the `close` method is called on the corresponding DiffDatabaseMapping instances,
-        so that the database is cleaned up.
-        Also close all SpineDatapackageWidget instances opened in Data Connections.
+        """Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in
+        Data Stores and Views. Ensures that close() method is called on all corresponding
+        DiffDatabaseMapping instances, which cleans up the databases. Also closes all
+        SpineDatapackageWidget instances opened in Data Connections.
         """
         if not self._project:
             return

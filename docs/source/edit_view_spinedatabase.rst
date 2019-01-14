@@ -134,9 +134,9 @@ To add new definitions or values you can use the add tools on the left of the ta
 You can also enter new parameter definitions or values by entering new data in the last row of the tables. The tables also support pasting values from the clipboard.
 
 Graph view
----------
+----------
 
-The **Graph view** is a tool to visiualize the spine database structure in a graph. In the **Graph view** you can select relationships and objects to see the connections between them. This widget also contains the parameter tables in the **Tree view** to which are filtered by the graph.
+The **Graph view** is a tool to visualize the spine database structure in a graph. In the **Graph view** you can select relationships and objects to see the connections between them. This widget also contains the parameter tables in the **Tree view** to which are filtered by the graph.
 
 .. image:: img/graph_view.png
    :align: center

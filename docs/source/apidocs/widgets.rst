@@ -124,18 +124,18 @@ widgets.custom\_qtreeview module
     :undoc-members:
     :show-inheritance:
 
-widgets.data\_store\_widgets module
------------------------------------
+widgets.custom\_qwidget module
+------------------------------
 
-.. automodule:: widgets.data_store_widgets
+.. automodule:: widgets.custom_qwidget
     :members:
     :undoc-members:
     :show-inheritance:
 
-widgets.filter\_menu\_widget module
+widgets.data\_store\_widgets module
 -----------------------------------
 
-.. automodule:: widgets.filter_menu_widget
+.. automodule:: widgets.data_store_widgets
     :members:
     :undoc-members:
     :show-inheritance:

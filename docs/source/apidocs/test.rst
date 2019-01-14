@@ -52,6 +52,14 @@ test.test\_spineToolboxProject module
     :undoc-members:
     :show-inheritance:
 
+test.test\_toolTemplateWidget module
+------------------------------------
+
+.. automodule:: test.test_toolTemplateWidget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 test.test\_toolboxUI module
 ---------------------------
 
