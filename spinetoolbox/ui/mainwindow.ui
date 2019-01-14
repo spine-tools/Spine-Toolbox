@@ -133,6 +133,8 @@
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
     <addaction name="separator"/>
+    <addaction name="actionSettings"/>
+    <addaction name="actionPackages"/>
     <addaction name="separator"/>
     <addaction name="actionQuit"/>
    </widget>
@@ -154,8 +156,6 @@
     <addaction name="actionAdd_Tool"/>
     <addaction name="actionAdd_View"/>
     <addaction name="separator"/>
-    <addaction name="actionSettings"/>
-    <addaction name="actionPackages"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -1686,8 +1686,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>366</width>
-              <height>433</height>
+              <width>379</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -2697,7 +2697,7 @@
   </action>
   <action name="actionPackages">
    <property name="text">
-    <string>Packages...</string>
+    <string>Tool configuration assistant...</string>
    </property>
    <property name="shortcut">
     <string>F3</string>

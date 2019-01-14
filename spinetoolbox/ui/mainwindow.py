@@ -728,7 +728,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 366, 433))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 379, 331))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.verticalLayout_17 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout_17.setObjectName("verticalLayout_17")
@@ -1120,6 +1120,8 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_As)
         self.menuFile.addSeparator()
+        self.menuFile.addAction(self.actionSettings)
+        self.menuFile.addAction(self.actionPackages)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
         self.menuHelp.addAction(self.actionUser_Guide)
@@ -1131,8 +1133,6 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionAdd_Tool)
         self.menuEdit.addAction(self.actionAdd_View)
         self.menuEdit.addSeparator()
-        self.menuEdit.addAction(self.actionSettings)
-        self.menuEdit.addAction(self.actionPackages)
         self.menuDock_Widgets.addAction(self.actionRestore_Dock_Widgets)
         self.menuDock_Widgets.addSeparator()
         self.menuView.addAction(self.menuToolbars.menuAction())
@@ -1294,11 +1294,11 @@ class Ui_MainWindow(object):
         self.actionRestore_Dock_Widgets.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>", None, -1))
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
-        self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Packages...", None, -1))
+        self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1))
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
-from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qgraphicsview import CustomQGraphicsView
 import resources_icons_rc
