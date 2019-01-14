@@ -161,7 +161,7 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.end_spine_model_operation()
             return
         if ret != 0:
-            self.add_spine_model_error_msg("SpineModel.jl is not installed.")
+            self.add_spine_model_error_msg("SpineModel couldn't be found.")
             anchor = "<a style='color:#99CCFF;' href='Install SpineModel'>here</a>"
             self.add_spine_model_msg("To install SpineModel, please click {0}.".format(anchor))
             self.end_spine_model_operation()
@@ -178,7 +178,7 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.end_spine_model_operation()
             return
         if ret != 0:
-            self.add_spine_model_error_msg("The PyCall module couldn't be found. ")
+            self.add_spine_model_error_msg("PyCall couldn't be found. ")
             anchor = "<a style='color:#99CCFF;' href='Install PyCall'>here</a>"
             self.add_spine_model_msg("To install PyCall, please click {0}.".format(anchor))
             self.end_spine_model_operation()
