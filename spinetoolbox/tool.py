@@ -700,8 +700,9 @@ class Tool(ProjectItem):
                 # Prepare Julia REPL command
                 # TODO: See if this can be simplified
                 mod_work_dir = work_dir.__repr__().strip("'")
-                args = "[string(" + "), string(".join(self.instance.args[1:]) + ")]"
+                args = r'["' + r'", "'.join(self.instance.args[1:]) + r'"]'
                 self.instance.julia_repl_command = r'cd("{}");'\
+                    r'empty!(ARGS);'\
                     r'ARGS = {};'\
                     r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
         elif self.tool_template().tooltype == "executable":
