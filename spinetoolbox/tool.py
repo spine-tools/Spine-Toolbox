@@ -703,7 +703,7 @@ class Tool(ProjectItem):
                 args = r'["' + r'", "'.join(self.instance.args[1:]) + r'"]'
                 self.instance.julia_repl_command = r'cd("{}");'\
                     r'empty!(ARGS);'\
-                    r'ARGS = {};'\
+                    r'append!(ARGS, {});'\
                     r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
         elif self.tool_template().tooltype == "executable":
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
