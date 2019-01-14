@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Widget for managing user packages.
+Widget for assisting the user in configuring tools, such as SpineModel.
 
 :author: M. Marin (KTH)
 :date:   9.1.2019
@@ -19,12 +19,12 @@ Widget for managing user packages.
 from PySide2.QtWidgets import QWidget, QStatusBar, QApplication
 from PySide2.QtGui import QCursor, QTextCursor
 from PySide2.QtCore import Slot, Qt
-import ui.packages
+import ui.tool_configuration_assistant
 from config import STATUSBAR_SS, TEXTBROWSER_SS
-from package_managers import SpineModelPackageManager
+from tool_configuration_assistants import SpineModelConfigurationAssistant
 
 
-class PackagesWidget(QWidget):
+class ToolConfigurationAssistantWidget(QWidget):
     """ A widget to manage user's external packages such as SpineModel.
 
     Attributes:
@@ -34,24 +34,19 @@ class PackagesWidget(QWidget):
         """ Initialize class. """
         super().__init__(parent=toolbox, f=Qt.Window)
         self._toolbox = toolbox  # QWidget parent
-        self.spine_model_pkg_mngr = SpineModelPackageManager(toolbox)
+        self.spine_model_config_asst = SpineModelConfigurationAssistant(toolbox)
         self.q_process = None
         # Set up the ui from Qt Designer files
-        self.ui = ui.packages.Ui_PackagesForm()
+        self.ui = ui.tool_configuration_assistant.Ui_PackagesForm()
         self.ui.setupUi(self)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.textBrowser_spine_model.setStyleSheet(TEXTBROWSER_SS)
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         self.connect_signals()
+        self.check_spine_model_configuration()
 
     def connect_signals(self):
         """Connect signals."""
-        self.ui.pushButton_spine_model_check.clicked.connect(self.check_spine_model)
         self.ui.textBrowser_spine_model.anchorClicked.connect(self._handle_spine_model_anchor_clicked)
 
     def add_spine_model_msg(self, msg):
@@ -95,31 +90,32 @@ class PackagesWidget(QWidget):
         self.begin_spine_model_operation()
         if link == "Install SpineModel":
             self.add_spine_model_msg("Installing SpineModel. This operation can take a few moments...")
-            self.q_process = self.spine_model_pkg_mngr.install_spine_model()
+            self.q_process = self.spine_model_config_asst.install_spine_model()
             self.q_process.subprocess_finished_signal.connect(self._handle_spine_model_installation_finished)
         elif link == "Install PyCall":
             self.add_spine_model_msg("Installing PyCall. This operation can take a few moments...")
-            self.q_process = self.spine_model_pkg_mngr.install_py_call()
+            self.q_process = self.spine_model_config_asst.install_py_call()
             self.q_process.subprocess_finished_signal.connect(self._handle_py_call_installation_finished)
         elif link == "Install spinedatabase_api in PyCall python":
             self.add_spine_model_msg("Installing spinedatabase_api. This operation can take a few moments...")
-            self.q_process = self.spine_model_pkg_mngr.install_spinedatabase_api()
+            self.q_process = self.spine_model_config_asst.install_spinedatabase_api()
             self.q_process.subprocess_finished_signal.connect(self._handle_spinedatabase_api_installation_finished)
         elif link == "Use same python as SpineToolbox":
             self.add_spine_model_msg("Reconfiguring PyCall to use the same python as Spine Toolbox. "
                                      "This operation can take a few moments...")
-            self.q_process = self.spine_model_pkg_mngr.reconfigure_py_call()
+            self.q_process = self.spine_model_config_asst.reconfigure_py_call()
             self.q_process.subprocess_finished_signal.connect(self._handle_py_call_reconfiguration_finished)
 
     @Slot(int, name="_handle_spine_model_installation_finished")
     def _handle_spine_model_installation_finished(self, ret):
-        if self.q_process.process_failed_to_start:
+        if ret != 0:
             self.end_spine_model_operation()
             self.add_spine_model_error_msg("Installation failed. "
                                            "Make sure that Julia is correctly installed and try again.")
             return
         self.add_spine_model_success_msg("SpineModel succesfully installed.")
         self.end_spine_model_operation()
+        self.check_spine_model_configuration()
 
     @Slot(int, name="_handle_py_call_installation_finished")
     def _handle_py_call_installation_finished(self, ret):
@@ -130,6 +126,7 @@ class PackagesWidget(QWidget):
             return
         self.add_spine_model_success_msg("PyCall succesfully installed.")
         self.end_spine_model_operation()
+        self.check_spine_model_configuration()
 
     @Slot(int, name="_handle_spinedatabase_api_installation_finished")
     def _handle_spinedatabase_api_installation_finished(self, ret):
@@ -139,6 +136,7 @@ class PackagesWidget(QWidget):
             return
         self.add_spine_model_success_msg("spinedatabase_api succesfully installed.")
         self.end_spine_model_operation()
+        self.check_spine_model_configuration()
 
     @Slot(int, name="_handle_py_call_reconfiguration_finished")
     def _handle_py_call_reconfiguration_finished(self, ret):
@@ -148,12 +146,12 @@ class PackagesWidget(QWidget):
             return
         self.add_spine_model_success_msg("PyCall successfully reconfigured.")
         self.end_spine_model_operation()
+        self.check_spine_model_configuration()
 
-    @Slot("bool", name="check_spine_model")
-    def check_spine_model(self, checked=False):
+    def check_spine_model_configuration(self):
         self.begin_spine_model_operation()
-        self.add_spine_model_msg("Checking SpineModel. This operation can take a few moments...")
-        self.q_process = self.spine_model_pkg_mngr.spine_model_installed_check()
+        self.add_spine_model_msg("<b>Checking SpineModel configuration.</b> This operation can take a few moments...")
+        self.q_process = self.spine_model_config_asst.spine_model_installed_check()
         self.q_process.subprocess_finished_signal.connect(self._handle_spine_model_installed_check_finished)
 
     @Slot(int, name="_handle_spine_model_installed_check_finished")
@@ -165,12 +163,12 @@ class PackagesWidget(QWidget):
         if ret != 0:
             self.add_spine_model_error_msg("SpineModel.jl is not installed.")
             anchor = "<a style='color:#99CCFF;' href='Install SpineModel'>here</a>"
-            self.add_spine_model_msg("You can install SpineModel by clicking {0}.".format(anchor))
+            self.add_spine_model_msg("To install SpineModel, please click {0}.".format(anchor))
             self.end_spine_model_operation()
             return
         spine_model_version = self.q_process.output
         self.add_spine_model_msg("SpineModel version {} is correctly installed.".format(spine_model_version))
-        self.q_process = self.spine_model_pkg_mngr.py_call_program_check()
+        self.q_process = self.spine_model_config_asst.py_call_program_check()
         self.q_process.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
 
     @Slot(int, name="_handle_py_call_program_check_finished")
@@ -182,14 +180,14 @@ class PackagesWidget(QWidget):
         if ret != 0:
             self.add_spine_model_error_msg("The PyCall module couldn't be found. ")
             anchor = "<a style='color:#99CCFF;' href='Install PyCall'>here</a>"
-            self.add_spine_model_msg("You can install PyCall by clicking {0}.".format(anchor))
+            self.add_spine_model_msg("To install PyCall, please click {0}.".format(anchor))
             self.end_spine_model_operation()
             return
         py_call_python_program = self.q_process.output
         self.add_spine_model_msg("PyCall is configured to use the python program at "
                                  "<b>{0}</b>".format(py_call_python_program))
-        self.spine_model_pkg_mngr.py_call_python_program = py_call_python_program
-        self.q_process = self.spine_model_pkg_mngr.spinedatabase_api_installed_check()
+        self.spine_model_config_asst.py_call_python_program = py_call_python_program
+        self.q_process = self.spine_model_config_asst.spinedatabase_api_installed_check()
         self.q_process.subprocess_finished_signal.connect(self._handle_spinedatabase_api_installed_check_finished)
 
     @Slot(int, name="_handle_spinedatabase_api_installed_check_finished")
@@ -198,26 +196,24 @@ class PackagesWidget(QWidget):
             self.add_spine_model_error_msg("Check failed.")
             self.end_spine_model_operation()
             return
-        py_call_python_program = self.spine_model_pkg_mngr.py_call_python_program
+        py_call_python_program = self.spine_model_config_asst.py_call_python_program
         if ret != 0:
             self.add_spine_model_error_msg("spinedatabase_api is not installed in PyCall's python.")
             anchor1 = "<a style='color:#99CCFF;' href='Install spinedatabase_api in PyCall python'>here</a>"
             anchor2 = "<a style='color:#99CCFF;' href='Use same python as SpineToolbox'>here</a>"
             self.add_spine_model_msg("You have two options:"
-                                     "<ul><li>Install spinedatabase_api in PyCall's python, "
-                                     "by clicking {0}.</li>"
-                                     "<li>Reconfigure PyCall to use the same python as SpineToolbox, "
-                                     "by clicking {1}.</li></ul>".format(anchor1, anchor2))
+                                     "<ul><li>To install spinedatabase_api in PyCall's python, "
+                                     "please click {0}.</li>"
+                                     "<li>To reconfigure PyCall to use the same python as SpineToolbox, "
+                                     "please click {1}.</li></ul>".format(anchor1, anchor2))
             self.end_spine_model_operation()
             return
         self.add_spine_model_msg("spinedatabase_api is correctly installed in PyCall's python.")
-        self.add_spine_model_success_msg("All checks passed. SpineModel is ready to use.")
+        self.add_spine_model_success_msg("<b>SpineModel is ready to use.</b>")
         self.end_spine_model_operation()
 
     def begin_spine_model_operation(self):
-        self.ui.pushButton_spine_model_check.setEnabled(False)
         QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
 
     def end_spine_model_operation(self):
-        self.ui.pushButton_spine_model_check.setEnabled(True)
         QApplication.restoreOverrideCursor()

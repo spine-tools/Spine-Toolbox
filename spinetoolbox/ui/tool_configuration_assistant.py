@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/packages.ui',
-# licensing of '../spinetoolbox/ui/packages.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/tool_configuration_assistant.ui',
+# licensing of '../spinetoolbox/ui/tool_configuration_assistant.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -46,7 +46,7 @@ class Ui_PackagesForm(object):
         self.scrollArea.setAlignment(QtCore.Qt.AlignLeading|QtCore.Qt.AlignLeft|QtCore.Qt.AlignTop)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 681, 305))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 681, 327))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
@@ -67,35 +67,15 @@ class Ui_PackagesForm(object):
         self.textBrowser_spine_model = QtWidgets.QTextBrowser(self.groupBox_general)
         self.textBrowser_spine_model.setObjectName("textBrowser_spine_model")
         self.verticalLayout_6.addWidget(self.textBrowser_spine_model)
-        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem)
-        self.pushButton_spine_model_check = QtWidgets.QPushButton(self.groupBox_general)
-        self.pushButton_spine_model_check.setMaximumSize(QtCore.QSize(16777215, 23))
-        self.pushButton_spine_model_check.setObjectName("pushButton_spine_model_check")
-        self.horizontalLayout_2.addWidget(self.pushButton_spine_model_check)
-        self.verticalLayout_6.addLayout(self.horizontalLayout_2)
         self.verticalLayout_2.addWidget(self.groupBox_general)
         self.scrollArea.setWidget(self.scrollAreaWidgetContents)
         self.verticalLayout_3.addWidget(self.scrollArea)
         self.verticalLayout.addLayout(self.verticalLayout_3)
-        self.horizontalLayout_statusbar_placeholder = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_statusbar_placeholder.setSpacing(0)
-        self.horizontalLayout_statusbar_placeholder.setContentsMargins(0, 0, 0, 0)
-        self.horizontalLayout_statusbar_placeholder.setObjectName("horizontalLayout_statusbar_placeholder")
-        self.widget_invisible_dummy = QtWidgets.QWidget(PackagesForm)
-        self.widget_invisible_dummy.setMinimumSize(QtCore.QSize(0, 20))
-        self.widget_invisible_dummy.setMaximumSize(QtCore.QSize(0, 20))
-        self.widget_invisible_dummy.setObjectName("widget_invisible_dummy")
-        self.horizontalLayout_statusbar_placeholder.addWidget(self.widget_invisible_dummy)
-        self.verticalLayout.addLayout(self.horizontalLayout_statusbar_placeholder)
 
         self.retranslateUi(PackagesForm)
         QtCore.QMetaObject.connectSlotsByName(PackagesForm)
 
     def retranslateUi(self, PackagesForm):
-        PackagesForm.setWindowTitle(QtWidgets.QApplication.translate("PackagesForm", "Packages", None, -1))
+        PackagesForm.setWindowTitle(QtWidgets.QApplication.translate("PackagesForm", "Tool configuration assistant", None, -1))
         self.groupBox_general.setTitle(QtWidgets.QApplication.translate("PackagesForm", "SpineModel.jl", None, -1))
-        self.pushButton_spine_model_check.setText(QtWidgets.QApplication.translate("PackagesForm", "Check", None, -1))
 

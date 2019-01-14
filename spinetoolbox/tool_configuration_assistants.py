@@ -10,20 +10,20 @@
 ######################################################################################################################
 
 """
-Classes for package managers.
+Classes for tool configuration assistants.
 
 :authors: M. Marin (KTH)
 :date:   10.1.2019
 """
 
-import os
 import sys
+import os
 import qsubprocess
 from PySide2.QtCore import QObject, Signal, Slot
 from config import JULIA_EXECUTABLE
 
 
-class SpineModelPackageManager(QObject):
+class SpineModelConfigurationAssistant(QObject):
 
     check_finished = Signal(name="check_finished")
     installation_finished = Signal(name="installation_finished")
@@ -44,7 +44,7 @@ class SpineModelPackageManager(QObject):
         program = self.julia_program
         args = list()
         args.append("-e")
-        args.append("try using Pkg catch; end; println(Pkg.installed(ARGS[1]));")
+        args.append("try using Pkg catch; end; using SpineModel; println(Pkg.installed()[ARGS[1]]);")
         args.append("SpineModel")
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
@@ -78,7 +78,7 @@ class SpineModelPackageManager(QObject):
         args.append("try using Pkg catch; end; Pkg.clone(ARGS[1], ARGS[2]);")
         args.append("https://github.com/Spine-project/Spine-Model.git")
         args.append("SpineModel")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=False)
         q_process.start_process()
         return q_process
 
@@ -88,7 +88,7 @@ class SpineModelPackageManager(QObject):
         args.append("-e")
         args.append("try using Pkg catch; end; Pkg.add(ARGS[1]);")
         args.append("PyCall")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=False)
         q_process.start_process()
         return q_process
 
@@ -99,7 +99,7 @@ class SpineModelPackageManager(QObject):
         args.append("pip")
         args.append("install")
         args.append("git+https://github.com/Spine-project/Spine-Database-API.git")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=False)
         q_process.start_process()
         return q_process
 
