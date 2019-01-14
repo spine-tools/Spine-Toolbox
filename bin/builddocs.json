@@ -1,0 +1,13 @@
+{
+    "name": "BuildDocs",
+    "description": "",
+    "tooltype": "executable",
+    "execute_in_work": false,
+    "includes": [
+        "build_doc.bat"
+    ],
+    "inputfiles": [],
+    "inputfiles_opt": [],
+    "outputfiles": [],
+    "cmdline_args": ""
+}

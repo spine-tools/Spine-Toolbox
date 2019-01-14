@@ -6,16 +6,17 @@ Welcome to Spine Toolbox's User Guide!
 Spine Toolbox is an application, which provides means to define, manage, and execute complex data processing and
 computation tasks, such as energy system models.
 
-..  toctree::
-    :maxdepth: 1
-    :caption: Contents:
+.. toctree::
+   :maxdepth: 1
+   :caption: Contents:
 
-    getting_started
-    terminology
-    edit_view_spinedatabase
-    data_import_export
-    contribution_guide
-    code_ref
+   settings
+   getting_started
+   terminology
+   edit_view_spinedatabase
+   data_import_export
+   contribution_guide
+   code_ref
 
 Dependencies
 ------------
