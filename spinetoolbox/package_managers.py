@@ -16,6 +16,7 @@ Classes for package managers.
 :date:   10.1.2019
 """
 
+import os
 import sys
 import qsubprocess
 from PySide2.QtCore import QObject, Signal, Slot
