@@ -12,6 +12,8 @@ computation tasks, such as energy system models.
 
     getting_started
     terminology
+    edit_view_spinedatabase
+    data_import_export
     contribution_guide
     code_ref
 
