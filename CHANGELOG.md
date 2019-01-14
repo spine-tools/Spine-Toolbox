@@ -16,12 +16,17 @@ main program file is located). The setting is in the Tool template editor and in
 properties.
 - Tool properties now shows the Tool template main program file and the optional input
 files
+- Tabular view: New view for Data Store items, allowing to view and edit data in a
+pivot table.
 
 ### Fixed
 - Tool template optional input files. You can now use Unix style wildcards (`*` and `?`) 
 to specify the optional files that a Tool may exploit, e.g. `*.csv`.
+- Better support for scaling screen resolutions
 
 ### Changed
+- Importing items with names into a spinedatabase moved to spinedatabase_api to
+allow for easier adding of new import formats in future verisions.
 
 ### Deprecated
 
