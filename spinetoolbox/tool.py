@@ -62,8 +62,11 @@ class Tool(ProjectItem):
         self.populate_template_model(False)
         self.source_files = list()
         self._tool_template = None
-        self._tool_template_index = None
         self.set_tool_template(tool_template)
+        if not self._tool_template:
+            self._tool_template_name = ""
+        else:
+            self._tool_template_name = self.tool_template().name
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
@@ -109,12 +112,13 @@ class Tool(ProjectItem):
         """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_tool_name.setText(self.name)
         self._toolbox.ui.treeView_template.setModel(self.template_model)
-        if not self._tool_template_index:
-            self._toolbox.ui.comboBox_tool.setCurrentIndex(0)
+        if self._tool_template_name == "":
+            self._toolbox.ui.comboBox_tool.setCurrentIndex(-1)
             self.set_tool_template(None)
         else:
-            self._toolbox.ui.comboBox_tool.setCurrentIndex(self._tool_template_index.row())  # Row in tool temp model
-            tool_template = self._toolbox.tool_template_model.tool_template(self._tool_template_index.row())
+            tool_template = self._toolbox.tool_template_model.find_tool_template(self._tool_template_name)
+            row = self._toolbox.tool_template_model.tool_template_row(self._tool_template_name)
+            self._toolbox.ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
             self.set_tool_template(tool_template)
         if self.execute_in_work:
             self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
@@ -124,9 +128,9 @@ class Tool(ProjectItem):
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
         if not self._tool_template:
-            self._tool_template_index = None
+            self._tool_template_name = ""
         else:
-            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+            self._tool_template_name = self.tool_template().name
         self.execute_in_work = True if self._toolbox.ui.radioButton_execute_in_work.isChecked() else False
 
     @Slot(bool, name="update_execution_mode")
@@ -141,8 +145,12 @@ class Tool(ProjectItem):
         Args:
             row (int): Selected row in the comboBox
         """
-        new_tool = self._toolbox.tool_template_model.tool_template(row)
-        self.set_tool_template(new_tool)
+        if row == -1:
+            self._toolbox.ui.comboBox_tool.setCurrentIndex(-1)
+            self.set_tool_template(None)
+        else:
+            new_tool = self._toolbox.tool_template_model.tool_template(row)
+            self.set_tool_template(new_tool)
 
     def set_tool_template(self, tool_template):
         """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
@@ -154,10 +162,6 @@ class Tool(ProjectItem):
             ToolTemplate or None if no Tool Template set for this Tool.
         """
         self._tool_template = tool_template
-        if not tool_template:
-            self._tool_template_index = None
-        else:
-            self._tool_template_index = self._toolbox.tool_template_model.tool_template_index(tool_template.name)
         self.update_tool_ui()
 
     def update_tool_ui(self):
@@ -213,15 +217,18 @@ class Tool(ProjectItem):
 
     @Slot(name="edit_tool_template")
     def edit_tool_template(self):
-        self._toolbox.edit_tool_template(self._tool_template_index)
+        index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        self._toolbox.edit_tool_template(index)
 
     @Slot(name="open_tool_template_file")
     def open_tool_template_file(self):
-        self._toolbox.open_tool_template_file(self._tool_template_index)
+        index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        self._toolbox.open_tool_template_file(index)
 
     @Slot(name="open_tool_main_program_file")
     def open_tool_main_program_file(self):
-        self._toolbox.open_tool_main_program_file(self._tool_template_index)
+        index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        self._toolbox.open_tool_main_program_file(index)
 
     @Slot(name="open_tool_main_directory")
     def open_tool_main_directory(self):

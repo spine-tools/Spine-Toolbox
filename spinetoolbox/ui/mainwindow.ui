@@ -2400,7 +2400,7 @@
                 <enum>QFrame::NoFrame</enum>
                </property>
                <property name="text">
-                <string>Toolbox</string>
+                <string>Tool templates</string>
                </property>
                <property name="indent">
                 <number>-1</number>

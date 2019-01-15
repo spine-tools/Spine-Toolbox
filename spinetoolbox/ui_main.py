@@ -316,8 +316,7 @@ class ToolboxUI(QMainWindow):
         # Put project's tool template definition files into a list
         tool_templates = list()
         for i in range(self.tool_template_model.rowCount()):
-            if i > 0:
-                tool_templates.append(self.tool_template_model.tool_template(i).get_def_path())
+            tool_templates.append(self.tool_template_model.tool_template(i).get_def_path())
         self._project.save(tool_templates)
         self.msg.emit("Project saved to <b>{0}</b>".format(self._project.path))
 
@@ -396,7 +395,7 @@ class ToolboxUI(QMainWindow):
             # Insert tool into model
             self.tool_template_model.insertRow(tool_cand)
             # self.msg.emit("Tool template <b>{0}</b> ready".format(tool_cand.name))
-        # Set model to list view on tool templates tab
+        # Set model to the tool template list view
         self.ui.listView_tool_templates.setModel(self.tool_template_model)
         # Set model to Tool project item combo box
         self.ui.comboBox_tool.setModel(self.tool_template_model)
@@ -681,10 +680,6 @@ class ToolboxUI(QMainWindow):
             return
         if not index.isValid():
             return
-        if index.row() == 0:
-            # Do not remove No Tool option
-            self.msg.emit("<b>No Tool template</b> cannot be removed")
-            return
         self.remove_tool_template(index)
 
     @Slot("QModelIndex", name="remove_tool_template")
@@ -841,8 +836,6 @@ class ToolboxUI(QMainWindow):
         """
         if not index.isValid():
             return
-        if index.row() == 0:
-            return  # Don't do anything if No Tool option is double-clicked
         tool_template = self.tool_template_model.tool_template(index.row())
         # Show the template in the Tool Template Form
         self.show_tool_template_form(tool_template)

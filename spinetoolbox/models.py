@@ -390,7 +390,6 @@ class ToolTemplateModel(QAbstractListModel):
     def __init__(self, toolbox=None):
         super().__init__()
         self._tools = list()
-        self._tools.append('No Tool template')  # TODO: Try to get rid of this
         self._toolbox = toolbox
 
     def rowCount(self, parent=None, *args, **kwargs):
@@ -418,15 +417,11 @@ class ToolTemplateModel(QAbstractListModel):
         if not index.isValid() or self.rowCount() == 0:
             return None
         row = index.row()
-        # TODO: Try to get rid of first item (str: 'No Tool') by just returning 'No Tool' when rowCount == 1 && row==0
         if role == Qt.DisplayRole:
-            if row == 0:
-                return self._tools[0]
-            else:
-                toolname = self._tools[row].name
-                return toolname
+            toolname = self._tools[row].name
+            return toolname
         elif role == Qt.ToolTipRole:
-            if row == 0 or row >= self.rowCount():
+            if row >= self.rowCount():
                 return ""
             else:
                 return self._tools[row].def_file_path
@@ -499,8 +494,6 @@ class ToolTemplateModel(QAbstractListModel):
         Returns:
             ToolTemplate from tool template list or None if given row is zero
         """
-        if row == 0:
-            return None
         return self._tools[row]
 
     def find_tool_template(self, name):
@@ -510,21 +503,15 @@ class ToolTemplateModel(QAbstractListModel):
             name (str): Name of tool template to find
         """
         for template in self._tools:
-            if isinstance(template, str):
-                continue
-            else:
-                if name.lower() == template.name.lower():
-                    return template
+            if name.lower() == template.name.lower():
+                return template
         return None
 
     def tool_template_row(self, name):
         """Returns the row on which the given template is located or -1 if it is not found."""
         for i in range(len(self._tools)):
-            if isinstance(self._tools[i], str):
-                continue
-            else:
-                if name == self._tools[i].name:
-                    return i
+            if name == self._tools[i].name:
+                return i
         return -1
 
     def tool_template_index(self, name):
