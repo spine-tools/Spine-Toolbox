@@ -49,7 +49,7 @@ Alongside *Design view* there are a few 'docked widgets' that provide additional
 - *Event Log* shows relevant messages about every performed action.
 - *Process Log* shows the output of executed Tools.
 - *Julia console* provides an interface to interact with the Julia programming language,
-and also allows Spine Toolbox to execute Julia Tools.
+  and also allows Spine Toolbox to execute Julia Tools.
 
 .. tip:: You can drag-and-drop the Docked Widgets around the screen,
    customizing the interface at your will.
@@ -257,7 +257,8 @@ of the window, looking similar to this:
 .. image:: img/pass_input_txt_dc_properties.png
    :align: center
 
-At the bottom right part you will find a button. Press it to open the Data Connection's directory in your file folder.
+At the bottom right part you will find a button. Press it to open the Data Connection's directory in your
+file explorer.
 It should be an empty folder at the moment.
 
 Now use whatever mechanism is available in your system to create a new
