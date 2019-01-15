@@ -25,7 +25,7 @@ from tool_configuration_assistants import SpineModelConfigurationAssistant
 
 
 class ToolConfigurationAssistantWidget(QWidget):
-    """ A widget to manage user's external packages such as SpineModel.
+    """ A widget to assis the user in configuring external tools such as SpineModel.
 
     Attributes:
         toolbox (ToolboxUI): Parent widget.
@@ -87,6 +87,9 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     @Slot("QString", name="_handle_spine_model_anchor_clicked")
     def _handle_spine_model_anchor_clicked(self, link):
+        """Run when the user clicks an anchor in SpineModel's text browser.
+        Call the appropriate method on the Spine Model configuration assistant.
+        """
         self.begin_spine_model_operation()
         if link == "Install SpineModel":
             self.add_spine_model_msg("Installing SpineModel. This operation can take a few moments...")
@@ -108,6 +111,9 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     @Slot(int, name="_handle_spine_model_installation_finished")
     def _handle_spine_model_installation_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished installing SpineModel.
+        Restart SpineModel configuration check.
+        """
         if ret != 0:
             self.end_spine_model_operation()
             self.add_spine_model_error_msg("Installation failed. "
@@ -119,6 +125,9 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     @Slot(int, name="_handle_py_call_installation_finished")
     def _handle_py_call_installation_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished installing PyCall.
+        Restart SpineModel configuration check.
+        """
         if ret != 0:
             self.end_spine_model_operation()
             self.add_spine_model_error_msg("Installation failed. "
@@ -130,6 +139,9 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     @Slot(int, name="_handle_spinedatabase_api_installation_finished")
     def _handle_spinedatabase_api_installation_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished installing spinedatabase_api.
+        Restart SpineModel configuration check.
+        """
         if ret != 0:
             self.end_spine_model_operation()
             self.add_spine_model_error_msg("Installation failed.")
@@ -140,6 +152,9 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     @Slot(int, name="_handle_py_call_reconfiguration_finished")
     def _handle_py_call_reconfiguration_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished reconfiguring PyCall.
+        Restart SpineModel configuration check.
+        """
         if ret != 0:
             self.end_spine_model_operation()
             self.add_spine_model_error_msg("PyCall reconfiguration failed.")
@@ -149,13 +164,28 @@ class ToolConfigurationAssistantWidget(QWidget):
         self.check_spine_model_configuration()
 
     def check_spine_model_configuration(self):
+        """Begin SpineModel configuration check, by checking if SpineModel is installed."""
         self.begin_spine_model_operation()
         self.add_spine_model_msg("<b>Checking SpineModel configuration.</b> This operation can take a few moments...")
+        julia_version = self.spine_model_config_asst.julia_version()
+        if julia_version is None:
+            self.add_spine_model_error_msg("Unable to determine Julia version. "
+                                           "Make sure that Julia is correctly installed and try again")
+            self.end_spine_model_operation()
+            return
+        if julia_version > "0.6.4" or julia_version < "0.6.0":
+            self.add_spine_model_error_msg("Julia version is {}. SpineModel.jl requires "
+                                           "Julia version 0.6.x to be installed.".format(julia_version))
+            self.end_spine_model_operation()
+            return
         self.q_process = self.spine_model_config_asst.spine_model_installed_check()
         self.q_process.subprocess_finished_signal.connect(self._handle_spine_model_installed_check_finished)
 
     @Slot(int, name="_handle_spine_model_installed_check_finished")
     def _handle_spine_model_installed_check_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished checking if SpineModel is installed.
+        Continue SpineModel configuration check, by checking the python program used by PyCall.
+        """
         if self.q_process.process_failed_to_start:
             self.add_spine_model_error_msg("Check failed. Make sure that Julia is correctly installed and try again.")
             self.end_spine_model_operation()
@@ -173,6 +203,9 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     @Slot(int, name="_handle_py_call_program_check_finished")
     def _handle_py_call_program_check_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished checking the python program used by PyCall.
+        Continue SpineModel configuration check, by checking if spinedatabase_api is installed.
+        """
         if self.q_process.process_failed_to_start:
             self.add_spine_model_error_msg("Check failed. Make sure that Julia is correctly installed and try again.")
             self.end_spine_model_operation()
@@ -192,6 +225,9 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     @Slot(int, name="_handle_spinedatabase_api_installed_check_finished")
     def _handle_spinedatabase_api_installed_check_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished checking if spinedatabase_api is installed.
+        End SpineModel configuration check.
+        """
         if self.q_process.process_failed_to_start:
             self.add_spine_model_error_msg("Check failed.")
             self.end_spine_model_operation()

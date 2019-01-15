@@ -24,12 +24,18 @@ from config import JULIA_EXECUTABLE
 
 
 class SpineModelConfigurationAssistant(QObject):
+    """Configuration assistant for SpineModel.jl.
+
+    Attributes:
+        toolbox (ToolboxUI): QMainWindow instance
+    """
 
     check_finished = Signal(name="check_finished")
     installation_finished = Signal(name="installation_finished")
     msg = Signal("QString", name="msg")
 
     def __init__(self, toolbox):
+        """Init class."""
         super().__init__(toolbox)
         self._toolbox = toolbox
         julia_dir = self._toolbox._config.get("settings", "julia_path")
@@ -40,7 +46,22 @@ class SpineModelConfigurationAssistant(QObject):
         self.julia_program = "{0}".format(julia_exe)
         self.py_call_python_program = None
 
+    def julia_version(self):
+        """Return current julia version."""
+        program = self.julia_program
+        args = list()
+        args.append("-e")
+        args.append("println(VERSION)")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        if not q_process.wait_for_finished(msecs=5000):
+            return None
+        return q_process.output
+
     def spine_model_installed_check(self):
+        """Start qsubprocess that checks if SpineModel is installed in current julia version.
+        Return the qsubprocess.
+        """
         program = self.julia_program
         args = list()
         args.append("-e")
@@ -51,6 +72,9 @@ class SpineModelConfigurationAssistant(QObject):
         return q_process
 
     def py_call_program_check(self):
+        """Start qsubprocess that checks the python program used by PyCall in current julia version.
+        Return the qsubprocess.
+        """
         program = self.julia_program
         args = list()
         args.append("-e")
@@ -61,6 +85,9 @@ class SpineModelConfigurationAssistant(QObject):
         return q_process
 
     def spinedatabase_api_installed_check(self):
+        """Start qsubprocess that checks if spinedatabase_api is installed in PyCall's python.
+        Return the qsubprocess.
+        """
         program = self.py_call_python_program
         args = list()
         args.append("-m")
@@ -72,6 +99,9 @@ class SpineModelConfigurationAssistant(QObject):
         return q_process
 
     def install_spine_model(self):
+        """Start qsubprocess that installs SpineModel in current julia version.
+        Return the qsubprocess.
+        """
         program = self.julia_program
         args = list()
         args.append("-e")
@@ -83,6 +113,9 @@ class SpineModelConfigurationAssistant(QObject):
         return q_process
 
     def install_py_call(self):
+        """Start qsubprocess that installs PyCall in current julia version.
+        Return the qsubprocess.
+        """
         program = self.julia_program
         args = list()
         args.append("-e")
@@ -93,6 +126,9 @@ class SpineModelConfigurationAssistant(QObject):
         return q_process
 
     def install_spinedatabase_api(self):
+        """Start qsubprocess that installs spinedatabase_api in PyCall's python.
+        Return the qsubprocess.
+        """
         program = self.py_call_python_program
         args = list()
         args.append("-m")
@@ -104,6 +140,9 @@ class SpineModelConfigurationAssistant(QObject):
         return q_process
 
     def reconfigure_py_call(self):
+        """Start qsubprocess that reconfigure PyCall to point to Spine Toolbox's python.
+        Return the qsubprocess.
+        """
         program = self.julia_program
         args = list()
         args.append("-e")
