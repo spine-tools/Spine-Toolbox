@@ -454,6 +454,7 @@ class ToolboxUI(QMainWindow):
         window_size = self.qsettings.value("mainWindow/windowSize")
         window_pos = self.qsettings.value("mainWindow/windowPosition")
         window_state = self.qsettings.value("mainWindow/windowState")
+        splitter_state = self.qsettings.value("mainWindow/projectDockWidgetSplitterState")
         window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
         n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
         # noinspection PyArgumentList
@@ -464,6 +465,8 @@ class ToolboxUI(QMainWindow):
             self.move(window_pos)
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
+        if splitter_state:
+            self.ui.splitter.restoreState(splitter_state)  # Project Dock Widget splitter position
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
         if n_screens_now < int(n_screens):
@@ -944,8 +947,8 @@ class ToolboxUI(QMainWindow):
         """Hides project item info tab bar and connections tab in project item QTreeView.
         Makes (hidden) actions on how to show them if needed for debugging purposes."""
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide project item info QTabBar
-        self.connections_tab = self.ui.tabWidget.widget(2)
-        self.ui.tabWidget.removeTab(2)  # Remove connections tab
+        self.connections_tab = self.ui.tabWidget.widget(1)
+        self.ui.tabWidget.removeTab(1)  # Remove connections tab
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
@@ -965,11 +968,11 @@ class ToolboxUI(QMainWindow):
 
     def toggle_connections_tab_visibility(self):
         """Shows or hides connections tab in the project item QTreeView. For debugging purposes."""
-        if self.ui.tabWidget.count() == 2:  # Connections tab hidden
-            self.ui.tabWidget.insertTab(2, self.connections_tab, "Connections")
+        if self.ui.tabWidget.count() == 1:  # Connections tab hidden
+            self.ui.tabWidget.insertTab(1, self.connections_tab, "Connections")
         else:
-            self.connections_tab = self.ui.tabWidget.widget(2)
-            self.ui.tabWidget.removeTab(2)
+            self.connections_tab = self.ui.tabWidget.widget(1)
+            self.ui.tabWidget.removeTab(1)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -1498,6 +1501,7 @@ class ToolboxUI(QMainWindow):
         self.qsettings.setValue("mainWindow/windowSize", self.size())
         self.qsettings.setValue("mainWindow/windowPosition", self.pos())
         self.qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
+        self.qsettings.setValue("mainWindow/projectDockWidgetSplitterState", self.ui.splitter.saveState())
         if self.windowState() == Qt.WindowMaximized:
             self.qsettings.setValue("mainWindow/windowMaximized", True)
         else:

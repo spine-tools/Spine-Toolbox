@@ -49,3 +49,9 @@ Spine Toolbox Terminology
   Tool contains a reference to the model code, external program that executes the code, and input
   data that the model code requires. Spine Model is a Tool from Spine Toolbox's point-of-view.
 - **View** A project item that can be used for visualizing project data.
+- **Work directory** A directory where Tool template execution takes place. When a Tool is executed, Spine Toolbox
+  creates a new *work* directory, copies all required and optional files needed for running the Tool template
+  to this directory and executes it there. After execution has finished, output or result files can be archived
+  into a timestamped results directory from the work directory.
+
+

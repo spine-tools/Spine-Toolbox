@@ -10,6 +10,7 @@ computation tasks, such as energy system models.
    :maxdepth: 1
    :caption: Contents:
 
+   main_window
    settings
    getting_started
    terminology
