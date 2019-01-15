@@ -31,6 +31,7 @@ from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu
     ToolPropertiesContextMenu, ViewPropertiesContextMenu
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
+from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
@@ -79,6 +80,7 @@ class ToolboxUI(QMainWindow):
         self.connection_model = None
         # Widget and form references
         self.settings_form = None
+        self.tool_config_asst_form = None
         self.about_form = None
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
@@ -149,6 +151,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionSettings.triggered.connect(self.show_settings)
+        self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
         self.ui.actionAdd_Data_Store.triggered.connect(self.show_add_data_store_form)
         self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
@@ -1106,6 +1109,12 @@ class ToolboxUI(QMainWindow):
         """Show Settings widget."""
         self.settings_form = SettingsWidget(self, self._config)
         self.settings_form.show()
+
+    @Slot(name="show_tool_config_asst")
+    def show_tool_config_asst(self):
+        """Show Tool configuration assistant widget."""
+        self.tool_config_asst_form = ToolConfigurationAssistantWidget(self)
+        self.tool_config_asst_form.show()
 
     @Slot(name="show_about")
     def show_about(self):

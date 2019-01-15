@@ -32,6 +32,7 @@ class QSubProcess(QObject):
             toolbox (ToolboxUI): Instance of Main UI class.
             program (str): Path to program to run in the subprocess (e.g. julia.exe)
             args (list): List of argument for the program (e.g. path to script file)
+            silent (bool): Whether or not to emit toolbox msg signals
         """
         super().__init__()
         self._toolbox = toolbox
@@ -62,10 +63,10 @@ class QSubProcess(QObject):
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
         self._process.started.connect(self.process_started)
+        self._process.finished.connect(self.process_finished)
         if not self._silent:
             self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
             self._process.readyReadStandardError.connect(self.on_ready_stderr)
-            self._process.finished.connect(self.process_finished)
             self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
             self._process.stateChanged.connect(self.on_state_changed)
         # self._toolbox.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
@@ -92,12 +93,6 @@ class QSubProcess(QObject):
             self._process.close()
             self._process = None
             return False
-        if self._silent:
-            out = str(self._process.readAllStandardOutput().data(), "utf-8")
-            if out is not None:
-                self.output = out.strip()
-            self._process.deleteLater()
-            self._process = None
         return True
 
     @Slot(name="process_started")
@@ -118,9 +113,8 @@ class QSubProcess(QObject):
             arg_str = " ".join(self._args)
             self._toolbox.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
         elif new_state == QProcess.Running:
-            if not self._silent:
-                self._toolbox.msg_warning.emit("\tExecution is in progress. See Process Log for messages "
-                                               "(stdout&stderr)")
+            self._toolbox.msg_warning.emit("\tExecution is in progress. See Process Log for messages "
+                                           "(stdout&stderr)")
         elif new_state == QProcess.NotRunning:
             # logging.debug("QProcess is not running")
             pass
@@ -177,20 +171,25 @@ class QSubProcess(QObject):
         # logging.debug("Error that occurred last: {0}".format(self._process.error()))
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
-            self._toolbox.msg_error.emit("\tProcess crashed")
+            if not self._silent:
+                self._toolbox.msg_error.emit("\tProcess crashed")
             exit_code = -1
         elif exit_status == QProcess.NormalExit:
-            out = str(self._process.readAllStandardOutput().data(), "utf-8")
-            self._toolbox.msg.emit("\tProcess finished")
+            if not self._silent:
+                self._toolbox.msg.emit("\tProcess finished")
         else:
-            self._toolbox.msg_error.emit("Unknown QProcess exit status [{0}]".format(exit_status))
+            if not self._silent:
+                self._toolbox.msg_error.emit("Unknown QProcess exit status [{0}]".format(exit_status))
             exit_code = -1
         if not exit_code == 0:
             self.process_failed = True
         if not self._user_stopped:
             out = str(self._process.readAllStandardOutput().data(), "utf-8")
             if out is not None:
-                self._toolbox.msg_proc.emit(out.strip())
+                if not self._silent:
+                    self._toolbox.msg_proc.emit(out.strip())
+                else:
+                    self.output = out.strip()
         else:
             self._toolbox.msg.emit("*** Terminating process ***")
         # Delete QProcess
