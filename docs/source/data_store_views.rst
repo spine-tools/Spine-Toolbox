@@ -1,4 +1,3 @@
-
 .. |plus_object_parameter| image:: ../../spinetoolbox/ui/resources/plus_object_parameter_icon.png
       :width: 24
 
