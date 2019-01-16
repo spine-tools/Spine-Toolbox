@@ -5,11 +5,11 @@
 .. |plus_relationship_parameter| image:: ../../spinetoolbox/ui/resources/plus_relationship_parameter_icon.png
       :width: 24
 
-*************************
-Edit/View Spine databases
-*************************
+****************
+Data store views
+****************
 
-This section explains the different ways of viewing and editing the data in an existing Spine database.
+This section describes the different interfaces for viewing and editing data in a Spine database.
 
 .. contents::
     :local:
