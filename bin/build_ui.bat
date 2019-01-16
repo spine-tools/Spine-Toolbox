@@ -84,11 +84,6 @@ CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwind
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\mainwindow.py.o > ..\spinetoolbox\ui\mainwindow.py
 del ..\spinetoolbox\ui\mainwindow.py.o
 
-ECHO building packages.py
-CALL pyside2-uic ../spinetoolbox/ui/packages.ui -o ../spinetoolbox/ui/packages.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\packages.py.o > ..\spinetoolbox\ui\packages.py
-del ..\spinetoolbox\ui\packages.py.o
-
 ECHO building project_form.py
 CALL pyside2-uic ../spinetoolbox/ui/project_form.ui -o ../spinetoolbox/ui/project_form.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\project_form.py.o > ..\spinetoolbox\ui\project_form.py
@@ -108,6 +103,11 @@ ECHO building tabular_view_form.py
 CALL pyside2-uic ../spinetoolbox/ui/tabular_view_form.ui -o ../spinetoolbox/ui/tabular_view_form.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\tabular_view_form.py.o > ..\spinetoolbox\ui\tabular_view_form.py
 del ..\spinetoolbox\ui\tabular_view_form.py.o
+
+ECHO building tool_configuration_assistant.py
+CALL pyside2-uic ../spinetoolbox/ui/tool_configuration_assistant.ui -o ../spinetoolbox/ui/tool_configuration_assistant.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\tool_configuration_assistant.py.o > ..\spinetoolbox\ui\tool_configuration_assistant.py
+del ..\spinetoolbox\ui\tool_configuration_assistant.py.o
 
 ECHO building tool_template_form.py
 CALL pyside2-uic ../spinetoolbox/ui/tool_template_form.ui -o ../spinetoolbox/ui/tool_template_form.py.o
@@ -140,12 +140,12 @@ CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
 CALL append_license_xml ..\spinetoolbox\ui\edit_data_items.ui
 CALL append_license_xml ..\spinetoolbox\ui\graph_view_form.ui
-CALL append_license_xml ..\spinetoolbox\ui\packages.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
 CALL append_license_xml ..\spinetoolbox\ui\spine_datapackage_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\tabular_view_form.ui
+CALL append_license_xml ..\spinetoolbox\ui\tool_configuration_assistant.ui
 CALL append_license_xml ..\spinetoolbox\ui\tool_template_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\tree_view_form.ui
 ECHO.
@@ -162,12 +162,12 @@ CALL append_license_py ..\spinetoolbox\ui\add_tool.py
 CALL append_license_py ..\spinetoolbox\ui\add_view.py
 CALL append_license_py ..\spinetoolbox\ui\edit_data_items.py
 CALL append_license_py ..\spinetoolbox\ui\graph_view_form.py
-CALL append_license_py ..\spinetoolbox\ui\packages.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py
 CALL append_license_py ..\spinetoolbox\ui\spine_datapackage_form.py
 CALL append_license_py ..\spinetoolbox\ui\tabular_view_form.py
+CALL append_license_py ..\spinetoolbox\ui\tool_configuration_assistant.py
 CALL append_license_py ..\spinetoolbox\ui\tool_template_form.py
 CALL append_license_py ..\spinetoolbox\ui\tree_view_form.py
 CALL append_license_py ..\spinetoolbox\resources_icons_rc.py
