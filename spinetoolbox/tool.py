@@ -70,7 +70,7 @@ class Tool(ProjectItem):
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
-        self.execute_in_work = use_work
+        self.execute_in_work = use_work  # Enables overriding the template default setting
         # Make project directory for this Tool
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -119,11 +119,7 @@ class Tool(ProjectItem):
             tool_template = self._toolbox.tool_template_model.find_tool_template(self._tool_template_name)
             row = self._toolbox.tool_template_model.tool_template_row(self._tool_template_name)
             self._toolbox.ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
-            self.set_tool_template(tool_template)
-        if self.execute_in_work:
-            self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
-        else:
-            self._toolbox.ui.radioButton_execute_in_source.setChecked(True)
+            self.restore_tool_template(tool_template)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -140,7 +136,7 @@ class Tool(ProjectItem):
 
     @Slot(int, name="update_tool_template")
     def update_tool_template(self, row):
-        """Update Tool template according to selection.
+        """Update Tool template according to selection in the template comboBox.
 
         Args:
             row (int): Selected row in the comboBox
@@ -157,15 +153,13 @@ class Tool(ProjectItem):
 
         Args:
             tool_template (ToolTemplate): Template for this Tool. None removes the template.
-
-        Returns:
-            ToolTemplate or None if no Tool Template set for this Tool.
         """
         self._tool_template = tool_template
         self.update_tool_ui()
 
     def update_tool_ui(self):
-        """Update Tool UI to show Tool template details."""
+        """Update Tool UI to show Tool template details. Used when Tool template is changed.
+        Overrides execution mode (work or source) with the template default."""
         if not self.tool_template():
             self._toolbox.ui.lineEdit_tool_args.setText("")
             self.populate_source_file_model(None)
@@ -190,6 +184,37 @@ class Tool(ProjectItem):
         self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
         self._toolbox.ui.treeView_template.expandAll()
 
+    def restore_tool_template(self, tool_template):
+        """Restores the Tool Template of this Tool. Removes Tool Template if None given as argument.
+        Needed in order to override tool template default execution mode (work or source).
+
+        Args:
+            tool_template (ToolTemplate): Template for this Tool. None removes the template.
+        """
+        self._tool_template = tool_template
+        if not tool_template:
+            self._toolbox.ui.lineEdit_tool_args.setText("")
+            self.populate_source_file_model(None)
+            self.populate_input_file_model(None)
+            self.populate_opt_input_file_model(None)
+            self.populate_output_file_model(None)
+            self.populate_template_model(populate=False)
+            self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+        else:
+            self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+            self.populate_source_file_model(self.tool_template().includes)
+            self.populate_input_file_model(self.tool_template().inputfiles)
+            self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
+            self.populate_output_file_model(self.tool_template().outputfiles)
+            self.populate_template_model(populate=True)
+            if self.execute_in_work:
+                self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+            else:
+                self._toolbox.ui.radioButton_execute_in_source.setChecked(True)
+        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
+        self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
+        self._toolbox.ui.treeView_template.expandAll()
+
     @Slot(bool, name="open_results")
     def open_results(self, checked=False):
         """Open output directory in file browser."""
@@ -205,28 +230,33 @@ class Tool(ProjectItem):
 
     @Slot(bool, name="stop_process")
     def stop_process(self, checked=False):
+        """Terminate Tool template execution."""
         self.instance.terminate_instance()
         self._toolbox.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
 
     def set_icon(self, icon):
+        """Icon setter method."""
         self._graphics_item = icon
 
     def get_icon(self):
-        """Returns the item representing this data connection in the scene."""
+        """Returns the graphics item representing this tool in the scene."""
         return self._graphics_item
 
     @Slot(name="edit_tool_template")
     def edit_tool_template(self):
+        """Open Tool template editor for the Tool template attached to this Tool."""
         index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
         self._toolbox.edit_tool_template(index)
 
     @Slot(name="open_tool_template_file")
     def open_tool_template_file(self):
+        """Open Tool template definition file."""
         index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
         self._toolbox.open_tool_template_file(index)
 
     @Slot(name="open_tool_main_program_file")
     def open_tool_main_program_file(self):
+        """Open Tool template main program file in an external text edit application."""
         index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
         self._toolbox.open_tool_main_program_file(index)
 
