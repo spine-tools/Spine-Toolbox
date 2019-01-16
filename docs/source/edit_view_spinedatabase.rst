@@ -1,13 +1,21 @@
-************************
-Edit/View Spine-database
-************************
 
-This section explains the different ways of viewing and editing the data in an existing spine-database.
+.. |plus_object_parameter| image:: ../../spinetoolbox/ui/resources/plus_object_parameter_icon.png
+      :width: 24
+
+.. |plus_relationship_parameter| image:: ../../spinetoolbox/ui/resources/plus_relationship_parameter_icon.png
+      :width: 24
+
+*************************
+Edit/View Spine databases
+*************************
+
+This section explains the different ways of viewing and editing the data in an existing Spine database.
 
 .. contents::
     :local:
 
-To open any of the viewing tools, select a **Data store** and click the corresponding button in the **Data store** preferences:
+To open any of the viewing interfaces, select a **Data Store** and click the corresponding button
+in its *Properties*:
 
 .. image:: img/data_store_edit.png
    :align: center
@@ -15,45 +23,56 @@ To open any of the viewing tools, select a **Data store** and click the correspo
 Tabular view
 ------------
 
-The **Tabular view** is used to display and edit the data in a spine-database in a table-like interface. The interface lets you filter and pivot the data for exploration and editing. To start the **Tabular view** select a **Data store** item and press the **Tabular view** button in the properties window.
+The **Tabular view** is used to display and edit the data in a Spine database via a table-like interface.
+The interface lets you filter and pivot the data for exploration and editing.
+To start the **Tabular view**, select a **Data Store** item and press the **Tabular view** button in its *Properties*.
 
 .. image:: img/tabular_view.png
    :align: center
 
-The **Tabular view** has two main components:
+The **Tabular view** has three main components:
 
-* Select component (1): here you can select which object classes or relationship classes that you want to view and which parameter data you wish to view.
-* Tabular component (2, 3): here the selected data is displayed.
+* *Selection component* (1), where you can select the object class or relationship class
+  to visualize.
+* *Pivot lists* (2), where you can transform the data view and choose, e.g., which items go
+  into rows and which into columns.
+* *Main table* (3), where the actual data is displayed.
 
-The different data-viewing modes that exists are:
+From the drop-down list at the top of the selection component,
+you can select three different input types:
 
-* value: This displays all objects/relationships, parameters and parameter values for the selected object/relationship class.
-* json: This displays timeseries data stored in the json field for the selected object/relationship class.
-* set: This displays only the objects/relationships for the selected object/relationship class.
+* *value*: display all objects (or relationships), as well as all parameters and parameter values
+  for the selected object (or relationship) class.
+* *json*: display only timeseries data from the json field for the selected object (or relationship) class.
+* *set*: display only the objects (or relationships) for the selected object (or relationship) class.
 
 Pivoting and filtering data
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-In the tabular component you can transform the view of the data by draging an index between the pivot lists:
+You can transform (pivot) the data-view by dragging items across the *Pivot lists*:
 
 .. image:: img/tabular_view_pivot.png
    :align: center
 
-The pivot options are:
+Here is how each of the *Pivot lists* works:
 
-* Rows: All indexes in this list are displayed so each row contains a unique row for the indexes in the list.
-* Columns: All indexes in this list are displayed so each column contains a unique column for the indexes in the list.
-* Frozen: All indexes in the frozen list are excluded from the display table and instead shown in the **Frozen values** table, the main table is then filtered by the selected indexes in the **Frozen values** table.
-* Frozen values: All unique index values for the indexes in the *Frozen* index list are displayed here. Selecting a row will cause the main table to be filtered to the selected row index values.
+* *Rows*: All items in this list are displayed in the *Main table*
+  so there is a unique row for each object (or relationship)
+  that belongs to that object (or relationship) class.
+* *Columns*: All items in this list are displayed in the *Main table*
+  so there is a unique column for each object (or relationship)
+  that belongs to that object (or relationship) class.
+* *Frozen*: All items in this list are excluded from the *Main table*
+  and shown in the *Frozen values* table instead;
+  the *Main table* is then filtered by the selected item in the *Frozen values* table.
 
-To filter a specific index you can use the filter buttons:
-
-When applying a filter the main table will be filtered for the selected filter for that index. You can filter multiple index values at the same time.
+To filter a specific item you can use the filter buttons just above the *Main view*.
+You can apply multiple filters at the same time.
 
 Editing Data
 ~~~~~~~~~~~~
 
-When editing data you will see tre colors:
+When editing parameter *values*, cells get painted in different colors:
 
 .. image:: img/tabular_view_edit_data.png
    :align: center
@@ -62,81 +81,109 @@ When editing data you will see tre colors:
 * Yellow: Edited data
 * Red: Deleted data
 
-To restore a cell to it's initial value, select the cell and right click, in the context menu choose: Restore value. You can also hoover a edited cell to see the original value.
+To restore a cell to its initial value, right click on it and select **Restore value** from the context menu.
+You can also hover an edited cell to see the original value.
 
-When editing index values you will also see three colors, how ever their meaning is a bit different:
+When editing item *names*, cells also get painted in different colors although their meaning is a bit different:
 
 .. image:: img/tabular_view_edit_index.png
    :align: center
 
-* Green: New index value, For objects and parameters this means that all green cells will be inserted when commiting changes.
-* Red: This means that the index value is invalid and all data for that row/column cannot be inserted when commiting data. The affected rows/columns will get a grey background. Invalid values are:
+* Green: New item. This means that all objects and parameters in green cells will be inserted when committing changes.
+* Red: Invalid item. This means that the item, as well as all data for that row/column cannot be inserted
+  when committing changes. The affected rows/columns will get a gray background. Invalid names are:
 
- * Empty values: An index must have a value.
- * Duplicate values: If the combination of index values already exists.
- * Existing name: If the index value is already taken by another object or parameter.
+ * Empty names: An item must have a name.
+ * Duplicate names: If the name (or combination of item names) is already assigned to an object (or relationship).
+ * Existing name: If the name is already taken by another object or parameter.
 
-If you edit an index value, the original index value is not deleted from the database on commit. To delete a index value from the database, select the cell with the value and right click and select: Delete index1: value
+If you edit an item's name, the original item is not deleted from the database on commit.
+To delete an item from the database, right click on the cell with the name, and select **Delete item:name** from
+the context menu.
 
-When working with relationships, a new relationship is added as soon as a combination of valid objects for that relationship class is entered even if the row/column is not valid. To remove a relationships, select the relationship and right click and select: Delete relationship:
+A new relationship is added as soon as a valid combination of objects for that relationship class is entered,
+even if the row/column is invalid. To remove a relationship, right click on it and select **Delete item:name** from
+the context menu.
 
 Commit/Rollback changes
 ~~~~~~~~~~~~~~~~~~~~~~~
 
-To save changes made in the **Tabular view** use the Session menu and click commit, enter a commit message and press commit. Any changes made in the **Tabular view** is now saved into the database.
+To save changes select **Session -> Commit** from the menu bar, enter a commit message and press **Commit**.
+Any changes made in the **Tabular view** will be saved into the database.
 
-To undo any changes since the last commit, use the Session menu and click Rollback
+To undo any changes since the last commit, select **Session -> Rollback** from the menu bar.
 
 
 Tree view
 ---------
 
-The **Tree view** is used to display the different object/relationship classes with their objects/relationships in a hierarchical tree. You can also edit/add/delete classes, objects, relationships, parameters and parameter values. You can use the **Tree view** to get an overview of the data and the relations of the data in a spine database:
+The **Tree view** is used to display the different object and relationship classes,
+with their objects and relationships in a hierarchical tree.
+You can also add, edit, and delete object classes, relationship classes, objects, relationships,
+parameters and parameter values. The **Tree view** is useful to get an overview of the data and the relationships
+within a Spine database:
 
 .. image:: img/tree_view.png
    :align: center
 
-The **Tree view** has three main components:
+The interface has three main components:
 
-1. Tree component: In this component you can expand/collapse the different levels of hierarchy of the spine database structure. This component also works as a selection tool for the other two table components.
-2. Object parameter table: In this component you can view/add/edit/delete parameter definitions and values for object classes and objects.
-3. Relationship parameter table: In this component you can view/add/edit/delete parameter definitions and values for relationship classes and relationships.
+1. *Object tree*, where you can expand and collapse the different levels of the hierarchy.
+   It also acts as a filtering tool for the other two table components, so that only items selected in the
+   *Object tree* are shown in the *Parameter tables*.
+2. *Object parameter table*, where you can view, add, edit, and delete object parameter definitions and values.
+3. *Relationship parameter table*, where you can view, add, edit, and delete relationship parameter
+   definitions and values.
 
-Editing Classes, Objects, Relationship and Parameters
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Editing items
+~~~~~~~~~~~~~
 
-To add object classes, relationship classes, objects or relationships you can use the **Edit** menu or right clicking on any item in the object tree. In the menu that pops up you can enter new items by typing the new names or pasting from the clipboard.
+To add object classes, relationship classes, objects or relationships you can use the **Edit** menu from the main
+menu bar, as well as the context menu from the *Object tree*.
+In the dialog that pops up you can enter new items by typing their names or pasting data from the clipboard.
 
 .. image:: img/tree_view_add_objects.png
    :align: center
 
-To delete an item, right click the item in the object tree and click the delete option in the context menu.
+To delete an item, you can again use the **Edit** menu from the main
+menu bar or the item's context menu from the *Object tree*.
 
 .. image:: img/tree_view_context_menu.png
    :align: center
 
-From this menu you can also rename or edit classes/objects/relationships
+Editing items is done following a similar procedure.
 
-Editing Parameters and Parameter values
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-In the Object parameter table and the Relationship parameter table you can add/edit/delete parameters and parameter values. To filter the tables you can either select a class/object/relationship item from the object tree hierarchy or click on a column header to show filter options for that column.
+Viewing parameter definitions and values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-You can choose to view parameter defintions or values in the object and relationship parameter tables by the tabs showed in to top right corner of the table:
+In the *Parameter tables*, you can switch between viewing parameter definitions or values by using the tabs
+in the upper right corner:
 
 .. image:: img/tree_view_table_tab.png
    :align: center
 
-To add new definitions or values you can use the add tools on the left of the tables: 
+You can also (further) filter the tables by clicking on the column headers.
+
+
+Editing parameters definitions and values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+To add new parameter definitions or values you can directly do it in the last row of each table.
+The tables also support pasting values from the clipboard.
+
+Additionally, you can automatically enter data for the first columns by selecting some items in the *Object tree*
+and then pressing the |plus_object_parameter| or |plus_relationship_parameter| buttons:
 
 .. image:: img/tree_view_table_parameter_tools.png
    :align: center
 
-You can also enter new parameter definitions or values by entering new data in the last row of the tables. The tables also support pasting values from the clipboard.
 
 Graph view
 ----------
 
-The **Graph view** is a tool to visualize the spine database structure in a graph. In the **Graph view** you can select relationships and objects to see the connections between them. This widget also contains the parameter tables in the **Tree view** to which are filtered by the graph.
+The **Graph view** is used to visualize the Spine database structure into a graph.
+Here you can select objects to see how they are related.
+You can also view parameter definition and values same as in the **Tree view**.
 
 .. image:: img/graph_view.png
    :align: center

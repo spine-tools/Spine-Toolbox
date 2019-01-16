@@ -25,8 +25,8 @@ Getting Started
 ***************
 
 Welcome to the Spine Toolbox's getting started guide.
-In this guide you will learn two ways of running the `"Hello, World!" program
-<https://en.wikipedia.org/wiki/%22Hello,_World!%22_program>`_ using Spine Toolbox.
+In this guide you will learn two ways of running a `"Hello, World!" program
+<https://en.wikipedia.org/wiki/%22Hello,_World!%22_program>`_ on Spine Toolbox.
 The following topics are touched (although not exhaustively covered):
 
 .. contents::
