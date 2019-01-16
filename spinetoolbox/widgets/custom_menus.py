@@ -156,9 +156,6 @@ class ToolTemplateContextMenu(CustomContextMenu):
         if not index.isValid():
             # If no item at index
             return
-        if index.row() == 0:
-            # Don't show menu when clicking on No tool
-            return
         self.add_action("Edit Tool template")
         self.add_action("Edit main program file...")
         self.add_action("Open main program directory...")

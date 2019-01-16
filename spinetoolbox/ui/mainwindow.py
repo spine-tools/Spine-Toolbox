@@ -1272,7 +1272,7 @@ class Ui_MainWindow(object):
         self.dockWidget_julia_repl.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Julia Console", None, -1))
         self.dockWidget_project.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Project", None, -1))
         self.label_4.setText(QtWidgets.QApplication.translate("MainWindow", "Items", None, -1))
-        self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Toolbox", None, -1))
+        self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Tool templates", None, -1))
         self.listView_tool_templates.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool Templates available in this project</p></body></html>", None, -1))
         self.toolButton_add_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Create new or add an existing Tool template to project</p></body></html>", None, -1))
         self.toolButton_remove_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove (selected) Tool template from project</p></body></html>", None, -1))
@@ -1319,8 +1319,8 @@ class Ui_MainWindow(object):
         self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1))
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qgraphicsview import CustomQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 import resources_icons_rc
