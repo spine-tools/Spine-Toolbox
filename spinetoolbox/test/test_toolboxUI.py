@@ -101,12 +101,12 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(item4.parent().is_root, "Parent item of category item on row 3 should be root")
 
     def test_init_tool_template_model(self):
-        """Check that tool template model only has the "No Tool" string and that
+        """Check that tool template model has no items after init and that
         signals are connected just once.
         """
         self.assertIsNone(self.mw.project())  # Make sure that there is no project open
         self.mw.init_tool_template_model(list())
-        self.assertEqual(self.mw.tool_template_model.rowCount(), 1)
+        self.assertEqual(self.mw.tool_template_model.rowCount(), 0)
         # Test that QLisView signals are connected only once.
         n_dbl_clicked_recv = self.mw.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))
         self.assertEqual(n_dbl_clicked_recv, 1)
@@ -119,8 +119,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(n_dbl_clicked_recv, 1)
         n_context_menu_recv = self.mw.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
         self.assertEqual(n_context_menu_recv, 1)
-        # Check that there's still just one item in the model
-        self.assertEqual(self.mw.tool_template_model.rowCount(), 1)
+        # Check that there's still no items in the model
+        self.assertEqual(self.mw.tool_template_model.rowCount(), 0)
 
     def test_init_connection_model(self):
         """Test that ConnectionModel is empty when initialized."""
