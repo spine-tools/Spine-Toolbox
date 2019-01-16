@@ -10,14 +10,15 @@ computation tasks, such as energy system models.
    :maxdepth: 1
    :caption: Contents:
 
+   terminology
+   getting_started
    main_window
    tool_template_editor
    executing_tools
    settings
-   getting_started
-   terminology
-   edit_view_spinedatabase
+   data_store_views
    data_import_export
+   spine_datapackage_editor
    contribution_guide
    code_ref
 

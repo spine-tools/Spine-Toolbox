@@ -158,7 +158,7 @@ class DatapackageToSpineConverter(QRunnable):
                     object_name_suffix = "_".join(row_dict[field] for field in primary_key)
                 else:
                     object_name_suffix = str(i)
-                object_name = resource.name + object_name_suffix
+                object_name = resource.name + "_" + object_name_suffix
                 if not object_name in object_names:
                     objects.append(dict(class_id=object_class_id, name=object_name))
                     object_names.append(object_name)
