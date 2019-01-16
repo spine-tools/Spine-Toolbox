@@ -66,7 +66,7 @@ Creating a Project
 
 To create a new project, please do one of the following:
 
-A) From the application menu bar, select **File -> New...**
+A) From the application main menu, select **File -> New...**
 B) Press *Ctrl+N*.
 
 The *New Project* form will show up.
@@ -123,14 +123,14 @@ Right click on the 'hello_world' item in the *Tool templates* list and select **
 context menu. This will open the file 'hello_world.bat' (or 'hello_world.sh') in your default text editor.
 
 If you're on Windows and your main program file is called 'hello_world.bat',
-enter the following into the file's content:
+enter the following into the file's content::
 
-``@echo Hello, World!``
+    @echo Hello, World!
 
 If you're on Linux or Mac and your main program file is called 'hello_world.sh',
-enter the following into the file's content:
+enter the following into the file's content::
 
-``echo Hello, World!``
+    echo Hello, World!
 
 Save the file.
 Now, whenever 'hello_world.bat' (or 'hello_world.sh') is executed, the sentence 'Hello, World!'
@@ -145,7 +145,7 @@ Adding a Tool item to the project
 Let's add a Tool item to our project, so that we're able to run the Tool template we created above.
 To add a Tool item please do one of the following:
 
-A) From the application menu bar, select **Edit -> Add Tool**.
+A) From the application main menu, select **Edit -> Add Tool**.
 B) Drag-and-drop the Tool icon (|tool_icon|) from the *Add Item* toolbar onto the *Design View*.
 
 The *Add Tool* form will popup.
@@ -207,14 +207,14 @@ and this time select **Edit main program file...** from the popup menu. This wil
 'hello_world.bat' (or 'hello_world.sh') in your default text editor.
 
 If you're on Windows and your main program file is called 'hello_world.bat',
-delete whatever it's in the file and enter the following instead:
+delete whatever it's in the file and enter the following instead::
 
-``type input.txt``
+    type input.txt
 
 If you're on Linux or Mac and your main program file is called 'hello_world.sh',
-delete whatever it's in the file and enter the following instead:
+delete whatever it's in the file and enter the following instead::
 
-``cat input.txt``
+    cat input.txt
 
 Save the file.
 Now, whenever 'hello_world.bat' (or 'hello_world.sh') is executed, it will look for a file called 'input.txt'
@@ -238,7 +238,7 @@ Adding a Data Connection item to the project
 Let's add a Data Connection item to our project, so that we're able to pass the file 'input.txt' to 'say hello world'.
 To add a Data Connection item, please do one of the following:
 
-A) From the application menu bar, click **Edit -> Add Data Connection**.
+A) From the application main menu, click **Edit -> Add Data Connection**.
 B) Drag-and-drop the Data Connection icon (|dc_icon|) from the *Add Item* toolbar onto the *Design View*.
 
 The *Add Data Connection* form will show up.
@@ -269,9 +269,9 @@ Now you should see the newly created file in the *Data* list:
 .. image:: img/pass_input_txt_dc_properties_with_file.png
    :align: center
 
-Double click on this file to open it in your default text editor. Then enter the following into the file's content:
+Double click on this file to open it in your default text editor. Then enter the following into the file's content::
 
-``Hello again, World!``
+    Hello again, World!
 
 Save the file.
 

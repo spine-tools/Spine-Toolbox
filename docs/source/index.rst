@@ -17,6 +17,7 @@ computation tasks, such as energy system models.
    settings
    data_store_views
    data_import_export
+   spine_datapackage_editor
    contribution_guide
    code_ref
 
