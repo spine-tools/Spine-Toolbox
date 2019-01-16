@@ -123,12 +123,12 @@ Right click on the 'hello_world' item in the *Tool templates* list and select **
 context menu. This will open the file 'hello_world.bat' (or 'hello_world.sh') in your default text editor.
 
 If you're on Windows and your main program file is called 'hello_world.bat',
-type the following:
+enter the following into the file's content:
 
 ``@echo Hello, World!``
 
 If you're on Linux or Mac and your main program file is called 'hello_world.sh',
-type the following:
+enter the following into the file's content:
 
 ``echo Hello, World!``
 
@@ -193,7 +193,7 @@ This will open the 'Edit Tool Template' form pre-filled with data from the 'hell
 
 Right below the *Input files* list, you will find two buttons. Click on the left one.
 A dialog will appear so that you can enter a
-name for a new input file. Type 'input.txt' and click **Ok**. The 'Edit Tool Template' form
+name for a new input file. Type 'input.txt' and click **Ok**. The form
 should now be looking like this:
 
 .. image:: img/hello_world_input_tool_template_editor.png
@@ -201,7 +201,7 @@ should now be looking like this:
 
 Clik **Ok** at the bottom of the form.
 
-So far so good. Now let's use this input file in our program file.
+So far so good. Now let's use this input file in our program.
 Click on the 'tool template options' button (|tool_template_options|) again,
 and this time select **Edit main program file...** from the popup menu. This will open the file
 'hello_world.bat' (or 'hello_world.sh') in your default text editor.
@@ -235,8 +235,7 @@ Adding a Data Connection item to the project
 .. note:: The **Data Connection** item is used to hold and manipulate generic data files,
    so that other items, notably Tool items, can make use of that data.
 
-Let's add a Data Connection item to our project, so that we're able to pass 'input.txt' to our 'say hello world'
-Tool.
+Let's add a Data Connection item to our project, so that we're able to pass the file 'input.txt' to 'say hello world'.
 To add a Data Connection item, please do one of the following:
 
 A) From the application menu bar, click **Edit -> Add Data Connection**.
@@ -262,18 +261,15 @@ of the window, looking similar to this:
 .. image:: img/pass_input_txt_dc_properties.png
    :align: center
 
-At the far bottom right you will find a button. Press it to open the Data Connection's directory in your
-file explorer.
-It should be an empty folder at the moment.
+Right click anywhere within the *Data* box and select **New file...** from the context menu.
+When prompted to enter a name for the new file, type 'input.txt' and click **Ok**.
 
-Now use whatever mechanism is available in your system to create a new
-file called 'input.txt' in this folder.
-Back to Spine Toolbox, you should see the newly created file in the *Data* list:
+Now you should see the newly created file in the *Data* list:
 
 .. image:: img/pass_input_txt_dc_properties_with_file.png
    :align: center
 
-Double click on this file to open it in your default text editor. Enter the following into the file's content:
+Double click on this file to open it in your default text editor. Then enter the following into the file's content:
 
 ``Hello again, World!``
 
@@ -297,3 +293,5 @@ Select 'say hello world' and press **Execute**. The Tool will run successfully t
 
 .. image:: img/hello_again_world_event_process_log.png
    :align: center
+
+That's all for now. I hope you've enjoyed following this guide as much as I enjoyed writing it. See you next time.
