@@ -7,9 +7,6 @@ Main Window
 
 This section describes the different components in the application main window.
 
-.. contents::
-    :local:
-
 The first time you start the application you will see the main window.
 
 .. image:: img/main_window_no_project.png

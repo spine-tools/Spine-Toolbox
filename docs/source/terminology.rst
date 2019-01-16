@@ -5,7 +5,35 @@
 Terminology
 ***********
 
-The following is a list of definitions that are used throughout the documentation and in Spine Toolbox.
+Here is a list of definitions that are used throughout the User Guide and in Spine Toolbox.
+
+Spine Toolbox Terminology
+-------------------------
+- **Data Connection** is a project item, which facilitates data transfer from original data sources,
+  e.g. spreadsheet files or databases, to Spine Toolbox. The original data source file does not need to
+  conform to the format that Spine Toolbox is capable of reading, since there is an interpreting layer
+  between them (Data Interface).
+- **Data Store** is a project item. It's a Spine Toolbox internal data container which follows the Spine data
+  model. A data store is implemented using a database, it may be, for example, an SQL database.
+- **Project** is a Spine Toolbox concept and consists of a data processing chain that
+  is built by the user for solving a particular problem. Current items that constitute a project are;
+  Data Connection, Data Store, Tool, and View. There can be any number of these items in a project, and
+  they can be connected by drawing links between them.
+- **Source directory** When in context of Tool templates, a Source directory is the directory where the main
+  program file of the Tool template is located. This is also where the Tool template definition file (.json) is
+  saved.
+- **Tool** is a project item that is used to execute Tool templates. To execute a script or a simulation
+  model in Spine Toolbox, you attach a Tool template to a Tool.
+- **Tool template** can be a computational process or a simulation model, or it can also be a script to
+  convert data or calculate a new variable. Tool template takes some data as input and produces an output.
+  Tool template contains a reference to the model code, external program that executes the code, and input
+  data that the model code requires. Spine Model is a Tool template from Spine Toolbox's point-of-view.
+- **View** A project item that can be used for visualizing project data.
+- **Work directory** A directory where Tool template execution takes place. When a Tool is executed, Spine Toolbox
+  creates a new *work* directory, copies all required and optional files needed for running the Tool template
+  to this directory and executes it there. After execution has finished, output or result files can be archived
+  into a timestamped results directory from the work directory.
+
 
 Spine project Terminology
 -------------------------
@@ -31,27 +59,3 @@ Spine project Terminology
 - **Use case** Potential way to use Spine Toolbox. Use cases together are used to test the
   functionality and stability of Spine Toolbox and Spine Model under different
   potential circumstances.
-
-Spine Toolbox Terminology
--------------------------
-- **Spine Toolbox Project** is a Toolbox concept and consists of a data processing chain that
-  is built by the user for solving a particular problem. Current items that constitute a project are;
-  Data Connection, Data Store, Tool, and View. There can be any number of these items in a project, and
-  they can be connected by drawing links between them.
-- **Data Connection** is a project item, which facilitates data transfer from original data sources,
-  e.g. spreadsheet files or databases, to Spine Toolbox. The original data source file does not need to
-  conform to the format that Spine Toolbox is capable of reading, since there is an interpreting layer
-  between them (Data Interface).
-- **Data Store** is a Spine Toolbox internal data container which follows the Spine data
-  model. A data store is implemented using a database, it may be, for example, an SQL database.
-- **Tool** can be a computation process or a simulation model, or it can also be a script to
-  convert data or calculate a new variable. Tool takes some data as input and produces an output.
-  Tool contains a reference to the model code, external program that executes the code, and input
-  data that the model code requires. Spine Model is a Tool from Spine Toolbox's point-of-view.
-- **View** A project item that can be used for visualizing project data.
-- **Work directory** A directory where Tool template execution takes place. When a Tool is executed, Spine Toolbox
-  creates a new *work* directory, copies all required and optional files needed for running the Tool template
-  to this directory and executes it there. After execution has finished, output or result files can be archived
-  into a timestamped results directory from the work directory.
-
-
