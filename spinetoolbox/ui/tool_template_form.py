@@ -406,7 +406,7 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Edit Tool Template", None, -1))
         self.lineEdit_name.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item name (required)</p></body></html>", None, -1))
-        self.lineEdit_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type tool name here...", None, -1))
+        self.lineEdit_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type name here...", None, -1))
         self.checkBox_execute_in_work.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>If checked, Tool template is executed in the work directory.</p><p>If not checked, Tool template is executed in the source directory where the main program file is located.</p><p>It is recommended to uncheck this for <span style=\" font-weight:600;\">Executable</span> Tool templates.</p></body></html>", None, -1))
         self.checkBox_execute_in_work.setText(QtWidgets.QApplication.translate("Form", "Execute in work directory", None, -1))
         self.textEdit_description.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type description here...", None, -1))
@@ -430,6 +430,6 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
+from widgets.custom_qtreeview import CustomTreeView, SourcesTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 import resources_icons_rc

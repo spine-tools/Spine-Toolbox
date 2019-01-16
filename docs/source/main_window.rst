@@ -7,7 +7,7 @@ Main Window
 
 This section describes the different components in the application main window.
 
-The first time you start the application you will see the main window.
+The first time you start the application you will see the main window like this.
 
 .. image:: img/main_window_no_project.png
    :align: center

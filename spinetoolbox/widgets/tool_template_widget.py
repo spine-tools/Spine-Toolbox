@@ -78,7 +78,7 @@ class ToolTemplateWidget(QWidget):
         self.ui.treeView_inputfiles.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.treeView_inputfiles_opt.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.treeView_outputfiles.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.comboBox_tooltype.addItem("Select tool type...")
+        self.ui.comboBox_tooltype.addItem("Select type...")
         self.ui.comboBox_tooltype.addItems(TOOL_TYPES)
         # if a template is given, fill the form with data from it
         if tool_template:
