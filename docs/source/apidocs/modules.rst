@@ -24,6 +24,7 @@ spinetoolbox
    tabularview_models
    test
    tool
+   tool_configuration_assistants
    tool_instance
    tool_templates
    ui

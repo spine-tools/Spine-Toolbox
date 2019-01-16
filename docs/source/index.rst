@@ -11,6 +11,7 @@ computation tasks, such as energy system models.
    :caption: Contents:
 
    main_window
+   tool_template_editor
    settings
    getting_started
    terminology

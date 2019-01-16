@@ -140,6 +140,14 @@ ui.tabular\_view\_form module
     :undoc-members:
     :show-inheritance:
 
+ui.tool\_configuration\_assistant module
+----------------------------------------
+
+.. automodule:: ui.tool_configuration_assistant
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 ui.tool\_template\_form module
 ------------------------------
 

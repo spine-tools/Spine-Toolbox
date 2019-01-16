@@ -180,6 +180,14 @@ widgets.tabular\_view\_widget module
     :undoc-members:
     :show-inheritance:
 
+widgets.tool\_configuration\_assistant\_widget module
+-----------------------------------------------------
+
+.. automodule:: widgets.tool_configuration_assistant_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 widgets.tool\_template\_widget module
 -------------------------------------
 
