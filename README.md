@@ -147,6 +147,8 @@ The required `qtconsole` package from the ***conda-forge*** channel also
 installs `qt` and `PyQt` packages. Since this is a `PySide2` application, those are 
 not needed and there is a chance of conflicts between the packages.
 
+**Note**: Spine Toolbox does not support PySide2 5.12 version (yet).
+
 ## Contribution Guide
 
 All are welcome to contribute!
