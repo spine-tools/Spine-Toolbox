@@ -1,4 +1,4 @@
-*Properties*..  Tutorial for Spine Toolbox
+..  Tutorial for Spine Toolbox
     Created: 18.6.2018
 
 .. |dc_icon| image:: ../../spinetoolbox/ui/resources/dc_icon.png

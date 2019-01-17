@@ -68,7 +68,7 @@ When you are happy with your Tool template, click Ok, and you will be asked wher
 It is recommended to save the file into the same directory where the main program file is located. The Tool
 template file is a text file in JSON format and has an extension *.json*
 
-.. note:: Only *name*, *type*, and *main program file* fields are required to make a Tool template. The other
+.. tip:: Only *name*, *type*, and *main program file* fields are required to make a Tool template. The other
    fields are optional.
 
 Here is a minimal Tool template for a Julia script *script.jl*
@@ -76,26 +76,35 @@ Here is a minimal Tool template for a Julia script *script.jl*
 .. image:: img/minimal_tool_template.png
    :align: center
 
-When the user clicks Ok, here are the contents of the Tool template definition .json file::
 
-   {
-       "name": "Example Tool template",
-       "description": "",
-       "tooltype": "julia",
-       "execute_in_work": true,
-       "includes": [
-           "script.jl"
-       ],
-       "inputfiles": [],
-       "inputfiles_opt": [],
-       "outputfiles": [],
-       "cmdline_args": ""
-   }
+.. note::
+
+   Under the hood, the contents of the Tool template are saved to a *Tool template definition file* in JSON
+   format. Users do not need to worry about the contents of these files since reading and writing them is
+   managed by the app. For the interested, here's the contents of the *Tool template definition file* that we
+   just created.::
+
+      {
+          "name": "Example Tool template",
+          "description": "",
+          "tooltype": "julia",
+          "execute_in_work": true,
+          "includes": [
+              "script.jl"
+          ],
+          "inputfiles": [],
+          "inputfiles_opt": [],
+          "outputfiles": [],
+          "cmdline_args": ""
+      }
 
 After the user has clicked Ok and saved the file, the new Tool template has been added to the project.
 
 .. image:: img/project_dock_widget_with_one_tool_template.png
    :align: center
+
+To edit this Tool template, just right-click on the Tool template name and select `Edit Tool template` from the
+context-menu.
 
 You are now ready to execute the Tool template in Spine Toolbox. You just need to select a Tool item in the
 *Design view*, set the template *Example Tool template* to it, and click execute.
