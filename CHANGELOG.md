@@ -3,36 +3,47 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
-This section is for upcoming changes.
+## [0.2] - 2019-01-17
 
 ### Added
-- New Setting (F1). You can now select whether to delete project item's data directory
-when removing a project item.
+- New Setting. You can now select whether to delete project item's data directory
+  when removing a project item.
 - Graph View is also available from Data Store items, allowing to insert new 
-relationships more graphically.
+  relationships more graphically.
 - You can now execute Tools in the work directory or the source directory (where the 
-main program file is located). The setting is in the Tool template editor and in Tool 
-properties.
-- Tool properties now shows the Tool template main program file and the optional input
-files
+  main program file is located). The Setting is in the Tool template editor and in Tool 
+  properties.
 - Tabular view: New view for Data Store items, allowing to view and edit data in a
-pivot table.
+  pivot table.
+- Tool Properties now shows all information about the attached Tool template
+- Context-menus for Data Connection Properties, Tool Properties, and View Properties
+- Support for optional input files for Tool templates. You can now use Unix style wildcards (`*` and `?`) 
+  to specify the optional files that a Tool may exploit, e.g. `*.csv`.
+- Wildcard support for Tool template output files
+- Tool template output files now support subdirectories
+- You can now create a new (blank) main program file in the Tool template editor by pressing the the *+* button 
+  and selecting `Make new main program` 
+- A shortcut to Tool template main directory, accessible e.g. in Tool Properties context-menu
+- New Setting. You can select whether the zoom in the Graph view is smooth or discrete
+- Windows installer default location is /Program Files/SpineToolbox/. When new versions are released, the 
+  installer will automatically upgrade Spine Toolbox to a new version in that directory.
+- Support for executing Executable type tools in Linux&Mac. (Windows support was added previously)
+- Tool configuration assistant. Available in menu `File->Tool configuration assistant`. Checks automatically 
+  if the Julia you have selected in Settings supports running Spine Model. If not, the required packages are 
+  automatically installed.
 
 ### Fixed
-- Tool template optional input files. You can now use Unix style wildcards (`*` and `?`) 
-to specify the optional files that a Tool may exploit, e.g. `*.csv`.
 - Better support for scaling screen resolutions
+- Exporting a datapackage to Spine format failed if datapackage.json was not explicitly saved
 
 ### Changed
 - Importing items with names into a spinedatabase moved to spinedatabase_api to
-allow for easier adding of new import formats in future verisions.
-
-### Deprecated
+  allow for easier adding of new import formats in future verisions.
+- Tool template list is now located in the Project dock widget below the list of Project items
+- New look for Spine Datapackage editor
 
 ### Removed
-
-### Security
+- Templates tab in `Project` dock widget.
 
 ## [0.1.75] - 2018-11-23
 
