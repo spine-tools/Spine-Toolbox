@@ -79,6 +79,7 @@ class TestAddItemsDialog(unittest.TestCase):
         button = dialog.ui.tableView.indexWidget(button_index)
         self.assertTrue(isinstance(button, QToolButton))
 
+    @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_data(self):
         """Test that data is pasted and the model grows.
         """

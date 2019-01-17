@@ -742,6 +742,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(split_scooby_nemo_object_id_list, [nemo_object_id, scooby_object_id])
         self.assertEqual(nemo_scooby_item_object_name_list, "nemo,scooby")
 
+    @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_add_object_parameter_definitions(self):
         """Test that data is pasted onto the view and object parameter definitions are added to the model.
         """
@@ -785,6 +786,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(breed.id, breed_id)
         self.assertEqual(water.id, water_id)
 
+    @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_add_object_parameter_values(self):
         """Test that data is pasted onto the view and object parameter values are added to the model.
         """
@@ -874,6 +876,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(pluto_breed.value, 'bloodhound')
         self.assertEqual(scooby_breed.value, 'great dane')
 
+    @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_add_relationship_parameter_definitions(self):
         """Test that data is pasted onto the view and relationship parameter definitions are added to the model.
         """
@@ -928,6 +931,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(relative_speed.id, relative_speed_id)
         self.assertEqual(combined_mojo.id, combined_mojo_id)
 
+    @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_add_relationship_parameter_values(self):
         """Test that data is pasted onto the view and relationship parameter values are added to the model.
         """
