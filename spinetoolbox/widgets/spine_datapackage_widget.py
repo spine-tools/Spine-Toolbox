@@ -327,9 +327,10 @@ class SpineDatapackageWidget(QMainWindow):
         except OSError:
             pass
         db_url = 'sqlite:///{0}'.format(file_path)
-        datapackage_path = os.path.join(self.datapackage.base_path, "datapackage.json")
+        # datapackage_path = os.path.join(self.datapackage.base_path, "datapackage.json")
         self.progress_bar.show()
-        converter = DatapackageToSpineConverter(db_url, datapackage_path)
+        # converter = DatapackageToSpineConverter(db_url, datapackage_path)
+        converter = DatapackageToSpineConverter(db_url, self.datapackage.descriptor, self.datapackage.base_path)
         converter.signaler.finished.connect(self._handle_converter_finished)
         converter.signaler.failed.connect(self._handle_converter_failed)
         converter.signaler.progressed.connect(self._handle_converter_progressed)

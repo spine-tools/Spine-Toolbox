@@ -399,7 +399,7 @@ class DataConnectionImage(ItemImage):
         if self.drag_over:
             return
         self.drag_over = True
-        QTimer.singleShot(500, self.select_on_drag_over)
+        QTimer.singleShot(100, self.select_on_drag_over)
 
     def drag_leave_event(self, event):
         """Drag and drop action leaves.
@@ -1042,7 +1042,7 @@ class ObjectItem(QGraphicsPixmapItem):
         label_position (str)
     """
     def __init__(self, graph_view_form, object_id, object_name, object_class_id, object_class_name,
-                 x, y, extent, label_font=QFont(), label_color=Qt.transparent, label_position='under_icon'):
+                 x, y, extent, label_font=QFont(), label_color=Qt.transparent, label_position="under_icon"):
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id = object_id
@@ -1434,6 +1434,9 @@ class ArcItem(QGraphicsLineItem):
         self.shape_item.hide()
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
+        self.setAcceptHoverEvents(True)
+        viewport = self._graph_view_form.ui.graphicsView.viewport()
+        self.viewport_cursor = viewport.cursor()
         # Token item
         self.token_item = QGraphicsPixmapItem()
         if object_class_name_list:
@@ -1516,7 +1519,10 @@ class ArcItem(QGraphicsLineItem):
         self.token_item.setPos(middle)
 
     def token_hover_enter_event(self, event):
-        """Show label if src and dst are not hovered."""
+        """Set viewport's cursor to arrow; show label if src and dst are not hovered."""
+        # viewport = self._graph_view_form.ui.graphicsView.viewport()
+        # self.viewport_cursor = viewport.cursor()
+        # viewport.setCursor(Qt.ArrowCursor)
         self.label_item.setPos(
             event.scenePos().x() - self.label_item.boundingRect().x() + 16,
             event.scenePos().y() - self.label_item.boundingRect().y() + 16)
@@ -1534,8 +1540,23 @@ class ArcItem(QGraphicsLineItem):
         self.label_item.show()
 
     def token_hover_leave_event(self, event):
-        """Hide label."""
+        """Restore viewport's cursor and hide label."""
+        # viewport = self._graph_view_form.ui.graphicsView.viewport()
+        # viewport.setCursor(self.viewport_cursor)
         self.label_item.hide()
+
+    def hoverEnterEvent(self, event):
+        """Set viewport's cursor to arrow, to signify that this item is not draggable."""
+        pass
+        # viewport = self._graph_view_form.ui.graphicsView.viewport()
+        # self.viewport_cursor = viewport.cursor()
+        # viewport.setCursor(Qt.ArrowCursor)
+
+    def hoverLeaveEvent(self, event):
+        """Restore viewport's cursor."""
+        pass
+        # viewport = self._graph_view_form.ui.graphicsView.viewport()
+        # viewport.setCursor(self.viewport_cursor)
 
 
 class ObjectLabelItem(QGraphicsTextItem):
@@ -1606,7 +1627,6 @@ class ArcLabelItem(QGraphicsRectItem):
         for item in object_items:
             item._label_position = 'beside_icon'
             item.label_item.setTextWidth(-1)
-            item.label_item.set_bg_color(Qt.transparent)
         for item in object_items + arc_items:
             item.setParentItem(self)
         rect = self.childrenBoundingRect()

@@ -804,3 +804,7 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setText(database)
         self._toolbox.ui.lineEdit_username.setText(username)
         self._toolbox.ui.lineEdit_password.clear()
+
+    def update_name_label(self):
+        """Update Data Store tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_ds_name.setText(self.name)

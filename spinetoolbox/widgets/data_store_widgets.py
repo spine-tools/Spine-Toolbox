@@ -25,7 +25,7 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
     QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
-    QButtonGroup, QSizePolicy, QHBoxLayout, QWidget
+    QButtonGroup, QSizePolicy, QHBoxLayout, QWidget, QWidgetAction
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
@@ -41,6 +41,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
+from widgets.custom_qwidget import ZoomWidget
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
@@ -229,7 +230,7 @@ class DataStoreForm(QMainWindow):
         self.init_models()
 
     def object_icon(self, object_class_name):
-        """An appropriate object icon for object_class_name."""
+        """An appropriate object icon for `object_class_name`."""
         if not object_class_name:
             return QIcon()
         try:
@@ -240,7 +241,7 @@ class DataStoreForm(QMainWindow):
         return icon
 
     def relationship_icon(self, object_class_name_list):
-        """An appropriate relationship icon for object_class_name_list."""
+        """An appropriate relationship icon for `object_class_name_list`."""
         if not object_class_name_list:
             return QIcon()
         try:
@@ -1968,7 +1969,7 @@ class GraphViewForm(DataStoreForm):
         # Icon dicts
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
-        # Contex menus
+        # Context menus
         self.object_item_context_menu = None
         self.graph_view_context_menu = None
         # Hidden and rejected items
@@ -1977,6 +1978,9 @@ class GraphViewForm(DataStoreForm):
         # Current item selection
         self.object_item_selection = list()
         self.arc_item_selection = list()
+        # Zoom widget and action
+        self.zoom_widget_action = None
+        self.zoom_widget = None
         # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_parameter)
         self._handle_parameter_dock_location_changed(area)
@@ -1987,6 +1991,7 @@ class GraphViewForm(DataStoreForm):
         self.init_views()
         self.setup_delegates()
         self.create_add_more_actions()
+        self.setup_zoom_action()
         self.connect_signals()
         self.settings_key = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
@@ -2029,6 +2034,14 @@ class GraphViewForm(DataStoreForm):
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
 
+    def setup_zoom_action(self):
+        """Setup zoom action in view menu."""
+        self.zoom_widget = ZoomWidget(self)
+        self.zoom_widget_action = QWidgetAction(self)
+        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
+        self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.zoom_widget_action)
+
     def create_add_more_actions(self):
         """Create and 'Add more' action and button for the Item Palette views."""
         # object class
@@ -2069,6 +2082,29 @@ class GraphViewForm(DataStoreForm):
         self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
         self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
+        self.zoom_widget_action.hovered.connect(self._handle_zoom_widget_action_hovered)
+        self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
+        self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
+        self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+
+    @Slot(name="_handle_zoom_widget_minus_pressed")
+    def _handle_zoom_widget_minus_pressed(self):
+        self.ui.graphicsView.zoom_out()
+
+    @Slot(name="_handle_zoom_widget_plus_pressed")
+    def _handle_zoom_widget_plus_pressed(self):
+        self.ui.graphicsView.zoom_in()
+
+    @Slot(name="_handle_zoom_widget_reset_pressed")
+    def _handle_zoom_widget_reset_pressed(self):
+        self.ui.graphicsView.reset_zoom()
+
+    @Slot(name="_handle_zoom_widget_action_hovered")
+    def _handle_zoom_widget_action_hovered(self):
+        """Called when the zoom widget action is hovered. Hide the 'Dock widgets' submenu in case
+        it's being shown. This is the default behavior for hovering 'normal' `QAction`s, but for some reason
+        it's not the case for hovering `QWidgetAction`s."""
+        self.ui.menuDock_Widgets.hide()
 
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
@@ -2384,7 +2420,7 @@ class GraphViewForm(DataStoreForm):
             label_object_class_names = self.arc_label_object_class_name_lists[k]
             label_parts = self.relationship_graph(
                 label_object_names, label_object_class_names, self.extent, self._spread / 2,
-                label_font=self.font, label_color=Qt.transparent,
+                label_font=self.font, label_color=Qt.transparent, # label_color=self.object_label_color
                 relationship_class_id=relationship_class_id)
             arc_item = ArcItem(
                 self, object_id_list, relationship_class_id, label_object_class_names, # object_class_names,

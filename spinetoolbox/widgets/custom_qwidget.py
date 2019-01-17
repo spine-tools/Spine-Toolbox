@@ -16,9 +16,11 @@ Unit tests for PivotModel class.
 :date:   4.12.2018
 """
 
-from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QListView, QLineEdit, \
-    QDialogButtonBox, QMenu, QPushButton, QWidgetAction, QAction, QTableView, QStyle
+from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, QListView, QLineEdit, \
+    QDialogButtonBox, QMenu, QPushButton, QAction, QTableView, QStyle, QPushButton, \
+    QLabel, QToolBar, QToolButton, QStyleOptionMenuItem
 from PySide2.QtCore import Qt, QTimer, Signal, Slot
+from PySide2.QtGui import QPixmap, QPainter
 from tabularview_models import FilterCheckboxListModel
 from models import MinimalTableModel
 from widgets.custom_delegates import CheckBoxDelegate
@@ -197,3 +199,43 @@ class FilterWidget(QWidget):
         # is edited before last time is out.
         self._search_text = new_text
         self._search_timer.start(self.search_delay)
+
+
+class ZoomWidget(QWidget):
+    """A widget for a QWidgetAction providing zoom actions for the graph view.
+
+    Attributes
+        parent (QWidget): the widget's parent
+    """
+
+    minus_pressed = Signal(name="minus_pressed")
+    plus_pressed = Signal(name="plus_pressed")
+    reset_pressed = Signal(name="reset_pressed")
+
+    def __init__(self, parent=None):
+        """Init class."""
+        super().__init__(parent)
+        self.option = QStyleOptionMenuItem()
+        zoom_action = QAction("Zoom")
+        QMenu(parent).initStyleOption(self.option, zoom_action)
+        layout = QHBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        tool_bar = QToolBar(self)
+        tool_bar.setFixedHeight(self.option.rect.height())
+        minus_action = tool_bar.addAction("-")
+        reset_action = tool_bar.addAction("Reset")
+        plus_action = tool_bar.addAction("+")
+        layout.addSpacing(self.option.rect.width())
+        layout.addWidget(tool_bar)
+        minus_action.setToolTip("Zoom out")
+        reset_action.setToolTip("Reset zoom")
+        plus_action.setToolTip("Zoom in")
+        minus_action.triggered.connect(lambda x: self.minus_pressed.emit())
+        plus_action.triggered.connect(lambda x: self.plus_pressed.emit())
+        reset_action.triggered.connect(lambda x: self.reset_pressed.emit())
+
+    def paintEvent(self, event):
+        painter = QPainter(self)
+        self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
+        super().paintEvent(event)

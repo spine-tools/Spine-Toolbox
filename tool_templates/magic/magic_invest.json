@@ -11,8 +11,8 @@
         "input/sub-folder1/*.gms"
     ],
     "inputfiles": [
-        "input/data.gdx",
-        "input/required_file.txt"
+        "input/required_file.txt",
+        "input/data.gdx"
     ],
     "inputfiles_opt": [
         "input/magic_*.dat",

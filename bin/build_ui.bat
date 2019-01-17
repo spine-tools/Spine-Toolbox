@@ -104,6 +104,11 @@ CALL pyside2-uic ../spinetoolbox/ui/tabular_view_form.ui -o ../spinetoolbox/ui/t
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\tabular_view_form.py.o > ..\spinetoolbox\ui\tabular_view_form.py
 del ..\spinetoolbox\ui\tabular_view_form.py.o
 
+ECHO building tool_configuration_assistant.py
+CALL pyside2-uic ../spinetoolbox/ui/tool_configuration_assistant.ui -o ../spinetoolbox/ui/tool_configuration_assistant.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\tool_configuration_assistant.py.o > ..\spinetoolbox\ui\tool_configuration_assistant.py
+del ..\spinetoolbox\ui\tool_configuration_assistant.py.o
+
 ECHO building tool_template_form.py
 CALL pyside2-uic ../spinetoolbox/ui/tool_template_form.ui -o ../spinetoolbox/ui/tool_template_form.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\tool_template_form.py.o > ..\spinetoolbox\ui\tool_template_form.py
@@ -140,6 +145,7 @@ CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
 CALL append_license_xml ..\spinetoolbox\ui\spine_datapackage_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\tabular_view_form.ui
+CALL append_license_xml ..\spinetoolbox\ui\tool_configuration_assistant.ui
 CALL append_license_xml ..\spinetoolbox\ui\tool_template_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\tree_view_form.ui
 ECHO.
@@ -161,6 +167,7 @@ CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py
 CALL append_license_py ..\spinetoolbox\ui\spine_datapackage_form.py
 CALL append_license_py ..\spinetoolbox\ui\tabular_view_form.py
+CALL append_license_py ..\spinetoolbox\ui\tool_configuration_assistant.py
 CALL append_license_py ..\spinetoolbox\ui\tool_template_form.py
 CALL append_license_py ..\spinetoolbox\ui\tree_view_form.py
 CALL append_license_py ..\spinetoolbox\resources_icons_rc.py

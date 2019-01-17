@@ -298,10 +298,15 @@ class GraphViewGraphicsView(QGraphicsView):
         super().__init__(parent)
         self._graph_view_form = None
         self._zoom_factor_base = 1.0015
+        self._angle = 120
         self.target_viewport_pos = None
         self.target_scene_pos = QPointF(0, 0)
         self._num_scheduled_scalings = 0
         self.anim = None
+        self.rel_zoom_factor = 1.0
+        self.default_zoom_factor = None
+        self.max_rel_zoom_factor = 10.0
+        self.min_rel_zoom_factor = 0.1
 
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
@@ -313,58 +318,78 @@ class GraphViewGraphicsView(QGraphicsView):
         self.target_viewport_pos = event.pos()
         self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
 
-    # def wheelEvent(self, event):
-    #    """Zoom in/out."""
-    #    if event.orientation() != Qt.Vertical:
-    #        event.ignore()
-    #        return
-    #    event.accept()
-    #    angle = event.angleDelta().y()
-    #    self.gentle_zoom(angle)
-
-    # def gentle_zoom(self, angle):
-    #    """Perform the zoom."""
-    #    factor = self._zoom_factor_base ** angle
-    #    self.scale(factor, factor)
-    #    self.centerOn(self.target_scene_pos)
-    #    delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
-    #    viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
-    #    self.centerOn(self.mapToScene(viewport_center))
-
     def wheelEvent(self, event):
         """Zoom in/out."""
         if event.orientation() != Qt.Vertical:
             event.ignore()
             return
         event.accept()
-        num_degrees = event.delta() / 8
-        num_steps = num_degrees / 15
-        self._num_scheduled_scalings += num_steps
-        if self._num_scheduled_scalings * num_steps < 0:
-            self._num_scheduled_scalings = num_steps
-        if self.anim:
-            self.anim.deleteLater()
-        self.anim = QTimeLine(200, self)
-        self.anim.setUpdateInterval(20)
-        self.anim.valueChanged.connect(self.scaling_time)
-        self.anim.finished.connect(self.anim_finished)
-        self.anim.start()
+        try:
+            config = self._graph_view_form._data_store._toolbox._config
+            use_smooth_zoom = config.getboolean("settings", "use_smooth_zoom")
+        except AttributeError:
+            use_smooth_zoom = False
+        if use_smooth_zoom:
+            num_degrees = event.delta() / 8
+            num_steps = num_degrees / 15
+            self._num_scheduled_scalings += num_steps
+            if self._num_scheduled_scalings * num_steps < 0:
+                self._num_scheduled_scalings = num_steps
+            if self.anim:
+                self.anim.deleteLater()
+            self.anim = QTimeLine(200, self)
+            self.anim.setUpdateInterval(20)
+            self.anim.valueChanged.connect(self.scaling_time)
+            self.anim.finished.connect(self.anim_finished)
+            self.anim.start()
+        else:
+            angle = event.angleDelta().y()
+            factor = self._zoom_factor_base ** angle
+            self.gentle_zoom(factor)
 
     def scaling_time(self, x):
+        """Called when animation value for smooth zoom changes. Perform zoom."""
         factor = 1.0 + self._num_scheduled_scalings / 100.0
-        self.scale(factor, factor)
-        self.centerOn(self.target_scene_pos)
-        delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
-        viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
-        self.centerOn(self.mapToScene(viewport_center))
+        self.gentle_zoom(factor)
 
     def anim_finished(self):
+        """Called when animation for smooth zoom finishes. Clean up."""
         if self._num_scheduled_scalings > 0:
             self._num_scheduled_scalings -= 1
         else:
             self._num_scheduled_scalings += 1
         self.sender().deleteLater()
         self.anim = None
+
+    def zoom_in(self):
+        """Perform a zoom in with a fixed scaling."""
+        self.target_viewport_pos = self.viewport().rect().center()
+        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
+        self.gentle_zoom(self._zoom_factor_base ** self._angle)
+
+    def zoom_out(self):
+        """Perform a zoom out with a fixed scaling."""
+        self.gentle_zoom(self._zoom_factor_base ** -self._angle)
+
+    def reset_zoom(self):
+        """Reset zoom to the default factor."""
+        if not self.default_zoom_factor:
+            return
+        self.resetTransform()
+        self.scale(self.default_zoom_factor, self.default_zoom_factor)
+        self.rel_zoom_factor = 1.0
+
+    def gentle_zoom(self, factor):
+        """Perform a zoom by a given factor."""
+        new_rel_zoom_factor = self.rel_zoom_factor * factor
+        if new_rel_zoom_factor > self.max_rel_zoom_factor or new_rel_zoom_factor < self.min_rel_zoom_factor:
+            return
+        self.rel_zoom_factor = new_rel_zoom_factor
+        self.scale(factor, factor)
+        self.centerOn(self.target_scene_pos)
+        delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
+        viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
+        self.centerOn(self.mapToScene(viewport_center))
 
     def scale_to_fit_scene(self):
         """Scale view so the scene fits best in it."""
@@ -374,16 +399,17 @@ class GraphViewGraphicsView(QGraphicsView):
         scene_extent = max(scene_rect.width(), scene_rect.height())
         if not scene_extent:
             return
-        self.resetTransform()
         size = self.size()
         extent = min(size.height(), size.width())
-        factor = extent / scene_extent
-        self.scale(factor, factor)
+        self.default_zoom_factor = extent / scene_extent
+        self.reset_zoom()
 
     def mousePressEvent(self, event):
         """Set rubber band drag mode if control pressed."""
         if event.modifiers() & Qt.ControlModifier:
             self.setDragMode(QGraphicsView.RubberBandDrag)
+        if event.button() == Qt.MidButton:
+            self.reset_zoom()
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):

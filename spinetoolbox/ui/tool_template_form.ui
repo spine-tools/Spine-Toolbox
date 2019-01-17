@@ -22,7 +22,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>743</height>
+    <height>760</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -96,7 +96,7 @@
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Item name (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="placeholderText">
-          <string>Type tool name here...</string>
+          <string>Type name here...</string>
          </property>
          <property name="clearButtonEnabled">
           <bool>true</bool>
@@ -165,7 +165,7 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_6">
        <item>
-        <widget class="QLineEdit" name="lineEdit_main_program">
+        <widget class="CustomQLineEdit" name="lineEdit_main_program">
          <property name="placeholderText">
           <string>Add main program file here...</string>
          </property>
@@ -181,6 +181,16 @@
            <width>22</width>
            <height>22</height>
           </size>
+         </property>
+         <property name="icon">
+          <iconset resource="resources/resources_icons.qrc">
+           <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+         </property>
+         <property name="popupMode">
+          <enum>QToolButton::InstantPopup</enum>
+         </property>
+         <property name="autoRaise">
+          <bool>false</bool>
          </property>
         </widget>
        </item>
@@ -247,7 +257,7 @@
             </font>
            </property>
            <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
+            <enum>Qt::StrongFocus</enum>
            </property>
            <property name="acceptDrops">
             <bool>true</bool>
@@ -260,6 +270,9 @@
            </property>
            <property name="selectionMode">
             <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
            </property>
            <property name="indentation">
             <number>5</number>
@@ -380,7 +393,7 @@
           <number>6</number>
          </property>
          <item>
-          <widget class="QTreeView" name="treeView_inputfiles">
+          <widget class="CustomTreeView" name="treeView_inputfiles">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Preferred">
              <horstretch>0</horstretch>
@@ -399,7 +412,7 @@
             </font>
            </property>
            <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
+            <enum>Qt::StrongFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -410,8 +423,14 @@
            <property name="selectionMode">
             <enum>QAbstractItemView::ExtendedSelection</enum>
            </property>
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
+           </property>
            <property name="indentation">
             <number>5</number>
+           </property>
+           <property name="uniformRowHeights">
+            <bool>false</bool>
            </property>
           </widget>
          </item>
@@ -510,7 +529,7 @@
           <number>6</number>
          </property>
          <item>
-          <widget class="QTreeView" name="treeView_inputfiles_opt">
+          <widget class="CustomTreeView" name="treeView_inputfiles_opt">
            <property name="maximumSize">
             <size>
              <width>16777215</width>
@@ -523,13 +542,16 @@
             </font>
            </property>
            <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
+            <enum>Qt::StrongFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="selectionMode">
             <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
            </property>
            <property name="indentation">
             <number>5</number>
@@ -631,7 +653,7 @@
           <number>6</number>
          </property>
          <item>
-          <widget class="QTreeView" name="treeView_outputfiles">
+          <widget class="CustomTreeView" name="treeView_outputfiles">
            <property name="maximumSize">
             <size>
              <width>16777215</width>
@@ -644,13 +666,16 @@
             </font>
            </property>
            <property name="focusPolicy">
-            <enum>Qt::NoFocus</enum>
+            <enum>Qt::WheelFocus</enum>
            </property>
            <property name="toolTip">
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Double-click or press F2 to edit selected item&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="selectionMode">
             <enum>QAbstractItemView::ExtendedSelection</enum>
+           </property>
+           <property name="verticalScrollMode">
+            <enum>QAbstractItemView::ScrollPerPixel</enum>
            </property>
            <property name="indentation">
             <number>5</number>
@@ -868,7 +893,17 @@
  </widget>
  <customwidgets>
   <customwidget>
+   <class>CustomQLineEdit</class>
+   <extends>QLineEdit</extends>
+   <header>widgets/custom_qlineedit.h</header>
+  </customwidget>
+  <customwidget>
    <class>SourcesTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CustomTreeView</class>
    <extends>QTreeView</extends>
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
@@ -881,13 +916,17 @@
   <tabstop>lineEdit_main_program</tabstop>
   <tabstop>toolButton_add_main_program</tabstop>
   <tabstop>lineEdit_args</tabstop>
+  <tabstop>treeView_sourcefiles</tabstop>
   <tabstop>toolButton_add_source_files</tabstop>
   <tabstop>toolButton_add_source_dirs</tabstop>
   <tabstop>toolButton_minus_source_files</tabstop>
+  <tabstop>treeView_inputfiles</tabstop>
   <tabstop>toolButton_plus_inputfiles</tabstop>
   <tabstop>toolButton_minus_inputfiles</tabstop>
+  <tabstop>treeView_inputfiles_opt</tabstop>
   <tabstop>toolButton_plus_inputfiles_opt</tabstop>
   <tabstop>toolButton_minus_inputfiles_opt</tabstop>
+  <tabstop>treeView_outputfiles</tabstop>
   <tabstop>toolButton_plus_outputfiles</tabstop>
   <tabstop>toolButton_minus_outputfiles</tabstop>
   <tabstop>pushButton_ok</tabstop>

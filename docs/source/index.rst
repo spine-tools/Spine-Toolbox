@@ -6,14 +6,21 @@ Welcome to Spine Toolbox's User Guide!
 Spine Toolbox is an application, which provides means to define, manage, and execute complex data processing and
 computation tasks, such as energy system models.
 
-..  toctree::
-    :maxdepth: 1
-    :caption: Contents:
+.. toctree::
+   :maxdepth: 1
+   :caption: Contents:
 
-    getting_started
-    terminology
-    contribution_guide
-    code_ref
+   terminology
+   getting_started
+   main_window
+   tool_template_editor
+   executing_tools
+   settings
+   data_store_views
+   data_import_export
+   spine_datapackage_editor
+   contribution_guide
+   code_ref
 
 Dependencies
 ------------
@@ -23,14 +30,14 @@ Spine Toolbox uses code from packages and/or projects listed in the table below.
 installed for the application to start. Users can choose the SQL dialect API (pymysql, pyodbc psycopg2, and cx_Oracle)
 they want to use. These can be installed in Spine Toolbox when needed. Sphinx, recommonmark, and cx_Freeze
 packages are needed for building the user guide and for deploying the application. All version numbers are
-minimum versions.
+minimum versions except pyside2 5.12 version is not supported (yet).
 
 +-------------------+---------------+---------------+
 | Package name      |    Version    |     License   |
 +===================+===============+===============+
 | **Required packages (requirements.txt)**          |
 +-------------------+---------------+---------------+
-| pyside2           | 5.6           |     LGPL      |
+| pyside2           | <5.12         |     LGPL      |
 +-------------------+---------------+---------------+
 | datapackage       | 1.2.3         |     MIT       |
 +-------------------+---------------+---------------+

@@ -103,7 +103,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
             self._toolbox.msg_error.emit("\tCouldn't determine Julia version. "
-                                         "Make sure that Julia is installed properly on your computer "
+                                         "Make sure that Julia is correctly installed "
                                          "and try again.")
             return None
         julia_version = q_process.output
@@ -156,7 +156,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         except FileNotFoundError:
             self._toolbox.msg_error.emit("\tCouldn't find the Julia executable specified by the Jupyter kernel.")
             return self.handle_repl_failed_to_start()
-        except NoSuchKernel:  # TODO: in which case this exactly happens
+        except NoSuchKernel:  # TODO: in which case this exactly happens?
             self._toolbox.msg_error.emit("\t[NoSuchKernel] Couldn't find the specified Julia Jupyter kernel.")
             return self.handle_repl_failed_to_start()
 
@@ -172,8 +172,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
-            self._toolbox.msg_error.emit("\tCouldn't determine if IJulia is installed. "
-                                         "Make sure that Julia is installed properly on your computer "
+            self._toolbox.msg_error.emit("\tCouldn't start Julia to check IJulia status. "
+                                         "Make sure that Julia is correctly installed "
                                          "and try again.")
             return None
         if q_process.output == "True":

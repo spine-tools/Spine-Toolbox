@@ -390,7 +390,6 @@ class ToolTemplateModel(QAbstractListModel):
     def __init__(self, toolbox=None):
         super().__init__()
         self._tools = list()
-        self._tools.append('No Tool template')  # TODO: Try to get rid of this
         self._toolbox = toolbox
 
     def rowCount(self, parent=None, *args, **kwargs):
@@ -418,15 +417,11 @@ class ToolTemplateModel(QAbstractListModel):
         if not index.isValid() or self.rowCount() == 0:
             return None
         row = index.row()
-        # TODO: Try to get rid of first item (str: 'No Tool') by just returning 'No Tool' when rowCount == 1 && row==0
         if role == Qt.DisplayRole:
-            if row == 0:
-                return self._tools[0]
-            else:
-                toolname = self._tools[row].name
-                return toolname
+            toolname = self._tools[row].name
+            return toolname
         elif role == Qt.ToolTipRole:
-            if row == 0 or row >= self.rowCount():
+            if row >= self.rowCount():
                 return ""
             else:
                 return self._tools[row].def_file_path
@@ -499,8 +494,6 @@ class ToolTemplateModel(QAbstractListModel):
         Returns:
             ToolTemplate from tool template list or None if given row is zero
         """
-        if row == 0:
-            return None
         return self._tools[row]
 
     def find_tool_template(self, name):
@@ -510,26 +503,20 @@ class ToolTemplateModel(QAbstractListModel):
             name (str): Name of tool template to find
         """
         for template in self._tools:
-            if isinstance(template, str):
-                continue
-            else:
-                if name.lower() == template.name.lower():
-                    return template
+            if name.lower() == template.name.lower():
+                return template
         return None
 
     def tool_template_row(self, name):
         """Returns the row on which the given template is located or -1 if it is not found."""
         for i in range(len(self._tools)):
-            if isinstance(self._tools[i], str):
-                continue
-            else:
-                if name == self._tools[i].name:
-                    return i
+            if name == self._tools[i].name:
+                return i
         return -1
 
     def tool_template_index(self, name):
         """Returns the QModelIndex on which a tool template with
-        the given name is located or None if it is not found."""
+        the given name is located or invalid index if it is not found."""
         row = self.tool_template_row(name)
         if row == -1:
             return QModelIndex()
@@ -1778,10 +1765,10 @@ class ObjectTreeModel(QStandardItemModel):
 
     def update_relationships(self, updated_items):
         """Update relationships in the model.
-        This may require moving rows if the objects in the relationship have changed."""
+        NOTE: This may require moving rows if the objects in the relationship have changed."""
         items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         updated_items_dict = {x.id: x for x in updated_items}
-        ids_to_add = set()
+        relationships_to_add = set()
         for visited_item in reversed(items):
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != "relationship":
@@ -1789,20 +1776,19 @@ class ObjectTreeModel(QStandardItemModel):
             visited_id = visited_item.data(Qt.UserRole + 1)['id']
             try:
                 updated_item = updated_items_dict[visited_id]
-                # Handle changes in object path
-                visited_object_id_list = visited_item.data(Qt.UserRole + 1)['object_id_list']
-                updated_object_id_list = updated_item.object_id_list
-                if visited_object_id_list != updated_object_id_list:
-                    visited_index = self.indexFromItem(visited_item)
-                    self.removeRows(visited_index.row(), 1, visited_index.parent())
-                    ids_to_add.add(visited_id)
-                else:
-                    visited_item.setText(updated_item.object_name_list)
-                    visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
             except KeyError:
                 continue
-        for id in ids_to_add:
-            self.add_relationship(updated_items_dict[id])
+            # Handle changes in object path
+            visited_object_id_list = visited_item.data(Qt.UserRole + 1)['object_id_list']
+            updated_object_id_list = updated_item.object_id_list
+            if visited_object_id_list != updated_object_id_list:
+                visited_index = self.indexFromItem(visited_item)
+                self.removeRows(visited_index.row(), 1, visited_index.parent())
+                relationships_to_add.add(updated_item)
+            else:
+                visited_item.setText(updated_item.object_name_list)
+                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+        self.add_relationships(relationships_to_add)
 
     def remove_items(self, removed_type, removed_ids):
         """Remove all matched items and their 'childs'."""
@@ -2139,37 +2125,58 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         relationships_to_add = dict()
         # Get column numbers
         header = self._parent.horizontal_header_labels()
+        relationship_class_id_column = header.index('relationship_class_id')
         relationship_class_name_column = header.index('relationship_class_name')
+        object_class_id_list_column = header.index('object_class_id_list')
+        object_class_name_list_column = header.index('object_class_name_list')
         object_id_list_column = header.index('object_id_list')
         object_name_list_column = header.index('object_name_list')
+        parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
         relationship_class_dict = {
-            x.name: {
-                'id': x.id,
-                'object_class_count': len(x.object_class_id_list.split(','))
+            x.id: {
+                "name": x.name,
+                "object_class_id_list": x.object_class_id_list,
+                "object_class_name_list": x.object_class_name_list
             } for x in self._parent.db_map.wide_relationship_class_list()}
-        relationship_dict = {
-            x.id: (x.class_id, [int(y) for y in x.object_id_list.split(",")])
-            for x in self._parent.db_map.wide_relationship_list()}
+        relationship_class_name_id_dict = {
+            x.name: x.id for x in self._parent.db_map.wide_relationship_class_list()}
+        parameter_name_relationship_class_id_dict = {
+            x.name: x.relationship_class_id for x in self._parent.db_map.parameter_list()}
         relationship_dict = {
             (x.class_id, x.object_id_list): x.id for x in self._parent.db_map.wide_relationship_list()}
         object_dict = {x.name: x.id for x in self._parent.db_map.object_list()}
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
+            # Find relationship_class_id: trust relationship_class_name the most
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             try:
-                relationship_class = relationship_class_dict[relationship_class_name]
+                relationship_class_id = relationship_class_name_id_dict[relationship_class_name]
             except KeyError:
+                parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
+                try:
+                    relationship_class_id = parameter_name_relationship_class_id_dict[parameter_name]
+                except KeyError:
+                    continue
+            relationship_class = relationship_class_dict[relationship_class_id]
+            correct_relationship_class_name = relationship_class['name']
+            object_class_id_list = relationship_class['object_class_id_list']
+            object_class_name_list = relationship_class['object_class_name_list']
+            self._main_data[row][relationship_class_id_column] = relationship_class_id
+            self._main_data[row][relationship_class_name_column] = correct_relationship_class_name
+            self._main_data[row][object_class_id_list_column] = object_class_id_list
+            self._main_data[row][object_class_name_list_column] = object_class_name_list
+            if correct_relationship_class_name != relationship_class_name:
+                indexes.append(self.index(row, relationship_class_name_column))
+            object_name_list = self.index(row, object_name_list_column).data(Qt.DisplayRole)
+            if not object_name_list:
+                continue
+            split_object_name_list = object_name_list.split(",")
+            object_class_count = len(object_class_id_list.split(","))
+            if len(split_object_name_list) < object_class_count:
                 continue
             object_id_list = list()
-            join_object_name_list = self.index(row, object_name_list_column).data(Qt.DisplayRole)
-            if not join_object_name_list:
-                continue
-            object_name_list = join_object_name_list.split(",")
-            object_class_count = relationship_class['object_class_count']
-            if len(object_name_list) < object_class_count:
-                continue
-            for object_name in object_name_list:
+            for object_name in split_object_name_list:
                 try:
                     object_id = object_dict[object_name]
                     object_id_list.append(object_id)
@@ -2179,14 +2186,14 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                 continue
             join_object_id_list = ",".join([str(x) for x in object_id_list])
             try:
-                relationship_id = relationship_dict[relationship_class['id'], join_object_id_list]
+                relationship_id = relationship_dict[relationship_class_id, join_object_id_list]
                 relationships_on_the_fly[row] = relationship_id
             except KeyError:
-                relationship_name = relationship_class_name + "_" + "__".join(object_name_list)
+                relationship_name = correct_relationship_class_name + "_" + "__".join(split_object_name_list)
                 relationship = {
                     "name": relationship_name,
                     "object_id_list": object_id_list,
-                    "class_id": relationship_class['id']
+                    "class_id": relationship_class_id
                 }
                 relationships_to_add[row] = relationship
             self._main_data[row][object_id_list_column] = join_object_id_list
@@ -2216,59 +2223,22 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         items_to_add = dict()
         # Get column numbers
         header = self._parent.horizontal_header_labels()
-        relationship_class_id_column = header.index('relationship_class_id')
-        relationship_class_name_column = header.index('relationship_class_name')
-        object_class_id_list_column = header.index('object_class_id_list')
-        object_class_name_list_column = header.index('object_class_name_list')
         relationship_id_column = header.index('relationship_id')
         parameter_id_column = header.index('parameter_id')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
-        relationship_class_name_id_dict = {
-            x.name: x.id for x in self._parent.db_map.wide_relationship_class_list()}
-        relationship_class_dict = {
-            x.id: {
-                "name": x.name,
-                "object_class_id_list": x.object_class_id_list,
-                "object_class_name_list": x.object_class_name_list
-            } for x in self._parent.db_map.wide_relationship_class_list()}
-        parameter_dict = {
-            x.name: {
-                'id': x.id,
-                'relationship_class_id': x.relationship_class_id
-            } for x in self._parent.db_map.parameter_list()}
+        parameter_dict = {x.name: x.id for x in self._parent.db_map.parameter_list()}
         for row in {ind.row() for ind in indexes}:
-            relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            parameter = parameter_dict.get(parameter_name)
-            # Find relationship_class_id: trust relationship_class_name the most
-            relationship_class_id = None
-            if parameter:
-                relationship_class_id = parameter['relationship_class_id']
-                parameter_id = parameter['id']
+            try:
+                parameter_id = parameter_dict[parameter_name]
                 self._main_data[row][parameter_id_column] = parameter_id
-            try:
-                relationship_class_id = relationship_class_name_id_dict[relationship_class_name]
-            except KeyError:
-                pass
-            try:
-                correct_relationship_class_name = relationship_class_dict[relationship_class_id]['name']
-                object_class_id_list = relationship_class_dict[relationship_class_id]['object_class_id_list']
-                object_class_name_list = relationship_class_dict[relationship_class_id]['object_class_name_list']
             except KeyError:
                 continue
-            self._main_data[row][relationship_class_id_column] = relationship_class_id
-            self._main_data[row][relationship_class_name_column] = correct_relationship_class_name
-            self._main_data[row][object_class_id_list_column] = object_class_id_list
-            self._main_data[row][object_class_name_list_column] = object_class_name_list
-            if correct_relationship_class_name != relationship_class_name:
-                indexes.append(self.index(row, relationship_class_name_column))
             try:
                 relationship_id = relationships_on_the_fly[row]
                 self._main_data[row][relationship_id_column] = relationship_id
             except KeyError:
-                continue
-            if parameter is None:
                 continue
             item = {
                 "relationship_id": relationship_id,
