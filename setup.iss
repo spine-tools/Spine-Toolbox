@@ -20,10 +20,10 @@ AppPublisher={#MyAppPublisher}
 AppPublisherURL={#MyAppURL}
 AppSupportURL={#MyAppURL}
 AppUpdatesURL={#MyAppURL}
-DefaultDirName={pf}\Spine Toolbox {#MyAppVersion}
-DefaultGroupName=Spine Toolbox {#MyAppVersion}
+DefaultDirName={pf}\Spine Toolbox
+DefaultGroupName=Spine Toolbox
 AllowNoIcons=yes
-LicenseFile=C:\data\GIT\SPINETOOLBOX\COPYING.LESSER
+LicenseFile=COPYING.LESSER
 OutputBaseFilename=spine-toolbox-{#MyAppVersion}-x64
 Compression=lzma
 SolidCompression=yes
@@ -31,7 +31,7 @@ PrivilegesRequired=admin
 OutputDir=spinetoolbox\dist
 ArchitecturesInstallIn64BitMode=x64 ia64
 ArchitecturesAllowed=x64 ia64 arm64
-UsePreviousAppDir=no
+UsePreviousAppDir=yes
 
 [Code]
 procedure CurUninstallStepChanged(CurUninstallStep: TUninstallStep);
@@ -53,8 +53,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "C:\data\GIT\SPINETOOLBOX\spinetoolbox\build\exe.win-amd64-3.6\spinetoolbox.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "C:\data\GIT\SPINETOOLBOX\spinetoolbox\build\exe.win-amd64-3.6\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "spinetoolbox\build\exe.win-amd64-3.6\spinetoolbox.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "spinetoolbox\build\exe.win-amd64-3.6\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Dirs]
@@ -63,7 +63,7 @@ Name: "{app}\projects"; Permissions: users-full
 Name: "{app}\work"; Permissions: users-full
 
 [Icons]
-Name: "{group}\{#MyAppName}"; Filename: "{app}\{#MyAppExeName}"
+Name: "{group}\{#MyAppName} {#MyAppVersion}"; Filename: "{app}\{#MyAppExeName}"
 Name: "{group}\{cm:UninstallProgram,{#MyAppName}}"; Filename: "{uninstallexe}"
 Name: "{commondesktop}\{#MyAppName} {#MyAppVersion}"; Filename: "{app}\{#MyAppExeName}"; Tasks: desktopicon
 
