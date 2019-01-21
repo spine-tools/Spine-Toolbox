@@ -561,6 +561,8 @@ class CustomPackage(Package):
         self.commit()
 
     def rename_field(self, resource, old, new):
+        """Rename a field.
+        """
         resource_index = self.resource_names.index(resource)
         resource_dict = self.descriptor['resources'][resource_index]
         resource_schema = self.get_resource(resource).schema
@@ -570,7 +572,7 @@ class CustomPackage(Package):
         foreign_keys = resource_schema.foreign_keys
         for i, field in enumerate(primary_key):
             if field == old:
-                resource_dict['schema']['primaryKey'][primary_key_index] = new
+                resource_dict['schema']['primaryKey'][i] = new
         for i, foreign_key in enumerate(foreign_keys):
             for j, field in enumerate(foreign_key["fields"]):
                 if field == old:
