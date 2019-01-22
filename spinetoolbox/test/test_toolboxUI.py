@@ -20,7 +20,7 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtCore import SIGNAL
 from ui_main import ToolboxUI
 from project import SpineToolboxProject
@@ -46,11 +46,11 @@ class TestToolboxUI(unittest.TestCase):
         """
         with mock.patch("ui_main.CONFIGURATION_FILE") as mocked_file_path, \
                 mock.patch("os.path.split") as mock_split, \
-                mock.patch("configuration.create_dir") as mock_create_dir:
-            # # Set logging level to Error to silence "Logging level: All messages" print
-            logging.disable(level=logging.ERROR)  # Disable logging
+                mock.patch("configuration.create_dir") as mock_create_dir, \
+                mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
+            # Make Julia REPL Widget as a QWidget so that the DeprecationWarning from qtconsole is not printed
+            mock_julia_repl.return_value = QWidget()
             self.mw = ToolboxUI()
-            logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -132,7 +132,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(columns, 0)
 
     def test_create_project(self):
-        """Test that method makes a SpineToolboxProject instance.
+        """Test that create_project method makes a SpineToolboxProject instance.
         Skips creating a .proj file and creating directories.
         """
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \

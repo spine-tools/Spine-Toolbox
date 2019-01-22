@@ -22,7 +22,7 @@ import os
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtCore import Qt
 from data_store import DataStore
 from graphics_items import DataStoreImage
@@ -45,13 +45,12 @@ class TestDataStore(unittest.TestCase):
                             datefmt='%Y-%m-%d %H:%M:%S')
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of ToolboxUI class.
-        """
-        # # Set logging level to Error to silence "Logging level: All messages" print
-        logging.disable(level=logging.ERROR)  # Disable logging
-        self.toolbox = ToolboxUI()
-        self.toolbox.create_project("UnitTest Project", "")
-        logging.disable(level=logging.NOTSET)  # Enable logging
+        """Overridden method. Runs before each test. Makes instance of ToolboxUI class."""
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
+            # Make Julia REPL Widget as a QWidget so that the DeprecationWarning from qtconsole is not printed
+            mock_julia_repl.return_value = QWidget()
+            self.toolbox = ToolboxUI()
+            self.toolbox.create_project("UnitTest Project", "")
 
     def tearDown(self):
         """Overridden method. Runs after each test.

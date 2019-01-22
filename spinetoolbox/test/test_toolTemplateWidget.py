@@ -20,7 +20,7 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from ui_main import ToolboxUI
 
@@ -39,14 +39,12 @@ class TestToolTemplateWidget(unittest.TestCase):
                             datefmt='%Y-%m-%d %H:%M:%S')
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of TreeViewForm class.
-        """
-
-        # # Set logging level to Error to silence "Logging level: All messages" print
-        logging.disable(level=logging.ERROR)  # Disable logging
-        toolbox = ToolboxUI()
-        self.tool_template_widget = ToolTemplateWidget(toolbox)
-        logging.disable(level=logging.NOTSET)  # Enable logging
+        """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
+            # Make Julia REPL Widget as a QWidget so that the DeprecationWarning from qtconsole is not printed
+            mock_julia_repl.return_value = QWidget()
+            toolbox = ToolboxUI()
+            self.tool_template_widget = ToolTemplateWidget(toolbox)
 
     def tearDown(self):
         """Overridden method. Runs after each test.

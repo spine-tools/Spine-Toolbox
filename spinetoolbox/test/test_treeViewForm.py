@@ -74,7 +74,7 @@ class TestTreeViewForm(unittest.TestCase):
         # Set logging level to Error to silence "Logging level: All messages" print
         with mock.patch("data_store.DataStore") as mock_data_store, \
                 mock.patch("spinedatabase_api.DiffDatabaseMapping") as mock_db_map:
-            logging.disable(level=logging.ERROR)  # Disable logging
+            # logging.disable(level=logging.ERROR)  # Disable logging
             mock_db_map.object_parameter_fields.return_value = [
                 'id', 'object_class_id', 'object_class_name', 'parameter_name']
             mock_db_map.relationship_parameter_fields.return_value = [
@@ -92,7 +92,7 @@ class TestTreeViewForm(unittest.TestCase):
                 'parameter_id', 'parameter_name', 'index', 'value'
             ]
             self.tree_view_form = TreeViewForm(mock_data_store, mock_db_map, "mock_db")
-            logging.disable(level=logging.NOTSET)  # Enable logging
+            # logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
         """Overridden method. Runs after each test.
