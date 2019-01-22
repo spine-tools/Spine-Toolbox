@@ -55,11 +55,11 @@ class TestTreeViewForm(unittest.TestCase):
         """
         # Set logging level to Error to silence "Logging level: All messages" print
         with mock.patch("data_store.DataStore") as mock_data_store:
-            logging.disable(level=logging.ERROR)  # Disable logging
+            # logging.disable(level=logging.ERROR)  # Disable logging
             self.db_map.reset_mapping()
             self.db_map.session.query(self.db_map.NextId).delete(synchronize_session=False)
             self.tree_view_form = TreeViewForm(mock_data_store, self.db_map, "mock_db")
-            logging.disable(level=logging.NOTSET)  # Enable logging
+            # logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
         """Overridden method. Runs after each test.

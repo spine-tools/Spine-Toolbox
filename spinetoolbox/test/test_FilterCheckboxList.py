@@ -25,7 +25,7 @@ from tabularview_models import FilterCheckboxListModel
 class TestPivotModel(unittest.TestCase):
 
     def setUp(self):
-        self.data = ['a','aa','aaa','b','bb','bbb']
+        self.data = ['a', 'aa', 'aaa', 'b', 'bb', 'bbb']
 
     def test_init_model(self):
         FilterCheckboxListModel()
