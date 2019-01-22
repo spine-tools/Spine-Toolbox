@@ -2042,8 +2042,8 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
         object_class_id_name_dict = {x.id: x.name for x in self._parent.db_map.object_class_list()}
         object_class_name_id_dict = {x.name: x.id for x in self._parent.db_map.object_class_list()}
         object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self._parent.db_map.object_list()}
-        parameter_dict = {x.name: {'id': x.id, 'object_class_id': x.object_class_id}
-                          for x in self._parent.db_map.parameter_list()}
+        parameter_dict = {x.parameter_name: {'id': x.id, 'object_class_id': x.object_class_id}
+                          for x in self._parent.db_map.object_parameter_list()}
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
@@ -2142,7 +2142,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         relationship_class_name_id_dict = {
             x.name: x.id for x in self._parent.db_map.wide_relationship_class_list()}
         parameter_name_relationship_class_id_dict = {
-            x.name: x.relationship_class_id for x in self._parent.db_map.parameter_list()}
+            x.parameter_name: x.relationship_class_id for x in self._parent.db_map.relationship_parameter_list()}
         relationship_dict = {
             (x.class_id, x.object_id_list): x.id for x in self._parent.db_map.wide_relationship_list()}
         object_dict = {x.name: x.id for x in self._parent.db_map.object_list()}
@@ -2227,7 +2227,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         parameter_id_column = header.index('parameter_id')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
-        parameter_dict = {x.name: x.id for x in self._parent.db_map.parameter_list()}
+        parameter_dict = {x.parameter_name: x.id for x in self._parent.db_map.relationship_parameter_list()}
         for row in {ind.row() for ind in indexes}:
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             try:
