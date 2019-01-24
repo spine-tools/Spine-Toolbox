@@ -19,7 +19,7 @@ Functions to import and export from excel to spine database.
 # TODO: PEP8: Do not use bare except. Too broad exception clause
 
 from collections import namedtuple
-from itertools import groupby
+from itertools import groupby, islice
 import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
@@ -525,7 +525,7 @@ def read_spine_xlsx(filepath):
     Args:
         filepath (str): str with filepath to excel file to read from.
     """
-    wb = load_workbook(filepath)
+    wb = load_workbook(filepath, read_only=True)
     sheets = wb.sheetnames
 
     obj_data = []
@@ -722,53 +722,47 @@ def read_json_sheet(ws, sheet_type):
 
     # search row for until first empty cell
     read_cols = []
+    add_if_not_break = 1 
     for c, cell in enumerate(ws[4]):
         if c > 0:
             if cell.value is None:
+                add_if_not_break = 0
                 break
-            else:
-                read_cols.append(c+1)
+    read_cols = range(1, c + add_if_not_break)
 
-    Data = namedtuple("Data", ["parameter_type"] + path + ["parameter", "value"])
-
-    unique_parameters = []
     json_data = []
     # red columnwise from second column.
-    for c in read_cols:
-        obj_path = []
-        parameter = []
-        json_vals = []
-        for r, cell in enumerate(ws[get_column_letter(c)]):
-            if r > 2 and r < 3+dim:
-                # get object path
-                obj_path.append(cell.value)
-                if cell.value is None:
-                    # invalid column, skip
-                    break
-            elif r == 3+dim:
-                # get parameter name
-                parameter = [cell.value]
-                if cell.value is None:
-                    # invalid column, skip
-                    break
-            elif r > 3+dim:
-                # get values until first empty cell
-                if cell.value is None:
-                    break
-                else:
-                    json_vals.append(cell.value)
+    rows = ws.iter_rows()
+    obj_path = []
+    parameters = []
+    for r, row in enumerate(rows):
+        if r > 2 and r < 3+dim:
+            # get object path
+            obj_path.append([cell.value for i, cell in enumerate(row) if i in read_cols])
+        elif r == 3+dim:
+            # get parameter name
+            parameters = [cell.value for i, cell in enumerate(row) if i in read_cols]
+            break
 
-        if json_vals and parameter and None not in obj_path:
+    data = [[cell.value for i, cell in enumerate(row) if i in read_cols] for row in rows]
+    
+    # pivot data
+    obj_path = [[obj_path[r][c] for r in range(len(obj_path))] for c in range(len(obj_path[0]))]
+    data = [[data[r][c] for r in range(len(data))] for c in range(len(data[0]))]
+
+
+    Data = namedtuple("Data", ["parameter_type"] + path + ["parameter", "value"])
+    if data:
+        for objects, parameter, data_list in zip(obj_path, parameters, data):
             # save values if there is json data, a parameter name
             # and the obj_path doesn't contain None.
-            unique_parameters.append(parameter[0])
-            packed_json = json.dumps(json_vals)
-            json_data.append(Data._make(["json"] + obj_path+parameter+[packed_json]))
+            packed_json = json.dumps(data_list)
+            json_data.append(Data._make(["json"] + objects + [parameter, packed_json]))
 
     return SheetData(sheet_name=ws.title,
                      class_name=class_name,
                      object_classes=object_classes,
-                     parameters=list(set(unique_parameters)),
+                     parameters=list(set(parameters)),
                      parameter_values=json_data,
                      objects=[],
                      class_type=sheet_type)
@@ -799,14 +793,20 @@ def read_parameter_sheet(ws):
     # read all columns to the right of the number of cells in dim. Read until
     # encounters a empty cell.
     parameters = []
+    read_cols = []
     for c, cell in enumerate(ws[4]):
         if cell.value is None:
             break
         elif c >= dim:
             parameters.append(cell.value)
+    read_cols = range(0, c + 1)
 
     # get data
-    data = read_2d(ws, 5, len(ws['A']), 1, dim + len(parameters))
+    rows = islice(ws.iter_rows(), 4, None)
+    try:
+        data = [[cell.value for i, cell in enumerate(row) if i in read_cols] for row in rows]
+    except StopIteration:
+        data = []
 
     keyfunc = lambda x: [x[i] for i, _ in enumerate(object_classes)]
 

@@ -227,6 +227,8 @@ class TestExcelImport(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test.
         """
+        Cell = namedtuple('cell',['value'])
+        
         # mock data for relationship sheets
         ws_mock = {}
         ws_mock['A2'] = MagicMock(value='relationship')
@@ -241,6 +243,13 @@ class TestExcelImport(unittest.TestCase):
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
+        mock_row_generator_data1 = [[],
+                                   [],
+                                   [],
+                                   [Cell('object_class_name1'), Cell('object_class_name2'),Cell('parameter1'), Cell('parameter2'), Cell(None)],
+                                   [Cell('a_obj1'), Cell('b_obj1'), Cell(1), Cell('a'), Cell(None)],
+                                   [Cell('a_obj2'), Cell('b_obj2'), Cell(2), Cell('b'), Cell(None)]]
+        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data1)
         self.ws_rel = ws
         self.data_parameter = ['parameter1', 'parameter2']
         self.data_class_rel = [['object_class_name1', 'object_class_name2']]
@@ -261,6 +270,13 @@ class TestExcelImport(unittest.TestCase):
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
+        mock_row_generator_data2 = [[],
+                                   [],
+                                   [],
+                                   [Cell('object_class_name'),Cell('parameter1'), Cell('parameter2')],
+                                   [Cell('obj1'), Cell(1), Cell('a')],
+                                   [Cell('obj2'), Cell(2), Cell('b')]]
+        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data2)
         self.ws_obj = ws
         self.data_parameter = ['parameter1', 'parameter2']
         self.data_class_obj = [['object_class_name']]
@@ -286,6 +302,15 @@ class TestExcelImport(unittest.TestCase):
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
+        mock_row_generator_data3 = [[],
+                                   [],
+                                   [],
+                                   [Cell('object_class_name'),Cell('obj1'),Cell('obj2')],
+                                   [Cell('json parameter'),Cell('parameter1'), Cell('parameter2')],
+                                   [Cell(None), Cell(1), Cell(4)],
+                                   [Cell(None), Cell(2), Cell(5)],
+                                   [Cell(None), Cell(3), Cell(6)]]
+        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data3)
         self.ws_obj_json = ws
 
         # mock data for json sheets relationship
@@ -308,6 +333,16 @@ class TestExcelImport(unittest.TestCase):
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
+        mock_row_generator_data4 = [[],
+                                   [],
+                                   [],
+                                   [Cell('object_class_name1'),Cell('a_obj1'),Cell('a_obj2'),Cell(None)],
+                                   [Cell('object_class_name2'),Cell('b_obj1'),Cell('b_obj2'),Cell(None)],
+                                   [Cell('json parameter'),Cell('parameter1'), Cell('parameter2'),Cell(None)],
+                                   [Cell(None), Cell(1), Cell(4),Cell(None)],
+                                   [Cell(None), Cell(2), Cell(5),Cell(None)],
+                                   [Cell(None), Cell(3), Cell(6),Cell(None)]]
+        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data4)
         self.ws_rel_json = ws
 
     def tearDown(self):
@@ -502,6 +537,11 @@ class TestExcelImport(unittest.TestCase):
         # make last row in data invalid
         self.data_rel[1][0] = None
         self.class_obj_rel.pop(1)
+        Cell = namedtuple('cell',['value'])
+        data = list(ws.iter_rows())
+        data.pop(-1)
+        data.append([Cell(None), Cell('b_obj2'), Cell(2), Cell('b'), Cell(None)])
+        ws.iter_rows.side_effect = lambda : iter(data)
 
         parameter_values = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
                             self.RelData('value', 'a_obj1', 'b_obj1', 'parameter2', 'a')]
@@ -518,6 +558,11 @@ class TestExcelImport(unittest.TestCase):
         """Test reading a sheet with None values in parameter value cells"""
         ws = self.ws_obj
         self.data_obj[1][1] = None
+        Cell = namedtuple('cell',['value'])
+        data = list(ws.iter_rows())
+        data[5][1] = Cell(None)
+        ws.iter_rows.side_effect = lambda : iter(data)
+
         parameter_values = [self.ObjData('value', 'obj1', 'parameter1', 1),
                             self.ObjData('value', 'obj1', 'parameter2', 'a'),
                             self.ObjData('value', 'obj2', 'parameter2', 'b')]
