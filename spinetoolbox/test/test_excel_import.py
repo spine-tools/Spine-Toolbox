@@ -16,36 +16,51 @@ from sqlalchemy.orm import Session
 from spinedatabase_api import DatabaseMapping, DiffDatabaseMapping, create_new_spine_database
 from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, validate_sheet, SheetData, read_parameter_sheet, read_json_sheet, merge_spine_xlsx_data, read_spine_xlsx, export_spine_database_to_xlsx, get_unstacked_objects, import_xlsx_to_db
 
+UUID_STR = 'f7f92ced-faff-4315-900e-704d2a786a65'
+TEMP_EXCEL_FILENAME = UUID_STR + '-excel.xlsx'
+TEMP_SQLITE_FILENAME = UUID_STR + '-first.sqlite'
+TEMP_SQLITE_TEST_FILENAME = UUID_STR + '-second.sqlite'
 
 class TestExcelIntegration(unittest.TestCase):
+    
+    def delete_temp_files(self):
+        # delete temp excel file if it exists
+        # close mappings
+        if hasattr(self, 'db_map'):
+            self.db_map.close()
+        if hasattr(self, 'empty_db_map'):
+            self.empty_db_map.close()
+
+        # remove temp files
+        try:
+            os.remove(TEMP_EXCEL_FILENAME)
+        except OSError:
+            pass
+        try:
+            os.remove(TEMP_SQLITE_FILENAME)
+        except OSError:
+            pass
+        try:
+            os.remove(TEMP_SQLITE_TEST_FILENAME)
+        except OSError:
+            pass
 
     def setUp(self):
         """Overridden method. Runs before each test.
         """
-        # temp file for excel export
-        self.temp_excel_filename = str(uuid.uuid4()) + '.xlsx'
+        self.delete_temp_files()
 
         # create a in memory database with objects, relationship, parameters and values
-        input_db = create_new_spine_database('sqlite://')
+        create_new_spine_database('sqlite:///' + TEMP_SQLITE_FILENAME)
         db_map = DiffDatabaseMapping(
-            "", username='IntegrationTest', create_all=False)
-        db_map.engine = input_db
-        db_map.engine.connect()
-        db_map.session = Session(db_map.engine, autoflush=False)
-        db_map.create_mapping()
-        db_map.create_diff_tables_and_mapping()
-        db_map.init_next_id()
+            'sqlite:///' + TEMP_SQLITE_FILENAME,
+            username='IntegrationTest')
 
         # create empty database for loading excel into
-        input_db_test = create_new_spine_database('sqlite://')
+        create_new_spine_database('sqlite:///' + TEMP_SQLITE_TEST_FILENAME)
         db_map_test = DiffDatabaseMapping(
-            "", username='IntegrationTest', create_all=False)
-        db_map_test.engine = input_db_test
-        db_map_test.engine.connect()
-        db_map_test.session = Session(db_map_test.engine, autoflush=False)
-        db_map_test.create_mapping()
-        db_map_test.create_diff_tables_and_mapping()
-        db_map_test.init_next_id()
+            'sqlite:///' + TEMP_SQLITE_TEST_FILENAME,
+            username='IntegrationTest')
 
         # delete all object_classes to empty database
         oc = set(oc. id for oc in db_map_test.object_class_list().all())
@@ -128,11 +143,7 @@ class TestExcelIntegration(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        # delete temp excel file if it exists
-        try:
-            os.remove(self.temp_excel_filename)
-        except OSError:
-            pass
+        self.delete_temp_files()
 
     def compare_dbs(self, db1, db2):
         # compare imported database with exported database
@@ -192,10 +203,10 @@ class TestExcelIntegration(unittest.TestCase):
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""
         # export to excel
-        export_spine_database_to_xlsx(self.db_map, self.temp_excel_filename)
+        export_spine_database_to_xlsx(self.db_map, TEMP_EXCEL_FILENAME)
 
         # import into empty database
-        import_xlsx_to_db(self.empty_db_map, self.temp_excel_filename)
+        import_xlsx_to_db(self.empty_db_map, TEMP_EXCEL_FILENAME)
         self.empty_db_map.commit_session('Excel import')
 
         # compare dbs
@@ -204,10 +215,10 @@ class TestExcelIntegration(unittest.TestCase):
     def test_import_to_existing_data(self):
         """Integration test importing data to a database with existing items"""
         # export to excel
-        export_spine_database_to_xlsx(self.db_map, self.temp_excel_filename)
+        export_spine_database_to_xlsx(self.db_map, TEMP_EXCEL_FILENAME)
 
         # import into empty database
-        import_xlsx_to_db(self.empty_db_map, self.temp_excel_filename)
+        import_xlsx_to_db(self.empty_db_map, TEMP_EXCEL_FILENAME)
         self.empty_db_map.commit_session('Excel import')
 
         # delete 1 object class
@@ -215,7 +226,7 @@ class TestExcelIntegration(unittest.TestCase):
         self.db_map.commit_session("Delete class")
 
         # reimport data
-        import_xlsx_to_db(self.db_map, self.temp_excel_filename)
+        import_xlsx_to_db(self.db_map, TEMP_EXCEL_FILENAME)
         self.db_map.commit_session("reimport data")
 
         # compare dbs
