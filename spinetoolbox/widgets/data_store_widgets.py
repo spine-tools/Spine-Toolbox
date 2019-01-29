@@ -27,25 +27,26 @@ from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QM
     QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
     QButtonGroup, QSizePolicy, QHBoxLayout, QWidget, QWidgetAction
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, QStandardItemModel, QStandardItem
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, \
-    ObjectItemContextMenu, GraphViewContextMenu
+    ObjectItemContextMenu, GraphViewContextMenu, QOkMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDefinitionDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDefinitionDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     AddRelationshipClassesDialog, AddRelationshipsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
-    CommitDialog
+    CommitDialog, ManageParameterTagsDialog
 from widgets.custom_qwidget import ZoomWidget
+from widgets.custom_qtreeview import ParameterTagTreeView
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
-    JSONArrayModel
+    JSONArrayModel, MinimalTableModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
@@ -522,6 +523,11 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
+    @Slot("bool", name="show_manage_parameter_tags_form")
+    def show_manage_parameter_tags_form(self, checked=False):
+        dialog = ManageParameterTagsDialog(self)
+        dialog.show()
+
     @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
     def set_parameter_value_data(self, index, new_value):
         """Update (object or relationship) parameter value with newly edited data."""
@@ -657,37 +663,18 @@ class TreeViewForm(DataStoreForm):
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
+        self.object_parameter_tag_menu = QOkMenu(self)
+        self.ui.toolButton_object_parameter_tag.setMenu(self.object_parameter_tag_menu)
         # init models and views
         self.init_models()
         self.init_views()
         self.setup_delegates()
-        self.setup_buttons()
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
         # Ensure this window gets garbage-collected when closed
         toc = time.clock()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
-
-    def setup_buttons(self):
-        """Specify actions and menus for add/remove parameter buttons."""
-        # Setup button actions
-        self.ui.toolButton_add_object_parameter_values.\
-            setDefaultAction(self.ui.actionAdd_object_parameter_values)
-        self.ui.toolButton_remove_object_parameter_values.\
-            setDefaultAction(self.ui.actionRemove_object_parameter_values)
-        self.ui.toolButton_add_relationship_parameter_values.\
-            setDefaultAction(self.ui.actionAdd_relationship_parameter_values)
-        self.ui.toolButton_remove_relationship_parameter_values.\
-            setDefaultAction(self.ui.actionRemove_relationship_parameter_values)
-        self.ui.toolButton_add_object_parameter_definitions.\
-            setDefaultAction(self.ui.actionAdd_object_parameter_definitions)
-        self.ui.toolButton_remove_object_parameter_definitions.\
-            setDefaultAction(self.ui.actionRemove_object_parameter_definitions)
-        self.ui.toolButton_add_relationship_parameter_definitions.\
-            setDefaultAction(self.ui.actionAdd_relationship_parameter_definitions)
-        self.ui.toolButton_remove_relationship_parameter_definitions.\
-            setDefaultAction(self.ui.actionRemove_relationship_parameter_definitions)
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -699,11 +686,6 @@ class TreeViewForm(DataStoreForm):
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationship_classes.triggered.connect(self.show_add_relationship_classes_form)
         self.ui.actionAdd_relationships.triggered.connect(self.show_add_relationships_form)
-        self.ui.actionAdd_object_parameter_values.triggered.connect(self.add_object_parameter_values)
-        self.ui.actionAdd_relationship_parameter_values.triggered.connect(self.add_relationship_parameter_values)
-        self.ui.actionAdd_object_parameter_definitions.triggered.connect(self.add_object_parameter_definitions)
-        self.ui.actionAdd_relationship_parameter_definitions.triggered.\
-            connect(self.add_relationship_parameter_definitions)
         self.ui.actionEdit_object_classes.triggered.connect(self.show_edit_object_classes_form)
         self.ui.actionEdit_objects.triggered.connect(self.show_edit_objects_form)
         self.ui.actionEdit_relationship_classes.triggered.connect(self.show_edit_relationship_classes_form)
@@ -715,6 +697,7 @@ class TreeViewForm(DataStoreForm):
             connect(self.remove_relationship_parameter_definitions)
         self.ui.actionRemove_relationship_parameter_values.triggered.\
             connect(self.remove_relationship_parameter_values)
+        self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         # Copy and paste
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
@@ -770,6 +753,13 @@ class TreeViewForm(DataStoreForm):
         self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuSession.aboutToShow.connect(self._handle_menu_about_to_show)
+        # Parameter tag menus about to show
+        self.object_parameter_tag_menu.aboutToShow.connect(self.populate_object_parameter_tag_menu)
+
+    @Slot(name="populate_object_parameter_tag_menu")
+    def populate_object_parameter_tag_menu(self):
+        parameter_tag_list = self.db_map.parameter_tag_list()
+        self.object_parameter_tag_menu.populate([x.tag for x in parameter_tag_list])
 
     @Slot("bool", name="copy")
     def copy(self, checked=False):
@@ -1417,10 +1407,6 @@ class TreeViewForm(DataStoreForm):
             self.find_next(index)
         elif option.startswith("Remove selected"):
             self.remove_object_tree_items()
-        elif option == "Add parameter definitions":
-            self.call_add_parameters(index)
-        elif option == "Add parameter values":
-            self.call_add_parameter_values(index)
         elif option == "Fully expand":
             self.fully_expand_selection()
         elif option == "Fully collapse":
@@ -1454,20 +1440,6 @@ class TreeViewForm(DataStoreForm):
             relationship_class_id=relationship_class['id'],
             object_id=object_['id'],
             object_class_id=object_class['id'])
-
-    def call_add_parameters(self, tree_index):
-        class_type = tree_index.data(Qt.UserRole)
-        if class_type == 'object_class':
-            self.add_object_parameter_definitions()
-        elif class_type == 'relationship_class':
-            self.add_relationship_parameter_definitions()
-
-    def call_add_parameter_values(self, tree_index):
-        entity_type = tree_index.data(Qt.UserRole)
-        if entity_type == 'object':
-            self.add_object_parameter_values()
-        elif entity_type == 'relationship':
-            self.add_relationship_parameter_values()
 
     def add_object_classes(self, object_classes):
         """Insert new object classes."""
@@ -1617,147 +1589,6 @@ class TreeViewForm(DataStoreForm):
             self.ui.tableView_relationship_parameter_definition.paste()
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
-
-    @Slot(name="add_object_parameter_values")
-    def add_object_parameter_values(self):
-        """Sweep object treeview selection.
-        For each item in the selection, add a parameter value row if needed.
-        """
-        model = self.object_parameter_value_model
-        index = self.ui.tableView_object_parameter_value.currentIndex()
-        row = model.rowCount() - 1
-        tree_selection = self.ui.treeView_object.selectionModel().selection()
-        if not tree_selection.isEmpty():
-            object_class_name_column = model.horizontal_header_labels().index('object_class_name')
-            object_name_column = model.horizontal_header_labels().index('object_name')
-            row_column_tuples = list()
-            data = list()
-            i = 0
-            for tree_index in tree_selection.indexes():
-                if tree_index.data(Qt.UserRole) == 'object_class':
-                    object_class_name = tree_index.data(Qt.DisplayRole)
-                    object_name = None
-                elif tree_index.data(Qt.UserRole) == 'object':
-                    object_class_name = tree_index.parent().data(Qt.DisplayRole)
-                    object_name = tree_index.data(Qt.DisplayRole)
-                else:
-                    continue
-                row_column_tuples.append((row + i, object_class_name_column))
-                row_column_tuples.append((row + i, object_name_column))
-                data.extend([object_class_name, object_name])
-                i += 1
-            if i > 0:
-                model.insertRows(row, i)
-                indexes = [model.index(row, column) for row, column in row_column_tuples]
-                model.batch_set_data(indexes, data)
-        self.ui.tabWidget_object_parameter.setCurrentIndex(0)
-        model.update_filter()
-
-    @Slot(name="add_relationship_parameter_values")
-    def add_relationship_parameter_values(self):
-        """Sweep object treeview selection.
-        For each item in the selection, add a parameter value row if needed.
-        """
-        model = self.relationship_parameter_value_model
-        index = self.ui.tableView_relationship_parameter_value.currentIndex()
-        row = model.rowCount() - 1
-        tree_selection = self.ui.treeView_object.selectionModel().selection()
-        if not tree_selection.isEmpty():
-            relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
-            object_name_list_column = model.horizontal_header_labels().index('object_name_list')
-            row_column_tuples = list()
-            data = list()
-            i = 0
-            for tree_index in tree_selection.indexes():
-                if tree_index.data(Qt.UserRole) == 'relationship_class':
-                    selected_object_class_name = tree_index.parent().parent().data(Qt.DisplayRole)
-                    object_name = tree_index.parent().data(Qt.DisplayRole)
-                    relationship_class_name = tree_index.data(Qt.DisplayRole)
-                    object_class_name_list = tree_index.data(Qt.UserRole + 1)["object_class_name_list"].split(",")
-                    object_name_list = list()
-                    for object_class_name in object_class_name_list:
-                        if object_class_name == selected_object_class_name:
-                            object_name_list.append(object_name)
-                        else:
-                            object_name_list.append('')
-                elif tree_index.data(Qt.UserRole) == 'relationship':
-                    relationship_class_name = tree_index.parent().data(Qt.DisplayRole)
-                    object_name_list = tree_index.data(Qt.UserRole + 1)["object_name_list"].split(",")
-                else:
-                    continue
-                row_column_tuples.append((row + i, relationship_class_name_column))
-                data.append(relationship_class_name)
-                row_column_tuples.append((row + i, object_name_list_column))
-                data.append(",".join(object_name_list))
-                i += 1
-            if i > 0:
-                model.insertRows(row, i)
-                indexes = [model.index(row, column) for row, column in row_column_tuples]
-                model.batch_set_data(indexes, data)
-        self.ui.tabWidget_relationship_parameter.setCurrentIndex(0)
-        model.update_filter()
-
-    @Slot(name="add_object_parameter_definitions")
-    def add_object_parameter_definitions(self):
-        """Sweep object treeview selection.
-        For each item in the selection, add a parameter value row if needed.
-        """
-        model = self.object_parameter_definition_model
-        index = self.ui.tableView_object_parameter_definition.currentIndex()
-        row = model.rowCount() - 1
-        tree_selection = self.ui.treeView_object.selectionModel().selection()
-        if not tree_selection.isEmpty():
-            object_class_name_column = model.horizontal_header_labels().index('object_class_name')
-            row_column_tuples = list()
-            data = list()
-            i = 0
-            for tree_index in tree_selection.indexes():
-                if tree_index.data(Qt.UserRole) == 'object_class':
-                    object_class_name = tree_index.data(Qt.DisplayRole)
-                elif tree_index.data(Qt.UserRole) == 'object':
-                    object_class_name = tree_index.parent().data(Qt.DisplayRole)
-                else:
-                    continue
-                row_column_tuples.append((row + i, object_class_name_column))
-                data.append(object_class_name)
-                i += 1
-            if i > 0:
-                model.insertRows(row, i)
-                indexes = [model.index(row, column) for row, column in row_column_tuples]
-                model.batch_set_data(indexes, data)
-        self.ui.tabWidget_object_parameter.setCurrentIndex(1)
-        model.update_filter()
-
-    @Slot(name="add_relationship_parameter_definitions")
-    def add_relationship_parameter_definitions(self):
-        """Sweep object treeview selection.
-        For each item in the selection, add a parameter row if needed.
-        """
-        model = self.relationship_parameter_definition_model
-        index = self.ui.tableView_relationship_parameter_definition.currentIndex()
-        row = model.rowCount() - 1
-        tree_selection = self.ui.treeView_object.selectionModel().selection()
-        if not tree_selection.isEmpty():
-            relationship_class_name_column = model.horizontal_header_labels().index('relationship_class_name')
-            row_column_tuples = list()
-            data = list()
-            i = 0
-            for tree_index in tree_selection.indexes():
-                if tree_index.data(Qt.UserRole) == 'relationship_class':
-                    relationship_class_name = tree_index.data(Qt.DisplayRole)
-                elif tree_index.data(Qt.UserRole) == 'relationship':
-                    relationship_class_name = tree_index.parent().data(Qt.DisplayRole)
-                else:
-                    continue
-                row_column_tuples.append((row + i, relationship_class_name_column))
-                data.append(relationship_class_name)
-                i += 1
-            if i > 0:
-                model.insertRows(row, i)
-                indexes = [model.index(row, column) for row, column in row_column_tuples]
-                model.batch_set_data(indexes, data)
-        self.ui.tabWidget_relationship_parameter.setCurrentIndex(1)
-        model.update_filter()
 
     @busy_effect
     @Slot(name="remove_object_parameter_values")

@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>808</width>
-    <height>635</height>
+    <width>891</width>
+    <height>774</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -29,32 +29,11 @@
    <enum>Qt::LeftToRight</enum>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_10">
-    <property name="spacing">
-     <number>0</number>
-    </property>
-    <property name="leftMargin">
-     <number>0</number>
-    </property>
-    <property name="topMargin">
-     <number>0</number>
-    </property>
-    <property name="rightMargin">
-     <number>0</number>
-    </property>
-    <property name="bottomMargin">
-     <number>0</number>
-    </property>
+   <layout class="QVBoxLayout" name="verticalLayout_19">
     <item>
      <widget class="QSplitter" name="splitter_tree_parameter">
-      <property name="frameShape">
-       <enum>QFrame::StyledPanel</enum>
-      </property>
       <property name="orientation">
        <enum>Qt::Horizontal</enum>
-      </property>
-      <property name="handleWidth">
-       <number>6</number>
       </property>
       <widget class="QWidget" name="layoutWidget">
        <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -101,25 +80,98 @@
         </item>
        </layout>
       </widget>
-      <widget class="QWidget" name="layoutWidget_2">
-       <layout class="QHBoxLayout" name="horizontalLayout_6">
-        <item>
-         <widget class="QSplitter" name="splitter">
-          <property name="sizePolicy">
-           <sizepolicy hsizetype="Preferred" vsizetype="Expanding">
-            <horstretch>2</horstretch>
-            <verstretch>0</verstretch>
-           </sizepolicy>
-          </property>
-          <property name="frameShape">
-           <enum>QFrame::StyledPanel</enum>
-          </property>
-          <property name="orientation">
-           <enum>Qt::Vertical</enum>
-          </property>
-          <property name="handleWidth">
-           <number>6</number>
-          </property>
+      <widget class="QSplitter" name="splitter">
+       <property name="orientation">
+        <enum>Qt::Vertical</enum>
+       </property>
+       <widget class="QWidget" name="verticalLayoutWidget_3">
+        <layout class="QVBoxLayout" name="verticalLayout_10">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_9">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Object parameter</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_object_parameter_tag_list">
+             <property name="text">
+              <string/>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLabel" name="label_object_parameter_tag">
+             <property name="text">
+              <string>Tags:</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QLineEdit" name="lineEdit">
+             <property name="maximumSize">
+              <size>
+               <width>16777215</width>
+               <height>24</height>
+              </size>
+             </property>
+             <property name="readOnly">
+              <bool>true</bool>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_object_parameter_tag">
+             <property name="layoutDirection">
+              <enum>Qt::LeftToRight</enum>
+             </property>
+             <property name="text">
+              <string>heeeeeeeeeey</string>
+             </property>
+             <property name="popupMode">
+              <enum>QToolButton::InstantPopup</enum>
+             </property>
+             <property name="toolButtonStyle">
+              <enum>Qt::ToolButtonIconOnly</enum>
+             </property>
+             <property name="arrowType">
+              <enum>Qt::DownArrow</enum>
+             </property>
+            </widget>
+           </item>
+          </layout>
+         </item>
+         <item>
           <widget class="QTabWidget" name="tabWidget_object_parameter">
            <property name="sizePolicy">
             <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
@@ -137,10 +189,10 @@
             <enum>Qt::CustomContextMenu</enum>
            </property>
            <property name="layoutDirection">
-            <enum>Qt::RightToLeft</enum>
+            <enum>Qt::LeftToRight</enum>
            </property>
            <property name="tabPosition">
-            <enum>QTabWidget::North</enum>
+            <enum>QTabWidget::West</enum>
            </property>
            <property name="currentIndex">
             <number>0</number>
@@ -181,67 +233,6 @@
                  <property name="spacing">
                   <number>0</number>
                  </property>
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout_2">
-                   <property name="spacing">
-                    <number>0</number>
-                   </property>
-                   <item>
-                    <widget class="QToolButton" name="toolButton_add_object_parameter_values">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                       <horstretch>2</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="text">
-                      <string>...</string>
-                     </property>
-                     <property name="iconSize">
-                      <size>
-                       <width>16</width>
-                       <height>16</height>
-                      </size>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QToolButton" name="toolButton_remove_object_parameter_values">
-                     <property name="sizePolicy">
-                      <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
-                       <horstretch>2</horstretch>
-                       <verstretch>0</verstretch>
-                      </sizepolicy>
-                     </property>
-                     <property name="text">
-                      <string>...</string>
-                     </property>
-                     <property name="iconSize">
-                      <size>
-                       <width>16</width>
-                       <height>16</height>
-                      </size>
-                     </property>
-                     <property name="shortcut">
-                      <string>Ctrl+S</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="verticalSpacer_3">
-                     <property name="orientation">
-                      <enum>Qt::Vertical</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>20</width>
-                       <height>40</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                  </layout>
-                 </item>
                  <item>
                   <widget class="AutoFilterCopyPasteTableView" name="tableView_object_parameter_value">
                    <property name="sizePolicy">
@@ -534,45 +525,53 @@
                  </attribute>
                 </widget>
                </item>
-               <item>
-                <layout class="QVBoxLayout" name="verticalLayout_5">
-                 <property name="spacing">
-                  <number>0</number>
-                 </property>
-                 <item>
-                  <widget class="QToolButton" name="toolButton_add_object_parameter_definitions">
-                   <property name="text">
-                    <string>...</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QToolButton" name="toolButton_remove_object_parameter_definitions">
-                   <property name="text">
-                    <string>...</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="verticalSpacer_4">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>40</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                </layout>
-               </item>
               </layout>
              </item>
             </layout>
            </widget>
           </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="verticalLayoutWidget_4">
+        <layout class="QVBoxLayout" name="verticalLayout_18">
+         <property name="spacing">
+          <number>0</number>
+         </property>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_10">
+           <item>
+            <widget class="QLabel" name="label_4">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Relationship parameter</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_4">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QComboBox" name="comboBox_relationship_parameter_tag"/>
+           </item>
+          </layout>
+         </item>
+         <item>
           <widget class="QTabWidget" name="tabWidget_relationship_parameter">
            <property name="enabled">
             <bool>true</bool>
@@ -593,10 +592,10 @@
             <enum>Qt::CustomContextMenu</enum>
            </property>
            <property name="layoutDirection">
-            <enum>Qt::RightToLeft</enum>
+            <enum>Qt::LeftToRight</enum>
            </property>
            <property name="tabPosition">
-            <enum>QTabWidget::North</enum>
+            <enum>QTabWidget::West</enum>
            </property>
            <property name="currentIndex">
             <number>0</number>
@@ -637,40 +636,6 @@
                  <property name="spacing">
                   <number>0</number>
                  </property>
-                 <item>
-                  <layout class="QVBoxLayout" name="verticalLayout">
-                   <property name="spacing">
-                    <number>0</number>
-                   </property>
-                   <item>
-                    <widget class="QToolButton" name="toolButton_add_relationship_parameter_values">
-                     <property name="text">
-                      <string>...</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <widget class="QToolButton" name="toolButton_remove_relationship_parameter_values">
-                     <property name="text">
-                      <string>...</string>
-                     </property>
-                    </widget>
-                   </item>
-                   <item>
-                    <spacer name="verticalSpacer">
-                     <property name="orientation">
-                      <enum>Qt::Vertical</enum>
-                     </property>
-                     <property name="sizeHint" stdset="0">
-                      <size>
-                       <width>20</width>
-                       <height>40</height>
-                      </size>
-                     </property>
-                    </spacer>
-                   </item>
-                  </layout>
-                 </item>
                  <item>
                   <widget class="AutoFilterCopyPasteTableView" name="tableView_relationship_parameter_value">
                    <property name="sizePolicy">
@@ -954,48 +919,14 @@
                  </attribute>
                 </widget>
                </item>
-               <item>
-                <layout class="QVBoxLayout" name="verticalLayout_7">
-                 <property name="spacing">
-                  <number>0</number>
-                 </property>
-                 <item>
-                  <widget class="QToolButton" name="toolButton_add_relationship_parameter_definitions">
-                   <property name="text">
-                    <string>...</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <widget class="QToolButton" name="toolButton_remove_relationship_parameter_definitions">
-                   <property name="text">
-                    <string>...</string>
-                   </property>
-                  </widget>
-                 </item>
-                 <item>
-                  <spacer name="verticalSpacer_2">
-                   <property name="orientation">
-                    <enum>Qt::Vertical</enum>
-                   </property>
-                   <property name="sizeHint" stdset="0">
-                    <size>
-                     <width>20</width>
-                     <height>40</height>
-                    </size>
-                   </property>
-                  </spacer>
-                 </item>
-                </layout>
-               </item>
               </layout>
              </item>
             </layout>
            </widget>
           </widget>
-         </widget>
-        </item>
-       </layout>
+         </item>
+        </layout>
+       </widget>
       </widget>
      </widget>
     </item>
@@ -1006,7 +937,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>808</width>
+     <width>891</width>
      <height>28</height>
     </rect>
    </property>
@@ -1049,6 +980,8 @@
     <addaction name="actionRemove_object_parameter_values"/>
     <addaction name="actionRemove_relationship_parameter_definitions"/>
     <addaction name="actionRemove_relationship_parameter_values"/>
+    <addaction name="separator"/>
+    <addaction name="actionManage_parameter_tags"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">
@@ -1369,6 +1302,14 @@
     <string>Remove object tree items</string>
    </property>
   </action>
+  <action name="actionManage_parameter_tags">
+   <property name="text">
+    <string>Manage parameter tags</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+Shift+T</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -1390,28 +1331,19 @@
  <tabstops>
   <tabstop>treeView_object</tabstop>
   <tabstop>tabWidget_object_parameter</tabstop>
-  <tabstop>toolButton_add_object_parameter_values</tabstop>
-  <tabstop>toolButton_remove_object_parameter_values</tabstop>
   <tabstop>tableView_object_parameter_value</tabstop>
   <tabstop>textEdit_object_parameter_json</tabstop>
   <tabstop>tableView_object_parameter_json</tabstop>
   <tabstop>toolButton_object_parameter_json_raw</tabstop>
   <tabstop>toolButton_object_parameter_json_table</tabstop>
   <tabstop>pushButton_object_parameter_json_ok</tabstop>
-  <tabstop>toolButton_add_object_parameter_definitions</tabstop>
-  <tabstop>toolButton_remove_object_parameter_definitions</tabstop>
   <tabstop>tableView_object_parameter_definition</tabstop>
-  <tabstop>tabWidget_relationship_parameter</tabstop>
-  <tabstop>toolButton_add_relationship_parameter_values</tabstop>
-  <tabstop>toolButton_remove_relationship_parameter_values</tabstop>
   <tabstop>tableView_relationship_parameter_value</tabstop>
   <tabstop>textEdit_relationship_parameter_json</tabstop>
   <tabstop>tableView_relationship_parameter_json</tabstop>
   <tabstop>toolButton_relationship_parameter_json_raw</tabstop>
   <tabstop>toolButton_relationship_parameter_json_table</tabstop>
   <tabstop>pushButton_relationship_parameter_json_ok</tabstop>
-  <tabstop>toolButton_add_relationship_parameter_definitions</tabstop>
-  <tabstop>toolButton_remove_relationship_parameter_definitions</tabstop>
   <tabstop>tableView_relationship_parameter_definition</tabstop>
   <tabstop>tabWidget_object_parameter_json</tabstop>
   <tabstop>tabWidget_relationship_parameter_json</tabstop>

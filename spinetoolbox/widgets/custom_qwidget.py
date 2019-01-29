@@ -75,26 +75,26 @@ class AutoFilterWidget(QWidget):
         else:
             # Data row
             self.model.setData(index, not data)
-            self.set_ok_index_data()
+            self.set_all_index_data()
 
-    def set_ok_index_data(self):
-        """Set data for ok index based on data from all other indexes."""
-        ok_index = self.model.index(0, 0)
+    def set_all_index_data(self):
+        """Set data for 'all' index based on data from all other indexes."""
+        all_index = self.model.index(0, 0)
         true_count = 0
         for row_data in self.model._main_data[1:]:
             if row_data[0] == True:
                 true_count += 1
         if true_count == len(self.model._main_data) - 1:
-            self.model.setData(ok_index, True)
+            self.model.setData(all_index, True)
         elif true_count == 0:
-            self.model.setData(ok_index, False)
+            self.model.setData(all_index, False)
         else:
-            self.model.setData(ok_index, None)
+            self.model.setData(all_index, None)
 
     def set_values(self, values):
         """Set values to show in the 'menu'. Reset model using those values and update geometry."""
         self.model.reset_model([[None, "All"]] + values)
-        self.set_ok_index_data()
+        self.set_all_index_data()
         self.view.horizontalHeader().hideSection(2)  # Column 2 holds internal data (cls_id_set)
         self.view.resizeColumnsToContents()
         width = self.view.horizontalHeader().length() + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)

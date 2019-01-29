@@ -272,8 +272,6 @@ class ObjectTreeContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         plus_object_icon = self._parent.ui.actionAdd_objects.icon()
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
-        plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameter_values.icon()
-        plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameter_values.icon()
         edit_object_icon = self._parent.ui.actionEdit_objects.icon()
         edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
         minus_object_icon = self._parent.ui.actionRemove_object_tree_items.icon()
@@ -295,20 +293,16 @@ class ObjectTreeContextMenu(CustomContextMenu):
         elif item_type == 'object_class':
             self.add_action("Add relationship classes", plus_relationship_icon)
             self.add_action("Add objects", plus_object_icon)
-            self.add_action("Add parameter definitions", plus_object_parameter_icon)
             self.addSeparator()
             self.add_action("Edit object classes", edit_object_icon)
         elif item_type == 'object':
-            self.add_action("Add parameter values", plus_object_parameter_icon)
             self.addSeparator()
             self.add_action("Edit objects", edit_object_icon)
         elif item_type == 'relationship_class':
             self.add_action("Add relationships", plus_relationship_icon)
-            self.add_action("Add parameter definitions", plus_relationship_parameter_icon)
             self.addSeparator()
             self.add_action("Edit relationship classes", edit_relationship_icon)
         elif item_type == 'relationship':
-            self.add_action("Add parameter values", plus_relationship_parameter_icon)
             self.addSeparator()
             self.add_action("Edit relationships", edit_relationship_icon)
         if item_type != 'root':
@@ -703,3 +697,77 @@ class PivotTableModelMenu(QMenu):
         mPos=pPos+QPos
         self.move(mPos)
         self.show()
+
+class QOkMenu(QMenu):
+    """A QMenu that only hides when 'Ok' action is triggered.
+    It allows selecting multiple checkable options.
+
+    Attributes:
+        parent (QWidget): Parent of the QMenu
+    """
+    ok_clicked = Signal(name="ok_clicked")
+
+    def __init__(self, parent):
+        """Initialize the class."""
+        super().__init__(parent)
+        self.action_all = None
+        self.action_list = []
+        self.checked_actions = []
+
+    def mouseReleaseEvent(self, event):
+        """The super implementation triggers the action and closes the menu.
+        Here, we only close the menu if the action is the 'Ok' action.
+        Otherwise we just trigger it.
+        """
+        action = self.activeAction()
+        if action is None:
+            super().mouseReleaseEvent(event)
+            return
+        if action.text() == "Ok":
+            super().mouseReleaseEvent(event)
+            return
+        action.trigger()
+
+    def populate(self, actions=[]):
+        """Populate the menu with actions."""
+        self.clear()
+        self.action_list = []
+        self.action_all = self.addAction("All")
+        self.action_all.setCheckable(True)
+        self.action_all.triggered.connect(self._handle_action_all_triggered)
+        self.addSeparator()
+        for i, action in enumerate(actions):
+            action = self.addAction(str(action))
+            action.setCheckable(True)
+            action.triggered.connect(self._handle_any_action_triggered)
+            self.action_list.append(action)
+            if actions not in self.checked_actions:
+                action.setChecked(True)
+            action.trigger()  # NOTE: this toggles the checked property
+        # 'Ok' action
+        self.addSeparator()
+        action_ok = self.addAction("Ok")
+        action_ok.triggered.connect(self._handle_action_ok_triggered)
+
+    @Slot("bool", name="_handle_any_action_triggered")
+    def _handle_any_action_triggered(self, checked=False):
+        """Called when any action is triggered.
+        In case they are all checked, check to 'All' action too.
+        """
+        self.action_all.setChecked(all([a.isChecked() for a in self.action_list]))
+
+    @Slot("bool", name="_handle_action_all_triggered")
+    def _handle_action_all_triggered(self, checked=False):
+        """Check or uncheck all filter actions."""
+        checked = self.action_all.isChecked()
+        for action in self.action_list:
+            action.setChecked(checked)
+
+    @Slot("bool", name="_handle_action_ok_triggered")
+    def _handle_action_ok_triggered(self, checked=False):
+        """Called when user clicks Ok. Update list of checked actions and emit signal"""
+        self.checked_actions = list()
+        for action in self.action_list:
+            if action.isChecked():
+                self.checked_actions.append(action.text())
+        self.ok_clicked.emit()

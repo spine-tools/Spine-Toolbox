@@ -26,7 +26,7 @@ from PySide2.QtCore import Signal, Slot, Qt, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from config import STATUSBAR_SS
-from models import EmptyRowModel, MinimalTableModel
+from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
     LineEditDelegate
 import ui.add_object_classes
@@ -34,6 +34,7 @@ import ui.add_objects
 import ui.add_relationship_classes
 import ui.add_relationships
 import ui.edit_data_items
+import ui.manage_parameter_tags
 from helpers import busy_effect, object_pixmap
 
 
@@ -820,7 +821,7 @@ class EditRelationshipsDialog(EditItemsDialog):
 
 
 class CommitDialog(QDialog):
-    """A dialog to query user's preferences for new parameter values.
+    """A dialog to query user's preferences for new commit.
 
     Attributes:
         parent (TreeViewForm): data store widget
@@ -863,3 +864,107 @@ class CommitDialog(QDialog):
         cond = self.commit_msg.strip() != ""
         self.commit_button.setEnabled(cond)
         self.actionAccept.setEnabled(cond)
+
+
+class ManageParameterTagsDialog(QDialog):
+    """A dialog to query user's preferences for parameter tags.
+
+    Attributes:
+        parent (TreeViewForm): data store widget
+    """
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._parent = parent
+        self.parameter_tag_list = self._parent.db_map.parameter_tag_list()
+        self.remove_row_icon = QIcon(":/icons/minus.png")
+        self.model = HybridTableModel(self)
+        self.ui = ui.manage_parameter_tags.Ui_Dialog()
+        self.ui.setupUi(self)
+        self.ui.tableView.setModel(self.model)
+        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.connect_signals()
+        self.orig_data = list()
+        self.id_list = list()
+        model_data = list()
+        for parameter_tag in self.parameter_tag_list:
+            try:
+                self.id_list.append(parameter_tag.id)
+            except KeyError:
+                continue
+            tag = parameter_tag.tag
+            description = parameter_tag.description
+            row_data = [tag, description]
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+        self.model.set_horizontal_header_labels(['parameter tag', 'description'])
+        self.model.reset_model(model_data)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.ui.tableView.resizeColumnsToContents()
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.model.modelAboutToBeReset.connect(self._handle_model_about_to_be_reset)
+        self.model.rowsInserted.connect(self._handle_model_rows_inserted)
+
+    @Slot(name="_handle_model_about_to_be_reset")
+    def _handle_model_about_to_be_reset(self):
+        column_count = self.model.columnCount()
+        self.model.insert_horizontal_header_labels(column_count, [""])
+        self.ui.tableView.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
+        self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
+        self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
+
+    @Slot("QModelIndex", "int", "int", name="_handle_model_rows_inserted")
+    def _handle_model_rows_inserted(self, parent, first, last):
+        column = self.model.columnCount() - 1
+        for row in range(first, last + 1):
+            index = self.model.index(row, column, parent)
+            self.create_remove_row_button(index)
+
+    def create_remove_row_button(self, index):
+        """Create button to remove row."""
+        print(index)
+        action = QAction()
+        action.setIcon(self.remove_row_icon)
+        button = QToolButton()
+        button.setDefaultAction(action)
+        button.setIconSize(QSize(20, 20))
+        self.ui.tableView.setIndexWidget(index, button)
+        action.triggered.connect(lambda: self.remove_clicked_row(button))
+
+    def remove_clicked_row(self, button):
+        column = self.model.columnCount() - 1
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, column)
+            if button == self.ui.tableView.indexWidget(index):
+                self.model.removeRows(row, 1)
+                break
+
+    @busy_effect
+    def accept(self):
+        """Collect info from dialog and try to update items."""
+        kwargs_list = list()
+        for i in range(self.model.rowCount()):
+            id = self.id_list[i]
+            tag, description = self.model.row_data(i)
+            if not tag:
+                self._parent.msg_error.emit("Tag missing at row {}".format(i + 1))
+                return
+            orig_tag, orig_description = self.orig_data[i]
+            if name == orig_name and description == orig_description:
+                continue
+            kwargs = {
+                'id': id,
+                'name': name,
+                'description': description
+            }
+            kwargs_list.append(kwargs)
+        if not kwargs_list:
+            self._parent.msg_error.emit("Nothing to update")
+            return
+        try:
+            object_classes = self._parent.db_map.update_object_classes(*kwargs_list)
+            self._parent.update_object_classes(object_classes)
+            super().accept()
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
