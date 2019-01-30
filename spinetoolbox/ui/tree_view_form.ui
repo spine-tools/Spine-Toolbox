@@ -38,7 +38,7 @@
       <widget class="QWidget" name="layoutWidget">
        <layout class="QVBoxLayout" name="verticalLayout_3">
         <property name="spacing">
-         <number>6</number>
+         <number>0</number>
         </property>
         <item>
          <widget class="QLabel" name="label_object_tree">
@@ -95,7 +95,7 @@
             <number>0</number>
            </property>
            <item>
-            <widget class="QLabel" name="label">
+            <widget class="QLabel" name="label_object_parameter">
              <property name="font">
               <font>
                <weight>75</weight>
@@ -121,53 +121,20 @@
             </spacer>
            </item>
            <item>
-            <widget class="QLabel" name="label_object_parameter_tag_list">
-             <property name="text">
-              <string/>
+            <spacer name="horizontalSpacer_5">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
              </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLabel" name="label_object_parameter_tag">
-             <property name="text">
-              <string>Tags:</string>
+             <property name="sizeType">
+              <enum>QSizePolicy::Fixed</enum>
              </property>
-             <property name="alignment">
-              <set>Qt::AlignRight|Qt::AlignTrailing|Qt::AlignVCenter</set>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QLineEdit" name="lineEdit">
-             <property name="maximumSize">
+             <property name="sizeHint" stdset="0">
               <size>
-               <width>16777215</width>
-               <height>24</height>
+               <width>3</width>
+               <height>20</height>
               </size>
              </property>
-             <property name="readOnly">
-              <bool>true</bool>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <widget class="QToolButton" name="toolButton_object_parameter_tag">
-             <property name="layoutDirection">
-              <enum>Qt::LeftToRight</enum>
-             </property>
-             <property name="text">
-              <string>heeeeeeeeeey</string>
-             </property>
-             <property name="popupMode">
-              <enum>QToolButton::InstantPopup</enum>
-             </property>
-             <property name="toolButtonStyle">
-              <enum>Qt::ToolButtonIconOnly</enum>
-             </property>
-             <property name="arrowType">
-              <enum>Qt::DownArrow</enum>
-             </property>
-            </widget>
+            </spacer>
            </item>
           </layout>
          </item>
@@ -566,9 +533,6 @@
              </property>
             </spacer>
            </item>
-           <item>
-            <widget class="QComboBox" name="comboBox_relationship_parameter_tag"/>
-           </item>
           </layout>
          </item>
          <item>
@@ -924,6 +888,87 @@
             </layout>
            </widget>
           </widget>
+         </item>
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_4">
+           <property name="spacing">
+            <number>0</number>
+           </property>
+           <item>
+            <widget class="QLabel" name="label_object_parameter_tag">
+             <property name="font">
+              <font>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>Parameter tag</string>
+             </property>
+             <property name="alignment">
+              <set>Qt::AlignLeading|Qt::AlignLeft|Qt::AlignVCenter</set>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <layout class="QHBoxLayout" name="horizontalLayout_object_parameter_tag">
+             <property name="spacing">
+              <number>0</number>
+             </property>
+             <property name="sizeConstraint">
+              <enum>QLayout::SetMinimumSize</enum>
+             </property>
+             <property name="leftMargin">
+              <number>6</number>
+             </property>
+            </layout>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_filter_parameter_tag">
+             <property name="font">
+              <font>
+               <weight>50</weight>
+               <bold>false</bold>
+              </font>
+             </property>
+             <property name="layoutDirection">
+              <enum>Qt::LeftToRight</enum>
+             </property>
+             <property name="text">
+              <string>Filter</string>
+             </property>
+             <property name="popupMode">
+              <enum>QToolButton::InstantPopup</enum>
+             </property>
+             <property name="toolButtonStyle">
+              <enum>Qt::ToolButtonTextBesideIcon</enum>
+             </property>
+             <property name="arrowType">
+              <enum>Qt::DownArrow</enum>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_7">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+           <item>
+            <widget class="QToolButton" name="toolButton_manage_parameter_tags">
+             <property name="text">
+              <string>Manage tags...</string>
+             </property>
+            </widget>
+           </item>
+          </layout>
          </item>
         </layout>
        </widget>

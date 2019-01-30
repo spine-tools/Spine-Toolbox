@@ -17,12 +17,13 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction
+from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction, QWidget, QVBoxLayout, QListView, \
+    QLineEdit, QDialogButtonBox
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint
+from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer
 from helpers import fix_name_ambiguity, tuple_itemgetter
-from widgets.custom_qwidget import FilterWidget
 from operator import itemgetter
+from tabularview_models import FilterCheckboxListModel
 
 
 class CustomContextMenu(QMenu):
@@ -497,6 +498,98 @@ class CreateMainProgramPopupMenu(CustomPopupMenu):
         self.add_action("Select existing main program", self._parent.browse_main_program)
 
 
+class FilterWidget(QWidget):
+    okPressed = Signal()
+    cancelPressed = Signal()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # parameters
+        self._filter_state = set()
+        self._filter_empty_state = False
+        self._search_text = ''
+        self.search_delay = 200
+
+        # create ui elements
+        self._ui_vertical_layout = QVBoxLayout(self)
+        self._ui_list = QListView()
+        self._ui_edit = QLineEdit()
+        self._ui_edit.setPlaceholderText('Search')
+        self._ui_edit.setClearButtonEnabled(True)
+        self._ui_buttons = QDialogButtonBox(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+
+        self._ui_vertical_layout.addWidget(self._ui_edit)
+        self._ui_vertical_layout.addWidget(self._ui_list)
+        self._ui_vertical_layout.addWidget(self._ui_buttons)
+
+
+        # add models
+        # used to limit search so it doesn't search when typing
+        self._search_timer = QTimer()
+        self._search_timer.setSingleShot(True)
+
+        self._filter_model = FilterCheckboxListModel()
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+
+        # connect signals
+        self._ui_list.clicked.connect(self._filter_model.click_index)
+        self._search_timer.timeout.connect(self._filter_list)
+        self._ui_edit.textChanged.connect(self._text_edited)
+        self._ui_buttons.button(QDialogButtonBox.Ok).clicked.connect(self._apply_filter)
+        self._ui_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self._cancel_filter)
+
+    def save_state(self):
+        """Saves the state of the FilterCheckboxListModel"""
+        self._filter_state = self._filter_model.get_selected()
+        self._filter_empty_state = self._filter_model._empty_selected
+
+    def reset_state(self):
+        """Sets the state of the FilterCheckboxListModel to saved state"""
+        self._filter_model.set_selected(self._filter_state, self._filter_empty_state)
+
+    def clear_filter(self):
+        """Selects all items in FilterCheckBoxListModel"""
+        self._filter_model.reset_selection()
+        self.save_state()
+
+    def has_filter(self):
+        """Returns true if any item is filtered in FilterCheckboxListModel false otherwise"""
+        return not self._filter_model._all_selected
+
+    def set_filter_list(self, data):
+        """Sets the list of items to filter"""
+        self._filter_state = set(data)
+        self._filter_empty_state = True
+        self._filter_model.set_list(self._filter_state)
+
+    def _apply_filter(self):
+        """apply current filter and save state"""
+        self._filter_model.apply_filter()
+        self.save_state()
+        self._ui_edit.setText('')
+        self.okPressed.emit()
+
+    def _cancel_filter(self):
+        """cancel current edit of filter and set the state to the stored state"""
+        self._filter_model.remove_filter()
+        self.reset_state()
+        self._ui_edit.setText('')
+        self.cancelPressed.emit()
+
+    def _filter_list(self):
+        """filter list with current text"""
+        # filter model
+        self._filter_model.set_filter(self._search_text)
+
+    def _text_edited(self, new_text):
+        """callback for edit text, starts/restarts timer"""
+        # start timer after text is edited, restart timer if text
+        # is edited before last time is out.
+        self._search_text = new_text
+        self._search_timer.start(self.search_delay)
+
+
 class FilterMenu(QMenu):
     """Filter menu to use together with FilterWidget in TabularViewForm."""
     filterChanged = Signal(object, set, bool)
@@ -698,6 +791,7 @@ class PivotTableModelMenu(QMenu):
         self.move(mPos)
         self.show()
 
+
 class QOkMenu(QMenu):
     """A QMenu that only hides when 'Ok' action is triggered.
     It allows selecting multiple checkable options.
@@ -707,12 +801,12 @@ class QOkMenu(QMenu):
     """
     ok_clicked = Signal(name="ok_clicked")
 
-    def __init__(self, parent):
+    def __init__(self, parent, checked_action_names=[]):
         """Initialize the class."""
         super().__init__(parent)
         self.action_all = None
         self.action_list = []
-        self.checked_actions = []
+        self.checked_action_names = checked_action_names
 
     def mouseReleaseEvent(self, event):
         """The super implementation triggers the action and closes the menu.
@@ -728,7 +822,7 @@ class QOkMenu(QMenu):
             return
         action.trigger()
 
-    def populate(self, actions=[]):
+    def populate(self, action_names=[]):
         """Populate the menu with actions."""
         self.clear()
         self.action_list = []
@@ -736,14 +830,14 @@ class QOkMenu(QMenu):
         self.action_all.setCheckable(True)
         self.action_all.triggered.connect(self._handle_action_all_triggered)
         self.addSeparator()
-        for i, action in enumerate(actions):
-            action = self.addAction(str(action))
+        for i, name in enumerate(action_names):
+            action = self.addAction(name)
             action.setCheckable(True)
             action.triggered.connect(self._handle_any_action_triggered)
             self.action_list.append(action)
-            if actions not in self.checked_actions:
+            if name in self.checked_action_names:
                 action.setChecked(True)
-            action.trigger()  # NOTE: this toggles the checked property
+        self._handle_any_action_triggered()
         # 'Ok' action
         self.addSeparator()
         action_ok = self.addAction("Ok")
@@ -766,8 +860,8 @@ class QOkMenu(QMenu):
     @Slot("bool", name="_handle_action_ok_triggered")
     def _handle_action_ok_triggered(self, checked=False):
         """Called when user clicks Ok. Update list of checked actions and emit signal"""
-        self.checked_actions = list()
+        self.checked_action_names = list()
         for action in self.action_list:
             if action.isChecked():
-                self.checked_actions.append(action.text())
+                self.checked_action_names.append(action.text())
         self.ok_clicked.emit()

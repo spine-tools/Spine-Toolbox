@@ -25,7 +25,7 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
     QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
-    QButtonGroup, QSizePolicy, QHBoxLayout, QWidget, QWidgetAction
+    QButtonGroup, QSizePolicy, QWidgetAction, QFrame
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, QStandardItemModel, QStandardItem
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
@@ -42,7 +42,6 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog, ManageParameterTagsDialog
 from widgets.custom_qwidget import ZoomWidget
-from widgets.custom_qtreeview import ParameterTagTreeView
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
@@ -80,8 +79,6 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.setStyleSheet(MAINWINDOW_SS)
-        # Set up corner widgets
-        self.set_corner_widgets()
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB db_map
@@ -131,40 +128,6 @@ class DataStoreForm(QMainWindow):
             connect(self.set_parameter_value_data)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
-
-    def set_corner_widgets(self):
-        """Set corner widgets (icon and text on the tab bar) to both QTabWidgets."""
-        icon_size_policy = QSizePolicy(QSizePolicy.Fixed, QSizePolicy.Fixed)
-        # Corner widget for object parameter tab widget
-        corner_widget1 = QWidget()
-        icon_label1 = QLabel()
-        icon_label1.setSizePolicy(icon_size_policy)
-        icon_label1.setMinimumSize(QSize(16, 16))
-        icon_label1.setMaximumSize(QSize(16, 16))
-        icon_label1.setPixmap(QPixmap(":/icons/object_parameter_icon.png"))
-        icon_label1.setScaledContents(True)
-        text_label1 = QLabel("Object parameter")
-        obj_layout = QHBoxLayout()
-        obj_layout.setContentsMargins(6, 2, 0, 2)
-        obj_layout.addWidget(text_label1)
-        obj_layout.addWidget(icon_label1)
-        corner_widget1.setLayout(obj_layout)
-        self.ui.tabWidget_object_parameter.setCornerWidget(corner_widget1, Qt.TopRightCorner)
-        # Corner widget for relationship parameter tab widget
-        corner_widget2 = QWidget()
-        icon_label2 = QLabel()
-        icon_label2.setSizePolicy(icon_size_policy)
-        icon_label2.setMinimumSize(QSize(16, 16))
-        icon_label2.setMaximumSize(QSize(16, 16))
-        icon_label2.setPixmap(QPixmap(":/icons/relationship_parameter_icon.png"))
-        icon_label2.setScaledContents(True)
-        text_label2 = QLabel("Relationship parameter")
-        rel_layout = QHBoxLayout()
-        rel_layout.addWidget(text_label2)
-        rel_layout.addWidget(icon_label2)
-        rel_layout.setContentsMargins(6, 2, 0, 2)
-        corner_widget2.setLayout(rel_layout)
-        self.ui.tabWidget_relationship_parameter.setCornerWidget(corner_widget2, Qt.TopRightCorner)
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -528,6 +491,31 @@ class DataStoreForm(QMainWindow):
         dialog = ManageParameterTagsDialog(self)
         dialog.show()
 
+    @busy_effect
+    def add_parameter_tags(self, parameter_tags):
+        """Add parameter tags."""
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully added parameter tags '{}'.".format([x.tag for x in parameter_tags])
+        self.msg.emit(msg)
+
+    @busy_effect
+    def update_parameter_tags(self, parameter_tags):
+        """Update parameter tags."""
+        # TODO: update parameter tables
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully updated parameter tags '{}'.".format([x.tag for x in parameter_tags])
+        self.msg.emit(msg)
+
+    @busy_effect
+    def remove_parameter_tags(self, parameter_tag_ids):
+        """Remove parameter tags."""
+        # TODO: update parameter tables
+        if not parameter_tag_ids:
+            return
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully removed parameter tags."
+        self.msg.emit(msg)
+
     @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
     def set_parameter_value_data(self, index, new_value):
         """Update (object or relationship) parameter value with newly edited data."""
@@ -663,8 +651,10 @@ class TreeViewForm(DataStoreForm):
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
-        self.object_parameter_tag_menu = QOkMenu(self)
-        self.ui.toolButton_object_parameter_tag.setMenu(self.object_parameter_tag_menu)
+        parameter_tag_list = ["(empty)"] + [x.tag for x in self.db_map.parameter_tag_list()]
+        self.object_parameter_tag_menu = QOkMenu(self, parameter_tag_list)
+        self._handle_object_parameter_tag_menu_ok_clicked()
+        self.ui.toolButton_filter_parameter_tag.setMenu(self.object_parameter_tag_menu)
         # init models and views
         self.init_models()
         self.init_views()
@@ -754,12 +744,29 @@ class TreeViewForm(DataStoreForm):
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuSession.aboutToShow.connect(self._handle_menu_about_to_show)
         # Parameter tag menus about to show
-        self.object_parameter_tag_menu.aboutToShow.connect(self.populate_object_parameter_tag_menu)
+        self.object_parameter_tag_menu.aboutToShow.connect(self._handle_object_parameter_tag_menu_about_to_show)
+        self.object_parameter_tag_menu.ok_clicked.connect(self._handle_object_parameter_tag_menu_ok_clicked)
+        self.ui.toolButton_manage_parameter_tags.clicked.connect(self.show_manage_parameter_tags_form)
 
-    @Slot(name="populate_object_parameter_tag_menu")
-    def populate_object_parameter_tag_menu(self):
-        parameter_tag_list = self.db_map.parameter_tag_list()
-        self.object_parameter_tag_menu.populate([x.tag for x in parameter_tag_list])
+    @Slot(name="_handle_object_parameter_tag_menu_about_to_show")
+    def _handle_object_parameter_tag_menu_about_to_show(self):
+        parameter_tag_list = ["(empty)"] + [x.tag for x in self.db_map.parameter_tag_list()]
+        self.object_parameter_tag_menu.populate(parameter_tag_list)
+
+    @Slot(name="_handle_object_parameter_tag_menu_ok_clicked")
+    def _handle_object_parameter_tag_menu_ok_clicked(self):
+        layout = self.ui.horizontalLayout_object_parameter_tag
+        while True:
+            item = layout.takeAt(0)
+            if not item:
+                break
+            item.widget().deleteLater()
+        for tag in self.object_parameter_tag_menu.checked_action_names:
+            label = QLabel(tag, self)
+            label.setFrameShape(QFrame.Box)
+            label.setFrameShadow(QFrame.Raised)
+            label.setLineWidth(1)
+            layout.addWidget(label)
 
     @Slot("bool", name="copy")
     def copy(self, checked=False):

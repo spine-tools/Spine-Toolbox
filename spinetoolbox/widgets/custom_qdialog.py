@@ -885,6 +885,7 @@ class ManageParameterTagsDialog(QDialog):
         self.connect_signals()
         self.orig_data = list()
         self.id_list = list()
+        self.removed_id_list = list()
         model_data = list()
         for parameter_tag in self.parameter_tag_list:
             try:
@@ -903,13 +904,17 @@ class ManageParameterTagsDialog(QDialog):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.model.modelAboutToBeReset.connect(self._handle_model_about_to_be_reset)
+        self.model.modelReset.connect(self._handle_model_reset)
         self.model.rowsInserted.connect(self._handle_model_rows_inserted)
 
-    @Slot(name="_handle_model_about_to_be_reset")
-    def _handle_model_about_to_be_reset(self):
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
         column_count = self.model.columnCount()
         self.model.insert_horizontal_header_labels(column_count, [""])
+        column = self.model.columnCount() - 1
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, column)
+            self.create_remove_row_button(index)
         self.ui.tableView.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
@@ -923,7 +928,6 @@ class ManageParameterTagsDialog(QDialog):
 
     def create_remove_row_button(self, index):
         """Create button to remove row."""
-        print(index)
         action = QAction()
         action.setIcon(self.remove_row_icon)
         button = QToolButton()
@@ -938,33 +942,56 @@ class ManageParameterTagsDialog(QDialog):
             index = self.model.index(row, column)
             if button == self.ui.tableView.indexWidget(index):
                 self.model.removeRows(row, 1)
+                try:
+                    self.removed_id_list.append(self.id_list.pop(row))
+                except IndexError:
+                    pass
                 break
 
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
-        kwargs_list = list()
-        for i in range(self.model.rowCount()):
+        # update
+        items_to_update = list()
+        for i in range(self.model.existing_item_model.rowCount()):
             id = self.id_list[i]
-            tag, description = self.model.row_data(i)
+            tag, description = self.model.existing_item_model.row_data(i)
             if not tag:
                 self._parent.msg_error.emit("Tag missing at row {}".format(i + 1))
                 return
             orig_tag, orig_description = self.orig_data[i]
-            if name == orig_name and description == orig_description:
+            if tag == orig_tag and description == orig_description:
                 continue
             kwargs = {
                 'id': id,
-                'name': name,
+                'tag': tag,
                 'description': description
             }
-            kwargs_list.append(kwargs)
-        if not kwargs_list:
-            self._parent.msg_error.emit("Nothing to update")
-            return
+            items_to_update.append(kwargs)
+        # insert
+        items_to_add = list()
+        for i in range(self.model.new_item_model.rowCount() - 1):  # last row will always be empty
+            tag, description = self.model.new_item_model.row_data(i)
+            if not tag:
+                self._parent.msg_error.emit("Tag missing at row {0}".format(i + 1))
+                return
+            kwargs = {
+                'tag': tag,
+                'description': description
+            }
+            items_to_add.append(kwargs)
         try:
-            object_classes = self._parent.db_map.update_object_classes(*kwargs_list)
-            self._parent.update_object_classes(object_classes)
+            if items_to_update:
+                parameter_tags = self._parent.db_map.update_parameter_tags(*items_to_update)
+                self._parent.update_parameter_tags(parameter_tags)
+            if self.removed_id_list:
+                self._parent.db_map.remove_items(parameter_tag_ids=self.removed_id_list)
+                self._parent.remove_parameter_tags(self.removed_id_list)
+            if items_to_add:
+                parameter_tags = self._parent.db_map.add_parameter_tags(*items_to_add)
+                self._parent.add_parameter_tags(parameter_tags)
             super().accept()
+        except SpineIntegrityError as e:
+            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)

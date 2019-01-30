@@ -16,9 +16,10 @@ Custom item delegates.
 :date:   1.9.2018
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
-from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, QApplication, \
-    QTextEdit, QWidget, QVBoxLayout, QPushButton, QTableView
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
+from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
+    QApplication, QTextEdit, QWidget, QVBoxLayout, QPushButton, QTableView
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor, \
+    ParameterTagListEditor
 from models import MinimalTableModel
 import logging
 
@@ -202,11 +203,21 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
     def __init__(self, parent):
         super().__init__(parent)
 
+    def close_parameter_tag_list_editor(self, editor, index, model):
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, model, index)
+
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'object_class_name':
             return CustomComboEditor(parent)
+        elif header[index.column()] == 'parameter_tag_list':
+            editor = ParameterTagListEditor(parent)
+            model = index.model()
+            editor.data_committed.connect(
+                lambda e=editor, i=index, m=model: self.close_parameter_tag_list_editor(e, i, m))
+            return editor
         return CustomLineEditor(parent)
 
     def setEditorData(self, editor, index):
@@ -215,6 +226,13 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         if header[index.column()] == 'object_class_name':
             name_list = [x.name for x in self.db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'parameter_tag_list':
+            all_parameter_tag_list = [x.tag for x in self.db_map.parameter_tag_list()]
+            try:
+                parameter_tag_list = index.data(Qt.EditRole).split(",")
+            except AttributeError:
+                parameter_tag_list = []
+            editor.set_data(parameter_tag_list, all_parameter_tag_list)
         else:
             editor.set_data(index.data(Qt.EditRole))
 

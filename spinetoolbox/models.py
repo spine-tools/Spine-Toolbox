@@ -1161,7 +1161,7 @@ class EmptyRowModel(MinimalTableModel):
         self.default_row = {}  # A row of default values to put in any newly inserted row
         self.force_default = False  # Whether or not default values are editable
         self.dataChanged.connect(self._handle_data_changed)
-        self.rowsAboutToBeRemoved.connect(self._handle_rows_about_to_be_removed)
+        self.rowsRemoved.connect(self._handle_rows_removed)
         self.rowsInserted.connect(self._handle_rows_inserted)
         self.columnsInserted.connect(self._handle_columns_inserted)
 
@@ -1208,10 +1208,10 @@ class EmptyRowModel(MinimalTableModel):
                 self.insertRows(self.rowCount(), 1)
                 break
 
-    @Slot("QModelIndex", "int", "int", name="_handle_rows_about_to_be_removed")
-    def _handle_rows_about_to_be_removed(self, parent, first, last):
-        """Insert a new empty row in case the current one is being deleted."""
-        last_row = self.rowCount() - 1
+    @Slot("QModelIndex", "int", "int", name="_handle_rows_removed")
+    def _handle_rows_removed(self, parent, first, last):
+        """Insert a new empty row in case all have been removed."""
+        last_row = self.rowCount()
         if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
 
@@ -1840,7 +1840,7 @@ class SubParameterModel(MinimalTableModel):
     """A parameter model which corresponds to a slice of the entire table.
     The idea is to combine several of these into one big model.
     Allows specifying set of columns that are non-editable (e.g., object_class_name)
-    # TODO: how column insertion/removal impact fixed_columns?
+    TODO: how column insertion/removal impact fixed_columns?
     """
     def __init__(self, parent):
         """Initialize class."""
@@ -1952,6 +1952,17 @@ class SubParameterDefinitionModel(SubParameterModel):
         if not items_to_update:
             return False
         try:
+            tag_dicts = list()
+            for item in items_to_update:
+                parameter_tag_list = item.pop("parameter_tag_list", None)
+                if parameter_tag_list is None:
+                    continue
+                tag_dict = {
+                    "parameter_definition_id": item["id"],
+                    "parameter_tag_list": parameter_tag_list
+                }
+                tag_dicts.append(tag_dict)
+            self._parent.db_map.set_parameter_definition_tags(*tag_dicts)
             self._parent.db_map.update_parameters(*items_to_update)
             self._parent._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Parameter definitions successfully updated."
@@ -2527,7 +2538,7 @@ class ObjectParameterModel(MinimalTableModel):
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
-        offset = self.rowCount() - 1
+        offset = self.rowCount() - self.empty_row_model.rowCount()
         self.rowsInserted.emit(QModelIndex(), offset + first, offset + last)
 
 
@@ -3011,7 +3022,7 @@ class RelationshipParameterModel(MinimalTableModel):
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
-        offset = self.rowCount() - 1
+        offset = self.rowCount() - self.empty_row_model.rowCount()
         self.rowsInserted.emit(QModelIndex(), offset + first, offset + last)
 
 
@@ -3688,7 +3699,6 @@ class HybridTableModel(MinimalTableModel):
         self._parent = parent
         self.existing_item_model = MinimalTableModel(self)
         self.new_item_model = EmptyRowModel(self)
-        self.new_item_model.rowsInserted.connect(self._handle_new_item_model_rows_inserted)
 
     def flags(self, index):
         """Return flags for given index.
@@ -3785,8 +3795,9 @@ class HybridTableModel(MinimalTableModel):
         """Reset model data."""
         self.beginResetModel()
         self.existing_item_model.reset_model(data)
-        self.endResetModel()
         self.new_item_model.clear()
+        self.endResetModel()
+        self.new_item_model.rowsInserted.connect(self._handle_new_item_model_rows_inserted)
 
     @Slot("QModelIndex", "int", "int", name="_handle_new_item_model_rows_inserted")
     def _handle_new_item_model_rows_inserted(self, parent, first, last):
