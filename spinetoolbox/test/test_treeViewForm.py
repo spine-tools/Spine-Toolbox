@@ -52,29 +52,21 @@ class TestTreeViewForm(unittest.TestCase):
         cls.RelationshipParameter = namedtuple(
             "RelationshipParameter",
             ['id', 'relationship_class_id', 'relationship_class_name',
-            'object_class_id_list', 'object_class_name_list', 'parameter_name'])
+             'object_class_id_list', 'object_class_name_list', 'parameter_name'])
         cls.ObjectParameterValue = namedtuple(
             "ObjectParameterValue",
-            [
-                'id', 'object_class_id', 'object_class_name', 'object_id', 'object_name',
-                'parameter_id', 'parameter_name', 'index', 'value'
-            ])
+            ['id', 'object_class_id', 'object_class_name', 'object_id', 'object_name',
+             'parameter_id', 'parameter_name', 'index', 'value'])
         cls.RelationshipParameterValue = namedtuple(
             "RelationshipParameterValue",
-            [
-                'id', 'relationship_class_id', 'relationship_class_name',
-                'object_class_id_list', 'object_class_name_list',
-                'relationship_id', 'object_id_list', 'object_name_list',
-                'parameter_id', 'parameter_name', 'index', 'value'
-            ])
+            ['id', 'relationship_class_id', 'relationship_class_name', 'object_class_id_list',
+             'object_class_name_list', 'relationship_id', 'object_id_list',
+             'object_name_list', 'parameter_id', 'parameter_name', 'index', 'value'])
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes.
-        """
-        # Set logging level to Error to silence "Logging level: All messages" print
+        """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes."""
         with mock.patch("data_store.DataStore") as mock_data_store, \
                 mock.patch("spinedatabase_api.DiffDatabaseMapping") as mock_db_map:
-            # logging.disable(level=logging.ERROR)  # Disable logging
             mock_db_map.object_parameter_fields.return_value = [
                 'id', 'object_class_id', 'object_class_name', 'parameter_name']
             mock_db_map.relationship_parameter_fields.return_value = [
@@ -92,12 +84,12 @@ class TestTreeViewForm(unittest.TestCase):
                 'parameter_id', 'parameter_name', 'index', 'value'
             ]
             self.tree_view_form = TreeViewForm(mock_data_store, mock_db_map, "mock_db")
-            # logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
+        self.tree_view_form.deleteLater()
         self.tree_view_form = None
 
     def test_add_object_classes(self):
@@ -128,8 +120,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(root_item.rowCount(), 3)
 
     def test_add_objects(self):
-        """Test that objects are added to the object tree model.
-        """
+        """Test that objects are added to the object tree model."""
         fish_class, dog_class = self.add_mock_object_classes()
         self.tree_view_form.init_object_tree_model()
         objects = [
@@ -143,6 +134,7 @@ class TestTreeViewForm(unittest.TestCase):
         fish_item = root_item.child(0)
         fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
         self.tree_view_form.object_tree_model.fetchMore(fish_index)
+
         # Make object_list return something meaningful
         def side_effect(class_id):
             if class_id == fish_class.id:
@@ -196,8 +188,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(fish_item.rowCount(), 2)
 
     def test_add_relationship_classes(self):
-        """Test that relationship classes are added to the object tree model.
-        """
+        """Test that relationship classes are added to the object tree model."""
         fish_class, dog_class = self.add_mock_object_classes()
         self.tree_view_form.init_object_tree_model()
         # Add nemo object before adding the relationships to test fetch more
@@ -207,6 +198,7 @@ class TestTreeViewForm(unittest.TestCase):
             description='The lost one.'
         )
         nemo_object = self.Object(1, fish_class.id, "nemo", "The lost one.")
+
         # Make object_list return something meaningful
         def side_effect(class_id):
             if class_id == fish_class.id:
@@ -221,6 +213,7 @@ class TestTreeViewForm(unittest.TestCase):
             self.RelationshipClass(1, "dog__fish", str(dog_class.id) + "," + str(fish_class.id), "dog,fish"),
             self.RelationshipClass(2, "fish__dog", str(fish_class.id) + "," + str(dog_class.id), "fish,dog")
         ]
+
         # Make wide_relationship_class_list return something meaningful
         def side_effect(object_class_id):
             if object_class_id in (fish_class.id, dog_class.id):
@@ -231,6 +224,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.tree_view_form.add_relationship_classes(relationship_classes)
         # Add pluto object after adding the relationships to test fetch more
         pluto_object = self.Object(2, dog_class.id, "pluto", "Mickey's.")
+
         # Make object_list return something meaningful
         def side_effect(class_id):
             if class_id == fish_class.id:
@@ -282,8 +276,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(pluto_item.rowCount(), 2)
 
     def test_add_relationships(self):
-        """Test that relationships are added to the object tree model.
-        """
+        """Test that relationships are added to the object tree model."""
         fish_class, dog_class = self.add_mock_object_classes()
         self.tree_view_form.init_object_tree_model()
         nemo_object, pluto_object, scooby_object = self.add_mock_objects(fish_class.id, dog_class.id)
@@ -295,6 +288,7 @@ class TestTreeViewForm(unittest.TestCase):
             2, fish_dog_class.id, "rel2", str(nemo_object.id) + "," + str(pluto_object.id), "nemo,pluto")
         rel3 = self.Relationship(
             3, fish_dog_class.id, "rel3", str(nemo_object.id) + "," + str(scooby_object.id), "nemo,scooby")
+
         # Make wide_relationship_list return something meaningful
         def side_effect(class_id, object_id):
             if class_id == dog_fish_class.id:
@@ -442,8 +436,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(nemo_scooby_item2_object_name_list, "nemo,scooby")
 
     def test_add_object_parameter_definitions(self):
-        """Test that object parameter definitions are added to the model.
-        """
+        """Test that object parameter definitions are added to the model."""
         self.tree_view_form.db_map.object_parameter_fields.return_value = [
             'id', 'object_class_id', 'object_class_name', 'parameter_name']
         self.tree_view_form.object_parameter_definition_model.reset_model()
@@ -481,8 +474,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter_name_index.data(), 'breed')
 
     def test_add_relationship_parameter_definitions(self):
-        """Test that relationship parameter definitions are added to the model.
-        """
+        """Test that relationship parameter definitions are added to the model."""
         self.tree_view_form.db_map.relationship_parameter_fields.return_value = [
             'id', 'relationship_class_id', 'relationship_class_name',
             'object_class_id_list', 'object_class_name_list', 'parameter_name'
@@ -528,8 +520,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(parameter_name_index.data(), 'combined_mojo')
 
     def test_add_object_parameter_values(self):
-        """Test that object parameter values are added to the model.
-        """
+        """Test that object parameter values are added to the model."""
         self.tree_view_form.db_map.object_parameter_value_fields.return_value = [
             'id', 'object_class_id', 'object_class_name', 'object_id', 'object_name',
             'parameter_id', 'parameter_name', 'index', 'value', 'json'
@@ -610,8 +601,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(obj_id_index.data(), pluto_object.id)
 
     def test_add_relationship_parameter_values(self):
-        """Test that relationship parameter values are added to the model.
-        """
+        """Test that relationship parameter values are added to the model."""
         self.tree_view_form.db_map.relationship_parameter_value_fields.return_value = [
             'id', 'relationship_class_id', 'relationship_class_name',
             'object_class_id_list', 'object_class_name_list',
@@ -641,6 +631,7 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_pluto_relationship = self.Relationship(
             1, fish_dog_class.id, "fish__dog_nemo__pluto",
             str(nemo_object.id) + "," + str(pluto_object.id), "nemo,pluto")
+
         def side_effect(class_id=None, object_id=None):
             if class_id == fish_dog_class.id:
                 if object_id in (nemo_object.id, pluto_object.id):
@@ -751,8 +742,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_add_object_parameter_definitions(self):
-        """Test that data is pasted onto the view and object parameter definitions are added to the model.
-        """
+        """Test that data is pasted onto the view and object parameter definitions are added to the model."""
         fish_class, dog_class = self.add_mock_object_classes()
         self.tree_view_form.init_models()
         # Paste data
@@ -782,8 +772,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_add_object_parameter_values(self):
-        """Test that data is pasted onto the view and object parameter values are added to the model.
-        """
+        """Test that data is pasted onto the view and object parameter values are added to the model."""
         fish_class, dog_class = self.add_mock_object_classes()
         nemo_object, pluto_object, scooby_object = self.add_mock_objects(fish_class.id, dog_class.id)
         water_parameter, breed_parameter = self.add_mock_object_parameter_definitions(
@@ -854,8 +843,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_add_relationship_parameter_definitions(self):
-        """Test that data is pasted onto the view and relationship parameter definitions are added to the model.
-        """
+        """Test that data is pasted onto the view and relationship parameter definitions are added to the model."""
         fish_class, dog_class = self.add_mock_object_classes()
         nemo_object, pluto_object, scooby_object = self.add_mock_objects(fish_class.id, dog_class.id)
         fish_dog_class, dog_fish_class = self.add_mock_relationship_classes(fish_class.id, dog_class.id)
@@ -896,8 +884,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
     def test_paste_add_relationship_parameter_values(self):
-        """Test that data is pasted onto the view and relationship parameter values are added to the model.
-        """
+        """Test that data is pasted onto the view and relationship parameter values are added to the model."""
         fish_class, dog_class = self.add_mock_object_classes()
         nemo_object, pluto_object, scooby_object = self.add_mock_objects(fish_class.id, dog_class.id)
         fish_dog_class, dog_fish_class = self.add_mock_relationship_classes(fish_class.id, dog_class.id)
@@ -1035,8 +1022,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(data, [['fish'], ['dog'], ['nemo'], ['scooby']])
 
     def test_set_object_parameter_definition_defaults(self):
-        """Test that defaults are set in object parameter definition models according the object tree selection.
-        """
+        """Test that defaults are set in object parameter definition models according the object tree selection."""
         self.tree_view_form.db_map.object_parameter_fields.return_value = [
             'id', 'object_class_id', 'object_class_name', 'parameter_name']
         fish_class, dog_class = self.add_mock_object_classes()
@@ -1068,25 +1054,27 @@ class TestTreeViewForm(unittest.TestCase):
 
     @unittest.skip("TODO")
     def test_set_object_parameter_value_defaults(self):
-        """Test that defaults are set in relationship parameter definition models according the object tree selection.
+        """Test that defaults are set in relationship parameter definition
+        models according the object tree selection.
         """
         self.fail()
 
     @unittest.skip("TODO")
     def test_set_relationship_parameter_definition_defaults(self):
-        """Test that defaults are set in relationship parameter definition models according the object tree selection.
+        """Test that defaults are set in relationship parameter definition
+        models according the object tree selection.
         """
         self.fail()
 
     @unittest.skip("TODO")
     def test_set_relationship_parameter_value_defaults(self):
-        """Test that defaults are set in relationship parameter definition models according the object tree selection.
+        """Test that defaults are set in relationship parameter definition
+        models according the object tree selection.
         """
         self.fail()
 
     def test_update_object_classes(self):
-        """Test that object classes are updated on all model/views.
-        """
+        """Test that object classes are updated on all model/views."""
         fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
             fish_dog_class, dog_fish_class, \
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
@@ -1143,8 +1131,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(obj_cls_name_lst_2, 'god,octopus')
 
     def test_update_objects(self):
-        """Test that objects are updated on all model/views.
-        """
+        """Test that objects are updated on all model/views."""
         fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
             fish_dog_class, dog_fish_class, \
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
@@ -1161,6 +1148,7 @@ class TestTreeViewForm(unittest.TestCase):
         # Update objects
         upd_nemo_object = self.Object(nemo_object.id, fish_class.id, "dory", "")
         upd_pluto_object = self.Object(pluto_object.id, dog_class.id, "rascal", "")
+
         def side_effect(class_id=None):
             if class_id == fish_class.id:
                 return [nemo_object]
@@ -1201,8 +1189,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(obj_name_lst_2, 'rascal,dory')
 
     def test_update_relationship_classes(self):
-        """Test that relationship classes are updated on all model/views.
-        """
+        """Test that relationship classes are updated on all model/views."""
         fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
             fish_dog_class, dog_fish_class, \
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
@@ -1233,6 +1220,7 @@ class TestTreeViewForm(unittest.TestCase):
         upd_dog_fish_class = self.RelationshipClass(
                 dog_fish_class.id, "god__octopus",
                 str(dog_class.id) + "," + str(fish_class.id), "dog,fish")
+
         # Make wide_relationship_class_list return something meaningful
         def side_effect(object_class_id=None):
             if object_class_id in (fish_class.id, dog_class.id):
@@ -1292,8 +1280,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(rel_cls_name_2, 'god__octopus')
 
     def test_update_relationships(self):
-        """Test that relationships are updated on all model/views.
-        """
+        """Test that relationships are updated on all model/views."""
         fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
             fish_dog_class, dog_fish_class, \
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
@@ -1329,6 +1316,7 @@ class TestTreeViewForm(unittest.TestCase):
         upd_pluto_nemo_rel = self.Relationship(
             pluto_nemo_rel.id, dog_fish_class.id, "dog__fish_scooby__nemo",
             str(scooby_object.id) + "," + str(nemo_object.id), "scooby,nemo")
+
         def side_effect(class_id, object_id):
             if class_id == dog_fish_class.id:
                 if object_id in (nemo_object.id, pluto_object.id):
@@ -1362,8 +1350,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(pluto_dog_fish_item.rowCount(), 0)
 
     def test_remove_object_classes(self):
-        """Test that object classes are removed from all model/views.
-        """
+        """Test that object classes are removed from all model/views."""
         fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
             fish_dog_class, dog_fish_class, \
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
@@ -1413,8 +1400,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1)
 
     def test_remove_objects(self):
-        """Test that objects are removed from all model/views.
-        """
+        """Test that objects are removed from all model/views."""
         fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
             fish_dog_class, dog_fish_class, \
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
@@ -1462,8 +1448,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(model.rowCount(), 1)
 
     def test_remove_relationship_classes(self):
-        """Test that relationship classes are removed from all model/views.
-        """
+        """Test that relationship classes are removed from all model/views."""
         fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
             fish_dog_class, dog_fish_class, \
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
@@ -1527,8 +1512,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(model.rowCount(), 2)
 
     def test_remove_relationships(self):
-        """Test that relationships are removed from all model/views.
-        """
+        """Test that relationships are removed from all model/views."""
         fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
             fish_dog_class, dog_fish_class, \
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
@@ -2026,6 +2010,7 @@ class TestTreeViewForm(unittest.TestCase):
         nemo_scooby_rel = self.Relationship(
             3, fish_dog_class_id, "fish__dog_nemo__scooby",
             str(nemo_object_id) + "," + str(scooby_object_id), "nemo,scooby")
+
         def side_effect(class_id=None, object_id=None):
             if class_id == dog_fish_class_id:
                 if object_id in (nemo_object_id, pluto_object_id):
@@ -2052,6 +2037,7 @@ class TestTreeViewForm(unittest.TestCase):
         """Add water and breed object parameter definitions."""
         water_parameter = self.ObjectParameter(1, fish_class_id, "fish", "water")
         breed_parameter = self.ObjectParameter(2, dog_class_id, "dog", "breed")
+
         def side_effect(object_class_id=None):
             if object_class_id == fish_class_id:
                 return [water_parameter]
@@ -2073,6 +2059,7 @@ class TestTreeViewForm(unittest.TestCase):
         combined_mojo_parameter = self.RelationshipParameter(
             2, dog_fish_class_id, "dog__fish", str(dog_class_id) + "," + str(fish_class_id),
             "dog,fish", "combined_mojo")
+
         def side_effect(relationship_class_id=None):
             if relationship_class_id == fish_dog_class_id:
                 return [relative_speed_parameter]
@@ -2117,6 +2104,7 @@ class TestTreeViewForm(unittest.TestCase):
             3, dog_fish_class_id, "dog__fish", str(dog_class_id) + "," + str(fish_class_id), "dog,fish",
             pluto_nemo_rel_id, str(pluto_object_id) + "," + str(nemo_object_id), "pluto,nemo",
             combined_mojo_parameter_id, "combined_mojo", 1, 100)
+
         def side_effect():
             return [nemo_pluto_relative_speed, nemo_scooby_relative_speed, pluto_nemo_combined_mojo]
         self.tree_view_form.db_map.relationship_parameter_value_list.side_effect = side_effect

@@ -1,28 +1,38 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov 12 13:40:52 2018
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
-@author: pvper
+"""
+Unit tests for Excel import and export.
+
+:author: P. Vennström (VTT)
+:date:   12.11.2018
 """
 
 import os
-import uuid
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock
 from collections import namedtuple
-from sqlalchemy.orm import Session
-
-from spinedatabase_api import DatabaseMapping, DiffDatabaseMapping, create_new_spine_database
-from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, validate_sheet, SheetData, read_parameter_sheet, read_json_sheet, merge_spine_xlsx_data, read_spine_xlsx, export_spine_database_to_xlsx, get_unstacked_objects, import_xlsx_to_db
+from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
+from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, validate_sheet, SheetData, \
+    read_parameter_sheet, read_json_sheet, merge_spine_xlsx_data, read_spine_xlsx, export_spine_database_to_xlsx, \
+    import_xlsx_to_db
 
 UUID_STR = 'f7f92ced-faff-4315-900e-704d2a786a65'
 TEMP_EXCEL_FILENAME = UUID_STR + '-excel.xlsx'
 TEMP_SQLITE_FILENAME = UUID_STR + '-first.sqlite'
 TEMP_SQLITE_TEST_FILENAME = UUID_STR + '-second.sqlite'
 
+
 class TestExcelIntegration(unittest.TestCase):
-    
     def delete_temp_files(self):
         # delete temp excel file if it exists
         # close mappings

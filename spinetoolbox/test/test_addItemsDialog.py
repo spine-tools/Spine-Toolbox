@@ -22,11 +22,9 @@ import logging
 import os
 import sys
 from PySide2.QtWidgets import QApplication, QToolButton
-from PySide2.QtCore import Qt
 from widgets.data_store_widgets import TreeViewForm
 from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
-from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
-    AddRelationshipClassesDialog, AddRelationshipsDialog
+from widgets.custom_qdialog import AddObjectClassesDialog
 
 
 class TestAddItemsDialog(unittest.TestCase):
@@ -43,11 +41,8 @@ class TestAddItemsDialog(unittest.TestCase):
                             datefmt='%Y-%m-%d %H:%M:%S')
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of TreeViewForm class.
-        """
-        # # Set logging level to Error to silence "Logging level: All messages" print
+        """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
         with mock.patch("data_store.DataStore") as mock_data_store:
-            logging.disable(level=logging.ERROR)  # Disable logging
             try:
                 os.remove('mock_db.sqlite')
             except OSError:
@@ -57,13 +52,14 @@ class TestAddItemsDialog(unittest.TestCase):
             db_map = DiffDatabaseMapping(db_url, "UnitTest")
             db_map.reset_mapping()
             self.tree_view_form = TreeViewForm(mock_data_store, db_map, "mock_db")
-            logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
         self.tree_view_form.close()
+        self.tree_view_form.deleteLater()
+        self.tree_view_form = None
         try:
             os.remove('mock_db.sqlite')
         except OSError:
