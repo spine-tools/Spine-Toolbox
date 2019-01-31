@@ -651,20 +651,30 @@ class TreeViewForm(DataStoreForm):
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
-        parameter_tag_list = ["(empty)"] + [x.tag for x in self.db_map.parameter_tag_list()]
-        self.object_parameter_tag_menu = QOkMenu(self, parameter_tag_list)
-        self._handle_object_parameter_tag_menu_ok_clicked()
-        self.ui.toolButton_filter_parameter_tag.setMenu(self.object_parameter_tag_menu)
+        self.tag_button_group = QButtonGroup(self)
+        self.tag_button_group.setExclusive(False)
+        self.selected_parameter_tag_ids = {x.id for x in self.db_map.parameter_tag_list()}
+        self.selected_parameter_definition_ids = set()
         # init models and views
         self.init_models()
         self.init_views()
         self.setup_delegates()
+        self.init_parameter_tag_buttons()
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
         # Ensure this window gets garbage-collected when closed
         toc = time.clock()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
+
+    def init_parameter_tag_buttons(self):
+        for tag in self.db_map.parameter_tag_list():
+            button = QToolButton(self)
+            button.setText(tag.tag)
+            button.setCheckable(True)
+            button.setChecked(True)  # NOTE: do this before connecting the buttonToggled signal
+            self.tag_button_group.addButton(button, id=tag.id)
+            self.ui.horizontalLayout_parameter_tag_clicker.addWidget(button)
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -743,30 +753,36 @@ class TreeViewForm(DataStoreForm):
         self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuSession.aboutToShow.connect(self._handle_menu_about_to_show)
-        # Parameter tag menus about to show
-        self.object_parameter_tag_menu.aboutToShow.connect(self._handle_object_parameter_tag_menu_about_to_show)
-        self.object_parameter_tag_menu.ok_clicked.connect(self._handle_object_parameter_tag_menu_ok_clicked)
+        # Parameter tags
         self.ui.toolButton_manage_parameter_tags.clicked.connect(self.show_manage_parameter_tags_form)
+        self.tag_button_group.buttonToggled["int", "bool"].connect(self._handle_tag_button_toggled)
 
-    @Slot(name="_handle_object_parameter_tag_menu_about_to_show")
-    def _handle_object_parameter_tag_menu_about_to_show(self):
-        parameter_tag_list = ["(empty)"] + [x.tag for x in self.db_map.parameter_tag_list()]
-        self.object_parameter_tag_menu.populate(parameter_tag_list)
+    @Slot("int", "bool", name="_handle_tag_button_toggled")
+    def _handle_tag_button_toggled(self, id, checked):
+        if checked:
+            self.selected_parameter_tag_ids.add(id)
+        else:
+            self.selected_parameter_tag_ids.remove(id)
+        self.selected_parameter_definition_ids = set()
+        parameter_definition_ids = set()
+        for item in self.db_map.wide_parameter_tag_definition_list():
+            print(item)
+            tag_id = item.parameter_tag_id
+            if tag_id not in self.selected_parameter_tag_ids:
+                continue
+            definition_ids = {int(x) for x in item.parameter_definition_id_list.split(",")}
+            parameter_definition_ids.update(definition_ids)
+        wide_object_parameter_definition_list = self.db_map.wide_object_parameter_definition_list(
+            parameter_definition_id_list=parameter_definition_ids)
+        print(parameter_definition_ids)
+        print(wide_object_parameter_definition_list.all())
+        return
 
-    @Slot(name="_handle_object_parameter_tag_menu_ok_clicked")
-    def _handle_object_parameter_tag_menu_ok_clicked(self):
-        layout = self.ui.horizontalLayout_object_parameter_tag
-        while True:
-            item = layout.takeAt(0)
-            if not item:
-                break
-            item.widget().deleteLater()
-        for tag in self.object_parameter_tag_menu.checked_action_names:
-            label = QLabel(tag, self)
-            label.setFrameShape(QFrame.Box)
-            label.setFrameShadow(QFrame.Raised)
-            label.setLineWidth(1)
-            layout.addWidget(label)
+        for ind in self.selected_tree_indexes.get('object', {}):
+            object_class_id = ind.data(Qt.UserRole + 1)['class_id']
+            object_id = ind.data(Qt.UserRole + 1)['id']
+            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
+
 
     @Slot("bool", name="copy")
     def copy(self, checked=False):

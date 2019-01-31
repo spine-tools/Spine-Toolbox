@@ -48,7 +48,7 @@ def import_xlsx_to_db(db, filepath):
     """
 
     obj_data, rel_data, error_log = read_spine_xlsx(filepath)
-    
+
     object_classes = []
     objects = []
     object_parameters = []
@@ -59,7 +59,7 @@ def import_xlsx_to_db(db, filepath):
         object_parameters.extend([(o, sheet.class_name) for o in sheet.parameters])
         d_getter = itemgetter(*[1,2,0,3])
         object_values.extend([d_getter(d) for d in sheet.parameter_values])
-    
+
     rel_classes = []
     rels = []
     rel_parameters = []
@@ -96,23 +96,14 @@ def get_objects_and_parameters(db):
     obj_class = db.object_class_list().all()
 
     # get all parameter values
-    pval = db.session.query(
-                            db.ObjectClass.name,
-                            db.Object.name,
-                            db.Parameter.name,
-                            db.ParameterValue.value,
-                            db.ParameterValue.json).\
-        filter(db.ParameterValue.object_id == db.Object.id,
-               db.ObjectClass.id == db.Object.class_id,
-               db.ParameterValue.parameter_id == db.Parameter.id).\
-        all()
+    pval = db.object_parameter_value_list().all()
 
     # get all parameter definitions
-    par = db.session.query(db.ObjectClass.name, db.Parameter.name).\
-        filter(db.ObjectClass.id == db.Parameter.object_class_id).all()
+    par = db.object_parameter_list().all()
 
     # make all in same format
-    par = [(p[0], None, p[1], None, None) for p in par]
+    par = [(p.object_class_name, None, p.parameter_name, None, None) for p in par]
+    pval = [(p.object_class_name, p.object_name, p.parameter_name, p.value, p.json) for p in pval]
     obj = [(p.class_name, p.name, None, None, None) for p in obj]
     obj_class = [(p.name, None, None, None, None) for p in obj_class]
 
@@ -189,9 +180,9 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
             value_name_col = value_name_col[0]
         value_name_getter = itemgetter(value_name_col)
         value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
-        
-    
-    
+
+
+
     key_names = [headers[n] for n in key_cols]
     #value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
     headers = key_names + value_names
@@ -200,7 +191,7 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
     keyfunc = lambda x: [x[k] for k in key_cols]
     data = [x for x in data if None not in keyfunc(x)]
     data = sorted(data, key=keyfunc)
-    
+
     # unstack data
     data_list_out = []
     for k, k_data in groupby(data, key=keyfunc):
@@ -428,7 +419,7 @@ def write_json_array_to_xlsx(wb, data, sheet_type):
             sheet_title = "json_"
         else:
             raise ValueError("sheet_type must be a str with value 'relationship' or 'object'")
-            
+
         ws = wb.create_sheet()
         # sheet name can only be 31 chars log
         title = sheet_title + d[0]
@@ -677,7 +668,7 @@ def validate_sheet(ws):
             return False
         if sheet_data.lower() == 'parameter':
             rel_row = read_2d(ws, 4, 4, 1, rel_dimension)[0]
-        else: 
+        else:
             rel_row = read_2d(ws, 4, 4 + rel_dimension - 1, 1, 1)
             rel_row = [r[0] for r in rel_row]
         if None in rel_row:
@@ -722,7 +713,7 @@ def read_json_sheet(ws, sheet_type):
 
     # search row for until first empty cell
     read_cols = []
-    add_if_not_break = 1 
+    add_if_not_break = 1
     for c, cell in enumerate(ws[4]):
         if c > 0:
             if cell.value is None:
@@ -745,7 +736,7 @@ def read_json_sheet(ws, sheet_type):
             break
 
     data = [[cell.value for i, cell in enumerate(row) if i in read_cols] for row in rows]
-    
+
     # pivot data
     obj_path = [[obj_path[r][c] for r in range(len(obj_path))] for c in range(len(obj_path[0]))]
     data = [[data[r][c] for r in range(len(data))] for c in range(len(data[0]))]

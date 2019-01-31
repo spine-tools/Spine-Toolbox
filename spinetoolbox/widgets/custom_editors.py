@@ -136,6 +136,12 @@ class ParameterTagListEditor(QToolButton):
         self.setPopupMode(QToolButton.InstantPopup)
         self.setMaximumHeight(0)
         self.menu.ok_clicked.connect(self._handle_menu_ok_clicked)
+        self.menu.aboutToHide.connect(self._handle_menu_about_to_hide)
+
+    @Slot(name="_handle_menu_about_to_hide")
+    def _handle_menu_about_to_hide(self):
+        self.setEnabled(False)
+        self.setVisible(False)
 
     @Slot(name="_handle_menu_ok_clicked")
     def _handle_menu_ok_clicked(self):

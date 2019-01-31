@@ -1887,6 +1887,8 @@ class SubParameterModel(MinimalTableModel):
         for k, index in enumerate(indexes):
             if data[k] == index.data(Qt.EditRole):
                 continue
+            if data[k] is None and index.data(Qt.EditRole) == "":
+                continue
             row = index.row()
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
             if not id:
@@ -1952,17 +1954,13 @@ class SubParameterDefinitionModel(SubParameterModel):
         if not items_to_update:
             return False
         try:
-            tag_dicts = list()
+            tag_dict = dict()
             for item in items_to_update:
                 parameter_tag_list = item.pop("parameter_tag_list", None)
                 if parameter_tag_list is None:
                     continue
-                tag_dict = {
-                    "parameter_definition_id": item["id"],
-                    "parameter_tag_list": parameter_tag_list
-                }
-                tag_dicts.append(tag_dict)
-            self._parent.db_map.set_parameter_definition_tags(*tag_dicts)
+                tag_dict[item["id"]] = parameter_tag_list
+            self._parent.db_map.set_parameter_definition_tags(tag_dict)
             self._parent.db_map.update_parameters(*items_to_update)
             self._parent._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Parameter definitions successfully updated."
@@ -2278,10 +2276,19 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
         try:
             items = list(items_to_add.values())
             rows = list(items_to_add.keys())
+            name_tag_dict = dict()
+            for item in items:
+                parameter_tag_list = item.pop("parameter_tag_list", None)
+                if parameter_tag_list is None:
+                    continue
+                name_tag_dict[item["name"]] = parameter_tag_list
             parameters = self._parent.db_map.add_parameters(*items)
             id_column = self._parent.horizontal_header_labels().index('id')
+            tag_dict = dict()
             for i, parameter in enumerate(parameters):
+                tag_dict[parameter.id] = name_tag_dict[parameter.name]
                 self._main_data[rows[i]][id_column] = parameter.id
+            self._parent.db_map.set_parameter_definition_tags(tag_dict)
             self._parent._tree_view_form.set_commit_rollback_actions_enabled(True)
             msg = "Successfully added new parameters definition."
             self._parent._tree_view_form.msg.emit(msg)
@@ -2394,6 +2401,9 @@ class ObjectParameterModel(MinimalTableModel):
         self.sub_models = {}
         self.empty_row_model = None
         self.fixed_columns = list()
+        self.filtered_out = dict()
+        self.italic_font = QFont()
+        self.italic_font.setItalic(True)
 
     def flags(self, index):
         """Return flags for given index.
@@ -2475,13 +2485,15 @@ class ObjectParameterModel(MinimalTableModel):
                 model_indexes.setdefault(model, list()).append(model.index(row, column))
                 model_data.setdefault(model, list()).append(data[k])
         for model in self.sub_models.values():
-            model.batch_set_data(
-                model_indexes.get(model, list()),
-                model_data.get(model, list()))
-        model = self.empty_row_model
-        model.batch_set_data(
-            model_indexes.get(model, list()),
-            model_data.get(model, list()))
+            indexes_ = model_indexes.get(model, list())
+            data_ = model_data.get(model, list())
+            if not indexes_ or not data_:
+                continue
+            if not model.batch_set_data(indexes_, data_):
+                break
+        else:
+            model = self.empty_row_model
+            model.batch_set_data(model_indexes.get(model, list()), model_data.get(model, list()))
         # Find square envelope of indexes to emit dataChanged
         top = min(ind.row() for ind in indexes)
         bottom = max(ind.row() for ind in indexes)
@@ -2540,53 +2552,6 @@ class ObjectParameterModel(MinimalTableModel):
     def _handle_empty_rows_inserted(self, parent, first, last):
         offset = self.rowCount() - self.empty_row_model.rowCount()
         self.rowsInserted.emit(QModelIndex(), offset + first, offset + last)
-
-
-class ObjectParameterValueModel(ObjectParameterModel):
-    """A model that concatenates several 'sub' object parameter value models,
-    one per object class.
-    """
-    def __init__(self, tree_view_form=None):
-        """Init class."""
-        super().__init__(tree_view_form)
-        self.empty_row_model = EmptyObjectParameterValueModel(self)
-        self.filtered_out = dict()
-        self.italic_font = QFont()
-        self.italic_font.setItalic(True)
-
-    def reset_model(self):
-        """Reset model data. Each sub-model is filled with parameter value data
-        for a different object class."""
-        header = self.db_map.object_parameter_value_fields()
-        data = self.db_map.object_parameter_value_list()
-        self.fixed_columns = [header.index(x) for x in ('object_class_name', 'object_name', 'parameter_name')]
-        self.object_class_name_column = header.index('object_class_name')
-        object_id_column = header.index('object_id')
-        self.set_horizontal_header_labels(header)
-        data_dict = {}
-        value_dict = {}
-        for parameter_value in data:
-            object_class_id = parameter_value.object_class_id
-            data_dict.setdefault(object_class_id, list()).append(parameter_value)
-            #value_dict.setdefault(object_class_id, set()).add(parameter_value.value)
-        for object_class_id, data in data_dict.items():
-            source_model = SubParameterValueModel(self)
-            source_model.reset_model([list(x) for x in data])
-            model = self.sub_models[object_class_id] = ObjectFilterProxyModel(self, object_id_column)
-            model.setSourceModel(source_model)
-        self.empty_row_model.set_horizontal_header_labels(header)
-        self.empty_row_model.clear()
-        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
-
-    def update_filter(self):
-        """Update filter."""
-        self.layoutAboutToBeChanged.emit()
-        selected_object_ids = self._tree_view_form.selected_object_ids
-        for object_class_id, model in self.sub_models.items():
-            model.update_filter(selected_object_ids.get(object_class_id, {}))
-            model.clear_filtered_out_values()
-        self.clear_filtered_out_values()
-        self.layoutChanged.emit()
 
     def invalidate_filter(self):
         """Invalidate filter."""
@@ -2675,6 +2640,60 @@ class ObjectParameterValueModel(ObjectParameterModel):
             for row_data in model.sourceModel()._main_data:
                 row_data[object_class_name_column] = object_class_name
 
+    def remove_object_classes(self, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        for object_class in object_classes:
+            self.sub_models.pop(object_class['id'], None)
+        self.layoutChanged.emit()
+
+
+class ObjectParameterValueModel(ObjectParameterModel):
+    """A model that concatenates several 'sub' object parameter value models,
+    one per object class.
+    """
+    def __init__(self, tree_view_form=None):
+        """Init class."""
+        super().__init__(tree_view_form)
+        self.empty_row_model = EmptyObjectParameterValueModel(self)
+
+    def reset_model(self):
+        """Reset model data. Each sub-model is filled with parameter value data
+        for a different object class."""
+        header = self.db_map.object_parameter_value_fields()
+        data = self.db_map.object_parameter_value_list()
+        self.fixed_columns = [header.index(x) for x in ('object_class_name', 'object_name', 'parameter_name')]
+        self.object_class_name_column = header.index('object_class_name')
+        parameter_definition_id_column = header.index('parameter_id')
+        object_id_column = header.index('object_id')
+        self.set_horizontal_header_labels(header)
+        data_dict = {}
+        for parameter_value in data:
+            object_class_id = parameter_value.object_class_id
+            data_dict.setdefault(object_class_id, list()).append(parameter_value)
+        for object_class_id, data in data_dict.items():
+            source_model = SubParameterValueModel(self)
+            source_model.reset_model([list(x) for x in data])
+            model = self.sub_models[object_class_id] = ObjectParameterValueFilterProxyModel(
+                self, parameter_definition_id_column, object_id_column)
+            model.setSourceModel(source_model)
+        self.empty_row_model.set_horizontal_header_labels(header)
+        self.empty_row_model.clear()
+        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+
+    def update_filter(self):
+        """Update filter."""
+        self.layoutAboutToBeChanged.emit()
+        selected_parameter_definition_ids = {} # FIXME: self._tree_view_form.selected_parameter_definition_ids
+        selected_object_ids = self._tree_view_form.selected_object_ids
+        for object_class_id, model in self.sub_models.items():
+            parameter_definition_ids = selected_parameter_definition_ids.get(object_class_id, {})
+            object_ids = selected_object_ids.get(object_class_id, {})
+            model.update_filter(parameter_definition_ids, object_ids)
+            model.clear_filtered_out_values()
+        self.clear_filtered_out_values()
+        self.layoutChanged.emit()
+
     def rename_objects(self, objects):
         """Rename objects in model."""
         object_id_column = self.header.index("object_id")
@@ -2706,13 +2725,6 @@ class ObjectParameterValueModel(ObjectParameterModel):
         for row_data in model.sourceModel()._main_data:
             if row_data[parameter_id_column] == parameter_id:
                 row_data[parameter_name_column] = new_name
-
-    def remove_object_classes(self, object_classes):
-        """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        for object_class in object_classes:
-            self.sub_models.pop(object_class['id'], None)
-        self.layoutChanged.emit()
 
     def remove_objects(self, objects):
         """Remove objects from model."""
@@ -2762,14 +2774,18 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         data = self.db_map.object_parameter_list()
         self.fixed_columns = [header.index('object_class_name')]
         self.object_class_name_column = header.index('object_class_name')
+        parameter_definition_id_column = header.index('id')
         self.set_horizontal_header_labels(header)
         data_dict = {}
         for parameter_definition in data:
             object_class_id = parameter_definition.object_class_id
             data_dict.setdefault(object_class_id, list()).append(parameter_definition)
         for object_class_id, data in data_dict.items():
-            model = self.sub_models[object_class_id] = SubParameterDefinitionModel(self)
-            model.reset_model([list(x) for x in data])
+            source_model = SubParameterDefinitionModel(self)
+            source_model.reset_model([list(x) for x in data])
+            model = self.sub_models[object_class_id] = ObjectParameterDefinitionFilterProxyModel(
+                self, parameter_definition_id_column)
+            model.setSourceModel(source_model)
         self.empty_row_model.set_horizontal_header_labels(header)
         self.empty_row_model.clear()
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
@@ -2777,44 +2793,11 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        self.layoutChanged.emit()
-
-    def move_rows_to_sub_models(self, rows):
-        """Move rows from empty row model to the appropriate sub_model.
-        Called when the empty row model succesfully inserts new data in the db.
-        """
-        object_class_id_column = self.header.index("object_class_id")
-        model_data_dict = {}
-        for row in rows:
-            row_data = self.empty_row_model._main_data[row]
-            object_class_id = row_data[object_class_id_column]
-            model_data_dict.setdefault(object_class_id, list()).append(row_data)
-        for object_class_id, data in model_data_dict.items():
-            model = self.sub_models.setdefault(object_class_id, SubParameterDefinitionModel(self))
-            row_count = model.rowCount()
-            model.insertRows(row_count, len(data))
-            model._main_data[row_count:row_count + len(data)] = data
-        for row in reversed(rows):
-            self.empty_row_model.removeRows(row, 1)
-        self.update_filter()
-
-    def rename_object_classes(self, object_classes):
-        """Rename object classes in model."""
-        object_class_name_column = self.header.index("object_class_name")
-        object_class_id_name = {x.id: x.name for x in object_classes}
+        selected_parameter_definition_ids = {} # FIXME: self._tree_view_form.selected_parameter_definition_ids
         for object_class_id, model in self.sub_models.items():
-            try:
-                object_class_name = object_class_id_name[object_class_id]
-            except KeyError:
-                continue
-            for row_data in model._main_data:
-                row_data[object_class_name_column] = object_class_name
-
-    def remove_object_classes(self, object_classes):
-        """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        for object_class in object_classes:
-            self.sub_models.pop(object_class['id'], None)
+            model.update_filter(selected_parameter_definition_ids.get(object_class_id, {}))
+            model.clear_filtered_out_values()
+        self.clear_filtered_out_values()
         self.layoutChanged.emit()
 
 
@@ -2947,13 +2930,15 @@ class RelationshipParameterModel(MinimalTableModel):
                 model_indexes.setdefault(model, list()).append(model.index(row, column))
                 model_data.setdefault(model, list()).append(data[k])
         for model in self.sub_models.values():
-            model.batch_set_data(
-                model_indexes.get(model, list()),
-                model_data.get(model, list()))
-        model = self.empty_row_model
-        model.batch_set_data(
-            model_indexes.get(model, list()),
-            model_data.get(model, list()))
+            indexes_ = model_indexes.get(model, list())
+            data_ = model_data.get(model, list())
+            if not indexes_ or not data_:
+                continue
+            if not model.batch_set_data(indexes_, data_):
+                break
+        else:
+            model = self.empty_row_model
+            model.batch_set_data(model_indexes.get(model, list()), model_data.get(model, list()))
         # Find square envelope of indexes to emit dataChanged
         top = min(ind.row() for ind in indexes)
         bottom = max(ind.row() for ind in indexes)
@@ -3386,20 +3371,19 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         self.layoutChanged.emit()
 
 
-class ObjectFilterProxyModel(QSortFilterProxyModel):
+class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
     """A filter proxy model for object parameter models."""
-    def __init__(self, parent, object_id_column):
+    def __init__(self, parent, parameter_definition_id_column):
         """Init class."""
         super().__init__(parent)
-        self.selected_object_ids = set()
-        self.object_id_column = object_id_column
+        self.parameter_definition_ids = set()
+        self.parameter_definition_id_column = parameter_definition_id_column
         self.filtered_out = dict()
 
-    def update_filter(self, selected_object_ids):
+    def update_filter(self, parameter_definition_ids):
         """Update filter."""
-        if selected_object_ids == self.selected_object_ids:
-            return
-        self.selected_object_ids = selected_object_ids
+        if parameter_definition_ids != self.parameter_definition_ids:
+            self.parameter_definition_ids = parameter_definition_ids
         self.invalidateFilter()
 
     def set_filtered_out_values(self, column, values):
@@ -3427,8 +3411,9 @@ class ObjectFilterProxyModel(QSortFilterProxyModel):
 
     def main_filter_accepts_row(self, source_row, source_parent):
         """Accept or reject row."""
-        if self.selected_object_ids:
-            return self.sourceModel()._main_data[source_row][self.object_id_column] in self.selected_object_ids
+        if self.parameter_definition_ids:
+            parameter_definition_id = self.sourceModel()._main_data[source_row][self.parameter_definition_id_column]
+            return parameter_definition_id in self.parameter_definition_ids
         return True
 
     def filterAcceptsRow(self, source_row, source_parent):
@@ -3444,22 +3429,45 @@ class ObjectFilterProxyModel(QSortFilterProxyModel):
         return self.sourceModel().batch_set_data(source_indexes, data)
 
 
+class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyModel):
+    """A filter proxy model for object parameter value models."""
+    def __init__(self, parent, parameter_definition_id_column, object_id_column):
+        """Init class."""
+        super().__init__(parent, parameter_definition_id_column)
+        self.object_ids = set()
+        self.object_id_column = object_id_column
+
+    def update_filter(self, parameter_definition_ids, object_ids):
+        """Update filter."""
+        if object_ids != self.object_ids:
+            self.object_ids = object_ids
+        super().update_filter(parameter_definition_ids)
+
+    def main_filter_accepts_row(self, source_row, source_parent):
+        """Accept or reject row."""
+        if not super().main_filter_accepts_row(source_row, source_parent):
+            return False
+        if self.object_ids:
+            return self.sourceModel()._main_data[source_row][self.object_id_column] in self.object_ids
+        return True
+
+
 class RelationshipFilterProxyModel(QSortFilterProxyModel):
     """A filter proxy model for relationship parameter models."""
     def __init__(self, parent, object_id_list_column):
         """Init class."""
         super().__init__(parent)
-        self.selected_object_ids = dict()
+        self.object_ids = dict()
         self.selected_object_id_lists = set()
         self.object_id_list_column = object_id_list_column
         self.filtered_out = dict()
 
-    def update_filter(self, selected_object_ids, selected_object_id_lists):
+    def update_filter(self, object_ids, selected_object_id_lists):
         """Update filter."""
-        if selected_object_ids == self.selected_object_ids and \
+        if object_ids == self.object_ids and \
                 selected_object_id_lists == self.selected_object_id_lists:
             return
-        self.selected_object_ids = selected_object_ids
+        self.object_ids = object_ids
         self.selected_object_id_lists = selected_object_id_lists
         self.invalidateFilter()
 
@@ -3491,8 +3499,8 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
         object_id_list = self.sourceModel()._main_data[source_row][self.object_id_list_column]
         if self.selected_object_id_lists:
             return object_id_list in self.selected_object_id_lists
-        if self.selected_object_ids:
-            return len(self.selected_object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
+        if self.object_ids:
+            return len(self.object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
         return True
 
     def filterAcceptsRow(self, source_row, source_parent):

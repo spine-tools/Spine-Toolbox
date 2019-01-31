@@ -22,7 +22,7 @@ TEMP_SQLITE_FILENAME = UUID_STR + '-first.sqlite'
 TEMP_SQLITE_TEST_FILENAME = UUID_STR + '-second.sqlite'
 
 class TestExcelIntegration(unittest.TestCase):
-    
+
     def delete_temp_files(self):
         # delete temp excel file if it exists
         # close mappings
@@ -192,10 +192,10 @@ class TestExcelIntegration(unittest.TestCase):
             par_org.values()), msg='Difference in parameters')
         # parameters values
         parv = db1.parameter_value_list().all()
-        parv = set((par[p.parameter_id][0], p.value, p.json, ol_id[p.object_id] if p.object_id else None,
+        parv = set((par[p.parameter_definition_id][0], p.value, p.json, ol_id[p.object_id] if p.object_id else None,
                     rel[p.relationship_id][1] if p.relationship_id else None) for p in parv)
         parv_org = db2.parameter_value_list().all()
-        parv_org = set((par_org[p.parameter_id][0], p.value, p.json, ol_id_org[p.object_id] if p.object_id else None,
+        parv_org = set((par_org[p.parameter_definition_id][0], p.value, p.json, ol_id_org[p.object_id] if p.object_id else None,
                         rel_org[p.relationship_id][1] if p.relationship_id else None) for p in parv_org)
         self.assertEqual(set(par.values()), set(
             par_org.values()), msg='Difference in parameter values')
@@ -239,7 +239,7 @@ class TestExcelImport(unittest.TestCase):
         """Overridden method. Runs before each test.
         """
         Cell = namedtuple('cell',['value'])
-        
+
         # mock data for relationship sheets
         ws_mock = {}
         ws_mock['A2'] = MagicMock(value='relationship')
