@@ -106,7 +106,8 @@ class DataStoreForm(QMainWindow):
         self.tag_button_group = QButtonGroup(self)
         self.tag_button_group.setExclusive(False)
         self.selected_parameter_tag_ids = set()
-        self.selected_parameter_definition_ids = dict()
+        self.selected_obj_parameter_definition_ids = dict()
+        self.selected_rel_parameter_definition_ids = dict()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -672,14 +673,12 @@ class TreeViewForm(DataStoreForm):
         button = QToolButton(self)
         button.setText("untagged")
         button.setCheckable(True)
-        # button.setChecked(True)  # NOTE: do this before connecting the buttonToggled signal
         self.tag_button_group.addButton(button, id=0)
         self.ui.horizontalLayout_parameter_tag_clicker.addWidget(button)
         for tag in self.db_map.parameter_tag_list():
             button = QToolButton(self)
             button.setText(tag.tag)
             button.setCheckable(True)
-            # button.setChecked(True)  # NOTE: do this before connecting the buttonToggled signal
             self.tag_button_group.addButton(button, id=tag.id)
             self.ui.horizontalLayout_parameter_tag_clicker.addWidget(button)
 
@@ -780,12 +779,16 @@ class TreeViewForm(DataStoreForm):
             if tag_id not in self.selected_parameter_tag_ids:
                 continue
             parameter_definition_id_list.update({int(x) for x in item.parameter_definition_id_list.split(",")})
-        self.selected_parameter_definition_ids = {
+        self.selected_obj_parameter_definition_ids = {
             x.object_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
             for x in self.db_map.wide_object_parameter_definition_list(
                 parameter_definition_id_list=parameter_definition_id_list)
         }
-        self.update_selected_object_class_ids()
+        self.selected_rel_parameter_definition_ids = {
+            x.relationship_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
+            for x in self.db_map.wide_relationship_parameter_definition_list(
+                parameter_definition_id_list=parameter_definition_id_list)
+        }
         self.do_update_filter()
 
     @Slot("bool", name="copy")
@@ -1360,29 +1363,18 @@ class TreeViewForm(DataStoreForm):
         """Update set of selected object class id, by combining selectiong from object tree
         and parameter tag.
         """
-        tree_object_class_ids = set(
+        self.selected_object_class_ids = set(
             ind.data(Qt.UserRole + 1)['id']
             for ind in self.selected_tree_indexes.get('object_class', {}))
-        tree_object_class_ids.update(set(
+        self.selected_object_class_ids.update(set(
             ind.data(Qt.UserRole + 1)['class_id']
             for ind in self.selected_tree_indexes.get('object', {})))
-        tree_object_class_ids.update(set(
+        self.selected_object_class_ids.update(set(
             ind.parent().data(Qt.UserRole + 1)['class_id']
             for ind in self.selected_tree_indexes.get('relationship_class', {})))
-        tree_object_class_ids.update(set(
+        self.selected_object_class_ids.update(set(
             ind.parent().parent().data(Qt.UserRole + 1)['class_id']
             for ind in self.selected_tree_indexes.get('relationship', {})))
-        tag_object_class_ids = set(self.selected_parameter_definition_ids.keys())
-        if not tag_object_class_ids:
-            self.selected_object_class_ids = tree_object_class_ids
-        elif not tree_object_class_ids:
-            self.selected_object_class_ids = tag_object_class_ids
-        else:
-            intersection = tree_object_class_ids.intersection(tag_object_class_ids)
-            if intersection:
-                self.selected_object_class_ids = intersection
-            else:
-                self.selected_object_class_ids = {None}
 
     def update_selected_object_ids(self):
         """Update set of selected object id."""
@@ -1416,6 +1408,34 @@ class TreeViewForm(DataStoreForm):
             relationship_class_id = ind.data(Qt.UserRole + 1)['class_id']
             object_id_list = ind.data(Qt.UserRole + 1)['object_id_list']
             self.selected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
+
+    def all_selected_object_class_ids(self):
+        tree_object_class_ids = self.selected_object_class_ids
+        tag_object_class_ids = set(self.selected_obj_parameter_definition_ids.keys())
+        if not tag_object_class_ids:
+            return tree_object_class_ids
+        elif not tree_object_class_ids:
+            return tag_object_class_ids
+        else:
+            intersection = tree_object_class_ids.intersection(tag_object_class_ids)
+            if intersection:
+                return intersection
+            else:
+                return {None}
+
+    def all_selected_relationship_class_ids(self):
+        tree_relationship_class_ids = self.selected_relationship_class_ids
+        tag_relationship_class_ids = set(self.selected_rel_parameter_definition_ids.keys())
+        if not tag_relationship_class_ids:
+            return tree_relationship_class_ids
+        elif not tree_relationship_class_ids:
+            return tag_relationship_class_ids
+        else:
+            intersection = tree_relationship_class_ids.intersection(tag_relationship_class_ids)
+            if intersection:
+                return intersection
+            else:
+                return {None}
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):

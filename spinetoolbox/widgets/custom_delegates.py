@@ -317,11 +317,21 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
     def __init__(self, parent):
         super().__init__(parent)
 
+    def close_parameter_tag_list_editor(self, editor, index, model):
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, model, index)
+
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship_class_name':
             return CustomComboEditor(parent)
+        elif header[index.column()] == 'parameter_tag_list':
+            editor = MultipleOptionsEditor(parent, option, index)
+            model = index.model()
+            editor.data_committed.connect(
+                lambda e=editor, i=index, m=model: self.close_parameter_tag_list_editor(e, i, m))
+            return editor
         return CustomLineEditor(parent)
 
     def setEditorData(self, editor, index):
@@ -330,6 +340,13 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
         if header[index.column()] == 'relationship_class_name':
             name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'parameter_tag_list':
+            all_parameter_tag_list = [x.tag for x in self.db_map.parameter_tag_list()]
+            try:
+                parameter_tag_list = index.data(Qt.EditRole).split(",")
+            except AttributeError:
+                parameter_tag_list = []
+            editor.set_data(all_parameter_tag_list, parameter_tag_list)
         else:
             editor.set_data(index.data(Qt.EditRole))
 

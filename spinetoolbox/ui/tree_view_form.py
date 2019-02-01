@@ -417,7 +417,7 @@ class Ui_MainWindow(object):
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setSpacing(0)
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
-        self.tableView_relationship_parameter_definition = CopyPasteTableView(self.tab_relationship_parameter_definition)
+        self.tableView_relationship_parameter_definition = AutoFilterCopyPasteTableView(self.tab_relationship_parameter_definition)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -710,6 +710,6 @@ class Ui_MainWindow(object):
         self.actionManage_parameter_tags.setText(QtWidgets.QApplication.translate("MainWindow", "Manage parameter tags", None, -1))
         self.actionManage_parameter_tags.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+T", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView, CopyPasteTableView
+from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

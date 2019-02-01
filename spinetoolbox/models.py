@@ -2412,7 +2412,7 @@ class ObjectParameterModel(MinimalTableModel):
         """
         row = index.row()
         column = index.column()
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models.items():
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -2428,7 +2428,7 @@ class ObjectParameterModel(MinimalTableModel):
         """
         row = index.row()
         column = index.column()
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models.items():
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -2448,7 +2448,7 @@ class ObjectParameterModel(MinimalTableModel):
         Skip models whose object class id is not selected.
         """
         count = 0
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models.items():
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -2466,7 +2466,7 @@ class ObjectParameterModel(MinimalTableModel):
             return False
         model_indexes = {}
         model_data = {}
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
         for k, index in enumerate(indexes):
             if not index.isValid():
                 continue
@@ -2504,7 +2504,7 @@ class ObjectParameterModel(MinimalTableModel):
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Find the right sub-model (or the empty model) and call insertRows on it."""
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models.items():
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -2518,7 +2518,7 @@ class ObjectParameterModel(MinimalTableModel):
         if row < 0 or row + count - 1 >= self.rowCount():
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
         model_row_sets = dict()
         for i in range(row, row + count):
             for object_class_id, model in self.sub_models.items():
@@ -2569,7 +2569,7 @@ class ObjectParameterModel(MinimalTableModel):
         3) A set of object class ids where the value is found.
         """
         values = dict()
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
+        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models.items():
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -2657,7 +2657,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        selected_parameter_definition_ids = self._tree_view_form.selected_parameter_definition_ids
+        selected_parameter_definition_ids = self._tree_view_form.selected_obj_parameter_definition_ids
         selected_object_ids = self._tree_view_form.selected_object_ids
         for object_class_id, model in self.sub_models.items():
             parameter_definition_ids = selected_parameter_definition_ids.get(object_class_id, {})
@@ -2795,7 +2795,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        selected_parameter_definition_ids = self._tree_view_form.selected_parameter_definition_ids
+        selected_parameter_definition_ids = self._tree_view_form.selected_obj_parameter_definition_ids
         for object_class_id, model in self.sub_models.items():
             model.update_filter(selected_parameter_definition_ids.get(object_class_id, {}))
             model.clear_filtered_out_values()
@@ -2821,7 +2821,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
                 source_model.insertRows(row_count, len(data))
                 source_model._main_data[row_count:row_count + len(data)] = data
             except KeyError:
-                source_model = SubParameterValueModel(self)
+                source_model = SubParameterDefinitionModel(self)
                 source_model.reset_model(data)
                 model = self.sub_models[object_class_id] = ObjectParameterDefinitionFilterProxyModel(
                     self, parameter_definition_id_column)
@@ -2829,6 +2829,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
         self.invalidate_filter()
+
 
 class RelationshipParameterModel(MinimalTableModel):
     """A model that combines several relationship parameter models
@@ -2842,6 +2843,10 @@ class RelationshipParameterModel(MinimalTableModel):
         self.sub_models = {}
         self.object_class_id_lists = {}
         self.empty_row_model = EmptyRowModel(self)
+        self.fixed_columns = list()
+        self.filtered_out = dict()
+        self.italic_font = QFont()
+        self.italic_font.setItalic(True)
 
     def reset_model(self):
         """Reset model data. Populate a dictionary of object class id lists per relationship class."""
@@ -2859,7 +2864,8 @@ class RelationshipParameterModel(MinimalTableModel):
         row = index.row()
         column = index.column()
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2882,7 +2888,8 @@ class RelationshipParameterModel(MinimalTableModel):
         row = index.row()
         column = index.column()
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2911,7 +2918,8 @@ class RelationshipParameterModel(MinimalTableModel):
         """
         count = 0
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2935,7 +2943,8 @@ class RelationshipParameterModel(MinimalTableModel):
         model_indexes = {}
         model_data = {}
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for k, index in enumerate(indexes):
             if not index.isValid():
                 continue
@@ -2979,7 +2988,8 @@ class RelationshipParameterModel(MinimalTableModel):
     def insertRows(self, row, count, parent=QModelIndex()):
         """Find the right sub-model (or the empty model) and call insertRows on it."""
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2999,7 +3009,8 @@ class RelationshipParameterModel(MinimalTableModel):
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         model_row_sets = {}
         for i in range(row, row + count):
             for relationship_class_id, model in self.sub_models.items():
@@ -3039,58 +3050,6 @@ class RelationshipParameterModel(MinimalTableModel):
         offset = self.rowCount() - self.empty_row_model.rowCount()
         self.rowsInserted.emit(QModelIndex(), offset + first, offset + last)
 
-
-class RelationshipParameterValueModel(RelationshipParameterModel):
-    """A model that combines several relationship parameter value models
-    (one per relationship class), one on top of the other.
-    """
-    def __init__(self, tree_view_form=None):
-        """Init class."""
-        super().__init__(tree_view_form)
-        self.empty_row_model = EmptyRelationshipParameterValueModel(self)
-        self.filtered_out = dict()
-        self.italic_font = QFont()
-        self.italic_font.setItalic(True)
-
-    def reset_model(self):
-        """Reset model data. Each sub-model is filled with parameter value data
-        for a different relationship class."""
-        super().reset_model()
-        header = self.db_map.relationship_parameter_value_fields()
-        data = self.db_map.relationship_parameter_value_list()
-        self.fixed_columns = [
-            header.index(x) for x in ('relationship_class_name', 'object_name_list', 'parameter_name')]
-        self.relationship_class_name_column = header.index('relationship_class_name')
-        self.object_class_name_list_column = header.index('object_class_name_list')
-        object_id_list_column = header.index('object_id_list')
-        self.set_horizontal_header_labels(header)
-        data_dict = {}
-        for parameter_value in data:
-            relationship_class_id = parameter_value.relationship_class_id
-            data_dict.setdefault(relationship_class_id, list()).append(parameter_value)
-        for relationship_class_id, data in data_dict.items():
-            source_model = SubParameterValueModel(self)
-            source_model.reset_model([list(x) for x in data])
-            model = self.sub_models[relationship_class_id] = RelationshipFilterProxyModel(self, object_id_list_column)
-            model.setSourceModel(source_model)
-        self.empty_row_model.set_horizontal_header_labels(header)
-        self.empty_row_model.clear()
-        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
-
-    def update_filter(self):
-        """Update filter."""
-        self.layoutAboutToBeChanged.emit()
-        selected_object_ids = self._tree_view_form.selected_object_ids
-        selected_object_id_lists = self._tree_view_form.selected_object_id_lists
-        for relationship_class_id, model in self.sub_models.items():
-            object_class_id_list = self.object_class_id_lists[relationship_class_id]
-            object_ids = set(y for x in object_class_id_list for y in selected_object_ids.get(x, {}))
-            object_id_lists = selected_object_id_lists.get(relationship_class_id, {})
-            model.update_filter(object_ids, object_id_lists)
-            model.clear_filtered_out_values()
-        self.clear_filtered_out_values()
-        self.layoutChanged.emit()
-
     def invalidate_filter(self):
         """Invalidate filter."""
         self.layoutAboutToBeChanged.emit()
@@ -3108,7 +3067,8 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         """
         values = dict()
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.selected_relationship_class_ids
+        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -3145,34 +3105,6 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
             self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
         self.filtered_out = dict()
 
-    def move_rows_to_sub_models(self, rows):
-        """Move rows from empty row model to the appropriate sub_model.
-        Called when the empty row model succesfully inserts new data in the db.
-        """
-        relationship_class_id_column = self.header.index("relationship_class_id")
-        object_id_list_column = self.header.index('object_id_list')
-        model_data_dict = {}
-        for row in rows:
-            row_data = self.empty_row_model._main_data[row]
-            relationship_class_id = row_data[relationship_class_id_column]
-            model_data_dict.setdefault(relationship_class_id, list()).append(row_data)
-        for relationship_class_id, data in model_data_dict.items():
-            try:
-                model = self.sub_models[relationship_class_id]
-                source_model = model.sourceModel()
-                row_count = source_model.rowCount()
-                source_model.insertRows(row_count, len(data))
-                source_model._main_data[row_count:row_count + len(data)] = data
-            except KeyError:
-                source_model = SubParameterValueModel(self)
-                source_model.reset_model(data)
-                model = RelationshipFilterProxyModel(self, object_id_list_column)
-                model.setSourceModel(source_model)
-                self.sub_models[relationship_class_id] = model
-        for row in reversed(rows):
-            self.empty_row_model.removeRows(row, 1)
-        self.invalidate_filter()
-
     def rename_object_classes(self, object_classes):
         """Rename object classes in model."""
         object_class_name_list_column = self.header.index("object_class_name_list")
@@ -3196,6 +3128,117 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                     join([object_class_name_dict[i] for i in range(len(object_class_name_dict))])
                 row_data[object_class_name_list_column] = new_object_class_name_list
 
+    def rename_relationship_classes(self, relationship_classes):
+        """Rename relationship classes in model."""
+        relationship_class_name_column = self.header.index("relationship_class_name")
+        relationship_class_id_name = {x.id: x.name for x in relationship_classes}
+        for relationship_class_id, model in self.sub_models.items():
+            try:
+                relationship_class_name = relationship_class_id_name[relationship_class_id]
+            except KeyError:
+                continue
+            for row_data in model.sourceModel()._main_data:
+                row_data[relationship_class_name_column] = relationship_class_name
+
+    def remove_object_classes(self, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        object_class_ids = {x['id'] for x in object_classes}
+        for relationship_class_id, object_class_id_list in self.object_class_id_lists.items():
+            if object_class_ids.intersection(object_class_id_list):
+                self.sub_models.pop(relationship_class_id, None)
+        self.layoutChanged.emit()
+
+    def remove_relationship_classes(self, relationship_classes):
+        """Remove relationship classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        for relationship_class in relationship_classes:
+            self.sub_models.pop(relationship_class['id'], None)
+        self.layoutChanged.emit()
+
+
+class RelationshipParameterValueModel(RelationshipParameterModel):
+    """A model that combines several relationship parameter value models
+    (one per relationship class), one on top of the other.
+    """
+    def __init__(self, tree_view_form=None):
+        """Init class."""
+        super().__init__(tree_view_form)
+        self.empty_row_model = EmptyRelationshipParameterValueModel(self)
+
+    def reset_model(self):
+        """Reset model data. Each sub-model is filled with parameter value data
+        for a different relationship class."""
+        super().reset_model()
+        header = self.db_map.relationship_parameter_value_fields()
+        data = self.db_map.relationship_parameter_value_list()
+        self.fixed_columns = [
+            header.index(x) for x in ('relationship_class_name', 'object_name_list', 'parameter_name')]
+        self.relationship_class_name_column = header.index('relationship_class_name')
+        self.object_class_name_list_column = header.index('object_class_name_list')
+        parameter_definition_id_column = header.index('parameter_id')
+        object_id_list_column = header.index('object_id_list')
+        self.set_horizontal_header_labels(header)
+        data_dict = {}
+        for parameter_value in data:
+            relationship_class_id = parameter_value.relationship_class_id
+            data_dict.setdefault(relationship_class_id, list()).append(parameter_value)
+        for relationship_class_id, data in data_dict.items():
+            source_model = SubParameterValueModel(self)
+            source_model.reset_model([list(x) for x in data])
+            model = self.sub_models[relationship_class_id] = RelationshipParameterValueFilterProxyModel(
+                self, parameter_definition_id_column, object_id_list_column)
+            model.setSourceModel(source_model)
+        self.empty_row_model.set_horizontal_header_labels(header)
+        self.empty_row_model.clear()
+        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+
+    def update_filter(self):
+        """Update filter."""
+        self.layoutAboutToBeChanged.emit()
+        selected_parameter_definition_ids = self._tree_view_form.selected_rel_parameter_definition_ids
+        selected_object_ids = self._tree_view_form.selected_object_ids
+        selected_object_id_lists = self._tree_view_form.selected_object_id_lists
+        for relationship_class_id, model in self.sub_models.items():
+            parameter_definition_ids = selected_parameter_definition_ids.get(relationship_class_id, {})
+            object_class_id_list = self.object_class_id_lists[relationship_class_id]
+            object_ids = set(y for x in object_class_id_list for y in selected_object_ids.get(x, {}))
+            object_id_lists = selected_object_id_lists.get(relationship_class_id, {})
+            model.update_filter(parameter_definition_ids, object_ids, object_id_lists)
+            model.clear_filtered_out_values()
+        self.clear_filtered_out_values()
+        self.layoutChanged.emit()
+
+    def move_rows_to_sub_models(self, rows):
+        """Move rows from empty row model to the appropriate sub_model.
+        Called when the empty row model succesfully inserts new data in the db.
+        """
+        relationship_class_id_column = self.header.index("relationship_class_id")
+        parameter_definition_id_column = header.index('parameter_id')
+        object_id_list_column = self.header.index('object_id_list')
+        model_data_dict = {}
+        for row in rows:
+            row_data = self.empty_row_model._main_data[row]
+            relationship_class_id = row_data[relationship_class_id_column]
+            model_data_dict.setdefault(relationship_class_id, list()).append(row_data)
+        for relationship_class_id, data in model_data_dict.items():
+            try:
+                model = self.sub_models[relationship_class_id]
+                source_model = model.sourceModel()
+                row_count = source_model.rowCount()
+                source_model.insertRows(row_count, len(data))
+                source_model._main_data[row_count:row_count + len(data)] = data
+            except KeyError:
+                source_model = SubParameterValueModel(self)
+                source_model.reset_model(data)
+                model = RelationshipParameterValueFilterProxyModel(
+                    self, parameter_definition_id_column, object_id_list_column)
+                model.setSourceModel(source_model)
+                self.sub_models[relationship_class_id] = model
+        for row in reversed(rows):
+            self.empty_row_model.removeRows(row, 1)
+        self.invalidate_filter()
+
     def rename_objects(self, objects):
         """Rename objects in model."""
         object_id_list_column = self.header.index("object_id_list")
@@ -3212,39 +3255,6 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                         continue
                 row_data[object_name_list_column] = ",".join(object_name_list)
 
-    def rename_relationship_classes(self, relationship_classes):
-        """Rename relationship classes in model."""
-        relationship_class_name_column = self.header.index("relationship_class_name")
-        relationship_class_id_name = {x.id: x.name for x in relationship_classes}
-        for relationship_class_id, model in self.sub_models.items():
-            try:
-                relationship_class_name = relationship_class_id_name[relationship_class_id]
-            except KeyError:
-                continue
-            for row_data in model.sourceModel()._main_data:
-                row_data[relationship_class_name_column] = relationship_class_name
-
-    def rename_parameter(self, parameter_id, relationship_class_id, new_name):
-        """Rename single parameter in model."""
-        try:
-            model = self.sub_models[relationship_class_id]
-        except KeyError:
-            return
-        parameter_id_column = self.header.index("parameter_id")
-        parameter_name_column = self.header.index("parameter_name")
-        for row_data in model.sourceModel()._main_data:
-            if row_data[parameter_id_column] == parameter_id:
-                row_data[parameter_name_column] = new_name
-
-    def remove_object_classes(self, object_classes):
-        """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        object_class_ids = {x['id'] for x in object_classes}
-        for relationship_class_id, object_class_id_list in self.object_class_id_lists.items():
-            if object_class_ids.intersection(object_class_id_list):
-                self.sub_models.pop(relationship_class_id, None)
-        self.layoutChanged.emit()
-
     def remove_objects(self, objects):
         """Remove objects from model."""
         object_id_list_column = self.header.index("object_id_list")
@@ -3255,13 +3265,6 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                 object_id_list = source_model._main_data[row][object_id_list_column]
                 if object_ids.intersection(int(x) for x in object_id_list.split(',')):
                     source_model.removeRows(row, 1)
-
-    def remove_relationship_classes(self, relationship_classes):
-        """Remove relationship classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        for relationship_class in relationship_classes:
-            self.sub_models.pop(relationship_class['id'], None)
-        self.layoutChanged.emit()
 
     def remove_relationships(self, relationships):
         """Remove relationships from model."""
@@ -3279,6 +3282,18 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                 relationship_id = source_model._main_data[row][relationship_id_column]
                 if relationship_id in relationship_ids:
                     source_model.removeRows(row, 1)
+
+    def rename_parameter(self, parameter_id, relationship_class_id, new_name):
+        """Rename single parameter in model."""
+        try:
+            model = self.sub_models[relationship_class_id]
+        except KeyError:
+            return
+        parameter_id_column = self.header.index("parameter_id")
+        parameter_name_column = self.header.index("parameter_name")
+        for row_data in model.sourceModel()._main_data:
+            if row_data[parameter_id_column] == parameter_id:
+                row_data[parameter_name_column] = new_name
 
     def remove_parameters(self, parameter_dict):
         """Remove parameters from model."""
@@ -3313,14 +3328,18 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         self.fixed_columns = [header.index(x) for x in ('relationship_class_name', 'object_class_name_list')]
         self.relationship_class_name_column = header.index('relationship_class_name')
         self.object_class_name_list_column = header.index('object_class_name_list')
+        parameter_definition_id_column = header.index('id')
         self.set_horizontal_header_labels(header)
         data_dict = {}
         for parameter_definition in data:
             relationship_class_id = parameter_definition.relationship_class_id
             data_dict.setdefault(relationship_class_id, list()).append(parameter_definition)
         for relationship_class_id, data in data_dict.items():
-            model = self.sub_models[relationship_class_id] = SubParameterDefinitionModel(self)
-            model.reset_model([list(x) for x in data])
+            source_model = SubParameterDefinitionModel(self)
+            source_model.reset_model([list(x) for x in data])
+            model = self.sub_models[relationship_class_id] = RelationshipParameterDefinitionFilterProxyModel(
+                self, parameter_definition_id_column)
+            model.setSourceModel(source_model)
         self.empty_row_model.set_horizontal_header_labels(header)
         self.empty_row_model.clear()
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
@@ -3328,6 +3347,12 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
+        selected_parameter_definition_ids = self._tree_view_form.selected_rel_parameter_definition_ids
+        for relationship_class_id, model in self.sub_models.items():
+            parameter_definition_ids = selected_parameter_definition_ids.get(relationship_class_id, {})
+            model.update_filter(parameter_definition_ids)
+            model.clear_filtered_out_values()
+        self.clear_filtered_out_values()
         self.layoutChanged.emit()
 
     def move_rows_to_sub_models(self, rows):
@@ -3335,69 +3360,28 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         Called when the empty row model succesfully inserts new data in the db.
         """
         relationship_class_id_column = self.header.index("relationship_class_id")
+        parameter_definition_id_column = header.index('id')
         model_data_dict = {}
         for row in rows:
             row_data = self.empty_row_model._main_data[row]
             relationship_class_id = row_data[relationship_class_id_column]
             model_data_dict.setdefault(relationship_class_id, list()).append(row_data)
         for relationship_class_id, data in model_data_dict.items():
-            model = self.sub_models.setdefault(relationship_class_id, SubParameterDefinitionModel(self))
-            row_count = model.rowCount()
-            model.insertRows(row_count, len(data))
-            model._main_data[row_count:row_count + len(data)] = data
+            try:
+                model = self.sub_models[relationship_class_id]
+                source_model = model.sourceModel()
+                row_count = source_model.rowCount()
+                source_model.insertRows(row_count, len(data))
+                source_model._main_data[row_count:row_count + len(data)] = data
+            except KeyError:
+                source_model = SubParameterDefinitionModel(self)
+                source_model.reset_model(data)
+                model = RelationshipParameterDefinitionFilterProxyModel(self, parameter_definition_id_column)
+                model.setSourceModel(source_model)
+                self.sub_models[relationship_class_id] = model
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
-
-    def rename_object_classes(self, object_classes):
-        """Rename object classes in model."""
-        object_class_name_list_column = self.header.index("object_class_name_list")
-        object_class_id_name = {x.id: x.name for x in object_classes}
-        for relationship_class_id, model in self.sub_models.items():
-            object_class_id_list = self.object_class_id_lists[relationship_class_id]
-            new_object_class_name_dict = {}
-            for k, object_class_id in enumerate(object_class_id_list):
-                try:
-                    object_class_name = object_class_id_name[object_class_id]
-                except KeyError:
-                    continue
-                new_object_class_name_dict.update({k: object_class_name})
-            if not new_object_class_name_dict:
-                continue
-            for row_data in model._main_data:
-                object_class_name_list = row_data[object_class_name_list_column].split(',')
-                object_class_name_dict = {i: name for i, name in enumerate(object_class_name_list)}
-                object_class_name_dict.update(new_object_class_name_dict)
-                new_object_class_name_list = ",".\
-                    join([object_class_name_dict[i] for i in range(len(object_class_name_dict))])
-                row_data[object_class_name_list_column] = new_object_class_name_list
-
-    def rename_relationship_classes(self, relationship_classes):
-        """Rename relationship classes in model."""
-        relationship_class_name_column = self.header.index("relationship_class_name")
-        relationship_class_id_name = {x.id: x.name for x in relationship_classes}
-        for relationship_class_id, model in self.sub_models.items():
-            try:
-                relationship_class_name = relationship_class_id_name[relationship_class_id]
-            except KeyError:
-                continue
-            for row_data in model._main_data:
-                row_data[relationship_class_name_column] = relationship_class_name
-
-    def remove_object_classes(self, object_classes):
-        """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        object_class_ids = {x['id'] for x in object_classes}
-        for relationship_class_id, object_class_id_list in self.object_class_id_lists.items():
-            if object_class_ids.intersection(object_class_id_list):
-                self.sub_models.pop(relationship_class_id, None)
-        self.layoutChanged.emit()
-
-    def remove_relationship_classes(self, relationship_classes):
-        """Remove relationship classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        for relationship_class in relationship_classes:
-            self.sub_models.pop(relationship_class['id'], None)
-        self.layoutChanged.emit()
+        self.invalidate_filter()
 
 
 class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
@@ -3484,23 +3468,20 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
         return True
 
 
-class RelationshipFilterProxyModel(QSortFilterProxyModel):
-    """A filter proxy model for relationship parameter models."""
-    def __init__(self, parent, object_id_list_column):
+class RelationshipParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
+    """A filter proxy model for relationship parameter definition models."""
+    def __init__(self, parent, parameter_definition_id_column):
         """Init class."""
         super().__init__(parent)
-        self.object_ids = dict()
-        self.selected_object_id_lists = set()
-        self.object_id_list_column = object_id_list_column
+        self.parameter_definition_ids = set()
+        self.parameter_definition_id_column = parameter_definition_id_column
         self.filtered_out = dict()
 
-    def update_filter(self, object_ids, selected_object_id_lists):
+    def update_filter(self, parameter_definition_ids):
         """Update filter."""
-        if object_ids == self.object_ids and \
-                selected_object_id_lists == self.selected_object_id_lists:
+        if parameter_definition_ids == self.parameter_definition_ids:
             return
-        self.object_ids = object_ids
-        self.selected_object_id_lists = selected_object_id_lists
+        self.parameter_definition_ids = parameter_definition_ids
         self.invalidateFilter()
 
     def set_filtered_out_values(self, column, values):
@@ -3528,11 +3509,9 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
 
     def main_filter_accepts_row(self, source_row, source_parent):
         """Accept or reject row."""
-        object_id_list = self.sourceModel()._main_data[source_row][self.object_id_list_column]
-        if self.selected_object_id_lists:
-            return object_id_list in self.selected_object_id_lists
-        if self.object_ids:
-            return len(self.object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
+        if self.parameter_definition_ids:
+            parameter_definition_id = self.sourceModel()._main_data[source_row][self.parameter_definition_id_column]
+            return parameter_definition_id in self.parameter_definition_ids
         return True
 
     def filterAcceptsRow(self, source_row, source_parent):
@@ -3546,6 +3525,36 @@ class RelationshipFilterProxyModel(QSortFilterProxyModel):
     def batch_set_data(self, indexes, data):
         source_indexes = [self.mapToSource(x) for x in indexes]
         return self.sourceModel().batch_set_data(source_indexes, data)
+
+
+class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinitionFilterProxyModel):
+    """A filter proxy model for relationship parameter value models."""
+    def __init__(self, parent, parameter_definition_id_column, object_id_list_column):
+        """Init class."""
+        super().__init__(parent, parameter_definition_id_column)
+        self.object_ids = dict()
+        self.object_id_lists = set()
+        self.object_id_list_column = object_id_list_column
+
+    def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):
+        """Update filter."""
+        if object_ids == self.object_ids and \
+                object_id_lists == self.object_id_lists:
+            return
+        self.object_ids = object_ids
+        self.object_id_lists = object_id_lists
+        self.invalidateFilter()
+
+    def main_filter_accepts_row(self, source_row, source_parent):
+        """Accept or reject row."""
+        if not super().main_filter_accepts_row(source_row, source_parent):
+            return False
+        object_id_list = self.sourceModel()._main_data[source_row][self.object_id_list_column]
+        if self.object_id_lists:
+            return object_id_list in self.object_id_lists
+        if self.object_ids:
+            return len(self.object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
+        return True
 
 
 class JSONArrayModel(EmptyRowModel):
