@@ -102,6 +102,11 @@ class DataStoreForm(QMainWindow):
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
+        # Parameter tag stuff
+        self.tag_button_group = QButtonGroup(self)
+        self.tag_button_group.setExclusive(False)
+        self.selected_parameter_tag_ids = set()
+        self.selected_parameter_definition_ids = dict()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -651,10 +656,6 @@ class TreeViewForm(DataStoreForm):
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
-        self.tag_button_group = QButtonGroup(self)
-        self.tag_button_group.setExclusive(False)
-        self.selected_parameter_tag_ids = {x.id for x in self.db_map.parameter_tag_list()}
-        self.selected_parameter_definition_ids = set()
         # init models and views
         self.init_models()
         self.init_views()
@@ -668,11 +669,17 @@ class TreeViewForm(DataStoreForm):
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
     def init_parameter_tag_buttons(self):
+        button = QToolButton(self)
+        button.setText("untagged")
+        button.setCheckable(True)
+        # button.setChecked(True)  # NOTE: do this before connecting the buttonToggled signal
+        self.tag_button_group.addButton(button, id=0)
+        self.ui.horizontalLayout_parameter_tag_clicker.addWidget(button)
         for tag in self.db_map.parameter_tag_list():
             button = QToolButton(self)
             button.setText(tag.tag)
             button.setCheckable(True)
-            button.setChecked(True)  # NOTE: do this before connecting the buttonToggled signal
+            # button.setChecked(True)  # NOTE: do this before connecting the buttonToggled signal
             self.tag_button_group.addButton(button, id=tag.id)
             self.ui.horizontalLayout_parameter_tag_clicker.addWidget(button)
 
@@ -759,30 +766,27 @@ class TreeViewForm(DataStoreForm):
 
     @Slot("int", "bool", name="_handle_tag_button_toggled")
     def _handle_tag_button_toggled(self, id, checked):
+        """Called when a parameter tag button is toggled.
+        Compute selected parameter definiton ids per object class ids.
+        Then update set of selected object class ids. Finally, update filter.
+        """
         if checked:
             self.selected_parameter_tag_ids.add(id)
         else:
             self.selected_parameter_tag_ids.remove(id)
-        self.selected_parameter_definition_ids = set()
-        parameter_definition_ids = set()
+        parameter_definition_id_list = set()
         for item in self.db_map.wide_parameter_tag_definition_list():
-            print(item)
-            tag_id = item.parameter_tag_id
+            tag_id = item.parameter_tag_id if item.parameter_tag_id else 0
             if tag_id not in self.selected_parameter_tag_ids:
                 continue
-            definition_ids = {int(x) for x in item.parameter_definition_id_list.split(",")}
-            parameter_definition_ids.update(definition_ids)
-        wide_object_parameter_definition_list = self.db_map.wide_object_parameter_definition_list(
-            parameter_definition_id_list=parameter_definition_ids)
-        print(parameter_definition_ids)
-        print(wide_object_parameter_definition_list.all())
-        return
-
-        for ind in self.selected_tree_indexes.get('object', {}):
-            object_class_id = ind.data(Qt.UserRole + 1)['class_id']
-            object_id = ind.data(Qt.UserRole + 1)['id']
-            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
-
+            parameter_definition_id_list.update({int(x) for x in item.parameter_definition_id_list.split(",")})
+        self.selected_parameter_definition_ids = {
+            x.object_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
+            for x in self.db_map.wide_object_parameter_definition_list(
+                parameter_definition_id_list=parameter_definition_id_list)
+        }
+        self.update_selected_object_class_ids()
+        self.do_update_filter()
 
     @Slot("bool", name="copy")
     def copy(self, checked=False):
@@ -1245,7 +1249,7 @@ class TreeViewForm(DataStoreForm):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
         self.set_default_parameter_rows()
-        self.update_and_apply_filter(selected, deselected)
+        self.update_filter(selected, deselected)
         self.update_json_editors()
 
     def update_json_editors(self):
@@ -1328,8 +1332,8 @@ class TreeViewForm(DataStoreForm):
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
 
-    def update_and_apply_filter(self, selected, deselected):
-        """Apply filters on parameter models according to selected and deselected object tree indexes."""
+    def update_filter(self, selected, deselected):
+        """Update filters on parameter models according to selected and deselected object tree indexes."""
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
@@ -1340,6 +1344,9 @@ class TreeViewForm(DataStoreForm):
         self.update_selected_object_ids()
         self.update_selected_relationship_class_ids()
         self.update_selected_object_id_lists()
+        self.do_update_filter()
+
+    def do_update_filter(self):
         if self.ui.tabWidget_object_parameter.currentIndex() == 0:
             self.object_parameter_value_model.update_filter()
         else:
@@ -1350,19 +1357,32 @@ class TreeViewForm(DataStoreForm):
             self.relationship_parameter_definition_model.update_filter()
 
     def update_selected_object_class_ids(self):
-        """Update set of selected object class id."""
-        self.selected_object_class_ids = set(
+        """Update set of selected object class id, by combining selectiong from object tree
+        and parameter tag.
+        """
+        tree_object_class_ids = set(
             ind.data(Qt.UserRole + 1)['id']
             for ind in self.selected_tree_indexes.get('object_class', {}))
-        self.selected_object_class_ids.update(set(
+        tree_object_class_ids.update(set(
             ind.data(Qt.UserRole + 1)['class_id']
             for ind in self.selected_tree_indexes.get('object', {})))
-        self.selected_object_class_ids.update(set(
+        tree_object_class_ids.update(set(
             ind.parent().data(Qt.UserRole + 1)['class_id']
             for ind in self.selected_tree_indexes.get('relationship_class', {})))
-        self.selected_object_class_ids.update(set(
+        tree_object_class_ids.update(set(
             ind.parent().parent().data(Qt.UserRole + 1)['class_id']
             for ind in self.selected_tree_indexes.get('relationship', {})))
+        tag_object_class_ids = set(self.selected_parameter_definition_ids.keys())
+        if not tag_object_class_ids:
+            self.selected_object_class_ids = tree_object_class_ids
+        elif not tree_object_class_ids:
+            self.selected_object_class_ids = tag_object_class_ids
+        else:
+            intersection = tree_object_class_ids.intersection(tag_object_class_ids)
+            if intersection:
+                self.selected_object_class_ids = intersection
+            else:
+                self.selected_object_class_ids = {None}
 
     def update_selected_object_ids(self):
         """Update set of selected object id."""
@@ -2330,14 +2350,7 @@ class GraphViewForm(DataStoreForm):
             elif isinstance(item, ArcItem):
                 self.selected_relationship_class_ids.add(item.relationship_class_id)
                 self.selected_object_id_lists.setdefault(item.relationship_class_id, set()).add(item.object_id_list)
-        if self.ui.tabWidget_object_parameter.currentIndex() == 0:
-            self.object_parameter_value_model.update_filter()
-        else:
-            self.object_parameter_definition_model.update_filter()
-        if self.ui.tabWidget_relationship_parameter.currentIndex() == 0:
-            self.relationship_parameter_value_model.update_filter()
-        else:
-            self.relationship_parameter_definition_model.update_filter()
+        self.do_update_filter()
 
     @Slot("QList<QRectF>", name="_handle_scene_changed")
     def _handle_scene_changed(self, region):

@@ -17,7 +17,7 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 from PySide2.QtCore import Qt, Slot, Signal, QRect
-from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QHBoxLayout, QToolButton
+from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QHBoxLayout, QToolButton, QListView, QListWidget
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
 from widgets.custom_menus import QOkMenu
 
@@ -122,35 +122,3 @@ class ObjectNameListEditor(QWidget):
                 object_name = combo.currentText()
             object_name_list.append(object_name)
         return ','.join(object_name_list)
-
-
-class ParameterTagListEditor(QToolButton):
-    """A custom QWidget to edit object name lists."""
-
-    data_committed = Signal(name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.menu = QOkMenu(self)
-        self.setMenu(self.menu)
-        self.setPopupMode(QToolButton.InstantPopup)
-        self.setMaximumHeight(0)
-        self.menu.ok_clicked.connect(self._handle_menu_ok_clicked)
-        self.menu.aboutToHide.connect(self._handle_menu_about_to_hide)
-
-    @Slot(name="_handle_menu_about_to_hide")
-    def _handle_menu_about_to_hide(self):
-        self.setEnabled(False)
-        self.setVisible(False)
-
-    @Slot(name="_handle_menu_ok_clicked")
-    def _handle_menu_ok_clicked(self):
-        self.data_committed.emit()
-
-    def set_data(self, parameter_tag_list, all_parameter_tag_list):
-        self.menu.checked_action_names = parameter_tag_list
-        self.menu.populate(all_parameter_tag_list)
-        self.click()
-
-    def data(self):
-        return ",".join(self.menu.checked_action_names)

@@ -2601,33 +2601,6 @@ class ObjectParameterModel(MinimalTableModel):
             self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
         self.filtered_out = dict()
 
-    def move_rows_to_sub_models(self, rows):
-        """Move rows from empty row model to the appropriate sub_model.
-        Called when the empty row model succesfully inserts new data in the db.
-        """
-        object_class_id_column = self.header.index("object_class_id")
-        object_id_column = self.header.index("object_id")
-        model_data_dict = {}
-        for row in rows:
-            row_data = self.empty_row_model._main_data[row]
-            object_class_id = row_data[object_class_id_column]
-            model_data_dict.setdefault(object_class_id, list()).append(row_data)
-        for object_class_id, data in model_data_dict.items():
-            try:
-                model = self.sub_models[object_class_id]
-                source_model = model.sourceModel()
-                row_count = source_model.rowCount()
-                source_model.insertRows(row_count, len(data))
-                source_model._main_data[row_count:row_count + len(data)] = data
-            except KeyError:
-                source_model = SubParameterValueModel(self)
-                source_model.reset_model(data)
-                model = self.sub_models[object_class_id] = ObjectFilterProxyModel(self, object_id_column)
-                model.setSourceModel(source_model)
-        for row in reversed(rows):
-            self.empty_row_model.removeRows(row, 1)
-        self.invalidate_filter()
-
     def rename_object_classes(self, object_classes):
         """Rename object classes in model."""
         object_class_name_column = self.header.index("object_class_name")
@@ -2684,7 +2657,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        selected_parameter_definition_ids = {} # FIXME: self._tree_view_form.selected_parameter_definition_ids
+        selected_parameter_definition_ids = self._tree_view_form.selected_parameter_definition_ids
         selected_object_ids = self._tree_view_form.selected_object_ids
         for object_class_id, model in self.sub_models.items():
             parameter_definition_ids = selected_parameter_definition_ids.get(object_class_id, {})
@@ -2757,6 +2730,35 @@ class ObjectParameterValueModel(ObjectParameterModel):
                 if parameter_id in parameter_ids:
                     source_model.removeRows(row, 1)
 
+    def move_rows_to_sub_models(self, rows):
+        """Move rows from empty row model to the appropriate sub_model.
+        Called when the empty row model succesfully inserts new data in the db.
+        """
+        object_class_id_column = self.header.index("object_class_id")
+        parameter_definition_id_column = self.header.index('parameter_id')
+        object_id_column = self.header.index("object_id")
+        model_data_dict = {}
+        for row in rows:
+            row_data = self.empty_row_model._main_data[row]
+            object_class_id = row_data[object_class_id_column]
+            model_data_dict.setdefault(object_class_id, list()).append(row_data)
+        for object_class_id, data in model_data_dict.items():
+            try:
+                model = self.sub_models[object_class_id]
+                source_model = model.sourceModel()
+                row_count = source_model.rowCount()
+                source_model.insertRows(row_count, len(data))
+                source_model._main_data[row_count:row_count + len(data)] = data
+            except KeyError:
+                source_model = SubParameterValueModel(self)
+                source_model.reset_model(data)
+                model = self.sub_models[object_class_id] = ObjectParameterValueFilterProxyModel(
+                    self, parameter_definition_id_column, object_id_column)
+                model.setSourceModel(source_model)
+        for row in reversed(rows):
+            self.empty_row_model.removeRows(row, 1)
+        self.invalidate_filter()
+
 
 class ObjectParameterDefinitionModel(ObjectParameterModel):
     """A model that concatenates several object parameter definition models
@@ -2793,13 +2795,40 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        selected_parameter_definition_ids = {} # FIXME: self._tree_view_form.selected_parameter_definition_ids
+        selected_parameter_definition_ids = self._tree_view_form.selected_parameter_definition_ids
         for object_class_id, model in self.sub_models.items():
             model.update_filter(selected_parameter_definition_ids.get(object_class_id, {}))
             model.clear_filtered_out_values()
         self.clear_filtered_out_values()
         self.layoutChanged.emit()
 
+    def move_rows_to_sub_models(self, rows):
+        """Move rows from empty row model to the appropriate sub_model.
+        Called when the empty row model succesfully inserts new data in the db.
+        """
+        object_class_id_column = self.header.index("object_class_id")
+        parameter_definition_id_column = self.header.index('id')
+        model_data_dict = {}
+        for row in rows:
+            row_data = self.empty_row_model._main_data[row]
+            object_class_id = row_data[object_class_id_column]
+            model_data_dict.setdefault(object_class_id, list()).append(row_data)
+        for object_class_id, data in model_data_dict.items():
+            try:
+                model = self.sub_models[object_class_id]
+                source_model = model.sourceModel()
+                row_count = source_model.rowCount()
+                source_model.insertRows(row_count, len(data))
+                source_model._main_data[row_count:row_count + len(data)] = data
+            except KeyError:
+                source_model = SubParameterValueModel(self)
+                source_model.reset_model(data)
+                model = self.sub_models[object_class_id] = ObjectParameterDefinitionFilterProxyModel(
+                    self, parameter_definition_id_column)
+                model.setSourceModel(source_model)
+        for row in reversed(rows):
+            self.empty_row_model.removeRows(row, 1)
+        self.invalidate_filter()
 
 class RelationshipParameterModel(MinimalTableModel):
     """A model that combines several relationship parameter models
@@ -3382,8 +3411,9 @@ class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
 
     def update_filter(self, parameter_definition_ids):
         """Update filter."""
-        if parameter_definition_ids != self.parameter_definition_ids:
-            self.parameter_definition_ids = parameter_definition_ids
+        if parameter_definition_ids == self.parameter_definition_ids:
+            return
+        self.parameter_definition_ids = parameter_definition_ids
         self.invalidateFilter()
 
     def set_filtered_out_values(self, column, values):
@@ -3439,9 +3469,11 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
 
     def update_filter(self, parameter_definition_ids, object_ids):
         """Update filter."""
-        if object_ids != self.object_ids:
-            self.object_ids = object_ids
-        super().update_filter(parameter_definition_ids)
+        if parameter_definition_ids == self.parameter_definition_ids and object_ids == self.object_ids:
+            return
+        self.object_ids = object_ids
+        self.parameter_definition_ids = parameter_definition_ids
+        self.invalidateFilter()
 
     def main_filter_accepts_row(self, source_row, source_parent):
         """Accept or reject row."""

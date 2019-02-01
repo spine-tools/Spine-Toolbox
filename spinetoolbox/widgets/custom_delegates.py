@@ -18,8 +18,7 @@ Custom item delegates.
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
     QApplication, QTextEdit, QWidget, QVBoxLayout, QPushButton, QTableView
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor, \
-    ParameterTagListEditor
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
 from models import MinimalTableModel
 import logging
 
@@ -213,7 +212,7 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         if header[index.column()] == 'object_class_name':
             return CustomComboEditor(parent)
         elif header[index.column()] == 'parameter_tag_list':
-            editor = ParameterTagListEditor(parent)
+            editor = MultipleOptionsEditor(parent, option, index)
             model = index.model()
             editor.data_committed.connect(
                 lambda e=editor, i=index, m=model: self.close_parameter_tag_list_editor(e, i, m))
@@ -232,7 +231,7 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
                 parameter_tag_list = index.data(Qt.EditRole).split(",")
             except AttributeError:
                 parameter_tag_list = []
-            editor.set_data(parameter_tag_list, all_parameter_tag_list)
+            editor.set_data(all_parameter_tag_list, parameter_tag_list)
         else:
             editor.set_data(index.data(Qt.EditRole))
 
@@ -443,7 +442,7 @@ class AddRelationshipsDelegate(ParameterDelegate):
         return "__".join(object_name_list)
 
 
-class FieldNameListEditor(QWidget):
+class MultipleOptionsEditor(QWidget):
     """A widget to edit foreign keys' field name lists."""
 
     data_committed = Signal(name="data_committed")
@@ -533,7 +532,7 @@ class ForeignKeysDelegate(QItemDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'fields':
-            editor = FieldNameListEditor(parent, option, index)
+            editor = MultipleOptionsEditor(parent, option, index)
             model = index.model()
             editor.data_committed.connect(
                 lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
@@ -541,7 +540,7 @@ class ForeignKeysDelegate(QItemDelegate):
         elif header[index.column()] == 'reference resource':
             return CustomComboEditor(parent)
         elif header[index.column()] == 'reference fields':
-            editor = FieldNameListEditor(parent, option, index)
+            editor = MultipleOptionsEditor(parent, option, index)
             model = index.model()
             editor.data_committed.connect(
                 lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
