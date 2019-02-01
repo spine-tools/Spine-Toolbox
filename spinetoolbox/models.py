@@ -3455,8 +3455,8 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
         """Update filter."""
         if parameter_definition_ids == self.parameter_definition_ids and object_ids == self.object_ids:
             return
-        self.object_ids = object_ids
         self.parameter_definition_ids = parameter_definition_ids
+        self.object_ids = object_ids
         self.invalidateFilter()
 
     def main_filter_accepts_row(self, source_row, source_parent):
@@ -3538,9 +3538,10 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
 
     def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):
         """Update filter."""
-        if object_ids == self.object_ids and \
-                object_id_lists == self.object_id_lists:
+        if parameter_definition_ids == self.parameter_definition_ids \
+                and object_ids == self.object_ids and object_id_lists == self.object_id_lists:
             return
+        self.parameter_definition_ids = parameter_definition_ids
         self.object_ids = object_ids
         self.object_id_lists = object_id_lists
         self.invalidateFilter()
