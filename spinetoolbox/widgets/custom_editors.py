@@ -16,10 +16,10 @@ Custom editors for model/view programming.
 :author: M. Marin (KTH)
 :date:   2.9.2018
 """
-from PySide2.QtCore import Qt, Slot, Signal, QRect
-from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QHBoxLayout, QToolButton, QListView, QListWidget
+from PySide2.QtCore import Qt, Slot, Signal, QRect, QItemSelectionModel, QPoint
+from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QHBoxLayout, QToolButton, QVBoxLayout, \
+    QTableView, QStyle
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
-from widgets.custom_menus import QOkMenu
 
 
 class CustomComboEditor(QComboBox):
@@ -61,6 +61,82 @@ class CustomLineEditor(QLineEdit):
 
     def data(self):
         return self.text()
+
+
+class MultipleOptionsEditor(QWidget):
+    """A widget to edit fields with multiple options."""
+
+    data_committed = Signal(name="data_committed")
+
+    def __init__(self, parent, option, index):
+        """Initialize class."""
+        super().__init__(parent)
+        layout = QVBoxLayout(self)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(0)
+        self.model = QStandardItemModel(self)
+        self.view = QTableView(self)
+        self.view.setModel(self.model)
+        self.view.verticalHeader().hide()
+        self.view.horizontalHeader().hide()
+        self.view.setShowGrid(False)
+        self.view.setMouseTracking(True)
+        self.view.mouseMoveEvent = self._view_mouse_move_event
+        self.view.mousePressEvent = self._view_mouse_press_event
+        self.button = QToolButton(self)
+        self.button.setText("Ok")
+        layout.addWidget(self.view)
+        layout.addWidget(self.button)
+        self.button.clicked.connect(self._handle_ok_button_clicked)
+        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        x_offset = parent.parent().columnViewportPosition(index.column())
+        y_offset = parent.parent().rowViewportPosition(index.row())
+        self.position = parent.mapToGlobal(QPoint(0, 0)) + QPoint(x_offset, y_offset)
+        self.option_rect_width = option.rect.width()
+
+    def _view_mouse_move_event(self, event):
+        """Highlight current row."""
+        index = self.view.indexAt(event.pos())
+        self.view.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+        event.accept()
+
+    def _view_mouse_press_event(self, event):
+        """Toggle checked state."""
+        index = self.view.indexAt(event.pos())
+        item = self.model.itemFromIndex(index)
+        if item.checkState() == Qt.Checked:
+            item.setCheckState(Qt.Unchecked)
+        else:
+            item.setCheckState(Qt.Checked)
+        event.accept()
+
+    @Slot("bool", name="_handle_ok_button_clicked")
+    def _handle_ok_button_clicked(self, checked=False):
+        """Called when user pressed Ok."""
+        self.data_committed.emit()
+
+    def set_data(self, item_names, current_item_names):
+        """Set data and update geometry."""
+        for name in item_names:
+            qitem = QStandardItem(name)
+            if name in current_item_names:
+                qitem.setCheckState(Qt.Checked)
+            else:
+                qitem.setCheckState(Qt.Unchecked)
+            self.model.appendRow(qitem)
+        self.view.resizeColumnsToContents()
+        table_width = self.view.horizontalHeader().length() + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent) + 2
+        width = max(self.option_rect_width, table_width)
+        height = self.view.verticalHeader().length() + self.button.height()
+        parent_height = self.parent().height()
+        self.setFixedHeight(min(height, parent_height / 2) + 2)
+        self.setFixedWidth(width)
+        self.view.horizontalHeader().setMinimumSectionSize(width)
+        self.button.setFixedWidth(width)
+        self.move(self.position)
+
+    def data(self):
+        return ",".join(q.text() for q in self.model.findItems('*', Qt.MatchWildcard) if q.checkState() == Qt.Checked)
 
 
 class ObjectNameListEditor(QWidget):

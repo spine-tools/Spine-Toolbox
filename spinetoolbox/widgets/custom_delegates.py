@@ -17,8 +17,8 @@ Custom item delegates.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
-    QApplication, QTextEdit, QWidget, QVBoxLayout, QPushButton, QTableView
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor
+    QApplication
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor, MultipleOptionsEditor
 from models import MinimalTableModel
 import logging
 
@@ -440,74 +440,6 @@ class AddRelationshipsDelegate(ParameterDelegate):
             if object_name:
                 object_name_list.append(object_name)
         return "__".join(object_name_list)
-
-
-class MultipleOptionsEditor(QWidget):
-    """A widget to edit foreign keys' field name lists."""
-
-    data_committed = Signal(name="data_committed")
-
-    def __init__(self, parent, option, index):
-        """Initialize class."""
-        super().__init__(parent)
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.model = MinimalTableModel(self)
-        self.model.flags = self.model_flags
-        self.view = QTableView(self)
-        self.view.setModel(self.model)
-        self.view.verticalHeader().hide()
-        self.view.horizontalHeader().hide()
-        self.view.setShowGrid(False)
-        check_box_delegate = CheckBoxDelegate(self)
-        self.view.setItemDelegateForColumn(0, check_box_delegate)
-        check_box_delegate.data_committed.connect(self._handle_check_box_data_committed)
-        self.button = QPushButton("Ok", self)
-        self.button.setFlat(True)
-        self.view.verticalHeader().setDefaultSectionSize(option.rect.height())
-        self.button.setFixedHeight(option.rect.height())
-        layout.addWidget(self.view)
-        layout.addWidget(self.button)
-        self.button.clicked.connect(self._handle_ok_button_clicked)
-        self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
-        x_offset = parent.parent().columnViewportPosition(index.column())
-        y_offset = parent.parent().rowViewportPosition(index.row())
-        self.position = parent.mapToGlobal(QPoint(0, 0)) + QPoint(x_offset, y_offset)
-
-    def model_flags(self, index):
-        """Return index flags."""
-        if not index.isValid():
-            return Qt.NoItemFlags
-        if index.column() != 0:
-            return ~Qt.ItemIsEditable
-        return Qt.ItemIsEditable
-
-    @Slot("QModelIndex", name="_handle_check_box_data_committed")
-    def _handle_check_box_data_committed(self, index):
-        """Called when checkbox delegate wants to edit data. Toggle the index's value."""
-        data = index.data(Qt.EditRole)
-        self.model.setData(index, not data)
-
-    @Slot("bool", name="_handle_ok_button_clicked")
-    def _handle_ok_button_clicked(self, checked=False):
-        """Called when user pressed Ok."""
-        self.data_committed.emit()
-
-    def set_data(self, field_names, current_field_names):
-        """Set values to show in the 'menu'. Reset model using those values and update geometry."""
-        data = [[name in current_field_names, name] for name in field_names]
-        self.model.reset_model(data)
-        self.view.resizeColumnsToContents()
-        width = self.view.horizontalHeader().length() + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        self.setFixedWidth(width + 2)
-        height = self.view.verticalHeader().length() + self.button.height()
-        parent_height = self.parent().height()
-        self.setFixedHeight(min(height, parent_height / 2) + 2)
-        self.move(self.position)
-
-    def data(self):
-        return ",".join([name for checked, name in self.model._main_data if checked])
 
 
 class ForeignKeysDelegate(QItemDelegate):

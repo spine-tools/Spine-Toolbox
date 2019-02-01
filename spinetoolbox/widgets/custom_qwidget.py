@@ -17,15 +17,19 @@ Unit tests for PivotModel class.
 """
 
 from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
-    QMenu, QPushButton, QAction, QTableView, QStyle, QToolBar, QStyleOptionMenuItem
-from PySide2.QtCore import Qt, QTimer, Signal, Slot
-from PySide2.QtGui import QPixmap, QPainter
+    QMenu, QPushButton, QAction, QTableView, QStyle, QToolBar, QStyleOptionMenuItem, \
+    QListView, QLineEdit, QDialogButtonBox, QToolButton
+from PySide2.QtCore import Qt, QTimer, Signal, Slot, QItemSelectionModel
+from PySide2.QtGui import QPixmap, QPainter, QStandardItem, QStandardItemModel
 from models import MinimalTableModel
-from widgets.custom_delegates import CheckBoxDelegate
+from tabularview_models import FilterCheckboxListModel
 
 
 class AutoFilterWidget(QWidget):
     """A widget to show the auto filter 'menu'."""
+
+    data_committed = Signal(name="data_committed")
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -33,49 +37,74 @@ class AutoFilterWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(0)
         self.model = MinimalTableModel(self)
-        self.model.flags = self.model_flags
+        self.model.data = self._model_data
+        self.model.flags = self._model_flags
         self.view = QTableView(self)
         self.view.setModel(self.model)
         self.view.verticalHeader().hide()
         self.view.horizontalHeader().hide()
         self.view.setShowGrid(False)
-        check_box_delegate = CheckBoxDelegate(self)
-        self.view.setItemDelegateForColumn(0, check_box_delegate)
-        check_box_delegate.data_committed.connect(self._handle_check_box_data_committed)
-        self.button = QPushButton("Ok", self)
-        self.button.setFlat(True)
+        self.view.setMouseTracking(True)
+        self.view.mouseMoveEvent = self._view_mouse_move_event
+        self.view.mousePressEvent = self._view_mouse_press_event
+        self.view.leaveEvent = self._view_leave_event
+        self.button = QToolButton(self)
+        self.button.setText("Ok")
         layout.addWidget(self.view)
         layout.addWidget(self.button)
-        self.button.clicked.connect(self.hide)
-        self.hide()
+        self.button.clicked.connect(self._handle_ok_button_clicked)
         self.setWindowFlags(Qt.FramelessWindowHint | Qt.Popup)
+        self.checked_values = dict()
+        self.hide()
 
-    def model_flags(self, index):
-        """Return index flags."""
-        if not index.isValid():
-            return Qt.NoItemFlags
-        if index.column() == 1:
-            return ~Qt.ItemIsEditable
-        return Qt.ItemIsEditable
+    def _model_flags(self, index):
+        """Return no item flags."""
+        return ~Qt.ItemIsEditable
 
-    @Slot("QModelIndex", name="_handle_check_box_data_committed")
-    def _handle_check_box_data_committed(self, index):
-        """Called when checkbox delegate wants to edit data. Toggle the index's value."""
-        data = index.data(Qt.EditRole)
+    def _model_data(self, index, role=Qt.DisplayRole):
+        """Read checked state from first column."""
+        if role == Qt.CheckStateRole:
+            checked = self.model._main_data[index.row()][0]
+            if checked is None:
+                return Qt.PartiallyChecked
+            elif checked is True:
+                return Qt.Checked
+            else:
+                return Qt.Unchecked
+        return MinimalTableModel.data(self.model, index, role)
+
+    def _view_mouse_move_event(self, event):
+        """Highlight current row."""
+        index = self.view.indexAt(event.pos())
+        self.view.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+        event.accept()
+
+    def _view_leave_event(self, event):
+        """Clear selection."""
+        self.view.selectionModel().clearSelection()
+        event.accept()
+
+    def _view_mouse_press_event(self, event):
+        """Toggle checked state."""
+        pressed_index = self.view.indexAt(event.pos())
+        index = self.model.index(pressed_index.row(), 0)
+        checked = index.data(Qt.EditRole)
         model_data = self.model._main_data
         row_count = self.model.rowCount()
         if index.row() == 0:
-            # Ok row
-            value = data in (None, False)
+            # All row
+            all_checked = checked in (None, False)
             for row in range(row_count):
-                model_data[row][0] = value
-            self.model.dataChanged.emit(self.model.index(0, 0), self.model.index(row_count - 1, 0))
+                model_data[row][0] = all_checked
+            self.model.dataChanged.emit(self.model.index(0, 1), self.model.index(row_count - 1, 1))
         else:
             # Data row
-            self.model.setData(index, not data)
-            self.set_all_index_data()
+            self.model.setData(index, not checked)
+            self.model.dataChanged.emit(pressed_index, pressed_index)
+            self.set_data_for_all_index()
+        event.accept()
 
-    def set_all_index_data(self):
+    def set_data_for_all_index(self):
         """Set data for 'all' index based on data from all other indexes."""
         all_index = self.model.index(0, 0)
         true_count = 0
@@ -88,23 +117,135 @@ class AutoFilterWidget(QWidget):
             self.model.setData(all_index, False)
         else:
             self.model.setData(all_index, None)
+        index = self.model.index(0, 1)
+        self.model.dataChanged.emit(index, index)
+
+    @Slot("bool", name="_handle_ok_button_clicked")
+    def _handle_ok_button_clicked(self, checked=False):
+        """Called when user pressed Ok."""
+        self.checked_values = dict()
+        data = self.model._main_data
+        for checked, value, object_class_id_set in data[1:]:
+            if checked:
+                continue
+            for object_class_id in object_class_id_set:
+                self.checked_values.setdefault(object_class_id, set()).add(value)
+        self.hide()
+        self.data_committed.emit()
 
     def set_values(self, values):
-        """Set values to show in the 'menu'. Reset model using those values and update geometry."""
-        self.model.reset_model([[None, "All"]] + values)
-        self.set_all_index_data()
-        self.view.horizontalHeader().hideSection(2)  # Column 2 holds internal data (cls_id_set)
-        self.view.resizeColumnsToContents()
-        width = self.view.horizontalHeader().length() + qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        self.setFixedWidth(width + 2)
+        """Set values to show in the 'menu'."""
+        self.model.reset_model([[None, "All", ""]] + values)
+        self.set_data_for_all_index()
+        self.view.horizontalHeader().hideSection(0)  # Column 0 holds the checked state
+        self.view.horizontalHeader().hideSection(2)  # Column 2 holds the (cls_id_set)
+
+    def show(self, min_width=0):
+        super().show()
+        self.view.horizontalHeader().setMinimumSectionSize(0)
+        self.view.resizeColumnToContents(1)
+        table_width = self.view.horizontalHeader().sectionSize(1) + 2
+        width = max(table_width, min_width)
+        self.view.horizontalHeader().setMinimumSectionSize(width)
         height = self.view.verticalHeader().length() + self.button.height()
         parent_height = self.parent().height()
         self.setFixedHeight(min(height, parent_height / 2) + 2)
+        if self.view.verticalScrollBar().isVisible():
+            width += qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        self.setFixedWidth(width)
+        self.button.setFixedWidth(width)
 
-    def set_section_height(self, height):
-        """Set vertical header default section size as well as button height."""
-        self.view.verticalHeader().setDefaultSectionSize(height)
-        self.button.setFixedHeight(height)
+
+class FilterWidget(QWidget):
+    okPressed = Signal()
+    cancelPressed = Signal()
+    def __init__(self, parent=None):
+        super().__init__(parent)
+
+        # parameters
+        self._filter_state = set()
+        self._filter_empty_state = False
+        self._search_text = ''
+        self.search_delay = 200
+
+        # create ui elements
+        self._ui_vertical_layout = QVBoxLayout(self)
+        self._ui_list = QListView()
+        self._ui_edit = QLineEdit()
+        self._ui_edit.setPlaceholderText('Search')
+        self._ui_edit.setClearButtonEnabled(True)
+        self._ui_buttons = QDialogButtonBox(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+
+        self._ui_vertical_layout.addWidget(self._ui_edit)
+        self._ui_vertical_layout.addWidget(self._ui_list)
+        self._ui_vertical_layout.addWidget(self._ui_buttons)
+
+
+        # add models
+        # used to limit search so it doesn't search when typing
+        self._search_timer = QTimer()
+        self._search_timer.setSingleShot(True)
+
+        self._filter_model = FilterCheckboxListModel()
+        self._filter_model.set_list(self._filter_state)
+        self._ui_list.setModel(self._filter_model)
+
+        # connect signals
+        self._ui_list.clicked.connect(self._filter_model.click_index)
+        self._search_timer.timeout.connect(self._filter_list)
+        self._ui_edit.textChanged.connect(self._text_edited)
+        self._ui_buttons.button(QDialogButtonBox.Ok).clicked.connect(self._apply_filter)
+        self._ui_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self._cancel_filter)
+
+    def save_state(self):
+        """Saves the state of the FilterCheckboxListModel"""
+        self._filter_state = self._filter_model.get_selected()
+        self._filter_empty_state = self._filter_model._empty_selected
+
+    def reset_state(self):
+        """Sets the state of the FilterCheckboxListModel to saved state"""
+        self._filter_model.set_selected(self._filter_state, self._filter_empty_state)
+
+    def clear_filter(self):
+        """Selects all items in FilterCheckBoxListModel"""
+        self._filter_model.reset_selection()
+        self.save_state()
+
+    def has_filter(self):
+        """Returns true if any item is filtered in FilterCheckboxListModel false otherwise"""
+        return not self._filter_model._all_selected
+
+    def set_filter_list(self, data):
+        """Sets the list of items to filter"""
+        self._filter_state = set(data)
+        self._filter_empty_state = True
+        self._filter_model.set_list(self._filter_state)
+
+    def _apply_filter(self):
+        """apply current filter and save state"""
+        self._filter_model.apply_filter()
+        self.save_state()
+        self._ui_edit.setText('')
+        self.okPressed.emit()
+
+    def _cancel_filter(self):
+        """cancel current edit of filter and set the state to the stored state"""
+        self._filter_model.remove_filter()
+        self.reset_state()
+        self._ui_edit.setText('')
+        self.cancelPressed.emit()
+
+    def _filter_list(self):
+        """filter list with current text"""
+        # filter model
+        self._filter_model.set_filter(self._search_text)
+
+    def _text_edited(self, new_text):
+        """callback for edit text, starts/restarts timer"""
+        # start timer after text is edited, restart timer if text
+        # is edited before last time is out.
+        self._search_text = new_text
+        self._search_timer.start(self.search_delay)
 
 
 class ZoomWidget(QWidget):
