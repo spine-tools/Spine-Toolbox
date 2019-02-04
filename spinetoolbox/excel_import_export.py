@@ -23,6 +23,7 @@ from itertools import groupby, islice
 import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
+
 from spinedatabase_api import SpineDBAPIError, import_data
 import logging
 from operator import itemgetter

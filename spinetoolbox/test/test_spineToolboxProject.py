@@ -20,8 +20,10 @@ import unittest
 from unittest import mock
 import logging
 import sys
+import os
 from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
+from config import APPLICATION_PATH
 
 
 class TestSpineToolboxProject(unittest.TestCase):
@@ -42,19 +44,19 @@ class TestSpineToolboxProject(unittest.TestCase):
         We want the ToolboxUI to start with the default settings and without a project so
         we need to mock CONFIGURATION_FILE to prevent loading user's own configs from settings.conf.
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
+        patched_conf_file = os.path.abspath(os.path.join(".", "default_settings.conf"))
+        with mock.patch("ui_main.CONFIGURATION_FILE", new=patched_conf_file), \
+             mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
                 mock.patch("project.create_dir") as mock_create_dir, \
-                mock.patch("ui_main.CONFIGURATION_FILE") as mock_confs, \
-                mock.patch("os.path.split") as mock_split, \
-                mock.patch("configuration.create_dir") as mock_create_dir2, \
-                mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
-            # Make Julia REPL Widget as a QWidget so that the DeprecationWarning from qtconsole is not printed
+                mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project:
+            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             self.toolbox = ToolboxUI()
             self.toolbox.create_project("UnitTest Project", "")
 
     def tearDown(self):
         """Runs after each test. Use this to free resources after a test if needed."""
+        self.toolbox.deleteLater()
         self.toolbox = None
 
     def test_add_data_store(self):

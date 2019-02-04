@@ -309,7 +309,7 @@ class ProjectItemModel(QAbstractItemModel):
 
     def items(self, category_name=None):
         """Returns a list of items in model according to category name. If no category name given,
-        returns all items in a list.
+        returns all project items in a list.
 
         Args:
             category_name (str): Item category. Data Connections, Data Stores, Tools or Views permitted.
