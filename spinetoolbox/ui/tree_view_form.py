@@ -427,6 +427,10 @@ class Ui_MainWindow(object):
         self.menuEdit.setObjectName("menuEdit")
         self.menuFile = QtWidgets.QMenu(self.menubar)
         self.menuFile.setObjectName("menuFile")
+        self.menuView = QtWidgets.QMenu(self.menubar)
+        self.menuView.setObjectName("menuView")
+        self.menuToolbars = QtWidgets.QMenu(self.menuView)
+        self.menuToolbars.setObjectName("menuToolbars")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -586,8 +590,10 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
+        self.menuView.addAction(self.menuToolbars.menuAction())
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
+        self.menubar.addAction(self.menuView.menuAction())
         self.menubar.addAction(self.menuSession.menuAction())
 
         self.retranslateUi(MainWindow)
@@ -640,6 +646,8 @@ class Ui_MainWindow(object):
         self.menuSession.setTitle(QtWidgets.QApplication.translate("MainWindow", "Session", None, -1))
         self.menuEdit.setTitle(QtWidgets.QApplication.translate("MainWindow", "Edit", None, -1))
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
+        self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
+        self.menuToolbars.setTitle(QtWidgets.QApplication.translate("MainWindow", "Toolbars", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
         self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
@@ -685,6 +693,6 @@ class Ui_MainWindow(object):
         self.actionManage_parameter_tags.setText(QtWidgets.QApplication.translate("MainWindow", "Manage parameter tags", None, -1))
         self.actionManage_parameter_tags.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+T", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
 from widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
+from widgets.custom_qtreeview import ObjectTreeView
 import resources_icons_rc

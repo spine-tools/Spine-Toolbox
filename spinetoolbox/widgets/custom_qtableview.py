@@ -17,6 +17,7 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 """
 
 import time
+import logging
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
@@ -216,7 +217,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.auto_filter_widget.move(pos_x, pos_y)
         self.auto_filter_widget.show(min_width=width)
         toc = time.clock()
-        print("auto_filter\t {}".format(toc - tic))
+        # logging.debug("Filter populated in {} seconds".format(toc - tic))
 
     @Slot(name="update_auto_filter")
     def update_auto_filter(self):

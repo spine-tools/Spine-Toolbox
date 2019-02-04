@@ -121,21 +121,24 @@ class ParameterTagToolBar(QToolBar):
 
     def __init__(self, parent, db_map):
         """Init class"""
-        super().__init__("Parameter tag Toolbar", parent=parent)
+        super().__init__("Parameter Tag Toolbar", parent=parent)
         self.db_map = db_map
         self.action_dict = {}
+        self.filter_action_tool_tip = "<html>Check these buttons to filter parameters according to their tags.</html>"
         self.tag_button_group = QButtonGroup(self)
         self.tag_button_group.setExclusive(False)
         label = QLabel("Parameter tag")
         self.addWidget(label)
         action = self.addAction("untagged")
         action.setCheckable(True)
+        action.setToolTip(self.filter_action_tool_tip)
         self.action_dict[0] = action
         button = self.widgetForAction(action)
         self.tag_button_group.addButton(button, id=0)
         for tag in self.db_map.parameter_tag_list():
             action = self.addAction(tag.tag)
             action.setCheckable(True)
+            action.setToolTip(self.filter_action_tool_tip)
             self.action_dict[tag.id] = action
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=tag.id)
@@ -155,6 +158,7 @@ class ParameterTagToolBar(QToolBar):
             action = QAction(tag.tag)
             self.insertAction(self.empty_action, action)
             action.setCheckable(True)
+            action.setToolTip(self.filter_action_tool_tip)
             self.action_dict[tag.id] = action
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=tag.id)

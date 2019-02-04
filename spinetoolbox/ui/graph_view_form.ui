@@ -88,6 +88,12 @@
       <string>Dock Widgets</string>
      </property>
     </widget>
+    <widget class="QMenu" name="menuToolbars">
+     <property name="title">
+      <string>Toolbars</string>
+     </property>
+    </widget>
+    <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
    </widget>
    <widget class="QMenu" name="menuSession">

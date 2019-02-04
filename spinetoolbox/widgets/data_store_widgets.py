@@ -104,11 +104,17 @@ class DataStoreForm(QMainWindow):
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
         # Parameter tag stuff
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, db_map)
+        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         self.selected_parameter_tag_ids = set()
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+
+    def add_toggle_view_actions(self):
+        """Add toggle view actions to View menu."""
+        self.ui.menuToolbars.addAction(self.parameter_tag_toolbar.toggleViewAction())
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -133,6 +139,37 @@ class DataStoreForm(QMainWindow):
             connect(self.set_parameter_value_data)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
+        # Parameter tags
+        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
+        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
+
+    @Slot("int", "bool", name="_handle_tag_button_toggled")
+    def _handle_tag_button_toggled(self, id, checked):
+        """Called when a parameter tag button is toggled.
+        Compute selected parameter definiton ids per object class ids.
+        Then update set of selected object class ids. Finally, update filter.
+        """
+        if checked:
+            self.selected_parameter_tag_ids.add(id)
+        else:
+            self.selected_parameter_tag_ids.remove(id)
+        parameter_definition_id_list = set()
+        for item in self.db_map.wide_parameter_tag_definition_list():
+            tag_id = item.parameter_tag_id if item.parameter_tag_id else 0
+            if tag_id not in self.selected_parameter_tag_ids:
+                continue
+            parameter_definition_id_list.update({int(x) for x in item.parameter_definition_id_list.split(",")})
+        self.selected_obj_parameter_definition_ids = {
+            x.object_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
+            for x in self.db_map.wide_object_parameter_definition_list(
+                parameter_definition_id_list=parameter_definition_id_list)
+        }
+        self.selected_rel_parameter_definition_ids = {
+            x.relationship_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
+            for x in self.db_map.wide_relationship_parameter_definition_list(
+                parameter_definition_id_list=parameter_definition_id_list)
+        }
+        self.do_update_filter()
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -287,7 +324,7 @@ class DataStoreForm(QMainWindow):
         h = self.object_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
-        #self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
+        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -300,7 +337,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
-        #self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_definition.verticalHeader().\
@@ -355,6 +392,16 @@ class DataStoreForm(QMainWindow):
                 return intersection
             else:
                 return {None}
+
+    def do_update_filter(self):
+        if self.ui.tabWidget_object_parameter.currentIndex() == 0:
+            self.object_parameter_value_model.update_filter()
+        else:
+            self.object_parameter_definition_model.update_filter()
+        if self.ui.tabWidget_relationship_parameter.currentIndex() == 0:
+            self.relationship_parameter_value_model.update_filter()
+        else:
+            self.relationship_parameter_definition_model.update_filter()
 
     @Slot("bool", name="show_add_object_classes_form")
     def show_add_object_classes_form(self, checked=False):
@@ -697,12 +744,11 @@ class TreeViewForm(DataStoreForm):
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, db_map)
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # init models and views
         self.init_models()
         self.init_views()
         self.setup_delegates()
+        self.add_toggle_view_actions()
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
@@ -787,37 +833,6 @@ class TreeViewForm(DataStoreForm):
         self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuSession.aboutToShow.connect(self._handle_menu_about_to_show)
-        # Parameter tags
-        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
-        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
-
-    @Slot("int", "bool", name="_handle_tag_button_toggled")
-    def _handle_tag_button_toggled(self, id, checked):
-        """Called when a parameter tag button is toggled.
-        Compute selected parameter definiton ids per object class ids.
-        Then update set of selected object class ids. Finally, update filter.
-        """
-        if checked:
-            self.selected_parameter_tag_ids.add(id)
-        else:
-            self.selected_parameter_tag_ids.remove(id)
-        parameter_definition_id_list = set()
-        for item in self.db_map.wide_parameter_tag_definition_list():
-            tag_id = item.parameter_tag_id if item.parameter_tag_id else 0
-            if tag_id not in self.selected_parameter_tag_ids:
-                continue
-            parameter_definition_id_list.update({int(x) for x in item.parameter_definition_id_list.split(",")})
-        self.selected_obj_parameter_definition_ids = {
-            x.object_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
-            for x in self.db_map.wide_object_parameter_definition_list(
-                parameter_definition_id_list=parameter_definition_id_list)
-        }
-        self.selected_rel_parameter_definition_ids = {
-            x.relationship_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
-            for x in self.db_map.wide_relationship_parameter_definition_list(
-                parameter_definition_id_list=parameter_definition_id_list)
-        }
-        self.do_update_filter()
 
     @Slot("bool", name="copy")
     def copy(self, checked=False):
@@ -1377,16 +1392,6 @@ class TreeViewForm(DataStoreForm):
         self.update_selected_object_id_lists()
         self.do_update_filter()
 
-    def do_update_filter(self):
-        if self.ui.tabWidget_object_parameter.currentIndex() == 0:
-            self.object_parameter_value_model.update_filter()
-        else:
-            self.object_parameter_definition_model.update_filter()
-        if self.ui.tabWidget_relationship_parameter.currentIndex() == 0:
-            self.relationship_parameter_value_model.update_filter()
-        else:
-            self.relationship_parameter_definition_model.update_filter()
-
     def update_selected_object_class_ids(self):
         """Update set of selected object class id, by combining selectiong from object tree
         and parameter tag.
@@ -1885,11 +1890,11 @@ class GraphViewForm(DataStoreForm):
         self.init_views()
         self.setup_delegates()
         self.create_add_more_actions()
+        self.add_toggle_view_actions()
         self.setup_zoom_action()
         self.connect_signals()
         self.settings_key = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
-        self.add_toggle_view_actions()
         self.init_commit_rollback_actions()
         title = database + " (read only) " if read_only else database
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
@@ -2028,6 +2033,7 @@ class GraphViewForm(DataStoreForm):
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
+        super().add_toggle_view_actions()
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter.toggleViewAction())
         if not self.read_only:
