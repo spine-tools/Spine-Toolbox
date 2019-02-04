@@ -28,6 +28,8 @@ class CustomComboEditor(QComboBox):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
+    data_committed = Signal(name="data_committed")
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -37,7 +39,7 @@ class CustomComboEditor(QComboBox):
             self.setCurrentText(current_text)
         else:
             self.setCurrentIndex(-1)
-        self.activated.connect(self.close)
+        self.activated.connect(lambda: self.data_committed.emit())
         self.showPopup()
 
     def data(self):
@@ -50,6 +52,8 @@ class CustomLineEditor(QLineEdit):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
+    data_committed = Signal(name="data_committed")
+
     def __init__(self, parent):
         super().__init__(parent)
 

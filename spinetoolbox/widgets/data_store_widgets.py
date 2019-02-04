@@ -42,6 +42,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog, ManageParameterTagsDialog
 from widgets.custom_qwidget import ZoomWidget
+from widgets.toolbars import ParameterTagToolBar
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
@@ -103,8 +104,6 @@ class DataStoreForm(QMainWindow):
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
         # Parameter tag stuff
-        self.tag_button_group = QButtonGroup(self)
-        self.tag_button_group.setExclusive(False)
         self.selected_parameter_tag_ids = set()
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
@@ -288,6 +287,7 @@ class DataStoreForm(QMainWindow):
         h = self.object_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
+        #self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -300,6 +300,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
+        #self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_definition.verticalHeader().\
@@ -326,6 +327,34 @@ class DataStoreForm(QMainWindow):
         table_view = self.ui.tableView_relationship_parameter_value
         delegate = RelationshipParameterValueDelegate(self)
         table_view.setItemDelegate(delegate)
+
+    def all_selected_object_class_ids(self):
+        tree_object_class_ids = self.selected_object_class_ids
+        tag_object_class_ids = set(self.selected_obj_parameter_definition_ids.keys())
+        if not tag_object_class_ids:
+            return tree_object_class_ids
+        elif not tree_object_class_ids:
+            return tag_object_class_ids
+        else:
+            intersection = tree_object_class_ids.intersection(tag_object_class_ids)
+            if intersection:
+                return intersection
+            else:
+                return {None}
+
+    def all_selected_relationship_class_ids(self):
+        tree_relationship_class_ids = self.selected_relationship_class_ids
+        tag_relationship_class_ids = set(self.selected_rel_parameter_definition_ids.keys())
+        if not tag_relationship_class_ids:
+            return tree_relationship_class_ids
+        elif not tree_relationship_class_ids:
+            return tag_relationship_class_ids
+        else:
+            intersection = tree_relationship_class_ids.intersection(tag_relationship_class_ids)
+            if intersection:
+                return intersection
+            else:
+                return {None}
 
     @Slot("bool", name="show_add_object_classes_form")
     def show_add_object_classes_form(self, checked=False):
@@ -500,6 +529,7 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def add_parameter_tags(self, parameter_tags):
         """Add parameter tags."""
+        self.parameter_tag_toolbar.add_tag_actions(parameter_tags)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully added parameter tags '{}'.".format([x.tag for x in parameter_tags])
         self.msg.emit(msg)
@@ -507,7 +537,10 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def update_parameter_tags(self, parameter_tags):
         """Update parameter tags."""
-        # TODO: update parameter tables
+        # TODO: update parameter value tables??
+        self.object_parameter_definition_model.rename_parameter_tags(parameter_tags)
+        self.relationship_parameter_definition_model.rename_parameter_tags(parameter_tags)
+        self.parameter_tag_toolbar.update_tag_actions(parameter_tags)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully updated parameter tags '{}'.".format([x.tag for x in parameter_tags])
         self.msg.emit(msg)
@@ -515,9 +548,12 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def remove_parameter_tags(self, parameter_tag_ids):
         """Remove parameter tags."""
-        # TODO: update parameter tables
+        # TODO: remove from parameter value tables??
         if not parameter_tag_ids:
             return
+        self.object_parameter_definition_model.remove_parameter_tags(parameter_tag_ids)
+        self.relationship_parameter_definition_model.remove_parameter_tags(parameter_tag_ids)
+        self.parameter_tag_toolbar.remove_tag_actions(parameter_tag_ids)
         self.set_commit_rollback_actions_enabled(True)
         msg = "Successfully removed parameter tags."
         self.msg.emit(msg)
@@ -592,12 +628,15 @@ class DataStoreForm(QMainWindow):
         """Restore UI state from previous session."""
         window_size = self.qsettings.value("{0}/windowSize".format(self.settings_key))
         window_pos = self.qsettings.value("{0}/windowPosition".format(self.settings_key))
+        window_state = self.qsettings.value("{0}/windowState".format(self.settings_key))
         window_maximized = self.qsettings.value("{0}/windowMaximized".format(self.settings_key), defaultValue='false')
         n_screens = self.qsettings.value("{0}/n_screens".format(self.settings_key), defaultValue=1)
         if window_size:
             self.resize(window_size)
         if window_pos:
             self.move(window_pos)
+        if window_state:
+            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
         # noinspection PyArgumentList
@@ -612,12 +651,13 @@ class DataStoreForm(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         # save qsettings
-        self.qsettings.setValue("{}/windowSize".format(self.settings_key), self.size())
-        self.qsettings.setValue("{}/windowPosition".format(self.settings_key), self.pos())
+        self.qsettings.setValue("{0}/windowSize".format(self.settings_key), self.size())
+        self.qsettings.setValue("{0}/windowPosition".format(self.settings_key), self.pos())
+        self.qsettings.setValue("{0}/windowState".format(self.settings_key), self.saveState(version=1))
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("{}/windowMaximized".format(self.settings_key), True)
+            self.qsettings.setValue("{0}/windowMaximized".format(self.settings_key), True)
         else:
-            self.qsettings.setValue("{}/windowMaximized".format(self.settings_key), False)
+            self.qsettings.setValue("{0}/windowMaximized".format(self.settings_key), False)
         if self.db_map.has_pending_changes():
             self.show_commit_session_prompt()
         self.db_map.close()
@@ -657,30 +697,18 @@ class TreeViewForm(DataStoreForm):
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, db_map)
+        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # init models and views
         self.init_models()
         self.init_views()
         self.setup_delegates()
-        self.init_parameter_tag_buttons()
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
         # Ensure this window gets garbage-collected when closed
         toc = time.clock()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
-
-    def init_parameter_tag_buttons(self):
-        button = QToolButton(self)
-        button.setText("untagged")
-        button.setCheckable(True)
-        self.tag_button_group.addButton(button, id=0)
-        self.ui.horizontalLayout_parameter_tag_clicker.addWidget(button)
-        for tag in self.db_map.parameter_tag_list():
-            button = QToolButton(self)
-            button.setText(tag.tag)
-            button.setCheckable(True)
-            self.tag_button_group.addButton(button, id=tag.id)
-            self.ui.horizontalLayout_parameter_tag_clicker.addWidget(button)
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -760,8 +788,8 @@ class TreeViewForm(DataStoreForm):
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuSession.aboutToShow.connect(self._handle_menu_about_to_show)
         # Parameter tags
-        self.ui.toolButton_manage_parameter_tags.clicked.connect(self.show_manage_parameter_tags_form)
-        self.tag_button_group.buttonToggled["int", "bool"].connect(self._handle_tag_button_toggled)
+        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
+        self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
 
     @Slot("int", "bool", name="_handle_tag_button_toggled")
     def _handle_tag_button_toggled(self, id, checked):
@@ -1408,34 +1436,6 @@ class TreeViewForm(DataStoreForm):
             relationship_class_id = ind.data(Qt.UserRole + 1)['class_id']
             object_id_list = ind.data(Qt.UserRole + 1)['object_id_list']
             self.selected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
-
-    def all_selected_object_class_ids(self):
-        tree_object_class_ids = self.selected_object_class_ids
-        tag_object_class_ids = set(self.selected_obj_parameter_definition_ids.keys())
-        if not tag_object_class_ids:
-            return tree_object_class_ids
-        elif not tree_object_class_ids:
-            return tag_object_class_ids
-        else:
-            intersection = tree_object_class_ids.intersection(tag_object_class_ids)
-            if intersection:
-                return intersection
-            else:
-                return {None}
-
-    def all_selected_relationship_class_ids(self):
-        tree_relationship_class_ids = self.selected_relationship_class_ids
-        tag_relationship_class_ids = set(self.selected_rel_parameter_definition_ids.keys())
-        if not tag_relationship_class_ids:
-            return tree_relationship_class_ids
-        elif not tree_relationship_class_ids:
-            return tag_relationship_class_ids
-        else:
-            intersection = tree_relationship_class_ids.intersection(tag_relationship_class_ids)
-            if intersection:
-                return intersection
-            else:
-                return {None}
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
@@ -2727,7 +2727,6 @@ class GraphViewForm(DataStoreForm):
             event (QEvent): Closing event if 'X' is clicked.
         """
         super().closeEvent(event)
-        self.qsettings.setValue("{0}/windowState".format(self.settings_key), self.saveState(version=1))
         scene = self.ui.graphicsView.scene()
         if scene:
             scene.deleteLater()

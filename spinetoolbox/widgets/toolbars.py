@@ -18,9 +18,10 @@ Functions to make and handle QToolBars.
 
 import logging
 from PySide2.QtGui import QIcon, QPixmap, QDrag
-from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication
-from PySide2.QtCore import Qt, QMimeData
-from config import ICON_TOOLBAR_SS
+from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QButtonGroup, \
+    QPushButton, QWidget, QSizePolicy
+from PySide2.QtCore import Qt, QMimeData, Signal, Slot
+from config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 from graphics_items import ItemImage
 
 
@@ -106,3 +107,64 @@ class DraggableWidget(QLabel):
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
         self.drag_start_pos = None
+
+
+class ParameterTagToolBar(QToolBar):
+    """A toolbar to add items using drag and drop actions.
+
+    Attributes:
+        parent (ToolboxUI): QMainWindow instance
+    """
+
+    tag_button_toggled = Signal("int", "bool", name="tag_button_toggled")
+    manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
+
+    def __init__(self, parent, db_map):
+        """Init class"""
+        super().__init__("Parameter tag Toolbar", parent=parent)
+        self.db_map = db_map
+        self.action_dict = {}
+        self.tag_button_group = QButtonGroup(self)
+        self.tag_button_group.setExclusive(False)
+        label = QLabel("Parameter tag")
+        self.addWidget(label)
+        action = self.addAction("untagged")
+        action.setCheckable(True)
+        self.action_dict[0] = action
+        button = self.widgetForAction(action)
+        self.tag_button_group.addButton(button, id=0)
+        for tag in self.db_map.parameter_tag_list():
+            action = self.addAction(tag.tag)
+            action.setCheckable(True)
+            self.action_dict[tag.id] = action
+            button = self.widgetForAction(action)
+            self.tag_button_group.addButton(button, id=tag.id)
+        self.tag_button_group.buttonToggled["int", "bool"].\
+            connect(lambda id, checked: self.tag_button_toggled.emit(id, checked))
+        empty = QWidget()
+        empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.empty_action = self.addWidget(empty)
+        button = QPushButton("Manage tags...")
+        self.addWidget(button)
+        button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
+        self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
+        self.setObjectName("ParameterTagToolbar")
+
+    def add_tag_actions(self, parameter_tags):
+        for tag in parameter_tags:
+            action = QAction(tag.tag)
+            self.insertAction(self.empty_action, action)
+            action.setCheckable(True)
+            self.action_dict[tag.id] = action
+            button = self.widgetForAction(action)
+            self.tag_button_group.addButton(button, id=tag.id)
+
+    def remove_tag_actions(self, parameter_tag_ids):
+        for tag_id in parameter_tag_ids:
+            action = self.action_dict[tag_id]
+            self.removeAction(action)
+
+    def update_tag_actions(self, parameter_tags):
+        for tag in parameter_tags:
+            action = self.action_dict[tag.id]
+            action.setText(tag.tag)

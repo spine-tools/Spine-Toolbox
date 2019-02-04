@@ -150,6 +150,10 @@ class ParameterDelegate(QItemDelegate):
         """Send signal."""
         self.data_committed.emit(index, editor.data())
 
+    def close_editor(self, editor, index, model):
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, model, index)
+
 
 class ObjectParameterValueDelegate(ParameterDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.
@@ -163,14 +167,16 @@ class ObjectParameterValueDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        h = header.index
         if header[index.column()] in ('object_class_name', 'object_name', 'parameter_name'):
-            return CustomComboEditor(parent)
+            editor = CustomComboEditor(parent)
         elif header[index.column()] == 'json':
             self.json_editor_requested.emit()
             return None
         else:
-            return CustomLineEditor(parent)
+            editor = CustomLineEditor(parent)
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
     def setEditorData(self, editor, index):
         """Set editor data."""
@@ -210,14 +216,14 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'object_class_name':
-            return CustomComboEditor(parent)
+            editor = CustomComboEditor(parent)
         elif header[index.column()] == 'parameter_tag_list':
             editor = MultipleOptionsEditor(parent, option, index)
-            model = index.model()
-            editor.data_committed.connect(
-                lambda e=editor, i=index, m=model: self.close_parameter_tag_list_editor(e, i, m))
-            return editor
-        return CustomLineEditor(parent)
+        else:
+            editor = CustomLineEditor(parent)
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
     def setEditorData(self, editor, index):
         """Set editor data."""
@@ -254,18 +260,17 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
         header = index.model().horizontal_header_labels()
         h = header.index
         if header[index.column()] in ('relationship_class_name', 'parameter_name'):
-            return CustomComboEditor(parent)
+            editor = CustomComboEditor(parent)
         elif header[index.column()] == 'object_name_list':
             editor = ObjectNameListEditor(parent)
-            model = index.model()
-            editor.data_committed.connect(
-                lambda e=editor, i=index, m=model: self.close_object_name_list_editor(e, i, m))
-            return editor
         elif header[index.column()] == 'json':
             self.json_editor_requested.emit()
             return None
         else:
-            return CustomLineEditor(parent)
+            editor = CustomLineEditor(parent)
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
     def setEditorData(self, editor, index):
         """Set editor data."""
@@ -317,22 +322,18 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
     def __init__(self, parent):
         super().__init__(parent)
 
-    def close_parameter_tag_list_editor(self, editor, index, model):
-        self.closeEditor.emit(editor)
-        self.setModelData(editor, model, index)
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship_class_name':
-            return CustomComboEditor(parent)
+            editor = CustomComboEditor(parent)
         elif header[index.column()] == 'parameter_tag_list':
             editor = MultipleOptionsEditor(parent, option, index)
-            model = index.model()
-            editor.data_committed.connect(
-                lambda e=editor, i=index, m=model: self.close_parameter_tag_list_editor(e, i, m))
-            return editor
-        return CustomLineEditor(parent)
+        else:
+            editor = CustomLineEditor(parent)
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
     def setEditorData(self, editor, index):
         """Set editor data."""

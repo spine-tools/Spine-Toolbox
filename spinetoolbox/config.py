@@ -147,6 +147,11 @@ ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
                   "QLabel{color:black;" \
                     "padding: 3px;}"
 
+PARAMETER_TAG_TOOLBAR_SS = ICON_TOOLBAR_SS + \
+                           "QToolButton:open{background-color: lightGray;" \
+                             "border-style: inset;}" \
+                           "QToolButton{border-style: outset;}"
+
 TEXTBROWSER_SS = "QTextBrowser {background-color: #19232D; border: 1px solid #32414B; color: #F0F0F0; border-radius: 2px;}" \
                  "QTextBrowser:hover," \
                  "QTextBrowser:selected," \
