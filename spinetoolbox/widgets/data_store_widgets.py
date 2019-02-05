@@ -39,7 +39,7 @@ from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParamet
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     AddRelationshipClassesDialog, AddRelationshipsDialog, AddParameterEnumsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
-    EditRelationshipClassesDialog, EditRelationshipsDialog, EditParameterEnumsDialog, \
+    EditRelationshipClassesDialog, EditRelationshipsDialog, ManageParameterEnumsDialog, \
     ManageParameterTagsDialog, CommitDialog
 from widgets.custom_qwidget import ZoomWidget
 from widgets.toolbars import ParameterTagToolBar
@@ -141,7 +141,7 @@ class DataStoreForm(QMainWindow):
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
         # Parameter tags
-        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
+        self.parameter_tag_toolbar.edit_tags_action_triggered.connect(self.show_edit_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
         # Parameter enums
         self.ui.actionAdd_parameter_enums.triggered.connect(self.show_add_parameter_enums_form)
@@ -585,8 +585,8 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
-    @Slot("bool", name="show_manage_parameter_tags_form")
-    def show_manage_parameter_tags_form(self, checked=False):
+    @Slot("bool", name="show_edit_parameter_tags_form")
+    def show_edit_parameter_tags_form(self, checked=False):
         dialog = ManageParameterTagsDialog(self)
         dialog.show()
 
@@ -666,29 +666,17 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_edit_parameter_enums_form")
     def show_edit_parameter_enums_form(self, checked=False):
-        indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
-        if not indexes:
+        index = self.ui.treeView_parameter_enum.selectionModel().currentIndex()
+        if not index.isValid() or index.parent().isValid():
             return
-        wide_kwargs_list = list()
-        for i in range(self.parameter_enum_model.rowCount()):
-            index = self.parameter_enum_model.index(i, 0)
-            if index in indexes:
-                wide_kwargs_list.append(index.data(Qt.UserRole + 1))
-            continue
-            # TODO: Do we wanna edit enums if elements are selected?
-            for j in range(self.parameter_enum_model.rowCount(index)):
-                child = self.parameter_enum_model.index(j, 0, parent=index)
-                if child in indexes:
-                    wide_kwargs_list.append(index.data(Qt.UserRole + 1))
-                    break
-        dialog = EditParameterEnumsDialog(self, wide_kwargs_list)
+        dialog = ManageParameterEnumsDialog(self, index.data(Qt.UserRole + 1))
         dialog.show()
 
-    def update_parameter_enums(self, parameter_enums):
+    def update_parameter_enums(self, wide_enums):
         """Update parameter enums."""
-        # self.parameter_enum_model.update_parameter_enums(parameter_enums)
+        self.parameter_enum_model.update_parameter_enums(wide_enums)
         self.set_commit_rollback_actions_enabled(True)
-        msg = "Successfully updated parameter enum(s) '{}'.".format("', '".join([x.name for x in parameter_enums]))
+        msg = "Successfully updated parameter enum(s) '{}'.".format("', '".join([x.name for x in wide_enums]))
         self.msg.emit(msg)
 
     def show_commit_session_prompt(self):
@@ -833,7 +821,7 @@ class TreeViewForm(DataStoreForm):
             connect(self.remove_relationship_parameter_definitions)
         self.ui.actionRemove_relationship_parameter_values.triggered.\
             connect(self.remove_relationship_parameter_values)
-        self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
+        self.ui.actionEdit_parameter_tags.triggered.connect(self.show_edit_parameter_tags_form)
         # Copy and paste
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
@@ -1146,9 +1134,8 @@ class TreeViewForm(DataStoreForm):
         self.ui.actionEdit_relationship_classes.setEnabled('relationship_class' in item_types)
         self.ui.actionEdit_relationships.setEnabled('relationship' in item_types)
         # Edit parameter enums action
-        indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
-        top_level_indexes = [ind for ind in indexes if not ind.parent().isValid()]
-        self.ui.actionEdit_parameter_enums.setEnabled(len(top_level_indexes) > 0)
+        index = self.ui.treeView_parameter_enum.selectionModel().currentIndex()
+        self.ui.actionEdit_parameter_enums.setEnabled(index.isValid() and not index.parent().isValid())
         # Remove object tree items action
         self.ui.actionRemove_object_tree_items.setEnabled(len(indexes) > 0)
         # Copy/paste actions

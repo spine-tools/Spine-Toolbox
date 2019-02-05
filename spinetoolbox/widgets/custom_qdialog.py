@@ -20,12 +20,11 @@ NOTE: Where is this syntax error? We better fix it, since AddItemsDialog is inhe
 
 import logging
 from copy import deepcopy
-from PySide2.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
-    QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QAction, QApplication, QToolButton
+from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
+    QDialogButtonBox, QHeaderView, QAction, QApplication, QToolButton, QWidget, QLabel
 from PySide2.QtCore import Signal, Slot, Qt, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
-from config import STATUSBAR_SS
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
     AddParameterEnumsDelegate, LineEditDelegate
@@ -33,9 +32,8 @@ import ui.add_object_classes
 import ui.add_objects
 import ui.add_relationship_classes
 import ui.add_relationships
-import ui.edit_data_items
-import ui.manage_parameter_tags
 import ui.add_parameter_enums
+import ui.edit_data_items
 from helpers import busy_effect, object_pixmap
 
 
@@ -400,12 +398,6 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.setup_ui(ui.add_relationships.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
         self.init_relationship_class(force_default)
-        # Add status bar to form
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         self.connect_signals()
         self.reset_model()
 
@@ -876,81 +868,9 @@ class EditRelationshipsDialog(EditItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditParameterEnumsDialog(EditItemsDialog):
-    """A dialog to query user's preferences for updating parameter enums.
-
-    Attributes:
-        parent (TreeViewForm): data store widget
-        wide_kwargs_list (list): list of dictionaries corresponding to parameter enums to edit/update
-    """
-    def __init__(self, parent, wide_kwargs_list):
-        super().__init__(parent, wide_kwargs_list)
-        self.setup_ui()
-        self.setWindowTitle("Edit parameter enums")
-        self.model.set_horizontal_header_labels(['enum name', 'element', 'value'])
-        self.orig_data = list()
-        self.id_list = list()
-        model_data = list()
-        for wide_kwargs in wide_kwargs_list:
-            try:
-                self.id_list.append(wide_kwargs["id"])
-            except KeyError:
-                continue
-            try:
-                name = wide_kwargs["name"]
-            except KeyError:
-                continue
-            try:
-                element_list = wide_kwargs["element_list"].split(",")
-            except (KeyError, AttributeError):
-                continue
-            try:
-                value_list = wide_kwargs["value_list"].split(",")
-            except (KeyError, AttributeError):
-                value_list = [None for _ in element_list]
-            for element, value in zip(element_list, value_list):
-                row_data = [name, element, value]
-                self.orig_data.append(row_data.copy())
-                model_data.append(row_data)
-        self.model.reset_model(model_data)
-        self.ui.tableView.resizeColumnsToContents()
-
-    @busy_effect
-    def accept(self):
-        """Collect info from dialog and try to update items."""
-        enum_dict = dict()
-        for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = self.model.row_data(i)
-            enum_name, element, value = row_data
-            if not enum_name:
-                self._parent.msg_error.emit("Parameter enum name missing at row {}".format(i + 1))
-                return
-            if not element:
-                self._parent.msg_error.emit("Element missing at row {}".format(i + 1))
-                return
-            enum_dict.setdefault(enum_name, list()).append((element, value))
-        wide_kwargs_list = [
-            {
-                "name": enum_name,
-                "element_list": [x[0] for x in element_value_list],
-                "value_list": [x[1] for x in element_value_list]
-            } for enum_name, element_value_list in enum_dict.items()
-        ]
-        if not wide_kwargs_list:
-            self._parent.msg_error.emit("Nothing to update")
-            return
-        try:
-            enums = self._parent.db_map.update_wide_parameter_enums(*wide_kwargs_list)
-            self._parent.update_parameter_enums(enums)
-            super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
-        except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
-
-
-class ManageParameterTagsDialog(QDialog):
-    """A dialog to query user's preferences for parameter tags.
+class ManageItemsDialog(QDialog):
+    """A dialog to query user's preferences for managing items such as parameter tags
+    and enums, which require both adding and removing rows for instance.
 
     Attributes:
         parent (TreeViewForm): data store widget
@@ -958,32 +878,15 @@ class ManageParameterTagsDialog(QDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
-        self.parameter_tag_list = self._parent.db_map.parameter_tag_list()
         self.remove_row_icon = QIcon(":/icons/minus.png")
         self.model = HybridTableModel(self)
-        self.ui = ui.manage_parameter_tags.Ui_Dialog()
+        self.ui = ui.edit_data_items.Ui_Dialog()
         self.ui.setupUi(self)
         self.ui.tableView.setModel(self.model)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.connect_signals()
-        self.orig_data = list()
-        self.id_list = list()
         self.removed_id_list = list()
-        model_data = list()
-        for parameter_tag in self.parameter_tag_list:
-            try:
-                self.id_list.append(parameter_tag.id)
-            except KeyError:
-                continue
-            tag = parameter_tag.tag
-            description = parameter_tag.description
-            row_data = [tag, description]
-            self.orig_data.append(row_data.copy())
-            model_data.append(row_data)
-        self.model.set_horizontal_header_labels(['parameter tag', 'description'])
-        self.model.reset_model(model_data)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.ui.tableView.resizeColumnsToContents()
+        self.id_list = list()
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -1030,6 +933,108 @@ class ManageParameterTagsDialog(QDialog):
                 except IndexError:
                     pass
                 break
+
+
+class ManageParameterEnumsDialog(ManageItemsDialog):
+    """A dialog to query user's preferences for updating parameter enums.
+
+    Attributes:
+        parent (TreeViewForm): data store widget
+        wide_kwargs_list (list): list of dictionaries corresponding to parameter enums to edit/update
+    """
+    def __init__(self, parent, wide_kwargs):
+        super().__init__(parent)
+        self.setWindowTitle("Edit parameter enum")
+        self.model.set_horizontal_header_labels(['element', 'value'])
+        self.orig_data = list()
+        model_data = list()
+        try:
+            self.id = wide_kwargs["id"]
+        except KeyError:
+            return
+        try:
+            name = wide_kwargs["name"]
+        except KeyError:
+            return
+        widget = QWidget()
+        inner_layout = QHBoxLayout(widget)
+        inner_layout.addWidget(QLabel("enum name:"))
+        self.line_edit_name = QLineEdit(name)
+        inner_layout.addWidget(self.line_edit_name)
+        self.layout().insertWidget(0, widget)
+        try:
+            element_list = wide_kwargs["element_list"].split(",")
+        except (KeyError, AttributeError):
+            return
+        try:
+            value_list = wide_kwargs["value_list"].split(",")
+        except (KeyError, AttributeError):
+            value_list = [None for _ in element_list]
+        for element, value in zip(element_list, value_list):
+            row_data = [element, value]
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+        self.model.reset_model(model_data)
+        self.ui.tableView.resizeColumnsToContents()
+
+    @busy_effect
+    def accept(self):
+        """Collect info from dialog and try to update items."""
+        enum_name = self.line_edit_name.text()
+        if not enum_name:
+            self._parent.msg_error.emit("Parameter enum name missing")
+            return
+        element_list = list()
+        value_list = list()
+        for i in range(self.model.rowCount() - 1):  # last row will always be empty
+            row_data = [self.model.index(i, j).data(Qt.DisplayRole) for j in range(self.model.columnCount() - 1)]
+            element, value = row_data
+            if not element:
+                self._parent.msg_error.emit("Element missing at row {}".format(i + 1))
+                return
+            element_list.append(element)
+            value_list.append(value)
+        wide_kwargs = {
+            "id": self.id,
+            "name": enum_name,
+            "element_list": element_list,
+            "value_list": value_list
+        }
+        try:
+            wide_enums = self._parent.db_map.update_wide_parameter_enums(wide_kwargs)
+            self._parent.update_parameter_enums(wide_enums)
+            super().accept()
+        except SpineIntegrityError as e:
+            self._parent.msg_error.emit(e.msg)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
+
+
+class ManageParameterTagsDialog(ManageItemsDialog):
+    """A dialog to query user's preferences for managing parameter tags.
+
+    Attributes:
+        parent (TreeViewForm): data store widget
+    """
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("Edit parameter tags")
+        self.orig_data = list()
+        model_data = list()
+        for parameter_tag in self._parent.db_map.parameter_tag_list():
+            try:
+                self.id_list.append(parameter_tag.id)
+            except KeyError:
+                continue
+            tag = parameter_tag.tag
+            description = parameter_tag.description
+            row_data = [tag, description]
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+        self.model.set_horizontal_header_labels(['parameter tag', 'description'])
+        self.model.reset_model(model_data)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.ui.tableView.resizeColumnsToContents()
 
     @busy_effect
     def accept(self):

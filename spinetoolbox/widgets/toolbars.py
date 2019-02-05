@@ -117,7 +117,7 @@ class ParameterTagToolBar(QToolBar):
     """
 
     tag_button_toggled = Signal("int", "bool", name="tag_button_toggled")
-    manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
+    edit_tags_action_triggered = Signal("bool", name="edit_tags_action_triggered")
 
     def __init__(self, parent, db_map):
         """Init class"""
@@ -147,9 +147,9 @@ class ParameterTagToolBar(QToolBar):
         empty = QWidget()
         empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.empty_action = self.addWidget(empty)
-        button = QPushButton("Manage tags...")
+        button = QPushButton("Edit tags...")
         self.addWidget(button)
-        button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
+        button.clicked.connect(lambda checked: self.edit_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
 

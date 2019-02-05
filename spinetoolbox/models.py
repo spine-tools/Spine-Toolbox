@@ -3689,14 +3689,14 @@ class ParameterEnumModel(QStandardItemModel):
     def build_tree(self):
         """Build the enumeration tree"""
         self.clear()
-        parameter_enums = self.db_map.wide_parameter_enum_list()
-        self.add_parameter_enums(parameter_enums)
+        wide_parameter_enums = self.db_map.wide_parameter_enum_list()
+        self.add_parameter_enums(wide_parameter_enums)
         self.setHeaderData(0, Qt.Horizontal, "element")
         self.setHeaderData(1, Qt.Horizontal, "value")
 
-    def add_parameter_enums(self, parameter_enums):
+    def add_parameter_enums(self, wide_parameter_enums):
         """Add parameter enums."""
-        for wide_enum in parameter_enums:
+        for wide_enum in wide_parameter_enums:
             name_item = QStandardItem(wide_enum.name)
             name_item.setData(self.bold_font, Qt.FontRole)
             name_item.setData(wide_enum._asdict(), Qt.UserRole + 1)
@@ -3708,6 +3708,30 @@ class ParameterEnumModel(QStandardItemModel):
                 value_item = QStandardItem(value)
                 name_item.appendRow([element_item, value_item])
             self.invisibleRootItem().appendRow([name_item, QStandardItem()])
+
+    def update_parameter_enums(self, wide_parameter_enums):
+        """Update parameter enums."""
+        updated_wide_enum_dict = {x.id: x for x in wide_parameter_enums}
+        for i in range(self.rowCount()):
+            index = self.index(i, 0)
+            wide_enum = index.data(Qt.UserRole + 1)
+            id = wide_enum["id"]
+            try:
+                updated_wide_enum = updated_wide_enum_dict[id]
+            except KeyError:
+                continue
+            name_item = self.itemFromIndex(index)
+            name_item.setData(updated_wide_enum.name, Qt.DisplayRole)
+            name_item.setData(updated_wide_enum._asdict(), Qt.UserRole + 1)
+            name_item.removeRows(0, name_item.rowCount())
+            split_element_list = updated_wide_enum.element_list.split(",")
+            value_list = updated_wide_enum.value_list
+            split_value_list = value_list.split(",") if value_list else [None for _ in range(len(split_element_list))]
+            for element, value in zip(split_element_list, split_value_list):
+                element_item = QStandardItem(element)
+                value_item = QStandardItem(value)
+                name_item.appendRow([element_item, value_item])
+
 
 class JSONArrayModel(EmptyRowModel):
     """A model of JSON array data, used by TreeViewForm.

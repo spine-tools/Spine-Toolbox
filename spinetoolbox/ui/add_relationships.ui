@@ -128,13 +128,6 @@
      </item>
     </layout>
    </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_statusbar_placeholder">
-     <item>
-      <widget class="QWidget" name="widget_invisible_dummy" native="true"/>
-     </item>
-    </layout>
-   </item>
   </layout>
   <action name="actionRemove_rows">
    <property name="icon">

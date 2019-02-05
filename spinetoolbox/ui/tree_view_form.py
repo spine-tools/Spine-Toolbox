@@ -557,8 +557,8 @@ class Ui_MainWindow(object):
         icon14.addPixmap(QtGui.QPixmap(":/icons/minus_object_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRemove_object_tree_items.setIcon(icon14)
         self.actionRemove_object_tree_items.setObjectName("actionRemove_object_tree_items")
-        self.actionManage_parameter_tags = QtWidgets.QAction(MainWindow)
-        self.actionManage_parameter_tags.setObjectName("actionManage_parameter_tags")
+        self.actionEdit_parameter_tags = QtWidgets.QAction(MainWindow)
+        self.actionEdit_parameter_tags.setObjectName("actionEdit_parameter_tags")
         self.actionAdd_parameter_enums = QtWidgets.QAction(MainWindow)
         self.actionAdd_parameter_enums.setObjectName("actionAdd_parameter_enums")
         self.actionEdit_parameter_enums = QtWidgets.QAction(MainWindow)
@@ -594,7 +594,7 @@ class Ui_MainWindow(object):
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionRemove_parameter_enums)
         self.menuEdit.addSeparator()
-        self.menuEdit.addAction(self.actionManage_parameter_tags)
+        self.menuEdit.addAction(self.actionEdit_parameter_tags)
         self.menuFile.addAction(self.actionImport)
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
@@ -696,12 +696,12 @@ class Ui_MainWindow(object):
         self.actionEdit_objects.setText(QtWidgets.QApplication.translate("MainWindow", "Edit objects", None, -1))
         self.actionEdit_relationships.setText(QtWidgets.QApplication.translate("MainWindow", "Edit relationships", None, -1))
         self.actionRemove_object_tree_items.setText(QtWidgets.QApplication.translate("MainWindow", "Remove object tree items", None, -1))
-        self.actionManage_parameter_tags.setText(QtWidgets.QApplication.translate("MainWindow", "Manage parameter tags", None, -1))
-        self.actionManage_parameter_tags.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+T", None, -1))
+        self.actionEdit_parameter_tags.setText(QtWidgets.QApplication.translate("MainWindow", "Edit parameter tags", None, -1))
+        self.actionEdit_parameter_tags.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+T", None, -1))
         self.actionAdd_parameter_enums.setText(QtWidgets.QApplication.translate("MainWindow", "Add parameter enums", None, -1))
-        self.actionEdit_parameter_enums.setText(QtWidgets.QApplication.translate("MainWindow", "Edit parameter enums", None, -1))
+        self.actionEdit_parameter_enums.setText(QtWidgets.QApplication.translate("MainWindow", "Edit parameter enum", None, -1))
         self.actionRemove_parameter_enums.setText(QtWidgets.QApplication.translate("MainWindow", "Remove parameter enums", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView, CopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
 import resources_icons_rc
