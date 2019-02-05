@@ -351,7 +351,30 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
         else:
             editor.set_data(index.data(Qt.EditRole))
 
-class AddObjectsDelegate(ParameterDelegate):
+
+class AddItemsDelegate(QItemDelegate):
+    """A custom delegate for the model in AddItemDialogs.
+
+    Attributes:
+        parent (QMainWindow): tree or graph view form
+    """
+    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._parent = parent
+        self.db_map = parent.db_map
+
+    def setModelData(self, editor, model, index):
+        """Send signal."""
+        self.data_committed.emit(index, editor.data())
+
+    def close_editor(self, editor, index, model):
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, model, index)
+
+
+class AddObjectsDelegate(AddItemsDelegate):
     """A delegate for the model and view in AddObjectsDialog.
 
     Attributes:
@@ -364,8 +387,12 @@ class AddObjectsDelegate(ParameterDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'object class name':
-            return CustomComboEditor(parent)
-        return CustomLineEditor(parent)
+            editor = CustomComboEditor(parent)
+        else:
+            editor = CustomLineEditor(parent)
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
     def setEditorData(self, editor, index):
         """Set editor data."""
@@ -377,7 +404,7 @@ class AddObjectsDelegate(ParameterDelegate):
             editor.set_data(index.data(Qt.EditRole))
 
 
-class AddRelationshipClassesDelegate(ParameterDelegate):
+class AddRelationshipClassesDelegate(AddItemsDelegate):
     """A delegate for the model and view in AddRelationshipClassesDialog.
 
     Attributes:
@@ -390,8 +417,12 @@ class AddRelationshipClassesDelegate(ParameterDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship class name':
-            return CustomLineEditor(parent)
-        return CustomComboEditor(parent)
+            editor = CustomLineEditor(parent)
+        else:
+            editor = CustomComboEditor(parent)
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
     def setEditorData(self, editor, index):
         """Set editor data."""
@@ -416,7 +447,7 @@ class AddRelationshipClassesDelegate(ParameterDelegate):
         return "__".join(object_class_name_list)
 
 
-class AddRelationshipsDelegate(ParameterDelegate):
+class AddRelationshipsDelegate(AddItemsDelegate):
     """A delegate for the model and view in AddRelationshipsDialog.
 
     Attributes:
@@ -429,8 +460,12 @@ class AddRelationshipsDelegate(ParameterDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship name':
-            return CustomLineEditor(parent)
-        return CustomComboEditor(parent)
+            editor = CustomLineEditor(parent)
+        else:
+            editor = CustomComboEditor(parent)
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
     def setEditorData(self, editor, index):
         """Set editor data."""
@@ -458,6 +493,16 @@ class AddRelationshipsDelegate(ParameterDelegate):
             if object_name:
                 object_name_list.append(object_name)
         return "__".join(object_name_list)
+
+
+class AddParameterEnumsDelegate(LineEditDelegate):
+    """A delegate for the model and view in AddRelationshipsDialog.
+
+    Attributes:
+        parent (QMainWindow): tree or graph view form
+    """
+    def __init__(self, parent):
+        super().__init__(parent)
 
 
 class ForeignKeysDelegate(QItemDelegate):

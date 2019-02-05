@@ -1347,14 +1347,14 @@ class RelationshipClassListModel(QStandardItemModel):
 
 
 class ObjectTreeModel(QStandardItemModel):
-    """A class to hold Spine data structure in a treeview."""
+    """A class to display Spine data structure in a treeview."""
 
     def __init__(self, tree_view_form):
         """Initialize class"""
         super().__init__(tree_view_form)
         self._tree_view_form = tree_view_form
         self.db_map = tree_view_form.db_map
-        self.root_item = QModelIndex()
+        self.root_item = None
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.is_flat = False
@@ -3674,6 +3674,40 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
             return len(self.object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
         return True
 
+
+class ParameterEnumModel(QStandardItemModel):
+    """A class to display parameter enum data in a treeview."""
+
+    def __init__(self, tree_view_form):
+        """Initialize class"""
+        super().__init__(tree_view_form)
+        self._tree_view_form = tree_view_form
+        self.db_map = tree_view_form.db_map
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
+
+    def build_tree(self):
+        """Build the enumeration tree"""
+        self.clear()
+        parameter_enums = self.db_map.wide_parameter_enum_list()
+        self.add_parameter_enums(parameter_enums)
+        self.setHeaderData(0, Qt.Horizontal, "element")
+        self.setHeaderData(1, Qt.Horizontal, "value")
+
+    def add_parameter_enums(self, parameter_enums):
+        """Add parameter enums."""
+        for wide_enum in parameter_enums:
+            name_item = QStandardItem(wide_enum.name)
+            name_item.setData(self.bold_font, Qt.FontRole)
+            name_item.setData(wide_enum._asdict(), Qt.UserRole + 1)
+            split_element_list = wide_enum.element_list.split(",")
+            value_list = wide_enum.value_list
+            split_value_list = value_list.split(",") if value_list else [None for _ in range(len(split_element_list))]
+            for element, value in zip(split_element_list, split_value_list):
+                element_item = QStandardItem(element)
+                value_item = QStandardItem(value)
+                name_item.appendRow([element_item, value_item])
+            self.invisibleRootItem().appendRow([name_item, QStandardItem()])
 
 class JSONArrayModel(EmptyRowModel):
     """A model of JSON array data, used by TreeViewForm.

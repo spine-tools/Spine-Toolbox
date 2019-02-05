@@ -599,6 +599,21 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_parameter_enum">
+   <property name="windowTitle">
+    <string>Parameter enum</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_3">
+    <layout class="QVBoxLayout" name="verticalLayout_13">
+     <item>
+      <widget class="QTreeView" name="treeView_parameter_enum"/>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionGraph_reinstate_pruned">
    <property name="text">
     <string>Reinstate pruned items</string>

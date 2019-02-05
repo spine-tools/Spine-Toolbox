@@ -55,18 +55,43 @@
         <property name="spacing">
          <number>0</number>
         </property>
+        <property name="leftMargin">
+         <number>0</number>
+        </property>
+        <property name="topMargin">
+         <number>0</number>
+        </property>
+        <property name="rightMargin">
+         <number>0</number>
+        </property>
+        <property name="bottomMargin">
+         <number>0</number>
+        </property>
         <item>
-         <widget class="QLabel" name="label_object_tree">
-          <property name="font">
-           <font>
-            <weight>75</weight>
-            <bold>true</bold>
-           </font>
+         <layout class="QHBoxLayout" name="horizontalLayout_4">
+          <property name="spacing">
+           <number>0</number>
           </property>
-          <property name="text">
-           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Object tree&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <property name="leftMargin">
+           <number>3</number>
           </property>
-         </widget>
+          <property name="topMargin">
+           <number>1</number>
+          </property>
+          <property name="rightMargin">
+           <number>0</number>
+          </property>
+          <property name="bottomMargin">
+           <number>2</number>
+          </property>
+          <item>
+           <widget class="QLabel" name="label_object_tree">
+            <property name="text">
+             <string>Object tree</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
         </item>
         <item>
          <widget class="ObjectTreeView" name="treeView_object">
@@ -113,17 +138,35 @@
             <property name="leftMargin">
              <number>0</number>
             </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
+            <property name="bottomMargin">
+             <number>0</number>
+            </property>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_9">
               <property name="spacing">
                <number>0</number>
               </property>
+              <property name="leftMargin">
+               <number>3</number>
+              </property>
+              <property name="topMargin">
+               <number>1</number>
+              </property>
+              <property name="bottomMargin">
+               <number>2</number>
+              </property>
               <item>
                <widget class="QLabel" name="label_object_parameter">
                 <property name="font">
                  <font>
-                  <weight>75</weight>
-                  <bold>true</bold>
+                  <weight>50</weight>
+                  <bold>false</bold>
                  </font>
                 </property>
                 <property name="text">
@@ -516,14 +559,32 @@
             <property name="leftMargin">
              <number>0</number>
             </property>
+            <property name="topMargin">
+             <number>0</number>
+            </property>
+            <property name="rightMargin">
+             <number>0</number>
+            </property>
             <item>
              <layout class="QHBoxLayout" name="horizontalLayout_10">
+              <property name="spacing">
+               <number>0</number>
+              </property>
+              <property name="leftMargin">
+               <number>3</number>
+              </property>
+              <property name="topMargin">
+               <number>1</number>
+              </property>
+              <property name="bottomMargin">
+               <number>2</number>
+              </property>
               <item>
                <widget class="QLabel" name="label_4">
                 <property name="font">
                  <font>
-                  <weight>75</weight>
-                  <bold>true</bold>
+                  <weight>50</weight>
+                  <bold>false</bold>
                  </font>
                 </property>
                 <property name="text">
@@ -942,15 +1003,14 @@
     <addaction name="actionAdd_relationship_classes"/>
     <addaction name="actionAdd_relationships"/>
     <addaction name="separator"/>
-    <addaction name="actionAdd_object_parameter_definitions"/>
-    <addaction name="actionAdd_object_parameter_values"/>
-    <addaction name="actionAdd_relationship_parameter_definitions"/>
-    <addaction name="actionAdd_relationship_parameter_values"/>
+    <addaction name="actionAdd_parameter_enums"/>
     <addaction name="separator"/>
     <addaction name="actionEdit_object_classes"/>
     <addaction name="actionEdit_objects"/>
     <addaction name="actionEdit_relationship_classes"/>
     <addaction name="actionEdit_relationships"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_parameter_enums"/>
     <addaction name="separator"/>
     <addaction name="actionRemove_object_tree_items"/>
     <addaction name="separator"/>
@@ -958,6 +1018,8 @@
     <addaction name="actionRemove_object_parameter_values"/>
     <addaction name="actionRemove_relationship_parameter_definitions"/>
     <addaction name="actionRemove_relationship_parameter_values"/>
+    <addaction name="separator"/>
+    <addaction name="actionRemove_parameter_enums"/>
     <addaction name="separator"/>
     <addaction name="actionManage_parameter_tags"/>
    </widget>
@@ -987,6 +1049,46 @@
    <addaction name="menuSession"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
+  <widget class="QDockWidget" name="dockWidget_parameter_enum">
+   <property name="windowTitle">
+    <string>Parameter enum</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>2</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents">
+    <layout class="QVBoxLayout" name="verticalLayout">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="QTreeView" name="treeView_parameter_enum">
+       <property name="contextMenuPolicy">
+        <enum>Qt::CustomContextMenu</enum>
+       </property>
+       <property name="editTriggers">
+        <set>QAbstractItemView::EditKeyPressed</set>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>false</bool>
@@ -1151,24 +1253,6 @@
     <string>Ctrl+V</string>
    </property>
   </action>
-  <action name="actionAdd_object_parameter_definitions">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_object_parameter_icon.png</normaloff>:/icons/plus_object_parameter_icon.png</iconset>
-   </property>
-   <property name="text">
-    <string>Add object parameter definitions</string>
-   </property>
-  </action>
-  <action name="actionAdd_object_parameter_values">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_object_parameter_icon.png</normaloff>:/icons/plus_object_parameter_icon.png</iconset>
-   </property>
-   <property name="text">
-    <string>Add object parameter values</string>
-   </property>
-  </action>
   <action name="actionRemove_object_parameter_values">
    <property name="enabled">
     <bool>false</bool>
@@ -1179,24 +1263,6 @@
    </property>
    <property name="text">
     <string>Remove object parameter values</string>
-   </property>
-  </action>
-  <action name="actionAdd_relationship_parameter_definitions">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_relationship_parameter_icon.png</normaloff>:/icons/plus_relationship_parameter_icon.png</iconset>
-   </property>
-   <property name="text">
-    <string>Add relationship parameter definitions</string>
-   </property>
-  </action>
-  <action name="actionAdd_relationship_parameter_values">
-   <property name="icon">
-    <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_relationship_parameter_icon.png</normaloff>:/icons/plus_relationship_parameter_icon.png</iconset>
-   </property>
-   <property name="text">
-    <string>Add relationship parameter values</string>
    </property>
   </action>
   <action name="actionRemove_relationship_parameter_values">
@@ -1298,6 +1364,21 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+T</string>
+   </property>
+  </action>
+  <action name="actionAdd_parameter_enums">
+   <property name="text">
+    <string>Add parameter enums</string>
+   </property>
+  </action>
+  <action name="actionEdit_parameter_enums">
+   <property name="text">
+    <string>Edit parameter enums</string>
+   </property>
+  </action>
+  <action name="actionRemove_parameter_enums">
+   <property name="text">
+    <string>Remove parameter enums</string>
    </property>
   </action>
  </widget>

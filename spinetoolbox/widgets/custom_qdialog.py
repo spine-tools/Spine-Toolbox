@@ -28,13 +28,14 @@ from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from config import STATUSBAR_SS
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
-    LineEditDelegate
+    AddParameterEnumsDelegate, LineEditDelegate
 import ui.add_object_classes
 import ui.add_objects
 import ui.add_relationship_classes
 import ui.add_relationships
 import ui.edit_data_items
 import ui.manage_parameter_tags
+import ui.add_parameter_enums
 from helpers import busy_effect, object_pixmap
 
 
@@ -519,6 +520,61 @@ class AddRelationshipsDialog(AddItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
+class AddParameterEnumsDialog(AddItemsDialog):
+    """A dialog to query user's preferences for new parameter enums.
+
+    Attributes:
+        parent (TreeViewForm): data store widget
+        enum_id (int): default parameter enum id
+        force_default (bool): if True, defaults are non-editable
+    """
+    def __init__(self, parent, enum_id=None, force_default=False):
+        super().__init__(parent, force_default=force_default)
+        self.remove_row_icon = QIcon(":/icons/minus.png")
+        self.setup_ui(ui.add_parameter_enums.Ui_Dialog())
+        self.ui.tableView.setItemDelegate(AddParameterEnumsDelegate(parent))
+        self.connect_signals()
+        default_enum = self._parent.db_map.parameter_enum_list(id_list=[enum_id]).one_or_none()
+        self.default_enum_name = default_enum.name if default_enum else None
+        self.model.set_horizontal_header_labels(['enum name', 'element', 'value'])
+        self.model.set_default_row(**{'enum name': self.default_enum_name})
+        self.model.clear()
+        self.ui.tableView.resizeColumnsToContents()
+
+    @busy_effect
+    def accept(self):
+        """Collect info from dialog and try to add items."""
+        enum_dict = dict()
+        for i in range(self.model.rowCount() - 1):  # last row will always be empty
+            row_data = self.model.row_data(i)[:-1]
+            enum_name, element, value = row_data
+            if not enum_name:
+                self._parent.msg_error.emit("Parameter enum name missing at row {}".format(i + 1))
+                return
+            if not element:
+                self._parent.msg_error.emit("Element missing at row {}".format(i + 1))
+                return
+            enum_dict.setdefault(enum_name, list()).append((element, value))
+        wide_kwargs_list = [
+            {
+                "name": enum_name,
+                "element_list": [x[0] for x in element_value_list],
+                "value_list": [x[1] for x in element_value_list]
+            } for enum_name, element_value_list in enum_dict.items()
+        ]
+        if not wide_kwargs_list:
+            self._parent.msg_error.emit("Nothing to add")
+            return
+        try:
+            enums = self._parent.db_map.add_wide_parameter_enums(*wide_kwargs_list)
+            self._parent.add_parameter_enums(enums)
+            super().accept()
+        except SpineIntegrityError as e:
+            self._parent.msg_error.emit(e.msg)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
+
+
 class EditItemsDialog(QDialog):
     """A dialog to query user's preferences for updating items.
 
@@ -820,50 +876,77 @@ class EditRelationshipsDialog(EditItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class CommitDialog(QDialog):
-    """A dialog to query user's preferences for new commit.
+class EditParameterEnumsDialog(EditItemsDialog):
+    """A dialog to query user's preferences for updating parameter enums.
 
     Attributes:
         parent (TreeViewForm): data store widget
-        database (str): database name
+        wide_kwargs_list (list): list of dictionaries corresponding to parameter enums to edit/update
     """
-    def __init__(self, parent, database):
-        """Initialize class"""
-        super().__init__(parent)
-        self.commit_msg = None
-        self.setWindowTitle('Commit changes to {}'.format(database))
-        form = QVBoxLayout(self)
-        form.setContentsMargins(0, 0, 0, 0)
-        inner_layout = QVBoxLayout()
-        inner_layout.setContentsMargins(4, 4, 4, 4)
-        self.actionAccept = QAction(self)
-        self.actionAccept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
-        self.actionAccept.triggered.connect(self.accept)
-        self.actionAccept.setEnabled(False)
-        self.commit_msg_edit = QPlainTextEdit(self)
-        self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
-        self.commit_msg_edit.addAction(self.actionAccept)
-        button_box = QDialogButtonBox()
-        button_box.addButton(QDialogButtonBox.Cancel)
-        self.commit_button = button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
-        button_box.accepted.connect(self.accept)
-        button_box.rejected.connect(self.reject)
-        inner_layout.addWidget(self.commit_msg_edit)
-        inner_layout.addWidget(button_box)
-        # Add status bar to form
-        form.addLayout(inner_layout)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.commit_msg_edit.textChanged.connect(self.receive_text_changed)
-        self.receive_text_changed()
+    def __init__(self, parent, wide_kwargs_list):
+        super().__init__(parent, wide_kwargs_list)
+        self.setup_ui()
+        self.setWindowTitle("Edit parameter enums")
+        self.model.set_horizontal_header_labels(['enum name', 'element', 'value'])
+        self.orig_data = list()
+        self.id_list = list()
+        model_data = list()
+        for wide_kwargs in wide_kwargs_list:
+            try:
+                self.id_list.append(wide_kwargs["id"])
+            except KeyError:
+                continue
+            try:
+                name = wide_kwargs["name"]
+            except KeyError:
+                continue
+            try:
+                element_list = wide_kwargs["element_list"].split(",")
+            except (KeyError, AttributeError):
+                continue
+            try:
+                value_list = wide_kwargs["value_list"].split(",")
+            except (KeyError, AttributeError):
+                value_list = [None for _ in element_list]
+            for element, value in zip(element_list, value_list):
+                row_data = [name, element, value]
+                self.orig_data.append(row_data.copy())
+                model_data.append(row_data)
+        self.model.reset_model(model_data)
+        self.ui.tableView.resizeColumnsToContents()
 
-    @Slot(name="receive_text_changed")
-    def receive_text_changed(self):
-        """Called when text changes in the commit msg text edit.
-        Enable/disable commit button accordingly."""
-        self.commit_msg = self.commit_msg_edit.toPlainText()
-        cond = self.commit_msg.strip() != ""
-        self.commit_button.setEnabled(cond)
-        self.actionAccept.setEnabled(cond)
+    @busy_effect
+    def accept(self):
+        """Collect info from dialog and try to update items."""
+        enum_dict = dict()
+        for i in range(self.model.rowCount() - 1):  # last row will always be empty
+            row_data = self.model.row_data(i)
+            enum_name, element, value = row_data
+            if not enum_name:
+                self._parent.msg_error.emit("Parameter enum name missing at row {}".format(i + 1))
+                return
+            if not element:
+                self._parent.msg_error.emit("Element missing at row {}".format(i + 1))
+                return
+            enum_dict.setdefault(enum_name, list()).append((element, value))
+        wide_kwargs_list = [
+            {
+                "name": enum_name,
+                "element_list": [x[0] for x in element_value_list],
+                "value_list": [x[1] for x in element_value_list]
+            } for enum_name, element_value_list in enum_dict.items()
+        ]
+        if not wide_kwargs_list:
+            self._parent.msg_error.emit("Nothing to update")
+            return
+        try:
+            enums = self._parent.db_map.update_wide_parameter_enums(*wide_kwargs_list)
+            self._parent.update_parameter_enums(enums)
+            super().accept()
+        except SpineIntegrityError as e:
+            self._parent.msg_error.emit(e.msg)
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
 
 
 class ManageParameterTagsDialog(QDialog):
@@ -995,3 +1078,49 @@ class ManageParameterTagsDialog(QDialog):
             self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
+
+
+class CommitDialog(QDialog):
+    """A dialog to query user's preferences for new commit.
+
+    Attributes:
+        parent (TreeViewForm): data store widget
+        database (str): database name
+    """
+    def __init__(self, parent, database):
+        """Initialize class"""
+        super().__init__(parent)
+        self.commit_msg = None
+        self.setWindowTitle('Commit changes to {}'.format(database))
+        form = QVBoxLayout(self)
+        form.setContentsMargins(0, 0, 0, 0)
+        inner_layout = QVBoxLayout()
+        inner_layout.setContentsMargins(4, 4, 4, 4)
+        self.actionAccept = QAction(self)
+        self.actionAccept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
+        self.actionAccept.triggered.connect(self.accept)
+        self.actionAccept.setEnabled(False)
+        self.commit_msg_edit = QPlainTextEdit(self)
+        self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
+        self.commit_msg_edit.addAction(self.actionAccept)
+        button_box = QDialogButtonBox()
+        button_box.addButton(QDialogButtonBox.Cancel)
+        self.commit_button = button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
+        button_box.accepted.connect(self.accept)
+        button_box.rejected.connect(self.reject)
+        inner_layout.addWidget(self.commit_msg_edit)
+        inner_layout.addWidget(button_box)
+        # Add status bar to form
+        form.addLayout(inner_layout)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.commit_msg_edit.textChanged.connect(self.receive_text_changed)
+        self.receive_text_changed()
+
+    @Slot(name="receive_text_changed")
+    def receive_text_changed(self):
+        """Called when text changes in the commit msg text edit.
+        Enable/disable commit button accordingly."""
+        self.commit_msg = self.commit_msg_edit.toPlainText()
+        cond = self.commit_msg.strip() != ""
+        self.commit_button.setEnabled(cond)
+        self.actionAccept.setEnabled(cond)

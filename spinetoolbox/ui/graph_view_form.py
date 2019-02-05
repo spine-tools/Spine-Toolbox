@@ -255,6 +255,17 @@ class Ui_MainWindow(object):
         self.verticalLayout_12.addWidget(self.splitter_object_relationship_parameter)
         self.dockWidget_parameter.setWidget(self.dockWidgetContents_parameter)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_parameter)
+        self.dockWidget_parameter_enum = QtWidgets.QDockWidget(MainWindow)
+        self.dockWidget_parameter_enum.setObjectName("dockWidget_parameter_enum")
+        self.dockWidgetContents_3 = QtWidgets.QWidget()
+        self.dockWidgetContents_3.setObjectName("dockWidgetContents_3")
+        self.verticalLayout_13 = QtWidgets.QVBoxLayout(self.dockWidgetContents_3)
+        self.verticalLayout_13.setObjectName("verticalLayout_13")
+        self.treeView_parameter_enum = QtWidgets.QTreeView(self.dockWidgetContents_3)
+        self.treeView_parameter_enum.setObjectName("treeView_parameter_enum")
+        self.verticalLayout_13.addWidget(self.treeView_parameter_enum)
+        self.dockWidget_parameter_enum.setWidget(self.dockWidgetContents_3)
+        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_parameter_enum)
         self.actionGraph_reinstate_pruned = QtWidgets.QAction(MainWindow)
         self.actionGraph_reinstate_pruned.setObjectName("actionGraph_reinstate_pruned")
         self.actionDock_widgets = QtWidgets.QAction(MainWindow)
@@ -327,6 +338,7 @@ class Ui_MainWindow(object):
         self.label_4.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter", None, -1))
         self.tabWidget_relationship_parameter.setTabText(self.tabWidget_relationship_parameter.indexOf(self.tab_7), QtWidgets.QApplication.translate("MainWindow", "value", None, -1))
         self.tabWidget_relationship_parameter.setTabText(self.tabWidget_relationship_parameter.indexOf(self.tab_8), QtWidgets.QApplication.translate("MainWindow", "definition", None, -1))
+        self.dockWidget_parameter_enum.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter enum", None, -1))
         self.actionGraph_reinstate_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Reinstate pruned items", None, -1))
         self.actionDock_widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Dock Widgets", None, -1))
         self.actiontodos.setText(QtWidgets.QApplication.translate("MainWindow", "todos", None, -1))
@@ -342,6 +354,6 @@ class Ui_MainWindow(object):
         self.actionGraph_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
 
-from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsview import GraphViewGraphicsView
+from widgets.custom_qlistview import DragListView
 import resources_icons_rc
