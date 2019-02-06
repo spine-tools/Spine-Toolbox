@@ -575,16 +575,10 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionAdd_objects)
         self.menuEdit.addAction(self.actionAdd_relationship_classes)
         self.menuEdit.addAction(self.actionAdd_relationships)
-        self.menuEdit.addSeparator()
-        self.menuEdit.addAction(self.actionAdd_parameter_enums)
-        self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionEdit_object_classes)
         self.menuEdit.addAction(self.actionEdit_objects)
         self.menuEdit.addAction(self.actionEdit_relationship_classes)
         self.menuEdit.addAction(self.actionEdit_relationships)
-        self.menuEdit.addSeparator()
-        self.menuEdit.addAction(self.actionEdit_parameter_enums)
-        self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionRemove_object_tree_items)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionRemove_object_parameter_definitions)
@@ -592,9 +586,12 @@ class Ui_MainWindow(object):
         self.menuEdit.addAction(self.actionRemove_relationship_parameter_definitions)
         self.menuEdit.addAction(self.actionRemove_relationship_parameter_values)
         self.menuEdit.addSeparator()
+        self.menuEdit.addAction(self.actionAdd_parameter_enums)
+        self.menuEdit.addAction(self.actionEdit_parameter_enums)
         self.menuEdit.addAction(self.actionRemove_parameter_enums)
         self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionEdit_parameter_tags)
+        self.menuEdit.addSeparator()
         self.menuFile.addAction(self.actionImport)
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
@@ -702,6 +699,6 @@ class Ui_MainWindow(object):
         self.actionEdit_parameter_enums.setText(QtWidgets.QApplication.translate("MainWindow", "Edit parameter enum", None, -1))
         self.actionRemove_parameter_enums.setText(QtWidgets.QApplication.translate("MainWindow", "Remove parameter enums", None, -1))
 
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView, CopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView
-from widgets.custom_qtableview import CopyPasteTableView, AutoFilterCopyPasteTableView
 import resources_icons_rc

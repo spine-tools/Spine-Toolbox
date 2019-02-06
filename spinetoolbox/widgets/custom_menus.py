@@ -278,8 +278,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
         fully_expand_icon = self._parent.fully_expand_icon
         fully_collapse_icon = self._parent.fully_collapse_icon
         find_next_icon = self._parent.find_next_icon
-        item = index.model().itemFromIndex(index)
-        item_type = item.data(Qt.UserRole)
+        item_type = index.data(Qt.UserRole)
         self.add_action("Copy text", copy_icon)
         self.addSeparator()
         if index.model().hasChildren(index):
@@ -330,6 +329,25 @@ class ParameterContextMenu(CustomContextMenu):
         self.add_action("Paste", paste_icon)
         self.addSeparator()
         self.add_action("Remove selected", remove_icon)
+        self.exec_(position)
+
+
+class ParameterEnumContextMenu(CustomContextMenu):
+    """Context menu class for parameter enum view in tree view form.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            self.add_action("Add...")
+        elif not index.parent().isValid():
+            self.add_action("Edit...")
+            self.add_action("Remove selected")
         self.exec_(position)
 
 

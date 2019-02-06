@@ -32,7 +32,7 @@ from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
-from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, \
+from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, ParameterEnumContextMenu, \
     ObjectItemContextMenu, GraphViewContextMenu, QOkMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDefinitionDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDefinitionDelegate
@@ -143,9 +143,6 @@ class DataStoreForm(QMainWindow):
         # Parameter tags
         self.parameter_tag_toolbar.edit_tags_action_triggered.connect(self.show_edit_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
-        # Parameter enums
-        self.ui.actionAdd_parameter_enums.triggered.connect(self.show_add_parameter_enums_form)
-        self.ui.actionEdit_parameter_enums.triggered.connect(self.show_edit_parameter_enums_form)
 
     @Slot("int", "bool", name="_handle_tag_button_toggled")
     def _handle_tag_button_toggled(self, id, checked):
@@ -652,33 +649,6 @@ class DataStoreForm(QMainWindow):
                 except ValueError:
                     pass
 
-    @Slot("bool", name="show_add_parameter_enums_form")
-    def show_add_parameter_enums_form(self, checked=False):
-        dialog = AddParameterEnumsDialog(self)
-        dialog.show()
-
-    def add_parameter_enums(self, parameter_enums):
-        """Insert new parameter enums."""
-        self.parameter_enum_model.add_parameter_enums(parameter_enums)
-        self.set_commit_rollback_actions_enabled(True)
-        msg = "Successfully added new parameter enum(s) '{}'.".format("', '".join([x.name for x in parameter_enums]))
-        self.msg.emit(msg)
-
-    @Slot("bool", name="show_edit_parameter_enums_form")
-    def show_edit_parameter_enums_form(self, checked=False):
-        index = self.ui.treeView_parameter_enum.selectionModel().currentIndex()
-        if not index.isValid() or index.parent().isValid():
-            return
-        dialog = ManageParameterEnumsDialog(self, index.data(Qt.UserRole + 1))
-        dialog.show()
-
-    def update_parameter_enums(self, wide_enums):
-        """Update parameter enums."""
-        self.parameter_enum_model.update_parameter_enums(wide_enums)
-        self.set_commit_rollback_actions_enabled(True)
-        msg = "Successfully updated parameter enum(s) '{}'.".format("', '".join([x.name for x in wide_enums]))
-        self.msg.emit(msg)
-
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
         config = self._data_store._toolbox._config
@@ -782,6 +752,7 @@ class TreeViewForm(DataStoreForm):
         self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
+        self.parameter_enum_context_menu = None
         # Others
         self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
@@ -821,6 +792,11 @@ class TreeViewForm(DataStoreForm):
             connect(self.remove_relationship_parameter_definitions)
         self.ui.actionRemove_relationship_parameter_values.triggered.\
             connect(self.remove_relationship_parameter_values)
+        # Parameter enums
+        self.ui.actionAdd_parameter_enums.triggered.connect(self.show_add_parameter_enums_form)
+        self.ui.actionEdit_parameter_enums.triggered.connect(self.show_edit_parameter_enums_form)
+        self.ui.actionRemove_parameter_enums.triggered.connect(self.remove_parameter_enums)
+        # Parameter tags
         self.ui.actionEdit_parameter_tags.triggered.connect(self.show_edit_parameter_tags_form)
         # Copy and paste
         self.ui.actionCopy.triggered.connect(self.copy)
@@ -873,6 +849,8 @@ class TreeViewForm(DataStoreForm):
             connect(self.show_relationship_parameter_context_menu)
         self.ui.tableView_relationship_parameter_value.customContextMenuRequested.\
             connect(self.show_relationship_parameter_value_context_menu)
+        # Parameter enum context menu requested
+        self.ui.treeView_parameter_enum.customContextMenuRequested.connect(self.show_parameter_enum_context_menu)
         # Menu about to show
         self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
         self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
@@ -1133,11 +1111,15 @@ class TreeViewForm(DataStoreForm):
         self.ui.actionEdit_objects.setEnabled('object' in item_types)
         self.ui.actionEdit_relationship_classes.setEnabled('relationship_class' in item_types)
         self.ui.actionEdit_relationships.setEnabled('relationship' in item_types)
-        # Edit parameter enums action
-        index = self.ui.treeView_parameter_enum.selectionModel().currentIndex()
-        self.ui.actionEdit_parameter_enums.setEnabled(index.isValid() and not index.parent().isValid())
         # Remove object tree items action
         self.ui.actionRemove_object_tree_items.setEnabled(len(indexes) > 0)
+        # Edit parameter enum action
+        index = self.ui.treeView_parameter_enum.selectionModel().currentIndex()
+        self.ui.actionEdit_parameter_enums.setEnabled(index.isValid() and not index.parent().isValid())
+        # Remove parameter enums action
+        indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
+        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid() and ind.column() == 0]
+        self.ui.actionRemove_parameter_enums.setEnabled(len(toplevel_indexes) > 0)
         # Copy/paste actions
         if self.focusWidget() != self.ui.menubar:
             self.focus_widget = self.focusWidget()
@@ -1706,6 +1688,25 @@ class TreeViewForm(DataStoreForm):
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
+    @Slot("QPoint", name="show_parameter_enum_context_menu")
+    def show_parameter_enum_context_menu(self, pos):
+        """Context menu for relationship parameter table view.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        index = self.ui.treeView_parameter_enum.indexAt(pos)
+        global_pos = self.ui.treeView_parameter_enum.viewport().mapToGlobal(pos)
+        self.parameter_enum_context_menu = ParameterEnumContextMenu(self, global_pos, index)
+        self.parameter_enum_context_menu.deleteLater()
+        option = self.parameter_enum_context_menu.get_action()
+        if option == "Add...":
+            self.show_add_parameter_enums_form()
+        elif option == "Edit...":
+            self.show_edit_parameter_enums_form()
+        elif option == "Remove selected":
+            self.remove_parameter_enums()
+
     @busy_effect
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
@@ -1823,6 +1824,51 @@ class TreeViewForm(DataStoreForm):
             self.relationship_parameter_value_model.remove_parameters(parameter_dict)
             self.set_commit_rollback_actions_enabled(True)
             self.msg.emit("Successfully removed parameter definitions.")
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+
+    @Slot("bool", name="show_add_parameter_enums_form")
+    def show_add_parameter_enums_form(self, checked=False):
+        dialog = AddParameterEnumsDialog(self)
+        dialog.show()
+
+    def add_parameter_enums(self, parameter_enums):
+        """Insert new parameter enums."""
+        self.parameter_enum_model.add_parameter_enums(parameter_enums)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully added new parameter enum(s) '{}'.".format("', '".join([x.name for x in parameter_enums]))
+        self.msg.emit(msg)
+
+    @Slot("bool", name="show_edit_parameter_enums_form")
+    def show_edit_parameter_enums_form(self, checked=False):
+        index = self.ui.treeView_parameter_enum.selectionModel().currentIndex()
+        if not index.isValid() or index.parent().isValid():
+            return
+        dialog = ManageParameterEnumsDialog(self, index.data(Qt.UserRole + 1))
+        dialog.show()
+
+    def update_parameter_enums(self, wide_enums):
+        """Update parameter enums."""
+        self.parameter_enum_model.update_parameter_enums(wide_enums)
+        self.set_commit_rollback_actions_enabled(True)
+        msg = "Successfully updated parameter enum(s) '{}'.".format("', '".join([x.name for x in wide_enums]))
+        self.msg.emit(msg)
+
+    @busy_effect
+    @Slot("bool", name="remove_parameter_enums")
+    def remove_parameter_enums(self, checked=False):
+        """Remove selected parameter enums.
+        """
+        indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
+        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid() and ind.column() == 0]
+        if not toplevel_indexes:
+            return
+        parameter_enum_ids = set(ind.data(Qt.UserRole + 1)['id'] for ind in toplevel_indexes)
+        try:
+            self.db_map.remove_items(parameter_enum_ids=parameter_enum_ids)
+            self.parameter_enum_model.remove_parameter_enums(parameter_enum_ids)
+            self.set_commit_rollback_actions_enabled(True)
+            self.msg.emit("Successfully removed parameter enums.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 

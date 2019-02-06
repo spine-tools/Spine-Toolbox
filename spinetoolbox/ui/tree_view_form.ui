@@ -1002,16 +1002,10 @@
     <addaction name="actionAdd_objects"/>
     <addaction name="actionAdd_relationship_classes"/>
     <addaction name="actionAdd_relationships"/>
-    <addaction name="separator"/>
-    <addaction name="actionAdd_parameter_enums"/>
-    <addaction name="separator"/>
     <addaction name="actionEdit_object_classes"/>
     <addaction name="actionEdit_objects"/>
     <addaction name="actionEdit_relationship_classes"/>
     <addaction name="actionEdit_relationships"/>
-    <addaction name="separator"/>
-    <addaction name="actionEdit_parameter_enums"/>
-    <addaction name="separator"/>
     <addaction name="actionRemove_object_tree_items"/>
     <addaction name="separator"/>
     <addaction name="actionRemove_object_parameter_definitions"/>
@@ -1019,9 +1013,12 @@
     <addaction name="actionRemove_relationship_parameter_definitions"/>
     <addaction name="actionRemove_relationship_parameter_values"/>
     <addaction name="separator"/>
+    <addaction name="actionAdd_parameter_enums"/>
+    <addaction name="actionEdit_parameter_enums"/>
     <addaction name="actionRemove_parameter_enums"/>
     <addaction name="separator"/>
     <addaction name="actionEdit_parameter_tags"/>
+    <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuFile">
     <property name="title">

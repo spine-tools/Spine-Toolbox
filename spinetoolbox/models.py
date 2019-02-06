@@ -3732,6 +3732,15 @@ class ParameterEnumModel(QStandardItemModel):
                 value_item = QStandardItem(value)
                 name_item.appendRow([element_item, value_item])
 
+    def remove_parameter_enums(self, parameter_enum_ids):
+        """Remove parameter enums."""
+        for i in reversed(range(self.rowCount())):
+            index = self.index(i, 0)
+            wide_enum = index.data(Qt.UserRole + 1)
+            id = wide_enum["id"]
+            if id in parameter_enum_ids:
+                self.invisibleRootItem().removeRow(i)
+
 
 class JSONArrayModel(EmptyRowModel):
     """A model of JSON array data, used by TreeViewForm.

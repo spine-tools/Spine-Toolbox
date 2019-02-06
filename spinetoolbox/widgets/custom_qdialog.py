@@ -517,19 +517,15 @@ class AddParameterEnumsDialog(AddItemsDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
-        enum_id (int): default parameter enum id
         force_default (bool): if True, defaults are non-editable
     """
-    def __init__(self, parent, enum_id=None, force_default=False):
-        super().__init__(parent, force_default=force_default)
+    def __init__(self, parent,):
+        super().__init__(parent)
         self.remove_row_icon = QIcon(":/icons/minus.png")
         self.setup_ui(ui.add_parameter_enums.Ui_Dialog())
         self.ui.tableView.setItemDelegate(AddParameterEnumsDelegate(parent))
         self.connect_signals()
-        default_enum = self._parent.db_map.parameter_enum_list(id_list=[enum_id]).one_or_none()
-        self.default_enum_name = default_enum.name if default_enum else None
         self.model.set_horizontal_header_labels(['enum name', 'element', 'value'])
-        self.model.set_default_row(**{'enum name': self.default_enum_name})
         self.model.clear()
         self.ui.tableView.resizeColumnsToContents()
 
