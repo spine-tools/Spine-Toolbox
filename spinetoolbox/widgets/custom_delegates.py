@@ -215,7 +215,7 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'object_class_name':
+        if header[index.column()] in ('object_class_name', 'enum_name'):
             editor = CustomComboEditor(parent)
         elif header[index.column()] == 'parameter_tag_list':
             editor = MultipleOptionsEditor(parent, option, index)
@@ -238,6 +238,9 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
             except AttributeError:
                 parameter_tag_list = []
             editor.set_data(all_parameter_tag_list, parameter_tag_list)
+        elif header[index.column()] == 'enum_name':
+            name_list = [x.name for x in self.db_map.wide_parameter_enum_list()]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         else:
             editor.set_data(index.data(Qt.EditRole))
 
@@ -325,7 +328,7 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'relationship_class_name':
+        if header[index.column()] in ('relationship_class_name', 'enum_name'):
             editor = CustomComboEditor(parent)
         elif header[index.column()] == 'parameter_tag_list':
             editor = MultipleOptionsEditor(parent, option, index)
@@ -348,6 +351,9 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
             except AttributeError:
                 parameter_tag_list = []
             editor.set_data(all_parameter_tag_list, parameter_tag_list)
+        elif header[index.column()] == 'enum_name':
+            name_list = [x.name for x in self.db_map.wide_parameter_enum_list()]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         else:
             editor.set_data(index.data(Qt.EditRole))
 

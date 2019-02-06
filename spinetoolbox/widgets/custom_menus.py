@@ -348,6 +348,8 @@ class ParameterEnumContextMenu(CustomContextMenu):
         elif not index.parent().isValid():
             self.add_action("Edit...")
             self.add_action("Remove selected")
+        else:
+            return
         self.exec_(position)
 
 

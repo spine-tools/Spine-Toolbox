@@ -68,10 +68,13 @@ class TestTreeViewForm(unittest.TestCase):
         with mock.patch("data_store.DataStore") as mock_data_store, \
                 mock.patch("spinedatabase_api.DiffDatabaseMapping") as mock_db_map:
             mock_db_map.object_parameter_fields.return_value = [
-                'id', 'object_class_id', 'object_class_name', 'parameter_name']
+                'id', 'object_class_id', 'object_class_name', 'parameter_name',
+                'enum_id', 'enum_name', 'parameter_tag_id_list', 'parameter_tag_list'
+            ]
             mock_db_map.relationship_parameter_fields.return_value = [
                 'id', 'relationship_class_id', 'relationship_class_name',
-                'object_class_id_list', 'object_class_name_list', 'parameter_name'
+                'object_class_id_list', 'object_class_name_list', 'parameter_name',
+                'enum_id', 'enum_name', 'parameter_tag_id_list', 'parameter_tag_list'
             ]
             mock_db_map.object_parameter_value_fields.return_value = [
                 'id', 'object_class_id', 'object_class_name', 'object_id', 'object_name',
@@ -437,8 +440,6 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_add_object_parameter_definitions(self):
         """Test that object parameter definitions are added to the model."""
-        self.tree_view_form.db_map.object_parameter_fields.return_value = [
-            'id', 'object_class_id', 'object_class_name', 'parameter_name']
         self.tree_view_form.object_parameter_definition_model.reset_model()
         # Add fish and dog object classes
         fish_class, dog_class = self.add_mock_object_classes()
@@ -475,10 +476,6 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_add_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are added to the model."""
-        self.tree_view_form.db_map.relationship_parameter_fields.return_value = [
-            'id', 'relationship_class_id', 'relationship_class_name',
-            'object_class_id_list', 'object_class_name_list', 'parameter_name'
-        ]
         self.tree_view_form.relationship_parameter_definition_model.reset_model()
         fish_class, dog_class = self.add_mock_object_classes()
         nemo_object, pluto_object, scooby_object = self.add_mock_objects(fish_class.id, dog_class.id)
@@ -1023,8 +1020,6 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in object parameter definition models according the object tree selection."""
-        self.tree_view_form.db_map.object_parameter_fields.return_value = [
-            'id', 'object_class_id', 'object_class_name', 'parameter_name']
         fish_class, dog_class = self.add_mock_object_classes()
         self.tree_view_form.init_models()
         # Select fish item in object tree

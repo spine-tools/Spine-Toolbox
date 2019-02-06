@@ -29,7 +29,7 @@ class Ui_Dialog(object):
         self.tableView.setEditTriggers(QtWidgets.QAbstractItemView.AnyKeyPressed|QtWidgets.QAbstractItemView.DoubleClicked|QtWidgets.QAbstractItemView.EditKeyPressed)
         self.tableView.setTabKeyNavigation(False)
         self.tableView.setObjectName("tableView")
-        self.tableView.horizontalHeader().setStretchLastSection(True)
+        self.tableView.horizontalHeader().setStretchLastSection(False)
         self.verticalLayout.addWidget(self.tableView)
         self.buttonBox = QtWidgets.QDialogButtonBox(Dialog)
         self.buttonBox.setFocusPolicy(QtCore.Qt.StrongFocus)

@@ -582,6 +582,7 @@ class EditItemsDialog(QDialog):
         self.ui.setupUi(self)
         self.ui.tableView.setModel(self.model)
         self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.ui.tableView.horizontalHeader().setStretchLastSection(True)
 
 
 class EditObjectClassesDialog(EditItemsDialog):
@@ -782,6 +783,7 @@ class EditRelationshipsDialog(EditItemsDialog):
     def __init__(self, parent, kwargs_list, relationship_class):
         super().__init__(parent, kwargs_list)
         self.setup_ui()
+        self.ui.tableView.horizontalHeader().setStretchLastSection(False)  # FIXME: can't we do better here?
         self.setWindowTitle("Edit relationships")
         object_class_name_list = relationship_class.object_class_name_list.split(",")
         self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
@@ -891,8 +893,7 @@ class ManageItemsDialog(QDialog):
 
     @Slot(name="_handle_model_reset")
     def _handle_model_reset(self):
-        column_count = self.model.columnCount()
-        self.model.insert_horizontal_header_labels(column_count, [""])
+        self.model.insert_horizontal_header_labels(self.model.columnCount(), [""])
         column = self.model.columnCount() - 1
         for row in range(self.model.rowCount()):
             index = self.model.index(row, column)
@@ -933,6 +934,7 @@ class ManageItemsDialog(QDialog):
 
 class ManageParameterEnumsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for updating parameter enums.
+    FIXME: For now it allows editing a *single* enum.
 
     Attributes:
         parent (TreeViewForm): data store widget
