@@ -332,7 +332,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
-        # self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('enum_id'))
+        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('enum_id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -346,7 +346,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
-        # self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('enum_id'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('enum_id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_definition.verticalHeader().\

@@ -163,12 +163,21 @@ class ObjectParameterValueDelegate(ParameterDelegate):
     """
     def __init__(self, parent):
         super().__init__(parent)
+        self.enum_id = None
 
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
+        h = header.index
         if header[index.column()] in ('object_class_name', 'object_name', 'parameter_name'):
             editor = CustomComboEditor(parent)
+        elif header[index.column()] == 'value':
+            parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
+            self.enum_id = self.db_map.single_parameter(id=parameter_id).one().enum_id
+            if self.enum_id:
+                editor = CustomComboEditor(parent)
+            else:
+                editor = CustomLineEditor(parent)
         elif header[index.column()] == 'json':
             self.json_editor_requested.emit()
             return None
@@ -193,6 +202,12 @@ class ObjectParameterValueDelegate(ParameterDelegate):
             object_class_id = index.sibling(index.row(), h('object_class_id')).data(Qt.DisplayRole)
             name_list = [x.parameter_name for x in self.db_map.object_parameter_list(object_class_id=object_class_id)]
             editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'value':
+            if self.enum_id:
+                value_list = self.db_map.wide_parameter_enum_list(id_list=[self.enum_id]).one().value_list.split(",")
+                editor.set_data(index.data(Qt.EditRole), value_list)
+            else:
+                editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'json':
             pass
         else:
@@ -207,10 +222,6 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
     """
     def __init__(self, parent):
         super().__init__(parent)
-
-    def close_parameter_tag_list_editor(self, editor, index, model):
-        self.closeEditor.emit(editor)
-        self.setModelData(editor, model, index)
 
     def createEditor(self, parent, option, index):
         """Return editor."""

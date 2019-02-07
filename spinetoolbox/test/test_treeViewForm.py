@@ -1571,6 +1571,10 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
         self.assertEqual(editor.text(), "water")
         editor.setText("fire")
+        x = mock.Mock()
+        x.count.return_value = 0
+        self.tree_view_form.db_map.set_parameter_definition_tags.return_value = x, []
+        self.tree_view_form.db_map.update_parameters.return_value = x, []
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
         # Check object parameter definition table
@@ -1599,6 +1603,10 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
         self.assertEqual(editor.text(), "relative_speed")
         editor.setText("equivalent_ki")
+        x = mock.Mock()
+        x.count.return_value = 0
+        self.tree_view_form.db_map.set_parameter_definition_tags.return_value = x, []
+        self.tree_view_form.db_map.update_parameters.return_value = x, []
         view.itemDelegate().setModelData(editor, model, parameter_name_index)
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
         # Check relationship parameter definition table
@@ -1624,11 +1632,15 @@ class TestTreeViewForm(unittest.TestCase):
         header_index = model.horizontal_header_labels().index
         parameter_value_index = model.index(0, header_index("value"))
         self.assertEqual(parameter_value_index.data(), "salt")
+        self.tree_view_form.db_map.single_parameter.return_value.one.return_value.enum_id = None
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_value_index)
         view.itemDelegate().setEditorData(editor, parameter_value_index)
         self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
         self.assertEqual(editor.text(), "salt")
         editor.setText("pepper")
+        x = mock.Mock()
+        x.count.return_value = 0
+        self.tree_view_form.db_map.update_parameter_values.return_value = x, []
         view.itemDelegate().setModelData(editor, model, parameter_value_index)
         view.itemDelegate().destroyEditor(editor, parameter_value_index)
         # Check object parameter value table
@@ -1652,6 +1664,9 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
         self.assertEqual(editor.text(), "-1")
         editor.setText("1")
+        x = mock.Mock()
+        x.count.return_value = 0
+        self.tree_view_form.db_map.update_parameter_values.return_value = x, []
         view.itemDelegate().setModelData(editor, model, parameter_value_index)
         view.itemDelegate().destroyEditor(editor, parameter_value_index)
         # Check object parameter value table

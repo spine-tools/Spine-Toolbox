@@ -1921,6 +1921,7 @@ class SubParameterModel(MinimalTableModel):
         super().__init__(parent)
         self.gray_brush = self._parent._tree_view_form.palette().button()
         self.error_log = []
+        self.updated_count = 0
 
     def flags(self, index):
         """Make fixed indexes non-editable."""
@@ -1944,24 +1945,24 @@ class SubParameterModel(MinimalTableModel):
         Subclasses need to implement `update_items_in_db`.
         """
         self.error_log = []
+        self.updated_count = 0
         if not indexes:
             return False
         if len(indexes) != len(data):
             return False
         items_to_update = self.items_to_update(indexes, data)
-        if not self.update_items_in_db(items_to_update):
-            return False
+        self.update_items_in_db(items_to_update)
         for k, index in enumerate(indexes):
             self._main_data[index.row()][index.column()] = data[k]
         return True
 
     def items_to_update(self, indexes, data):
-        """A list of items (dict) for updating in the database. Reimplement in subclasses."""
+        """A list of items (dict) to update in the database. Reimplement in subclasses."""
         return []
 
     def update_items_in_db(self, items_to_update):
         """Try and update parameter values in database. Reimplement in subclasses."""
-        return False
+        pass
 
 
 class SubParameterValueModel(SubParameterModel):
@@ -1981,8 +1982,6 @@ class SubParameterValueModel(SubParameterModel):
         for k, index in enumerate(indexes):
             if data[k] == index.data(Qt.EditRole):
                 continue
-            if data[k] is None and index.data(Qt.EditRole) == "":
-                continue
             row = index.row()
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
             if not id_:
@@ -1996,16 +1995,14 @@ class SubParameterValueModel(SubParameterModel):
     def update_items_in_db(self, items_to_update):
         """Try and update parameter values in database."""
         if not items_to_update:
-            return False
+            return
         try:
             upd_items, error_log = self._parent.db_map.update_parameter_values(
                 *items_to_update, raise_intgr_error=False)
+            self.updated_count += upd_items.count()
             self.error_log += error_log
-            if error_log:
-                return False
-            return True
         except SpineDBAPIError as e:
-            return False
+            self.error_log.append(e.msg)
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
@@ -2087,26 +2084,22 @@ class SubParameterDefinitionModel(SubParameterModel):
     def update_items_in_db(self, items_to_update):
         """Try and update parameter definitions in database."""
         if not items_to_update:
-            return False
+            return
         try:
+            error_log = []
             tag_dict = dict()
             for item in items_to_update:
                 parameter_tag_id_list = item.pop("parameter_tag_id_list", None)
-                if parameter_tag_id_list is not None:
+                if parameter_tag_id_list is None:
                     continue
                 tag_dict[item["id"]] = parameter_tag_id_list
-            if tag_dict:
-                error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict, raise_intgr_error=False)
-            upd_items, error_log_ = self._parent.db_map.update_parameters(
-                *items_to_update, raise_intgr_error=False)
-            error_log += error_log_
-            self.error_log += error_log
-            if error_log:
-                return False
-            return True
+            upd_items, error_log = self._parent.db_map.set_parameter_definition_tags(
+                tag_dict, raise_intgr_error=False)
+            upd_items_, error_log_ = self._parent.db_map.update_parameters(*items_to_update, raise_intgr_error=False)
+            self.updated_count += upd_items.count() + upd_items_.count()
+            self.error_log += error_log + error_log_
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
-            return False
 
 
 class EmptyParameterModel(EmptyRowModel):
@@ -2118,6 +2111,7 @@ class EmptyParameterModel(EmptyRowModel):
         super().__init__(parent)
         self._parent = parent
         self.error_log = []
+        self.added_rows = []
 
     def batch_set_data(self, indexes, data):
         """Batch set data for indexes.
@@ -2125,11 +2119,11 @@ class EmptyParameterModel(EmptyRowModel):
         Extend set of indexes as additional data is set (for emitting dataChanged at the end).
         Subclasses need to implement `items_to_add` and `add_items_to_db`."""
         self.error_log = []
+        self.added_rows = []
         if not super().batch_set_data(indexes, data):
             return False
         items_to_add = self.items_to_add(indexes)
-        rows = self.add_items_to_db(items_to_add)
-        self._parent.move_rows_to_sub_models(rows)
+        self.add_items_to_db(items_to_add)
         return True
 
 
@@ -2146,24 +2140,18 @@ class EmptyParameterValueModel(EmptyParameterModel):
     @busy_effect
     def add_items_to_db(self, items_to_add):
         """Add parameter values to database.
-        Returns rows of newly inserted items.
         """
         if not items_to_add:
-            return []
+            return
         try:
             items = list(items_to_add.values())
-            rows = list(items_to_add.keys())
-            parameter_values = self._parent.db_map.add_parameter_values(*items)
+            parameter_values= self._parent.db_map.add_parameter_values(*items)
+            self.added_rows = list(items_to_add.keys())
             id_column = self._parent.horizontal_header_labels().index('id')
             for i, parameter_value in enumerate(parameter_values):
-                self._main_data[rows[i]][id_column] = parameter_value.id
-            self._parent._tree_view_form.set_commit_rollback_actions_enabled(True)
-            msg = "Successfully added new parameter values."
-            self._parent._tree_view_form.msg.emit(msg)
-            return rows
+                self._main_data[self.added_rows[i]][id_column] = parameter_value.id
         except (SpineIntegrityError, SpineDBAPIError) as e:
-            self._parent._tree_view_form.msg_error.emit(e.msg)
-            return []
+            self.error_log.append(e.msg)
 
 
 class EmptyObjectParameterValueModel(EmptyParameterValueModel):
@@ -2209,21 +2197,18 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
                     self._main_data[row][object_class_id_column] = object_class_id
                 except KeyError:
                     self.error_log.append("Invalid object class '{}'".format(object_class_name))
-                    continue
             if object_name:
                 try:
                     object_ = object_dict[object_name]
                     self._main_data[row][object_id_column] = object_['id']
                 except KeyError:
                     self.error_log.append("Invalid object '{}'".format(object_name))
-                    continue
             if parameter_name:
                 try:
                     parameter = parameter_dict[parameter_name]
                     self._main_data[row][parameter_id_column] = parameter['id']
                 except KeyError:
                     self.error_log.append("Invalid parameter '{}'".format(parameter_name))
-                    continue
             if object_class_id is None:
                 if object_ is not None:
                     object_class_id = object_['class_id']
@@ -2263,6 +2248,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         since here we need to manage creating relationships on the fly.
         """
         self.error_log = []
+        self.added_rows = []
         if not indexes:
             return False
         if len(indexes) != len(data):
@@ -2271,8 +2257,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
             self._main_data[index.row()][index.column()] = data[k]
         relationships_on_the_fly = self.relationships_on_the_fly(indexes)
         items_to_add = self.items_to_add(indexes, relationships_on_the_fly)
-        rows = self.add_items_to_db(items_to_add)
-        self._parent.move_rows_to_sub_models(rows)
+        self.add_items_to_db(items_to_add)
         # Find square envelope of indexes to emit dataChanged
         top = min(ind.row() for ind in indexes)
         bottom = max(ind.row() for ind in indexes)
@@ -2334,7 +2319,6 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                     indexes.append(self.index(row, object_class_name_list_column))
                 except KeyError:
                     self.error_log.append("Invalid relationship class '{}'".format(relationship_class_name))
-                    continue
             if object_name_list:
                 try:
                     object_id_list = [object_dict[x] for x in object_name_list.split(",")]
@@ -2342,14 +2326,12 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                     self._main_data[row][object_id_list_column] = join_object_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid object '{}'".format(e))
-                    continue
             if parameter_name:
                 try:
                     parameter = parameter_dict[parameter_name]
                     self._main_data[row][parameter_id_column] = parameter['id']
                 except KeyError:
                     self.error_log.append("Invalid parameter '{}'".format(parameter_name))
-                    continue
             if relationship_class_id is None and parameter is not None:
                 relationship_class_id = parameter['relationship_class_id']
                 relationship_class_name = relationship_class_name_dict[relationship_class_id]
@@ -2389,11 +2371,10 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
             rows = list(relationships_to_add.keys())
             relationships = self._parent.db_map.add_wide_relationships(*items)
             self._parent._tree_view_form.object_tree_model.add_relationships(relationships)
-            msg = "Successfully added new relationships on the fly."
-            self._parent._tree_view_form.msg.emit(msg)
             return dict(zip(rows, [x.id for x in relationships]))
         except (SpineIntegrityError, SpineDBAPIError) as e:
-            self._parent._tree_view_form.msg_error.emit(e.msg)
+            self.error_log.append(e.msg)
+            return {}
 
     def items_to_add(self, indexes, relationships_on_the_fly):
         """A dictionary of rows (int) to items (dict) to add to the db.
@@ -2435,13 +2416,11 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
     @busy_effect
     def add_items_to_db(self, items_to_add):
         """Add parameter definitions to database.
-        Returns rows of newly inserted items.
         """
         if not items_to_add:
-            return []
+            return
         try:
             items = list(items_to_add.values())
-            rows = list(items_to_add.keys())
             name_tag_dict = dict()
             for item in items:
                 parameter_tag_id_list = item.pop("parameter_tag_id_list", None)
@@ -2449,20 +2428,16 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
                     continue
                 name_tag_dict[item["name"]] = parameter_tag_id_list
             parameters = self._parent.db_map.add_parameters(*items)
+            self.added_rows = list(items_to_add.keys())
             id_column = self._parent.horizontal_header_labels().index('id')
             tag_dict = dict()
             for i, parameter in enumerate(parameters):
-                tag_dict[parameter.id] = name_tag_dict[parameter.name]
-                self._main_data[rows[i]][id_column] = parameter.id
-            if tag_dict:
-                self._parent.db_map.set_parameter_definition_tags(tag_dict)
-            self._parent._tree_view_form.set_commit_rollback_actions_enabled(True)
-            msg = "Successfully added new parameters definition."
-            self._parent._tree_view_form.msg.emit(msg)
-            return rows
+                if parameter.name in name_tag_dict:
+                    tag_dict[parameter.id] = name_tag_dict[parameter.name]
+                self._main_data[self.added_rows[i]][id_column] = parameter.id
+            upd_items = self._parent.db_map.set_parameter_definition_tags(tag_dict)
         except (SpineIntegrityError, SpineDBAPIError) as e:
-            self._parent._tree_view_form.msg_error.emit(e.msg)
-            return []
+            self.error_log.append(e.msg)
 
 
 class EmptyObjectParameterDefinitonModel(EmptyParameterDefinitionModel):
@@ -2500,7 +2475,6 @@ class EmptyObjectParameterDefinitonModel(EmptyParameterDefinitionModel):
                     self._main_data[row][object_class_id_column] = object_class_id
                 except KeyError:
                     self.error_log.append("Invalid object class '{}'".format(object_class_name))
-                    continue
             if parameter_tag_list:
                 try:
                     split_parameter_tag_list = parameter_tag_list.split(",")
@@ -2508,14 +2482,12 @@ class EmptyObjectParameterDefinitonModel(EmptyParameterDefinitionModel):
                     self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid parameter tag '{}'".format(e))
-                    continue
             if enum_name:
                 try:
                     enum_id = parameter_enum_dict[enum_name]
                     self._main_data[row][enum_id_column] = enum_id
                 except KeyError:
                     self.error_log.append("Invalid enum '{}'".format(enum_name))
-                    continue
             if not parameter_name or object_class_id is None:
                 continue
             item = {
@@ -2579,7 +2551,6 @@ class EmptyRelationshipParameterDefinitonModel(EmptyParameterDefinitionModel):
                     indexes.append(self.index(row, object_class_name_list_column))
                 except KeyError:
                     self.error_log.append("Invalid relationship class '{}'".format(relationship_class_name))
-                    continue
             if parameter_tag_list:
                 try:
                     split_parameter_tag_list = parameter_tag_list.split(",")
@@ -2587,14 +2558,12 @@ class EmptyRelationshipParameterDefinitonModel(EmptyParameterDefinitionModel):
                     self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid tag '{}'".format(e))
-                    continue
             if enum_name:
                 try:
                     enum_id = parameter_enum_dict[enum_name]
                     self._main_data[row][enum_id_column] = enum_id
                 except KeyError:
                     self.error_log.append("Invalid enum '{}'".format(enum_name))
-                    continue
             if not parameter_name or relationship_class_id is None:
                 continue
             item = {
@@ -2702,20 +2671,36 @@ class ObjectParameterModel(MinimalTableModel):
                 model = self.empty_row_model
                 model_indexes.setdefault(model, list()).append(model.index(row, column))
                 model_data.setdefault(model, list()).append(data[k])
-        error_log = []
+        updated_count = 0
+        update_error_log = []
         for model in self.sub_models.values():
             model.batch_set_data(model_indexes.get(model, list()), model_data.get(model, list()))
-            error_log += model.sourceModel().error_log
+            updated_count += model.sourceModel().updated_count
+            update_error_log += model.sourceModel().error_log
         model = self.empty_row_model
         model.batch_set_data(model_indexes.get(model, list()), model_data.get(model, list()))
-        error_log += model.error_log
+        add_error_log = model.error_log
+        added_rows = model.added_rows
         # Find square envelope of indexes to emit dataChanged
         top = min(ind.row() for ind in indexes)
         bottom = max(ind.row() for ind in indexes)
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
-        self._tree_view_form.msg_error.emit("\n".join(error_log))
+        if added_rows:
+            self.move_rows_to_sub_models(added_rows)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.msg.emit("Successfully added entries.")
+        if updated_count:
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.msg.emit("Successfully updated entries.")
+        error_log = add_error_log + update_error_log
+        if error_log:
+            msg = "<ul>"
+            for err in error_log:
+                msg += "<li>" + err + "</li>"
+            msg += "</ul>"
+            self._tree_view_form.msg_error.emit(msg)
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -3229,20 +3214,36 @@ class RelationshipParameterModel(MinimalTableModel):
                 model = self.empty_row_model
                 model_indexes.setdefault(model, list()).append(model.index(row, column))
                 model_data.setdefault(model, list()).append(data[k])
-        error_log = []
+        updated_count = 0
+        update_error_log = []
         for model in self.sub_models.values():
             model.batch_set_data(model_indexes.get(model, list()), model_data.get(model, list()))
-            error_log += model.sourceModel().error_log
+            updated_count += model.sourceModel().updated_count
+            update_error_log += model.sourceModel().error_log
         model = self.empty_row_model
         model.batch_set_data(model_indexes.get(model, list()), model_data.get(model, list()))
-        error_log += model.error_log
+        add_error_log = model.error_log
+        added_rows = model.added_rows
         # Find square envelope of indexes to emit dataChanged
         top = min(ind.row() for ind in indexes)
         bottom = max(ind.row() for ind in indexes)
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
-        self._tree_view_form.msg_error.emit("\n".join(error_log))
+        if added_rows:
+            self.move_rows_to_sub_models(added_rows)
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.msg.emit("Successfully added entries.")
+        if updated_count:
+            self._tree_view_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.msg.emit("Successfully updated entries.")
+        error_log = add_error_log + update_error_log
+        if error_log:
+            msg = "<ul>"
+            for err in error_log:
+                msg += "<li>" + err + "</li>"
+            msg += "</ul>"
+            self._tree_view_form.msg_error.emit(msg)
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
