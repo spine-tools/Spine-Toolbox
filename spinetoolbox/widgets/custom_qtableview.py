@@ -157,6 +157,11 @@ class CopyPasteTableView(QTableView):
         row_count = self.model().rowCount()
         if last_row >= row_count:
             self.model().insertRows(row_count, last_row - row_count + 1)
+        # Insert extra columns if needed:
+        last_column = max(columns)
+        column_count = self.model().columnCount()
+        if last_column >= column_count:
+            self.model().insertColumns(column_count, last_column - column_count + 1)
         model_index = self.model().index
         for i, row in enumerate(rows):
             try:

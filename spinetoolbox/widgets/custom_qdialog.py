@@ -12,8 +12,6 @@
 """
 Classes for custom QDialogs to add and edit database items.
 
-TODO: AddItemsDialog has a syntax error, so it does not even work.
-NOTE: Where is this syntax error? We better fix it, since AddItemsDialog is inherited by all other AddStuffDialogs
 :author: M. Marin (KTH)
 :date:   13.5.2018
 """
@@ -21,24 +19,21 @@ NOTE: Where is this syntax error? We better fix it, since AddItemsDialog is inhe
 import logging
 from copy import deepcopy
 from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
-    QDialogButtonBox, QHeaderView, QAction, QApplication, QToolButton, QWidget, QLabel
+    QDialogButtonBox, QHeaderView, QAction, QApplication, QToolButton, QWidget, QLabel, \
+    QComboBox, QSpinBox
 from PySide2.QtCore import Signal, Slot, Qt, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
-from models import EmptyRowModel, MinimalTableModel, HybridTableModel
+from models import EmptyRowModel, MinimalTableModel, HybridTableModel, EmptyColumnModel, EmptyRowAndColumnModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
     AddParameterEnumsDelegate, LineEditDelegate
-import ui.add_object_classes
-import ui.add_objects
-import ui.add_relationship_classes
-import ui.add_relationships
-import ui.add_parameter_enums
-import ui.edit_data_items
+from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect, object_pixmap
 
 
-class AddItemsDialog(QDialog):
-    """A dialog to query user's preferences for new object classes.
+class ManageItemsDialog(QDialog):
+    """A dialog with a CopyPasteTableView and a QDialogButtonBox, to be extended into
+    dialogs to query user's preferences for adding/editing/managing data items
 
     Attributes:
         parent (TreeViewForm): data store widget
@@ -47,32 +42,31 @@ class AddItemsDialog(QDialog):
     def __init__(self, parent, force_default=False):
         super().__init__(parent)
         self._parent = parent
-        self.ui = None
-        self.model = EmptyRowModel(self)
-        self.model.force_default = force_default
+        self.table_view = CopyPasteTableView(self)
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.button_box = QDialogButtonBox(self)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.table_view)
+        layout.addWidget(self.button_box)
         self.remove_row_icon = None  # Set in subclasses to a custom one
         self.setAttribute(Qt.WA_DeleteOnClose)
 
-    def setup_ui(self, ui_dialog):
-        self.ui = ui_dialog
-        self.ui.setupUi(self)
-        self.ui.tableView.setModel(self.model)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.tableView.itemDelegate().data_committed.connect(self._handle_data_committed)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
         self.model.dataChanged.connect(self._handle_model_data_changed)
-        self.model.modelAboutToBeReset.connect(self._handle_model_about_to_be_reset)
+        self.model.modelReset.connect(self._handle_model_reset)
         self.model.rowsInserted.connect(self._handle_model_rows_inserted)
 
-    @Slot(name="_handle_model_about_to_be_reset")
-    def _handle_model_about_to_be_reset(self):
-        column_count = self.model.columnCount()
-        self.model.insert_horizontal_header_labels(column_count, [""])
-        self.ui.tableView.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        self.model.insert_horizontal_header_labels(self.model.columnCount(), [""])
+        self.table_view.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
+        self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
+        self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
 
     @Slot("QModelIndex", "int", "int", name="_handle_model_rows_inserted")
     def _handle_model_rows_inserted(self, parent, first, last):
@@ -88,14 +82,14 @@ class AddItemsDialog(QDialog):
         button = QToolButton()
         button.setDefaultAction(action)
         button.setIconSize(QSize(20, 20))
-        self.ui.tableView.setIndexWidget(index, button)
+        self.table_view.setIndexWidget(index, button)
         action.triggered.connect(lambda: self.remove_clicked_row(button))
 
     def remove_clicked_row(self, button):
         column = self.model.columnCount() - 1
         for row in range(self.model.rowCount()):
             index = self.model.index(row, column)
-            if button == self.ui.tableView.indexWidget(index):
+            if button == self.table_view.indexWidget(index):
                 self.model.removeRows(row, 1)
                 break
 
@@ -112,7 +106,7 @@ class AddItemsDialog(QDialog):
         pass
 
 
-class AddObjectClassesDialog(AddItemsDialog):
+class AddObjectClassesDialog(ManageItemsDialog):
     """A dialog to query user's preferences for new object classes.
 
     Attributes:
@@ -120,25 +114,28 @@ class AddObjectClassesDialog(AddItemsDialog):
     """
     def __init__(self, parent):
         super().__init__(parent)
+        self.setWindowTitle("Add object classes")
+        self.model = EmptyRowModel(self)
+        self.table_view.setModel(self.model)
+        self.combo_box = QComboBox(self)
+        self.layout().insertWidget(0, self.combo_box)
         self.object_class_list = self._parent.db_map.object_class_list()
         self.remove_row_icon = QIcon(":/icons/minus_object_icon.png")
-        self.setup_ui(ui.add_object_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.model.clear()
-        # Add items to combobox
+        self.table_view.resizeColumnsToContents()
         insert_at_position_list = ['Insert new classes at the top']
         insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
-        self.ui.comboBox.addItems(insert_at_position_list)
-        self.ui.tableView.resizeColumnsToContents()
+        self.combo_box.addItems(insert_at_position_list)
 
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
         kwargs_list = list()
-        index = self.ui.comboBox.currentIndex()
+        index = self.combo_box.currentIndex()
         if index == 0:
             try:
                 display_order = self.object_class_list.first().display_order - 1
@@ -171,7 +168,7 @@ class AddObjectClassesDialog(AddItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class AddObjectsDialog(AddItemsDialog):
+class AddObjectsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for new objects.
 
     Attributes:
@@ -180,17 +177,20 @@ class AddObjectsDialog(AddItemsDialog):
         force_default (bool): if True, defaults are non-editable
     """
     def __init__(self, parent, class_id=None, force_default=False):
-        super().__init__(parent, force_default=force_default)
+        super().__init__(parent)
+        self.setWindowTitle("Add objects")
+        self.model = EmptyRowModel(self)
+        self.model.force_default = force_default
+        self.table_view.setModel(self.model)
         self.remove_row_icon = QIcon(":/icons/minus_object_icon.png")
-        self.setup_ui(ui.add_objects.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddObjectsDelegate(parent))
+        self.table_view.setItemDelegate(AddObjectsDelegate(parent))
         self.connect_signals()
         default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
         self.model.set_default_row(**{'object class name': self.default_class_name})
         self.model.clear()
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
@@ -249,7 +249,7 @@ class AddObjectsDialog(AddItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class AddRelationshipClassesDialog(AddItemsDialog):
+class AddRelationshipClassesDialog(ManageItemsDialog):
     """A dialog to query user's preferences for new relationship classes.
 
     Attributes:
@@ -257,58 +257,65 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         object_class_one_id (int): default object class id to put in dimension '1'
     """
     def __init__(self, parent, object_class_one_id=None, force_default=False):
-        super().__init__(parent, force_default=force_default)
+        super().__init__(parent)
+        self.setWindowTitle("Add relationship classes")
+        self.model = EmptyRowModel(self)
+        self.model.force_default = force_default
+        self.table_view.setModel(self.model)
+        widget = QWidget(self)
+        layout = QHBoxLayout(widget)
+        layout.addWidget(QLabel("Number of dimensions"))
+        self.spin_box = QSpinBox(self)
+        self.spin_box.setMinimum(2)
+        layout.addWidget(self.spin_box)
+        layout.addStretch()
+        self.layout().insertWidget(0, widget)
         self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
-        self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(parent))
-        self.connect_signals()
+        self.table_view.setItemDelegate(AddRelationshipClassesDelegate(parent))
         self.number_of_dimensions = 2
         self.object_class_one_name = None
         if object_class_one_id:
             object_class_one = self._parent.db_map.single_object_class(id=object_class_one_id).one_or_none()
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
+        self.connect_signals()
         self.model.set_horizontal_header_labels(
             ['object class 1 name', 'object class 2 name', 'relationship class name'])
         self.model.set_default_row(**{'object class 1 name': self.object_class_one_name})
         self.model.clear()
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.spinBox.valueChanged.connect(self.insert_or_remove_column)
+        self.spin_box.valueChanged.connect(self._handle_spin_box_value_changed)
         super().connect_signals()
 
-    @Slot("int", name="insert_or_remove_column")
-    def insert_or_remove_column(self, i):
-        self.ui.spinBox.setEnabled(False)
+    @Slot("int", name="_handle_spin_box_value_changed")
+    def _handle_spin_box_value_changed(self, i):
+        self.spin_box.setEnabled(False)
         if i > self.number_of_dimensions:
             self.insert_column()
         elif i < self.number_of_dimensions:
             self.remove_column()
-        self.ui.spinBox.setEnabled(True)
+        self.spin_box.setEnabled(True)
 
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
         column_name = "object class {} name".format(self.number_of_dimensions)
-        self.model.insert_horizontal_header_labels(column, [column_name])
         self.model.insertColumns(column, 1)
-        self.ui.tableView.resizeColumnToContents(column)
+        self.model.insert_horizontal_header_labels(column, [column_name])
+        self.table_view.resizeColumnToContents(column)
 
     def remove_column(self):
         self.number_of_dimensions -= 1
         column = self.number_of_dimensions
-        column_size = self.ui.tableView.horizontalHeader().sectionSize(column)
+        column_size = self.table_view.horizontalHeader().sectionSize(column)
         self.model.header.pop(column)
-        try:
-            self.model.default_row.pop(column)
-        except IndexError:
-            pass
         self.model.removeColumns(column, 1)
-        # Add removed column size to description column size
-        column_size += self.ui.tableView.horizontalHeader().sectionSize(column)
-        self.ui.tableView.horizontalHeader().resizeSection(column, column_size)
+        # Add removed column size to relationship class name column size
+        column_size += self.table_view.horizontalHeader().sectionSize(column)
+        self.table_view.horizontalHeader().resizeSection(column, column_size)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
@@ -374,7 +381,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class AddRelationshipsDialog(AddItemsDialog):
+class AddRelationshipsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for new relationships.
 
     Attributes:
@@ -384,7 +391,18 @@ class AddRelationshipsDialog(AddItemsDialog):
         object_class_id (int): default object class id
     """
     def __init__(self, parent, relationship_class_id=None, object_id=None, object_class_id=None, force_default=False):
-        super().__init__(parent, force_default=force_default)
+        super().__init__(parent)
+        self.setWindowTitle("Add relationships")
+        self.model = EmptyRowModel(self)
+        self.model.force_default = force_default
+        self.table_view.setModel(self.model)
+        widget = QWidget(self)
+        layout = QHBoxLayout(widget)
+        layout.addWidget(QLabel("Relationship class"))
+        self.combo_box = QComboBox(self)
+        layout.addWidget(self.combo_box)
+        layout.addStretch()
+        self.layout().insertWidget(0, widget)
         self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
         self.relationship_class_list = \
             [x for x in self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)]
@@ -395,8 +413,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.default_object_column = None
         self.default_object_name = None
         self.set_default_object_name()
-        self.setup_ui(ui.add_relationships.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
+        self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
         self.init_relationship_class(force_default)
         self.connect_signals()
         self.reset_model()
@@ -405,8 +422,8 @@ class AddRelationshipsDialog(AddItemsDialog):
         """Populate combobox and initialize relationship class if any."""
         relationship_class_name_list = [x.name for x in self.relationship_class_list]
         if not force_default:
-            self.ui.comboBox_relationship_class.addItems(relationship_class_name_list)
-            self.ui.comboBox_relationship_class.setCurrentIndex(-1)
+            self.combo_box.addItems(relationship_class_name_list)
+            self.combo_box.setCurrentIndex(-1)
         self.relationship_class = self._parent.db_map.\
             single_wide_relationship_class(id=self.relationship_class_id).one_or_none()
         if not self.relationship_class:
@@ -415,15 +432,15 @@ class AddRelationshipsDialog(AddItemsDialog):
         try:
             if not force_default:
                 combo_index = relationship_class_name_list.index(self.relationship_class.name)
-                self.ui.comboBox_relationship_class.setCurrentIndex(combo_index)
+                self.combo_box.setCurrentIndex(combo_index)
                 return
-            self.ui.comboBox_relationship_class.addItem(self.relationship_class.name)
+            self.combo_box.addItem(self.relationship_class.name)
         except ValueError:
             pass
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.comboBox_relationship_class.currentIndexChanged.connect(self.call_reset_model)
+        self.combo_box.currentIndexChanged.connect(self.call_reset_model)
         super().connect_signals()
 
     @Slot("int", name='call_reset_model')
@@ -447,7 +464,7 @@ class AddRelationshipsDialog(AddItemsDialog):
             defaults = {header[self.default_object_column]: self.default_object_name}
             self.model.set_default_row(**defaults)
         self.model.clear()
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
 
     def set_default_object_name(self):
         if not self.object_id:
@@ -512,44 +529,57 @@ class AddRelationshipsDialog(AddItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class AddParameterEnumsDialog(AddItemsDialog):
+class AddParameterEnumsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for new parameter enums.
 
     Attributes:
         parent (TreeViewForm): data store widget
-        force_default (bool): if True, defaults are non-editable
     """
-    def __init__(self, parent,):
+    def __init__(self, parent):
         super().__init__(parent)
-        self.remove_row_icon = QIcon(":/icons/minus.png")
-        self.setup_ui(ui.add_parameter_enums.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddParameterEnumsDelegate(parent))
+        self._parent = parent
+        self.model = EmptyRowAndColumnModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.model.set_horizontal_header_labels(['name', 'value'])
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['enum name', 'element', 'value'])
         self.model.clear()
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
+        self.model.dataChanged.connect(self._handle_model_data_changed)
+        self.model.columnsInserted.connect(self._handle_model_columns_inserted)
+
+    @Slot("QModelIndex", "int", "int", name="_handle_model_columns_inserted")
+    def _handle_model_columns_inserted(self, parent, first, last):
+        """Set horizontal level on newly inserted columns."""
+        count = last - first + 1
+        self.model.insert_horizontal_header_labels(first, ['value' for _ in range(count)])
 
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
-        enum_dict = dict()
+        wide_kwargs_list = list()
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = self.model.row_data(i)[:-1]
-            enum_name, element, value = row_data
+            row_data = self.model.row_data(i)
+            enum_name = row_data[0]
+            value_list = [x for x in row_data[1:-1] if x]  # Remove 'nulls'
             if not enum_name:
                 self._parent.msg_error.emit("Parameter enum name missing at row {}".format(i + 1))
                 return
-            if not element:
-                self._parent.msg_error.emit("Element missing at row {}".format(i + 1))
+            if not value_list:
+                self._parent.msg_error.emit("Not enough values at row {}".format(i + 1))
                 return
-            enum_dict.setdefault(enum_name, list()).append((element, value))
-        wide_kwargs_list = [
-            {
+            wide_kwargs = {
                 "name": enum_name,
-                "element_list": [x[0] for x in element_value_list],
-                "value_list": [x[1] for x in element_value_list]
-            } for enum_name, element_value_list in enum_dict.items()
-        ]
+                "value_list": value_list,
+            }
+            wide_kwargs_list.append(wide_kwargs)
         if not wide_kwargs_list:
             self._parent.msg_error.emit("Nothing to add")
             return
@@ -563,29 +593,7 @@ class AddParameterEnumsDialog(AddItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditItemsDialog(QDialog):
-    """A dialog to query user's preferences for updating items.
-
-    Attributes:
-        parent (TreeViewForm): data store widget
-        kwargs_list (list): orignal key word arguments
-    """
-    def __init__(self, parent, kwargs_list):
-        super().__init__(parent)
-        self._parent = parent
-        self.ui = None
-        self.model = MinimalTableModel(self)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-
-    def setup_ui(self):
-        self.ui = ui.edit_data_items.Ui_Dialog()
-        self.ui.setupUi(self)
-        self.ui.tableView.setModel(self.model)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView.horizontalHeader().setStretchLastSection(True)
-
-
-class EditObjectClassesDialog(EditItemsDialog):
+class EditObjectClassesDialog(ManageItemsDialog):
     """A dialog to query user's preferences for updating object classes.
 
     Attributes:
@@ -594,8 +602,11 @@ class EditObjectClassesDialog(EditItemsDialog):
     """
     def __init__(self, parent, kwargs_list):
         super().__init__(parent, kwargs_list)
-        self.setup_ui()
         self.setWindowTitle("Edit object classes")
+        self.model = MinimalTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.horizontalHeader().setStretchLastSection(True)
         self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.orig_data = list()
         self.id_list = list()
@@ -617,7 +628,8 @@ class EditObjectClassesDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
+        self.connect_signals()
 
     @busy_effect
     def accept(self):
@@ -649,7 +661,7 @@ class EditObjectClassesDialog(EditItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditObjectsDialog(EditItemsDialog):
+class EditObjectsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for updating objects.
 
     Attributes:
@@ -658,8 +670,11 @@ class EditObjectsDialog(EditItemsDialog):
     """
     def __init__(self, parent, kwargs_list):
         super().__init__(parent, kwargs_list)
-        self.setup_ui()
         self.setWindowTitle("Edit objects")
+        self.model = MinimalTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.horizontalHeader().setStretchLastSection(True)
         self.model.set_horizontal_header_labels(['object name', 'description'])
         self.orig_data = list()
         self.id_list = list()
@@ -681,7 +696,8 @@ class EditObjectsDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
+        self.connect_signals()
 
     @busy_effect
     def accept(self):
@@ -713,7 +729,7 @@ class EditObjectsDialog(EditItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditRelationshipClassesDialog(EditItemsDialog):
+class EditRelationshipClassesDialog(ManageItemsDialog):
     """A dialog to query user's preferences for updating relationship classes.
 
     Attributes:
@@ -722,8 +738,11 @@ class EditRelationshipClassesDialog(EditItemsDialog):
     """
     def __init__(self, parent, kwargs_list):
         super().__init__(parent, kwargs_list)
-        self.setup_ui()
         self.setWindowTitle("Edit relationship classes")
+        self.model = MinimalTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.horizontalHeader().setStretchLastSection(True)
         self.model.set_horizontal_header_labels(['relationship class name'])
         self.orig_data = list()
         self.id_list = list()
@@ -741,7 +760,8 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
+        self.connect_signals()
 
     @busy_effect
     def accept(self):
@@ -772,7 +792,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditRelationshipsDialog(EditItemsDialog):
+class EditRelationshipsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for updating relationships.
 
     Attributes:
@@ -782,9 +802,11 @@ class EditRelationshipsDialog(EditItemsDialog):
     """
     def __init__(self, parent, kwargs_list, relationship_class):
         super().__init__(parent, kwargs_list)
-        self.setup_ui()
-        self.ui.tableView.horizontalHeader().setStretchLastSection(False)  # FIXME: can't we do better here?
         self.setWindowTitle("Edit relationships")
+        self.model = MinimalTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
+        self.table_view.horizontalHeader().setStretchLastSection(False)
         object_class_name_list = relationship_class.object_class_name_list.split(",")
         self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
         self.orig_data = list()
@@ -807,16 +829,8 @@ class EditRelationshipsDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
-        self.ui.tableView.itemDelegate().data_committed.connect(self._handle_data_committed)
-        self.ui.tableView.resizeColumnsToContents()
-
-    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
-    def _handle_data_committed(self, index, data):
-        """Update 'object x' field with data from combobox editor."""
-        if data is None:
-            return
-        self.model.setData(index, data, Qt.EditRole)
+        self.table_view.resizeColumnsToContents()
+        self.connect_signals()
 
     @busy_effect
     def accept(self):
@@ -866,140 +880,96 @@ class EditRelationshipsDialog(EditItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class ManageItemsDialog(QDialog):
-    """A dialog to query user's preferences for managing items such as parameter tags
-    and enums, which require both adding and removing rows for instance.
-
-    Attributes:
-        parent (TreeViewForm): data store widget
-    """
-    def __init__(self, parent):
-        super().__init__(parent)
-        self._parent = parent
-        self.remove_row_icon = QIcon(":/icons/minus.png")
-        self.model = HybridTableModel(self)
-        self.ui = ui.edit_data_items.Ui_Dialog()
-        self.ui.setupUi(self)
-        self.ui.tableView.setModel(self.model)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.connect_signals()
-        self.removed_id_list = list()
-        self.id_list = list()
-
-    def connect_signals(self):
-        """Connect signals to slots."""
-        self.model.modelReset.connect(self._handle_model_reset)
-        self.model.rowsInserted.connect(self._handle_model_rows_inserted)
-
-    @Slot(name="_handle_model_reset")
-    def _handle_model_reset(self):
-        self.model.insert_horizontal_header_labels(self.model.columnCount(), [""])
-        column = self.model.columnCount() - 1
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, column)
-            self.create_remove_row_button(index)
-        self.ui.tableView.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
-
-    @Slot("QModelIndex", "int", "int", name="_handle_model_rows_inserted")
-    def _handle_model_rows_inserted(self, parent, first, last):
-        column = self.model.columnCount() - 1
-        for row in range(first, last + 1):
-            index = self.model.index(row, column, parent)
-            self.create_remove_row_button(index)
-
-    def create_remove_row_button(self, index):
-        """Create button to remove row."""
-        action = QAction()
-        action.setIcon(self.remove_row_icon)
-        button = QToolButton()
-        button.setDefaultAction(action)
-        button.setIconSize(QSize(20, 20))
-        self.ui.tableView.setIndexWidget(index, button)
-        action.triggered.connect(lambda: self.remove_clicked_row(button))
-
-    def remove_clicked_row(self, button):
-        column = self.model.columnCount() - 1
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, column)
-            if button == self.ui.tableView.indexWidget(index):
-                self.model.removeRows(row, 1)
-                try:
-                    self.removed_id_list.append(self.id_list.pop(row))
-                except IndexError:
-                    pass
-                break
-
-
-class ManageParameterEnumsDialog(ManageItemsDialog):
+class EditParameterEnumsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for updating parameter enums.
-    FIXME: For now it allows editing a *single* enum.
 
     Attributes:
         parent (TreeViewForm): data store widget
         wide_kwargs_list (list): list of dictionaries corresponding to parameter enums to edit/update
     """
-    def __init__(self, parent, wide_kwargs):
+    def __init__(self, parent, wide_kwargs_list):
         super().__init__(parent)
-        self.setWindowTitle("Edit parameter enum")
-        self.model.set_horizontal_header_labels(['element', 'value'])
+        self.setWindowTitle("Edit parameter enums")
+        self.model = EmptyColumnModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.horizontalHeader().setStretchLastSection(True)
         self.orig_data = list()
+        self.id_list = list()
         model_data = list()
-        try:
-            self.id = wide_kwargs["id"]
-        except KeyError:
-            return
-        try:
-            name = wide_kwargs["name"]
-        except KeyError:
-            return
-        widget = QWidget()
-        inner_layout = QHBoxLayout(widget)
-        inner_layout.addWidget(QLabel("enum name:"))
-        self.line_edit_name = QLineEdit(name)
-        inner_layout.addWidget(self.line_edit_name)
-        self.layout().insertWidget(0, widget)
-        try:
-            element_list = wide_kwargs["element_list"].split(",")
-        except (KeyError, AttributeError):
-            return
-        try:
-            value_list = wide_kwargs["value_list"].split(",")
-        except (KeyError, AttributeError):
-            value_list = [None for _ in element_list]
-        for element, value in zip(element_list, value_list):
-            row_data = [element, value]
+        max_len = 0
+        for wide_kwargs in wide_kwargs_list:
+            try:
+                self.id_list.append(wide_kwargs["id"])
+            except KeyError:
+                continue
+            try:
+                name = wide_kwargs["name"]
+            except KeyError:
+                continue
+            try:
+                value_list = wide_kwargs["value_list"].split(",")
+            except KeyError:
+                continue
+            row_data = value_list
+            row_data.insert(0, name)
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
+            max_len = max(max_len, len(row_data))
+        for row_data in model_data:
+            row_data += [None for _ in range(max_len - len(row_data))]
+            self.orig_data.append(row_data.copy())
+        self.model.set_horizontal_header_labels(['name'] + ['value' for _ in range(max_len - 1)])
+        self.connect_signals()
         self.model.reset_model(model_data)
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
+        self.model.dataChanged.connect(self._handle_model_data_changed)
+        self.model.columnsInserted.connect(self._handle_model_columns_inserted)
+
+    @Slot("QModelIndex", "int", "int", name="_handle_model_columns_inserted")
+    def _handle_model_columns_inserted(self, parent, first, last):
+        """Set horizontal level on newly inserted columns."""
+        count = last - first + 1
+        self.model.insert_horizontal_header_labels(first, ['value' for _ in range(count)])
 
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
-        enum_name = self.line_edit_name.text()
-        if not enum_name:
-            self._parent.msg_error.emit("Parameter enum name missing")
-            return
-        element_list = list()
-        value_list = list()
-        for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = [self.model.index(i, j).data(Qt.DisplayRole) for j in range(self.model.columnCount() - 1)]
-            element, value = row_data
-            if not element:
-                self._parent.msg_error.emit("Element missing at row {}".format(i + 1))
+        wide_kwargs_list = list()
+        for i in range(self.model.rowCount()):
+            id = self.id_list[i]
+            row_data = self.model.row_data(i)
+            enum_name = row_data[0]
+            value_list = [x for x in row_data[1:] if x]  # Remove 'nulls'
+            if not enum_name:
+                self._parent.msg_error.emit("Parameter enum name missing at row {}".format(i + 1))
                 return
-            element_list.append(element)
-            value_list.append(value)
-        wide_kwargs = {
-            "id": self.id,
-            "name": enum_name,
-            "element_list": element_list,
-            "value_list": value_list
-        }
+            if not value_list:
+                self._parent.msg_error.emit("Not enough values at row {}".format(i + 1))
+                return
+            orig_row_data = self.orig_data[i]
+            orig_enum_name = orig_row_data[0]
+            orig_value_list = [x for x in orig_row_data[1:] if x]  # Remove 'nulls'
+            if enum_name == orig_enum_name and value_list == orig_value_list:
+                continue
+            wide_kwargs = {
+                'id': id,
+                "name": enum_name,
+                "value_list": value_list,
+            }
+            wide_kwargs_list.append(wide_kwargs)
+        print(wide_kwargs_list)
+        if not wide_kwargs_list:
+            self._parent.msg_error.emit("Nothing to update")
+            return
         try:
-            wide_enums = self._parent.db_map.update_wide_parameter_enums(wide_kwargs)
+            wide_enums = self._parent.db_map.update_wide_parameter_enums(*wide_kwargs_list)
             self._parent.update_parameter_enums(wide_enums)
             super().accept()
         except SpineIntegrityError as e:
@@ -1016,8 +986,14 @@ class ManageParameterTagsDialog(ManageItemsDialog):
     """
     def __init__(self, parent):
         super().__init__(parent)
-        self.setWindowTitle("Edit parameter tags")
+        self.setWindowTitle("Manage parameter tags")
+        self.model = HybridTableModel(self)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.setModel(self.model)
+        self.remove_row_icon = QIcon(":/icons/minus.png")
         self.orig_data = list()
+        self.removed_id_list = list()
+        self.id_list = list()
         model_data = list()
         for parameter_tag in self._parent.db_map.parameter_tag_list():
             try:
@@ -1030,9 +1006,29 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.set_horizontal_header_labels(['parameter tag', 'description'])
+        self.connect_signals()
         self.model.reset_model(model_data)
-        self.setAttribute(Qt.WA_DeleteOnClose)
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
+
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        super()._handle_model_reset()
+        column = self.model.columnCount() - 1
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, column)
+            self.create_remove_row_button(index)
+
+    def remove_clicked_row(self, button):
+        column = self.model.columnCount() - 1
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, column)
+            if button == self.table_view.indexWidget(index):
+                self.model.removeRows(row, 1)
+                try:
+                    self.removed_id_list.append(self.id_list.pop(row))
+                except IndexError:
+                    pass
+                break
 
     @busy_effect
     def accept(self):
@@ -1099,13 +1095,13 @@ class CommitDialog(QDialog):
         form.setContentsMargins(0, 0, 0, 0)
         inner_layout = QVBoxLayout()
         inner_layout.setContentsMargins(4, 4, 4, 4)
-        self.actionAccept = QAction(self)
-        self.actionAccept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
-        self.actionAccept.triggered.connect(self.accept)
-        self.actionAccept.setEnabled(False)
+        self.action_accept = QAction(self)
+        self.action_accept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
+        self.action_accept.triggered.connect(self.accept)
+        self.action_accept.setEnabled(False)
         self.commit_msg_edit = QPlainTextEdit(self)
         self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
-        self.commit_msg_edit.addAction(self.actionAccept)
+        self.commit_msg_edit.addAction(self.action_accept)
         button_box = QDialogButtonBox()
         button_box.addButton(QDialogButtonBox.Cancel)
         self.commit_button = button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
@@ -1126,4 +1122,4 @@ class CommitDialog(QDialog):
         self.commit_msg = self.commit_msg_edit.toPlainText()
         cond = self.commit_msg.strip() != ""
         self.commit_button.setEnabled(cond)
-        self.actionAccept.setEnabled(cond)
+        self.action_accept.setEnabled(cond)

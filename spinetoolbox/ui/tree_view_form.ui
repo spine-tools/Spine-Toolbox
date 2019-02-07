@@ -1017,7 +1017,7 @@
     <addaction name="actionEdit_parameter_enums"/>
     <addaction name="actionRemove_parameter_enums"/>
     <addaction name="separator"/>
-    <addaction name="actionEdit_parameter_tags"/>
+    <addaction name="actionManage_parameter_tags"/>
     <addaction name="separator"/>
    </widget>
    <widget class="QMenu" name="menuFile">
@@ -1355,9 +1355,9 @@
     <string>Remove object tree items</string>
    </property>
   </action>
-  <action name="actionEdit_parameter_tags">
+  <action name="actionManage_parameter_tags">
    <property name="text">
-    <string>Edit parameter tags</string>
+    <string>Manage parameter tags</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+Shift+T</string>

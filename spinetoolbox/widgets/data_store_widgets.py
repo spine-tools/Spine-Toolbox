@@ -39,7 +39,7 @@ from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParamet
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     AddRelationshipClassesDialog, AddRelationshipsDialog, AddParameterEnumsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
-    EditRelationshipClassesDialog, EditRelationshipsDialog, ManageParameterEnumsDialog, \
+    EditRelationshipClassesDialog, EditRelationshipsDialog, EditParameterEnumsDialog, \
     ManageParameterTagsDialog, CommitDialog
 from widgets.custom_qwidget import ZoomWidget
 from widgets.toolbars import ParameterTagToolBar
@@ -141,7 +141,7 @@ class DataStoreForm(QMainWindow):
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
         # Parameter tags
-        self.parameter_tag_toolbar.edit_tags_action_triggered.connect(self.show_edit_parameter_tags_form)
+        self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
 
     @Slot("int", "bool", name="_handle_tag_button_toggled")
@@ -361,7 +361,7 @@ class DataStoreForm(QMainWindow):
             index = self.parameter_enum_model.index(i, 0)
             self.ui.treeView_parameter_enum.expand(index)
         self.ui.treeView_parameter_enum.resizeColumnToContents(0)
-        self.ui.treeView_parameter_enum.resizeColumnToContents(1)
+        self.ui.treeView_parameter_enum.header().hide()
 
     def setup_delegates(self):
         """Set delegates for tables."""
@@ -584,8 +584,8 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
-    @Slot("bool", name="show_edit_parameter_tags_form")
-    def show_edit_parameter_tags_form(self, checked=False):
+    @Slot("bool", name="show_manage_parameter_tags_form")
+    def show_manage_parameter_tags_form(self, checked=False):
         dialog = ManageParameterTagsDialog(self)
         dialog.show()
 
@@ -799,7 +799,7 @@ class TreeViewForm(DataStoreForm):
         self.ui.actionEdit_parameter_enums.triggered.connect(self.show_edit_parameter_enums_form)
         self.ui.actionRemove_parameter_enums.triggered.connect(self.remove_parameter_enums)
         # Parameter tags
-        self.ui.actionEdit_parameter_tags.triggered.connect(self.show_edit_parameter_tags_form)
+        self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
         # Copy and paste
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
@@ -1115,12 +1115,10 @@ class TreeViewForm(DataStoreForm):
         self.ui.actionEdit_relationships.setEnabled('relationship' in item_types)
         # Remove object tree items action
         self.ui.actionRemove_object_tree_items.setEnabled(len(indexes) > 0)
-        # Edit parameter enum action
-        index = self.ui.treeView_parameter_enum.selectionModel().currentIndex()
-        self.ui.actionEdit_parameter_enums.setEnabled(index.isValid() and not index.parent().isValid())
-        # Remove parameter enums action
+        # Edit and remove parameter enums action
         indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
-        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid() and ind.column() == 0]
+        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid()]
+        self.ui.actionEdit_parameter_enums.setEnabled(len(toplevel_indexes) > 0)
         self.ui.actionRemove_parameter_enums.setEnabled(len(toplevel_indexes) > 0)
         # Copy/paste actions
         if self.focusWidget() != self.ui.menubar:
@@ -1704,7 +1702,7 @@ class TreeViewForm(DataStoreForm):
         option = self.parameter_enum_context_menu.get_action()
         if option == "Add...":
             self.show_add_parameter_enums_form()
-        elif option == "Edit...":
+        elif option == "Edit selected...":
             self.show_edit_parameter_enums_form()
         elif option == "Remove selected":
             self.remove_parameter_enums()
@@ -1843,10 +1841,11 @@ class TreeViewForm(DataStoreForm):
 
     @Slot("bool", name="show_edit_parameter_enums_form")
     def show_edit_parameter_enums_form(self, checked=False):
-        index = self.ui.treeView_parameter_enum.selectionModel().currentIndex()
-        if not index.isValid() or index.parent().isValid():
+        indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
+        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid()]
+        if not toplevel_indexes:
             return
-        dialog = ManageParameterEnumsDialog(self, index.data(Qt.UserRole + 1))
+        dialog = EditParameterEnumsDialog(self, [ind.data(Qt.UserRole + 1) for ind in toplevel_indexes])
         dialog.show()
 
     def update_parameter_enums(self, wide_enums):
@@ -1862,7 +1861,7 @@ class TreeViewForm(DataStoreForm):
         """Remove selected parameter enums.
         """
         indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
-        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid() and ind.column() == 0]
+        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid()]
         if not toplevel_indexes:
             return
         parameter_enum_ids = set(ind.data(Qt.UserRole + 1)['id'] for ind in toplevel_indexes)

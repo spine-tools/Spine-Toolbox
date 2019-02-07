@@ -930,7 +930,7 @@ class MinimalTableModel(QAbstractTableModel):
             else:
                 self.header.insert(section + j, value)
                 self.aux_header.insert(section + j, {})
-        self.headerDataChanged.emit(Qt.Horizontal, section, section + len(labels))
+        self.headerDataChanged.emit(Qt.Horizontal, section, section + len(labels) - 1)
 
     def horizontal_header_labels(self):
         return self.header
@@ -1210,7 +1210,7 @@ class EmptyRowModel(MinimalTableModel):
 
     @Slot("QModelIndex", "int", "int", name="_handle_rows_removed")
     def _handle_rows_removed(self, parent, first, last):
-        """Insert a new empty row in case all have been removed."""
+        """Insert a new empty row in case it's been removed."""
         last_row = self.rowCount()
         if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
@@ -1262,6 +1262,80 @@ class EmptyRowModel(MinimalTableModel):
         top_left = self.index(0, left)
         bottom_right = self.index(self.rowCount() - 1, right)
         self.dataChanged.emit(top_left, bottom_right)
+
+
+class EmptyColumnModel(MinimalTableModel):
+    """A table model with a last empty column."""
+    def __init__(self, parent=None):
+        """Init class."""
+        super().__init__(parent)
+        self.dataChanged.connect(self._handle_data_changed)
+        self.columnsRemoved.connect(self._handle_columns_removed)
+
+    def clear(self):
+        super().clear()
+        self.insertColumns(self.columnCount(), 1, QModelIndex())
+
+    def reset_model(self, data):
+        super().reset_model(data)
+        self.insertColumns(self.columnCount(), 1, QModelIndex())
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
+    def _handle_data_changed(self, top_left, bottom_right, roles=[]):
+        """Insert a new last empty column in case the previous one has been filled
+        with any data."""
+        if roles and Qt.EditRole not in roles:
+            return
+        last_column = self.columnCount() - 1
+        for row in range(self.rowCount()):
+            data = self._main_data[row][last_column]
+            if data:
+                self.insertColumns(self.columnCount(), 1)
+                break
+
+    @Slot("QModelIndex", "int", "int", name="_handle_columns_removed")
+    def _handle_columns_removed(self, parent, first, last):
+        """Insert a new empty column in case it's been removed."""
+        last_column = self.columnCount()
+        if last_column in range(first, last + 1):
+            self.insertColumns(self.columnCount(), 1)
+
+
+class EmptyRowAndColumnModel(EmptyRowModel):
+    """A table model with a last empty row *and* column."""
+    def __init__(self, parent=None):
+        """Init class."""
+        super().__init__(parent)
+        self.columnsRemoved.connect(self._handle_columns_removed)
+
+    def clear(self):
+        super().clear()
+        self.insertColumns(self.columnCount(), 1, QModelIndex())
+
+    def reset_model(self, data):
+        super().reset_model(data)
+        self.insertColumns(self.columnCount(), 1, QModelIndex())
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
+    def _handle_data_changed(self, top_left, bottom_right, roles=[]):
+        """Insert a new last empty column in case the previous one has been filled
+        with any data."""
+        super()._handle_data_changed(top_left, bottom_right, roles)
+        if roles and Qt.EditRole not in roles:
+            return
+        last_column = self.columnCount() - 1
+        for row in range(self.rowCount()):
+            data = self._main_data[row][last_column]
+            if data:
+                self.insertColumns(self.columnCount(), 1)
+                break
+
+    @Slot("QModelIndex", "int", "int", name="_handle_columns_removed")
+    def _handle_columns_removed(self, parent, first, last):
+        """Insert a new empty column in case it's been removed."""
+        last_column = self.columnCount()
+        if last_column in range(first, last + 1):
+            self.insertColumns(self.columnCount(), 1)
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -3804,23 +3878,18 @@ class ParameterEnumModel(QStandardItemModel):
         self.clear()
         wide_parameter_enums = self.db_map.wide_parameter_enum_list()
         self.add_parameter_enums(wide_parameter_enums)
-        self.setHeaderData(0, Qt.Horizontal, "element")
-        self.setHeaderData(1, Qt.Horizontal, "value")
 
     def add_parameter_enums(self, wide_parameter_enums):
         """Add parameter enums."""
+        name_item_list = list()
         for wide_enum in wide_parameter_enums:
             name_item = QStandardItem(wide_enum.name)
             name_item.setData(self.bold_font, Qt.FontRole)
             name_item.setData(wide_enum._asdict(), Qt.UserRole + 1)
-            split_element_list = wide_enum.element_list.split(",")
-            value_list = wide_enum.value_list
-            split_value_list = value_list.split(",") if value_list else [None for _ in range(len(split_element_list))]
-            for element, value in zip(split_element_list, split_value_list):
-                element_item = QStandardItem(element)
-                value_item = QStandardItem(value)
-                name_item.appendRow([element_item, value_item])
-            self.invisibleRootItem().appendRow([name_item, QStandardItem()])
+            value_item_list = [QStandardItem(x) for x in wide_enum.value_list.split(",")]
+            name_item.appendRows(value_item_list)
+            name_item_list.append(name_item)
+        self.invisibleRootItem().appendRows(name_item_list)
 
     def update_parameter_enums(self, wide_parameter_enums):
         """Update parameter enums."""
@@ -3837,13 +3906,8 @@ class ParameterEnumModel(QStandardItemModel):
             name_item.setData(updated_wide_enum.name, Qt.DisplayRole)
             name_item.setData(updated_wide_enum._asdict(), Qt.UserRole + 1)
             name_item.removeRows(0, name_item.rowCount())
-            split_element_list = updated_wide_enum.element_list.split(",")
-            value_list = updated_wide_enum.value_list
-            split_value_list = value_list.split(",") if value_list else [None for _ in range(len(split_element_list))]
-            for element, value in zip(split_element_list, split_value_list):
-                element_item = QStandardItem(element)
-                value_item = QStandardItem(value)
-                name_item.appendRow([element_item, value_item])
+            value_item_list = [QStandardItem(x) for x in updated_wide_enum.value_list.split(",")]
+            name_item.appendRows(value_item_list)
 
     def remove_parameter_enums(self, parameter_enum_ids):
         """Remove parameter enums."""
@@ -4143,8 +4207,8 @@ class HybridTableModel(MinimalTableModel):
         self.beginResetModel()
         self.existing_item_model.reset_model(data)
         self.new_item_model.clear()
-        self.endResetModel()
         self.new_item_model.rowsInserted.connect(self._handle_new_item_model_rows_inserted)
+        self.endResetModel()
 
     @Slot("QModelIndex", "int", "int", name="_handle_new_item_model_rows_inserted")
     def _handle_new_item_model_rows_inserted(self, parent, first, last):
