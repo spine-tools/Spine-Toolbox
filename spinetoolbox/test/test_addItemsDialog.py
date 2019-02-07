@@ -42,16 +42,9 @@ class TestAddItemsDialog(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("data_store.DataStore") as mock_data_store:
-            try:
-                os.remove('mock_db.sqlite')
-            except OSError:
-                pass
-            db_url = "sqlite:///mock_db.sqlite"
-            create_new_spine_database(db_url)
-            db_map = DiffDatabaseMapping(db_url, "UnitTest")
-            db_map.reset_mapping()
-            self.tree_view_form = TreeViewForm(mock_data_store, db_map, "mock_db")
+        with mock.patch("data_store.DataStore") as mock_data_store, \
+                mock.patch("spinedatabase_api.DiffDatabaseMapping") as mock_db_map:
+            self.tree_view_form = TreeViewForm(mock_data_store, mock_db_map, "mock_db")
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -72,7 +65,7 @@ class TestAddItemsDialog(unittest.TestCase):
         self.assertEqual(dialog.model.rowCount(), 1)
         self.assertEqual(dialog.model.columnCount(), 3)
         button_index = dialog.model.index(0, 2)
-        button = dialog.ui.tableView.indexWidget(button_index)
+        button = dialog.table_view.indexWidget(button_index)
         self.assertTrue(isinstance(button, QToolButton))
 
     @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
@@ -83,7 +76,7 @@ class TestAddItemsDialog(unittest.TestCase):
         self.assertEqual(dialog.model.rowCount(), 1)
         self.assertEqual(dialog.model.columnCount(), 3)
         model = dialog.model
-        view = dialog.ui.tableView
+        view = dialog.table_view
         header_index = model.horizontal_header_labels().index
         clipboard_text = "fish\ndog\ncat\nmouse\noctopus\nchicken\n"
         QApplication.clipboard().setText(clipboard_text)
