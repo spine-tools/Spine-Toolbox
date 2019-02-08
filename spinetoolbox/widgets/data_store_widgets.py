@@ -25,7 +25,7 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
     QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
-    QButtonGroup, QSizePolicy, QWidgetAction, QFrame
+    QButtonGroup, QSizePolicy, QWidgetAction, QFrame, QWidget, QHBoxLayout
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, QStandardItemModel, QStandardItem
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
@@ -80,6 +80,8 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.setStyleSheet(MAINWINDOW_SS)
+        # Set up corner widgets
+        self.set_corner_widgets()
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB db_map
@@ -143,6 +145,22 @@ class DataStoreForm(QMainWindow):
         # Parameter tags
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
+
+    def set_corner_widgets(self):
+        """Set corner widgets (icon and text on the tab bar) to both QTabWidgets."""
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        label = QLabel("Object parameter")
+        layout.addWidget(label)
+        layout.setContentsMargins(3, 1, 0, 2)
+        self.ui.tabWidget_object_parameter.setCornerWidget(widget, Qt.TopLeftCorner)
+        self.ui.tabWidget_object_parameter.tabBar().setDrawBase(False)
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        label = QLabel("Relationship parameter")
+        layout.addWidget(label)
+        layout.setContentsMargins(3, 1, 0, 2)
+        self.ui.tabWidget_relationship_parameter.setCornerWidget(widget, Qt.TopLeftCorner)
 
     @Slot("int", "bool", name="_handle_tag_button_toggled")
     def _handle_tag_button_toggled(self, id, checked):
@@ -831,10 +849,11 @@ class TreeViewForm(DataStoreForm):
             connect(self._handle_object_parameter_json_splitter_moved)
         self.ui.splitter_relationship_parameter_value_json.splitterMoved.\
             connect(self._handle_relationship_parameter_json_splitter_moved)
-        # Parameter json editor tool buttons clicked
-        self.ui.toolButton_object_parameter_json_raw.toggled.connect(self._handle_object_parameter_json_raw_toggled)
-        self.ui.toolButton_relationship_parameter_json_raw.toggled.\
-            connect(self._handle_relationship_parameter_json_raw_toggled)
+        # Parameter json editor tabwidget current changed
+        self.ui.tabWidget_object_parameter_json.currentChanged.\
+            connect(self._handle_object_parameter_json_tab_changed)
+        self.ui.tabWidget_relationship_parameter_json.currentChanged.\
+            connect(self._handle_relationship_parameter_json_tab_changed)
         # Parameter json editor ok clicked
         self.ui.pushButton_object_parameter_json_ok.clicked.connect(self._handle_object_parameter_json_ok_clicked)
         self.ui.pushButton_relationship_parameter_json_ok.clicked.\
@@ -936,9 +955,21 @@ class TreeViewForm(DataStoreForm):
             else:
                 # Apply stored sizes
                 splitter.setSizes(self.object_parameter_json_splitter_sizes)
+            splitter.handle(1).setEnabled(True)
+            splitter.setHandleWidth(6)
+            self.ui.tabWidget_object_parameter_json.setFocusPolicy(Qt.TabFocus)
+            self.ui.textEdit_object_parameter_json.setFocusPolicy(Qt.StrongFocus)
+            self.ui.tableView_object_parameter_json.setFocusPolicy(Qt.StrongFocus)
+            self.ui.pushButton_object_parameter_json_ok.setFocusPolicy(Qt.StrongFocus)
         else:
             # Hide
             splitter.setSizes([width, 0])
+            splitter.handle(1).setEnabled(False)
+            splitter.setHandleWidth(0)
+            self.ui.tabWidget_object_parameter_json.setFocusPolicy(Qt.NoFocus)
+            self.ui.textEdit_object_parameter_json.setFocusPolicy(Qt.NoFocus)
+            self.ui.tableView_object_parameter_json.setFocusPolicy(Qt.NoFocus)
+            self.ui.pushButton_object_parameter_json_ok.setFocusPolicy(Qt.NoFocus)
 
     def update_relationship_json_editor(self, current):
         """Update relationship JSON editor.
@@ -979,29 +1010,32 @@ class TreeViewForm(DataStoreForm):
             else:
                 # Apply stored sizes
                 splitter.setSizes(self.relationship_parameter_json_splitter_sizes)
+            splitter.handle(1).setEnabled(True)
+            splitter.setHandleWidth(6)
+            self.ui.tabWidget_relationship_parameter_json.setFocusPolicy(Qt.TabFocus)
+            self.ui.textEdit_relationship_parameter_json.setFocusPolicy(Qt.StrongFocus)
+            self.ui.tableView_relationship_parameter_json.setFocusPolicy(Qt.StrongFocus)
+            self.ui.pushButton_relationship_parameter_json_ok.setFocusPolicy(Qt.StrongFocus)
         else:
             # Hide
             splitter.setSizes([width, 0])
+            splitter.handle(1).setEnabled(False)
+            splitter.setHandleWidth(0)
+            self.ui.tabWidget_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
+            self.ui.textEdit_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
+            self.ui.tableView_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
+            self.ui.pushButton_relationship_parameter_json_ok.setFocusPolicy(Qt.NoFocus)
 
-    @Slot("bool", name="_handle_object_parameter_json_raw_toggled")
-    def _handle_object_parameter_json_raw_toggled(self, checked):
-        """Called when the user checks the obj { } button in the object parameter json editor.
-        Activate the proper tab in the tabwidget."""
-        if checked:
-            self.ui.tabWidget_object_parameter_json.setCurrentIndex(0)
-        else:
-            self.ui.tabWidget_object_parameter_json.setCurrentIndex(1)
+    @Slot("int", name="_handle_object_parameter_json_tab_changed")
+    def _handle_object_parameter_json_tab_changed(self, index):
+        """Called when the user switches tab in the object parameter json editor."""
         current = self.ui.tableView_object_parameter_value.currentIndex()
         self.update_object_json_editor(current)
 
-    @Slot("bool", name="_handle_relationship_parameter_json_raw_toggled")
-    def _handle_relationship_parameter_json_raw_toggled(self, checked):
+    @Slot("int", name="_handle_relationship_parameter_json_tab_changed")
+    def _handle_relationship_parameter_json_tab_changed(self, index):
         """Called when the user checks the obj { } button in the relationship parameter json editor.
         Activate the proper tab in the tabwidget."""
-        if checked:
-            self.ui.tabWidget_relationship_parameter_json.setCurrentIndex(0)
-        else:
-            self.ui.tabWidget_relationship_parameter_json.setCurrentIndex(1)
         current = self.ui.tableView_relationship_parameter_value.currentIndex()
         self.update_relationship_json_editor(current)
 
@@ -1268,12 +1302,14 @@ class TreeViewForm(DataStoreForm):
         metrics = QFontMetrics(font)
         tab_stop_width = 4 * metrics.width(' ')
         # Object
-        button_group = QButtonGroup(self)
-        button_group.addButton(self.ui.toolButton_object_parameter_json_raw)
-        button_group.addButton(self.ui.toolButton_object_parameter_json_table)
-        self.ui.tabWidget_object_parameter_json.tabBar().hide()
         sizes = self.ui.splitter_object_parameter_value_json.sizes()
         self.ui.splitter_object_parameter_value_json.setSizes([sum(sizes), 0])
+        self.ui.splitter_object_parameter_value_json.handle(1).setEnabled(False)
+        self.ui.splitter_object_parameter_value_json.setHandleWidth(0)
+        self.ui.tabWidget_object_parameter_json.setFocusPolicy(Qt.NoFocus)
+        self.ui.textEdit_object_parameter_json.setFocusPolicy(Qt.NoFocus)
+        self.ui.tableView_object_parameter_json.setFocusPolicy(Qt.NoFocus)
+        self.ui.pushButton_object_parameter_json_ok.setFocusPolicy(Qt.NoFocus)
         self.ui.tableView_object_parameter_json.setModel(self.object_parameter_json_model)
         self.ui.tableView_object_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -1282,12 +1318,14 @@ class TreeViewForm(DataStoreForm):
         self.ui.textEdit_object_parameter_json.setFont(font)
         self.ui.textEdit_object_parameter_json.setTabStopWidth(tab_stop_width)
         # Relationship
-        button_group = QButtonGroup(self)
-        button_group.addButton(self.ui.toolButton_relationship_parameter_json_raw)
-        button_group.addButton(self.ui.toolButton_relationship_parameter_json_table)
-        self.ui.tabWidget_relationship_parameter_json.tabBar().hide()
         sizes = self.ui.splitter_relationship_parameter_value_json.sizes()
         self.ui.splitter_relationship_parameter_value_json.setSizes([sum(sizes), 0])
+        self.ui.splitter_relationship_parameter_value_json.handle(1).setEnabled(False)
+        self.ui.splitter_relationship_parameter_value_json.setHandleWidth(0)
+        self.ui.tabWidget_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
+        self.ui.textEdit_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
+        self.ui.tableView_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
+        self.ui.pushButton_relationship_parameter_json_ok.setFocusPolicy(Qt.NoFocus)
         self.ui.tableView_relationship_parameter_json.setModel(self.relationship_parameter_json_model)
         self.ui.tableView_relationship_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)

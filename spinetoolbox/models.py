@@ -1980,7 +1980,10 @@ class SubParameterValueModel(SubParameterModel):
         header = self._parent.horizontal_header_labels()
         id_column = header.index('id')
         for k, index in enumerate(indexes):
-            if data[k] == index.data(Qt.EditRole):
+            index_data = index.data(Qt.EditRole)
+            if str(data[k]) == str(index_data):
+                continue
+            if not data[k] and not index_data:
                 continue
             row = index.row()
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
@@ -2041,9 +2044,10 @@ class SubParameterDefinitionModel(SubParameterModel):
         new_indexes = []
         new_data = []
         for k, index in enumerate(indexes):
-            if data[k] == index.data(Qt.EditRole):
+            index_data = index.data(Qt.EditRole)
+            if str(data[k]) == str(index_data):
                 continue
-            if data[k] is None and index.data(Qt.EditRole) == "":
+            if not data[k] and not index_data:
                 continue
             row = index.row()
             id_ = index.sibling(row, id_column).data(Qt.EditRole)

@@ -33,7 +33,8 @@ from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
-from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, create_new_spine_database
+from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError, \
+    create_new_spine_database
 
 
 class DataStore(ProjectItem):
@@ -82,9 +83,9 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.toolButton_ds_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.call_open_tree_view
-        s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.call_open_graph_view
-        s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.call_open_tabular_view
+        s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.open_tree_view
+        s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
+        s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
         s[self._toolbox.ui.toolButton_new_spine.clicked] = self.create_new_spine_database
@@ -530,14 +531,39 @@ class DataStore(ProjectItem):
         }
         return reference
 
-    @Slot(bool, name="call_open_tree_view")
-    def call_open_tree_view(self, checked=False):
-        """Call method to open the treeview."""
-        # NOTE: This is just so we can use @busy_effect with the open_tree_view method
-        self.open_tree_view()
+    def get_db_map(self, db_url, username):
+        """Return a DiffDatabaseMapping instance to work with.
+        """
+        try:
+            db_map = DiffDatabaseMapping(db_url, username)
+            return db_map
+        except SpineDBVersionError as e:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Incompatible database version")
+            msg.setText("The database at <b>{}</b> is from an older version of Spine "\
+                        "and needs to be upgraded in order to be used with the current version.".format(db_url))
+            msg.setInformativeText("Do you want to upgrade it now?" \
+                                   "<p><b>WARNING</b>: After the upgrade, "\
+                                   "the database may no longer be used "\
+                                   "with previous versions of Spine.")
+            msg.addButton(QMessageBox.Cancel)
+            msg.addButton("Upgrade", QMessageBox.YesRole)
+            ret = msg.exec_()  # Show message box
+            if ret == QMessageBox.Cancel:
+                return None
+            try:
+                db_map = DiffDatabaseMapping(db_url, username, migrate=True)
+                return db_map
+            except SpineDBAPIError as e:
+                self._toolbox.msg_error.emit(e.msg)
+                return None
+        except SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return None
 
-    @busy_effect
-    def open_tree_view(self):
+    @Slot(bool, name="open_tree_view")
+    def open_tree_view(self, checked=False):
         """Open reference in tree view form."""
         reference = self.make_reference()
         if not reference:
@@ -558,11 +584,14 @@ class DataStore(ProjectItem):
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
-        try:
-            db_map = DiffDatabaseMapping(db_url, username)
-        except SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
+        db_map = self.get_db_map(db_url, username)
+        if not db_map:
             return
+        self.do_open_tree_view(db_map, database)
+
+    @busy_effect
+    def do_open_tree_view(self, db_map, database):
+        """Open reference in tree view form."""
         try:
             self.tree_view_form = TreeViewForm(self, db_map, database)
         except:
@@ -575,14 +604,8 @@ class DataStore(ProjectItem):
     def tree_view_form_destroyed(self):
         self.tree_view_form = None
 
-    @Slot(bool, name="call_open_graph_view")
-    def call_open_graph_view(self, checked=False):
-        """Call method to open the treeview."""
-        # NOTE: This is just so we can use @busy_effect with the open_graph_view method
-        self.open_graph_view()
-
-    @busy_effect
-    def open_graph_view(self):
+    @Slot(bool, name="open_graph_view")
+    def open_graph_view(self, checked=False):
         """Open reference in graph view form."""
         reference = self.make_reference()
         if not reference:
@@ -603,11 +626,14 @@ class DataStore(ProjectItem):
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
-        try:
-            db_map = DiffDatabaseMapping(db_url, username)
-        except SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
+        db_map = self.get_db_map(db_url, username)
+        if not db_map:
             return
+        self.do_open_graph_view(db_map, database)
+
+    @busy_effect
+    def do_open_graph_view(self, db_map, database):
+        """Open reference in graph view form."""
         try:
             self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
         except:
@@ -620,14 +646,8 @@ class DataStore(ProjectItem):
     def graph_view_form_destroyed(self):
         self.graph_view_form = None
 
-    @Slot(bool, name="call_open_tabular_view")
-    def call_open_tabular_view(self, checked=False):
-        """Call method to open the tabular view."""
-        # NOTE: This is just so we can use @busy_effect with the open_tabular_view method
-        self.open_tabular_view()
-
-    @busy_effect
-    def open_tabular_view(self):
+    @Slot(bool, name="open_tabular_view")
+    def open_tabular_view(self, checked=False):
         """Open reference in Data Store tabular view."""
         if self.tabular_view_form:
             if self.tabular_view_form.windowState() & Qt.WindowMinimized:
@@ -647,11 +667,14 @@ class DataStore(ProjectItem):
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
-        try:
-            db_map = DiffDatabaseMapping(db_url, username)
-        except SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
+        db_map = self.get_db_map(db_url, username)
+        if not db_map:
             return
+        self.do_open_tabular_view(db_map, database)
+
+    @busy_effect
+    def do_open_tabular_view(self, db_map, database):
+        """Open reference in tabular view form."""    
         try:
             self.tabular_view_form = TabularViewForm(self, db_map, database)
         except:
