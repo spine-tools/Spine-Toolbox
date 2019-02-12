@@ -45,8 +45,8 @@ class AutoFilterWidget(QWidget):
         self.view.horizontalHeader().hide()
         self.view.setShowGrid(False)
         self.view.setMouseTracking(True)
-        self.view.mouseMoveEvent = self._view_mouse_move_event
-        self.view.mousePressEvent = self._view_mouse_press_event
+        self.view.entered.connect(self._handle_view_entered)
+        self.view.clicked.connect(self._handle_view_clicked)
         self.view.leaveEvent = self._view_leave_event
         self.button = QToolButton(self)
         self.button.setText("Ok")
@@ -73,21 +73,15 @@ class AutoFilterWidget(QWidget):
                 return Qt.Unchecked
         return MinimalTableModel.data(self.model, index, role)
 
-    def _view_mouse_move_event(self, event):
+    @Slot("QModelIndex", name="_handle_view_entered")
+    def _handle_view_entered(self, index):
         """Highlight current row."""
-        index = self.view.indexAt(event.pos())
         self.view.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
-        event.accept()
 
-    def _view_leave_event(self, event):
-        """Clear selection."""
-        self.view.selectionModel().clearSelection()
-        event.accept()
-
-    def _view_mouse_press_event(self, event):
+    @Slot("QModelIndex", name="_handle_view_clicked")
+    def _handle_view_clicked(self, clicked_index):
         """Toggle checked state."""
-        pressed_index = self.view.indexAt(event.pos())
-        index = self.model.index(pressed_index.row(), 0)
+        index = self.model.index(clicked_index.row(), 0)
         checked = index.data(Qt.EditRole)
         model_data = self.model._main_data
         row_count = self.model.rowCount()
@@ -100,8 +94,12 @@ class AutoFilterWidget(QWidget):
         else:
             # Data row
             self.model.setData(index, not checked)
-            self.model.dataChanged.emit(pressed_index, pressed_index)
+            self.model.dataChanged.emit(clicked_index, clicked_index)
             self.set_data_for_all_index()
+
+    def _view_leave_event(self, event):
+        """Clear selection."""
+        self.view.selectionModel().clearSelection()
         event.accept()
 
     def set_data_for_all_index(self):

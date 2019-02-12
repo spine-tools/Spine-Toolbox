@@ -1204,6 +1204,8 @@ class EmptyRowModel(MinimalTableModel):
                 name = None
             data = self._main_data[last_row][column]
             default = self.default_row.get(name)
+            if not data and not default:
+                continue
             if data != default:
                 self.insertRows(self.rowCount(), 1)
                 break

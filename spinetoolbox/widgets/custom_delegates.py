@@ -17,8 +17,9 @@ Custom item delegates.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
-    QApplication
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, ObjectNameListEditor, MultipleOptionsEditor
+    QApplication, QStyleOptionViewItem
+from widgets.custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, \
+    MultiSearchBarEditor, CheckListEditor
 from models import MinimalTableModel
 import logging
 
@@ -145,6 +146,12 @@ class ParameterDelegate(QItemDelegate):
         super().__init__(parent)
         self._parent = parent
         self.db_map = parent.db_map
+        self.setClipping(False)
+        # self.closeEditor.connect(self.tempslot)
+
+    def tempslot(self, editor, hint):
+        print(editor)
+        print(hint)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -153,6 +160,33 @@ class ParameterDelegate(QItemDelegate):
     def close_editor(self, editor, index, model):
         self.closeEditor.emit(editor)
         self.setModelData(editor, model, index)
+
+    def updateEditorGeometry(self, editor, option, index):
+        super().updateEditorGeometry(editor, option, index)
+        if type(editor) in (SearchBarEditor, CheckListEditor, MultiSearchBarEditor):
+            size = option.rect.size()
+            if index.data(Qt.DecorationRole):
+                size.setWidth(size.width() - 22)  # FIXME
+            editor.set_base_size(size)
+            editor.update_geometry()
+
+    def editorEvent(self, event, model, option, index):
+        # print(event.type())
+        return False
+
+    def eventFilter(self, editor, event):
+        """Hack event filter so our MultiSearchBarEditor responds to Tab and Backtab
+        as expected.
+        """
+        if type(editor) == MultiSearchBarEditor and event.type() == QEvent.KeyPress:
+            if event.key() == Qt.Key_Tab and editor.active_index != editor.count() - 1:
+                editor.set_active_index(editor.active_index + 1)
+                return True
+            elif event.key() == Qt.Key_Backtab and editor.active_index != 0:
+                editor.set_active_index(editor.active_index - 1)
+                return True
+        ret = super().eventFilter(editor, event)
+        return ret
 
 
 class ObjectParameterValueDelegate(ParameterDelegate):
@@ -163,21 +197,36 @@ class ObjectParameterValueDelegate(ParameterDelegate):
     """
     def __init__(self, parent):
         super().__init__(parent)
-        self.enum_id = None
 
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         h = header.index
-        if header[index.column()] in ('object_class_name', 'object_name', 'parameter_name'):
-            editor = CustomComboEditor(parent)
+        if header[index.column()] == 'object_class_name':
+            editor = SearchBarEditor(parent)
+            name_list = [x.name for x in self.db_map.object_class_list()]
+            editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'object_name':
+            editor = SearchBarEditor(parent)
+            object_class_id = index.sibling(index.row(), h('object_class_id')).data(Qt.DisplayRole)
+            name_list = [x.name for x in self.db_map.object_list(class_id=object_class_id)]
+            editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'parameter_name':
+            editor = SearchBarEditor(parent)
+            object_class_id = index.sibling(index.row(), h('object_class_id')).data(Qt.DisplayRole)
+            name_list = [x.parameter_name for x in self.db_map.object_parameter_list(object_class_id=object_class_id)]
+            editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'value':
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
-            self.enum_id = self.db_map.single_parameter(id=parameter_id).one().enum_id
-            if self.enum_id:
-                editor = CustomComboEditor(parent)
+            parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
+            enum_id = parameter.enum_id if parameter else None
+            if enum_id:
+                editor = SearchBarEditor(parent)
+                value_list = self.db_map.wide_parameter_enum_list(id_list=[enum_id]).one().value_list.split(",")
+                editor.set_data(index.data(Qt.EditRole), value_list)
             else:
                 editor = CustomLineEditor(parent)
+                editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'json':
             self.json_editor_requested.emit()
             return None
@@ -186,32 +235,6 @@ class ObjectParameterValueDelegate(ParameterDelegate):
         model = index.model()
         editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
         return editor
-
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        header = index.model().horizontal_header_labels()
-        h = header.index
-        if header[index.column()] == 'object_class_name':
-            name_list = [x.name for x in self.db_map.object_class_list()]
-            editor.set_data(index.data(Qt.EditRole), name_list)
-        elif header[index.column()] == 'object_name':
-            object_class_id = index.sibling(index.row(), h('object_class_id')).data(Qt.DisplayRole)
-            name_list = [x.name for x in self.db_map.object_list(class_id=object_class_id)]
-            editor.set_data(index.data(Qt.EditRole), name_list)
-        elif header[index.column()] == 'parameter_name':
-            object_class_id = index.sibling(index.row(), h('object_class_id')).data(Qt.DisplayRole)
-            name_list = [x.parameter_name for x in self.db_map.object_parameter_list(object_class_id=object_class_id)]
-            editor.set_data(index.data(Qt.EditRole), name_list)
-        elif header[index.column()] == 'value':
-            if self.enum_id:
-                value_list = self.db_map.wide_parameter_enum_list(id_list=[self.enum_id]).one().value_list.split(",")
-                editor.set_data(index.data(Qt.EditRole), value_list)
-            else:
-                editor.set_data(index.data(Qt.EditRole))
-        elif header[index.column()] == 'json':
-            pass
-        else:
-            editor.set_data(index.data(Qt.EditRole))
 
 
 class ObjectParameterDefinitionDelegate(ParameterDelegate):
@@ -226,23 +249,12 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] in ('object_class_name', 'enum_name'):
-            editor = CustomComboEditor(parent)
-        elif header[index.column()] == 'parameter_tag_list':
-            editor = MultipleOptionsEditor(parent, option, index)
-        else:
-            editor = CustomLineEditor(parent)
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
-        return editor
-
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        header = index.model().horizontal_header_labels()
         if header[index.column()] == 'object_class_name':
+            editor = SearchBarEditor(parent)
             name_list = [x.name for x in self.db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'parameter_tag_list':
+            editor = CheckListEditor(parent)
             all_parameter_tag_list = [x.tag for x in self.db_map.parameter_tag_list()]
             try:
                 parameter_tag_list = index.data(Qt.EditRole).split(",")
@@ -250,10 +262,15 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
                 parameter_tag_list = []
             editor.set_data(all_parameter_tag_list, parameter_tag_list)
         elif header[index.column()] == 'enum_name':
+            editor = SearchBarEditor(parent)
             name_list = [x.name for x in self.db_map.wide_parameter_enum_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         else:
+            editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
 
 class RelationshipParameterValueDelegate(ParameterDelegate):
@@ -265,66 +282,64 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
     def __init__(self, parent):
         super().__init__(parent)
 
-    def close_object_name_list_editor(self, editor, index, model):
-        self.closeEditor.emit(editor)
-        self.setModelData(editor, model, index)
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         h = header.index
-        if header[index.column()] in ('relationship_class_name', 'parameter_name'):
-            editor = CustomComboEditor(parent)
-        elif header[index.column()] == 'object_name_list':
-            editor = ObjectNameListEditor(parent)
-        elif header[index.column()] == 'json':
-            self.json_editor_requested.emit()
-            return None
-        else:
-            editor = CustomLineEditor(parent)
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
-        return editor
-
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        header = index.model().horizontal_header_labels()
-        h = header.index
         if header[index.column()] == 'relationship_class_name':
+            editor = SearchBarEditor(parent)
             name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'object_name_list':
             object_class_id_list = index.sibling(index.row(), h('object_class_id_list')).data(Qt.DisplayRole)
-            object_class_name_list = index.sibling(index.row(), h('object_class_name_list')).data(Qt.DisplayRole)
-            try:
+            if not object_class_id_list:
+                editor = CustomLineEditor(parent)
+            else:
+                editor = MultiSearchBarEditor(parent)
                 object_class_ids = [int(x) for x in object_class_id_list.split(',')]
-                object_class_names = object_class_name_list.split(',')
-            except AttributeError:
-                return
-            object_icons = [self._parent.object_icon(x) for x in object_class_names]
-            object_class_dict = dict(zip(object_class_ids, object_class_names))
-            object_names_dict = {}
-            for object_ in self.db_map.object_list():
-                try:
-                    object_class_name = object_class_dict[object_.class_id]
-                except KeyError:
-                    continue
-                object_names_dict.setdefault(object_class_name, list()).append(object_.name)
-            object_name_list = index.data(Qt.EditRole)
-            try:
-                object_names = object_name_list.split(",")
-            except AttributeError:
-                object_names = []
-            editor.set_data(object_icons, object_class_names, object_names, object_names_dict)
+                object_name_list = index.data(Qt.EditRole)
+                current_object_names = object_name_list.split(",") if object_name_list else []
+                all_object_names_list = list()
+                for class_id in object_class_ids:
+                    all_object_names_list.append([x.name for x in self.db_map.object_list(class_id=class_id)])
+                editor.set_data(current_object_names, all_object_names_list)
+            #object_class_id_list = index.sibling(index.row(), h('object_class_id_list')).data(Qt.DisplayRole)
+            #object_class_name_list = index.sibling(index.row(), h('object_class_name_list')).data(Qt.DisplayRole)
+            #try:
+            #    object_class_ids = [int(x) for x in object_class_id_list.split(',')]
+            #    object_class_names = object_class_name_list.split(',')
+            #except AttributeError:
+            #    return
+            #object_icons = [self._parent.object_icon(x) for x in object_class_names]
+            #object_class_dict = dict(zip(object_class_ids, object_class_names))
+            #object_names_dict = {}
+            #for object_ in self.db_map.object_list():
+            #    try:
+            #        object_class_name = object_class_dict[object_.class_id]
+            #    except KeyError:
+            #        continue
+            #    object_names_dict.setdefault(object_class_name, list()).append(object_.name)
+            #object_name_list = index.data(Qt.EditRole)
+            #try:
+            #    object_names = object_name_list.split(",")
+            #except AttributeError:
+            #    object_names = []
+            #editor.set_data(object_icons, object_class_names, object_names, object_names_dict)
         elif header[index.column()] == 'parameter_name':
+            editor = SearchBarEditor(parent)
             relationship_class_id = index.sibling(index.row(), h('relationship_class_id')).data(Qt.DisplayRole)
             parameter_list = self.db_map.relationship_parameter_list(relationship_class_id=relationship_class_id)
             name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'json':
-            pass
+            self.json_editor_requested.emit()
+            return None
         else:
+            editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
 
 class RelationshipParameterDefinitionDelegate(ParameterDelegate):
@@ -339,23 +354,12 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
-        if header[index.column()] in ('relationship_class_name', 'enum_name'):
-            editor = CustomComboEditor(parent)
-        elif header[index.column()] == 'parameter_tag_list':
-            editor = MultipleOptionsEditor(parent, option, index)
-        else:
-            editor = CustomLineEditor(parent)
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
-        return editor
-
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship_class_name':
+            editor = SearchBarEditor(parent)
             name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'parameter_tag_list':
+            editor = CheckListEditor(parent)
             all_parameter_tag_list = [x.tag for x in self.db_map.parameter_tag_list()]
             try:
                 parameter_tag_list = index.data(Qt.EditRole).split(",")
@@ -363,10 +367,15 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
                 parameter_tag_list = []
             editor.set_data(all_parameter_tag_list, parameter_tag_list)
         elif header[index.column()] == 'enum_name':
+            editor = SearchBarEditor(parent)
             name_list = [x.name for x in self.db_map.wide_parameter_enum_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         else:
+            editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
 
 class AddItemsDelegate(QItemDelegate):
@@ -544,7 +553,7 @@ class ForeignKeysDelegate(QItemDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'fields':
-            editor = MultipleOptionsEditor(parent, option, index)
+            editor = CheckListEditor(parent)
             model = index.model()
             editor.data_committed.connect(
                 lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
@@ -552,7 +561,7 @@ class ForeignKeysDelegate(QItemDelegate):
         elif header[index.column()] == 'reference resource':
             return CustomComboEditor(parent)
         elif header[index.column()] == 'reference fields':
-            editor = MultipleOptionsEditor(parent, option, index)
+            editor = CheckListEditor(parent)
             model = index.model()
             editor.data_committed.connect(
                 lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
