@@ -45,6 +45,21 @@ class CustomQGraphicsView(QGraphicsView):
         self.max_rel_zoom_factor = 10.0
         self.min_rel_zoom_factor = 0.1
 
+    def mousePressEvent(self, event):
+        """Set rubber band selection mode if Control pressed.
+        Enable resetting the zoom factor from the middle mouse button.
+        """
+        if event.modifiers() & Qt.ControlModifier:
+            self.setDragMode(QGraphicsView.RubberBandDrag)
+        if event.button() == Qt.MidButton:
+            self.reset_zoom()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Reestablish scroll hand drag mode."""
+        super().mouseReleaseEvent(event)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
         super().mouseMoveEvent(event)
@@ -426,17 +441,12 @@ class GraphQGraphicsView(CustomQGraphicsView):
         super().wheelEvent(event)
 
     def mousePressEvent(self, event):
-        """Set rubber band drag mode if control pressed."""
-        if event.modifiers() & Qt.ControlModifier:
-            self.setDragMode(QGraphicsView.RubberBandDrag)
-        if event.button() == Qt.MidButton:
-            self.reset_zoom()
+        """Call superclass method."""
         super().mousePressEvent(event)
 
     def mouseReleaseEvent(self, event):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
