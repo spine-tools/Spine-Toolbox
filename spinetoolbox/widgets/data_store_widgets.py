@@ -2170,8 +2170,7 @@ class GraphViewForm(DataStoreForm):
         self.build_graph()
 
     def init_graph_data(self):
-        """Initialize graph data.
-        """
+        """Initialize graph data."""
         rejected_object_names = [x.object_name for x in self.rejected_items]
         self.object_ids = list()
         self.object_names = list()

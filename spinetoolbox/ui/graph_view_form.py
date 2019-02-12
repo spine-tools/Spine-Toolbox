@@ -29,7 +29,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.setSpacing(6)
         self.verticalLayout_2.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.graphicsView = GraphViewGraphicsView(self.centralwidget)
+        self.graphicsView = GraphQGraphicsView(self.centralwidget)
         sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Expanding)
         sizePolicy.setHorizontalStretch(2)
         sizePolicy.setVerticalStretch(0)
@@ -319,6 +319,6 @@ class Ui_MainWindow(object):
         self.actionGraph_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
 
+from widgets.custom_qgraphicsviews import GraphQGraphicsView
 from widgets.custom_qlistview import DragListView
-from widgets.custom_qgraphicsview import GraphViewGraphicsView
 import resources_icons_rc

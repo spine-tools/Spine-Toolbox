@@ -43,7 +43,7 @@
      <number>0</number>
     </property>
     <item>
-     <widget class="GraphViewGraphicsView" name="graphicsView">
+     <widget class="GraphQGraphicsView" name="graphicsView">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>2</horstretch>
@@ -660,9 +660,9 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>GraphViewGraphicsView</class>
+   <class>GraphQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>widgets/custom_qgraphicsview.h</header>
+   <header>widgets/custom_qgraphicsviews.h</header>
   </customwidget>
   <customwidget>
    <class>DragListView</class>
