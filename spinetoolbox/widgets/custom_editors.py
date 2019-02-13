@@ -16,10 +16,11 @@ Custom editors for model/view programming.
 :author: M. Marin (KTH)
 :date:   2.9.2018
 """
+
+import logging
 from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
-    QTimer
-from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QVBoxLayout, QTableView, QItemDelegate, \
-    QFrame
+    QTimer, QEvent, QCoreApplication, QModelIndex
+from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QFrame
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
 
 
@@ -68,7 +69,38 @@ class CustomComboEditor(QComboBox):
         return self.currentText()
 
 
-class SearchBarEditor(QWidget):
+class CustomLineEditDelegate(QItemDelegate):
+    """A custom delegate for SearchBarEditor.
+
+    Attributes:
+        parent (SearchBarEditor): search bar editor
+    """
+    text_edited = Signal("QString", name="text_edited")
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._parent = parent
+        self.key_list = (Qt.Key_Tab, Qt.Key_Backtab, Qt.Key_Escape)
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.data())
+
+    def createEditor(self, parent, option, index):
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data())
+        editor.textEdited.connect(lambda s: self.text_edited.emit(s))
+        return editor
+
+    def eventFilter(self, editor, event):
+        if event.type() == QEvent.KeyPress and event.key() in self.key_list:
+            self._parent.setFocus()
+            return QCoreApplication.sendEvent(self._parent, event)
+        if event.type() in (QEvent.FocusOut,):
+            return QCoreApplication.sendEvent(self._parent, event)
+        return super().eventFilter(editor, event)
+
+
+class SearchBarEditor(QTableView):
     """A widget that implements a Google-like search bar."""
 
     data_committed = Signal(name="data_committed")
@@ -77,103 +109,79 @@ class SearchBarEditor(QWidget):
         """Initialize class."""
         super().__init__(parent)
         self._base_size = None
-        layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(0)
-        self.line_edit = QLineEdit(self)
-        self.line_edit.setFocusPolicy(Qt.NoFocus)
-        self.line_edit.keyPressEvent = self._line_edit_key_press_event
-        self.old_text = None
+        self._original_text = None
+        self.first_index = QModelIndex()
         self.model = QStandardItemModel(self)
         self.proxy_model = QSortFilterProxyModel(self)
         self.proxy_model.setSourceModel(self.model)
-        self.view = QTableView(self)
-        self.view.setModel(self.proxy_model)
-        self.view.verticalHeader().hide()
-        self.view.horizontalHeader().hide()
-        self.view.setShowGrid(False)
-        self.view.setFocusPolicy(Qt.NoFocus)
-        self.view.setMouseTracking(True)
-        self.view.mouseMoveEvent = self._view_mouse_move_event
-        layout.addWidget(self.line_edit)
-        layout.addWidget(self.view)
-        self.connect_signals()
+        self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
+        self.setModel(self.proxy_model)
+        self.verticalHeader().hide()
+        self.horizontalHeader().hide()
+        self.setShowGrid(False)
+        self.setMouseTracking(True)
+        self.setTabKeyNavigation(False)
+        delegate = CustomLineEditDelegate(self)
+        delegate.text_edited.connect(self._handle_delegate_text_edited)
+        self.setItemDelegateForRow(0, delegate)
 
-    def connect_signals(self):
-        self.line_edit.textEdited.connect(self._handle_line_edit_text_edited)
-        self.view.clicked.connect(self._handle_view_clicked)
+    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
+        if source_row == 0:
+            return True
+        return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
 
-    def keyPressEvent(self, event):
-        """Call event handler on line edit.
-        """
-        self._line_edit_key_press_event(event)
-
-    def focusInEvent(self, event):
-        """Call event handler on line edit.
-        """
-        self.line_edit.focusInEvent(event)
-        self.line_edit.selectAll()
-
-    def focusOutEvent(self, event):
-        """Call event handler on line edit.
-        """
-        self.line_edit.focusOutEvent(event)
-
-    def _line_edit_key_press_event(self, event):
-        """Navigate through view when pressing up and down arrows.
-        """
-        if event.key() == Qt.Key_Down:
-            next_row = self.view.currentIndex().row() + 1
-            next_index = self.proxy_model.index(next_row, 0)
-            self.view.setCurrentIndex(next_index)
-            if next_row == 0:
-                self.old_text = self.line_edit.text()
-            if not next_index.isValid():
-                self.line_edit.setText(self.old_text)
-            else:
-                self.line_edit.setText(next_index.data())
-        elif event.key() == Qt.Key_Up:
-            next_row = self.view.currentIndex().row() - 1
-            if next_row == -2:
-                next_row = self.proxy_model.rowCount() - 1
-            next_index = self.proxy_model.index(next_row, 0)
-            self.view.setCurrentIndex(next_index)
-            if next_row == self.proxy_model.rowCount() - 1:
-                self.old_text = self.line_edit.text()
-            if not next_index.isValid():
-                self.line_edit.setText(self.old_text)
-            else:
-                self.line_edit.setText(next_index.data())
-        else:
-            QLineEdit.keyPressEvent(self.line_edit, event)
-
-    @Slot("QString", name="_handle_line_edit_text_edited")
-    def _handle_line_edit_text_edited(self, text):
-        """Filter model.
-        """
+    @Slot("QString", name="_handle_delegate_text_edited")
+    def _handle_delegate_text_edited(self, text):
+        self._original_text = text
         self.proxy_model.setFilterRegExp("^" + text)
         self.update_geometry()
 
-    def _view_mouse_move_event(self, event):
-        """Highlight current row."""
-        index = self.view.indexAt(event.pos())
-        self.view.setCurrentIndex(index)
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        if event.key() not in (Qt.Key_Up, Qt.Key_Down):
+            return
+        current = self.currentIndex()
+        if current.row() == 0:
+            self.proxy_model.setData(self.first_index, self._original_text)
+        else:
+            self.proxy_model.setData(self.first_index, current.data())
 
-    @Slot("QModelIndex", name="_handle_view_clicked")
-    def _handle_view_clicked(self, index):
+    def currentChanged(self, current, previous):
+        """Edit first index."""
+        super().currentChanged(current, previous)
+        self.edit_first_index()
+
+    def edit_first_index(self):
+        if not self.first_index.isValid():
+            return
+        if self.isPersistentEditorOpen(self.first_index):
+            return
+        self.edit(self.first_index)
+
+    def mouseMoveEvent(self, event):
+        """Highlight current row."""
+        index = self.indexAt(event.pos())
+        if index.row() == 0:
+            return
+        self.setCurrentIndex(index)
+
+    def mousePressEvent(self, event):
         """Commit data."""
-        self.line_edit.setText(index.data())
+        index = self.indexAt(event.pos())
+        if index.row() == 0:
+            return
+        self.proxy_model.setData(self.first_index, index.data())
         self.data_committed.emit()
 
     def set_data(self, current, all):
         """Set data."""
-        item_list = []
+        item_list = [QStandardItem(current)]
         for name in all:
             qitem = QStandardItem(name)
             item_list.append(qitem)
             qitem.setFlags(~Qt.ItemIsEditable)
         self.model.invisibleRootItem().appendRows(item_list)
-        self.line_edit.setText(current)
+        self.first_index = self.proxy_model.mapFromSource(self.model.index(0, 0))
 
     def set_base_size(self, size):
         self._base_size = size
@@ -181,17 +189,14 @@ class SearchBarEditor(QWidget):
     def update_geometry(self):
         """Update geometry.
         """
-        self.line_edit.setFixedHeight(self._base_size.height())
-        self.view.horizontalHeader().setDefaultSectionSize(self._base_size.width())
-        self.view.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        table_height = self.view.verticalHeader().length()
-        if not table_height:
-            table_height = 16  # FIXME
-        total_height = table_height + self._base_size.height() + 2
-        self.resize(self._base_size.width(), total_height)
+        self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
+        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
+        table_height = self.verticalHeader().length()
+        self.resize(self._base_size.width(), table_height + 2)
 
     def data(self):
-        return self.line_edit.text()
+        proxy_index = self.proxy_model.index(0, 0)
+        return proxy_index.data()
 
 
 class SearchBarDelegate(QItemDelegate):
@@ -226,6 +231,10 @@ class SearchBarDelegate(QItemDelegate):
         self.closeEditor.emit(editor)
         self.setModelData(editor, model, index)
 
+    def eventFilter(self, editor, event):
+        if event.type() in (QEvent.FocusOut,):
+            return QCoreApplication.sendEvent(self._parent, event)
+        return super().eventFilter(editor, event)
 
 class MultiSearchBarEditor(QTableView):
     """A table view made of several Google-like search bars."""

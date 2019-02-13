@@ -164,21 +164,6 @@ class ParameterDelegate(QItemDelegate):
             editor.set_base_size(size)
             editor.update_geometry()
 
-    def eventFilter(self, editor, event):
-        """Hack event filter so our MultiSearchBarEditor responds to Tab and Backtab
-        as expected.
-        """
-        return super().eventFilter(editor, event)
-        if type(editor) == MultiSearchBarEditor and event.type() == QEvent.KeyPress:
-            if event.key() == Qt.Key_Tab and editor.active_index != editor.count() - 1:
-                editor.set_active_index(editor.active_index + 1)
-                return True
-            elif event.key() == Qt.Key_Backtab and editor.active_index != 0:
-                editor.set_active_index(editor.active_index - 1)
-                return True
-        ret = super().eventFilter(editor, event)
-        return ret
-
 
 class ObjectParameterValueDelegate(ParameterDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.
