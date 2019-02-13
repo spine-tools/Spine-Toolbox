@@ -19,7 +19,7 @@ Class for a custom RichJupyterWidget to use as julia REPL.
 import os
 import logging
 import qsubprocess
-from PySide2.QtWidgets import QMessageBox, QAction
+from PySide2.QtWidgets import QMessageBox, QAction, QApplication
 from PySide2.QtCore import Slot, Signal, Qt
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
@@ -78,6 +78,15 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.execution_failed_to_start = False
         self.starting = False
         self.normal_cursor = self._control.viewport().cursor()
+        # Actions
+        self._copy_input_action = QAction('Copy (Only Input)', self)
+        self._copy_input_action.triggered.connect(lambda checked: self.copy_input())
+        self._copy_input_action.setEnabled(False)
+        self.copy_available.connect(self._copy_input_action.setEnabled)
+        self.start_repl_action = QAction("Start REPL", self)
+        self.start_repl_action.triggered.connect(lambda checked: self.start_jupyter_kernel())
+        self.restart_repl_action = QAction("Restart REPL", self)
+        self.restart_repl_action.triggered.connect(lambda checked: self.restart_jupyter_kernel())
         # Set logging level for jupyter module loggers
         traitlets_logger = logging.getLogger("traitlets")
         asyncio_logger = logging.getLogger("asyncio")
@@ -383,22 +392,22 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
 
-    def _custom_context_menu_requested(self, pos):
-        """Reimplemented method to add a (re)start REPL action into the default context menu.
+    def _context_menu_make(self, pos):
+        """ Reimplemented to add an action for (re)start REPL action.
         """
-        menu = self._context_menu_make(pos)
+        menu = super()._context_menu_make(pos)
+        for before_action in menu.actions():
+            if before_action.text() == 'Copy (Raw Text)':
+                menu.insertAction(before_action, self._copy_input_action)
+                break
         first_action = menu.actions()[0]
-        menu.insertSeparator(first_action)
         if not self.kernel_manager:
-            start_repl_action = QAction("Start REPL", self)
-            start_repl_action.triggered.connect(lambda: self.start_jupyter_kernel())
-            menu.insertAction(first_action, start_repl_action)
+            menu.insertAction(first_action, self.start_repl_action)
         else:
-            restart_repl_action = QAction("Restart REPL", self)
-            restart_repl_action.triggered.connect(lambda: self.restart_jupyter_kernel())
-            restart_repl_action.setEnabled(not self.command)
-            menu.insertAction(first_action, restart_repl_action)
-        menu.exec_(self._control.mapToGlobal(pos))
+            self.restart_repl_action.setEnabled(not self.command)
+            menu.insertAction(first_action, self.restart_repl_action)
+        menu.insertSeparator(first_action)
+        return menu
 
     def enterEvent(self, event):
         """Set busy cursor during REPL (re)starts."""
@@ -412,3 +421,31 @@ class JuliaREPLWidget(RichJupyterWidget):
             event.ignore()
         else:
             super().dragEnterEvent(event)
+
+    def copy_input(self):
+        """Copy only input."""
+        if not self._control.hasFocus():
+            return
+        text = self._control.textCursor().selection().toPlainText()
+        if not text:
+            return
+        # Remove prompts.
+        lines = text.splitlines()
+        useful_lines = []
+        for line in lines:
+            m = self._highlighter._classic_prompt_re.match(line)
+            if m:
+                useful_lines.append(line[len(m.group(0)):])
+                continue
+            m = self._highlighter._ipy_prompt_re.match(line)
+            if m:
+                useful_lines.append(line[len(m.group(0)):])
+                continue
+        text = '\n'.join(useful_lines)
+        try:
+            was_newline = text[-1] == '\n'
+        except IndexError:
+            was_newline = False
+        if was_newline:  # user doesn't need newline
+            text = text[:-1]
+        QApplication.clipboard().setText(text)
