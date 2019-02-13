@@ -92,10 +92,11 @@ class CustomLineEditDelegate(QItemDelegate):
         return editor
 
     def eventFilter(self, editor, event):
-        if event.type() == QEvent.KeyPress and event.key() in self.key_list:
+        if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Escape,):
             self._parent.setFocus()
             return QCoreApplication.sendEvent(self._parent, event)
-        if event.type() in (QEvent.FocusOut,):
+        if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Tab, Qt.Key_Backtab) \
+                or event.type() in (QEvent.FocusOut,):
             return QCoreApplication.sendEvent(self._parent, event)
         return super().eventFilter(editor, event)
 
@@ -137,10 +138,13 @@ class SearchBarEditor(QTableView):
         self.update_geometry()
 
     def keyPressEvent(self, event):
+        previous = self.currentIndex()
+        if self.isPersistentEditorOpen(previous):
+            self.closePersistentEditor(previous)
         super().keyPressEvent(event)
+        current = self.currentIndex()
         if event.key() not in (Qt.Key_Up, Qt.Key_Down):
             return
-        current = self.currentIndex()
         if current.row() == 0:
             self.proxy_model.setData(self.first_index, self._original_text)
         else:
