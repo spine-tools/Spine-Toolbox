@@ -75,13 +75,11 @@ class CustomQGraphicsView(QGraphicsView):
             event.ignore()
             return
         event.accept()
-        try:
-            # TODO: This only work with DesignQGraphicsView
-            config = self._graph_view_form._data_store._toolbox._config
-            use_smooth_zoom = config.getboolean("settings", "use_smooth_zoom")
-        except AttributeError:
-            use_smooth_zoom = False
-        if use_smooth_zoom:
+        object_name = self.parent().parent()
+        qsettings = self.parent().parent().qsettings()
+        smooth_zoom_str = qsettings.value("appSettings/smoothZoom", defaultValue="false")
+        smooth_zoom = True if smooth_zoom_str == "true" else False
+        if smooth_zoom:
             num_degrees = event.delta() / 8
             num_steps = num_degrees / 15
             self._num_scheduled_scalings += num_steps

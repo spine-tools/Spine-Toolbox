@@ -16,6 +16,7 @@ Widget for controlling user settings.
 :date:   17.1.2018
 """
 
+import logging
 import os
 from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog, QStyle
 from PySide2.QtCore import Slot, Qt
@@ -39,6 +40,7 @@ class SettingsWidget(QWidget):
         self._toolbox = toolbox  # QWidget parent
         self._configs = configs
         self._project = self._toolbox.project()
+        self._qsettings = self._toolbox.qsettings()
         self.orig_work_dir = ""  # Work dir when this widget was opened
         # Set up the ui from Qt Designer files
         self.ui = ui.settings.Ui_SettingsForm()
@@ -125,7 +127,8 @@ class SettingsWidget(QWidget):
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
         save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
         commit_at_exit = self._configs.get("settings", "commit_at_exit")  # Tri-state checkBox
-        use_smooth_zoom = self._configs.getboolean("settings", "use_smooth_zoom")
+        # QSettings value() method returns a str even if a boolean was stored
+        smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._configs.get("settings", "gams_path")
@@ -152,7 +155,7 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
         else:  # default
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
-        if use_smooth_zoom:
+        if smooth_zoom == "true":
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if datetime:
             self.ui.checkBox_datetime.setCheckState(Qt.Checked)
@@ -183,7 +186,7 @@ class SettingsWidget(QWidget):
         b = int(self.ui.checkBox_exit_prompt.checkState())
         f = str(int(self.ui.checkBox_save_at_exit.checkState()))
         g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
-        h = int(self.ui.checkBox_use_smooth_zoom.checkState())
+        h = True if int(self.ui.checkBox_use_smooth_zoom.checkState()) else False
         d = int(self.ui.checkBox_datetime.checkState())
         delete_data = int(self.ui.checkBox_delete_data.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
@@ -207,7 +210,7 @@ class SettingsWidget(QWidget):
         self._configs.setboolean("settings", "show_exit_prompt", b)
         self._configs.set("settings", "save_at_exit", f)
         self._configs.set("settings", "commit_at_exit", g)
-        self._configs.setboolean("settings", "use_smooth_zoom", h)
+        self._qsettings.setValue("appSettings/smoothZoom", h)
         self._configs.setboolean("settings", "datetime", d)
         self._configs.setboolean("settings", "delete_data", delete_data)
         self._configs.set("settings", "gams_path", gams_path)

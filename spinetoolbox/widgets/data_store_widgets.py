@@ -73,7 +73,6 @@ class DataStoreForm(QMainWindow):
         self.ui = ui
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set up status bar and apply style sheet
         self.ui.statusbar.setFixedHeight(20)
         self.ui.statusbar.setSizeGripEnabled(False)
@@ -130,6 +129,10 @@ class DataStoreForm(QMainWindow):
             connect(self.set_parameter_value_data)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
+
+    def qsettings(self):
+        """Returns the QSettings instance from ToolboxUI."""
+        return self._data_store._toolbox.qsettings()
 
     def set_corner_widgets(self):
         """Set corner widgets (icon and text on the tab bar) to both QTabWidgets."""
@@ -590,10 +593,10 @@ class DataStoreForm(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self.qsettings.value("{0}/windowSize".format(self.settings_key))
-        window_pos = self.qsettings.value("{0}/windowPosition".format(self.settings_key))
-        window_maximized = self.qsettings.value("{0}/windowMaximized".format(self.settings_key), defaultValue='false')
-        n_screens = self.qsettings.value("{0}/n_screens".format(self.settings_key), defaultValue=1)
+        window_size = self.qsettings().value("{0}/windowSize".format(self.settings_key))
+        window_pos = self.qsettings().value("{0}/windowPosition".format(self.settings_key))
+        window_maximized = self.qsettings().value("{0}/windowMaximized".format(self.settings_key), defaultValue='false')
+        n_screens = self.qsettings().value("{0}/n_screens".format(self.settings_key), defaultValue=1)
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -612,12 +615,12 @@ class DataStoreForm(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         # save qsettings
-        self.qsettings.setValue("{}/windowSize".format(self.settings_key), self.size())
-        self.qsettings.setValue("{}/windowPosition".format(self.settings_key), self.pos())
+        self.qsettings().setValue("{}/windowSize".format(self.settings_key), self.size())
+        self.qsettings().setValue("{}/windowPosition".format(self.settings_key), self.pos())
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("{}/windowMaximized".format(self.settings_key), True)
+            self.qsettings().setValue("{}/windowMaximized".format(self.settings_key), True)
         else:
-            self.qsettings.setValue("{}/windowMaximized".format(self.settings_key), False)
+            self.qsettings().setValue("{}/windowMaximized".format(self.settings_key), False)
         if self.db_map.has_pending_changes():
             self.show_commit_session_prompt()
         self.db_map.close()
@@ -1117,6 +1120,7 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="show_export_file_dialog")
     def show_export_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to export."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getSaveFileName(self,
                                              "Export to file",
                                              self._data_store.project().project_dir,
@@ -1206,7 +1210,7 @@ class TreeViewForm(DataStoreForm):
     def find_next_leaf(self, index):
         """If index corresponds to a relationship, then expand the next ocurrence of it."""
         if not index.isValid():
-            return # just to be safe
+            return  # just to be safe
         clicked_type = index.data(Qt.UserRole)
         if not clicked_type:  # root item
             return
@@ -1882,7 +1886,7 @@ class TreeViewForm(DataStoreForm):
     def restore_ui(self):
         """Restore UI state from previous session."""
         super().restore_ui()
-        splitter_tree_parameter_state = self.qsettings.value("treeViewWidget/splitterTreeParameterState")
+        splitter_tree_parameter_state = self.qsettings().value("treeViewWidget/splitterTreeParameterState")
         if splitter_tree_parameter_state:
             self.ui.splitter_tree_parameter.restoreState(splitter_tree_parameter_state)
 
@@ -1909,7 +1913,7 @@ class TreeViewForm(DataStoreForm):
             event (QEvent): Closing event if 'X' is clicked.
         """
         super().closeEvent(event)
-        self.qsettings.setValue(
+        self.qsettings().setValue(
             "{}/splitterTreeParameterState".format(self.settings_key),
             self.ui.splitter_tree_parameter.saveState())
         self.close_editors()
@@ -2187,8 +2191,8 @@ class GraphViewForm(DataStoreForm):
             is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
             # Fetch object class if needed
             if is_root_selected or is_object_class_selected:
-                 if self.object_tree_model.canFetchMore(index):
-                     self.object_tree_model.fetchMore(index)
+                if self.object_tree_model.canFetchMore(index):
+                    self.object_tree_model.fetchMore(index)
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
                 object_id = object_item.data(Qt.UserRole + 1)["id"]
@@ -2828,7 +2832,7 @@ class GraphViewForm(DataStoreForm):
     def restore_ui(self):
         """Restore UI state from previous session."""
         super().restore_ui()
-        window_state = self.qsettings.value("{0}/windowState".format(self.settings_key))
+        window_state = self.qsettings().value("{0}/windowState".format(self.settings_key))
         if window_state:
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
 
@@ -2839,7 +2843,7 @@ class GraphViewForm(DataStoreForm):
             event (QEvent): Closing event if 'X' is clicked.
         """
         super().closeEvent(event)
-        self.qsettings.setValue("{0}/windowState".format(self.settings_key), self.saveState(version=1))
+        self.qsettings().setValue("{0}/windowState".format(self.settings_key), self.saveState(version=1))
         scene = self.ui.graphicsView.scene()
         if scene:
             scene.deleteLater()

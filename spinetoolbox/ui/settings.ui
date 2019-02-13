@@ -101,8 +101,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>323</width>
-          <height>449</height>
+          <width>336</width>
+          <height>443</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_5">
@@ -232,6 +232,16 @@
               </property>
               <property name="readOnly">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Smooth zoom</string>
               </property>
              </widget>
             </item>
@@ -421,17 +431,10 @@
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Does not commit session and does not show message box&lt;/p&gt;&lt;p&gt;Partially checked: Shows message box (default)&lt;/p&gt;&lt;p&gt;Checked: Commits session and does not show message box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Commit session at exit</string>
+               <string>Commit session when view is closed</string>
               </property>
               <property name="tristate">
                <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
-              <property name="text">
-               <string>Use smooth zoom in graph view</string>
               </property>
              </widget>
             </item>
@@ -765,6 +768,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_save_at_exit</tabstop>
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
+  <tabstop>checkBox_use_smooth_zoom</tabstop>
   <tabstop>lineEdit_gams_path</tabstop>
   <tabstop>toolButton_browse_gams</tabstop>
   <tabstop>checkBox_use_repl</tabstop>
@@ -776,6 +780,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>toolButton_browse_work</tabstop>
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
+  <tabstop>scrollArea</tabstop>
  </tabstops>
  <resources/>
  <connections/>
