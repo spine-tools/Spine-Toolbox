@@ -21,7 +21,7 @@ from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from helpers import fix_name_ambiguity, tuple_itemgetter
-from widgets.custom_qwidget import FilterWidget
+from widgets.custom_qwidgets import FilterWidget
 from operator import itemgetter
 
 

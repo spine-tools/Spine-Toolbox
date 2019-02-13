@@ -41,7 +41,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
     EditRelationshipClassesDialog, EditRelationshipsDialog, \
     CommitDialog
-from widgets.custom_qwidget import ZoomWidget
+from widgets.custom_qwidgets import ZoomWidget
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \

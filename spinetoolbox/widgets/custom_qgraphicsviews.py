@@ -17,12 +17,11 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 """
 
 import logging
-from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
+from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine
-from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import LinkDrawer, Link, ItemImage
-from widgets.toolbars import DraggableWidget
+from graphics_items import LinkDrawer, Link
 from widgets.custom_qlistview import DragListView
+from widgets.custom_qgraphicsscene import CustomQGraphicsScene
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -175,6 +174,59 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
         self.show()
+
+    def mousePressEvent(self, e):
+        """Manage drawing of links. Handle the case where a link is being
+        drawn and the user doesn't hit a connector button.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        was_drawing = self.link_drawer.drawing if self.link_drawer else None
+        # This below will trigger connector button if any
+        super().mousePressEvent(e)
+        if was_drawing:
+            self.link_drawer.hide()
+            # If `drawing` is still `True` here, it means we didn't hit a connector
+            if self.link_drawer.drawing:
+                self.link_drawer.drawing = False
+                if e.button() != Qt.LeftButton:
+                    return
+                self._toolbox.msg_warning.emit("Unable to make connection. Try landing "
+                                               "the connection onto a connector button.")
+
+    def mouseReleaseEvent(self, event):
+        """Mouse release event.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Mouse event
+        """
+        super().mouseReleaseEvent(event)
+
+    def mouseMoveEvent(self, e):
+        """Update line end position.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        if self.link_drawer and self.link_drawer.drawing:
+            self.link_drawer.dst = self.mapToScene(e.pos())
+            self.link_drawer.update_geometry()
+        super().mouseMoveEvent(e)
+
+    def wheelEvent(self, event):
+        """Zoom in/out."""
+        super().wheelEvent(event)
+
+    def showEvent(self, event):
+        """Make the scene at least as big as the viewport."""
+        super().showEvent(event)
+        self.resize_scene(recenter=True)
+
+    def resizeEvent(self, event):
+        """Make the scene at least as big as the viewport."""
+        super().resizeEvent(event)
+        self.resize_scene(recenter=True)
 
     def set_ui(self, toolbox):
         """Set the main ToolboxUI instance."""
@@ -376,51 +428,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 self._toolbox.msg_warning.emit("<b>Not implemented</b>. Whatever you are trying to do "
                                                "is not implemented yet :)")
 
-    def mouseMoveEvent(self, e):
-        """Update line end position.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        if self.link_drawer and self.link_drawer.drawing:
-            self.link_drawer.dst = self.mapToScene(e.pos())
-            self.link_drawer.update_geometry()
-        super().mouseMoveEvent(e)
-
-    def mousePressEvent(self, e):
-        """Manage drawing of links. Handle the case where a link is being
-        drawn and the user doesn't hit a connector button.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        was_drawing = self.link_drawer.drawing if self.link_drawer else None
-        # This below will trigger connector button if any
-        super().mousePressEvent(e)
-        if was_drawing:
-            self.link_drawer.hide()
-            # If `drawing` is still `True` here, it means we didn't hit a connector
-            if self.link_drawer.drawing:
-                self.link_drawer.drawing = False
-                if e.button() != Qt.LeftButton:
-                    return
-                self._toolbox.msg_warning.emit("Unable to make connection. Try landing "
-                                               "the connection onto a connector button.")
-
-    def wheelEvent(self, event):
-        """Zoom in/out."""
-        super().wheelEvent(event)
-
-    def showEvent(self, event):
-        """Make the scene at least as big as the viewport."""
-        super().showEvent(event)
-        self.resize_scene(recenter=True)
-
-    def resizeEvent(self, event):
-        """Make the scene at least as big as the viewport."""
-        super().resizeEvent(event)
-        self.resize_scene(recenter=True)
-
 
 class GraphQGraphicsView(CustomQGraphicsView):
     """QGraphicsView for the Graph View."""
@@ -432,14 +439,6 @@ class GraphQGraphicsView(CustomQGraphicsView):
         super().__init__(parent=parent)
         self._graph_view_form = None
 
-    def mouseMoveEvent(self, event):
-        """Register mouse position to recenter the scene after zoom."""
-        super().mouseMoveEvent(event)
-
-    def wheelEvent(self, event):
-        """Zoom in/out."""
-        super().wheelEvent(event)
-
     def mousePressEvent(self, event):
         """Call superclass method."""
         super().mousePressEvent(event)
@@ -447,6 +446,14 @@ class GraphQGraphicsView(CustomQGraphicsView):
     def mouseReleaseEvent(self, event):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
+
+    def mouseMoveEvent(self, event):
+        """Register mouse position to recenter the scene after zoom."""
+        super().mouseMoveEvent(event)
+
+    def wheelEvent(self, event):
+        """Zoom in/out."""
+        super().wheelEvent(event)
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
@@ -496,74 +503,3 @@ class GraphQGraphicsView(CustomQGraphicsView):
             return
         e.accept()
         self._graph_view_form.show_graph_view_context_menu(e.globalPos())
-
-
-class CustomQGraphicsScene(QGraphicsScene):
-    """A scene that handles drag and drop events of DraggableWidget sources."""
-
-    files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
-
-    def __init__(self, parent, toolbox):
-        """Initialize class."""
-        super().__init__(parent)
-        self._toolbox = toolbox
-        self.item_shadow = None
-
-    def dragLeaveEvent(self, event):
-        """Accept event."""
-        event.accept()
-
-    def dragEnterEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
-        event.accept()
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            super().dragEnterEvent(event)
-
-    def dragMoveEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
-        event.accept()
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            super().dragMoveEvent(event)
-
-    def dropEvent(self, event):
-        """Only accept drops when the source is an instance of
-        DraggableWidget (from Add Item toolbar).
-        Capture text from event's mimedata and show the appropriate 'Add Item form.'
-        """
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            super().dropEvent(event)
-            return
-        if not self._toolbox.project():
-            self._toolbox.msg.emit("Create or open a project first")
-            event.ignore()
-            return
-        event.acceptProposedAction()
-        text = event.mimeData().text()
-        pos = event.scenePos()
-        pen = QPen(QColor('white'))
-        x = pos.x() - 35
-        y = pos.y() - 35
-        w = 70
-        h = 70
-        if text == "Data Store":
-            brush = QBrush(QColor(0, 255, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._toolbox.show_add_data_store_form(pos.x(), pos.y())
-        elif text == "Data Connection":
-            brush = QBrush(QColor(0, 0, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
-        elif text == "Tool":
-            brush = QBrush(QColor(255, 0, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._toolbox.show_add_tool_form(pos.x(), pos.y())
-        elif text == "View":
-            brush = QBrush(QColor(0, 255, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._toolbox.show_add_view_form(pos.x(), pos.y())
-        self.addItem(self.item_shadow)
