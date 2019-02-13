@@ -146,12 +146,6 @@ class ParameterDelegate(QItemDelegate):
         super().__init__(parent)
         self._parent = parent
         self.db_map = parent.db_map
-        self.setClipping(False)
-        # self.closeEditor.connect(self.tempslot)
-
-    def tempslot(self, editor, hint):
-        print(editor)
-        print(hint)
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -170,14 +164,11 @@ class ParameterDelegate(QItemDelegate):
             editor.set_base_size(size)
             editor.update_geometry()
 
-    def editorEvent(self, event, model, option, index):
-        # print(event.type())
-        return False
-
     def eventFilter(self, editor, event):
         """Hack event filter so our MultiSearchBarEditor responds to Tab and Backtab
         as expected.
         """
+        return super().eventFilter(editor, event)
         if type(editor) == MultiSearchBarEditor and event.type() == QEvent.KeyPress:
             if event.key() == Qt.Key_Tab and editor.active_index != editor.count() - 1:
                 editor.set_active_index(editor.active_index + 1)
@@ -297,34 +288,14 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
             else:
                 editor = MultiSearchBarEditor(parent)
                 object_class_ids = [int(x) for x in object_class_id_list.split(',')]
+                object_class_dict = {x.id: x.name for x in self.db_map.object_class_list(id_list=object_class_ids)}
+                object_class_names = [object_class_dict[x] for x in object_class_ids]
                 object_name_list = index.data(Qt.EditRole)
                 current_object_names = object_name_list.split(",") if object_name_list else []
                 all_object_names_list = list()
                 for class_id in object_class_ids:
                     all_object_names_list.append([x.name for x in self.db_map.object_list(class_id=class_id)])
-                editor.set_data(current_object_names, all_object_names_list)
-            #object_class_id_list = index.sibling(index.row(), h('object_class_id_list')).data(Qt.DisplayRole)
-            #object_class_name_list = index.sibling(index.row(), h('object_class_name_list')).data(Qt.DisplayRole)
-            #try:
-            #    object_class_ids = [int(x) for x in object_class_id_list.split(',')]
-            #    object_class_names = object_class_name_list.split(',')
-            #except AttributeError:
-            #    return
-            #object_icons = [self._parent.object_icon(x) for x in object_class_names]
-            #object_class_dict = dict(zip(object_class_ids, object_class_names))
-            #object_names_dict = {}
-            #for object_ in self.db_map.object_list():
-            #    try:
-            #        object_class_name = object_class_dict[object_.class_id]
-            #    except KeyError:
-            #        continue
-            #    object_names_dict.setdefault(object_class_name, list()).append(object_.name)
-            #object_name_list = index.data(Qt.EditRole)
-            #try:
-            #    object_names = object_name_list.split(",")
-            #except AttributeError:
-            #    object_names = []
-            #editor.set_data(object_icons, object_class_names, object_names, object_names_dict)
+                editor.set_data(object_class_names, current_object_names, all_object_names_list)
         elif header[index.column()] == 'parameter_name':
             editor = SearchBarEditor(parent)
             relationship_class_id = index.sibling(index.row(), h('relationship_class_id')).data(Qt.DisplayRole)

@@ -17,10 +17,10 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
-    QEvent, QSize
-from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QVBoxLayout, QTableView, QSplitter, \
-    QApplication
-from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QFocusEvent
+    QTimer
+from PySide2.QtWidgets import QComboBox, QLineEdit, QWidget, QVBoxLayout, QTableView, QItemDelegate, \
+    QFrame
+from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
 
 
 class CustomLineEditor(QLineEdit):
@@ -112,7 +112,7 @@ class SearchBarEditor(QWidget):
         """Call event handler on line edit.
         """
         self.line_edit.focusInEvent(event)
-        # self.line_edit.selectAll()
+        self.line_edit.selectAll()
 
     def focusOutEvent(self, event):
         """Call event handler on line edit.
@@ -194,84 +194,92 @@ class SearchBarEditor(QWidget):
         return self.line_edit.text()
 
 
-class MultiSearchBarEditor(QSplitter):
-    """A widget that splits out several Google-like search bars."""
+class SearchBarDelegate(QItemDelegate):
+    """A custom delegate for MultiSearchBarEditor.
+
+    Attributes:
+        parent (MultiSearchBarEditor): multi search bar editor
+    """
+    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self._parent = parent
+
+    def setModelData(self, editor, model, index):
+        model.setData(index, editor.data())
+
+    def createEditor(self, parent, option, index):
+        editor = SearchBarEditor(parent)
+        editor.set_data(index.data(), self._parent.alls[index.column()])
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
+
+    def updateEditorGeometry(self, editor, option, index):
+        super().updateEditorGeometry(editor, option, index)
+        size = option.rect.size()
+        editor.set_base_size(size)
+        editor.update_geometry()
+
+    def close_editor(self, editor, index, model):
+        self.closeEditor.emit(editor)
+        self.setModelData(editor, model, index)
+
+
+class MultiSearchBarEditor(QTableView):
+    """A table view made of several Google-like search bars."""
 
     data_committed = Signal(name="data_committed")
 
     def __init__(self, parent):
-        super().__init__(parent, Qt.Horizontal)
-        self.active_index = 0
-        self.setHandleWidth(0)
-        self.splitterMoved.connect(self._handle_splitter_moved)
-        self.setMouseTracking(True)
+        super().__init__(parent)
+        self.alls = None
+        self._max_item_count = None
+        self._base_size = None
+        self.model = QStandardItemModel(self)
+        self.setModel(self.model)
+        delegate = SearchBarDelegate(self)
+        self.setItemDelegate(delegate)
+        self.verticalHeader().hide()
+        self.horizontalHeader().setStretchLastSection(True)
+        # self.setFrameStyle(QFrame.NoFrame)
 
-    @Slot("int", "int", name="_handle_splitter_moved")
-    def _handle_splitter_moved(self, pos, index):
-        for k, width in enumerate(self.sizes()):
-            search_bar = self.widget(k)
-            size = QSize(width, search_bar._base_size.height())
-            search_bar.set_base_size(size)
-            search_bar.update_geometry()
-
-    def set_active_index(self, index):
-        """Set active index. The widget at the given index gains focus.
-        """
-        event = QFocusEvent(QEvent.FocusOut)
-        self.widget(self.active_index).focusOutEvent(event)
-        self.active_index = index
-        event = QFocusEvent(QEvent.FocusIn)
-        self.widget(self.active_index).focusInEvent(event)
-
-    def keyPressEvent(self, event):
-        """Call event handler on the active widget.
-        """
-        self.widget(self.active_index).keyPressEvent(event)
-
-    def focusInEvent(self, event):
-        """Set the active index.
-        """
-        self.set_active_index(0)
-
-    def set_data(self, currents, alls):
-        height = 0
-        width = 0
-        for k, all_ in enumerate(alls):
-            search_bar = SearchBarEditor(self)
+    def set_data(self, header, currents, alls):
+        self.model.setHorizontalHeaderLabels(header)
+        self.alls = alls
+        self._max_item_count = max(len(x) for x in alls)
+        item_list = []
+        for k in range(len(header)):
             try:
                 current = currents[k]
             except IndexError:
                 current = None
-            search_bar.set_data(current, all_)
-            search_bar.line_edit.setMouseTracking(True)
-            search_bar.line_edit.installEventFilter(self)
-            search_bar.view.clicked.connect(lambda i, k=k: self.set_active_index(k))
-            self.addWidget(search_bar)
+            qitem = QStandardItem(current)
+            item_list.append(qitem)
+        self.model.invisibleRootItem().appendRow(item_list)
+        QTimer.singleShot(0, self.start_editing)
 
-    def eventFilter(self, watched, event):
-        if event.type() == QEvent.MouseButtonPress and event.button() == Qt.LeftButton:
-            index = self.indexOf(watched.parent())
-            self.set_active_index(index)
-        return False
+    def data(self):
+        return ",".join(self.model.index(0, j).data() for j in range(self.model.columnCount()))
 
     def set_base_size(self, size):
         self._base_size = size
 
     def update_geometry(self):
-        total_width = 0
-        max_height = 0
-        size = self._base_size
-        size.setWidth(size.width() / self.count())
-        for k in range(self.count()):
-            search_bar = self.widget(k)
-            search_bar.set_base_size(size)
-            search_bar.update_geometry()
-            total_width += search_bar.width()
-            max_height = max(max_height, search_bar.height())
-        self.resize(self.width(), max_height)
+        """Update geometry.
+        """
+        self.horizontalHeader().setDefaultSectionSize(self._base_size.width() / self.model.columnCount())
+        self.horizontalHeader().setMaximumHeight(self._base_size.height())
+        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
+        self.resize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2)
 
-    def data(self):
-        return ",".join(self.widget(k).data() for k in range(self.count()))
+    def start_editing(self):
+        """Start editing first item.
+        """
+        index = self.model.index(0, 0)
+        self.setCurrentIndex(index)
+        self.edit(index)
 
 
 class CheckListEditor(QTableView):
@@ -343,66 +351,3 @@ class CheckListEditor(QTableView):
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         total_height = self.verticalHeader().length() + 2
         self.resize(self._base_size.width(), total_height)
-
-
-class ObjectNameListEditor(QWidget):
-    """A custom QWidget to edit object name lists.
-    NOTE: obsolete
-    """
-
-    data_committed = Signal(name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.missing_dimensions = set()
-        self.combos = list()
-        layout = QHBoxLayout()
-        layout.setSpacing(0)
-        layout.setContentsMargins(0, 0, 0, 0)
-        self.setLayout(layout)
-
-    def set_data(self, object_icons, object_class_names, object_names, object_names_dict):
-        for i, object_class_name in enumerate(object_class_names):
-            combo = QComboBox(self)
-            model = QStandardItemModel()
-            icon = object_icons[i]
-            qitem = QStandardItem(icon, object_class_name)
-            qitem.setFlags(~Qt.ItemIsSelectable)
-            model.appendRow(qitem)
-            all_object_names = object_names_dict[object_class_name]
-            for object_name in all_object_names:
-                qitem = QStandardItem(object_name)
-                model.appendRow(qitem)
-            combo.setModel(model)
-            combo.insertSeparator(1)
-            combo.activated.connect(lambda index, i=i: self.remove_missing_dimension(i))
-            self.layout().addWidget(combo)
-            self.combos.append(combo)
-            try:
-                object_name = object_names[i]
-            except IndexError:
-                self.missing_dimensions.add(i)
-                continue
-            if object_name:
-                combo.setCurrentText(object_name)
-            else:
-                self.missing_dimensions.add(i)
-
-    def remove_missing_dimension(self, dim):
-        combo = self.combos[dim]
-        try:
-            self.missing_dimensions.remove(dim)
-        except KeyError:
-            pass
-        if not self.missing_dimensions:
-            self.data_committed.emit()
-
-    def data(self):
-        object_name_list = list()
-        for combo in self.combos:
-            if combo.currentIndex() == 0:
-                object_name = ''
-            else:
-                object_name = combo.currentText()
-            object_name_list.append(object_name)
-        return ','.join(object_name_list)
