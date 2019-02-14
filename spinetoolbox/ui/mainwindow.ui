@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -86,7 +86,7 @@
      </widget>
     </item>
     <item>
-     <widget class="CustomQGraphicsView" name="graphicsView">
+     <widget class="DesignQGraphicsView" name="graphicsView">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -109,7 +109,10 @@
        <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
       </property>
       <property name="dragMode">
-       <enum>QGraphicsView::NoDrag</enum>
+       <enum>QGraphicsView::ScrollHandDrag</enum>
+      </property>
+      <property name="resizeAnchor">
+       <enum>QGraphicsView::AnchorUnderMouse</enum>
       </property>
       <property name="viewportUpdateMode">
        <enum>QGraphicsView::FullViewportUpdate</enum>
@@ -124,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -434,8 +437,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>366</width>
-              <height>345</height>
+              <width>349</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_15">
@@ -1277,8 +1280,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>379</width>
-              <height>331</height>
+              <width>349</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1692,8 +1695,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>379</width>
-              <height>331</height>
+              <width>349</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -2073,8 +2076,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>379</width>
-              <height>331</height>
+              <width>349</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2346,7 +2349,7 @@
            <property name="childrenCollapsible">
             <bool>false</bool>
            </property>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <layout class="QVBoxLayout" name="verticalLayout_5">
              <property name="spacing">
               <number>0</number>
@@ -2388,7 +2391,7 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <layout class="QVBoxLayout" name="verticalLayout_2">
              <property name="spacing">
               <number>0</number>
@@ -2778,9 +2781,9 @@
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>CustomQGraphicsView</class>
+   <class>DesignQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>widgets/custom_qgraphicsview.h</header>
+   <header>widgets/custom_qgraphicsviews.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

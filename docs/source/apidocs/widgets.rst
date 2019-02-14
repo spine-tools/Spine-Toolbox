@@ -76,10 +76,10 @@ widgets.custom\_qdialog module
     :undoc-members:
     :show-inheritance:
 
-widgets.custom\_qgraphicsview module
-------------------------------------
+widgets.custom\_qgraphicsviews module
+-------------------------------------
 
-.. automodule:: widgets.custom_qgraphicsview
+.. automodule:: widgets.custom_qgraphicsviews
     :members:
     :undoc-members:
     :show-inheritance:

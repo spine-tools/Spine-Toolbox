@@ -17,34 +17,214 @@ Class for a custom QGraphicsView for visualizing project items and connections.
 """
 
 import logging
-from PySide2.QtWidgets import QGraphicsView, QGraphicsScene
+from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine
-from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import LinkDrawer, Link, ItemImage
-from widgets.toolbars import DraggableWidget
+from graphics_items import LinkDrawer, Link
 from widgets.custom_qlistview import DragListView
+from widgets.custom_qgraphicsscene import CustomQGraphicsScene
 
 
 class CustomQGraphicsView(QGraphicsView):
-    """Custom QGraphicsView class.
+    """Super class for Design and Graph QGraphicsViews.
 
     Attributes:
-        parent (QWidget): Application central widget (self.centralwidget)
+        parent (QWidget): Parent widget
     """
     def __init__(self, parent):
-        """Initialize the QGraphicsView."""
+        """Init CustomQGraphicsView."""
+        super().__init__(parent=parent)  # Pass parent to QGraphicsView constructor
+        self._zoom_factor_base = 1.0015
+        self._angle = 120
+        self.target_viewport_pos = None
+        self.target_scene_pos = QPointF(0, 0)
+        self._num_scheduled_scalings = 0
+        self.anim = None
+        self.rel_zoom_factor = 1.0
+        self.default_zoom_factor = None
+        self.max_rel_zoom_factor = 10.0
+        self.min_rel_zoom_factor = 0.1
+
+    def mousePressEvent(self, event):
+        """Set rubber band selection mode if Control pressed.
+        Enable resetting the zoom factor from the middle mouse button.
+        """
+        if event.modifiers() & Qt.ControlModifier:
+            self.setDragMode(QGraphicsView.RubberBandDrag)
+        if event.button() == Qt.MidButton:
+            self.reset_zoom()
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Reestablish scroll hand drag mode."""
+        super().mouseReleaseEvent(event)
+        self.setDragMode(QGraphicsView.ScrollHandDrag)
+
+    def mouseMoveEvent(self, event):
+        """Register mouse position to recenter the scene after zoom."""
+        super().mouseMoveEvent(event)
+        if self.target_viewport_pos is not None:
+            delta = self.target_viewport_pos - event.pos()
+            if delta.manhattanLength() <= 3:
+                return
+        self.target_viewport_pos = event.pos()
+        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
+
+    def wheelEvent(self, event):
+        """Zoom in/out."""
+        if event.orientation() != Qt.Vertical:
+            event.ignore()
+            return
+        event.accept()
+        object_name = self.parent().parent()
+        qsettings = self.parent().parent().qsettings()
+        smooth_zoom_str = qsettings.value("appSettings/smoothZoom", defaultValue="false")
+        smooth_zoom = True if smooth_zoom_str == "true" else False
+        if smooth_zoom:
+            num_degrees = event.delta() / 8
+            num_steps = num_degrees / 15
+            self._num_scheduled_scalings += num_steps
+            if self._num_scheduled_scalings * num_steps < 0:
+                self._num_scheduled_scalings = num_steps
+            if self.anim:
+                self.anim.deleteLater()
+            self.anim = QTimeLine(200, self)
+            self.anim.setUpdateInterval(20)
+            self.anim.valueChanged.connect(self.scaling_time)
+            self.anim.finished.connect(self.anim_finished)
+            self.anim.start()
+        else:
+            angle = event.angleDelta().y()
+            factor = self._zoom_factor_base ** angle
+            self.gentle_zoom(factor)
+
+    def scaling_time(self, x):
+        """Called when animation value for smooth zoom changes. Perform zoom."""
+        factor = 1.0 + self._num_scheduled_scalings / 100.0
+        self.gentle_zoom(factor)
+
+    def anim_finished(self):
+        """Called when animation for smooth zoom finishes. Clean up."""
+        if self._num_scheduled_scalings > 0:
+            self._num_scheduled_scalings -= 1
+        else:
+            self._num_scheduled_scalings += 1
+        self.sender().deleteLater()
+        self.anim = None
+
+    def zoom_in(self):
+        """Perform a zoom in with a fixed scaling."""
+        self.target_viewport_pos = self.viewport().rect().center()
+        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
+        self.gentle_zoom(self._zoom_factor_base ** self._angle)
+
+    def zoom_out(self):
+        """Perform a zoom out with a fixed scaling."""
+        self.gentle_zoom(self._zoom_factor_base ** -self._angle)
+
+    def reset_zoom(self):
+        """Reset zoom to the default factor."""
+        if not self.default_zoom_factor:
+            return
+        self.resetTransform()
+        self.scale(self.default_zoom_factor, self.default_zoom_factor)
+        self.rel_zoom_factor = 1.0
+
+    def gentle_zoom(self, factor):
+        """Perform a zoom by a given factor."""
+        new_rel_zoom_factor = self.rel_zoom_factor * factor
+        if new_rel_zoom_factor > self.max_rel_zoom_factor or new_rel_zoom_factor < self.min_rel_zoom_factor:
+            return
+        self.rel_zoom_factor = new_rel_zoom_factor
+        self.scale(factor, factor)
+        self.centerOn(self.target_scene_pos)
+        delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
+        viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
+        self.centerOn(self.mapToScene(viewport_center))
+
+    def scale_to_fit_scene(self):
+        """Scale view so the scene fits best in it."""
+        if not self.isVisible():
+            return
+        scene_rect = self.sceneRect()
+        scene_extent = max(scene_rect.width(), scene_rect.height())
+        if not scene_extent:
+            return
+        size = self.size()
+        extent = min(size.height(), size.width())
+        self.default_zoom_factor = extent / scene_extent
+        self.reset_zoom()
+
+
+class DesignQGraphicsView(CustomQGraphicsView):
+    """QGraphicsView for the Design View.
+
+    Attributes:
+        parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
+    """
+    def __init__(self, parent):
+        """Initialize DesignQGraphicsView."""
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._scene = None
         self._toolbox = None
         self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
-        self.max_sw_width = 0
-        self.max_sw_height = 0
-        self.active_subwindow = None
-        self.src_widget = None  # source widget when drawing links
-        self.dst_widget = None  # destination widget when drawing links
+        self.src_item_name = None  # Name of source project item when drawing links
+        self.dst_item_name = None  # Name of destination project item when drawing links
         self.show()
+
+    def mousePressEvent(self, e):
+        """Manage drawing of links. Handle the case where a link is being
+        drawn and the user doesn't hit a connector button.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        was_drawing = self.link_drawer.drawing if self.link_drawer else None
+        # This below will trigger connector button if any
+        super().mousePressEvent(e)
+        if was_drawing:
+            self.link_drawer.hide()
+            # If `drawing` is still `True` here, it means we didn't hit a connector
+            if self.link_drawer.drawing:
+                self.link_drawer.drawing = False
+                if e.button() != Qt.LeftButton:
+                    return
+                self._toolbox.msg_warning.emit("Unable to make connection. Try landing "
+                                               "the connection onto a connector button.")
+
+    def mouseReleaseEvent(self, event):
+        """Mouse release event.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Mouse event
+        """
+        super().mouseReleaseEvent(event)
+
+    def mouseMoveEvent(self, e):
+        """Update line end position.
+
+        Args:
+            e (QGraphicsSceneMouseEvent): Mouse event
+        """
+        if self.link_drawer and self.link_drawer.drawing:
+            self.link_drawer.dst = self.mapToScene(e.pos())
+            self.link_drawer.update_geometry()
+        super().mouseMoveEvent(e)
+
+    def wheelEvent(self, event):
+        """Zoom in/out."""
+        super().wheelEvent(event)
+
+    def showEvent(self, event):
+        """Make the scene at least as big as the viewport."""
+        super().showEvent(event)
+        self.resize_scene(recenter=True)
+
+    def resizeEvent(self, event):
+        """Make the scene at least as big as the viewport."""
+        super().resizeEvent(event)
+        self.resize_scene(recenter=True)
 
     def set_ui(self, toolbox):
         """Set the main ToolboxUI instance."""
@@ -185,60 +365,60 @@ class CustomQGraphicsView(QGraphicsView):
             # start drawing and remember connector
             self.link_drawer.drawing = True
             self.link_drawer.start_drawing_at(src_rect)
-            self.src_widget = name
+            self.src_item_name = name
         else:
             # stop drawing and make connection
             self.link_drawer.drawing = False
-            self.dst_widget = name
+            self.dst_item_name = name
             # create connection
-            row = self._connection_model.header.index(self.src_widget)
-            column = self._connection_model.header.index(self.dst_widget)
+            row = self._connection_model.header.index(self.src_item_name)
+            column = self._connection_model.header.index(self.dst_item_name)
             index = self._connection_model.createIndex(row, column)
             if self._connection_model.data(index, Qt.DisplayRole) == "False":
-                self.add_link(self.src_widget, self.dst_widget, index)
+                self.add_link(self.src_item_name, self.dst_item_name, index)
                 self._toolbox.msg.emit("<b>{}</b>'s output is now connected to <b>{}</b>'s input."
-                                       .format(self.src_widget, self.dst_widget))
+                                       .format(self.src_item_name, self.dst_item_name))
             elif self._connection_model.data(index, Qt.DisplayRole) == "True":
                 self._toolbox.msg.emit("<b>{}</b>'s output is already connected to <b>{}</b>'s input."
-                                       .format(self.src_widget, self.dst_widget))
+                                       .format(self.src_item_name, self.dst_item_name))
             self.emit_connection_information_message()
 
     def emit_connection_information_message(self):
         """Inform user about what connections are implemented and how they work."""
-        if self.src_widget == self.dst_widget:
+        if self.src_item_name == self.dst_item_name:
             self._toolbox.msg_warning.emit("<b>Not implemented</b>. The functionality for feedback links "
                                            "is not implemented yet.")
         else:
-            src_index = self._project_item_model.find_item(self.src_widget)
+            src_index = self._project_item_model.find_item(self.src_item_name)
             if not src_index:
-                logging.error("Item {0} not found".format(self.src_widget))
+                logging.error("Item {0} not found".format(self.src_item_name))
                 return
-            dst_index = self._project_item_model.find_item(self.dst_widget)
+            dst_index = self._project_item_model.find_item(self.dst_item_name)
             if not dst_index:
-                logging.error("Item {0} not found".format(self.dst_widget))
+                logging.error("Item {0} not found".format(self.dst_item_name))
                 return
             src_item_type = self._project_item_model.project_item(src_index).item_type
             dst_item_type = self._project_item_model.project_item(dst_index).item_type
             if src_item_type == "Data Connection" and dst_item_type == "Tool":
                 self._toolbox.msg.emit("-> Input files for <b>{0}</b>'s execution "
                                        "will be looked up in <b>{1}</b>'s references and data directory."
-                                       .format(self.dst_widget, self.src_widget))
+                                       .format(self.dst_item_name, self.src_item_name))
             elif src_item_type == "Data Store" and dst_item_type == "Tool":
                 self._toolbox.msg.emit("-> Input files for <b>{0}</b>'s execution "
                                        "will be looked up in <b>{1}</b>'s data directory."
-                                       .format(self.dst_widget, self.src_widget))
+                                       .format(self.dst_item_name, self.src_item_name))
             elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
                 self._toolbox.msg.emit("-> Output files from <b>{0}</b>'s execution "
                                        "will be passed as reference to <b>{1}</b>'s data directory."
-                                       .format(self.src_widget, self.dst_widget))
+                                       .format(self.src_item_name, self.dst_item_name))
             elif src_item_type in ["Data Connection", "Data Store"] \
                     and dst_item_type in ["Data Connection", "Data Store"]:
                 self._toolbox.msg.emit("-> Input files for a tool's execution "
                                        "will be looked up in <b>{0}</b> if not found in <b>{1}</b>."
-                                       .format(self.src_widget, self.dst_widget))
+                                       .format(self.src_item_name, self.dst_item_name))
             elif src_item_type == "Data Store" and dst_item_type == "View":
                 self._toolbox.msg_warning.emit("-> Database references in <b>{0}</b> will be viewed by <b>{1}</b>."
-                                               .format(self.src_widget, self.dst_widget))
+                                               .format(self.src_item_name, self.dst_item_name))
             elif src_item_type == "Tool" and dst_item_type == "Tool":
                 self._toolbox.msg_warning.emit("<b>Not implemented</b>. Interaction between two "
                                                "Tool items is not implemented yet.")
@@ -246,176 +426,32 @@ class CustomQGraphicsView(QGraphicsView):
                 self._toolbox.msg_warning.emit("<b>Not implemented</b>. Whatever you are trying to do "
                                                "is not implemented yet :)")
 
-    def mouseMoveEvent(self, e):
-        """Update line end position.
 
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        if self.link_drawer and self.link_drawer.drawing:
-            self.link_drawer.dst = self.mapToScene(e.pos())
-            self.link_drawer.update_geometry()
-        super().mouseMoveEvent(e)
-
-    def mousePressEvent(self, e):
-        """Manage drawing of links. Handle the case where a link is being
-        drawn and the user doesn't hit a connector button.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
-        was_drawing = self.link_drawer.drawing if self.link_drawer else None
-        # This below will trigger connector button if any
-        super().mousePressEvent(e)
-        if was_drawing:
-            self.link_drawer.hide()
-            # If `drawing` is still `True` here, it means we didn't hit a connector
-            if self.link_drawer.drawing:
-                self.link_drawer.drawing = False
-                if e.button() != Qt.LeftButton:
-                    return
-                self._toolbox.msg_warning.emit("Unable to make connection. Try landing "
-                                               "the connection onto a connector button.")
-
-    def showEvent(self, event):
-        """Make the scene at least as big as the viewport."""
-        super().showEvent(event)
-        self.resize_scene(recenter=True)
-
-    def resizeEvent(self, event):
-        """Make the scene at least as big as the viewport."""
-        super().resizeEvent(event)
-        self.resize_scene(recenter=True)
-
-
-class GraphViewGraphicsView(QGraphicsView):
-    """A QGraphicsView to use with the GraphViewForm."""
+class GraphQGraphicsView(CustomQGraphicsView):
+    """QGraphicsView for the Graph View."""
 
     item_dropped = Signal("QPoint", "QString", name="item_dropped")
 
     def __init__(self, parent):
-        """Init class."""
-        super().__init__(parent)
+        """Init GraphQGraphicsView."""
+        super().__init__(parent=parent)
         self._graph_view_form = None
-        self._zoom_factor_base = 1.0015
-        self._angle = 120
-        self.target_viewport_pos = None
-        self.target_scene_pos = QPointF(0, 0)
-        self._num_scheduled_scalings = 0
-        self.anim = None
-        self.rel_zoom_factor = 1.0
-        self.default_zoom_factor = None
-        self.max_rel_zoom_factor = 10.0
-        self.min_rel_zoom_factor = 0.1
+
+    def mousePressEvent(self, event):
+        """Call superclass method."""
+        super().mousePressEvent(event)
+
+    def mouseReleaseEvent(self, event):
+        """Reestablish scroll hand drag mode."""
+        super().mouseReleaseEvent(event)
 
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
         super().mouseMoveEvent(event)
-        if self.target_viewport_pos is not None:
-            delta = self.target_viewport_pos - event.pos()
-            if delta.manhattanLength() <= 3:
-                return
-        self.target_viewport_pos = event.pos()
-        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
 
     def wheelEvent(self, event):
         """Zoom in/out."""
-        if event.orientation() != Qt.Vertical:
-            event.ignore()
-            return
-        event.accept()
-        try:
-            config = self._graph_view_form._data_store._toolbox._config
-            use_smooth_zoom = config.getboolean("settings", "use_smooth_zoom")
-        except AttributeError:
-            use_smooth_zoom = False
-        if use_smooth_zoom:
-            num_degrees = event.delta() / 8
-            num_steps = num_degrees / 15
-            self._num_scheduled_scalings += num_steps
-            if self._num_scheduled_scalings * num_steps < 0:
-                self._num_scheduled_scalings = num_steps
-            if self.anim:
-                self.anim.deleteLater()
-            self.anim = QTimeLine(200, self)
-            self.anim.setUpdateInterval(20)
-            self.anim.valueChanged.connect(self.scaling_time)
-            self.anim.finished.connect(self.anim_finished)
-            self.anim.start()
-        else:
-            angle = event.angleDelta().y()
-            factor = self._zoom_factor_base ** angle
-            self.gentle_zoom(factor)
-
-    def scaling_time(self, x):
-        """Called when animation value for smooth zoom changes. Perform zoom."""
-        factor = 1.0 + self._num_scheduled_scalings / 100.0
-        self.gentle_zoom(factor)
-
-    def anim_finished(self):
-        """Called when animation for smooth zoom finishes. Clean up."""
-        if self._num_scheduled_scalings > 0:
-            self._num_scheduled_scalings -= 1
-        else:
-            self._num_scheduled_scalings += 1
-        self.sender().deleteLater()
-        self.anim = None
-
-    def zoom_in(self):
-        """Perform a zoom in with a fixed scaling."""
-        self.target_viewport_pos = self.viewport().rect().center()
-        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
-        self.gentle_zoom(self._zoom_factor_base ** self._angle)
-
-    def zoom_out(self):
-        """Perform a zoom out with a fixed scaling."""
-        self.gentle_zoom(self._zoom_factor_base ** -self._angle)
-
-    def reset_zoom(self):
-        """Reset zoom to the default factor."""
-        if not self.default_zoom_factor:
-            return
-        self.resetTransform()
-        self.scale(self.default_zoom_factor, self.default_zoom_factor)
-        self.rel_zoom_factor = 1.0
-
-    def gentle_zoom(self, factor):
-        """Perform a zoom by a given factor."""
-        new_rel_zoom_factor = self.rel_zoom_factor * factor
-        if new_rel_zoom_factor > self.max_rel_zoom_factor or new_rel_zoom_factor < self.min_rel_zoom_factor:
-            return
-        self.rel_zoom_factor = new_rel_zoom_factor
-        self.scale(factor, factor)
-        self.centerOn(self.target_scene_pos)
-        delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
-        viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
-        self.centerOn(self.mapToScene(viewport_center))
-
-    def scale_to_fit_scene(self):
-        """Scale view so the scene fits best in it."""
-        if not self.isVisible():
-            return
-        scene_rect = self.sceneRect()
-        scene_extent = max(scene_rect.width(), scene_rect.height())
-        if not scene_extent:
-            return
-        size = self.size()
-        extent = min(size.height(), size.width())
-        self.default_zoom_factor = extent / scene_extent
-        self.reset_zoom()
-
-    def mousePressEvent(self, event):
-        """Set rubber band drag mode if control pressed."""
-        if event.modifiers() & Qt.ControlModifier:
-            self.setDragMode(QGraphicsView.RubberBandDrag)
-        if event.button() == Qt.MidButton:
-            self.reset_zoom()
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        """Restablish scroll hand drag mode."""
-        super().mouseReleaseEvent(event)
-        self.setDragMode(QGraphicsView.ScrollHandDrag)
+        super().wheelEvent(event)
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
@@ -465,75 +501,3 @@ class GraphViewGraphicsView(QGraphicsView):
             return
         e.accept()
         self._graph_view_form.show_graph_view_context_menu(e.globalPos())
-
-
-class CustomQGraphicsScene(QGraphicsScene):
-    """A scene that handles drag and drop events of DraggableWidget sources."""
-
-    files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
-
-    def __init__(self, parent, toolbox):
-        """Initialize class."""
-        super().__init__(parent)
-        self._toolbox = toolbox
-        self.item_shadow = None
-
-    def dragLeaveEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
-        event.accept()
-
-    def dragEnterEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
-        event.accept()
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            super().dragEnterEvent(event)
-
-    def dragMoveEvent(self, event):
-        """Accept event. Then call the super class method
-        only if drag source is not a DraggableWidget (from Add Item toolbar)."""
-        event.accept()
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            super().dragMoveEvent(event)
-
-    def dropEvent(self, event):
-        """Only accept drops when the source is an instance of
-        DraggableWidget (from Add Item toolbar).
-        Capture text from event's mimedata and show the appropriate 'Add Item form.'
-        """
-        source = event.source()
-        if not isinstance(source, DraggableWidget):
-            super().dropEvent(event)
-            return
-        if not self._toolbox.project():
-            self._toolbox.msg.emit("Create or open a project first")
-            event.ignore()
-            return
-        event.acceptProposedAction()
-        text = event.mimeData().text()
-        pos = event.scenePos()
-        pen = QPen(QColor('white'))
-        x = pos.x() - 35
-        y = pos.y() - 35
-        w = 70
-        h = 70
-        if text == "Data Store":
-            brush = QBrush(QColor(0, 255, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._toolbox.show_add_data_store_form(pos.x(), pos.y())
-        elif text == "Data Connection":
-            brush = QBrush(QColor(0, 0, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
-            self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
-        elif text == "Tool":
-            brush = QBrush(QColor(255, 0, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._toolbox.show_add_tool_form(pos.x(), pos.y())
-        elif text == "View":
-            brush = QBrush(QColor(0, 255, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
-            self._toolbox.show_add_view_form(pos.x(), pos.y())
-        self.addItem(self.item_shadow)

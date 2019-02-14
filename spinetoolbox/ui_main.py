@@ -71,7 +71,7 @@ class ToolboxUI(QMainWindow):
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers
         self.ui.graphicsView.set_ui(self)
-        self.qsettings = QSettings("SpineProject", "Spine Toolbox")
+        self._qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
         self._config = None
         self._project = None
@@ -183,6 +183,10 @@ class ToolboxUI(QMainWindow):
     def project(self):
         """Returns current project or None if no project open."""
         return self._project
+
+    def qsettings(self):
+        """Returns application preferences object."""
+        return self._qsettings
 
     @Slot(name="init_project")
     def init_project(self):
@@ -453,12 +457,12 @@ class ToolboxUI(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self.qsettings.value("mainWindow/windowSize")
-        window_pos = self.qsettings.value("mainWindow/windowPosition")
-        window_state = self.qsettings.value("mainWindow/windowState")
-        splitter_state = self.qsettings.value("mainWindow/projectDockWidgetSplitterState")
-        window_maximized = self.qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
-        n_screens = self.qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
+        window_size = self._qsettings.value("mainWindow/windowSize")
+        window_pos = self._qsettings.value("mainWindow/windowPosition")
+        window_state = self._qsettings.value("mainWindow/windowState")
+        splitter_state = self._qsettings.value("mainWindow/projectDockWidgetSplitterState")
+        window_maximized = self._qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
+        n_screens = self._qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
         # noinspection PyArgumentList
         n_screens_now = len(QGuiApplication.screens())  # number of screens now
         if window_size:
@@ -1500,17 +1504,17 @@ class ToolboxUI(QMainWindow):
             # Show save project prompt
             self.show_save_project_prompt()
         self._config.save()
-        self.qsettings.setValue("mainWindow/windowSize", self.size())
-        self.qsettings.setValue("mainWindow/windowPosition", self.pos())
-        self.qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
-        self.qsettings.setValue("mainWindow/projectDockWidgetSplitterState", self.ui.splitter.saveState())
+        self._qsettings.setValue("mainWindow/windowSize", self.size())
+        self._qsettings.setValue("mainWindow/windowPosition", self.pos())
+        self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
+        self._qsettings.setValue("mainWindow/projectDockWidgetSplitterState", self.ui.splitter.saveState())
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings.setValue("mainWindow/windowMaximized", True)
+            self._qsettings.setValue("mainWindow/windowMaximized", True)
         else:
-            self.qsettings.setValue("mainWindow/windowMaximized", False)
+            self._qsettings.setValue("mainWindow/windowMaximized", False)
         # Save number of screens
         # noinspection PyArgumentList
-        self.qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
+        self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
         self.close_view_forms()
         if event:

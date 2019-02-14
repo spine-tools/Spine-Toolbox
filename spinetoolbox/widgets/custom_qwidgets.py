@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for PivotModel class.
+Custom QWidgets for Filtering and Zooming.
 
 :author: P. Vennström (VTT)
 :date:   4.12.2018
@@ -155,11 +155,13 @@ class AutoFilterWidget(QWidget):
 
 
 class FilterWidget(QWidget):
+    """Filter widget class."""
     okPressed = Signal()
     cancelPressed = Signal()
-    def __init__(self, parent=None):
-        super().__init__(parent)
 
+    def __init__(self, parent=None):
+        """Init class."""
+        super().__init__(parent)
         # parameters
         self._filter_state = set()
         self._filter_empty_state = False
@@ -173,15 +175,12 @@ class FilterWidget(QWidget):
         self._ui_edit.setPlaceholderText('Search')
         self._ui_edit.setClearButtonEnabled(True)
         self._ui_buttons = QDialogButtonBox(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
-
         self._ui_vertical_layout.addWidget(self._ui_edit)
         self._ui_vertical_layout.addWidget(self._ui_list)
         self._ui_vertical_layout.addWidget(self._ui_buttons)
 
-
         # add models
-        # used to limit search so it doesn't search when typing
-        self._search_timer = QTimer()
+        self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
 
         self._filter_model = FilterCheckboxListModel()
@@ -196,63 +195,62 @@ class FilterWidget(QWidget):
         self._ui_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self._cancel_filter)
 
     def save_state(self):
-        """Saves the state of the FilterCheckboxListModel"""
+        """Saves the state of the FilterCheckboxListModel."""
         self._filter_state = self._filter_model.get_selected()
         self._filter_empty_state = self._filter_model._empty_selected
 
     def reset_state(self):
-        """Sets the state of the FilterCheckboxListModel to saved state"""
+        """Sets the state of the FilterCheckboxListModel to saved state."""
         self._filter_model.set_selected(self._filter_state, self._filter_empty_state)
 
     def clear_filter(self):
-        """Selects all items in FilterCheckBoxListModel"""
+        """Selects all items in FilterCheckBoxListModel."""
         self._filter_model.reset_selection()
         self.save_state()
 
     def has_filter(self):
-        """Returns true if any item is filtered in FilterCheckboxListModel false otherwise"""
+        """Returns true if any item is filtered in FilterCheckboxListModel false otherwise."""
         return not self._filter_model._all_selected
 
     def set_filter_list(self, data):
-        """Sets the list of items to filter"""
+        """Sets the list of items to filter."""
         self._filter_state = set(data)
         self._filter_empty_state = True
         self._filter_model.set_list(self._filter_state)
 
     def _apply_filter(self):
-        """apply current filter and save state"""
+        """Apply current filter and save state."""
         self._filter_model.apply_filter()
         self.save_state()
         self._ui_edit.setText('')
         self.okPressed.emit()
 
     def _cancel_filter(self):
-        """cancel current edit of filter and set the state to the stored state"""
+        """Cancel current edit of filter and set the state to the stored state."""
         self._filter_model.remove_filter()
         self.reset_state()
         self._ui_edit.setText('')
         self.cancelPressed.emit()
 
     def _filter_list(self):
-        """filter list with current text"""
-        # filter model
+        """Filter list with current text."""
         self._filter_model.set_filter(self._search_text)
 
     def _text_edited(self, new_text):
-        """callback for edit text, starts/restarts timer"""
-        # start timer after text is edited, restart timer if text
-        # is edited before last time is out.
+        """Callback for edit text, starts/restarts timer.
+        Start timer after text is edited, restart timer if text
+        is edited before last time out.
+        """
         self._search_text = new_text
         self._search_timer.start(self.search_delay)
 
 
 class ZoomWidget(QWidget):
-    """A widget for a QWidgetAction providing zoom actions for the graph view.
+    """A widget for a QWidgetAction providing zoom actions for a graph view.
 
     Attributes
         parent (QWidget): the widget's parent
     """
-
     minus_pressed = Signal(name="minus_pressed")
     plus_pressed = Signal(name="plus_pressed")
     reset_pressed = Signal(name="reset_pressed")
@@ -281,6 +279,7 @@ class ZoomWidget(QWidget):
         reset_action.triggered.connect(lambda x: self.reset_pressed.emit())
 
     def paintEvent(self, event):
+        """Overridden method."""
         painter = QPainter(self)
         self.style().drawControl(QStyle.CE_MenuItem, self.option, painter)
         super().paintEvent(event)

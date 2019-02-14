@@ -22,7 +22,7 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
-from widgets.custom_qwidget import FilterWidget
+from widgets.custom_qwidgets import FilterWidget
 
 
 class CustomContextMenu(QMenu):
