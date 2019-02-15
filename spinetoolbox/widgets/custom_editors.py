@@ -70,7 +70,7 @@ class CustomComboEditor(QComboBox):
 
 
 class CustomLineEditDelegate(QItemDelegate):
-    """A custom delegate for SearchBarEditor.
+    """A custom delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
 
     Attributes:
         parent (SearchBarEditor): search bar editor
@@ -78,31 +78,42 @@ class CustomLineEditDelegate(QItemDelegate):
     text_edited = Signal("QString", name="text_edited")
 
     def __init__(self, parent):
+        """Init class."""
         super().__init__(parent)
         self._parent = parent
-        self.key_list = (Qt.Key_Tab, Qt.Key_Backtab, Qt.Key_Escape)
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.data())
 
     def createEditor(self, parent, option, index):
+        """Create editor and 'forward' `textEdited` signal.
+        """
         editor = CustomLineEditor(parent)
         editor.set_data(index.data())
         editor.textEdited.connect(lambda s: self.text_edited.emit(s))
         return editor
 
     def eventFilter(self, editor, event):
-        if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Escape,):
+        """Handle all sort of special cases.
+        """
+        if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Tab, Qt.Key_Backtab):
+            # Bring focus to parent so tab editing works as expected
             self._parent.setFocus()
             return QCoreApplication.sendEvent(self._parent, event)
-        if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Tab, Qt.Key_Backtab) \
-                or event.type() in (QEvent.FocusOut,):
+        if event.type() == QEvent.FocusOut:
+            # Send event to parent so it gets closed when clicking on an empty area of the table
             return QCoreApplication.sendEvent(self._parent, event)
+        if event.type() == QEvent.ShortcutOverride and event.key() == Qt.Key_Escape:
+            # Close editor so we don't need to escape twice to close the parent SearchBarEditor
+            self._parent.closeEditor(editor, QItemDelegate.NoHint)
+            return True
         return super().eventFilter(editor, event)
 
 
 class SearchBarEditor(QTableView):
-    """A widget that implements a Google-like search bar."""
+    """A widget that implements a Google-like search bar.
+    It's just a QTableView with a CustomLineEditDelegate in the first row.
+    """
 
     data_committed = Signal(name="data_committed")
 
@@ -126,36 +137,42 @@ class SearchBarEditor(QTableView):
         delegate.text_edited.connect(self._handle_delegate_text_edited)
         self.setItemDelegateForRow(0, delegate)
 
-    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        if source_row == 0:
-            return True
-        return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
-
     @Slot("QString", name="_handle_delegate_text_edited")
     def _handle_delegate_text_edited(self, text):
+        """Filter model as the first row is being edited."""
         self._original_text = text
         self.proxy_model.setFilterRegExp("^" + text)
         self.update_geometry()
 
+    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
+        """Overridden method to always accept first row.
+        """
+        if source_row == 0:
+            return True
+        return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
+
     def keyPressEvent(self, event):
-        previous = self.currentIndex()
-        if self.isPersistentEditorOpen(previous):
-            self.closePersistentEditor(previous)
+        """Set data from current index into first index as the user navigates
+        through the table using the up and down keys.
+        """
         super().keyPressEvent(event)
-        current = self.currentIndex()
+        event.accept()  # Important to avoid weird behavior when pressing the up arrow on the first row
         if event.key() not in (Qt.Key_Up, Qt.Key_Down):
             return
+        current = self.currentIndex()
         if current.row() == 0:
             self.proxy_model.setData(self.first_index, self._original_text)
         else:
             self.proxy_model.setData(self.first_index, current.data())
 
     def currentChanged(self, current, previous):
-        """Edit first index."""
+        """Whenever the current index changes, go back to edit the first index.
+        """
         super().currentChanged(current, previous)
         self.edit_first_index()
 
     def edit_first_index(self):
+        """Edit first index if valid and not already being edited."""
         if not self.first_index.isValid():
             return
         if self.isPersistentEditorOpen(self.first_index):
@@ -163,7 +180,7 @@ class SearchBarEditor(QTableView):
         self.edit(self.first_index)
 
     def mouseMoveEvent(self, event):
-        """Highlight current row."""
+        """Make hovered index the current index."""
         index = self.indexAt(event.pos())
         if index.row() == 0:
             return
@@ -178,7 +195,7 @@ class SearchBarEditor(QTableView):
         self.data_committed.emit()
 
     def set_data(self, current, all):
-        """Set data."""
+        """Populate model."""
         item_list = [QStandardItem(current)]
         for name in all:
             qitem = QStandardItem(name)
@@ -199,12 +216,11 @@ class SearchBarEditor(QTableView):
         self.resize(self._base_size.width(), table_height + 2)
 
     def data(self):
-        proxy_index = self.proxy_model.index(0, 0)
-        return proxy_index.data()
+        return self.first_index.data()
 
 
 class SearchBarDelegate(QItemDelegate):
-    """A custom delegate for MultiSearchBarEditor.
+    """A custom delegate to place a SearchBarEditor on each cell of a MultiSearchBarEditor.
 
     Attributes:
         parent (MultiSearchBarEditor): multi search bar editor
@@ -236,9 +252,11 @@ class SearchBarDelegate(QItemDelegate):
         self.setModelData(editor, model, index)
 
     def eventFilter(self, editor, event):
-        if event.type() in (QEvent.FocusOut,):
+        if event.type() == QEvent.FocusOut:
+            super().eventFilter(editor, event)
             return QCoreApplication.sendEvent(self._parent, event)
         return super().eventFilter(editor, event)
+
 
 class MultiSearchBarEditor(QTableView):
     """A table view made of several Google-like search bars."""
@@ -257,6 +275,9 @@ class MultiSearchBarEditor(QTableView):
         self.verticalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
         # self.setFrameStyle(QFrame.NoFrame)
+
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
 
     def set_data(self, header, currents, alls):
         self.model.setHorizontalHeaderLabels(header)
