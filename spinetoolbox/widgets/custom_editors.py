@@ -157,13 +157,15 @@ class SearchBarEditor(QTableView):
         """
         super().keyPressEvent(event)
         event.accept()  # Important to avoid weird behavior when pressing the up arrow on the first row
-        if event.key() not in (Qt.Key_Up, Qt.Key_Down):
-            return
-        current = self.currentIndex()
-        if current.row() == 0:
-            self.proxy_model.setData(self.first_index, self._original_text)
-        else:
-            self.proxy_model.setData(self.first_index, current.data())
+        if self._original_text is None:
+            self.proxy_model.setData(self.first_index, event.text())
+            self._handle_delegate_text_edited(event.text())
+        if event.key() in (Qt.Key_Up, Qt.Key_Down):
+            current = self.currentIndex()
+            if current.row() == 0:
+                self.proxy_model.setData(self.first_index, self._original_text)
+            else:
+                self.proxy_model.setData(self.first_index, current.data())
 
     def currentChanged(self, current, previous):
         """Whenever the current index changes, go back to edit the first index.

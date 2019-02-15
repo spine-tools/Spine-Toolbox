@@ -806,7 +806,7 @@ class EditRelationshipsDialog(ManageItemsDialog):
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
-        self.table_view.horizontalHeader().setStretchLastSection(False)
+        self.table_view.horizontalHeader().setStretchLastSection(True)
         object_class_name_list = relationship_class.object_class_name_list.split(",")
         self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
         self.orig_data = list()
@@ -964,7 +964,6 @@ class EditParameterEnumsDialog(ManageItemsDialog):
                 "value_list": value_list,
             }
             wide_kwargs_list.append(wide_kwargs)
-        print(wide_kwargs_list)
         if not wide_kwargs_list:
             self._parent.msg_error.emit("Nothing to update")
             return

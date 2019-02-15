@@ -27,7 +27,8 @@ from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QM
     QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
     QButtonGroup, QSizePolicy, QWidgetAction, QFrame, QWidget, QHBoxLayout
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, QStandardItemModel, QStandardItem
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, \
+    QStandardItemModel, QStandardItem, QKeySequence
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
@@ -65,6 +66,7 @@ class DataStoreForm(QMainWindow):
     """
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
+    commit_available = Signal("bool", name="commit_available")
 
     def __init__(self, data_store, db_map, database, ui):
         """Initialize class."""
@@ -123,6 +125,7 @@ class DataStoreForm(QMainWindow):
         # Message signals
         self.msg.connect(self.add_message)
         self.msg_error.connect(self.add_error_message)
+        self.commit_available.connect(self._handle_commit_available)
         # Menu actions
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
@@ -212,7 +215,8 @@ class DataStoreForm(QMainWindow):
         """
         self.err_msg.showMessage(msg)
 
-    def set_commit_rollback_actions_enabled(self, on):
+    @Slot("bool", name="_handle_commit_available")
+    def _handle_commit_available(self, on):
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
 
@@ -232,7 +236,7 @@ class DataStoreForm(QMainWindow):
     def commit_session(self, commit_msg):
         try:
             self.db_map.commit_session(commit_msg)
-            self.set_commit_rollback_actions_enabled(False)
+            self.commit_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
@@ -243,7 +247,7 @@ class DataStoreForm(QMainWindow):
     def rollback_session(self, checked=False):
         try:
             self.db_map.rollback_session()
-            self.set_commit_rollback_actions_enabled(False)
+            self.commit_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
@@ -474,21 +478,21 @@ class DataStoreForm(QMainWindow):
     def add_object_classes(self, object_classes):
         """Insert new object classes."""
         self.object_tree_model.add_object_classes(object_classes)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
 
     def add_objects(self, objects):
         """Insert new objects."""
         self.object_tree_model.add_objects(objects)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully added new object(s) '{}'.".format("', '".join([x.name for x in objects]))
         self.msg.emit(msg)
 
     def add_relationship_classes(self, relationship_classes):
         """Insert new relationship classes."""
         self.object_tree_model.add_relationship_classes(relationship_classes)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
         msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
@@ -496,7 +500,7 @@ class DataStoreForm(QMainWindow):
     def add_relationships(self, relationships):
         """Insert new relationships."""
         self.object_tree_model.add_relationships(relationships)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         relationship_name_list = "', '".join([x.name for x in relationships])
         msg = "Successfully added new relationship(s) '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
@@ -571,7 +575,7 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_definition_model.rename_object_classes(object_classes)
         self.relationship_parameter_value_model.rename_object_classes(object_classes)
         self.relationship_parameter_definition_model.rename_object_classes(object_classes)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
 
@@ -581,7 +585,7 @@ class DataStoreForm(QMainWindow):
         self.object_tree_model.update_objects(objects)
         self.object_parameter_value_model.rename_objects(objects)
         self.relationship_parameter_value_model.rename_objects(objects)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
         self.msg.emit(msg)
 
@@ -591,7 +595,7 @@ class DataStoreForm(QMainWindow):
         self.object_tree_model.update_relationship_classes(wide_relationship_classes)
         self.relationship_parameter_value_model.rename_relationship_classes(wide_relationship_classes)
         self.relationship_parameter_definition_model.rename_relationship_classes(wide_relationship_classes)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
         msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
@@ -600,7 +604,7 @@ class DataStoreForm(QMainWindow):
     def update_relationships(self, wide_relationships):
         """Update relationships."""
         self.object_tree_model.update_relationships(wide_relationships)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         relationship_name_list = "', '".join([x.name for x in wide_relationships])
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
@@ -614,7 +618,7 @@ class DataStoreForm(QMainWindow):
     def add_parameter_tags(self, parameter_tags):
         """Add parameter tags."""
         self.parameter_tag_toolbar.add_tag_actions(parameter_tags)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully added parameter tags '{}'.".format([x.tag for x in parameter_tags])
         self.msg.emit(msg)
 
@@ -625,7 +629,7 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_definition_model.rename_parameter_tags(parameter_tags)
         self.relationship_parameter_definition_model.rename_parameter_tags(parameter_tags)
         self.parameter_tag_toolbar.update_tag_actions(parameter_tags)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully updated parameter tags '{}'.".format([x.tag for x in parameter_tags])
         self.msg.emit(msg)
 
@@ -638,7 +642,7 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_definition_model.remove_parameter_tags(parameter_tag_ids)
         self.relationship_parameter_definition_model.remove_parameter_tags(parameter_tag_ids)
         self.parameter_tag_toolbar.remove_tag_actions(parameter_tag_ids)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully removed parameter tags."
         self.msg.emit(msg)
 
@@ -757,6 +761,17 @@ class TreeViewForm(DataStoreForm):
         db_map (DiffDatabaseMapping): The object relational database mapping
         database (str): The database name
     """
+
+    object_class_selection_available = Signal("bool", name="object_class_selection_available")
+    object_selection_available = Signal("bool", name="object_selection_available")
+    relationship_class_selection_available = Signal("bool", name="relationship_class_selection_available")
+    relationship_selection_available = Signal("bool", name="relationship_selection_available")
+    object_tree_selection_available = Signal("bool", name="object_tree_selection_available")
+    obj_parameter_definition_selection_available = Signal("bool", name="obj_parameter_definition_selection_available")
+    obj_parameter_value_selection_available = Signal("bool", name="obj_parameter_value_selection_available")
+    rel_parameter_definition_selection_available = Signal("bool", name="rel_parameter_definition_selection_available")
+    rel_parameter_value_selection_available = Signal("bool", name="rel_parameter_value_selection_available")
+
     def __init__(self, data_store, db_map, database):
         """Initialize class."""
         tic = time.clock()
@@ -777,11 +792,14 @@ class TreeViewForm(DataStoreForm):
         self.relationship_parameter_context_menu = None
         self.parameter_enum_context_menu = None
         # Others
+        self.copy_from_widgets = list()
+        self.paste_to_widget = None
         self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
+        self.remove_action = QAction(self)
         # init models and views
         self.init_models()
         self.init_views()
@@ -796,8 +814,23 @@ class TreeViewForm(DataStoreForm):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        # Menu actions
         super().connect_signals()
+        qApp.focusChanged.connect(self.update_paste_action)
+        # Action availability
+        self.object_class_selection_available.connect(self.ui.actionEdit_object_classes.setEnabled)
+        self.object_selection_available.connect(self.ui.actionEdit_objects.setEnabled)
+        self.relationship_class_selection_available.connect(self.ui.actionEdit_relationship_classes.setEnabled)
+        self.relationship_selection_available.connect(self.ui.actionEdit_relationships.setEnabled)
+        self.object_tree_selection_available.connect(self._handle_object_tree_selection_available)
+        self.obj_parameter_definition_selection_available.\
+            connect(self._handle_obj_parameter_definition_selection_available)
+        self.obj_parameter_value_selection_available.\
+            connect(self._handle_obj_parameter_value_selection_available)
+        self.rel_parameter_definition_selection_available.\
+            connect(self._handle_rel_parameter_definition_selection_available)
+        self.rel_parameter_value_selection_available.\
+            connect(self._handle_rel_parameter_value_selection_available)
+        # Menu actions
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.show_export_file_dialog)
         self.ui.actionAdd_object_classes.triggered.connect(self.show_add_object_classes_form)
@@ -875,29 +908,103 @@ class TreeViewForm(DataStoreForm):
             connect(self.show_relationship_parameter_value_context_menu)
         # Parameter enum context menu requested
         self.ui.treeView_parameter_enum.customContextMenuRequested.connect(self.show_parameter_enum_context_menu)
-        # Menu about to show
-        self.ui.menuFile.aboutToShow.connect(self._handle_menu_about_to_show)
-        self.ui.menuEdit.aboutToShow.connect(self._handle_menu_about_to_show)
-        self.ui.menuView.aboutToShow.connect(self._handle_menu_about_to_show)
-        self.ui.menuSession.aboutToShow.connect(self._handle_menu_about_to_show)
+
+    def update_copy_action(self):
+        """Update copy action."""
+        if not self.copy_from_widgets:
+            self.ui.actionCopy.setEnabled(False)
+            self.ui.actionCopy.setText("Copy")
+        else:
+            copy_from_widget_name = self.copy_from_widgets[-1].accessibleName()
+            self.ui.actionCopy.setEnabled(True)
+            self.ui.actionCopy.setText("Copy from {}".format(copy_from_widget_name))
+
+    @Slot("bool", name="_handle_object_tree_selection_available")
+    def _handle_object_tree_selection_available(self, on):
+        self.ui.actionRemove_object_tree_items.setEnabled(on)
+        if self.ui.treeView_object in self.copy_from_widgets:
+            self.copy_from_widgets.remove(self.ui.treeView_object)
+        if on:
+            self.copy_from_widgets.append(self.ui.treeView_object)
+            self.remove_action.setShortcut(QKeySequence())
+            self.remove_action = self.ui.actionRemove_object_tree_items
+            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
+        self.update_copy_action()
+
+    @Slot("bool", name="_handle_obj_parameter_definition_selection_available")
+    def _handle_obj_parameter_definition_selection_available(self, on):
+        self.ui.actionRemove_object_parameter_definitions.setEnabled(on)
+        if self.ui.tableView_object_parameter_definition in self.copy_from_widgets:
+            self.copy_from_widgets.remove(self.ui.tableView_object_parameter_definition)
+        if on:
+            self.copy_from_widgets.append(self.ui.tableView_object_parameter_definition)
+            self.remove_action.setShortcut(QKeySequence())
+            self.remove_action = self.ui.actionRemove_object_parameter_definitions
+            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
+        self.update_copy_action()
+
+    @Slot("bool", name="_handle_obj_parameter_value_selection_available")
+    def _handle_obj_parameter_value_selection_available(self, on):
+        self.ui.actionRemove_object_parameter_values.setEnabled(on)
+        if self.ui.tableView_object_parameter_value in self.copy_from_widgets:
+            self.copy_from_widgets.remove(self.ui.tableView_object_parameter_value)
+        if on:
+            self.copy_from_widgets.append(self.ui.tableView_object_parameter_value)
+            self.remove_action.setShortcut(QKeySequence())
+            self.remove_action = self.ui.actionRemove_object_parameter_values
+            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
+        self.update_copy_action()
+
+    @Slot("bool", name="_handle_rel_parameter_definition_selection_available")
+    def _handle_rel_parameter_definition_selection_available(self, on):
+        self.ui.actionRemove_relationship_parameter_definitions.setEnabled(on)
+        if self.ui.tableView_relationship_parameter_definition in self.copy_from_widgets:
+            self.copy_from_widgets.remove(self.ui.tableView_relationship_parameter_definition)
+        if on:
+            self.copy_from_widgets.append(self.ui.tableView_relationship_parameter_definition)
+            self.remove_action.setShortcut(QKeySequence())
+            self.remove_action = self.ui.actionRemove_relationship_parameter_definitions
+            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
+        self.update_copy_action()
+
+    @Slot("bool", name="_handle_rel_parameter_value_selection_available")
+    def _handle_rel_parameter_value_selection_available(self, on):
+        self.ui.actionRemove_relationship_parameter_values.setEnabled(on)
+        if self.ui.tableView_relationship_parameter_value in self.copy_from_widgets:
+            self.copy_from_widgets.remove(self.ui.tableView_relationship_parameter_value)
+        if on:
+            self.copy_from_widgets.append(self.ui.tableView_relationship_parameter_value)
+            self.remove_action.setShortcut(QKeySequence())
+            self.remove_action = self.ui.actionRemove_relationship_parameter_values
+            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
+        self.update_copy_action()
+
+    @Slot("QWidget", "QWidget", name="update_paste_action")
+    def update_paste_action(self, old, now):
+        self.paste_to_widget = None
+        self.ui.actionPaste.setText("Paste")
+        self.ui.actionPaste.setEnabled(False)
+        try:
+            if now.canPaste():
+                self.paste_to_widget = now
+                self.ui.actionPaste.setText("Paste to {}".format(self.paste_to_widget.accessibleName()))
+                self.ui.actionPaste.setEnabled(True)
+        except AttributeError:
+            pass
 
     @Slot("bool", name="copy")
     def copy(self, checked=False):
         """Copy data to clipboard."""
-        focus_widget = self.focusWidget()
-        try:
-            focus_widget.copy()
-        except AttributeError:
-            pass
+        if not self.copy_from_widgets:
+            return
+        self.copy_from_widgets[-1].copy()
 
     @Slot("bool", name="paste")
     def paste(self, checked=False):
         """Paste data from clipboard."""
-        focus_widget = self.focusWidget()
-        try:
-            focus_widget.paste()
-        except AttributeError:
-            pass
+        if not self.paste_to_widget:
+            return
+        self.paste_to_widget.paste()
 
     @Slot("int", "int", name="_handle_object_parameter_json_splitter_moved")
     def _handle_object_parameter_json_splitter_moved(self, pos, index):
@@ -1089,28 +1196,28 @@ class TreeViewForm(DataStoreForm):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         tab_index = self.ui.tabWidget_object_parameter.currentIndex()
-        self.ui.actionRemove_object_parameter_definitions.setEnabled(tab_index == 1 and not selection.isEmpty())
+        self.obj_parameter_definition_selection_available.emit(tab_index == 1 and not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_value_selection_changed")
     def _handle_object_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
         tab_index = self.ui.tabWidget_object_parameter.currentIndex()
-        self.ui.actionRemove_object_parameter_values.setEnabled(tab_index == 0 and not selection.isEmpty())
+        self.obj_parameter_value_selection_available.emit(tab_index == 0 and not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_definition_selection_changed")
     def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         tab_index = self.ui.tabWidget_relationship_parameter.currentIndex()
-        self.ui.actionRemove_relationship_parameter_definitions.setEnabled(tab_index == 1 and not selection.isEmpty())
+        self.rel_parameter_definition_selection_available.emit(tab_index == 1 and not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_value_selection_changed")
     def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         tab_index = self.ui.tabWidget_relationship_parameter.currentIndex()
-        self.ui.actionRemove_relationship_parameter_values.setEnabled(tab_index == 0 and not selection.isEmpty())
+        self.rel_parameter_value_selection_available.emit(tab_index == 0 and not selection.isEmpty())
 
     @Slot("int", name="_handle_object_parameter_tab_changed")
     def _handle_object_parameter_tab_changed(self, index):
@@ -1120,9 +1227,9 @@ class TreeViewForm(DataStoreForm):
         else:
             self.object_parameter_definition_model.update_filter()
         selected = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        self.ui.actionRemove_object_parameter_definitions.setEnabled(index == 1 and not selected.isEmpty())
+        self.obj_parameter_definition_selection_available.emit(index == 1 and not selected.isEmpty())
         selected = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        self.ui.actionRemove_object_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
+        self.obj_parameter_value_selection_available.emit(index == 0 and not selected.isEmpty())
 
     @Slot("int", name="_handle_relationship_parameter_tab_changed")
     def _handle_relationship_parameter_tab_changed(self, index):
@@ -1132,9 +1239,9 @@ class TreeViewForm(DataStoreForm):
         else:
             self.relationship_parameter_definition_model.update_filter()
         selected = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
-        self.ui.actionRemove_relationship_parameter_definitions.setEnabled(index == 1 and not selected.isEmpty())
+        self.rel_parameter_definition_selection_available.emit(index == 1 and not selected.isEmpty())
         selected = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        self.ui.actionRemove_relationship_parameter_values.setEnabled(index == 0 and not selected.isEmpty())
+        self.rel_parameter_value_selection_available.emit(index == 0 and not selected.isEmpty())
 
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
@@ -1143,65 +1250,11 @@ class TreeViewForm(DataStoreForm):
         Enable/disable actions to edit object tree items depending on selection.
         Enable/disable actions to remove object tree items depending on selection.
         """
-        # Edit object tree item actions
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        item_types = {x.data(Qt.UserRole) for x in indexes}
-        self.ui.actionEdit_object_classes.setEnabled('object_class' in item_types)
-        self.ui.actionEdit_objects.setEnabled('object' in item_types)
-        self.ui.actionEdit_relationship_classes.setEnabled('relationship_class' in item_types)
-        self.ui.actionEdit_relationships.setEnabled('relationship' in item_types)
-        # Remove object tree items action
-        self.ui.actionRemove_object_tree_items.setEnabled(len(indexes) > 0)
-        # Edit and remove parameter enums action
         indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
         toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid()]
         self.ui.actionEdit_parameter_enums.setEnabled(len(toplevel_indexes) > 0)
         self.ui.actionRemove_parameter_enums.setEnabled(len(toplevel_indexes) > 0)
         # Copy/paste actions
-        if self.focusWidget() != self.ui.menubar:
-            self.focus_widget = self.focusWidget()
-        self.ui.actionCopy.setText("Copy")
-        self.ui.actionPaste.setText("Paste")
-        self.ui.actionCopy.setEnabled(False)
-        self.ui.actionPaste.setEnabled(False)
-        if self.focus_widget == self.ui.treeView_object:
-            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
-            focus_widget_name = "object tree"
-        elif self.focus_widget == self.ui.tableView_object_parameter_definition:
-            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
-            focus_widget_name = "object parameter definition"
-        elif self.focus_widget == self.ui.tableView_object_parameter_value:
-            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
-            focus_widget_name = "object parameter value"
-        elif self.focus_widget == self.ui.tableView_object_parameter_json:
-            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
-            focus_widget_name = "object parameter json"
-        elif self.focus_widget == self.ui.textEdit_object_parameter_json:
-            can_copy = not self.focus_widget.textCursor().selection().isEmpty()
-            focus_widget_name = "object parameter json"
-        elif self.focus_widget == self.ui.tableView_relationship_parameter_json:
-            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
-            focus_widget_name = "relationship parameter json"
-        elif self.focus_widget == self.ui.textEdit_relationship_parameter_json:
-            can_copy = not self.focus_widget.textCursor().selection().isEmpty()
-            focus_widget_name = "relationship parameter json"
-        elif self.focus_widget == self.ui.tableView_relationship_parameter_definition:
-            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
-            focus_widget_name = "relationship parameter definition"
-        elif self.focus_widget == self.ui.tableView_relationship_parameter_value:
-            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
-            focus_widget_name = "relationship parameter value"
-        elif self.focus_widget == self.ui.tableView_relationship_parameter_json:
-            can_copy = not self.focus_widget.selectionModel().selection().isEmpty()
-            focus_widget_name = "relationship parameter json"
-        else:
-            return
-        if can_copy:
-            self.ui.actionCopy.setText("Copy from {}".format(focus_widget_name))
-            self.ui.actionCopy.setEnabled(True)
-        if focus_widget_name != "object tree" and self.focus_widget.canPaste():
-            self.ui.actionPaste.setText("Paste to {}".format(focus_widget_name))
-            self.ui.actionPaste.setEnabled(True)
 
     @Slot("bool", name="show_import_file_dialog")
     def show_import_file_dialog(self, checked=False):
@@ -1220,7 +1273,7 @@ class TreeViewForm(DataStoreForm):
             try:
                 datapackage_to_spine(self.db_map, file_path)
                 self.msg.emit("Datapackage successfully imported.")
-                self.set_commit_rollback_actions_enabled(True)
+                self.commit_available.emit(True)
                 self.init_models()
             except (SpineDBAPIError, SpineIntegrityError) as e:
                 self.msg_error.emit(e.msg)
@@ -1229,7 +1282,7 @@ class TreeViewForm(DataStoreForm):
             try:
                 insert_log, error_log = import_xlsx_to_db(self.db_map, file_path)
                 self.msg.emit("Excel file successfully imported.")
-                self.set_commit_rollback_actions_enabled(True)
+                self.commit_available.emit(True)
                 # logging.debug(insert_log)
                 self.init_models()
             except SpineIntegrityError as e:
@@ -1367,7 +1420,19 @@ class TreeViewForm(DataStoreForm):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
         self.set_default_parameter_rows()
-        self.update_filter(selected, deselected)
+        for index in deselected.indexes():
+            item_type = index.data(Qt.UserRole)
+            self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
+        for index in selected.indexes():
+            item_type = index.data(Qt.UserRole)
+            self.selected_tree_indexes.setdefault(item_type, set()).add(index)
+        self.object_class_selection_available.emit(len(self.selected_tree_indexes.get('object_class', [])) > 0)
+        self.object_selection_available.emit(len(self.selected_tree_indexes.get('object', [])) > 0)
+        self.relationship_class_selection_available.\
+            emit(len(self.selected_tree_indexes.get('relationship_class', [])) > 0)
+        self.relationship_selection_available.emit(len(self.selected_tree_indexes.get('relationship', [])) > 0)
+        self.object_tree_selection_available.emit(any(v for v in self.selected_tree_indexes.values()))
+        self.update_filter()
         self.update_json_editors()
 
     def update_json_editors(self):
@@ -1450,14 +1515,8 @@ class TreeViewForm(DataStoreForm):
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
 
-    def update_filter(self, selected, deselected):
+    def update_filter(self):
         """Update filters on parameter models according to selected and deselected object tree indexes."""
-        for index in deselected.indexes():
-            item_type = index.data(Qt.UserRole)
-            self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
-        for index in selected.indexes():
-            item_type = index.data(Qt.UserRole)
-            self.selected_tree_indexes.setdefault(item_type, set()).add(index)
         self.update_selected_object_class_ids()
         self.update_selected_object_ids()
         self.update_selected_relationship_class_ids()
@@ -1640,9 +1699,10 @@ class TreeViewForm(DataStoreForm):
             self.relationship_parameter_definition_model.remove_object_classes(removed_items.get('object_class', []))
             self.relationship_parameter_definition_model.remove_relationship_classes(
                 removed_items.get('relationship_class', []))
-            self.set_commit_rollback_actions_enabled(True)
+            self.commit_available.emit(True)
             self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
             self.msg.emit("Successfully removed items.")
+            self.object_tree_selection_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
@@ -1770,7 +1830,7 @@ class TreeViewForm(DataStoreForm):
             for row in reversed(sorted(row_dict)):
                 count = row_dict[row]
                 self.object_parameter_value_model.removeRows(row, count)
-            self.set_commit_rollback_actions_enabled(True)
+            self.commit_available.emit(True)
             self.msg.emit("Successfully removed parameter values.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -1796,7 +1856,7 @@ class TreeViewForm(DataStoreForm):
             for row in reversed(sorted(row_dict)):
                 count = row_dict[row]
                 self.relationship_parameter_value_model.removeRows(row, count)
-            self.set_commit_rollback_actions_enabled(True)
+            self.commit_available.emit(True)
             self.msg.emit("Successfully removed parameter values.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -1830,7 +1890,7 @@ class TreeViewForm(DataStoreForm):
                 count = row_dict[row]
                 self.object_parameter_definition_model.removeRows(row, count)
             self.object_parameter_value_model.remove_parameters(parameter_dict)
-            self.set_commit_rollback_actions_enabled(True)
+            self.commit_available.emit(True)
             self.msg.emit("Successfully removed parameter definitions.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -1864,7 +1924,7 @@ class TreeViewForm(DataStoreForm):
                 count = row_dict[row]
                 self.relationship_parameter_definition_model.removeRows(row, count)
             self.relationship_parameter_value_model.remove_parameters(parameter_dict)
-            self.set_commit_rollback_actions_enabled(True)
+            self.commit_available.emit(True)
             self.msg.emit("Successfully removed parameter definitions.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -1877,7 +1937,7 @@ class TreeViewForm(DataStoreForm):
     def add_parameter_enums(self, parameter_enums):
         """Insert new parameter enums."""
         self.parameter_enum_model.add_parameter_enums(parameter_enums)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully added new parameter enum(s) '{}'.".format("', '".join([x.name for x in parameter_enums]))
         self.msg.emit(msg)
 
@@ -1893,7 +1953,7 @@ class TreeViewForm(DataStoreForm):
     def update_parameter_enums(self, wide_enums):
         """Update parameter enums."""
         self.parameter_enum_model.update_parameter_enums(wide_enums)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         msg = "Successfully updated parameter enum(s) '{}'.".format("', '".join([x.name for x in wide_enums]))
         self.msg.emit(msg)
 
@@ -1910,7 +1970,7 @@ class TreeViewForm(DataStoreForm):
         try:
             self.db_map.remove_items(parameter_enum_ids=parameter_enum_ids)
             self.parameter_enum_model.remove_parameter_enums(parameter_enum_ids)
-            self.set_commit_rollback_actions_enabled(True)
+            self.commit_available.emit(True)
             self.msg.emit("Successfully removed parameter enums.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -2180,7 +2240,7 @@ class GraphViewForm(DataStoreForm):
 
     def init_commit_rollback_actions(self):
         if not self.read_only:
-            self.set_commit_rollback_actions_enabled(False)
+            self.commit_available.emit(False)
         else:
             self.ui.menuSession.removeAction(self.ui.actionCommit)
             self.ui.menuSession.removeAction(self.ui.actionRollback)
@@ -2675,7 +2735,7 @@ class GraphViewForm(DataStoreForm):
                 item.remove_template()
                 item.template_id = None
                 item.object_id_list = ",".join([str(x) for x in object_id_list])
-            self.set_commit_rollback_actions_enabled(True)
+            self.commit_available.emit(True)
             msg = "Successfully added new relationship '{}'.".format(wide_relationship.name)
             self.msg.emit(msg)
             return True
@@ -2740,7 +2800,7 @@ class GraphViewForm(DataStoreForm):
         dim_count_list = list()
         for wide_relationship_class in wide_relationship_classes:
             self.relationship_class_list_model.add_relationship_class(wide_relationship_class)
-        self.set_commit_rollback_actions_enabled(True)
+        self.commit_available.emit(True)
         relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
         msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
@@ -2848,7 +2908,7 @@ class GraphViewForm(DataStoreForm):
             # Parameter models
             self.object_parameter_value_model.remove_objects(removed_objects)
             self.relationship_parameter_value_model.remove_objects(removed_objects)
-            self.set_commit_rollback_actions_enabled(True)
+            self.commit_available.emit(True)
             for item in self.object_item_selection:
                 item.wipe_out()
             self.msg.emit("Successfully removed items.")

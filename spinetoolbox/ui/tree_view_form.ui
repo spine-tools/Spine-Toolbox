@@ -104,6 +104,9 @@
           <property name="contextMenuPolicy">
            <enum>Qt::CustomContextMenu</enum>
           </property>
+          <property name="accessibleName">
+           <string>object tree</string>
+          </property>
           <property name="editTriggers">
            <set>QAbstractItemView::EditKeyPressed</set>
           </property>
@@ -163,6 +166,9 @@
               </property>
               <property name="contextMenuPolicy">
                <enum>Qt::CustomContextMenu</enum>
+              </property>
+              <property name="accessibleName">
+               <string/>
               </property>
               <property name="layoutDirection">
                <enum>Qt::LeftToRight</enum>
@@ -228,6 +234,9 @@
                       </property>
                       <property name="contextMenuPolicy">
                        <enum>Qt::CustomContextMenu</enum>
+                      </property>
+                      <property name="accessibleName">
+                       <string>object parameter value</string>
                       </property>
                       <property name="layoutDirection">
                        <enum>Qt::LeftToRight</enum>
@@ -449,6 +458,9 @@
                     <property name="contextMenuPolicy">
                      <enum>Qt::CustomContextMenu</enum>
                     </property>
+                    <property name="accessibleName">
+                     <string>object parameter definition</string>
+                    </property>
                     <property name="layoutDirection">
                      <enum>Qt::LeftToRight</enum>
                     </property>
@@ -578,6 +590,9 @@
                       </property>
                       <property name="contextMenuPolicy">
                        <enum>Qt::CustomContextMenu</enum>
+                      </property>
+                      <property name="accessibleName">
+                       <string>relationship parameter value</string>
                       </property>
                       <property name="layoutDirection">
                        <enum>Qt::LeftToRight</enum>
@@ -795,6 +810,9 @@
                     </property>
                     <property name="contextMenuPolicy">
                      <enum>Qt::CustomContextMenu</enum>
+                    </property>
+                    <property name="accessibleName">
+                     <string>relationship parameter definition</string>
                     </property>
                     <property name="layoutDirection">
                      <enum>Qt::LeftToRight</enum>
@@ -1089,7 +1107,7 @@
   </action>
   <action name="actionCopy">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -1104,7 +1122,7 @@
   </action>
   <action name="actionPaste">
    <property name="enabled">
-    <bool>true</bool>
+    <bool>false</bool>
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
@@ -1178,6 +1196,9 @@
    </property>
   </action>
   <action name="actionEdit_object_classes">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/edit_object_icon.png</normaloff>:/icons/edit_object_icon.png</iconset>
@@ -1187,6 +1208,9 @@
    </property>
   </action>
   <action name="actionEdit_relationship_classes">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/edit_relationship_icon.png</normaloff>:/icons/edit_relationship_icon.png</iconset>
@@ -1196,6 +1220,9 @@
    </property>
   </action>
   <action name="actionEdit_objects">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/edit_object_icon.png</normaloff>:/icons/edit_object_icon.png</iconset>
@@ -1205,6 +1232,9 @@
    </property>
   </action>
   <action name="actionEdit_relationships">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/edit_relationship_icon.png</normaloff>:/icons/edit_relationship_icon.png</iconset>
@@ -1214,6 +1244,9 @@
    </property>
   </action>
   <action name="actionRemove_object_tree_items">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
      <normaloff>:/icons/minus_object_icon.png</normaloff>:/icons/minus_object_icon.png</iconset>
@@ -1236,11 +1269,17 @@
    </property>
   </action>
   <action name="actionEdit_parameter_enums">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Edit parameter enum</string>
    </property>
   </action>
   <action name="actionRemove_parameter_enums">
+   <property name="enabled">
+    <bool>false</bool>
+   </property>
    <property name="text">
     <string>Remove parameter enums</string>
    </property>

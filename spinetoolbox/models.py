@@ -2695,10 +2695,10 @@ class ObjectParameterModel(MinimalTableModel):
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         if added_rows:
             self.move_rows_to_sub_models(added_rows)
-            self._tree_view_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.commit_available.emit(True)
             self._tree_view_form.msg.emit("Successfully added entries.")
         if updated_count:
-            self._tree_view_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.commit_available.emit(True)
             self._tree_view_form.msg.emit("Successfully updated entries.")
         error_log = add_error_log + update_error_log
         if error_log:
@@ -2880,6 +2880,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
         """Init class."""
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyObjectParameterValueModel(self)
+        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
     def reset_model(self):
         """Reset model data. Each sub-model is filled with parameter value data
@@ -2904,7 +2905,6 @@ class ObjectParameterValueModel(ObjectParameterModel):
             model.setSourceModel(source_model)
         self.empty_row_model.set_horizontal_header_labels(header)
         self.empty_row_model.clear()
-        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
         self.endResetModel()
 
     def update_filter(self):
@@ -3019,6 +3019,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         """Init class."""
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyObjectParameterDefinitonModel(self)
+        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
     def reset_model(self):
         """Reset model data. Each sub-model is filled with parameter definition data
@@ -3042,7 +3043,6 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
             model.setSourceModel(source_model)
         self.empty_row_model.set_horizontal_header_labels(header)
         self.empty_row_model.clear()
-        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
         self.endResetModel()
 
     def update_filter(self):
@@ -3238,10 +3238,10 @@ class RelationshipParameterModel(MinimalTableModel):
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         if added_rows:
             self.move_rows_to_sub_models(added_rows)
-            self._tree_view_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.commit_available.emit(True)
             self._tree_view_form.msg.emit("Successfully added entries.")
         if updated_count:
-            self._tree_view_form.set_commit_rollback_actions_enabled(True)
+            self._tree_view_form.commit_available.emit(True)
             self._tree_view_form.msg.emit("Successfully updated entries.")
         error_log = add_error_log + update_error_log
         if error_log:
@@ -3474,6 +3474,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         """Init class."""
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyRelationshipParameterValueModel(self)
+        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
     def reset_model(self):
         """Reset model data. Each sub-model is filled with parameter value data
@@ -3501,7 +3502,6 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
             model.setSourceModel(source_model)
         self.empty_row_model.set_horizontal_header_labels(header)
         self.empty_row_model.clear()
-        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
         self.endResetModel()
 
     def update_filter(self):
@@ -3627,6 +3627,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         """Init class."""
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyRelationshipParameterDefinitonModel(self)
+        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
     def reset_model(self):
         """Reset model data. Each sub-model is filled with parameter definition data
@@ -3652,7 +3653,6 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
             model.setSourceModel(source_model)
         self.empty_row_model.set_horizontal_header_labels(header)
         self.empty_row_model.clear()
-        self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
         self.endResetModel()
 
     def update_filter(self):
