@@ -17,9 +17,9 @@ Custom item delegates.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
-    QApplication, QStyleOptionViewItem
+    QApplication, QStyleOptionViewItem, QWidget
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, \
-    MultiSearchBarEditor, CheckListEditor
+    MultiSearchBarEditor, CheckListEditor, JSONEditor
 from models import MinimalTableModel
 import logging
 
@@ -134,13 +134,12 @@ class CheckBoxDelegate(QItemDelegate):
 
 
 class ParameterDelegate(QItemDelegate):
-    """A custom delegate for the parameter value models and views in TreeViewForm.
+    """A custom delegate for the parameter models and views in TreeViewForm.
 
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-    json_editor_requested = Signal(name="json_editor_requested")
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -157,7 +156,7 @@ class ParameterDelegate(QItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
-        if type(editor) in (SearchBarEditor, CheckListEditor, MultiSearchBarEditor):
+        if type(editor) in (SearchBarEditor, CheckListEditor, MultiSearchBarEditor, JSONEditor):
             size = option.rect.size()
             if index.data(Qt.DecorationRole):
                 size.setWidth(size.width() - 22)  # FIXME
@@ -165,7 +164,51 @@ class ParameterDelegate(QItemDelegate):
             editor.update_geometry()
 
 
-class ObjectParameterValueDelegate(ParameterDelegate):
+class ParameterValueDelegate(ParameterDelegate):
+    """A custom delegate for the parameter value models and views in TreeViewForm.
+
+    Attributes:
+        parent (QMainWindow): tree or graph view form
+    """
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.json_editor_index = 0
+        self.json_popup = None
+        self.last_index = None
+        self.view = parent.ui.tableView_object_parameter_value
+
+    @Slot("int", name="_handle_json_editor_current_changed")
+    def _handle_json_editor_current_changed(self, index):
+        self.json_editor_index = index
+
+    def editorEvent(self, event, model, option, index):
+        """Show json popup on hover.
+        """
+        if event.type() != QEvent.MouseMove:
+            return False
+        if self.last_index == index:
+            return False
+        self.last_index = index
+        if self.json_popup:
+            self.json_popup.deleteLater()
+            self.json_popup = None
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] != 'json':
+            return False
+        if not index.data(Qt.EditRole):
+            return False
+        self.json_popup = JSONEditor(self.view)
+        self.json_popup.currentChanged.connect(self._handle_json_editor_current_changed)
+        self.json_popup.set_data(index.data(Qt.EditRole), self.json_editor_index)
+        self.updateEditorGeometry(self.json_popup, option, index)
+        offset = QPoint(
+            self.view.verticalHeader().width() + option.rect.width(),
+            self.view.horizontalHeader().height())
+        self.json_popup.move(self.json_popup.pos() + offset)
+        self.json_popup.show()
+        return True
+
+class ObjectParameterValueDelegate(ParameterValueDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.
 
     Attributes:
@@ -204,8 +247,12 @@ class ObjectParameterValueDelegate(ParameterDelegate):
                 editor = CustomLineEditor(parent)
                 editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'json':
-            self.json_editor_requested.emit()
-            return None
+            if self.json_popup:
+                self.json_popup.deleteLater()
+                self.json_popup = None
+            editor = JSONEditor(parent)
+            editor.currentChanged.connect(self._handle_json_editor_current_changed)
+            editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
         else:
             editor = CustomLineEditor(parent)
         model = index.model()
@@ -214,7 +261,7 @@ class ObjectParameterValueDelegate(ParameterDelegate):
 
 
 class ObjectParameterDefinitionDelegate(ParameterDelegate):
-    """A delegate for the object parameter model and view in TreeViewForm.
+    """A delegate for the object parameter definition model and view in TreeViewForm.
 
     Attributes:
         parent (QMainWindow): tree or graph view form
@@ -249,7 +296,7 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         return editor
 
 
-class RelationshipParameterValueDelegate(ParameterDelegate):
+class RelationshipParameterValueDelegate(ParameterValueDelegate):
     """A delegate for the relationship parameter value model and view in TreeViewForm.
 
     Attributes:
@@ -288,8 +335,12 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
             name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'json':
-            self.json_editor_requested.emit()
-            return None
+            if self.json_popup:
+                self.json_popup.deleteLater()
+                self.json_popup = None
+            editor = JSONEditor(parent)
+            editor.currentChanged.connect(self._handle_json_editor_current_changed)
+            editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
@@ -299,7 +350,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
 
 
 class RelationshipParameterDefinitionDelegate(ParameterDelegate):
-    """A delegate for the object parameter model and view in TreeViewForm.
+    """A delegate for the object parameter definition model and view in TreeViewForm.
 
     Attributes:
         parent (QMainWindow): tree or graph view form

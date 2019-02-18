@@ -19,7 +19,6 @@ Classes for data store widgets.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
-import json
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
@@ -778,12 +777,6 @@ class TreeViewForm(DataStoreForm):
         super().__init__(data_store, db_map, database, tree_view_form_ui())
         # Object tree selected indexes
         self.selected_tree_indexes = {}
-        # JSON models
-        self.object_parameter_json_model = JSONArrayModel(self)
-        self.relationship_parameter_json_model = JSONArrayModel(self)
-        # JSON splitter sizes
-        self.object_parameter_json_splitter_sizes = None
-        self.relationship_parameter_json_splitter_sizes = None
         # Context menus
         self.object_tree_context_menu = None
         self.object_parameter_value_context_menu = None
@@ -792,14 +785,12 @@ class TreeViewForm(DataStoreForm):
         self.relationship_parameter_context_menu = None
         self.parameter_enum_context_menu = None
         # Others
-        self.copy_from_widgets = list()
+        self.widgets_with_selection = list()
         self.paste_to_widget = None
-        self.focus_widget = None  # Last widget which had focus before showing a menu from the menubar
         self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
-        self.remove_action = QAction(self)
         # init models and views
         self.init_models()
         self.init_views()
@@ -808,7 +799,6 @@ class TreeViewForm(DataStoreForm):
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
-        # Ensure this window gets garbage-collected when closed
         toc = time.clock()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
@@ -831,8 +821,13 @@ class TreeViewForm(DataStoreForm):
         self.rel_parameter_value_selection_available.\
             connect(self._handle_rel_parameter_value_selection_available)
         # Menu actions
+        # Import export
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
         self.ui.actionExport.triggered.connect(self.show_export_file_dialog)
+        # Copy and paste
+        self.ui.actionCopy.triggered.connect(self.copy)
+        self.ui.actionPaste.triggered.connect(self.paste)
+        # Add and edit object tree
         self.ui.actionAdd_object_classes.triggered.connect(self.show_add_object_classes_form)
         self.ui.actionAdd_objects.triggered.connect(self.show_add_objects_form)
         self.ui.actionAdd_relationship_classes.triggered.connect(self.show_add_relationship_classes_form)
@@ -841,31 +836,14 @@ class TreeViewForm(DataStoreForm):
         self.ui.actionEdit_objects.triggered.connect(self.show_edit_objects_form)
         self.ui.actionEdit_relationship_classes.triggered.connect(self.show_edit_relationship_classes_form)
         self.ui.actionEdit_relationships.triggered.connect(self.show_edit_relationships_form)
-        self.ui.actionRemove_object_tree_items.triggered.connect(self.remove_object_tree_items)
-        self.ui.actionRemove_object_parameter_definitions.triggered.connect(self.remove_object_parameter_definitions)
-        self.ui.actionRemove_object_parameter_values.triggered.connect(self.remove_object_parameter_values)
-        self.ui.actionRemove_relationship_parameter_definitions.triggered.\
-            connect(self.remove_relationship_parameter_definitions)
-        self.ui.actionRemove_relationship_parameter_values.triggered.\
-            connect(self.remove_relationship_parameter_values)
-        # Parameter enums
-        self.ui.actionAdd_parameter_enums.triggered.connect(self.show_add_parameter_enums_form)
-        self.ui.actionEdit_parameter_enums.triggered.connect(self.show_edit_parameter_enums_form)
-        self.ui.actionRemove_parameter_enums.triggered.connect(self.remove_parameter_enums)
+        # Remove
+        self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
         # Parameter tags
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
-        # Copy and paste
-        self.ui.actionCopy.triggered.connect(self.copy)
-        self.ui.actionPaste.triggered.connect(self.paste)
-        # Object tree
+        # Object tree misc
         self.ui.treeView_object.edit_key_pressed.connect(self.edit_object_tree_items)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.find_next_leaf)
-        # Parameter value tables delegate json editor requested
-        self.ui.tableView_object_parameter_value.itemDelegate().json_editor_requested.\
-            connect(self.edit_object_parameter_json)
-        self.ui.tableView_relationship_parameter_value.itemDelegate().json_editor_requested.\
-            connect(self.edit_relationship_parameter_json)
         # Parameter tables selection changes
         self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.\
             connect(self._handle_object_parameter_definition_selection_changed)
@@ -875,25 +853,6 @@ class TreeViewForm(DataStoreForm):
             connect(self._handle_relationship_parameter_definition_selection_changed)
         self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.\
             connect(self._handle_relationship_parameter_value_selection_changed)
-        # Parameter value tables current changed
-        self.ui.tableView_object_parameter_value.selectionModel().currentChanged.\
-            connect(self._handle_object_parameter_value_current_changed)
-        self.ui.tableView_relationship_parameter_value.selectionModel().currentChanged.\
-            connect(self._handle_relationship_parameter_value_current_changed)
-        # JSON splitters moved
-        self.ui.splitter_object_parameter_value_json.splitterMoved.\
-            connect(self._handle_object_parameter_json_splitter_moved)
-        self.ui.splitter_relationship_parameter_value_json.splitterMoved.\
-            connect(self._handle_relationship_parameter_json_splitter_moved)
-        # Parameter json editor tabwidget current changed
-        self.ui.tabWidget_object_parameter_json.currentChanged.\
-            connect(self._handle_object_parameter_json_tab_changed)
-        self.ui.tabWidget_relationship_parameter_json.currentChanged.\
-            connect(self._handle_relationship_parameter_json_tab_changed)
-        # Parameter json editor ok clicked
-        self.ui.pushButton_object_parameter_json_ok.clicked.connect(self._handle_object_parameter_json_ok_clicked)
-        self.ui.pushButton_relationship_parameter_json_ok.clicked.\
-            connect(self._handle_relationship_parameter_json_ok_clicked)
         # Parameter tabwidgets current changed
         self.ui.tabWidget_object_parameter.currentChanged.connect(self._handle_object_parameter_tab_changed)
         self.ui.tabWidget_relationship_parameter.currentChanged.connect(self._handle_relationship_parameter_tab_changed)
@@ -909,75 +868,69 @@ class TreeViewForm(DataStoreForm):
         # Parameter enum context menu requested
         self.ui.treeView_parameter_enum.customContextMenuRequested.connect(self.show_parameter_enum_context_menu)
 
-    def update_copy_action(self):
-        """Update copy action."""
-        if not self.copy_from_widgets:
+    def update_copy_and_remove_actions(self):
+        """Update copy and remove actions according to selections across the widgets."""
+        if not self.widgets_with_selection:
             self.ui.actionCopy.setEnabled(False)
             self.ui.actionCopy.setText("Copy")
+            self.ui.actionRemove_selection.setEnabled(False)
+            self.ui.actionRemove_selection.setText("Remove selection")
         else:
-            copy_from_widget_name = self.copy_from_widgets[-1].accessibleName()
+            name = self.widgets_with_selection[-1].accessibleName()
             self.ui.actionCopy.setEnabled(True)
-            self.ui.actionCopy.setText("Copy from {}".format(copy_from_widget_name))
+            self.ui.actionCopy.setText("Copy from {}".format(name))
+            self.ui.actionRemove_selection.setEnabled(True)
+            self.ui.actionRemove_selection.setText("Removed {} selection".format(name))
+            if name == "object tree":
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_icon.png"))
+            elif name == "object parameter definition":
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
+            elif name == "object parameter value":
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
+            elif name == "relationship parameter definition":
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
+            elif name == "relationship parameter value":
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
 
     @Slot("bool", name="_handle_object_tree_selection_available")
     def _handle_object_tree_selection_available(self, on):
-        self.ui.actionRemove_object_tree_items.setEnabled(on)
-        if self.ui.treeView_object in self.copy_from_widgets:
-            self.copy_from_widgets.remove(self.ui.treeView_object)
+        if self.ui.treeView_object in self.widgets_with_selection:
+            self.widgets_with_selection.remove(self.ui.treeView_object)
         if on:
-            self.copy_from_widgets.append(self.ui.treeView_object)
-            self.remove_action.setShortcut(QKeySequence())
-            self.remove_action = self.ui.actionRemove_object_tree_items
-            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
-        self.update_copy_action()
+            self.widgets_with_selection.append(self.ui.treeView_object)
+        self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_obj_parameter_definition_selection_available")
     def _handle_obj_parameter_definition_selection_available(self, on):
-        self.ui.actionRemove_object_parameter_definitions.setEnabled(on)
-        if self.ui.tableView_object_parameter_definition in self.copy_from_widgets:
-            self.copy_from_widgets.remove(self.ui.tableView_object_parameter_definition)
+        if self.ui.tableView_object_parameter_definition in self.widgets_with_selection:
+            self.widgets_with_selection.remove(self.ui.tableView_object_parameter_definition)
         if on:
-            self.copy_from_widgets.append(self.ui.tableView_object_parameter_definition)
-            self.remove_action.setShortcut(QKeySequence())
-            self.remove_action = self.ui.actionRemove_object_parameter_definitions
-            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
-        self.update_copy_action()
+            self.widgets_with_selection.append(self.ui.tableView_object_parameter_definition)
+        self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_obj_parameter_value_selection_available")
     def _handle_obj_parameter_value_selection_available(self, on):
-        self.ui.actionRemove_object_parameter_values.setEnabled(on)
-        if self.ui.tableView_object_parameter_value in self.copy_from_widgets:
-            self.copy_from_widgets.remove(self.ui.tableView_object_parameter_value)
+        if self.ui.tableView_object_parameter_value in self.widgets_with_selection:
+            self.widgets_with_selection.remove(self.ui.tableView_object_parameter_value)
         if on:
-            self.copy_from_widgets.append(self.ui.tableView_object_parameter_value)
-            self.remove_action.setShortcut(QKeySequence())
-            self.remove_action = self.ui.actionRemove_object_parameter_values
-            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
-        self.update_copy_action()
+            self.widgets_with_selection.append(self.ui.tableView_object_parameter_value)
+        self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_rel_parameter_definition_selection_available")
     def _handle_rel_parameter_definition_selection_available(self, on):
-        self.ui.actionRemove_relationship_parameter_definitions.setEnabled(on)
-        if self.ui.tableView_relationship_parameter_definition in self.copy_from_widgets:
-            self.copy_from_widgets.remove(self.ui.tableView_relationship_parameter_definition)
+        if self.ui.tableView_relationship_parameter_definition in self.widgets_with_selection:
+            self.widgets_with_selection.remove(self.ui.tableView_relationship_parameter_definition)
         if on:
-            self.copy_from_widgets.append(self.ui.tableView_relationship_parameter_definition)
-            self.remove_action.setShortcut(QKeySequence())
-            self.remove_action = self.ui.actionRemove_relationship_parameter_definitions
-            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
-        self.update_copy_action()
+            self.widgets_with_selection.append(self.ui.tableView_relationship_parameter_definition)
+        self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_rel_parameter_value_selection_available")
     def _handle_rel_parameter_value_selection_available(self, on):
-        self.ui.actionRemove_relationship_parameter_values.setEnabled(on)
-        if self.ui.tableView_relationship_parameter_value in self.copy_from_widgets:
-            self.copy_from_widgets.remove(self.ui.tableView_relationship_parameter_value)
+        if self.ui.tableView_relationship_parameter_value in self.widgets_with_selection:
+            self.widgets_with_selection.remove(self.ui.tableView_relationship_parameter_value)
         if on:
-            self.copy_from_widgets.append(self.ui.tableView_relationship_parameter_value)
-            self.remove_action.setShortcut(QKeySequence())
-            self.remove_action = self.ui.actionRemove_relationship_parameter_values
-            self.remove_action.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_Delete))
-        self.update_copy_action()
+            self.widgets_with_selection.append(self.ui.tableView_relationship_parameter_value)
+        self.update_copy_and_remove_actions()
 
     @Slot("QWidget", "QWidget", name="update_paste_action")
     def update_paste_action(self, old, now):
@@ -995,9 +948,9 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="copy")
     def copy(self, checked=False):
         """Copy data to clipboard."""
-        if not self.copy_from_widgets:
+        if not self.widgets_with_selection:
             return
-        self.copy_from_widgets[-1].copy()
+        self.widgets_with_selection[-1].copy()
 
     @Slot("bool", name="paste")
     def paste(self, checked=False):
@@ -1006,255 +959,62 @@ class TreeViewForm(DataStoreForm):
             return
         self.paste_to_widget.paste()
 
-    @Slot("int", "int", name="_handle_object_parameter_json_splitter_moved")
-    def _handle_object_parameter_json_splitter_moved(self, pos, index):
-        """Save splitter sizes for later."""
-        self.object_parameter_json_splitter_sizes = self.ui.splitter_object_parameter_value_json.sizes()
-
-    @Slot("int", "int", name="_handle_relationship_parameter_json_splitter_moved")
-    def _handle_relationship_parameter_json_splitter_moved(self, pos, index):
-        """Save splitter sizes for later."""
-        self.relationship_parameter_json_splitter_sizes = self.ui.splitter_relationship_parameter_value_json.sizes()
-
-    @Slot("QModelIndex","QModelIndex", name="_handle_object_parameter_value_current_changed")
-    def _handle_object_parameter_value_current_changed(self, current, previous):
-        """Call update object JSON editor."""
-        self.update_object_json_editor(current)
-
-    @Slot("QModelIndex","QModelIndex", name="_handle_relationship_parameter_value_current_changed")
-    def _handle_relationship_parameter_value_current_changed(self, current, previous):
-        """Call update relationship JSON editor."""
-        self.update_relationship_json_editor(current)
-
-    def update_object_json_editor(self, current):
-        """Update object JSON editor.
-        If current's column is the json column, then:
-        - if JSON data from current index is different than the one loaded
-        in the text edit or table view, reset them.
-        - Adjust splitter sizes.
-        Else (not the json column), fully collapse the editor.
-        """
-        header = self.object_parameter_value_model.horizontal_header_labels()
-        data = current.data(Qt.EditRole)
-        splitter = self.ui.splitter_object_parameter_value_json
-        sizes = splitter.sizes()
-        width = sum(sizes)
-        if header[current.column()] == "json":
-            if self.ui.textEdit_object_parameter_json.toPlainText() != data:
-                if data:
-                    formatted_data = json.dumps(json.loads(data), indent=4)
-                    self.ui.textEdit_object_parameter_json.setPlainText(formatted_data)
-                else:
-                    self.ui.textEdit_object_parameter_json.clear()
-            if self.object_parameter_json_model.json != data:
-                if self.object_parameter_json_model.reset_model(data):
-                    self.ui.tableView_object_parameter_json.show()
-                    self.ui.tableView_object_parameter_json.resizeColumnsToContents()
-                    self.ui.label_object_parameter_json_error.hide()
-                else:
-                    self.ui.label_object_parameter_json_error.setText(
-                        "Unable to parse JSON as array."
-                    )
-                    self.ui.label_object_parameter_json_error.show()
-                    self.ui.tableView_object_parameter_json.hide()
-            if not self.object_parameter_json_splitter_sizes:
-                # Apply reasonable sizes
-                sizes[0] = .8 * width
-                sizes[1] = .2 * width
-                splitter.setSizes(sizes)
-            else:
-                # Apply stored sizes
-                splitter.setSizes(self.object_parameter_json_splitter_sizes)
-            splitter.handle(1).setEnabled(True)
-            splitter.setHandleWidth(6)
-            self.ui.tabWidget_object_parameter_json.setFocusPolicy(Qt.TabFocus)
-            self.ui.textEdit_object_parameter_json.setFocusPolicy(Qt.StrongFocus)
-            self.ui.tableView_object_parameter_json.setFocusPolicy(Qt.StrongFocus)
-            self.ui.pushButton_object_parameter_json_ok.setFocusPolicy(Qt.StrongFocus)
-        else:
-            # Hide
-            splitter.setSizes([width, 0])
-            splitter.handle(1).setEnabled(False)
-            splitter.setHandleWidth(0)
-            self.ui.tabWidget_object_parameter_json.setFocusPolicy(Qt.NoFocus)
-            self.ui.textEdit_object_parameter_json.setFocusPolicy(Qt.NoFocus)
-            self.ui.tableView_object_parameter_json.setFocusPolicy(Qt.NoFocus)
-            self.ui.pushButton_object_parameter_json_ok.setFocusPolicy(Qt.NoFocus)
-
-    def update_relationship_json_editor(self, current):
-        """Update relationship JSON editor.
-        If current's column is the json column, then:
-        - if JSON data from current index is different than the one loaded
-        in the text edit or table view, reset them.
-        - Adjust splitter sizes.
-        Else (not the json column), fully collapse the editor.
-        """
-        header = self.relationship_parameter_value_model.horizontal_header_labels()
-        data = current.data(Qt.EditRole)
-        splitter = self.ui.splitter_relationship_parameter_value_json
-        sizes = splitter.sizes()
-        width = sum(sizes)
-        if header[current.column()] == "json":
-            if self.ui.textEdit_relationship_parameter_json.toPlainText() != data:
-                if data:
-                    formatted_data = json.dumps(json.loads(data), indent=4)
-                    self.ui.textEdit_relationship_parameter_json.setPlainText(formatted_data)
-                else:
-                    self.ui.textEdit_relationship_parameter_json.clear()
-            if self.relationship_parameter_json_model.json != data:
-                if self.relationship_parameter_json_model.reset_model(data):
-                    self.ui.tableView_relationship_parameter_json.show()
-                    self.ui.tableView_relationship_parameter_json.resizeColumnsToContents()
-                    self.ui.label_relationship_parameter_json_error.hide()
-                else:
-                    self.ui.label_relationship_parameter_json_error.setText(
-                        "Unable to parse JSON as array."
-                    )
-                    self.ui.label_relationship_parameter_json_error.show()
-                    self.ui.tableView_relationship_parameter_json.hide()
-            if not self.relationship_parameter_json_splitter_sizes:
-                # Apply reasonable sizes
-                sizes[0] = .8 * width
-                sizes[1] = .2 * width
-                splitter.setSizes(sizes)
-            else:
-                # Apply stored sizes
-                splitter.setSizes(self.relationship_parameter_json_splitter_sizes)
-            splitter.handle(1).setEnabled(True)
-            splitter.setHandleWidth(6)
-            self.ui.tabWidget_relationship_parameter_json.setFocusPolicy(Qt.TabFocus)
-            self.ui.textEdit_relationship_parameter_json.setFocusPolicy(Qt.StrongFocus)
-            self.ui.tableView_relationship_parameter_json.setFocusPolicy(Qt.StrongFocus)
-            self.ui.pushButton_relationship_parameter_json_ok.setFocusPolicy(Qt.StrongFocus)
-        else:
-            # Hide
-            splitter.setSizes([width, 0])
-            splitter.handle(1).setEnabled(False)
-            splitter.setHandleWidth(0)
-            self.ui.tabWidget_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
-            self.ui.textEdit_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
-            self.ui.tableView_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
-            self.ui.pushButton_relationship_parameter_json_ok.setFocusPolicy(Qt.NoFocus)
-
-    @Slot("int", name="_handle_object_parameter_json_tab_changed")
-    def _handle_object_parameter_json_tab_changed(self, index):
-        """Called when the user switches tab in the object parameter json editor."""
-        current = self.ui.tableView_object_parameter_value.currentIndex()
-        self.update_object_json_editor(current)
-
-    @Slot("int", name="_handle_relationship_parameter_json_tab_changed")
-    def _handle_relationship_parameter_json_tab_changed(self, index):
-        """Called when the user checks the obj { } button in the relationship parameter json editor.
-        Activate the proper tab in the tabwidget."""
-        current = self.ui.tableView_relationship_parameter_value.currentIndex()
-        self.update_relationship_json_editor(current)
-
-    @Slot("bool", name="_handle_object_parameter_json_ok_clicked")
-    def _handle_object_parameter_json_ok_clicked(self, checked=False):
-        """Called when the user clicks ok in the object parameter json editor.
-        Set json field in object parameter value table."""
-        if self.ui.tabWidget_object_parameter_json.currentIndex() == 0:
-            json = self.ui.textEdit_object_parameter_json.toPlainText()
-        else:
-            json = self.object_parameter_json_model.json()
-        index = self.ui.tableView_object_parameter_value.currentIndex()
-        self.set_parameter_value_data(index, json)
-
-    @Slot("bool", name="_handle_relationship_parameter_json_ok_clicked")
-    def _handle_relationship_parameter_json_ok_clicked(self, checked=False):
-        """Called when the user clicks ok in the relationship parameter json editor.
-        Set json field in relationship parameter value table."""
-        if self.ui.tabWidget_relationship_parameter_json.currentIndex() == 0:
-            json = self.ui.textEdit_relationship_parameter_json.toPlainText()
-        else:
-            json = self.relationship_parameter_json_model.json()
-        index = self.ui.tableView_relationship_parameter_value.currentIndex()
-        self.set_parameter_value_data(index, json)
-
-    @Slot(name="edit_object_parameter_json")
-    def edit_object_parameter_json(self):
-        """Start editing object parameter json."""
-        if self.ui.tabWidget_object_parameter_json.currentIndex() == 0:
-            self.ui.textEdit_object_parameter_json.setFocus()
-        else:
-            index = self.object_parameter_json_model.index(0, 0)
-            self.ui.tableView_object_parameter_json.scrollTo(index)
-            self.ui.tableView_object_parameter_json.edit(index)
-
-    @Slot(name="edit_relationship_parameter_json")
-    def edit_relationship_parameter_json(self):
-        """Start editing relationship parameter json."""
-        if self.ui.tabWidget_relationship_parameter_json.currentIndex() == 0:
-            self.ui.textEdit_relationship_parameter_json.setFocus()
-        else:
-            index = self.relationship_parameter_json_model.index(0, 0)
-            self.ui.tableView_relationship_parameter_json.scrollTo(index)
-            self.ui.tableView_relationship_parameter_json.edit(index)
+    @Slot("bool", name="remove_selection")
+    def remove_selection(self, checked=False):
+        """Remove selection items."""
+        if not self.widgets_with_selection:
+            return
+        name = self.widgets_with_selection[-1].accessibleName()
+        if name == "object tree":
+            self.remove_object_tree_items()
+        elif name == "object parameter definition":
+            self.remove_object_parameter_definitions()
+        elif name == "object parameter value":
+            self.remove_object_parameter_values()
+        elif name == "relationship parameter definition":
+            self.remove_relationship_parameter_definitions()
+        elif name == "relationship parameter value":
+            self.remove_relationship_parameter_values()
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_definition_selection_changed")
     def _handle_object_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        tab_index = self.ui.tabWidget_object_parameter.currentIndex()
-        self.obj_parameter_definition_selection_available.emit(tab_index == 1 and not selection.isEmpty())
+        self.obj_parameter_definition_selection_available.emit(not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_value_selection_changed")
     def _handle_object_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        tab_index = self.ui.tabWidget_object_parameter.currentIndex()
-        self.obj_parameter_value_selection_available.emit(tab_index == 0 and not selection.isEmpty())
+        self.obj_parameter_value_selection_available.emit(not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_definition_selection_changed")
     def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
-        tab_index = self.ui.tabWidget_relationship_parameter.currentIndex()
-        self.rel_parameter_definition_selection_available.emit(tab_index == 1 and not selection.isEmpty())
+        self.rel_parameter_definition_selection_available.emit(not selection.isEmpty())
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_value_selection_changed")
     def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        tab_index = self.ui.tabWidget_relationship_parameter.currentIndex()
-        self.rel_parameter_value_selection_available.emit(tab_index == 0 and not selection.isEmpty())
+        self.rel_parameter_value_selection_available.emit(not selection.isEmpty())
 
     @Slot("int", name="_handle_object_parameter_tab_changed")
     def _handle_object_parameter_tab_changed(self, index):
-        """Apply filter. Enable/disable the option to remove rows."""
+        """Update filter."""
         if index == 0:
             self.object_parameter_value_model.update_filter()
         else:
             self.object_parameter_definition_model.update_filter()
-        selected = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        self.obj_parameter_definition_selection_available.emit(index == 1 and not selected.isEmpty())
-        selected = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        self.obj_parameter_value_selection_available.emit(index == 0 and not selected.isEmpty())
 
     @Slot("int", name="_handle_relationship_parameter_tab_changed")
     def _handle_relationship_parameter_tab_changed(self, index):
-        """Apply filter. Enable/disable the option to remove rows."""
+        """Update filter."""
         if index == 0:
             self.relationship_parameter_value_model.update_filter()
         else:
             self.relationship_parameter_definition_model.update_filter()
-        selected = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
-        self.rel_parameter_definition_selection_available.emit(index == 1 and not selected.isEmpty())
-        selected = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        self.rel_parameter_value_selection_available.emit(index == 0 and not selected.isEmpty())
-
-    @Slot(name="_handle_menu_about_to_show")
-    def _handle_menu_about_to_show(self):
-        """Called when a menu from the menubar is about to show.
-        Adjust copy paste actions depending on which widget has the focus.
-        Enable/disable actions to edit object tree items depending on selection.
-        Enable/disable actions to remove object tree items depending on selection.
-        """
-        indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
-        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid()]
-        self.ui.actionEdit_parameter_enums.setEnabled(len(toplevel_indexes) > 0)
-        self.ui.actionRemove_parameter_enums.setEnabled(len(toplevel_indexes) > 0)
-        # Copy/paste actions
 
     @Slot("bool", name="show_import_file_dialog")
     def show_import_file_dialog(self, checked=False):
@@ -1343,53 +1103,6 @@ class TreeViewForm(DataStoreForm):
         self.object_tree_model.build_tree(self.database)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
 
-    def init_views(self):
-        """Initialize model views."""
-        super().init_views()
-        self.init_parameter_json_editors()
-
-    def init_parameter_json_editors(self):
-        """Init object and relationship parameter json editors."""
-        # Monospace font fot json text edits
-        font = QFont()
-        font.setFamily("Courier")
-        font.setStyleHint(QFont.Monospace)
-        font.setFixedPitch(True)
-        font.setPointSize(10)
-        metrics = QFontMetrics(font)
-        tab_stop_width = 4 * metrics.width(' ')
-        # Object
-        sizes = self.ui.splitter_object_parameter_value_json.sizes()
-        self.ui.splitter_object_parameter_value_json.setSizes([sum(sizes), 0])
-        self.ui.splitter_object_parameter_value_json.handle(1).setEnabled(False)
-        self.ui.splitter_object_parameter_value_json.setHandleWidth(0)
-        self.ui.tabWidget_object_parameter_json.setFocusPolicy(Qt.NoFocus)
-        self.ui.textEdit_object_parameter_json.setFocusPolicy(Qt.NoFocus)
-        self.ui.tableView_object_parameter_json.setFocusPolicy(Qt.NoFocus)
-        self.ui.pushButton_object_parameter_json_ok.setFocusPolicy(Qt.NoFocus)
-        self.ui.tableView_object_parameter_json.setModel(self.object_parameter_json_model)
-        self.ui.tableView_object_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.ui.label_object_parameter_json_error.hide()
-        self.ui.textEdit_relationship_parameter_json
-        self.ui.textEdit_object_parameter_json.setFont(font)
-        self.ui.textEdit_object_parameter_json.setTabStopWidth(tab_stop_width)
-        # Relationship
-        sizes = self.ui.splitter_relationship_parameter_value_json.sizes()
-        self.ui.splitter_relationship_parameter_value_json.setSizes([sum(sizes), 0])
-        self.ui.splitter_relationship_parameter_value_json.handle(1).setEnabled(False)
-        self.ui.splitter_relationship_parameter_value_json.setHandleWidth(0)
-        self.ui.tabWidget_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
-        self.ui.textEdit_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
-        self.ui.tableView_relationship_parameter_json.setFocusPolicy(Qt.NoFocus)
-        self.ui.pushButton_relationship_parameter_json_ok.setFocusPolicy(Qt.NoFocus)
-        self.ui.tableView_relationship_parameter_json.setModel(self.relationship_parameter_json_model)
-        self.ui.tableView_relationship_parameter_json.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter_json.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
-        self.ui.label_relationship_parameter_json_error.hide()
-        self.ui.textEdit_relationship_parameter_json.setFont(font)
-        self.ui.textEdit_relationship_parameter_json.setTabStopWidth(tab_stop_width)
-
     @Slot("QModelIndex", name="find_next_leaf")
     def find_next_leaf(self, index):
         """If index corresponds to a relationship, then expand the next ocurrence of it."""
@@ -1433,14 +1146,6 @@ class TreeViewForm(DataStoreForm):
         self.relationship_selection_available.emit(len(self.selected_tree_indexes.get('relationship', [])) > 0)
         self.object_tree_selection_available.emit(any(v for v in self.selected_tree_indexes.values()))
         self.update_filter()
-        self.update_json_editors()
-
-    def update_json_editors(self):
-        """Update data in json editors."""
-        current = self.ui.tableView_object_parameter_value.currentIndex()
-        self.update_object_json_editor(current)
-        current = self.ui.tableView_relationship_parameter_value.currentIndex()
-        self.update_relationship_json_editor(current)
 
     def set_default_parameter_rows(self):
         """Set default rows for parameter models according to selection in object tree."""
@@ -1604,7 +1309,7 @@ class TreeViewForm(DataStoreForm):
             self.show_edit_relationships_form()
         elif option == "Find next":
             self.find_next(index)
-        elif option.startswith("Remove selected"):
+        elif option.startswith("Remove selection"):
             self.remove_object_tree_items()
         elif option == "Fully expand":
             self.fully_expand_selection()
@@ -1715,10 +1420,9 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_object_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
-        remove_icon = self.ui.actionRemove_object_parameter_values.icon()
-        self.object_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
+        self.object_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.object_parameter_value_context_menu.get_action()
-        if option == "Remove selected":
+        if option == "Remove selection":
             self.remove_object_parameter_values()
         elif option == "Copy":
             self.ui.tableView_object_parameter_value.copy()
@@ -1736,10 +1440,9 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
-        remove_icon = self.ui.actionRemove_relationship_parameter_values.icon()
-        self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
+        self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.relationship_parameter_value_context_menu.get_action()
-        if option == "Remove selected":
+        if option == "Remove selection":
             self.remove_relationship_parameter_values()
         elif option == "Copy":
             self.ui.tableView_relationship_parameter_value.copy()
@@ -1757,10 +1460,9 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_object_parameter_definition.indexAt(pos)
         global_pos = self.ui.tableView_object_parameter_definition.viewport().mapToGlobal(pos)
-        remove_icon = self.ui.actionRemove_object_parameter_definitions.icon()
-        self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
+        self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.object_parameter_context_menu.get_action()
-        if option == "Remove selected":
+        if option == "Remove selection":
             self.remove_object_parameter_definitions()
         elif option == "Copy":
             self.ui.tableView_object_parameter_definition.copy()
@@ -1778,10 +1480,9 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_relationship_parameter_definition.indexAt(pos)
         global_pos = self.ui.tableView_relationship_parameter_definition.viewport().mapToGlobal(pos)
-        remove_icon = self.ui.actionRemove_relationship_parameter_definitions.icon()
-        self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index, remove_icon)
+        self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.relationship_parameter_context_menu.get_action()
-        if option == "Remove selected":
+        if option == "Remove selection":
             self.remove_relationship_parameter_definitions()
         elif option == "Copy":
             self.ui.tableView_relationship_parameter_definition.copy()
@@ -1806,13 +1507,13 @@ class TreeViewForm(DataStoreForm):
             self.show_add_parameter_enums_form()
         elif option == "Edit selected...":
             self.show_edit_parameter_enums_form()
-        elif option == "Remove selected":
+        elif option == "Remove selection":
             self.remove_parameter_enums()
 
     @busy_effect
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
-        """Remove selected rows from object parameter value table."""
+        """Remove selection rows from object parameter value table."""
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
         row_dict = dict()
         while not selection.isEmpty():
@@ -1838,7 +1539,7 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
-        """Remove selected rows from relationship parameter value table."""
+        """Remove selection rows from relationship parameter value table."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         row_dict = dict()
         while not selection.isEmpty():
@@ -1864,7 +1565,7 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     @Slot("bool", name="remove_object_parameter_definitions")
     def remove_object_parameter_definitions(self, checked=False):
-        """Remove selected rows from object parameter definition table."""
+        """Remove selection rows from object parameter definition table."""
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         row_dict = dict()
         while not selection.isEmpty():
@@ -1898,7 +1599,7 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     @Slot("bool", name="remove_relationship_parameter_definitions")
     def remove_relationship_parameter_definitions(self, checked=False):
-        """Remove selected rows from relationship parameter definition table."""
+        """Remove selection rows from relationship parameter definition table."""
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         row_dict = dict()
         while not selection.isEmpty():
@@ -1960,7 +1661,7 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     @Slot("bool", name="remove_parameter_enums")
     def remove_parameter_enums(self, checked=False):
-        """Remove selected parameter enums.
+        """Remove selection parameter enums.
         """
         indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
         toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid()]

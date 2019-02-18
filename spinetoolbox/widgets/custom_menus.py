@@ -274,7 +274,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
         edit_object_icon = self._parent.ui.actionEdit_objects.icon()
         edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        minus_object_icon = self._parent.ui.actionRemove_object_tree_items.icon()
+        remove_icon = QIcon(":/icons/minus_object_icon.png")
         fully_expand_icon = self._parent.fully_expand_icon
         fully_collapse_icon = self._parent.fully_collapse_icon
         find_next_icon = self._parent.find_next_icon
@@ -306,7 +306,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
             self.add_action("Edit relationships", edit_relationship_icon)
         if item_type != 'root':
             self.addSeparator()
-            self.add_action("Remove selected", minus_object_icon)
+            self.add_action("Remove selection", remove_icon)
         self.exec_(position)
 
 
@@ -318,17 +318,18 @@ class ParameterContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
-    def __init__(self, parent, position, index, remove_icon):
+    def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
         if not index.isValid():
             return
         copy_icon = self._parent.ui.actionCopy.icon()
         paste_icon = self._parent.ui.actionPaste.icon()
+        remove_icon = QIcon(":/icons/minus_object_parameter_icon.png")
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()
-        self.add_action("Remove selected", remove_icon)
+        self.add_action("Remove selection", remove_icon)
         self.exec_(position)
 
 
@@ -347,7 +348,7 @@ class ParameterEnumContextMenu(CustomContextMenu):
             self.add_action("Add...")
         elif not index.parent().isValid():
             self.add_action("Edit selected...")
-            self.add_action("Remove selected")
+            self.add_action("Remove selection")
         else:
             return
         self.exec_(position)

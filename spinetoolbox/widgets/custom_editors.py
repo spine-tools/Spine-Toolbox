@@ -17,12 +17,14 @@ Custom editors for model/view programming.
 :date:   2.9.2018
 """
 
+import json
 import logging
 from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
     QTimer, QEvent, QCoreApplication, QModelIndex
-from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QFrame
+from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
+    QVBoxLayout, QTextEdit, QFrame
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
-
+from models import JSONArrayModel
 
 class CustomLineEditor(QLineEdit):
     """A custom QLineEdit to handle data from models.
@@ -387,3 +389,76 @@ class CheckListEditor(QTableView):
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         total_height = self.verticalHeader().length() + 2
         self.resize(self._base_size.width(), total_height)
+
+
+class JSONEditor(QTabWidget):
+    """A QTabWidget for editing JSON in raw and table format.
+    """
+
+    data_committed = Signal(name="data_committed")
+
+    def __init__(self, parent):
+        """Init class."""
+        super().__init__(parent)
+        self.setTabPosition(QTabWidget.South)
+        self.tab_raw = QWidget()
+        vertical_layout = QVBoxLayout(self.tab_raw)
+        vertical_layout.setSpacing(0)
+        vertical_layout.setContentsMargins(0, 0, 0, 0)
+        self.text_edit = QTextEdit(self.tab_raw)
+        self.text_edit.setTabChangesFocus(True)
+        vertical_layout.addWidget(self.text_edit)
+        self.addTab(self.tab_raw, "Raw")
+        self.tab_table = QWidget()
+        vertical_layout = QVBoxLayout(self.tab_table)
+        vertical_layout.setSpacing(0)
+        vertical_layout.setContentsMargins(0, 0, 0, 0)
+        self.table_view = QTableView(self.tab_table)
+        self.table_view.horizontalHeader().hide()
+        self.table_view.setTabKeyNavigation(False)
+        vertical_layout.addWidget(self.table_view)
+        self.addTab(self.tab_table, "Table")
+        self.setCurrentIndex(0)
+        self._base_size = None
+        self.json = None
+        self.model = JSONArrayModel(self)
+        self.table_view.setModel(self.model)
+
+    @Slot("int", name="_handle_current_changed")
+    def _handle_current_changed(self, index):
+        if index == 0:
+            data = self.model.json_data()
+            formatted_data = json.dumps(json.loads(data), indent=4)
+            self.text_edit.setText(formatted_data)
+        elif index == 1:
+            data = self.text_edit.toPlainText()
+            self.model.reset_model(data)
+
+    def set_data(self, data, current_index):
+        self.setCurrentIndex(current_index)
+        self.currentChanged.connect(self._handle_current_changed)
+        # TODO: Handle None data
+        if not data:
+            return
+        if current_index == 0:
+            formatted_data = json.dumps(json.loads(data), indent=4)
+            self.text_edit.setText(formatted_data)
+        elif current_index == 1:
+            self.model.reset_model(data)
+
+    def set_base_size(self, size):
+        self._base_size = size
+
+    def update_geometry(self):
+        """Update geometry.
+        """
+        self.table_view.verticalHeader().setDefaultSectionSize(self._base_size.height())
+        self.resize(self._base_size.width(), self._base_size.height() * 16)  # FIXME
+
+    def data(self):
+        index = self.currentIndex()
+        if index == 0:
+            return self.text_edit.toPlainText()
+        elif index == 1:
+            return self.model.json_data()
+        return None

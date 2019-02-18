@@ -3879,12 +3879,56 @@ class ParameterEnumModel(QStandardItemModel):
         self.db_map = tree_view_form.db_map
         self.bold_font = QFont()
         self.bold_font.setBold(True)
+        self.itemChanged.connect(self._handle_item_changed)
+        self.empty_str = "..."
+
+    @Slot("QStandardItem", name="_handle_item_changed")
+    def _handle_item_changed(self, item):
+        """Insert a new last empty row in case the previous one has been filled
+        with any data other than the defaults."""
+        is_empty = item.data(Qt.UserRole) == "empty"
+        if not is_empty:
+            return
+        item.setData("full", Qt.UserRole)
+        parent = item.parent()
+        if not parent:
+            # Append new empty item at top-level
+            item.setData(self.bold_font, Qt.FontRole)
+            empty_name_item = QStandardItem(self.empty_str)
+            empty_name_item.setData("empty", Qt.UserRole)
+            self.invisibleRootItem().appendRow(empty_name_item)
+            parent = item
+        # Append new empty item at bottom-level
+        empty_value_item = QStandardItem(self.empty_str)
+        empty_value_item.setData("empty", Qt.UserRole)
+        parent.appendRow(empty_value_item)
+
+    def setData(self, index, data, role=Qt.EditRole):
+        old_data = index.data(role)
+        if data == old_data:
+            return False
+        if super().setData(index, data, role):
+            self.dataChanged.emit(index, index, [role])
+            return True
 
     def build_tree(self):
         """Build the enumeration tree"""
         self.clear()
-        wide_parameter_enums = self.db_map.wide_parameter_enum_list()
-        self.add_parameter_enums(wide_parameter_enums)
+        name_item_list = list()
+        for wide_enum in self.db_map.wide_parameter_enum_list():
+            name_item = QStandardItem(wide_enum.name)
+            name_item.setData(self.bold_font, Qt.FontRole)
+            name_item.setData(wide_enum._asdict(), Qt.UserRole + 1)
+            value_item_list = [QStandardItem(x) for x in wide_enum.value_list.split(",")]
+            empty_item = QStandardItem(self.empty_str)
+            empty_item.setData("empty", Qt.UserRole)
+            value_item_list.append(empty_item)
+            name_item.appendRows(value_item_list)
+            name_item_list.append(name_item)
+        empty_item = QStandardItem(self.empty_str)
+        empty_item.setData("empty", Qt.UserRole)
+        name_item_list.append(empty_item)
+        self.invisibleRootItem().appendRows(name_item_list)
 
     def add_parameter_enums(self, wide_parameter_enums):
         """Add parameter enums."""
@@ -3936,7 +3980,7 @@ class JSONArrayModel(EmptyRowModel):
     def __init__(self, parent, stride=256):
         """Initialize class"""
         super().__init__(parent)
-        self._json = list()
+        self._json_data = list()
         self._stride = stride
 
     def reset_model(self, data):
@@ -3944,32 +3988,32 @@ class JSONArrayModel(EmptyRowModel):
         Initialize `stride` rows.
         """
         try:
-            self._json = json.loads(data)
+            self._json_data = json.loads(data)
         except (TypeError, json.JSONDecodeError):
-            self._json = list()
+            self._json_data = list()
             return False
-        if not isinstance(self._json, list):
-            self._json = list()
+        if not isinstance(self._json_data, list):
+            self._json_data = list()
             return False
         data = list()
         for i in range(self._stride):
             try:
-                data.append([json.dumps(self._json.pop(0))])
+                data.append([json.dumps(self._json_data.pop(0))])
             except IndexError:
                 break
         super().reset_model(data)
         return True
 
     def canFetchMore(self, parent):
-        return len(self._json) > 0
+        return len(self._json_data) > 0
 
     def fetchMore(self, parent):
-        """Pop data from the _json attribute and add it to the model."""
+        """Pop data from the _json_data attribute and add it to the model."""
         data = list()
         count = 0
         for i in range(self._stride):
             try:
-                data.append(json.dumps(self._json.pop(0)))
+                data.append(json.dumps(self._json_data.pop(0)))
                 count += 1
             except IndexError:
                 break
@@ -3978,14 +4022,14 @@ class JSONArrayModel(EmptyRowModel):
         indexes = [self.index(last_data_row + i, 0) for i in range(count)]
         self.batch_set_data(indexes, data)
 
-    def json(self):
+    def json_data(self):
         """Return data into JSON array."""
         last_data_row = self.rowCount() - 1
-        new_json = [json.loads(self._main_data[i][0]) for i in range(last_data_row)]
-        new_json.extend(self._json)  # Whatever remains unfetched
-        if not new_json:
+        new_json_data = [json.loads(self._main_data[i][0]) for i in range(last_data_row)]
+        new_json_data.extend(self._json_data)  # Whatever remains unfetched
+        if not new_json_data:
             return None
-        return json.dumps(new_json)
+        return json.dumps(new_json_data)
 
 
 class DatapackageResourcesModel(MinimalTableModel):
