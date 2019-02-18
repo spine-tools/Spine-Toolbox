@@ -427,19 +427,9 @@ class JSONEditor(QTabWidget):
         self.text_edit.installEventFilter(self)
         self.table_view.installEventFilter(self)
         self.table_view.keyPressEvent = self._view_key_press_event
-        qApp.focusChanged.connect(self._handle_focus_changed)
         if popup:
             self.text_edit.setReadOnly(True)
             self.table_view.setEditTriggers(QTableView.NoEditTriggers)
-
-    @Slot("QWidget", "QWidget", name="_handle_focus_changed")
-    def _handle_focus_changed(self, old, now):
-        """Hack to close this widget when clicking on empty space in table view."""
-        print(old)
-        print(now)
-        if now not in (self, self.tabBar(), self.text_edit, self.table_view):
-            print("Bye")
-            self.data_committed.emit()
 
     def _view_key_press_event(self, event):
         """Accept key events on the view to avoid weird behaviour when trying to navigate
@@ -474,10 +464,22 @@ class JSONEditor(QTabWidget):
                     self.setFocus()
                     return QCoreApplication.sendEvent(self, event)
                 return False
+        if event.type() == QEvent.FocusOut:
+            QTimer.singleShot(0, self.check_focus)
         return False
+
+    def check_focus(self):
+        """Called when either the text edit or the table view lose focus.
+        Check if the focus is still on this widget (which would mean it was a tab change)
+        otherwise emit signal so this is closed.
+        """
+        if qApp.focusWidget() != self.focusWidget():
+            self.data_committed.emit()
 
     @Slot("int", name="_handle_current_changed")
     def _handle_current_changed(self, index):
+        """Update json data on text edit or table view, and set focus.
+        """
         if index == 0:
             data = self.model.json_data()
             try:
@@ -490,8 +492,12 @@ class JSONEditor(QTabWidget):
             data = self.text_edit.toPlainText()
             self.model.reset_model(data)
             self.table_view.setFocus()
+            self.table_view.setCurrentIndex(self.model.index(0, 0))
+            self.table_view.selectionModel().clearSelection()
 
     def set_data(self, data, current_index):
+        """Set data on text edit or table view (model) depending on current index.
+        """
         self.setCurrentIndex(current_index)
         self.currentChanged.connect(self._handle_current_changed)
         if current_index == 0:
@@ -510,6 +516,7 @@ class JSONEditor(QTabWidget):
     def update_geometry(self):
         """Update geometry.
         """
+        self.table_view.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.table_view.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self.resize(self._base_size.width(), self._base_size.height() * 16)  # FIXME
 
@@ -522,7 +529,7 @@ class JSONEditor(QTabWidget):
         return None
 
     def start_editing(self):
-        """Start editing first item.
+        """Start editing.
         """
         current_index = self.currentIndex()
         if current_index == 0:

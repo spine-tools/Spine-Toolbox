@@ -933,13 +933,13 @@ class TreeViewForm(DataStoreForm):
         self.update_copy_and_remove_actions()
 
     @Slot("QWidget", "QWidget", name="update_paste_action")
-    def update_paste_action(self, old, now):
+    def update_paste_action(self, old, new):
         self.paste_to_widget = None
         self.ui.actionPaste.setText("Paste")
         self.ui.actionPaste.setEnabled(False)
         try:
-            if now.canPaste():
-                self.paste_to_widget = now
+            if new.canPaste():
+                self.paste_to_widget = new
                 self.ui.actionPaste.setText("Paste to {}".format(self.paste_to_widget.accessibleName()))
                 self.ui.actionPaste.setEnabled(True)
         except AttributeError:
