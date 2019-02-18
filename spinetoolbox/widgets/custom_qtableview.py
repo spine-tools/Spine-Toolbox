@@ -21,7 +21,6 @@ import logging
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
-from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import AutoFilterWidget
 from models import TableModel
 

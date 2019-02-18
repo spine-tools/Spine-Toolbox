@@ -1266,80 +1266,6 @@ class EmptyRowModel(MinimalTableModel):
         self.dataChanged.emit(top_left, bottom_right)
 
 
-class EmptyColumnModel(MinimalTableModel):
-    """A table model with a last empty column."""
-    def __init__(self, parent=None):
-        """Init class."""
-        super().__init__(parent)
-        self.dataChanged.connect(self._handle_data_changed)
-        self.columnsRemoved.connect(self._handle_columns_removed)
-
-    def clear(self):
-        super().clear()
-        self.insertColumns(self.columnCount(), 1, QModelIndex())
-
-    def reset_model(self, data):
-        super().reset_model(data)
-        self.insertColumns(self.columnCount(), 1, QModelIndex())
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
-    def _handle_data_changed(self, top_left, bottom_right, roles=[]):
-        """Insert a new last empty column in case the previous one has been filled
-        with any data."""
-        if roles and Qt.EditRole not in roles:
-            return
-        last_column = self.columnCount() - 1
-        for row in range(self.rowCount()):
-            data = self._main_data[row][last_column]
-            if data:
-                self.insertColumns(self.columnCount(), 1)
-                break
-
-    @Slot("QModelIndex", "int", "int", name="_handle_columns_removed")
-    def _handle_columns_removed(self, parent, first, last):
-        """Insert a new empty column in case it's been removed."""
-        last_column = self.columnCount()
-        if last_column in range(first, last + 1):
-            self.insertColumns(self.columnCount(), 1)
-
-
-class EmptyRowAndColumnModel(EmptyRowModel):
-    """A table model with a last empty row *and* column."""
-    def __init__(self, parent=None):
-        """Init class."""
-        super().__init__(parent)
-        self.columnsRemoved.connect(self._handle_columns_removed)
-
-    def clear(self):
-        super().clear()
-        self.insertColumns(self.columnCount(), 1, QModelIndex())
-
-    def reset_model(self, data):
-        super().reset_model(data)
-        self.insertColumns(self.columnCount(), 1, QModelIndex())
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
-    def _handle_data_changed(self, top_left, bottom_right, roles=[]):
-        """Insert a new last empty column in case the previous one has been filled
-        with any data."""
-        super()._handle_data_changed(top_left, bottom_right, roles)
-        if roles and Qt.EditRole not in roles:
-            return
-        last_column = self.columnCount() - 1
-        for row in range(self.rowCount()):
-            data = self._main_data[row][last_column]
-            if data:
-                self.insertColumns(self.columnCount(), 1)
-                break
-
-    @Slot("QModelIndex", "int", "int", name="_handle_columns_removed")
-    def _handle_columns_removed(self, parent, first, last):
-        """Insert a new empty column in case it's been removed."""
-        last_column = self.columnCount()
-        if last_column in range(first, last + 1):
-            self.insertColumns(self.columnCount(), 1)
-
-
 class ObjectClassListModel(QStandardItemModel):
     """A class to list object classes in the GraphViewForm."""
     def __init__(self, graph_view_form):
@@ -3980,29 +3906,26 @@ class JSONArrayModel(EmptyRowModel):
     def __init__(self, parent, stride=256):
         """Initialize class"""
         super().__init__(parent)
-        self._json_data = list()
+        self._json_data = []
         self._stride = stride
 
-    def reset_model(self, data):
+    def reset_model(self, json_data):
         """Store JSON array into a list.
         Initialize `stride` rows.
         """
         try:
-            self._json_data = json.loads(data)
+            self._json_data = json.loads(json_data)
         except (TypeError, json.JSONDecodeError):
-            self._json_data = list()
-            return False
+            self._json_data = []
         if not isinstance(self._json_data, list):
-            self._json_data = list()
-            return False
-        data = list()
+            self._json_data = []
+        data = []
         for i in range(self._stride):
             try:
                 data.append([json.dumps(self._json_data.pop(0))])
             except IndexError:
                 break
         super().reset_model(data)
-        return True
 
     def canFetchMore(self, parent):
         return len(self._json_data) > 0

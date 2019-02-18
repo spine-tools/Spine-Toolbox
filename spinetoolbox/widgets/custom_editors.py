@@ -25,6 +25,7 @@ from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, Q
     QVBoxLayout, QTextEdit, QFrame
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
 from models import JSONArrayModel
+from widgets.custom_qtableview import CopyPasteTableView
 
 class CustomLineEditor(QLineEdit):
     """A custom QLineEdit to handle data from models.
@@ -158,7 +159,7 @@ class SearchBarEditor(QTableView):
         through the table using the up and down keys.
         """
         super().keyPressEvent(event)
-        event.accept()  # Important to avoid weird behavior when pressing the up arrow on the first row
+        event.accept()  # Important to avoid weird behavior when trying to navigate outside view limits
         if self._original_text is None:
             self.proxy_model.setData(self.first_index, event.text())
             self._handle_delegate_text_edited(event.text())
@@ -397,7 +398,7 @@ class JSONEditor(QTabWidget):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent):
+    def __init__(self, parent, popup=False):
         """Init class."""
         super().__init__(parent)
         self.setTabPosition(QTabWidget.South)
@@ -413,7 +414,7 @@ class JSONEditor(QTabWidget):
         vertical_layout = QVBoxLayout(self.tab_table)
         vertical_layout.setSpacing(0)
         vertical_layout.setContentsMargins(0, 0, 0, 0)
-        self.table_view = QTableView(self.tab_table)
+        self.table_view = CopyPasteTableView(self.tab_table)
         self.table_view.horizontalHeader().hide()
         self.table_view.setTabKeyNavigation(False)
         vertical_layout.addWidget(self.table_view)
@@ -423,28 +424,85 @@ class JSONEditor(QTabWidget):
         self.json = None
         self.model = JSONArrayModel(self)
         self.table_view.setModel(self.model)
+        self.text_edit.installEventFilter(self)
+        self.table_view.installEventFilter(self)
+        self.table_view.keyPressEvent = self._view_key_press_event
+        qApp.focusChanged.connect(self._handle_focus_changed)
+        if popup:
+            self.text_edit.setReadOnly(True)
+            self.table_view.setEditTriggers(QTableView.NoEditTriggers)
+
+    @Slot("QWidget", "QWidget", name="_handle_focus_changed")
+    def _handle_focus_changed(self, old, now):
+        """Hack to close this widget when clicking on empty space in table view."""
+        print(old)
+        print(now)
+        if now not in (self, self.tabBar(), self.text_edit, self.table_view):
+            print("Bye")
+            self.data_committed.emit()
+
+    def _view_key_press_event(self, event):
+        """Accept key events on the view to avoid weird behaviour when trying to navigate
+        outside of its limits.
+        """
+        QTableView.keyPressEvent(self.table_view, event)
+        event.accept()
+
+    def eventFilter(self, widget, event):
+        """Intercept events to text_edit and table_view to enable consistent behavior.
+        """
+        if event.type() == QEvent.KeyPress:
+            if event.key() == Qt.Key_Tab:
+                if widget == self.text_edit:
+                    self.setCurrentIndex(1)
+                    return True
+                if widget == self.table_view:
+                    return QCoreApplication.sendEvent(self, event)
+            if event.key() == Qt.Key_Backtab:
+                if widget == self.table_view:
+                    self.setCurrentIndex(0)
+                    return True
+                if widget == self.text_edit:
+                    return QCoreApplication.sendEvent(self, event)
+            if event.key() == Qt.Key_Escape:
+                self.setFocus()
+                return QCoreApplication.sendEvent(self, event)
+            if event.key() in (Qt.Key_Enter, Qt.Key_Return):
+                if widget == self.table_view:
+                    if self.table_view.isPersistentEditorOpen(self.table_view.currentIndex()):
+                        return True
+                    self.setFocus()
+                    return QCoreApplication.sendEvent(self, event)
+                return False
+        return False
 
     @Slot("int", name="_handle_current_changed")
     def _handle_current_changed(self, index):
         if index == 0:
             data = self.model.json_data()
-            formatted_data = json.dumps(json.loads(data), indent=4)
-            self.text_edit.setText(formatted_data)
+            try:
+                formatted_data = json.dumps(json.loads(data), indent=4)
+                self.text_edit.setText(formatted_data)
+            except (TypeError, json.JSONDecodeError):
+                pass
+            self.text_edit.setFocus()
         elif index == 1:
             data = self.text_edit.toPlainText()
             self.model.reset_model(data)
+            self.table_view.setFocus()
 
     def set_data(self, data, current_index):
         self.setCurrentIndex(current_index)
         self.currentChanged.connect(self._handle_current_changed)
-        # TODO: Handle None data
-        if not data:
-            return
         if current_index == 0:
-            formatted_data = json.dumps(json.loads(data), indent=4)
-            self.text_edit.setText(formatted_data)
+            try:
+                formatted_data = json.dumps(json.loads(data), indent=4)
+                self.text_edit.setText(formatted_data)
+            except (TypeError, json.JSONDecodeError):
+                pass
         elif current_index == 1:
             self.model.reset_model(data)
+        QTimer.singleShot(0, self.start_editing)
 
     def set_base_size(self, size):
         self._base_size = size
@@ -462,3 +520,12 @@ class JSONEditor(QTabWidget):
         elif index == 1:
             return self.model.json_data()
         return None
+
+    def start_editing(self):
+        """Start editing first item.
+        """
+        current_index = self.currentIndex()
+        if current_index == 0:
+            self.text_edit.setFocus()
+        elif current_index == 1:
+            self.table_view.setFocus()

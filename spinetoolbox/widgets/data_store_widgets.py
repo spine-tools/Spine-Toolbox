@@ -37,9 +37,9 @@ from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, Pa
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDefinitionDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDefinitionDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
-    AddRelationshipClassesDialog, AddRelationshipsDialog, AddParameterEnumsDialog, \
+    AddRelationshipClassesDialog, AddRelationshipsDialog, \
     EditObjectClassesDialog, EditObjectsDialog, \
-    EditRelationshipClassesDialog, EditRelationshipsDialog, EditParameterEnumsDialog, \
+    EditRelationshipClassesDialog, EditRelationshipsDialog, \
     ManageParameterTagsDialog, CommitDialog
 from widgets.custom_qwidgets import ZoomWidget
 from widgets.toolbars import ParameterTagToolBar

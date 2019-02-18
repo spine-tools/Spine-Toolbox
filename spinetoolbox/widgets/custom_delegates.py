@@ -197,7 +197,7 @@ class ParameterValueDelegate(ParameterDelegate):
             return False
         if not index.data(Qt.EditRole):
             return False
-        self.json_popup = JSONEditor(self.view)
+        self.json_popup = JSONEditor(self.view, popup=True)
         self.json_popup.currentChanged.connect(self._handle_json_editor_current_changed)
         self.json_popup.set_data(index.data(Qt.EditRole), self.json_editor_index)
         self.updateEditorGeometry(self.json_popup, option, index)
@@ -207,6 +207,7 @@ class ParameterValueDelegate(ParameterDelegate):
         self.json_popup.move(self.json_popup.pos() + offset)
         self.json_popup.show()
         return True
+
 
 class ObjectParameterValueDelegate(ParameterValueDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.

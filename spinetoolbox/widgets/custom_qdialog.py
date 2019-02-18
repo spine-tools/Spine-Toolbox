@@ -24,7 +24,7 @@ from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit,
 from PySide2.QtCore import Signal, Slot, Qt, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
-from models import EmptyRowModel, MinimalTableModel, HybridTableModel, EmptyColumnModel, EmptyRowAndColumnModel
+from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
     AddParameterEnumsDelegate, LineEditDelegate
 from widgets.custom_qtableview import CopyPasteTableView
@@ -529,70 +529,6 @@ class AddRelationshipsDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class AddParameterEnumsDialog(ManageItemsDialog):
-    """A dialog to query user's preferences for new parameter enums.
-
-    Attributes:
-        parent (TreeViewForm): data store widget
-    """
-    def __init__(self, parent):
-        super().__init__(parent)
-        self._parent = parent
-        self.model = EmptyRowAndColumnModel(self)
-        self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.table_view.horizontalHeader().setStretchLastSection(True)
-        self.model.set_horizontal_header_labels(['name', 'value'])
-        self.connect_signals()
-        self.model.clear()
-        self.table_view.resizeColumnsToContents()
-
-    def connect_signals(self):
-        """Connect signals to slots."""
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
-        self.model.dataChanged.connect(self._handle_model_data_changed)
-        self.model.columnsInserted.connect(self._handle_model_columns_inserted)
-
-    @Slot("QModelIndex", "int", "int", name="_handle_model_columns_inserted")
-    def _handle_model_columns_inserted(self, parent, first, last):
-        """Set horizontal level on newly inserted columns."""
-        count = last - first + 1
-        self.model.insert_horizontal_header_labels(first, ['value' for _ in range(count)])
-
-    @busy_effect
-    def accept(self):
-        """Collect info from dialog and try to add items."""
-        wide_kwargs_list = list()
-        for i in range(self.model.rowCount() - 1):  # last row will always be empty
-            row_data = self.model.row_data(i)
-            enum_name = row_data[0]
-            value_list = [x for x in row_data[1:-1] if x]  # Remove 'nulls'
-            if not enum_name:
-                self._parent.msg_error.emit("Parameter enum name missing at row {}".format(i + 1))
-                return
-            if not value_list:
-                self._parent.msg_error.emit("Not enough values at row {}".format(i + 1))
-                return
-            wide_kwargs = {
-                "name": enum_name,
-                "value_list": value_list,
-            }
-            wide_kwargs_list.append(wide_kwargs)
-        if not wide_kwargs_list:
-            self._parent.msg_error.emit("Nothing to add")
-            return
-        try:
-            enums = self._parent.db_map.add_wide_parameter_enums(*wide_kwargs_list)
-            self._parent.add_parameter_enums(enums)
-            super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
-        except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
-
-
 class EditObjectClassesDialog(ManageItemsDialog):
     """A dialog to query user's preferences for updating object classes.
 
@@ -876,103 +812,6 @@ class EditRelationshipsDialog(ManageItemsDialog):
             wide_relationships = self._parent.db_map.update_wide_relationships(*kwargs_list)
             self._parent.update_relationships(wide_relationships)
             super().accept()
-        except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
-
-
-class EditParameterEnumsDialog(ManageItemsDialog):
-    """A dialog to query user's preferences for updating parameter enums.
-
-    Attributes:
-        parent (TreeViewForm): data store widget
-        wide_kwargs_list (list): list of dictionaries corresponding to parameter enums to edit/update
-    """
-    def __init__(self, parent, wide_kwargs_list):
-        super().__init__(parent)
-        self.setWindowTitle("Edit parameter enums")
-        self.model = EmptyColumnModel(self)
-        self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.table_view.horizontalHeader().setStretchLastSection(True)
-        self.orig_data = list()
-        self.id_list = list()
-        model_data = list()
-        max_len = 0
-        for wide_kwargs in wide_kwargs_list:
-            try:
-                self.id_list.append(wide_kwargs["id"])
-            except KeyError:
-                continue
-            try:
-                name = wide_kwargs["name"]
-            except KeyError:
-                continue
-            try:
-                value_list = wide_kwargs["value_list"].split(",")
-            except KeyError:
-                continue
-            row_data = value_list
-            row_data.insert(0, name)
-            self.orig_data.append(row_data.copy())
-            model_data.append(row_data)
-            max_len = max(max_len, len(row_data))
-        for row_data in model_data:
-            row_data += [None for _ in range(max_len - len(row_data))]
-            self.orig_data.append(row_data.copy())
-        self.model.set_horizontal_header_labels(['name'] + ['value' for _ in range(max_len - 1)])
-        self.connect_signals()
-        self.model.reset_model(model_data)
-        self.table_view.resizeColumnsToContents()
-
-    def connect_signals(self):
-        """Connect signals to slots."""
-        self.button_box.accepted.connect(self.accept)
-        self.button_box.rejected.connect(self.reject)
-        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
-        self.model.dataChanged.connect(self._handle_model_data_changed)
-        self.model.columnsInserted.connect(self._handle_model_columns_inserted)
-
-    @Slot("QModelIndex", "int", "int", name="_handle_model_columns_inserted")
-    def _handle_model_columns_inserted(self, parent, first, last):
-        """Set horizontal level on newly inserted columns."""
-        count = last - first + 1
-        self.model.insert_horizontal_header_labels(first, ['value' for _ in range(count)])
-
-    @busy_effect
-    def accept(self):
-        """Collect info from dialog and try to update items."""
-        wide_kwargs_list = list()
-        for i in range(self.model.rowCount()):
-            id = self.id_list[i]
-            row_data = self.model.row_data(i)
-            enum_name = row_data[0]
-            value_list = [x for x in row_data[1:] if x]  # Remove 'nulls'
-            if not enum_name:
-                self._parent.msg_error.emit("Parameter enum name missing at row {}".format(i + 1))
-                return
-            if not value_list:
-                self._parent.msg_error.emit("Not enough values at row {}".format(i + 1))
-                return
-            orig_row_data = self.orig_data[i]
-            orig_enum_name = orig_row_data[0]
-            orig_value_list = [x for x in orig_row_data[1:] if x]  # Remove 'nulls'
-            if enum_name == orig_enum_name and value_list == orig_value_list:
-                continue
-            wide_kwargs = {
-                'id': id,
-                "name": enum_name,
-                "value_list": value_list,
-            }
-            wide_kwargs_list.append(wide_kwargs)
-        if not wide_kwargs_list:
-            self._parent.msg_error.emit("Nothing to update")
-            return
-        try:
-            wide_enums = self._parent.db_map.update_wide_parameter_enums(*wide_kwargs_list)
-            self._parent.update_parameter_enums(wide_enums)
-            super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
