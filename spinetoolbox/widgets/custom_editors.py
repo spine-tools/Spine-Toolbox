@@ -401,7 +401,7 @@ class JSONEditor(QTabWidget):
     def __init__(self, parent, popup=False):
         """Init class."""
         super().__init__(parent)
-        self.setTabPosition(QTabWidget.South)
+        # self.setTabPosition(QTabWidget.South)
         self.tab_raw = QWidget()
         vertical_layout = QVBoxLayout(self.tab_raw)
         vertical_layout.setSpacing(0)
@@ -421,7 +421,7 @@ class JSONEditor(QTabWidget):
         self.addTab(self.tab_table, "Table")
         self.setCurrentIndex(0)
         self._base_size = None
-        self.json = None
+        self.json_data = None
         self.model = JSONArrayModel(self)
         self.table_view.setModel(self.model)
         self.text_edit.installEventFilter(self)
@@ -430,9 +430,10 @@ class JSONEditor(QTabWidget):
         if popup:
             self.text_edit.setReadOnly(True)
             self.table_view.setEditTriggers(QTableView.NoEditTriggers)
+            self.setFocusPolicy(Qt.NoFocus)
 
     def _view_key_press_event(self, event):
-        """Accept key events on the view to avoid weird behaviour when trying to navigate
+        """Accept key events on the view to avoid weird behaviour, when trying to navigate
         outside of its limits.
         """
         QTableView.keyPressEvent(self.table_view, event)
@@ -482,6 +483,8 @@ class JSONEditor(QTabWidget):
         """
         if index == 0:
             data = self.model.json_data()
+            if not data:
+                data = self.json_data
             try:
                 formatted_data = json.dumps(json.loads(data), indent=4)
                 self.text_edit.setText(formatted_data)
@@ -498,6 +501,7 @@ class JSONEditor(QTabWidget):
     def set_data(self, data, current_index):
         """Set data on text edit or table view (model) depending on current index.
         """
+        self.json_data = data
         self.setCurrentIndex(current_index)
         self.currentChanged.connect(self._handle_current_changed)
         if current_index == 0:
@@ -509,6 +513,15 @@ class JSONEditor(QTabWidget):
         elif current_index == 1:
             self.model.reset_model(data)
         QTimer.singleShot(0, self.start_editing)
+
+    def start_editing(self):
+        """Start editing.
+        """
+        current_index = self.currentIndex()
+        if current_index == 0:
+            self.text_edit.setFocus()
+        elif current_index == 1:
+            self.table_view.setFocus()
 
     def set_base_size(self, size):
         self._base_size = size
@@ -527,12 +540,3 @@ class JSONEditor(QTabWidget):
         elif index == 1:
             return self.model.json_data()
         return None
-
-    def start_editing(self):
-        """Start editing.
-        """
-        current_index = self.currentIndex()
-        if current_index == 0:
-            self.text_edit.setFocus()
-        elif current_index == 1:
-            self.table_view.setFocus()

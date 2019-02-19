@@ -1630,34 +1630,6 @@ class TreeViewForm(DataStoreForm):
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
-    @Slot("bool", name="show_add_parameter_enums_form")
-    def show_add_parameter_enums_form(self, checked=False):
-        dialog = AddParameterEnumsDialog(self)
-        dialog.show()
-
-    def add_parameter_enums(self, parameter_enums):
-        """Insert new parameter enums."""
-        self.parameter_enum_model.add_parameter_enums(parameter_enums)
-        self.commit_available.emit(True)
-        msg = "Successfully added new parameter enum(s) '{}'.".format("', '".join([x.name for x in parameter_enums]))
-        self.msg.emit(msg)
-
-    @Slot("bool", name="show_edit_parameter_enums_form")
-    def show_edit_parameter_enums_form(self, checked=False):
-        indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
-        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid()]
-        if not toplevel_indexes:
-            return
-        dialog = EditParameterEnumsDialog(self, [ind.data(Qt.UserRole + 1) for ind in toplevel_indexes])
-        dialog.show()
-
-    def update_parameter_enums(self, wide_enums):
-        """Update parameter enums."""
-        self.parameter_enum_model.update_parameter_enums(wide_enums)
-        self.commit_available.emit(True)
-        msg = "Successfully updated parameter enum(s) '{}'.".format("', '".join([x.name for x in wide_enums]))
-        self.msg.emit(msg)
-
     @busy_effect
     @Slot("bool", name="remove_parameter_enums")
     def remove_parameter_enums(self, checked=False):

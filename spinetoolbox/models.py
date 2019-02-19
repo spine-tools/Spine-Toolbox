@@ -3805,37 +3805,109 @@ class ParameterEnumModel(QStandardItemModel):
         self.db_map = tree_view_form.db_map
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self.itemChanged.connect(self._handle_item_changed)
         self.empty_str = "..."
 
-    @Slot("QStandardItem", name="_handle_item_changed")
     def _handle_item_changed(self, item):
-        """Insert a new last empty row in case the previous one has been filled
-        with any data other than the defaults."""
-        is_empty = item.data(Qt.UserRole) == "empty"
-        if not is_empty:
-            return
-        item.setData("full", Qt.UserRole)
+        """Ensure there's always one empty item at the bottom of each parent.
+        Return enum dict to add or to update.
+        """
         parent = item.parent()
-        if not parent:
-            # Append new empty item at top-level
-            item.setData(self.bold_font, Qt.FontRole)
-            empty_name_item = QStandardItem(self.empty_str)
-            empty_name_item.setData("empty", Qt.UserRole)
-            self.invisibleRootItem().appendRow(empty_name_item)
-            parent = item
-        # Append new empty item at bottom-level
-        empty_value_item = QStandardItem(self.empty_str)
-        empty_value_item.setData("empty", Qt.UserRole)
-        parent.appendRow(empty_value_item)
+        if self.is_empty(item):
+            if parent:
+                # Append new empty item to the parent
+                empty_value_item = QStandardItem(self.empty_str)
+                parent.appendRow(empty_value_item)
+            else:
+                # Append new empty item to model
+                item.setData(self.bold_font, Qt.FontRole)
+                empty_name_item = QStandardItem(self.empty_str)
+                self.invisibleRootItem().appendRow(empty_name_item)
+                # Append first empty child to the changed item
+                empty_value_item = QStandardItem(self.empty_str)
+                item.appendRow(empty_value_item)
+        to_add = None
+        to_update = None
+        if parent:
+            # The changed item corresponds to a enum value
+            value_list = [parent.child(i).data(Qt.DisplayRole) for i in range(parent.rowCount() - 1)]
+            id = parent.data(Qt.UserRole + 1)
+            if id:
+                # Update
+                to_update = dict(id=id, value_list=value_list)
+            else:
+                # Add
+                name = parent.data(Qt.DisplayRole)
+                to_add = dict(parent=parent, name=name, value_list=value_list)
+        else:
+            # The changed item corresponds to a enum name
+            name = item.data(Qt.DisplayRole)
+            id = item.data(Qt.UserRole + 1)
+            if id:
+                # Update
+                to_update = dict(id=id, name=name)
+            else:
+                # Add
+                value_list = [item.child(i).data(Qt.DisplayRole) for i in range(item.rowCount() - 1)]
+                if value_list:
+                    to_add = dict(parent=item, name=name, value_list=value_list)
+        return to_add, to_update
 
-    def setData(self, index, data, role=Qt.EditRole):
-        old_data = index.data(role)
-        if data == old_data:
+    def is_empty(self, item):
+        """Return whether or not this item is 'empty', i.e., the
+        last one for its parent."""
+        parent = item.parent() if item.parent() else self.invisibleRootItem()
+        return item.row() == parent.rowCount() - 1
+
+    def setData(self, index, value, role=Qt.EditRole):
+        """Set data of index to value for given role."""
+        item = self.itemFromIndex(index)
+        old_value = item.data(role)
+        if value == old_value:
             return False
-        if super().setData(index, data, role):
-            self.dataChanged.emit(index, index, [role])
-            return True
+        item.setData(value, role)
+        if role == Qt.EditRole:
+            to_add, to_update = self._handle_item_changed(item)
+            self.add_parameter_enums(to_add)
+            self.update_parameter_enums(to_update)
+        return True
+
+    def batch_set_data(self, indexes, values):
+        """Set edit role for indexes to values in batch."""
+        parented_rows = dict()
+        for index, value in zip(indexes, values):
+            item = self.itemFromIndex(index)
+            item.setData(value, role=Qt.EditRole)
+            parent = item.parent()
+            parented_rows.setdefault(parent, list()).append(item.row())
+        # Handle item changed, but only for the last item under each parent
+        for parent, rows in parented_rows.items():
+            item = parent.child(max(rows))
+            to_add, to_update = self._handle_item_changed(item)
+
+    def add_parameter_enums(self, *to_add):
+        if not any(to_add):
+            return
+        parents = []
+        for item in to_add:
+            parents.append(item.pop("parent"))
+        try:
+            enums = self.db_map.add_wide_parameter_enums(*to_add)
+            for k, enum in enumerate(enums):
+                parents[k].setData(enum.id, Qt.UserRole + 1)
+            self._tree_view_form.commit_available.emit(True)
+            self._tree_view_form.msg.emit("Successfully added new parameter enum(s)")
+        except (SpineIntegrityError, SpineDBAPIError) as e:
+            self._tree_view_form.msg_error.emit(e.msg)
+
+    def update_parameter_enums(self, *to_update):
+        if not any(to_update):
+            return
+        try:
+            enums = self.db_map.update_wide_parameter_enums(*to_update)
+            self._tree_view_form.commit_available.emit(True)
+            self._tree_view_form.msg.emit("Successfully updated parameter enum(s)")
+        except (SpineIntegrityError, SpineDBAPIError) as e:
+            self._tree_view_form.msg_error.emit(e.msg)
 
     def build_tree(self):
         """Build the enumeration tree"""
@@ -3843,48 +3915,16 @@ class ParameterEnumModel(QStandardItemModel):
         name_item_list = list()
         for wide_enum in self.db_map.wide_parameter_enum_list():
             name_item = QStandardItem(wide_enum.name)
+            name_item.setData(wide_enum.id, Qt.UserRole + 1)
             name_item.setData(self.bold_font, Qt.FontRole)
-            name_item.setData(wide_enum._asdict(), Qt.UserRole + 1)
             value_item_list = [QStandardItem(x) for x in wide_enum.value_list.split(",")]
             empty_item = QStandardItem(self.empty_str)
-            empty_item.setData("empty", Qt.UserRole)
             value_item_list.append(empty_item)
             name_item.appendRows(value_item_list)
             name_item_list.append(name_item)
         empty_item = QStandardItem(self.empty_str)
-        empty_item.setData("empty", Qt.UserRole)
         name_item_list.append(empty_item)
         self.invisibleRootItem().appendRows(name_item_list)
-
-    def add_parameter_enums(self, wide_parameter_enums):
-        """Add parameter enums."""
-        name_item_list = list()
-        for wide_enum in wide_parameter_enums:
-            name_item = QStandardItem(wide_enum.name)
-            name_item.setData(self.bold_font, Qt.FontRole)
-            name_item.setData(wide_enum._asdict(), Qt.UserRole + 1)
-            value_item_list = [QStandardItem(x) for x in wide_enum.value_list.split(",")]
-            name_item.appendRows(value_item_list)
-            name_item_list.append(name_item)
-        self.invisibleRootItem().appendRows(name_item_list)
-
-    def update_parameter_enums(self, wide_parameter_enums):
-        """Update parameter enums."""
-        updated_wide_enum_dict = {x.id: x for x in wide_parameter_enums}
-        for i in range(self.rowCount()):
-            index = self.index(i, 0)
-            wide_enum = index.data(Qt.UserRole + 1)
-            id = wide_enum["id"]
-            try:
-                updated_wide_enum = updated_wide_enum_dict[id]
-            except KeyError:
-                continue
-            name_item = self.itemFromIndex(index)
-            name_item.setData(updated_wide_enum.name, Qt.DisplayRole)
-            name_item.setData(updated_wide_enum._asdict(), Qt.UserRole + 1)
-            name_item.removeRows(0, name_item.rowCount())
-            value_item_list = [QStandardItem(x) for x in updated_wide_enum.value_list.split(",")]
-            name_item.appendRows(value_item_list)
 
     def remove_parameter_enums(self, parameter_enum_ids):
         """Remove parameter enums."""
@@ -3908,6 +3948,7 @@ class JSONArrayModel(EmptyRowModel):
         super().__init__(parent)
         self._json_data = []
         self._stride = stride
+        self.set_horizontal_header_labels("json")
 
     def reset_model(self, json_data):
         """Store JSON array into a list.

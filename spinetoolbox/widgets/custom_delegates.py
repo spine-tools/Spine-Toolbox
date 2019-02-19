@@ -189,9 +189,7 @@ class ParameterValueDelegate(ParameterDelegate):
         if self.last_index == index:
             return False
         self.last_index = index
-        if self.json_popup:
-            self.json_popup.deleteLater()
-            self.json_popup = None
+        self.destroy_json_popup()
         header = index.model().horizontal_header_labels()
         if header[index.column()] != 'json':
             return False
@@ -200,6 +198,7 @@ class ParameterValueDelegate(ParameterDelegate):
         self.json_popup = JSONEditor(self.view, popup=True)
         self.json_popup.currentChanged.connect(self._handle_json_editor_current_changed)
         self.json_popup.set_data(index.data(Qt.EditRole), self.json_editor_index)
+        self.json_popup.data_committed.connect(self.destroy_json_popup)
         self.updateEditorGeometry(self.json_popup, option, index)
         offset = QPoint(
             self.view.verticalHeader().width() + option.rect.width(),
@@ -207,6 +206,11 @@ class ParameterValueDelegate(ParameterDelegate):
         self.json_popup.move(self.json_popup.pos() + offset)
         self.json_popup.show()
         return True
+
+    def destroy_json_popup(self):
+        if self.json_popup:
+            self.json_popup.deleteLater()
+            self.json_popup = None
 
 
 class ObjectParameterValueDelegate(ParameterValueDelegate):
@@ -248,9 +252,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
                 editor = CustomLineEditor(parent)
                 editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'json':
-            if self.json_popup:
-                self.json_popup.deleteLater()
-                self.json_popup = None
+            self.destroy_json_popup()
             editor = JSONEditor(parent)
             editor.currentChanged.connect(self._handle_json_editor_current_changed)
             editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
@@ -336,9 +338,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'json':
-            if self.json_popup:
-                self.json_popup.deleteLater()
-                self.json_popup = None
+            self.destroy_json_popup()
             editor = JSONEditor(parent)
             editor.currentChanged.connect(self._handle_json_editor_current_changed)
             editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
