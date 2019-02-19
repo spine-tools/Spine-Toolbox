@@ -345,12 +345,12 @@ class ParameterEnumContextMenu(CustomContextMenu):
         """Class constructor."""
         super().__init__(parent)
         if not index.isValid():
-            self.add_action("Add...")
-        elif not index.parent().isValid():
-            self.add_action("Edit selected...")
-            self.add_action("Remove selection")
-        else:
             return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        remove_icon = QIcon(":/icons/minus.png")
+        self.add_action("Copy", copy_icon)
+        self.addSeparator()
+        self.add_action("Remove selection", remove_icon)
         self.exec_(position)
 
 
@@ -718,78 +718,3 @@ class PivotTableModelMenu(QMenu):
         mPos=pPos+QPos
         self.move(mPos)
         self.show()
-
-
-class QOkMenu(QMenu):
-    """A QMenu that only hides when 'Ok' action is triggered.
-    It allows selecting multiple checkable options.
-
-    Attributes:
-        parent (QWidget): Parent of the QMenu
-    """
-    ok_clicked = Signal(name="ok_clicked")
-
-    def __init__(self, parent, checked_action_names=[]):
-        """Initialize the class."""
-        super().__init__(parent)
-        self.action_all = None
-        self.action_list = []
-        self.checked_action_names = checked_action_names
-
-    def mouseReleaseEvent(self, event):
-        """The super implementation triggers the action and closes the menu.
-        Here, we only close the menu if the action is the 'Ok' action.
-        Otherwise we just trigger it.
-        """
-        action = self.activeAction()
-        if action is None:
-            super().mouseReleaseEvent(event)
-            return
-        if action.text() == "Ok":
-            super().mouseReleaseEvent(event)
-            return
-        action.trigger()
-
-    def populate(self, action_names=[]):
-        """Populate the menu with actions."""
-        self.clear()
-        self.action_list = []
-        self.action_all = self.addAction("All")
-        self.action_all.setCheckable(True)
-        self.action_all.triggered.connect(self._handle_action_all_triggered)
-        self.addSeparator()
-        for i, name in enumerate(action_names):
-            action = self.addAction(name)
-            action.setCheckable(True)
-            action.triggered.connect(self._handle_any_action_triggered)
-            self.action_list.append(action)
-            if name in self.checked_action_names:
-                action.setChecked(True)
-        self._handle_any_action_triggered()
-        # 'Ok' action
-        self.addSeparator()
-        action_ok = self.addAction("Ok")
-        action_ok.triggered.connect(self._handle_action_ok_triggered)
-
-    @Slot("bool", name="_handle_any_action_triggered")
-    def _handle_any_action_triggered(self, checked=False):
-        """Called when any action is triggered.
-        In case they are all checked, check to 'All' action too.
-        """
-        self.action_all.setChecked(all([a.isChecked() for a in self.action_list]))
-
-    @Slot("bool", name="_handle_action_all_triggered")
-    def _handle_action_all_triggered(self, checked=False):
-        """Check or uncheck all filter actions."""
-        checked = self.action_all.isChecked()
-        for action in self.action_list:
-            action.setChecked(checked)
-
-    @Slot("bool", name="_handle_action_ok_triggered")
-    def _handle_action_ok_triggered(self, checked=False):
-        """Called when user clicks Ok. Update list of checked actions and emit signal"""
-        self.checked_action_names = list()
-        for action in self.action_list:
-            if action.isChecked():
-                self.checked_action_names.append(action.text())
-        self.ok_clicked.emit()

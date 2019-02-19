@@ -77,7 +77,7 @@ class ManageItemsDialog(QDialog):
 
     def create_remove_row_button(self, index):
         """Create button to remove row."""
-        action = QAction()
+        action = QAction("remove")
         action.setIcon(self.remove_row_icon)
         button = QToolButton()
         button.setDefaultAction(action)

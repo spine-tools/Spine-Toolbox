@@ -603,9 +603,12 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QTreeView" name="treeView_parameter_enum">
+      <widget class="CopyTreeView" name="treeView_parameter_enum">
        <property name="contextMenuPolicy">
         <enum>Qt::CustomContextMenu</enum>
+       </property>
+       <property name="accessibleName">
+        <string>parameter enum</string>
        </property>
        <property name="editTriggers">
         <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::EditKeyPressed</set>
@@ -867,6 +870,11 @@
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>CopyTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

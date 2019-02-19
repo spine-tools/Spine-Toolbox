@@ -3869,10 +3869,12 @@ class ParameterEnumModel(QStandardItemModel):
             to_add, to_update = self._handle_item_changed(item)
             self.add_parameter_enums(to_add)
             self.update_parameter_enums(to_update)
+        self.dataChanged.emit(index, index, [role])
         return True
 
     def batch_set_data(self, indexes, values):
         """Set edit role for indexes to values in batch."""
+        # FIXME: this needs testing
         parented_rows = dict()
         for index, value in zip(indexes, values):
             item = self.itemFromIndex(index)
@@ -3895,7 +3897,7 @@ class ParameterEnumModel(QStandardItemModel):
             for k, enum in enumerate(enums):
                 parents[k].setData(enum.id, Qt.UserRole + 1)
             self._tree_view_form.commit_available.emit(True)
-            self._tree_view_form.msg.emit("Successfully added new parameter enum(s)")
+            self._tree_view_form.msg.emit("Successfully added new parameter enum(s).")
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
 
@@ -3903,9 +3905,9 @@ class ParameterEnumModel(QStandardItemModel):
         if not any(to_update):
             return
         try:
-            enums = self.db_map.update_wide_parameter_enums(*to_update)
+            self.db_map.update_wide_parameter_enums(*to_update)
             self._tree_view_form.commit_available.emit(True)
-            self._tree_view_form.msg.emit("Successfully updated parameter enum(s)")
+            self._tree_view_form.msg.emit("Successfully updated parameter enum(s).")
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
 
@@ -3926,14 +3928,11 @@ class ParameterEnumModel(QStandardItemModel):
         name_item_list.append(empty_item)
         self.invisibleRootItem().appendRows(name_item_list)
 
-    def remove_parameter_enums(self, parameter_enum_ids):
-        """Remove parameter enums."""
-        for i in reversed(range(self.rowCount())):
-            index = self.index(i, 0)
-            wide_enum = index.data(Qt.UserRole + 1)
-            id = wide_enum["id"]
-            if id in parameter_enum_ids:
-                self.invisibleRootItem().removeRow(i)
+    def removeRow(self, row, parent=QModelIndex()):
+        """Remove row under parent, but never the last row (which is the empty one)"""
+        if row == self.rowCount(parent) - 1:
+            return
+        super().removeRow(row, parent)
 
 
 class JSONArrayModel(EmptyRowModel):

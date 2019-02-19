@@ -247,7 +247,7 @@ class Ui_MainWindow(object):
         self.verticalLayout.setSpacing(0)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.treeView_parameter_enum = QtWidgets.QTreeView(self.dockWidgetContents)
+        self.treeView_parameter_enum = CopyTreeView(self.dockWidgetContents)
         self.treeView_parameter_enum.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_parameter_enum.setEditTriggers(QtWidgets.QAbstractItemView.AnyKeyPressed|QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_parameter_enum.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
@@ -397,6 +397,7 @@ class Ui_MainWindow(object):
         self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.menuToolbars.setTitle(QtWidgets.QApplication.translate("MainWindow", "Toolbars", None, -1))
         self.dockWidget_parameter_enum.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter enum", None, -1))
+        self.treeView_parameter_enum.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "parameter enum", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
         self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
@@ -434,6 +435,6 @@ class Ui_MainWindow(object):
         self.actionRemove_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Remove selection", None, -1))
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView
+from widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

@@ -33,7 +33,7 @@ from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, ParameterEnumContextMenu, \
-    ObjectItemContextMenu, GraphViewContextMenu, QOkMenu
+    ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDefinitionDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDefinitionDelegate
 from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
@@ -506,45 +506,37 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
+        try:
+            indexes = self.selected_tree_indexes['object_class']
+        except KeyError:
             return
-        kwargs_list = list()
-        for index in indexes:
-            if index.data(Qt.UserRole) != "object_class":
-                continue
-            kwargs_list.append(index.data(Qt.UserRole + 1))
+        kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
         dialog = EditObjectClassesDialog(self, kwargs_list)
         dialog.show()
 
     @Slot("bool", name="show_edit_objects_form")
     def show_edit_objects_form(self, checked=False):
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
+        try:
+            indexes = self.selected_tree_indexes['object']
+        except KeyError:
             return
-        kwargs_list = list()
-        for index in indexes:
-            if index.data(Qt.UserRole) != "object":
-                continue
-            kwargs_list.append(index.data(Qt.UserRole + 1))
+        kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
         dialog = EditObjectsDialog(self, kwargs_list)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationship_classes_form")
     def show_edit_relationship_classes_form(self, checked=False):
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
+        try:
+            indexes = self.selected_tree_indexes['relationship_class']
+        except KeyError:
             return
-        kwargs_list = list()
-        for index in indexes:
-            if index.data(Qt.UserRole) != "relationship_class":
-                continue
-            kwargs_list.append(index.data(Qt.UserRole + 1))
+        kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
         dialog = EditRelationshipClassesDialog(self, kwargs_list)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationships_form")
     def show_edit_relationships_form(self, checked=False):
+        # Only edit relationships of the same class as the one in current index, for now...
         current = self.ui.treeView_object.currentIndex()
         if current.data(Qt.UserRole) != "relationship":
             return
@@ -552,14 +544,12 @@ class DataStoreForm(QMainWindow):
         wide_relationship_class = self.db_map.single_wide_relationship_class(id=class_id).one_or_none()
         if not wide_relationship_class:
             return
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
+        try:
+            indexes = self.selected_tree_indexes['relationship']
+        except KeyError:
             return
         kwargs_list = list()
         for index in indexes:
-            if index.data(Qt.UserRole) != "relationship":
-                continue
-            # Only edit relationships of the same class as the one in current index, for now...
             if index.data(Qt.UserRole + 1)['class_id'] != class_id:
                 continue
             kwargs_list.append(index.data(Qt.UserRole + 1))
@@ -770,6 +760,7 @@ class TreeViewForm(DataStoreForm):
     obj_parameter_value_selection_available = Signal("bool", name="obj_parameter_value_selection_available")
     rel_parameter_definition_selection_available = Signal("bool", name="rel_parameter_definition_selection_available")
     rel_parameter_value_selection_available = Signal("bool", name="rel_parameter_value_selection_available")
+    parameter_enum_selection_available = Signal("bool", name="parameter_enum_selection_available")
 
     def __init__(self, data_store, db_map, database):
         """Initialize class."""
@@ -820,6 +811,7 @@ class TreeViewForm(DataStoreForm):
             connect(self._handle_rel_parameter_definition_selection_available)
         self.rel_parameter_value_selection_available.\
             connect(self._handle_rel_parameter_value_selection_available)
+        self.parameter_enum_selection_available.connect(self._handle_parameter_enum_selection_available)
         # Menu actions
         # Import export
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
@@ -853,6 +845,9 @@ class TreeViewForm(DataStoreForm):
             connect(self._handle_relationship_parameter_definition_selection_changed)
         self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.\
             connect(self._handle_relationship_parameter_value_selection_changed)
+        # Parameter enum tree selection changed
+        self.ui.treeView_parameter_enum.selectionModel().selectionChanged.\
+            connect(self._handle_parameter_enum_selection_changed)
         # Parameter tabwidgets current changed
         self.ui.tabWidget_object_parameter.currentChanged.connect(self._handle_object_parameter_tab_changed)
         self.ui.tabWidget_relationship_parameter.currentChanged.connect(self._handle_relationship_parameter_tab_changed)
@@ -891,6 +886,8 @@ class TreeViewForm(DataStoreForm):
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
             elif name == "relationship parameter value":
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
+            elif name == "parameter enum":
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus.png"))
 
     @Slot("bool", name="_handle_object_tree_selection_available")
     def _handle_object_tree_selection_available(self, on):
@@ -930,6 +927,14 @@ class TreeViewForm(DataStoreForm):
             self.widgets_with_selection.remove(self.ui.tableView_relationship_parameter_value)
         if on:
             self.widgets_with_selection.append(self.ui.tableView_relationship_parameter_value)
+        self.update_copy_and_remove_actions()
+
+    @Slot("bool", name="_handle_parameter_enum_selection_available")
+    def _handle_parameter_enum_selection_available(self, on):
+        if self.ui.treeView_parameter_enum in self.widgets_with_selection:
+            self.widgets_with_selection.remove(self.ui.treeView_parameter_enum)
+        if on:
+            self.widgets_with_selection.append(self.ui.treeView_parameter_enum)
         self.update_copy_and_remove_actions()
 
     @Slot("QWidget", "QWidget", name="update_paste_action")
@@ -975,6 +980,8 @@ class TreeViewForm(DataStoreForm):
             self.remove_relationship_parameter_definitions()
         elif name == "relationship parameter value":
             self.remove_relationship_parameter_values()
+        elif name == "parameter enum":
+            self.remove_parameter_enums()
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_definition_selection_changed")
     def _handle_object_parameter_definition_selection_changed(self, selected, deselected):
@@ -999,6 +1006,12 @@ class TreeViewForm(DataStoreForm):
         """Enable/disable the option to remove rows."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         self.rel_parameter_value_selection_available.emit(not selection.isEmpty())
+
+    @Slot("QItemSelection", "QItemSelection", name="_handle_parameter_enum_selection_changed")
+    def _handle_parameter_enum_selection_changed(self, selected, deselected):
+        """Enable/disable the option to remove rows."""
+        selection = self.ui.treeView_parameter_enum.selectionModel().selection()
+        self.parameter_enum_selection_available.emit(not selection.isEmpty())
 
     @Slot("int", name="_handle_object_parameter_tab_changed")
     def _handle_object_parameter_tab_changed(self, index):
@@ -1369,18 +1382,15 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="remove_object_tree_items")
     def remove_object_tree_items(self, checked=False):
         """Remove all selected items from the object treeview."""
-        indexes = self.ui.treeView_object.selectionModel().selectedIndexes()
-        if not indexes:
-            return
-        removed_items = {}
-        for index in indexes:
-            removed_type = index.data(Qt.UserRole)
-            removed_item = index.data(Qt.UserRole + 1)
-            removed_items.setdefault(removed_type, list()).append(removed_item)
-        object_class_ids = set(x['id'] for x in removed_items.get('object_class', []))
-        object_ids = set(x['id'] for x in removed_items.get('object', []))
-        relationship_class_ids = set(x['id'] for x in removed_items.get('relationship_class', []))
-        relationship_ids = set(x['id'] for x in removed_items.get('relationship', []))
+        indexes = self.selected_tree_indexes
+        object_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object_class', [])]
+        objects = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object', [])]
+        relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', [])]
+        relationships = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship', [])]
+        object_class_ids = set(x['id'] for x in object_classes)
+        object_ids = set(x['id'] for x in objects)
+        relationship_class_ids = set(x['id'] for x in relationship_classes)
+        relationship_ids = set(x['id'] for x in relationships)
         try:
             self.db_map.remove_items(
                 object_class_ids=object_class_ids,
@@ -1393,17 +1403,15 @@ class TreeViewForm(DataStoreForm):
             self.object_tree_model.remove_items("relationship_class", relationship_class_ids)
             self.object_tree_model.remove_items("relationship", relationship_ids)
             # Parameter models
-            self.object_parameter_value_model.remove_object_classes(removed_items.get('object_class', []))
-            self.object_parameter_value_model.remove_objects(removed_items.get('object', []))
-            self.object_parameter_definition_model.remove_object_classes(removed_items.get('object_class', []))
-            self.relationship_parameter_value_model.remove_object_classes(removed_items.get('object_class', []))
-            self.relationship_parameter_value_model.remove_objects(removed_items.get('object', []))
-            self.relationship_parameter_value_model.remove_relationship_classes(
-                removed_items.get('relationship_class', []))
-            self.relationship_parameter_value_model.remove_relationships(removed_items.get('relationship', []))
-            self.relationship_parameter_definition_model.remove_object_classes(removed_items.get('object_class', []))
-            self.relationship_parameter_definition_model.remove_relationship_classes(
-                removed_items.get('relationship_class', []))
+            self.object_parameter_value_model.remove_object_classes(object_classes)
+            self.object_parameter_value_model.remove_objects(objects)
+            self.object_parameter_definition_model.remove_object_classes(object_classes)
+            self.relationship_parameter_value_model.remove_object_classes(object_classes)
+            self.relationship_parameter_value_model.remove_objects(objects)
+            self.relationship_parameter_value_model.remove_relationship_classes(relationship_classes)
+            self.relationship_parameter_value_model.remove_relationships(relationships)
+            self.relationship_parameter_definition_model.remove_object_classes(object_classes)
+            self.relationship_parameter_definition_model.remove_relationship_classes(relationship_classes)
             self.commit_available.emit(True)
             self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
             self.msg.emit("Successfully removed items.")
@@ -1503,15 +1511,12 @@ class TreeViewForm(DataStoreForm):
         self.parameter_enum_context_menu = ParameterEnumContextMenu(self, global_pos, index)
         self.parameter_enum_context_menu.deleteLater()
         option = self.parameter_enum_context_menu.get_action()
-        if option == "Add...":
-            self.show_add_parameter_enums_form()
-        elif option == "Edit selected...":
-            self.show_edit_parameter_enums_form()
+        if option == "Copy":
+            self.ui.treeView_parameter_enum.copy()
         elif option == "Remove selection":
             self.remove_parameter_enums()
 
     @busy_effect
-    @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
         """Remove selection rows from object parameter value table."""
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
@@ -1537,7 +1542,6 @@ class TreeViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
 
     @busy_effect
-    @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
         """Remove selection rows from relationship parameter value table."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
@@ -1563,8 +1567,7 @@ class TreeViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
 
     @busy_effect
-    @Slot("bool", name="remove_object_parameter_definitions")
-    def remove_object_parameter_definitions(self, checked=False):
+    def remove_object_parameter_definitions(self):
         """Remove selection rows from object parameter definition table."""
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
         row_dict = dict()
@@ -1597,8 +1600,7 @@ class TreeViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
 
     @busy_effect
-    @Slot("bool", name="remove_relationship_parameter_definitions")
-    def remove_relationship_parameter_definitions(self, checked=False):
+    def remove_relationship_parameter_definitions(self):
         """Remove selection rows from relationship parameter definition table."""
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
         row_dict = dict()
@@ -1631,23 +1633,47 @@ class TreeViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
 
     @busy_effect
-    @Slot("bool", name="remove_parameter_enums")
-    def remove_parameter_enums(self, checked=False):
+    def remove_parameter_enums(self):
         """Remove selection parameter enums.
         """
         indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
-        toplevel_indexes = [ind for ind in indexes if not ind.parent().isValid()]
-        if not toplevel_indexes:
-            return
-        parameter_enum_ids = set(ind.data(Qt.UserRole + 1)['id'] for ind in toplevel_indexes)
+        parented_indexes = {}
+        toplevel_indexes = []
+        for index in indexes:
+            parent = index.parent()
+            if parent.isValid():
+                parented_indexes.setdefault(parent, list()).append(index)
+            else:
+                toplevel_indexes.append(index)
+        # Remove top level indexes from parented indexes, since they will be fully removed
+        for index in toplevel_indexes:
+            parented_indexes.pop(index, None)
+        # Get items to update
+        model = self.parameter_enum_model
+        to_update = list()
+        for parent, indexes in parented_indexes.items():
+            id = parent.data(Qt.UserRole + 1)
+            removed_rows = [ind.row() for ind in indexes]
+            all_rows = range(model.rowCount(parent) - 1)
+            value_list = [
+                model.index(row, 0, parent).data(Qt.DisplayRole) for row in all_rows if row not in removed_rows
+            ]
+            to_update.append(dict(id=id, value_list=value_list))
+        # Get ids to remove
+        removed_ids = [ind.data(Qt.UserRole + 1) for ind in toplevel_indexes]
         try:
-            self.db_map.remove_items(parameter_enum_ids=parameter_enum_ids)
-            self.parameter_enum_model.remove_parameter_enums(parameter_enum_ids)
+            self.db_map.update_wide_parameter_enums(*to_update)
+            self.db_map.remove_items(parameter_enum_ids=removed_ids)
             self.commit_available.emit(True)
-            self.msg.emit("Successfully removed parameter enums.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
-
+            for index in toplevel_indexes:
+                self.parameter_enum_model.removeRow(index.row())
+            for parent, indexes in parented_indexes.items():
+                for index in indexes:
+                    self.parameter_enum_model.removeRow(index.row(), parent)
+            self.msg.emit("Successfully removed parameter enum(s).")
+        except (SpineIntegrityError, SpineDBAPIError) as e:
+            self._tree_view_form.msg_error.emit(e.msg)
+            
     def restore_ui(self):
         """Restore UI state from previous session."""
         super().restore_ui()

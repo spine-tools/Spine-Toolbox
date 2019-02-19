@@ -337,6 +337,17 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             parameter_list = self.db_map.relationship_parameter_list(relationship_class_id=relationship_class_id)
             name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'value':
+            parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
+            parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
+            enum_id = parameter.enum_id if parameter else None
+            if enum_id:
+                editor = SearchBarEditor(parent)
+                value_list = self.db_map.wide_parameter_enum_list(id_list=[enum_id]).one().value_list.split(",")
+                editor.set_data(index.data(Qt.EditRole), value_list)
+            else:
+                editor = CustomLineEditor(parent)
+                editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'json':
             self.destroy_json_popup()
             editor = JSONEditor(parent)

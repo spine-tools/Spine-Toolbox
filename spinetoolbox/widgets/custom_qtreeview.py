@@ -22,7 +22,26 @@ from PySide2.QtCore import Signal, Slot, Qt, QMimeData, QUrl
 from PySide2.QtGui import QDrag
 
 
-class ObjectTreeView(QTreeView):
+class CopyTreeView(QTreeView):
+    """Custom QTreeView class with copy support.
+    """
+    def __init__(self, parent):
+        """Initialize the view."""
+        super().__init__(parent=parent)
+
+    def copy(self):
+        """Copy current selection to clipboard in excel format."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        indexes = selection.indexes()
+        values = [index.data(Qt.DisplayRole) for index in indexes]
+        content = "\n".join(values)
+        QApplication.clipboard().setText(content)
+        return True
+
+
+class ObjectTreeView(CopyTreeView):
     """Custom QTreeView class for object tree in TreeViewForm.
 
     Attributes:
@@ -43,17 +62,6 @@ class ObjectTreeView(QTreeView):
         if trigger == QTreeView.EditKeyPressed:
             self.edit_key_pressed.emit(index)
         return False
-
-    def copy(self):
-        """Copy current selection to clipboard in excel format."""
-        selection = self.selectionModel().selection()
-        if not selection:
-            return False
-        indexes = selection.indexes()
-        values = [index.data(Qt.DisplayRole) for index in indexes]
-        content = "\n".join(values)
-        QApplication.clipboard().setText(content)
-        return True
 
 
 class ReferencesTreeView(QTreeView):
