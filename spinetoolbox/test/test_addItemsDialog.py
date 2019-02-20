@@ -44,6 +44,7 @@ class TestAddItemsDialog(unittest.TestCase):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
         with mock.patch("data_store.DataStore") as mock_data_store, \
                 mock.patch("spinedatabase_api.DiffDatabaseMapping") as mock_db_map:
+            mock_data_store._toolbox.qsettings.return_value.value.return_value = False
             self.tree_view_form = TreeViewForm(mock_data_store, mock_db_map, "mock_db")
 
     def tearDown(self):
