@@ -175,7 +175,7 @@ class ParameterValueDelegate(ParameterDelegate):
         self.json_editor_index = 0
         self.json_popup = None
         self.last_index = None
-        self.view = parent.ui.tableView_object_parameter_value
+        self.view = None
 
     @Slot("int", name="_handle_json_editor_current_changed")
     def _handle_json_editor_current_changed(self, index):
@@ -221,6 +221,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
     """
     def __init__(self, parent):
         super().__init__(parent)
+        self.view = parent.ui.tableView_object_parameter_value
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -307,6 +308,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
     """
     def __init__(self, parent):
         super().__init__(parent)
+        self.view = parent.ui.tableView_relationship_parameter_value
 
     def createEditor(self, parent, option, index):
         """Return editor."""
