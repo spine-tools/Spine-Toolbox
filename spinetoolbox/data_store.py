@@ -23,7 +23,7 @@ import logging
 import fnmatch
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication, QCheckBox
 from project_item import ProjectItem
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
@@ -674,7 +674,7 @@ class DataStore(ProjectItem):
 
     @busy_effect
     def do_open_tabular_view(self, db_map, database):
-        """Open reference in tabular view form."""    
+        """Open reference in tabular view form."""
         try:
             self.tabular_view_form = TabularViewForm(self, db_map, database)
         except:
@@ -799,13 +799,19 @@ class DataStore(ProjectItem):
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine SQLite database file."""
-        answer = QFileDialog.getSaveFileName(self._toolbox,
-                                             "Create new Spine SQLite database",
-                                             self.data_dir,
-                                             "SQlite database (*.sqlite *.db)")
-        file_path = answer[0]
-        if not file_path:
+        dialog = QFileDialog(self._toolbox,
+                             "Create new Spine SQLite database",
+                             self.data_dir,
+                             "SQlite database (*.sqlite *.db)")
+        dialog.setAcceptMode(QFileDialog.AcceptSave)
+        dialog.setOption(QFileDialog.DontUseNativeDialog, True)  # Only way to add the checkbox
+        check_box = QCheckBox("Include specific data structure for Spine Model.", dialog)
+        check_box.setChecked(True)
+        dialog.layout().addWidget(check_box)
+        ret = dialog.exec_()
+        if not ret:
             return
+        file_path = dialog.selectedFiles()[0]
         extension = os.path.splitext(file_path)[1]
         if not extension:
             file_path += ".sqlite"
@@ -815,7 +821,8 @@ class DataStore(ProjectItem):
         except OSError:
             pass
         url = "sqlite:///" + file_path
-        create_new_spine_database(url)
+        for_spine_model = check_box.isChecked()
+        create_new_spine_database(url, for_spine_model=for_spine_model)
         database = os.path.basename(file_path)
         username = getpass.getuser()
         # Update UI
