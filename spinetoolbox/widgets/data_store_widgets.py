@@ -598,6 +598,33 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
+    def add_parameter_enums(self, *to_add):
+        if not any(to_add):
+            return
+        parents = []
+        for item in to_add:
+            parents.append(item.pop("parent"))
+        try:
+            enums = self.db_map.add_wide_parameter_enums(*to_add)
+            for k, enum in enumerate(enums):
+                parents[k].setData(enum.id, Qt.UserRole + 1)
+            self.commit_available.emit(True)
+            self.msg.emit("Successfully added new parameter enum(s).")
+        except (SpineIntegrityError, SpineDBAPIError) as e:
+            self.msg_error.emit(e.msg)
+
+    def update_parameter_enums(self, *to_update):
+        if not any(to_update):
+            return
+        try:
+            enums = self.db_map.update_wide_parameter_enums(*to_update)
+            self.object_parameter_definition_model.rename_parameter_enums(enums)
+            self.relationship_parameter_definition_model.rename_parameter_enums(enums)
+            self.commit_available.emit(True)
+            self.msg.emit("Successfully updated parameter enum(s).")
+        except (SpineIntegrityError, SpineDBAPIError) as e:
+            self.msg_error.emit(e.msg)
+
     @Slot("bool", name="show_manage_parameter_tags_form")
     def show_manage_parameter_tags_form(self, checked=False):
         dialog = ManageParameterTagsDialog(self)

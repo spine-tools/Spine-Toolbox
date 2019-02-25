@@ -3019,6 +3019,21 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
                 if enum_id in parameter_enum_ids:
                     row_data[enum_id_column] = None
                     row_data[enum_name_column] = None
+        self.dataChanged.emit(
+            self.index(0, enum_name_column), self.index(self.rowCount() - 1, enum_name_column), [Qt.DisplayRole])
+
+    def rename_parameter_enums(self, enums):
+        """Rename parameter enums in model."""
+        enum_id_column = self.header.index("enum_id")
+        enum_name_column = self.header.index("enum_name")
+        enum_dict = {x.id: x.name for x in enums}
+        for model in self.sub_models.values():
+            for row_data in model.sourceModel()._main_data:
+                enum_id = row_data[enum_id_column]
+                if enum_id in enum_dict:
+                    row_data[enum_name_column] = enum_dict[enum_id]
+        self.dataChanged.emit(
+            self.index(0, enum_name_column), self.index(self.rowCount() - 1, enum_name_column), [Qt.DisplayRole])
 
 
 class RelationshipParameterModel(MinimalTableModel):
@@ -3641,6 +3656,21 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
                 if enum_id in parameter_enum_ids:
                     row_data[enum_id_column] = None
                     row_data[enum_name_column] = None
+        self.dataChanged.emit(
+            self.index(0, enum_name_column), self.index(self.rowCount() - 1, enum_name_column), [Qt.DisplayRole])
+
+    def rename_parameter_enums(self, enums):
+        """Rename parameter enums in model."""
+        enum_id_column = self.header.index("enum_id")
+        enum_name_column = self.header.index("enum_name")
+        enum_dict = {x.id: x.name for x in enums}
+        for model in self.sub_models.values():
+            for row_data in model.sourceModel()._main_data:
+                enum_id = row_data[enum_id_column]
+                if enum_id in enum_dict:
+                    row_data[enum_name_column] = enum_dict[enum_id]
+        self.dataChanged.emit(
+            self.index(0, enum_name_column), self.index(self.rowCount() - 1, enum_name_column), [Qt.DisplayRole])
 
 
 class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
@@ -3887,11 +3917,11 @@ class ParameterEnumModel(QStandardItemModel):
         if value == old_value:
             return False
         item.setData(value, role)
+        self.dataChanged.emit(index, index, [role])
         if role == Qt.EditRole:
             to_add, to_update = self._handle_item_changed(item)
-            self.add_parameter_enums(to_add)
-            self.update_parameter_enums(to_update)
-        self.dataChanged.emit(index, index, [role])
+            self._tree_view_form.add_parameter_enums(to_add)
+            self._tree_view_form.update_parameter_enums(to_update)
         return True
 
     def batch_set_data(self, indexes, values):
@@ -3907,31 +3937,6 @@ class ParameterEnumModel(QStandardItemModel):
         for parent, rows in parented_rows.items():
             item = parent.child(max(rows))
             to_add, to_update = self._handle_item_changed(item)
-
-    def add_parameter_enums(self, *to_add):
-        if not any(to_add):
-            return
-        parents = []
-        for item in to_add:
-            parents.append(item.pop("parent"))
-        try:
-            enums = self.db_map.add_wide_parameter_enums(*to_add)
-            for k, enum in enumerate(enums):
-                parents[k].setData(enum.id, Qt.UserRole + 1)
-            self._tree_view_form.commit_available.emit(True)
-            self._tree_view_form.msg.emit("Successfully added new parameter enum(s).")
-        except (SpineIntegrityError, SpineDBAPIError) as e:
-            self._tree_view_form.msg_error.emit(e.msg)
-
-    def update_parameter_enums(self, *to_update):
-        if not any(to_update):
-            return
-        try:
-            self.db_map.update_wide_parameter_enums(*to_update)
-            self._tree_view_form.commit_available.emit(True)
-            self._tree_view_form.msg.emit("Successfully updated parameter enum(s).")
-        except (SpineIntegrityError, SpineDBAPIError) as e:
-            self._tree_view_form.msg_error.emit(e.msg)
 
     def build_tree(self):
         """Build the enumeration tree"""
