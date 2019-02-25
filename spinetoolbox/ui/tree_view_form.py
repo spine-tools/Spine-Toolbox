@@ -235,6 +235,8 @@ class Ui_MainWindow(object):
         self.menuView.setObjectName("menuView")
         self.menuToolbars = QtWidgets.QMenu(self.menuView)
         self.menuToolbars.setObjectName("menuToolbars")
+        self.menuDock_Widgets = QtWidgets.QMenu(self.menuView)
+        self.menuDock_Widgets.setObjectName("menuDock_Widgets")
         MainWindow.setMenuBar(self.menubar)
         self.statusbar = QtWidgets.QStatusBar(MainWindow)
         self.statusbar.setObjectName("statusbar")
@@ -341,6 +343,8 @@ class Ui_MainWindow(object):
         self.actionRemove_selection = QtWidgets.QAction(MainWindow)
         self.actionRemove_selection.setEnabled(False)
         self.actionRemove_selection.setObjectName("actionRemove_selection")
+        self.actionvvv = QtWidgets.QAction(MainWindow)
+        self.actionvvv.setObjectName("actionvvv")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -366,6 +370,7 @@ class Ui_MainWindow(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
         self.menuView.addAction(self.menuToolbars.menuAction())
+        self.menuView.addAction(self.menuDock_Widgets.menuAction())
         self.menubar.addAction(self.menuFile.menuAction())
         self.menubar.addAction(self.menuEdit.menuAction())
         self.menubar.addAction(self.menuView.menuAction())
@@ -396,6 +401,7 @@ class Ui_MainWindow(object):
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
         self.menuView.setTitle(QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.menuToolbars.setTitle(QtWidgets.QApplication.translate("MainWindow", "Toolbars", None, -1))
+        self.menuDock_Widgets.setTitle(QtWidgets.QApplication.translate("MainWindow", "Dock Widgets", None, -1))
         self.dockWidget_parameter_enum.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter enum", None, -1))
         self.treeView_parameter_enum.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "parameter enum", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
@@ -434,7 +440,8 @@ class Ui_MainWindow(object):
         self.actionManage_parameter_tags.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+T", None, -1))
         self.actionRemove_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Remove selection", None, -1))
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
+        self.actionvvv.setText(QtWidgets.QApplication.translate("MainWindow", "vvv", None, -1))
 
-from widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
+from widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

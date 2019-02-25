@@ -3009,6 +3009,17 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
             self.empty_row_model.removeRows(row, 1)
         self.invalidate_filter()
 
+    def clear_parameter_enums(self, parameter_enum_ids):
+        """Clear parameter enums from model."""
+        enum_id_column = self.header.index("enum_id")
+        enum_name_column = self.header.index("enum_name")
+        for model in self.sub_models.values():
+            for row_data in model.sourceModel()._main_data:
+                enum_id = row_data[enum_id_column]
+                if enum_id in parameter_enum_ids:
+                    row_data[enum_id_column] = None
+                    row_data[enum_name_column] = None
+
 
 class RelationshipParameterModel(MinimalTableModel):
     """A model that combines several relationship parameter models
@@ -3620,6 +3631,17 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
             self.empty_row_model.removeRows(row, 1)
         self.invalidate_filter()
 
+    def clear_parameter_enums(self, parameter_enum_ids):
+        """Clear parameter enums from model."""
+        enum_id_column = self.header.index("enum_id")
+        enum_name_column = self.header.index("enum_name")
+        for model in self.sub_models.values():
+            for row_data in model.sourceModel()._main_data:
+                enum_id = row_data[enum_id_column]
+                if enum_id in parameter_enum_ids:
+                    row_data[enum_id_column] = None
+                    row_data[enum_name_column] = None
+
 
 class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
     """A filter proxy model for object parameter models."""
@@ -3874,7 +3896,7 @@ class ParameterEnumModel(QStandardItemModel):
 
     def batch_set_data(self, indexes, values):
         """Set edit role for indexes to values in batch."""
-        # FIXME: this needs testing
+        # TODO: this needs testing
         parented_rows = dict()
         for index, value in zip(indexes, values):
             item = self.itemFromIndex(index)

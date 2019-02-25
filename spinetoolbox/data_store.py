@@ -553,7 +553,7 @@ class DataStore(ProjectItem):
             if ret == QMessageBox.Cancel:
                 return None
             try:
-                db_map = DiffDatabaseMapping(db_url, username, migrate=True)
+                db_map = DiffDatabaseMapping(db_url, username, upgrade=True)
                 return db_map
             except SpineDBAPIError as e:
                 self._toolbox.msg_error.emit(e.msg)
@@ -808,8 +808,7 @@ class DataStore(ProjectItem):
         check_box = QCheckBox("Include specific data structure for Spine Model.", dialog)
         check_box.setChecked(True)
         dialog.layout().addWidget(check_box)
-        ret = dialog.exec_()
-        if not ret:
+        if not dialog.exec_():
             return
         file_path = dialog.selectedFiles()[0]
         extension = os.path.splitext(file_path)[1]

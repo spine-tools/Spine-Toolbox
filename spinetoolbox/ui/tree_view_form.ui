@@ -570,7 +570,13 @@
       <string>Toolbars</string>
      </property>
     </widget>
+    <widget class="QMenu" name="menuDock_Widgets">
+     <property name="title">
+      <string>Dock Widgets</string>
+     </property>
+    </widget>
     <addaction name="menuToolbars"/>
+    <addaction name="menuDock_Widgets"/>
    </widget>
    <addaction name="menuFile"/>
    <addaction name="menuEdit"/>
@@ -857,6 +863,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Del</string>
+   </property>
+  </action>
+  <action name="actionvvv">
+   <property name="text">
+    <string>vvv</string>
    </property>
   </action>
  </widget>

@@ -244,11 +244,13 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
         elif header[index.column()] == 'value':
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
-            enum_id = parameter.enum_id if parameter else None
-            if enum_id:
+            if parameter:
+                enum = self.db_map.wide_parameter_enum_list(id_list=[parameter.enum_id]).one_or_none()
+            else:
+                enum = None
+            if enum:
                 editor = SearchBarEditor(parent)
-                value_list = self.db_map.wide_parameter_enum_list(id_list=[enum_id]).one().value_list.split(",")
-                editor.set_data(index.data(Qt.EditRole), value_list)
+                editor.set_data(index.data(Qt.EditRole), enum.value_list.split(","))
             else:
                 editor = CustomLineEditor(parent)
                 editor.set_data(index.data(Qt.EditRole))
@@ -342,11 +344,13 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
         elif header[index.column()] == 'value':
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
-            enum_id = parameter.enum_id if parameter else None
-            if enum_id:
+            if parameter:
+                enum = self.db_map.wide_parameter_enum_list(id_list=[parameter.enum_id]).one_or_none()
+            else:
+                enum = None
+            if enum:
                 editor = SearchBarEditor(parent)
-                value_list = self.db_map.wide_parameter_enum_list(id_list=[enum_id]).one().value_list.split(",")
-                editor.set_data(index.data(Qt.EditRole), value_list)
+                editor.set_data(index.data(Qt.EditRole), enum.value_list.split(","))
             else:
                 editor = CustomLineEditor(parent)
                 editor.set_data(index.data(Qt.EditRole))

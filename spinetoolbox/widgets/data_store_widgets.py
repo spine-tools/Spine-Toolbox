@@ -793,6 +793,11 @@ class TreeViewForm(DataStoreForm):
         toc = time.clock()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
+    def add_toggle_view_actions(self):
+        """Add toggle view actions to View menu."""
+        super().add_toggle_view_actions()
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter_enum.toggleViewAction())
+
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
@@ -1102,13 +1107,8 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     def export_to_sqlite(self, file_path):
         """Export data from database into SQlite file."""
-        # Remove file if exists (at this point, the user has confirmed that overwritting is ok)
-        try:
-            os.remove(file_path)
-        except OSError:
-            pass
         dst_url = 'sqlite:///{0}'.format(file_path)
-        copy_database(dst_url, self.db_map.db_url)
+        copy_database(dst_url, self.db_map.db_url, overwrite=True)
         self.msg.emit("SQlite file successfully exported.")
 
     def init_object_tree_model(self):
@@ -1665,15 +1665,17 @@ class TreeViewForm(DataStoreForm):
             self.db_map.update_wide_parameter_enums(*to_update)
             self.db_map.remove_items(parameter_enum_ids=removed_ids)
             self.commit_available.emit(True)
-            for index in toplevel_indexes:
-                self.parameter_enum_model.removeRow(index.row())
+            for row in sorted([ind.row() for ind in toplevel_indexes], reverse=True):
+                self.parameter_enum_model.removeRow(row)
             for parent, indexes in parented_indexes.items():
-                for index in indexes:
-                    self.parameter_enum_model.removeRow(index.row(), parent)
+                for row in sorted([ind.row() for ind in indexes], reverse=True):
+                    self.parameter_enum_model.removeRow(row, parent)
+            self.object_parameter_definition_model.clear_parameter_enums(removed_ids)
+            self.relationship_parameter_definition_model.clear_parameter_enums(removed_ids)
             self.msg.emit("Successfully removed parameter enum(s).")
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
-            
+
     def restore_ui(self):
         """Restore UI state from previous session."""
         super().restore_ui()
