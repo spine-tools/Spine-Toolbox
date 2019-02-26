@@ -462,6 +462,7 @@ class JSONEditor(QTabWidget):
         self._parent = parent
         self._big_sibling = big_sibling
         self._popup = popup
+        self._minimum_size = QSize(200, 0)
         # self.setTabPosition(QTabWidget.South)
         self.tab_raw = QWidget()
         vertical_layout = QVBoxLayout(self.tab_raw)
@@ -593,7 +594,8 @@ class JSONEditor(QTabWidget):
         self.table_view.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.table_view.verticalHeader().setDefaultSectionSize(self._base_size.height())
         # TODO: Try and get rid of the 16 here
-        size = QSize(self._base_size.width(), self._base_size.height() * 16).boundedTo(self._parent.size())
+        size = QSize(self._base_size.width(), self._base_size.height() * 16).boundedTo(self._parent.size()).\
+            expandedTo(self._minimum_size)
         self.resize(size)
         self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         if self._popup:
