@@ -20,7 +20,7 @@ Custom editors for model/view programming.
 import json
 import logging
 from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
-    QTimer, QEvent, QCoreApplication, QModelIndex, QPoint
+    QTimer, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
     QVBoxLayout, QTextEdit
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
@@ -46,6 +46,11 @@ class CustomLineEditor(QLineEdit):
 
     def data(self):
         return self.text()
+
+    def keyPressEvent(self, event):
+        """Don't allow shift key to clear the contents."""
+        if event.key() != Qt.Key_Shift:
+            super().keyPressEvent(event)
 
 
 class CustomComboEditor(QComboBox):
@@ -100,8 +105,10 @@ class CustomLineEditDelegate(QItemDelegate):
     def eventFilter(self, editor, event):
         """Handle all sort of special cases.
         """
-        if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Shift,):
-            # Don't clear content when pressing Shift
+        if event.type() != QEvent.Paint:
+            logging.debug(event.type())
+        if event.type() == QEvent.FocusIn:
+            # Filter event so contents are not cleared
             return True
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Tab, Qt.Key_Backtab):
             # Bring focus to parent so tab editing works as expected
@@ -238,7 +245,8 @@ class SearchBarEditor(QTableView):
         """
         self.move(self._orig_pos)
         table_height = self.verticalHeader().length()
-        self.resize(self._base_size.width(), table_height + 2)
+        size = QSize(self._base_size.width(), table_height + 2).boundedTo(self._parent.size())
+        self.resize(size)
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -342,7 +350,9 @@ class MultiSearchBarEditor(QTableView):
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width() / self.model.columnCount())
         self.horizontalHeader().setMaximumHeight(self._base_size.height())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        self.resize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2)
+        size = QSize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2).\
+            boundedTo(self._parent.size())
+        self.resize(size)
         self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
@@ -429,7 +439,8 @@ class CheckListEditor(QTableView):
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         total_height = self.verticalHeader().length() + 2
-        self.resize(self._base_size.width(), total_height)
+        size = QSize(self._base_size.width(), total_height).boundedTo(self._parent.size())
+        self.resize(size)
         self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
@@ -581,7 +592,9 @@ class JSONEditor(QTabWidget):
         """
         self.table_view.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.table_view.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        self.resize(self._base_size.width(), self._base_size.height() * 16)  # FIXME
+        # TODO: Try and get rid of the 16 here
+        size = QSize(self._base_size.width(), self._base_size.height() * 16).boundedTo(self._parent.size())
+        self.resize(size)
         self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         if self._popup:
             offset = QPoint(
