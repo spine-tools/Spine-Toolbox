@@ -20,9 +20,9 @@ Custom editors for model/view programming.
 import json
 import logging
 from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
-    QTimer, QEvent, QCoreApplication, QModelIndex
+    QTimer, QEvent, QCoreApplication, QModelIndex, QPoint
 from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
-    QVBoxLayout, QTextEdit, QFrame
+    QVBoxLayout, QTextEdit
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
@@ -126,19 +126,16 @@ class SearchBarEditor(QTableView):
 
     Attributes:
         parent (QWidget): the parent for this widget
-        on_top (bool): whether or not the widget should stay on top of all other windows.
-        If False, we set the parent.
+        big_sibling (QWidget or NoneType): another widget which is used to find this widget's position.
     """
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, on_top=True):
+    def __init__(self, parent, big_sibling=None):
         """Initialize class."""
-        super().__init__()
-        self.setWindowFlags(Qt.FramelessWindowHint)
-        if not on_top:
-            self.setParent(parent)
+        super().__init__(parent)
         self._parent = parent
+        self._big_sibling = big_sibling
         self._base_size = None
         self._original_text = None
         self.first_index = QModelIndex()
@@ -230,8 +227,14 @@ class SearchBarEditor(QTableView):
         is has no parent (this means the `on_top` argument was True).
         """
         self.refit()
-        if not self.parent():
-            self.move(self.pos() + self._parent.parent().mapToGlobal(self._parent.pos()))
+        if self._big_sibling:
+            self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        # Adjust position if widget is outside parent's limits
+        bottom_right = self.mapToGlobal(self.rect().bottomRight())
+        parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
+        x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
+        y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
+        self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def refit(self):
         """Resize to optimal size.
@@ -261,7 +264,7 @@ class SearchBarDelegate(QItemDelegate):
         model.setData(index, editor.data())
 
     def createEditor(self, parent, option, index):
-        editor = SearchBarEditor(parent, on_top=False)
+        editor = SearchBarEditor(parent)
         editor.set_data(index.data(), self._parent.alls[index.column()])
         model = index.model()
         editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
@@ -289,10 +292,11 @@ class MultiSearchBarEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent):
-        super().__init__()
-        self.setWindowFlags(Qt.FramelessWindowHint)
+    def __init__(self, parent, big_sibling=None):
+        """Initialize class."""
+        super().__init__(parent)
         self._parent = parent
+        self._big_sibling = big_sibling
         self.alls = None
         self._max_item_count = None
         self._base_size = None
@@ -334,7 +338,13 @@ class MultiSearchBarEditor(QTableView):
         self.horizontalHeader().setMaximumHeight(self._base_size.height())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self.resize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2)
-        self.move(self.pos() + self._parent.parent().mapToGlobal(self._parent.pos()))
+        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        # Adjust position if widget is outside parent's limits
+        bottom_right = self.mapToGlobal(self.rect().bottomRight())
+        parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
+        x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
+        y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
+        self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def start_editing(self):
         """Start editing first item.
@@ -349,9 +359,11 @@ class CheckListEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent):
+    def __init__(self, parent, big_sibling):
         """Initialize class."""
         super().__init__(parent)
+        self._parent = parent
+        self._big_sibling = big_sibling
         self._base_size = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
@@ -413,6 +425,13 @@ class CheckListEditor(QTableView):
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         total_height = self.verticalHeader().length() + 2
         self.resize(self._base_size.width(), total_height)
+        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        # Adjust position if widget is outside parent's limits
+        bottom_right = self.mapToGlobal(self.rect().bottomRight())
+        parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
+        x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
+        y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
+        self.move(self.pos() - QPoint(x_offset, y_offset))
 
 
 class JSONEditor(QTabWidget):
@@ -421,9 +440,12 @@ class JSONEditor(QTabWidget):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, popup=False):
-        """Init class."""
+    def __init__(self, parent, big_sibling, popup=False):
+        """Initialize class."""
         super().__init__(parent)
+        self._parent = parent
+        self._big_sibling = big_sibling
+        self._popup = popup
         # self.setTabPosition(QTabWidget.South)
         self.tab_raw = QWidget()
         vertical_layout = QVBoxLayout(self.tab_raw)
@@ -555,6 +577,18 @@ class JSONEditor(QTabWidget):
         self.table_view.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.table_view.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self.resize(self._base_size.width(), self._base_size.height() * 16)  # FIXME
+        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        if self._popup:
+            offset = QPoint(
+                self._base_size.width(),
+                self._big_sibling.horizontalHeader().height())
+            self.move(self.pos() + offset)
+        # Adjust position if widget is outside parent's limits
+        bottom_right = self.mapToGlobal(self.rect().bottomRight())
+        parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
+        x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
+        y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
+        self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
         index = self.currentIndex()
