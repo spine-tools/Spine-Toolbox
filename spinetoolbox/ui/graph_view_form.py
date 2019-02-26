@@ -36,6 +36,7 @@ class Ui_MainWindow(object):
         sizePolicy.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
         self.graphicsView.setSizePolicy(sizePolicy)
         self.graphicsView.setMouseTracking(True)
+        self.graphicsView.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.graphicsView.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
         self.graphicsView.setObjectName("graphicsView")
         self.verticalLayout_2.addWidget(self.graphicsView)

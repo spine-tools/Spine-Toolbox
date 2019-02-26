@@ -51,7 +51,7 @@ class Ui_MainWindow(object):
         sizePolicy.setVerticalStretch(0)
         sizePolicy.setHeightForWidth(self.graphicsView.sizePolicy().hasHeightForWidth())
         self.graphicsView.setSizePolicy(sizePolicy)
-        self.graphicsView.setFrameShape(QtWidgets.QFrame.Panel)
+        self.graphicsView.setFrameShape(QtWidgets.QFrame.NoFrame)
         self.graphicsView.setFrameShadow(QtWidgets.QFrame.Raised)
         self.graphicsView.setMidLineWidth(0)
         self.graphicsView.setAlignment(QtCore.Qt.AlignCenter)
@@ -190,7 +190,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 349, 361))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 269, 345))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_15 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_15.setObjectName("verticalLayout_15")
@@ -560,7 +560,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 349, 361))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 117, 264))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.verticalLayout_16 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_2)
         self.verticalLayout_16.setObjectName("verticalLayout_16")
@@ -731,7 +731,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 349, 361))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 269, 230))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.verticalLayout_17 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout_17.setObjectName("verticalLayout_17")
@@ -881,7 +881,7 @@ class Ui_MainWindow(object):
         self.scrollArea_4.setWidgetResizable(True)
         self.scrollArea_4.setObjectName("scrollArea_4")
         self.scrollAreaWidgetContents_4 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 349, 361))
+        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 101, 157))
         self.scrollAreaWidgetContents_4.setObjectName("scrollAreaWidgetContents_4")
         self.verticalLayout_18 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_4)
         self.verticalLayout_18.setObjectName("verticalLayout_18")
@@ -1321,7 +1321,7 @@ class Ui_MainWindow(object):
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

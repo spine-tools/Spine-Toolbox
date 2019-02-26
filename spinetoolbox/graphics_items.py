@@ -18,36 +18,14 @@ Classes for drawing graphics items on QGraphicsScene.
 
 import logging
 import os
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer, QEvent
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer, Slot
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle
 from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, \
-    QFont, QTransform, QTextCursor, QFontMetrics
+    QFont, QTextCursor
 from math import atan2, degrees, sin, cos, pi
-from helpers import object_pixmap
-from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
-
-
-class SceneBackground(QGraphicsRectItem):
-    """Experimental. This should be used to paint the scene background white."""
-    def __init__(self, toolbox):
-        super().__init__(toolbox.ui.graphicsView.scene().sceneRect())
-        self._toolbox = toolbox
-        self.bg_pen = QPen(QColor('blue'))  # QPen is used to draw the item outline
-        self.bg_brush = QBrush(QColor(0, 0, 0, 128))  # QBrush is used to fill the item
-        self.setPen(self.bg_pen)
-        self.setBrush(self.bg_brush)
-        self.setZValue(-1)
-        self._toolbox.ui.graphicsView.scene().addItem(self)
-
-    # @Slot("QRectF", name="update_scene_bg")
-    # def update_scene_bg(self, rect):
-    #     self.setRect(rect)
-
-    def update_bg(self):
-        """Work in progress."""
-        self.setRect(self._toolbox.ui.graphicsView.scene().sceneRect())
+from spinedatabase_api import SpineDBAPIError
 
 
 class ItemImage(QGraphicsItem):
@@ -652,6 +630,7 @@ class DataStoreImage(ItemImage):
 
 
 class ViewImage(ItemImage):
+    # TODO: ViewImage consists of 3 QGraphicsItems, other Images consist of 4 QGraphicsItems. Why?
     """View item that is drawn into QGraphicsScene. NOTE: Make sure
     to set self._master as the parent of all drawn items. This groups the
     individual QGraphicsItems together.
@@ -922,10 +901,9 @@ class LinkDrawer(QGraphicsPathItem):
     Attributes:
         toolbox (ToolboxUI): QMainWindow instance
     """
-    def __init__(self, toolbox):
+    def __init__(self):
         """Initializes instance."""
         super().__init__()
-        self._toolbox = toolbox
         self.src = None  # source point
         self.dst = None  # destination point
         self.drawing = False

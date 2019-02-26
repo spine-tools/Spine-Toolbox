@@ -93,3 +93,31 @@ class CustomQGraphicsScene(QGraphicsScene):
             self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
             self._toolbox.show_add_view_form(pos.x(), pos.y())
         self.addItem(self.item_shadow)
+
+    def drawBackground(self, painter, rect):
+        """Reimplemented method to make a custom background.
+
+        Args:
+            painter (QPainter): Painter that is used to paint background
+            rect (QRectF): The exposed (viewport) rectangle in scene coordinates
+        """
+        step = 20  # Grid step
+        rect = self.sceneRect()  # Override to only draw background for the scene rectangle
+        # logging.debug("sceneRect pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})".format(rect.x(), rect.y(), rect.width(), rect.height()))
+        painter.setPen(QPen(QColor(200, 200, 255, 125)))
+        # Draw horizontal grid
+        start = round(rect.top(), step)
+        if start > rect.top():
+            start -= step
+        y = start
+        while y < rect.bottom():
+            painter.drawLine(rect.left(), y, rect.right(), y)
+            y += step
+        # Now draw vertical grid
+        start = round(rect.left(), step)
+        if start > rect.left():
+            start -= step
+        x = start
+        while x < rect.right():
+            painter.drawLine(x, rect.top(), x, rect.bottom())
+            x += step
