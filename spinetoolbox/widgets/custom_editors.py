@@ -47,11 +47,6 @@ class CustomLineEditor(QLineEdit):
     def data(self):
         return self.text()
 
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-        if event.key() in (Qt.Key_Shift,):
-            print("heyhey")
-
 
 class CustomComboEditor(QComboBox):
     """A custom QComboBox to handle data from models.
@@ -89,6 +84,7 @@ class CustomLineEditDelegate(QItemDelegate):
         """Init class."""
         super().__init__(parent)
         self._parent = parent
+        self._editor = None
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.data())
@@ -96,16 +92,17 @@ class CustomLineEditDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         """Create editor and 'forward' `textEdited` signal.
         """
-        editor = CustomLineEditor(parent)
-        editor.set_data(index.data())
-        editor.textEdited.connect(lambda s: self.text_edited.emit(s))
-        return editor
+        self._editor = CustomLineEditor(parent)
+        self._editor.set_data(index.data())
+        self._editor.textEdited.connect(lambda s: self.text_edited.emit(s))
+        return self._editor
 
     def eventFilter(self, editor, event):
         """Handle all sort of special cases.
         """
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Shift,):
-            print("hey")
+            # Don't clear content when pressing Shift
+            return True
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Tab, Qt.Key_Backtab):
             # Bring focus to parent so tab editing works as expected
             self._parent.setFocus()
@@ -138,6 +135,7 @@ class SearchBarEditor(QTableView):
         self._big_sibling = big_sibling
         self._base_size = None
         self._original_text = None
+        self._orig_pos = None
         self.first_index = QModelIndex()
         self.model = QStandardItemModel(self)
         self.proxy_model = QSortFilterProxyModel(self)
@@ -149,15 +147,14 @@ class SearchBarEditor(QTableView):
         self.setShowGrid(False)
         self.setMouseTracking(True)
         self.setTabKeyNavigation(False)
-        delegate = CustomLineEditDelegate(self)
-        delegate.text_edited.connect(self._handle_delegate_text_edited)
-        self.setItemDelegateForRow(0, delegate)
+        self._delegate = CustomLineEditDelegate(self)
+        self._delegate.text_edited.connect(self._handle_delegate_text_edited)
+        self.setItemDelegateForRow(0, self._delegate)
 
     @Slot("QString", name="_handle_delegate_text_edited")
     def _handle_delegate_text_edited(self, text):
         """Filter model as the first row is being edited."""
         self._original_text = text
-        self.proxy_model.setData(self.first_index, text)
         self.proxy_model.setFilterRegExp("^" + text)
         self.refit()
 
@@ -188,6 +185,9 @@ class SearchBarEditor(QTableView):
         """Edit first index if valid and not already being edited.
         """
         super().currentChanged(current, previous)
+        self.edit_first_index()
+
+    def edit_first_index(self):
         if not self.first_index.isValid():
             return
         if self.isPersistentEditorOpen(self.first_index):
@@ -226,25 +226,30 @@ class SearchBarEditor(QTableView):
         """Update geometry. Resize the widget to optimal size, then move it to a proper position if
         is has no parent (this means the `on_top` argument was True).
         """
-        self.refit()
+        self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
+        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
+        self._orig_pos = self.pos()
         if self._big_sibling:
-            self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+            self._orig_pos += self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos())
+        self.refit()
+
+    def refit(self):
+        """Resize to optimal size.
+        """
+        self.move(self._orig_pos)
+        table_height = self.verticalHeader().length()
+        self.resize(self._base_size.width(), table_height + 2)
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
         x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
         y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
         self.move(self.pos() - QPoint(x_offset, y_offset))
-
-    def refit(self):
-        """Resize to optimal size.
-        """
-        self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
-        self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        table_height = self.verticalHeader().length()
-        self.resize(self._base_size.width(), table_height + 2)
+        if self._delegate._editor:
+            self._delegate._editor.setFocus()
 
     def data(self):
+        self.proxy_model.setData(self.first_index, self._delegate._editor.data())
         return self.first_index.data()
 
 
