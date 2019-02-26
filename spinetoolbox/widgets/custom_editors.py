@@ -47,6 +47,11 @@ class CustomLineEditor(QLineEdit):
     def data(self):
         return self.text()
 
+    def keyPressEvent(self, event):
+        super().keyPressEvent(event)
+        if event.key() in (Qt.Key_Shift,):
+            print("heyhey")
+
 
 class CustomComboEditor(QComboBox):
     """A custom QComboBox to handle data from models.
@@ -99,6 +104,8 @@ class CustomLineEditDelegate(QItemDelegate):
     def eventFilter(self, editor, event):
         """Handle all sort of special cases.
         """
+        if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Shift,):
+            print("hey")
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Tab, Qt.Key_Backtab):
             # Bring focus to parent so tab editing works as expected
             self._parent.setFocus()
@@ -116,13 +123,22 @@ class CustomLineEditDelegate(QItemDelegate):
 class SearchBarEditor(QTableView):
     """A widget that implements a Google-like search bar.
     It's just a QTableView with a CustomLineEditDelegate in the first row.
+
+    Attributes:
+        parent (QWidget): the parent for this widget
+        on_top (bool): whether or not the widget should stay on top of all other windows.
+        If False, we set the parent.
     """
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent):
+    def __init__(self, parent, on_top=True):
         """Initialize class."""
-        super().__init__(parent)
+        super().__init__()
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        if not on_top:
+            self.setParent(parent)
+        self._parent = parent
         self._base_size = None
         self._original_text = None
         self.first_index = QModelIndex()
@@ -144,8 +160,9 @@ class SearchBarEditor(QTableView):
     def _handle_delegate_text_edited(self, text):
         """Filter model as the first row is being edited."""
         self._original_text = text
+        self.proxy_model.setData(self.first_index, text)
         self.proxy_model.setFilterRegExp("^" + text)
-        self.update_geometry()
+        self.refit()
 
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
         """Overridden method to always accept first row.
@@ -171,13 +188,9 @@ class SearchBarEditor(QTableView):
                 self.proxy_model.setData(self.first_index, current.data())
 
     def currentChanged(self, current, previous):
-        """Whenever the current index changes, go back to edit the first index.
+        """Edit first index if valid and not already being edited.
         """
         super().currentChanged(current, previous)
-        self.edit_first_index()
-
-    def edit_first_index(self):
-        """Edit first index if valid and not already being edited."""
         if not self.first_index.isValid():
             return
         if self.isPersistentEditorOpen(self.first_index):
@@ -213,7 +226,15 @@ class SearchBarEditor(QTableView):
         self._base_size = size
 
     def update_geometry(self):
-        """Update geometry.
+        """Update geometry. Resize the widget to optimal size, then move it to a proper position if
+        is has no parent (this means the `on_top` argument was True).
+        """
+        self.refit()
+        if not self.parent():
+            self.move(self.pos() + self._parent.parent().mapToGlobal(self._parent.pos()))
+
+    def refit(self):
+        """Resize to optimal size.
         """
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
@@ -240,7 +261,7 @@ class SearchBarDelegate(QItemDelegate):
         model.setData(index, editor.data())
 
     def createEditor(self, parent, option, index):
-        editor = SearchBarEditor(parent)
+        editor = SearchBarEditor(parent, on_top=False)
         editor.set_data(index.data(), self._parent.alls[index.column()])
         model = index.model()
         editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
@@ -269,7 +290,9 @@ class MultiSearchBarEditor(QTableView):
     data_committed = Signal(name="data_committed")
 
     def __init__(self, parent):
-        super().__init__(parent)
+        super().__init__()
+        self.setWindowFlags(Qt.FramelessWindowHint)
+        self._parent = parent
         self.alls = None
         self._max_item_count = None
         self._base_size = None
@@ -279,7 +302,6 @@ class MultiSearchBarEditor(QTableView):
         self.setItemDelegate(delegate)
         self.verticalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
-        # self.setFrameStyle(QFrame.NoFrame)
 
     def keyPressEvent(self, event):
         super().keyPressEvent(event)
@@ -312,6 +334,7 @@ class MultiSearchBarEditor(QTableView):
         self.horizontalHeader().setMaximumHeight(self._base_size.height())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self.resize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2)
+        self.move(self.pos() + self._parent.parent().mapToGlobal(self._parent.pos()))
 
     def start_editing(self):
         """Start editing first item.
