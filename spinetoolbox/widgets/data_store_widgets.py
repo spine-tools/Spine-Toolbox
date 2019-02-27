@@ -1836,7 +1836,7 @@ class GraphViewForm(DataStoreForm):
         self.setup_zoom_action()
         self.connect_signals()
         self.settings_key = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
-        #self.restore_ui()
+        self.restore_ui()
         self.init_commit_rollback_actions()
         title = database + " (read only) " if read_only else database
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
@@ -2343,7 +2343,7 @@ class GraphViewForm(DataStoreForm):
                 while relationships between those objects are edges.
                 </ul>
             </li>
-            <li>Select items here to show their parameters in <a href="Parameter dock">Parameter dock</a>.
+            <li>Select items here to show their parameters in <a href="Parameters">Parameters</a>.
                 <ul>
                 <li>Hold down 'Ctrl' to add multiple items to the selection.</li>
                 <li> Hold down 'Ctrl' and drag your mouse to perform a rubber band selection.</li>
@@ -2369,8 +2369,11 @@ class GraphViewForm(DataStoreForm):
     def _handle_usage_link_activated(self, link):
         if link == "Object tree":
             self.ui.dockWidget_object_tree.show()
-        elif link == "Parameter dock":
+        elif link == "Parameters":
             self.ui.dockWidget_object_parameter_value.show()
+            self.ui.dockWidget_object_parameter_definition.show()
+            self.ui.dockWidget_relationship_parameter_value.show()
+            self.ui.dockWidget_relationship_parameter_definition.show()
         elif link == "Item palette":
             self.ui.dockWidget_item_palette.show()
 
