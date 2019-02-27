@@ -18,7 +18,7 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine, QMarginsF
 from graphics_items import LinkDrawer, Link
 from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsscene import CustomQGraphicsScene
@@ -236,24 +236,37 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.setScene(CustomQGraphicsScene(self, toolbox))
         self.scene().changed.connect(self.scene_changed)
 
-    def init_scene(self):
+    def init_scene(self, empty=False):
         """Resize scene and add a link drawer on scene.
-        The scene must be cleared before calling this."""
+        The scene must be cleared before calling this.
+
+        Args:
+            empty (boolean): True when creating a new project
+        """
         self.link_drawer = LinkDrawer()
         self.scene().addItem(self.link_drawer)
-        # Reset scene rectangle to be as big as the items bounding rectangle
-        # TODO: Define a minimum scene rectangle
-        items_rect = self.scene().itemsBoundingRect()
-        self.scene().setSceneRect(items_rect)
-        self.centerOn(items_rect.center())
+        if len(self.scene().items()) == 1:
+            # Loaded project has no project items
+            empty = True
+        if not empty:
+            # Reset scene rectangle to be as big as the items bounding rectangle
+            items_rect = self.scene().itemsBoundingRect()
+            margin_rect = items_rect.marginsAdded(QMarginsF(20, 20, 20, 20))  # Add margins
+            self.scene().setSceneRect(margin_rect)
+            self.centerOn(margin_rect.center())
+        else:
+            rect = QRectF(0, 0, 401, 301)
+            self.scene().setSceneRect(rect)
+            self.centerOn(rect.center())
         self.reset_zoom()  # Reset zoom
 
-    def resize_scene(self, recenter=False):
+    def resize_scene(self):
         """Resize scene to be at least the size of items bounding rectangle.
         Does not let the scene shrink."""
         scene_rect = self.scene().sceneRect()
         items_rect = self.scene().itemsBoundingRect()
-        self.scene().setSceneRect(scene_rect | items_rect)
+        union_rect = scene_rect | items_rect
+        self.scene().setSceneRect(union_rect)
 
     @Slot("QList<QRectF>", name="scene_changed")
     def scene_changed(self, rects):

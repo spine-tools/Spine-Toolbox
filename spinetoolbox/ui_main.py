@@ -254,7 +254,7 @@ class ToolboxUI(QMainWindow):
         self._project = SpineToolboxProject(self, name, description, self._config)
         self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
-        self.ui.graphicsView.init_scene()
+        self.ui.graphicsView.init_scene(empty=True)
         self.msg.emit("New project created")
         self.save_project()
 
@@ -339,9 +339,6 @@ class ToolboxUI(QMainWindow):
         # Initialize Design View scene
         self.ui.graphicsView.init_scene()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
-        # items_rect = self.ui.graphicsView.scene().itemsBoundingRect()
-        # logging.debug("items_rect:{0}".format(items_rect))
-        # self.ui.graphicsView.scene().setSceneRect(items_rect)
         return True
 
     @Slot(name="save_project")
