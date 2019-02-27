@@ -185,16 +185,16 @@ class ParameterValueDelegate(ParameterDelegate):
         """Show json popup on hover.
         """
         if event.type() != QEvent.MouseMove:
-            return False
+            return super().editorEvent(event, model, option, index)
         if self.last_index == index:
-            return False
+            return super().editorEvent(event, model, option, index)
         self.last_index = index
         self.destroy_json_popup()
         header = index.model().horizontal_header_labels()
         if header[index.column()] != 'json':
-            return False
+            return super().editorEvent(event, model, option, index)
         if not index.data(Qt.EditRole):
-            return False
+            return super().editorEvent(event, model, option, index)
         self.json_popup = JSONEditor(self._parent, self.view, popup=True)
         self.json_popup.currentChanged.connect(self._handle_json_editor_current_changed)
         self.json_popup.set_data(index.data(Qt.EditRole), self.json_editor_index)

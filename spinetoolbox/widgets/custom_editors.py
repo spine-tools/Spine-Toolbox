@@ -105,11 +105,6 @@ class CustomLineEditDelegate(QItemDelegate):
     def eventFilter(self, editor, event):
         """Handle all sort of special cases.
         """
-        if event.type() != QEvent.Paint:
-            logging.debug(event.type())
-        if event.type() == QEvent.FocusIn:
-            # Filter event so contents are not cleared
-            return True
         if event.type() == QEvent.KeyPress and event.key() in (Qt.Key_Tab, Qt.Key_Backtab):
             # Bring focus to parent so tab editing works as expected
             self._parent.setFocus()
@@ -158,66 +153,8 @@ class SearchBarEditor(QTableView):
         self._delegate.text_edited.connect(self._handle_delegate_text_edited)
         self.setItemDelegateForRow(0, self._delegate)
 
-    @Slot("QString", name="_handle_delegate_text_edited")
-    def _handle_delegate_text_edited(self, text):
-        """Filter model as the first row is being edited."""
-        self._original_text = text
-        self.proxy_model.setFilterRegExp("^" + text)
-        self.refit()
-
-    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        """Overridden method to always accept first row.
-        """
-        if source_row == 0:
-            return True
-        return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
-
-    def keyPressEvent(self, event):
-        """Set data from current index into first index as the user navigates
-        through the table using the up and down keys.
-        """
-        super().keyPressEvent(event)
-        event.accept()  # Important to avoid weird behavior when trying to navigate outside view limits
-        if self._original_text is None:
-            self.proxy_model.setData(self.first_index, event.text())
-            self._handle_delegate_text_edited(event.text())
-        if event.key() in (Qt.Key_Up, Qt.Key_Down):
-            current = self.currentIndex()
-            if current.row() == 0:
-                self.proxy_model.setData(self.first_index, self._original_text)
-            else:
-                self.proxy_model.setData(self.first_index, current.data())
-
-    def currentChanged(self, current, previous):
-        """Edit first index if valid and not already being edited.
-        """
-        super().currentChanged(current, previous)
-        self.edit_first_index()
-
-    def edit_first_index(self):
-        if not self.first_index.isValid():
-            return
-        if self.isPersistentEditorOpen(self.first_index):
-            return
-        self.edit(self.first_index)
-
-    def mouseMoveEvent(self, event):
-        """Make hovered index the current index."""
-        index = self.indexAt(event.pos())
-        if index.row() == 0:
-            return
-        self.setCurrentIndex(index)
-
-    def mousePressEvent(self, event):
-        """Commit data."""
-        index = self.indexAt(event.pos())
-        if index.row() == 0:
-            return
-        self.proxy_model.setData(self.first_index, index.data())
-        self.data_committed.emit()
-
     def set_data(self, current, all):
-        """Populate model."""
+        """Populate model and initialize first index."""
         item_list = [QStandardItem(current)]
         for name in all:
             qitem = QStandardItem(name)
@@ -230,8 +167,7 @@ class SearchBarEditor(QTableView):
         self._base_size = size
 
     def update_geometry(self):
-        """Update geometry. Resize the widget to optimal size, then move it to a proper position if
-        is has no parent (this means the `on_top` argument was True).
+        """Update geometry. Resize the widget to optimal size, then adjust its position.
         """
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
@@ -253,12 +189,72 @@ class SearchBarEditor(QTableView):
         x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
         y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
         self.move(self.pos() - QPoint(x_offset, y_offset))
-        if self._delegate._editor:
-            self._delegate._editor.setFocus()
 
     def data(self):
-        self.proxy_model.setData(self.first_index, self._delegate._editor.data())
         return self.first_index.data()
+
+    @Slot("QString", name="_handle_delegate_text_edited")
+    def _handle_delegate_text_edited(self, text):
+        """Filter model as the first row is being edited."""
+        self._original_text = text
+        self.proxy_model.setFilterRegExp("^" + text)
+        self.proxy_model.setData(self.first_index, text)
+        self.refit()
+
+    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
+        """Overridden method to always accept first row.
+        """
+        if source_row == 0:
+            return True
+        return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
+
+    def keyPressEvent(self, event):
+        """Set data from current index into first index as the user navigates
+        through the table using the up and down keys.
+        """
+        super().keyPressEvent(event)
+        event.accept()  # Important to avoid unhandled behavior when trying to navigate outside view limits
+        # Initialize original text. TODO: Is there a better place for this?
+        if self._original_text is None:
+            self.proxy_model.setData(self.first_index, event.text())
+            self._handle_delegate_text_edited(event.text())
+        # Set data from current index in model
+        if event.key() in (Qt.Key_Up, Qt.Key_Down):
+            current = self.currentIndex()
+            if current.row() == 0:
+                self.proxy_model.setData(self.first_index, self._original_text)
+            else:
+                self.proxy_model.setData(self.first_index, current.data())
+
+    def currentChanged(self, current, previous):
+        super().currentChanged(current, previous)
+        self.edit_first_index()
+
+    def edit_first_index(self):
+        """Edit first index if valid and not already being edited.
+        """
+        if not self.first_index.isValid():
+            return
+        if self.isPersistentEditorOpen(self.first_index):
+            return
+        self.edit(self.first_index)
+
+    def mouseMoveEvent(self, event):
+        """Make hovered index the current index."""
+        if not self.currentIndex().isValid():
+            return
+        index = self.indexAt(event.pos())
+        if index.row() == 0:
+            return
+        self.setCurrentIndex(index)
+
+    def mousePressEvent(self, event):
+        """Commit data."""
+        index = self.indexAt(event.pos())
+        if index.row() == 0:
+            return
+        self.proxy_model.setData(self.first_index, index.data())
+        self.data_committed.emit()
 
 
 class SearchBarDelegate(QItemDelegate):
