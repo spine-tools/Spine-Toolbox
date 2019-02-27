@@ -20,9 +20,9 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QRectF
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QInputDialog, QDockWidget, QStyle, QAction
+    QCheckBox, QInputDialog, QDockWidget, QStyle, QAction, QWidgetAction
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
@@ -38,6 +38,7 @@ from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
+from widgets.custom_qwidgets import ZoomWidget
 from widgets.julia_repl_widget import JuliaREPLWidget
 import widgets.toolbars
 from project import SpineToolboxProject
@@ -99,6 +100,8 @@ class ToolboxUI(QMainWindow):
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
         self.connections_tab = None
+        self.zoom_widget = None
+        self.zoom_widget_action = None
         # self.scene_bg = SceneBackground(self)
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
@@ -112,6 +115,8 @@ class ToolboxUI(QMainWindow):
         # Make julia REPL
         self.julia_repl = JuliaREPLWidget(self)
         self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
+        # Application main menu
+        self.setup_zoom_action()
         # QActions
         self.show_connections_tab = QAction(self)  # self is for PySide 5.6
         self.show_item_tabbar = QAction(self)
@@ -179,6 +184,30 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_dc_data.customContextMenuRequested.connect(self.show_dc_data_properties_context_menu)
         self.ui.treeView_template.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
         self.ui.treeView_view.customContextMenuRequested.connect(self.show_view_properties_context_menu)
+        # Main menu
+        self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
+        self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
+        self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+
+    @Slot(name="_handle_zoom_widget_minus_pressed")
+    def _handle_zoom_widget_minus_pressed(self):
+        self.ui.graphicsView.zoom_out()
+
+    @Slot(name="_handle_zoom_widget_plus_pressed")
+    def _handle_zoom_widget_plus_pressed(self):
+        self.ui.graphicsView.zoom_in()
+
+    @Slot(name="_handle_zoom_widget_reset_pressed")
+    def _handle_zoom_widget_reset_pressed(self):
+        self.ui.graphicsView.reset_zoom()
+
+    def setup_zoom_action(self):
+        """Setup zoom action in view menu."""
+        self.zoom_widget = ZoomWidget(self)
+        self.zoom_widget_action = QWidgetAction(self)
+        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
+        self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.zoom_widget_action)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -222,11 +251,10 @@ class ToolboxUI(QMainWindow):
             description (str): Project description
         """
         self.clear_ui()
-        self._project = None
         self._project = SpineToolboxProject(self, name, description, self._config)
         self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
-        self.ui.textBrowser_eventlog.clear()
+        self.ui.graphicsView.init_scene(empty=True)
         self.msg.emit("New project created")
         self.save_project()
 
@@ -289,8 +317,6 @@ class ToolboxUI(QMainWindow):
             h = project_dict['scene_h']
         except KeyError:
             pass
-        # self.ui.graphicsView.reset_scene()
-        # self.ui.graphicsView.setSceneRect(QRectF())  # TODO: This should setSceneRect to 0 but does nothing
         # Create project
         self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config, work_dir)
         # Init models and views
@@ -309,8 +335,9 @@ class ToolboxUI(QMainWindow):
         self.connection_model.reset_model(connections)
         self.ui.tableView_connections.resizeColumnsToContents()
         self.ui.graphicsView.restore_links()
-        self.ui.graphicsView.init_scene()
         self.ui.tabWidget.setCurrentIndex(0)  # Activate 'Items' tab
+        # Initialize Design View scene
+        self.ui.graphicsView.init_scene()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
@@ -349,7 +376,6 @@ class ToolboxUI(QMainWindow):
         self.open_project(self._project.path)
         return
 
-    # noinspection PyMethodMayBeStatic
     def init_models(self, tool_template_paths):
         """Initialize application internal data models.
 
@@ -482,20 +508,18 @@ class ToolboxUI(QMainWindow):
 
     def clear_ui(self):
         """Clean UI to make room for a new or opened project."""
-        if self.project_item_model:
-            item_names = self.project_item_model.return_item_names()
-            n = len(item_names)
-            if n == 0:
-                return
-            for name in item_names:
-                ind = self.project_item_model.find_item(name)
-                self.remove_item(ind)
-            self.msg.emit("All {0} items removed from project".format(n))
-        # Clear widget info from QDockWidget
-        self.activate_item_tab()
+        if not self.project():
+            return
+        item_names = self.project_item_model.return_item_names()
+        for name in item_names:
+            ind = self.project_item_model.find_item(name)
+            self.remove_item(ind)
+        self.activate_item_tab()  # Clear widget info from QDockWidget
         self._project = None
         self.tool_template_model = None
-        self.ui.graphicsView.make_new_scene()
+        self.ui.textBrowser_eventlog.clear()
+        self.ui.textBrowser_process_output.clear()
+        self.ui.graphicsView.scene().clear()  # Clear all items from scene
 
     @Slot("QModelIndex", "QModelIndex", name="selected_item_changed")
     def selected_item_changed(self, current, previous):

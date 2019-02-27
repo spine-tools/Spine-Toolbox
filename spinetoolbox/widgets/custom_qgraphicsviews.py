@@ -10,15 +10,15 @@
 ######################################################################################################################
 
 """
-Class for a custom QGraphicsView for visualizing project items and connections.
+Classes for custom QGraphicsViews for the Design and Graph views.
 
-:author: P. Savolainen (VTT)
+:authors: P. Savolainen (VTT), M. Marin (KTH)
 :date:   6.2.2018
 """
 
 import logging
 from PySide2.QtWidgets import QGraphicsView
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine, QMarginsF
 from graphics_items import LinkDrawer, Link
 from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsscene import CustomQGraphicsScene
@@ -40,9 +40,13 @@ class CustomQGraphicsView(QGraphicsView):
         self._num_scheduled_scalings = 0
         self.anim = None
         self.rel_zoom_factor = 1.0
-        self.default_zoom_factor = None
+        self.default_zoom_factor = 1
         self.max_rel_zoom_factor = 10.0
         self.min_rel_zoom_factor = 0.1
+
+    # def keyPressEvent(self, evnt):
+    # TODO: Check that this does not conflict with other key presses (Delete in particular)
+    #     pass
 
     def mousePressEvent(self, event):
         """Set rubber band selection mode if Control pressed.
@@ -70,13 +74,17 @@ class CustomQGraphicsView(QGraphicsView):
         self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
 
     def wheelEvent(self, event):
-        """Zoom in/out."""
+        """Zoom in/out.
+
+        Args:
+            event (QWheelEvent): Mouse wheel event
+        """
         if event.orientation() != Qt.Vertical:
             event.ignore()
             return
         event.accept()
-        object_name = self.parent().parent()
-        qsettings = self.parent().parent().qsettings()
+        ui = self.parent().parent()
+        qsettings = ui.qsettings()
         smooth_zoom_str = qsettings.value("appSettings/smoothZoom", defaultValue="false")
         smooth_zoom = True if smooth_zoom_str == "true" else False
         if smooth_zoom:
@@ -123,8 +131,6 @@ class CustomQGraphicsView(QGraphicsView):
 
     def reset_zoom(self):
         """Reset zoom to the default factor."""
-        if not self.default_zoom_factor:
-            return
         self.resetTransform()
         self.scale(self.default_zoom_factor, self.default_zoom_factor)
         self.rel_zoom_factor = 1.0
@@ -217,59 +223,58 @@ class DesignQGraphicsView(CustomQGraphicsView):
         super().wheelEvent(event)
 
     def showEvent(self, event):
-        """Make the scene at least as big as the viewport."""
+        """Calls super method. Not in use."""
         super().showEvent(event)
-        self.resize_scene(recenter=True)
 
     def resizeEvent(self, event):
-        """Make the scene at least as big as the viewport."""
+        """Calls super method. Not in use."""
         super().resizeEvent(event)
-        self.resize_scene(recenter=True)
 
     def set_ui(self, toolbox):
-        """Set the main ToolboxUI instance."""
+        """Set a new scene into the Design View when app is started."""
         self._toolbox = toolbox
-        self._scene = CustomQGraphicsScene(self, toolbox)
-        self.setScene(self._scene)
-        self.make_link_drawer()
-        self.init_scene()
+        self.setScene(CustomQGraphicsScene(self, toolbox))
+        self.scene().changed.connect(self.scene_changed)
 
-    @Slot("QList<QRectF>", name='scene_changed')
-    def scene_changed(self, changed_qrects):
-        """Resize scene as it changes."""
-        self.resize_scene()
+    def init_scene(self, empty=False):
+        """Resize scene and add a link drawer on scene.
+        The scene must be cleared before calling this.
 
-    def make_new_scene(self):
-        """Make a new, clean scene. Needed when clearing the UI for a new project
-        so that new items are correctly placed."""
-        try:
-            self._scene.changed.disconnect(self.scene_changed)
-        except RuntimeError:
-            logging.error("RuntimeError in disconnecting changed signal")
-        self._scene = CustomQGraphicsScene(self, self._toolbox)
-        self.setScene(self._scene)
-        self._scene.addItem(self.link_drawer)
-
-    def init_scene(self):
-        """Resize the scene and connect its `changed` signal. Needed after
-        loading a new project.
+        Args:
+            empty (boolean): True when creating a new project
         """
-        self._scene.changed.connect(self.scene_changed)
-        self.resize_scene(recenter=True)
-
-    def resize_scene(self, recenter=False):
-        """Make the scene at least as big as the viewport."""
-        view_rect = self.mapToScene(self.rect()).boundingRect()
-        items_rect = self._scene.itemsBoundingRect()
-        if recenter:
-            view_rect.moveCenter(items_rect.center())
-            self.centerOn(items_rect.center())
-        self._scene.setSceneRect(view_rect | items_rect)
-
-    def make_link_drawer(self):
-        """Make new LinkDrawer and add it scene. Needed when opening a new project."""
-        self.link_drawer = LinkDrawer(self._toolbox)
+        self.link_drawer = LinkDrawer()
         self.scene().addItem(self.link_drawer)
+        if len(self.scene().items()) == 1:
+            # Loaded project has no project items
+            empty = True
+        if not empty:
+            # Reset scene rectangle to be as big as the items bounding rectangle
+            items_rect = self.scene().itemsBoundingRect()
+            margin_rect = items_rect.marginsAdded(QMarginsF(20, 20, 20, 20))  # Add margins
+            self.scene().setSceneRect(margin_rect)
+            self.centerOn(margin_rect.center())
+        else:
+            rect = QRectF(0, 0, 401, 301)
+            self.scene().setSceneRect(rect)
+            self.centerOn(rect.center())
+        self.reset_zoom()  # Reset zoom
+
+    def resize_scene(self):
+        """Resize scene to be at least the size of items bounding rectangle.
+        Does not let the scene shrink."""
+        scene_rect = self.scene().sceneRect()
+        items_rect = self.scene().itemsBoundingRect()
+        union_rect = scene_rect | items_rect
+        self.scene().setSceneRect(union_rect)
+
+    @Slot("QList<QRectF>", name="scene_changed")
+    def scene_changed(self, rects):
+        """Resize scene as it changes."""
+        rect = self.scene().sceneRect()
+        # logging.debug("scene_changed pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
+        #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
+        self.resize_scene()
 
     def set_project_item_model(self, model):
         """Set project item model."""

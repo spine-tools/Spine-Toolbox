@@ -56,6 +56,9 @@
       <property name="mouseTracking">
        <bool>true</bool>
       </property>
+      <property name="frameShape">
+       <enum>QFrame::NoFrame</enum>
+      </property>
       <property name="dragMode">
        <enum>QGraphicsView::ScrollHandDrag</enum>
       </property>
