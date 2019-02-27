@@ -80,8 +80,6 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.setSizeGripEnabled(False)
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.setStyleSheet(MAINWINDOW_SS)
-        # Set up corner widgets
-        self.set_corner_widgets()
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB db_map
@@ -118,6 +116,11 @@ class DataStoreForm(QMainWindow):
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
         self.ui.menuToolbars.addAction(self.parameter_tag_toolbar.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter_enum.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_relationship_parameter_definition.toggleViewAction())
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -146,26 +149,39 @@ class DataStoreForm(QMainWindow):
         # Parameter tags
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
+        # Dock widgets visibility
+        self.ui.dockWidget_object_parameter_value.visibilityChanged.\
+            connect(self._handle_object_parameter_value_visibility_changed)
+        self.ui.dockWidget_object_parameter_definition.visibilityChanged.\
+            connect(self._handle_object_parameter_definition_visibility_changed)
+        self.ui.dockWidget_relationship_parameter_value.visibilityChanged.\
+            connect(self._handle_relationship_parameter_value_visibility_changed)
+        self.ui.dockWidget_relationship_parameter_definition.visibilityChanged.\
+            connect(self._handle_relationship_parameter_definition_visibility_changed)
 
     def qsettings(self):
         """Returns the QSettings instance from ToolboxUI."""
         return self._data_store._toolbox.qsettings()
 
-    def set_corner_widgets(self):
-        """Set corner widgets (icon and text on the tab bar) to both QTabWidgets."""
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
-        label = QLabel("Object parameter")
-        layout.addWidget(label)
-        layout.setContentsMargins(3, 1, 0, 2)
-        self.ui.tabWidget_object_parameter.setCornerWidget(widget, Qt.TopLeftCorner)
-        self.ui.tabWidget_object_parameter.tabBar().setDrawBase(False)
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
-        label = QLabel("Relationship parameter")
-        layout.addWidget(label)
-        layout.setContentsMargins(3, 1, 0, 2)
-        self.ui.tabWidget_relationship_parameter.setCornerWidget(widget, Qt.TopLeftCorner)
+    @Slot("bool", name="_handle_object_parameter_value_visibility_changed")
+    def _handle_object_parameter_value_visibility_changed(self, visible):
+        if visible:
+            self.object_parameter_value_model.update_filter()
+
+    @Slot("bool", name="_handle_object_parameter_definition_visibility_changed")
+    def _handle_object_parameter_definition_visibility_changed(self, visible):
+        if visible:
+            self.object_parameter_definition_model.update_filter()
+
+    @Slot("bool", name="_handle_relationship_parameter_value_visibility_changed")
+    def _handle_relationship_parameter_value_visibility_changed(self, visible):
+        if visible:
+            self.relationship_parameter_value_model.update_filter()
+
+    @Slot("bool", name="_handle_relationship_parameter_definition_visibility_changed")
+    def _handle_relationship_parameter_definition_visibility_changed(self, visible):
+        if visible:
+            self.relationship_parameter_definition_model.update_filter()
 
     @Slot("int", "bool", name="_handle_tag_button_toggled")
     def _handle_tag_button_toggled(self, id, checked):
@@ -435,13 +451,13 @@ class DataStoreForm(QMainWindow):
                 return {None}
 
     def do_update_filter(self):
-        if self.ui.tabWidget_object_parameter.currentIndex() == 0:
+        if self.ui.dockWidget_object_parameter_value.isVisible():
             self.object_parameter_value_model.update_filter()
-        else:
+        if self.ui.dockWidget_object_parameter_definition.isVisible():
             self.object_parameter_definition_model.update_filter()
-        if self.ui.tabWidget_relationship_parameter.currentIndex() == 0:
+        if self.ui.dockWidget_relationship_parameter_value.isVisible():
             self.relationship_parameter_value_model.update_filter()
-        else:
+        if self.ui.dockWidget_relationship_parameter_definition.isVisible():
             self.relationship_parameter_definition_model.update_filter()
 
     @Slot("bool", name="show_add_object_classes_form")
@@ -809,6 +825,20 @@ class TreeViewForm(DataStoreForm):
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_parameter_enum,
+            Qt.Horizontal)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_relationship_parameter_value,
+            Qt.Vertical)
+        self.tabifyDockWidget(
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
+        self.tabifyDockWidget(
+            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition)
+        self.ui.dockWidget_object_parameter_value.raise_()
+        self.ui.dockWidget_relationship_parameter_value.raise_()
         # init models and views
         self.init_models()
         self.init_views()
@@ -819,11 +849,6 @@ class TreeViewForm(DataStoreForm):
         self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
         toc = time.clock()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
-
-    def add_toggle_view_actions(self):
-        """Add toggle view actions to View menu."""
-        super().add_toggle_view_actions()
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter_enum.toggleViewAction())
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -880,9 +905,6 @@ class TreeViewForm(DataStoreForm):
         # Parameter enum tree selection changed
         self.ui.treeView_parameter_enum.selectionModel().selectionChanged.\
             connect(self._handle_parameter_enum_selection_changed)
-        # Parameter tabwidgets current changed
-        self.ui.tabWidget_object_parameter.currentChanged.connect(self._handle_object_parameter_tab_changed)
-        self.ui.tabWidget_relationship_parameter.currentChanged.connect(self._handle_relationship_parameter_tab_changed)
         # Parameter tables context menu requested
         self.ui.tableView_object_parameter_definition.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
@@ -1703,13 +1725,6 @@ class TreeViewForm(DataStoreForm):
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
 
-    def restore_ui(self):
-        """Restore UI state from previous session."""
-        super().restore_ui()
-        splitter_tree_parameter_state = self.qsettings().value("treeViewWidget/splitterTreeParameterState")
-        if splitter_tree_parameter_state:
-            self.ui.splitter_tree_parameter.restoreState(splitter_tree_parameter_state)
-
     def close_editors(self):
         """Close any open editor in the parameter table views.
         Call this before closing the database mapping."""
@@ -1733,9 +1748,6 @@ class TreeViewForm(DataStoreForm):
             event (QEvent): Closing event if 'X' is clicked.
         """
         super().closeEvent(event)
-        self.qsettings().setValue(
-            "{}/splitterTreeParameterState".format(self.settings_key),
-            self.ui.splitter_tree_parameter.saveState())
         self.close_editors()
 
 
@@ -1806,10 +1818,15 @@ class GraphViewForm(DataStoreForm):
         self.zoom_widget_action = None
         self.zoom_widget = None
         # Set up splitters
-        area = self.dockWidgetArea(self.ui.dockWidget_parameter)
-        self._handle_parameter_dock_location_changed(area)
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
+        # Set up dock widgets
+        self.tabifyDockWidget(
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
+        self.tabifyDockWidget(
+            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition)
+        self.ui.dockWidget_object_parameter_value.raise_()
+        self.ui.dockWidget_relationship_parameter_value.raise_()
         # Initialize stuff
         self.init_models()
         self.init_views()
@@ -1819,7 +1836,7 @@ class GraphViewForm(DataStoreForm):
         self.setup_zoom_action()
         self.connect_signals()
         self.settings_key = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
-        self.restore_ui()
+        #self.restore_ui()
         self.init_commit_rollback_actions()
         title = database + " (read only) " if read_only else database
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
@@ -1899,7 +1916,6 @@ class GraphViewForm(DataStoreForm):
         """Connect signals."""
         super().connect_signals()
         self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
-        self.ui.dockWidget_parameter.dockLocationChanged.connect(self._handle_parameter_dock_location_changed)
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
         self.ui.actionGraph_hide_selected.triggered.connect(self.hide_selected_items)
         self.ui.actionGraph_show_hidden.triggered.connect(self.show_hidden_items)
@@ -1938,15 +1954,6 @@ class GraphViewForm(DataStoreForm):
         self.ui.actionGraph_prune_selected.setEnabled(len(self.object_item_selection) > 0)
         self.ui.actionGraph_reinstate_pruned.setEnabled(len(self.rejected_items) > 0)
 
-    @Slot("Qt.DockWidgetArea", name="_handle_parameter_dock_location_changed")
-    def _handle_parameter_dock_location_changed(self, area):
-        """Called when the parameter dock widget location changes.
-        Adjust splitter orientation accordingly."""
-        if area & (Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea):
-            self.ui.splitter_object_relationship_parameter.setOrientation(Qt.Vertical)
-        else:
-            self.ui.splitter_object_relationship_parameter.setOrientation(Qt.Horizontal)
-
     @Slot("Qt.DockWidgetArea", name="_handle_item_palette_dock_location_changed")
     def _handle_item_palette_dock_location_changed(self, area):
         """Called when the item palette dock widget location changes.
@@ -1960,7 +1967,6 @@ class GraphViewForm(DataStoreForm):
         """Add toggle view actions to View menu."""
         super().add_toggle_view_actions()
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter.toggleViewAction())
         if not self.read_only:
             self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item_palette.toggleViewAction())
         else:
@@ -2364,7 +2370,7 @@ class GraphViewForm(DataStoreForm):
         if link == "Object tree":
             self.ui.dockWidget_object_tree.show()
         elif link == "Parameter dock":
-            self.ui.dockWidget_parameter.show()
+            self.ui.dockWidget_object_parameter_value.show()
         elif link == "Item palette":
             self.ui.dockWidget_item_palette.show()
 
@@ -2642,13 +2648,6 @@ class GraphViewForm(DataStoreForm):
             self.msg.emit("Successfully removed items.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
-
-    def restore_ui(self):
-        """Restore UI state from previous session."""
-        super().restore_ui()
-        window_state = self.qsettings().value("{0}/windowState".format(self.settings_key))
-        if window_state:
-            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
 
     def closeEvent(self, event=None):
         """Handle close window.
