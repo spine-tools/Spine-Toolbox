@@ -18,7 +18,7 @@ Custom QGraphicsScene used in the Design View.
 
 import logging
 from PySide2.QtWidgets import QGraphicsScene
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, Qt
 from PySide2.QtGui import QColor, QPen, QBrush
 from graphics_items import ItemImage
 from widgets.toolbars import DraggableWidget

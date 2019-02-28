@@ -44,9 +44,31 @@ class CustomQGraphicsView(QGraphicsView):
         self.max_rel_zoom_factor = 10.0
         self.min_rel_zoom_factor = 0.1
 
-    # def keyPressEvent(self, evnt):
-    # TODO: Check that this does not conflict with other key presses (Delete in particular)
-    #     pass
+    # def keyPressEvent(self, event):
+    #     """Overridden method. Enable zooming with plus and minus keyboard keys.
+    #
+    #     Args:
+    #         event (QKeyEvent): Pressed key
+    #     """
+    #     logging.debug("scene keyPressEvent")
+    #     if event.key() == Qt.Key_Plus:
+    #         self.zoom_in()
+    #     elif event.key() == Qt.Key_Minus:
+    #         self.zoom_out()
+    #     elif event.key() == Qt.Key_Comma:
+    #         self.reset_zoom()
+    #     else:
+    #         event.ignore()
+    #     # TODO: Check that this does not conflict with other key presses (Delete in particular)
+
+    def enterEvent(self, event):
+        """Overridden method. Do not show the stupid open hand mouse cursor.
+
+        Args:
+            event (QEvent): event
+        """
+        super().enterEvent(event)
+        self.viewport().setCursor(Qt.ArrowCursor)
 
     def mousePressEvent(self, event):
         """Set rubber band selection mode if Control pressed.
@@ -54,6 +76,7 @@ class CustomQGraphicsView(QGraphicsView):
         """
         if event.modifiers() & Qt.ControlModifier:
             self.setDragMode(QGraphicsView.RubberBandDrag)
+            self.viewport().setCursor(Qt.CrossCursor)
         if event.button() == Qt.MidButton:
             self.reset_zoom()
         super().mousePressEvent(event)
@@ -62,6 +85,7 @@ class CustomQGraphicsView(QGraphicsView):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
         self.setDragMode(QGraphicsView.ScrollHandDrag)
+        self.viewport().setCursor(Qt.ArrowCursor)
 
     def mouseMoveEvent(self, event):
         """Register mouse position to recenter the scene after zoom."""
