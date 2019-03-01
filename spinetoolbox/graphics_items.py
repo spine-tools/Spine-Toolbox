@@ -96,6 +96,7 @@ class ItemImage(QGraphicsItem):
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         # icon.setAcceptHoverEvents(True)
         icon.setAcceptDrops(True)
+        icon.setCursor(Qt.PointingHandCursor)
         return icon
 
     def make_master(self, pen, brush):
@@ -115,6 +116,7 @@ class ItemImage(QGraphicsItem):
         icon.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         # icon.setAcceptHoverEvents(True)
         icon.setAcceptDrops(True)
+        icon.setCursor(Qt.PointingHandCursor)
         return icon
 
     def name(self):
@@ -235,12 +237,14 @@ class ItemImage(QGraphicsItem):
         self._master.setSelected(True)
         self._toolbox.show_item_image_context_menu(event.screenPos(), self.name())
 
-    def key_press_event(self, event):
+    # def key_press_event(self, event):
+    def keyPressEvent(self, event):
         """Remove item when pressing delete if it is selected.
 
         Args:
             event (QKeyEvent): Key event
         """
+        # logging.debug("item keyPressEvent")
         if event.key() == Qt.Key_Delete and self._master.isSelected():
             ind = self._toolbox.project_item_model.find_item(self.name())
             self._toolbox.remove_item(ind, delete_item=self._toolbox._config.getboolean("settings", "delete_data"))
@@ -292,7 +296,7 @@ class DataConnectionImage(ItemImage):
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
-        self._master.keyPressEvent = self.key_press_event
+        self._master.keyPressEvent = super().keyPressEvent
         self._master.itemChange = self.item_change
         self._master.dragEnterEvent = self.drag_enter_event
         self._master.dragLeaveEvent = self.drag_leave_event
@@ -349,9 +353,10 @@ class DataConnectionImage(ItemImage):
         """Calls super class method."""
         return super().context_menu_event(event)
 
-    def key_press_event(self, event):
-        """Calls super class method."""
-        return super().key_press_event(event)
+    # def key_press_event(self, event):
+    # def keyPressEvent(self, event):
+    #     """Calls super class method."""
+    #     super().keyPressEvent(event)
 
     def item_change(self, change, value):
         """Calls super class method."""
@@ -438,7 +443,7 @@ class ToolImage(ItemImage):
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
-        self._master.keyPressEvent = self.key_press_event
+        self._master.keyPressEvent = super().keyPressEvent
         self._master.itemChange = self.item_change
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
@@ -530,9 +535,10 @@ class ToolImage(ItemImage):
         """Calls super class method."""
         return super().context_menu_event(event)
 
-    def key_press_event(self, event):
-        """Calls super class method."""
-        return super().key_press_event(event)
+    # def key_press_event(self, event):
+    # def keyPressEvent(self, event):
+    #     """Calls super class method."""
+    #     super().keyPressEvent(event)
 
     def item_change(self, change, value):
         """Calls super class method."""
@@ -568,7 +574,7 @@ class DataStoreImage(ItemImage):
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
-        self._master.keyPressEvent = self.key_press_event
+        self._master.keyPressEvent = super().keyPressEvent
         self._master.itemChange = self.item_change
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
@@ -620,9 +626,10 @@ class DataStoreImage(ItemImage):
         """Calls super class method."""
         return super().context_menu_event(event)
 
-    def key_press_event(self, event):
-        """Calls super class method."""
-        return super().key_press_event(event)
+    # def key_press_event(self, event):
+    # def keyPressEvent(self, event):
+    #     """Calls super class method."""
+    #     super().keyPressEvent(event)
 
     def item_change(self, change, value):
         """Calls super class method."""
@@ -659,7 +666,7 @@ class ViewImage(ItemImage):
         self._master.hoverEnterEvent = self.hover_enter_event
         self._master.hoverLeaveEvent = self.hover_leave_event
         self._master.contextMenuEvent = self.context_menu_event
-        self._master.keyPressEvent = self.key_press_event
+        self._master.keyPressEvent = super().keyPressEvent
         self._master.itemChange = self.item_change
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
@@ -711,9 +718,10 @@ class ViewImage(ItemImage):
         """Calls super class method."""
         return super().context_menu_event(event)
 
-    def key_press_event(self, event):
-        """Calls super class method."""
-        return super().key_press_event(event)
+    # def key_press_event(self, event):
+    # def keyPressEvent(self, event):
+    #     """Calls super class method."""
+    #     super().keyPressEvent(event)
 
     def item_change(self, change, value):
         """Calls super class method."""
@@ -774,6 +782,7 @@ class Link(QGraphicsPathItem):
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.setCursor(Qt.PointingHandCursor)
         self.update_geometry()
 
     def find_model_index(self):
@@ -1194,7 +1203,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.outgoing_arc_items.append(arc_item)
 
     def keyPressEvent(self, event):
-        """Triger editing name."""
+        """Trigger editing name."""
         if event.key() == Qt.Key_F2:
             self.edit_name()
             event.accept()
