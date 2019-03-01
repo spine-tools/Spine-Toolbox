@@ -32,45 +32,56 @@
    <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::GroupedDragging</set>
   </property>
   <widget class="QWidget" name="centralwidget">
-   <layout class="QVBoxLayout" name="verticalLayout_7">
+   <layout class="QVBoxLayout" name="verticalLayout_2">
+    <property name="spacing">
+     <number>0</number>
+    </property>
+    <property name="leftMargin">
+     <number>0</number>
+    </property>
+    <property name="topMargin">
+     <number>0</number>
+    </property>
+    <property name="rightMargin">
+     <number>0</number>
+    </property>
+    <property name="bottomMargin">
+     <number>0</number>
+    </property>
     <item>
-     <layout class="QVBoxLayout" name="verticalLayout_2">
-      <item>
-       <widget class="QLabel" name="label_object_tree">
-        <property name="text">
-         <string>Object tree</string>
-        </property>
-       </widget>
-      </item>
-      <item>
-       <widget class="ObjectTreeView" name="treeView_object">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-          <horstretch>1</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="contextMenuPolicy">
-         <enum>Qt::CustomContextMenu</enum>
-        </property>
-        <property name="accessibleName">
-         <string>object tree</string>
-        </property>
-        <property name="editTriggers">
-         <set>QAbstractItemView::EditKeyPressed</set>
-        </property>
-        <property name="selectionMode">
-         <enum>QAbstractItemView::ExtendedSelection</enum>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>20</width>
-          <height>20</height>
-         </size>
-        </property>
-       </widget>
-      </item>
-     </layout>
+     <widget class="QLabel" name="label_object_tree">
+      <property name="text">
+       <string>Object tree</string>
+      </property>
+     </widget>
+    </item>
+    <item>
+     <widget class="ObjectTreeView" name="treeView_object">
+      <property name="sizePolicy">
+       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+        <horstretch>1</horstretch>
+        <verstretch>0</verstretch>
+       </sizepolicy>
+      </property>
+      <property name="contextMenuPolicy">
+       <enum>Qt::CustomContextMenu</enum>
+      </property>
+      <property name="accessibleName">
+       <string>object tree</string>
+      </property>
+      <property name="editTriggers">
+       <set>QAbstractItemView::EditKeyPressed</set>
+      </property>
+      <property name="selectionMode">
+       <enum>QAbstractItemView::ExtendedSelection</enum>
+      </property>
+      <property name="iconSize">
+       <size>
+        <width>20</width>
+        <height>20</height>
+       </size>
+      </property>
+     </widget>
     </item>
    </layout>
   </widget>
@@ -148,9 +159,9 @@
    <addaction name="menuSession"/>
   </widget>
   <widget class="QStatusBar" name="statusbar"/>
-  <widget class="QDockWidget" name="dockWidget_parameter_enum">
+  <widget class="QDockWidget" name="dockWidget_parameter_value_list">
    <property name="windowTitle">
-    <string>Parameter enum</string>
+    <string>Parameter value list</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>2</number>
@@ -173,12 +184,12 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="CopyTreeView" name="treeView_parameter_enum">
+      <widget class="CopyTreeView" name="treeView_parameter_value_list">
        <property name="contextMenuPolicy">
         <enum>Qt::CustomContextMenu</enum>
        </property>
        <property name="accessibleName">
-        <string>parameter enum</string>
+        <string>parameter value list</string>
        </property>
        <property name="editTriggers">
         <set>QAbstractItemView::AnyKeyPressed|QAbstractItemView::EditKeyPressed</set>
@@ -530,9 +541,6 @@
    <property name="toolTip">
     <string>Add object classes</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+O</string>
-   </property>
   </action>
   <action name="actionAdd_objects">
    <property name="icon">
@@ -544,9 +552,6 @@
    </property>
    <property name="toolTip">
     <string>Add objects</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionAdd_relationship_classes">
@@ -560,9 +565,6 @@
    <property name="toolTip">
     <string>Add relationship classes</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+R</string>
-   </property>
   </action>
   <action name="actionAdd_relationships">
    <property name="icon">
@@ -575,9 +577,6 @@
    <property name="toolTip">
     <string>Add relationships</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+R</string>
-   </property>
   </action>
   <action name="actionImport">
    <property name="icon">
@@ -586,9 +585,6 @@
    </property>
    <property name="text">
     <string>Import</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+I</string>
    </property>
   </action>
   <action name="actionExport">
@@ -601,9 +597,6 @@
    </property>
    <property name="text">
     <string>Export</string>
-   </property>
-   <property name="shortcut">
-    <string>Ctrl+E</string>
    </property>
   </action>
   <action name="actionCopy">
@@ -645,7 +638,7 @@
     <string>Refresh</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Shift+Return</string>
+    <string>F5</string>
    </property>
   </action>
   <action name="actionEdit_object_classes">
@@ -700,9 +693,6 @@
    <property name="text">
     <string>Manage parameter tags</string>
    </property>
-   <property name="shortcut">
-    <string>Ctrl+Shift+T</string>
-   </property>
   </action>
   <action name="actionRemove_selection">
    <property name="enabled">
@@ -713,11 +703,6 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Del</string>
-   </property>
-  </action>
-  <action name="actionvvv">
-   <property name="text">
-    <string>vvv</string>
    </property>
   </action>
  </widget>
@@ -739,7 +724,12 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>treeView_parameter_enum</tabstop>
+  <tabstop>treeView_object</tabstop>
+  <tabstop>tableView_object_parameter_value</tabstop>
+  <tabstop>tableView_object_parameter_definition</tabstop>
+  <tabstop>tableView_relationship_parameter_value</tabstop>
+  <tabstop>tableView_relationship_parameter_definition</tabstop>
+  <tabstop>treeView_parameter_value_list</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

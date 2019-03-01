@@ -595,9 +595,7 @@ class JSONEditor(QTabWidget):
         self.resize(size)
         self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         if self._popup:
-            offset = QPoint(
-                self._base_size.width(),
-                self._big_sibling.horizontalHeader().height())
+            offset = QPoint(self._base_size.width(), 0)
             self.move(self.pos() + offset)
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())

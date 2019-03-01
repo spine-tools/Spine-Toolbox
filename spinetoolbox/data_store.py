@@ -33,8 +33,7 @@ from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
-from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError, \
-    create_new_spine_database
+import spinedatabase_api
 
 
 class DataStore(ProjectItem):
@@ -531,13 +530,12 @@ class DataStore(ProjectItem):
         }
         return reference
 
-    def get_db_map(self, db_url, username):
+    def get_db_map(self, db_url, username, upgrade=False):
         """Return a DiffDatabaseMapping instance to work with.
         """
         try:
-            db_map = DiffDatabaseMapping(db_url, username)
-            return db_map
-        except SpineDBVersionError as e:
+            return spinedatabase_api.DiffDatabaseMapping(db_url, username, upgrade=upgrade)
+        except spinedatabase_api.SpineDBVersionError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
@@ -552,13 +550,8 @@ class DataStore(ProjectItem):
             ret = msg.exec_()  # Show message box
             if ret == QMessageBox.Cancel:
                 return None
-            try:
-                db_map = DiffDatabaseMapping(db_url, username, upgrade=True)
-                return db_map
-            except SpineDBAPIError as e:
-                self._toolbox.msg_error.emit(e.msg)
-                return None
-        except SpineDBAPIError as e:
+            return self.get_db_map(db_url, username, upgrade=True)
+        except spinedatabase_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return None
 
@@ -821,7 +814,7 @@ class DataStore(ProjectItem):
             pass
         url = "sqlite:///" + file_path
         for_spine_model = check_box.isChecked()
-        create_new_spine_database(url, for_spine_model=for_spine_model)
+        spinedatabase_api.create_new_spine_database(url, for_spine_model=for_spine_model)
         database = os.path.basename(file_path)
         username = getpass.getuser()
         # Update UI

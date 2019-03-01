@@ -1965,9 +1965,9 @@ class SubParameterDefinitionModel(SubParameterModel):
         items_to_update = dict()
         header = self._parent.horizontal_header_labels()
         id_column = header.index('id')
-        enum_id_column = header.index('enum_id')
+        value_list_id_column = header.index('value_list_id')
         parameter_tag_id_list_column = header.index('parameter_tag_id_list')
-        parameter_enum_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_enum_list()}
+        parameter_value_list_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_value_list_list()}
         parameter_tag_dict = {x.tag: x.id for x in self._parent.db_map.parameter_tag_list()}
         new_indexes = []
         new_data = []
@@ -1993,16 +1993,16 @@ class SubParameterDefinitionModel(SubParameterModel):
                     item.update({'parameter_tag_id_list': parameter_tag_id_list})
                 except KeyError as e:
                     self.error_log.append("Invalid parameter tag '{}'.".format(e))
-            # Handle changes in enum name: update enum id accordingly
-            elif field_name == "enum_name":
-                enum_name = data[k]
+            # Handle changes in value_list name: update value_list id accordingly
+            elif field_name == "value_list_name":
+                value_list_name = data[k]
                 try:
-                    enum_id = parameter_enum_dict[enum_name]
-                    new_indexes.append(index.sibling(row, enum_id_column))
-                    new_data.append(enum_id)
-                    item.update({'enum_id': enum_id})
+                    value_list_id = parameter_value_list_dict[value_list_name]
+                    new_indexes.append(index.sibling(row, value_list_id_column))
+                    new_data.append(value_list_id)
+                    item.update({'parameter_value_list_id': value_list_id})
                 except KeyError:
-                    self.error_log.append("Invalid enum '{}'.".format(enum_name))
+                    self.error_log.append("Invalid value list '{}'.".format(value_list_name))
             elif field_name == "parameter_name":
                 item.update({"name": data[k]})
             else:
@@ -2389,17 +2389,17 @@ class EmptyObjectParameterDefinitonModel(EmptyParameterDefinitionModel):
         parameter_name_column = header.index('parameter_name')
         parameter_tag_list_column = header.index('parameter_tag_list')
         parameter_tag_id_list_column = header.index('parameter_tag_id_list')
-        enum_id_column = header.index('enum_id')
-        enum_name_column = header.index('enum_name')
+        value_list_id_column = header.index('value_list_id')
+        value_list_name_column = header.index('value_list_name')
         # Query db and build ad-hoc dicts
         object_class_dict = {x.name: x.id for x in self._parent.db_map.object_class_list()}
         parameter_tag_dict = {x.tag: x.id for x in self._parent.db_map.parameter_tag_list()}
-        parameter_enum_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_enum_list()}
+        parameter_value_list_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_value_list_list()}
         for row in {ind.row() for ind in indexes}:
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             parameter_tag_list = self.index(row, parameter_tag_list_column).data(Qt.DisplayRole)
-            enum_name = self.index(row, enum_name_column).data(Qt.DisplayRole)
+            value_list_name = self.index(row, value_list_name_column).data(Qt.DisplayRole)
             object_class_id = None
             if object_class_name:
                 try:
@@ -2414,12 +2414,12 @@ class EmptyObjectParameterDefinitonModel(EmptyParameterDefinitionModel):
                     self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid parameter tag '{}'".format(e))
-            if enum_name:
+            if value_list_name:
                 try:
-                    enum_id = parameter_enum_dict[enum_name]
-                    self._main_data[row][enum_id_column] = enum_id
+                    value_list_id = parameter_value_list_dict[value_list_name]
+                    self._main_data[row][value_list_id_column] = value_list_id
                 except KeyError:
-                    self.error_log.append("Invalid enum '{}'".format(enum_name))
+                    self.error_log.append("Invalid value list '{}'".format(value_list_name))
             if not parameter_name or object_class_id is None:
                 continue
             item = {
@@ -2452,8 +2452,8 @@ class EmptyRelationshipParameterDefinitonModel(EmptyParameterDefinitionModel):
         parameter_name_column = header.index('parameter_name')
         parameter_tag_list_column = header.index('parameter_tag_list')
         parameter_tag_id_list_column = header.index('parameter_tag_id_list')
-        enum_id_column = header.index('enum_id')
-        enum_name_column = header.index('enum_name')
+        value_list_id_column = header.index('value_list_id')
+        value_list_name_column = header.index('value_list_name')
         # Query db and build ad-hoc dicts
         relationship_class_dict = {
             x.name: {
@@ -2462,14 +2462,14 @@ class EmptyRelationshipParameterDefinitonModel(EmptyParameterDefinitionModel):
                 'object_class_name_list': x.object_class_name_list
             } for x in self._parent.db_map.wide_relationship_class_list()}
         parameter_tag_dict = {x.tag: x.id for x in self._parent.db_map.parameter_tag_list()}
-        parameter_enum_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_enum_list()}
+        parameter_value_list_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_value_list_list()}
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             object_class_name_list = self.index(row, object_class_name_list_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             parameter_tag_list = self.index(row, parameter_tag_list_column).data(Qt.DisplayRole)
-            enum_name = self.index(row, enum_name_column).data(Qt.DisplayRole)
+            value_list_name = self.index(row, value_list_name_column).data(Qt.DisplayRole)
             relationship_class_id = None
             if relationship_class_name:
                 try:
@@ -2490,12 +2490,12 @@ class EmptyRelationshipParameterDefinitonModel(EmptyParameterDefinitionModel):
                     self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid tag '{}'".format(e))
-            if enum_name:
+            if value_list_name:
                 try:
-                    enum_id = parameter_enum_dict[enum_name]
-                    self._main_data[row][enum_id_column] = enum_id
+                    value_list_id = parameter_value_list_dict[value_list_name]
+                    self._main_data[row][value_list_id_column] = value_list_id
                 except KeyError:
-                    self.error_log.append("Invalid enum '{}'".format(enum_name))
+                    self.error_log.append("Invalid value list '{}'".format(value_list_name))
             if not parameter_name or relationship_class_id is None:
                 continue
             item = {
@@ -3009,31 +3009,31 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
             self.empty_row_model.removeRows(row, 1)
         self.invalidate_filter()
 
-    def clear_parameter_enums(self, parameter_enum_ids):
-        """Clear parameter enums from model."""
-        enum_id_column = self.header.index("enum_id")
-        enum_name_column = self.header.index("enum_name")
+    def clear_parameter_value_lists(self, value_list_ids):
+        """Clear parameter value_lists from model."""
+        value_list_id_column = self.header.index("value_list_id")
+        value_list_name_column = self.header.index("value_list_name")
         for model in self.sub_models.values():
             for row_data in model.sourceModel()._main_data:
-                enum_id = row_data[enum_id_column]
-                if enum_id in parameter_enum_ids:
-                    row_data[enum_id_column] = None
-                    row_data[enum_name_column] = None
+                value_list_id = row_data[value_list_id_column]
+                if value_list_id in value_list_ids:
+                    row_data[value_list_id_column] = None
+                    row_data[value_list_name_column] = None
         self.dataChanged.emit(
-            self.index(0, enum_name_column), self.index(self.rowCount() - 1, enum_name_column), [Qt.DisplayRole])
+            self.index(0, value_list_name_column), self.index(self.rowCount() - 1, value_list_name_column), [Qt.DisplayRole])
 
-    def rename_parameter_enums(self, enums):
-        """Rename parameter enums in model."""
-        enum_id_column = self.header.index("enum_id")
-        enum_name_column = self.header.index("enum_name")
-        enum_dict = {x.id: x.name for x in enums}
+    def rename_parameter_value_lists(self, value_lists):
+        """Rename parameter value_lists in model."""
+        value_list_id_column = self.header.index("value_list_id")
+        value_list_name_column = self.header.index("value_list_name")
+        value_list_dict = {x.id: x.name for x in value_lists}
         for model in self.sub_models.values():
             for row_data in model.sourceModel()._main_data:
-                enum_id = row_data[enum_id_column]
-                if enum_id in enum_dict:
-                    row_data[enum_name_column] = enum_dict[enum_id]
+                value_list_id = row_data[value_list_id_column]
+                if value_list_id in value_list_dict:
+                    row_data[value_list_name_column] = value_list_dict[value_list_id]
         self.dataChanged.emit(
-            self.index(0, enum_name_column), self.index(self.rowCount() - 1, enum_name_column), [Qt.DisplayRole])
+            self.index(0, value_list_name_column), self.index(self.rowCount() - 1, value_list_name_column), [Qt.DisplayRole])
 
 
 class RelationshipParameterModel(MinimalTableModel):
@@ -3646,31 +3646,31 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
             self.empty_row_model.removeRows(row, 1)
         self.invalidate_filter()
 
-    def clear_parameter_enums(self, parameter_enum_ids):
-        """Clear parameter enums from model."""
-        enum_id_column = self.header.index("enum_id")
-        enum_name_column = self.header.index("enum_name")
+    def clear_parameter_value_lists(self, value_list_ids):
+        """Clear parameter value_lists from model."""
+        value_list_id_column = self.header.index("value_list_id")
+        value_list_name_column = self.header.index("value_list_name")
         for model in self.sub_models.values():
             for row_data in model.sourceModel()._main_data:
-                enum_id = row_data[enum_id_column]
-                if enum_id in parameter_enum_ids:
-                    row_data[enum_id_column] = None
-                    row_data[enum_name_column] = None
+                value_list_id = row_data[value_list_id_column]
+                if value_list_id in value_list_ids:
+                    row_data[value_list_id_column] = None
+                    row_data[value_list_name_column] = None
         self.dataChanged.emit(
-            self.index(0, enum_name_column), self.index(self.rowCount() - 1, enum_name_column), [Qt.DisplayRole])
+            self.index(0, value_list_name_column), self.index(self.rowCount() - 1, value_list_name_column), [Qt.DisplayRole])
 
-    def rename_parameter_enums(self, enums):
-        """Rename parameter enums in model."""
-        enum_id_column = self.header.index("enum_id")
-        enum_name_column = self.header.index("enum_name")
-        enum_dict = {x.id: x.name for x in enums}
+    def rename_parameter_value_lists(self, value_lists):
+        """Rename parameter value_lists in model."""
+        value_list_id_column = self.header.index("value_list_id")
+        value_list_name_column = self.header.index("value_list_name")
+        parameter_value_list_dict = {x.id: x.name for x in value_lists}
         for model in self.sub_models.values():
             for row_data in model.sourceModel()._main_data:
-                enum_id = row_data[enum_id_column]
-                if enum_id in enum_dict:
-                    row_data[enum_name_column] = enum_dict[enum_id]
+                value_list_id = row_data[value_list_id_column]
+                if value_list_id in parameter_value_list_dict:
+                    row_data[value_list_name_column] = parameter_value_list_dict[value_list_id]
         self.dataChanged.emit(
-            self.index(0, enum_name_column), self.index(self.rowCount() - 1, enum_name_column), [Qt.DisplayRole])
+            self.index(0, value_list_name_column), self.index(self.rowCount() - 1, value_list_name_column), [Qt.DisplayRole])
 
 
 class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
@@ -3847,8 +3847,17 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
         return True
 
 
-class ParameterEnumModel(QStandardItemModel):
-    """A class to display parameter enum data in a treeview."""
+class TreeNode(object):
+    def __init__(self, parent, row, text=None, id=None):
+        self.parent = parent
+        self.row = row
+        self.child_nodes = list()
+        self.text = text
+        self.id = id
+
+
+class ParameterValueListModel(QAbstractItemModel):
+    """A class to display parameter value_list data in a treeview."""
 
     def __init__(self, tree_view_form):
         """Initialize class"""
@@ -3858,71 +3867,145 @@ class ParameterEnumModel(QStandardItemModel):
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.empty_str = "..."
+        self._root_nodes = list()
+        self.dataChanged.connect(self._handle_data_changed)
 
-    def _handle_item_changed(self, item):
+    def build_tree(self):
+        """Build the value list tree"""
+        self.beginResetModel()
+        self._root_nodes = list()
+        i = 0
+        for wide_value_list in self.db_map.wide_parameter_value_list_list():
+            root_node = TreeNode(None, i, text=wide_value_list.name, id=wide_value_list.id)
+            i += 1
+            self._root_nodes.append(root_node)
+            j = 0
+            for value in wide_value_list.value_list.split(","):
+                child_node = TreeNode(root_node, j, text=value)
+                j += 1
+                root_node.child_nodes.append(child_node)
+            root_node.child_nodes.append(TreeNode(root_node, j, text=self.empty_str))
+        self._root_nodes.append(TreeNode(None, i, text=self.empty_str))
+        self.endResetModel()
+
+    def index(self, row, column, parent=QModelIndex()):
+        if not parent.isValid():
+            return self.createIndex(row, column, self._root_nodes[row])
+        parent_node = parent.internalPointer()
+        return self.createIndex(row, column, parent_node.child_nodes[row])
+
+    def parent(self, index):
+        if not index.isValid():
+            return QModelIndex()
+        node = index.internalPointer()
+        if node.parent is None:
+            return QModelIndex()
+        return self.createIndex(node.parent.row, 0, node.parent)
+
+    def rowCount(self, parent=QModelIndex()):
+        if not parent.isValid():
+            return len(self._root_nodes)
+        node = parent.internalPointer()
+        return len(node.child_nodes)
+
+    def columnCount(self, parent=QModelIndex()):
+        return 1
+
+    def data(self, index, role=Qt.DisplayRole):
+        if not index.isValid():
+            return None
+        if role == Qt.FontRole:
+            if not index.parent().isValid():
+                return self.bold_font
+            return None
+        if role not in (Qt.DisplayRole, Qt.EditRole):
+            return None
+        node = index.internalPointer()
+        return node.text
+
+    def flags(self, index):
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if not index.isValid():
+            return False
+        if role != Qt.EditRole:
+            return False
+        node = index.internalPointer()
+        if value == node.text:
+            return False
+        node.text = value
+        self.dataChanged.emit(index, index, [role])
+        return True
+
+    def appendRows(self, count, parent=QModelIndex()):
+        row = self.rowCount(parent)
+        self.beginInsertRows(parent, row, row + count -1 )
+        if not parent.isValid():
+            self._root_nodes.append(TreeNode(None, row, text=self.empty_str))
+        else:
+            root_node = parent.internalPointer()
+            root_node.child_nodes.append(TreeNode(root_node, row, text=self.empty_str))
+        self.endInsertRows()
+
+    def is_last(self, index):
+        """Return True if this item is the last one for its parent."""
+        return self.rowCount(index.parent()) == index.row() + 1
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
+    def _handle_data_changed(self, top_left, bottom_right, roles=[]):
+        # TODO: Don't handle repetead
+        if Qt.EditRole not in roles:
+            return
+        parent = self.parent(top_left)
+        to_add_list = []
+        to_update_list = []
+        for row in range(top_left.row(), bottom_right.row() + 1):
+            index = self.index(row, 0, parent)
+            self._handle_index_changed(index)
+            to_add, to_update = self.items_to_add_and_update(index, parent)
+            to_add_list.append(to_add)
+            to_update_list.append(to_update)
+        self._tree_view_form.add_parameter_value_lists(*to_add_list)
+        self._tree_view_form.update_parameter_value_lists(*to_update_list)
+
+    def _handle_index_changed(self, index):
         """Ensure there's always one empty item at the bottom of each parent.
-        Return enum dict to add or to update.
+        Return value_list dict to add or to update.
         """
-        parent = item.parent()
-        if self.is_empty(item):
-            if parent:
-                # Append new empty item to the parent
-                empty_value_item = QStandardItem(self.empty_str)
-                parent.appendRow(empty_value_item)
-            else:
-                # Append new empty item to model
-                item.setData(self.bold_font, Qt.FontRole)
-                empty_name_item = QStandardItem(self.empty_str)
-                self.invisibleRootItem().appendRow(empty_name_item)
-                # Append first empty child to the changed item
-                empty_value_item = QStandardItem(self.empty_str)
-                item.appendRow(empty_value_item)
+        parent = index.parent()
+        if self.is_last(index):
+            self.appendRows(1, parent)
+            if not parent.isValid():
+                self.appendRows(1, index)
+
+    def items_to_add_and_update(self, index, parent):
         to_add = None
         to_update = None
-        if parent:
-            # The changed item corresponds to a enum value
-            value_list = [parent.child(i).data(Qt.DisplayRole) for i in range(parent.rowCount() - 1)]
-            id = parent.data(Qt.UserRole + 1)
+        if parent.isValid():
+            # The changed index corresponds to a value
+            value_list = [self.index(i, 0, parent).internalPointer().text for i in range(self.rowCount(parent) - 1)]
+            id = parent.internalPointer().id
             if id:
                 # Update
                 to_update = dict(id=id, value_list=value_list)
             else:
                 # Add
-                name = parent.data(Qt.DisplayRole)
+                name = parent.internalPointer().text
                 to_add = dict(parent=parent, name=name, value_list=value_list)
         else:
-            # The changed item corresponds to a enum name
-            name = item.data(Qt.DisplayRole)
-            id = item.data(Qt.UserRole + 1)
+            # The changed index corresponds to a name
+            id = index.internalPointer().id
+            name = index.internalPointer().text
             if id:
                 # Update
                 to_update = dict(id=id, name=name)
             else:
                 # Add
-                value_list = [item.child(i).data(Qt.DisplayRole) for i in range(item.rowCount() - 1)]
+                value_list = [self.index(i, 0, index).internalPointer().text for i in range(self.rowCount(index) - 1)]
                 if value_list:
-                    to_add = dict(parent=item, name=name, value_list=value_list)
+                    to_add = dict(parent=index, name=name, value_list=value_list)
         return to_add, to_update
-
-    def is_empty(self, item):
-        """Return whether or not this item is 'empty', i.e., the
-        last one for its parent."""
-        parent = item.parent() if item.parent() else self.invisibleRootItem()
-        return item.row() == parent.rowCount() - 1
-
-    def setData(self, index, value, role=Qt.EditRole):
-        """Set data of index to value for given role."""
-        item = self.itemFromIndex(index)
-        old_value = item.data(role)
-        if value == old_value:
-            return False
-        item.setData(value, role)
-        self.dataChanged.emit(index, index, [role])
-        if role == Qt.EditRole:
-            to_add, to_update = self._handle_item_changed(item)
-            self._tree_view_form.add_parameter_enums(to_add)
-            self._tree_view_form.update_parameter_enums(to_update)
-        return True
 
     def batch_set_data(self, indexes, values):
         """Set edit role for indexes to values in batch."""
@@ -3938,22 +4021,6 @@ class ParameterEnumModel(QStandardItemModel):
             item = parent.child(max(rows))
             to_add, to_update = self._handle_item_changed(item)
 
-    def build_tree(self):
-        """Build the enumeration tree"""
-        self.clear()
-        name_item_list = list()
-        for wide_enum in self.db_map.wide_parameter_enum_list():
-            name_item = QStandardItem(wide_enum.name)
-            name_item.setData(wide_enum.id, Qt.UserRole + 1)
-            name_item.setData(self.bold_font, Qt.FontRole)
-            value_item_list = [QStandardItem(x) for x in wide_enum.value_list.split(",")]
-            empty_item = QStandardItem(self.empty_str)
-            value_item_list.append(empty_item)
-            name_item.appendRows(value_item_list)
-            name_item_list.append(name_item)
-        empty_item = QStandardItem(self.empty_str)
-        name_item_list.append(empty_item)
-        self.invisibleRootItem().appendRows(name_item_list)
 
     def removeRow(self, row, parent=QModelIndex()):
         """Remove row under parent, but never the last row (which is the empty one)"""

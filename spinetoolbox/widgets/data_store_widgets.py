@@ -25,14 +25,14 @@ from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
     QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
     QButtonGroup, QSizePolicy, QWidgetAction, QFrame, QWidget, QHBoxLayout
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize, QEvent
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, \
     QStandardItemModel, QStandardItem, QKeySequence
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
 from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
-from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, ParameterEnumContextMenu, \
+from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, ParameterValueListContextMenu, \
     ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDefinitionDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDefinitionDelegate
@@ -46,7 +46,7 @@ from widgets.toolbars import ParameterTagToolBar
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
-    ParameterEnumModel, JSONArrayModel
+    ParameterValueListModel, JSONArrayModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
@@ -100,7 +100,7 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
         self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(self)
         # Other
-        self.parameter_enum_model = ParameterEnumModel(self)
+        self.parameter_value_list_model = ParameterValueListModel(self)
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
         self.visible_rows = int(max_screen_height / self.default_row_height)
@@ -116,7 +116,7 @@ class DataStoreForm(QMainWindow):
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
         self.ui.menuToolbars.addAction(self.parameter_tag_toolbar.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter_enum.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
@@ -303,7 +303,7 @@ class DataStoreForm(QMainWindow):
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_definition_models()
-        self.init_parameter_enum_model()
+        self.init_parameter_value_list_model()
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
@@ -315,9 +315,9 @@ class DataStoreForm(QMainWindow):
         self.object_parameter_definition_model.reset_model()
         self.relationship_parameter_definition_model.reset_model()
 
-    def init_parameter_enum_model(self):
-        """Initialize parameter enum models from source database."""
-        self.parameter_enum_model.build_tree()
+    def init_parameter_value_list_model(self):
+        """Initialize parameter value_list models from source database."""
+        self.parameter_value_list_model.build_tree()
 
     def init_views(self):
         """Initialize model views."""
@@ -326,7 +326,7 @@ class DataStoreForm(QMainWindow):
         self.init_relationship_parameter_value_view()
         self.init_object_parameter_definition_view()
         self.init_relationship_parameter_definition_view()
-        self.init_parameter_enum_view()
+        self.init_parameter_value_list_view()
 
     def init_object_tree_view(self):
         """Init object tree view."""
@@ -372,7 +372,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('enum_id'))
+        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -386,7 +386,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('enum_id'))
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
             setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_definition.verticalHeader().\
@@ -395,13 +395,13 @@ class DataStoreForm(QMainWindow):
             setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
-    def init_parameter_enum_view(self):
-        self.ui.treeView_parameter_enum.setModel(self.parameter_enum_model)
-        for i in range(self.parameter_enum_model.rowCount()):
-            index = self.parameter_enum_model.index(i, 0)
-            self.ui.treeView_parameter_enum.expand(index)
-        self.ui.treeView_parameter_enum.resizeColumnToContents(0)
-        self.ui.treeView_parameter_enum.header().hide()
+    def init_parameter_value_list_view(self):
+        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
+        for i in range(self.parameter_value_list_model.rowCount()):
+            index = self.parameter_value_list_model.index(i, 0)
+            self.ui.treeView_parameter_value_list.expand(index)
+        self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
+        self.ui.treeView_parameter_value_list.header().hide()
 
     def setup_delegates(self):
         """Set delegates for tables."""
@@ -614,30 +614,30 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
         self.msg.emit(msg)
 
-    def add_parameter_enums(self, *to_add):
+    def add_parameter_value_lists(self, *to_add):
         if not any(to_add):
             return
         parents = []
         for item in to_add:
             parents.append(item.pop("parent"))
         try:
-            enums = self.db_map.add_wide_parameter_enums(*to_add)
-            for k, enum in enumerate(enums):
-                parents[k].setData(enum.id, Qt.UserRole + 1)
+            value_lists = self.db_map.add_wide_parameter_value_lists(*to_add)
+            for k, value_list in enumerate(value_lists):
+                parents[k].internalPointer().id = value_list.id
             self.commit_available.emit(True)
-            self.msg.emit("Successfully added new parameter enum(s).")
+            self.msg.emit("Successfully added new parameter value list(s).")
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self.msg_error.emit(e.msg)
 
-    def update_parameter_enums(self, *to_update):
+    def update_parameter_value_lists(self, *to_update):
         if not any(to_update):
             return
         try:
-            enums = self.db_map.update_wide_parameter_enums(*to_update)
-            self.object_parameter_definition_model.rename_parameter_enums(enums)
-            self.relationship_parameter_definition_model.rename_parameter_enums(enums)
+            value_lists = self.db_map.update_wide_parameter_value_lists(*to_update)
+            self.object_parameter_definition_model.rename_parameter_value_lists(value_lists)
+            self.relationship_parameter_definition_model.rename_parameter_value_lists(value_lists)
             self.commit_available.emit(True)
-            self.msg.emit("Successfully updated parameter enum(s).")
+            self.msg.emit("Successfully updated parameter value list(s).")
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self.msg_error.emit(e.msg)
 
@@ -803,7 +803,7 @@ class TreeViewForm(DataStoreForm):
     obj_parameter_value_selection_available = Signal("bool", name="obj_parameter_value_selection_available")
     rel_parameter_definition_selection_available = Signal("bool", name="rel_parameter_definition_selection_available")
     rel_parameter_value_selection_available = Signal("bool", name="rel_parameter_value_selection_available")
-    parameter_enum_selection_available = Signal("bool", name="parameter_enum_selection_available")
+    parameter_value_list_selection_available = Signal("bool", name="parameter_value_list_selection_available")
 
     def __init__(self, data_store, db_map, database):
         """Initialize class."""
@@ -817,7 +817,7 @@ class TreeViewForm(DataStoreForm):
         self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
-        self.parameter_enum_context_menu = None
+        self.parameter_value_list_context_menu = None
         # Others
         self.widgets_with_selection = list()
         self.paste_to_widget = None
@@ -827,7 +827,7 @@ class TreeViewForm(DataStoreForm):
         self.settings_key = 'treeViewWidget'
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_parameter_enum,
+            self.ui.dockWidget_parameter_value_list,
             Qt.Horizontal)
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value,
@@ -868,7 +868,7 @@ class TreeViewForm(DataStoreForm):
             connect(self._handle_rel_parameter_definition_selection_available)
         self.rel_parameter_value_selection_available.\
             connect(self._handle_rel_parameter_value_selection_available)
-        self.parameter_enum_selection_available.connect(self._handle_parameter_enum_selection_available)
+        self.parameter_value_list_selection_available.connect(self._handle_parameter_value_list_selection_available)
         # Menu actions
         # Import export
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
@@ -902,9 +902,9 @@ class TreeViewForm(DataStoreForm):
             connect(self._handle_relationship_parameter_definition_selection_changed)
         self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.\
             connect(self._handle_relationship_parameter_value_selection_changed)
-        # Parameter enum tree selection changed
-        self.ui.treeView_parameter_enum.selectionModel().selectionChanged.\
-            connect(self._handle_parameter_enum_selection_changed)
+        # Parameter value_list tree selection changed
+        self.ui.treeView_parameter_value_list.selectionModel().selectionChanged.\
+            connect(self._handle_parameter_value_list_selection_changed)
         # Parameter tables context menu requested
         self.ui.tableView_object_parameter_definition.customContextMenuRequested.\
             connect(self.show_object_parameter_context_menu)
@@ -914,8 +914,8 @@ class TreeViewForm(DataStoreForm):
             connect(self.show_relationship_parameter_context_menu)
         self.ui.tableView_relationship_parameter_value.customContextMenuRequested.\
             connect(self.show_relationship_parameter_value_context_menu)
-        # Parameter enum context menu requested
-        self.ui.treeView_parameter_enum.customContextMenuRequested.connect(self.show_parameter_enum_context_menu)
+        # Parameter value_list context menu requested
+        self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(self.show_parameter_value_list_context_menu)
 
     def update_copy_and_remove_actions(self):
         """Update copy and remove actions according to selections across the widgets."""
@@ -940,7 +940,7 @@ class TreeViewForm(DataStoreForm):
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
             elif name == "relationship parameter value":
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
-            elif name == "parameter enum":
+            elif name == "parameter value list":
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus.png"))
 
     @Slot("bool", name="_handle_object_tree_selection_available")
@@ -983,12 +983,12 @@ class TreeViewForm(DataStoreForm):
             self.widgets_with_selection.append(self.ui.tableView_relationship_parameter_value)
         self.update_copy_and_remove_actions()
 
-    @Slot("bool", name="_handle_parameter_enum_selection_available")
-    def _handle_parameter_enum_selection_available(self, on):
-        if self.ui.treeView_parameter_enum in self.widgets_with_selection:
-            self.widgets_with_selection.remove(self.ui.treeView_parameter_enum)
+    @Slot("bool", name="_handle_parameter_value_list_selection_available")
+    def _handle_parameter_value_list_selection_available(self, on):
+        if self.ui.treeView_parameter_value_list in self.widgets_with_selection:
+            self.widgets_with_selection.remove(self.ui.treeView_parameter_value_list)
         if on:
-            self.widgets_with_selection.append(self.ui.treeView_parameter_enum)
+            self.widgets_with_selection.append(self.ui.treeView_parameter_value_list)
         self.update_copy_and_remove_actions()
 
     @Slot("QWidget", "QWidget", name="update_paste_action")
@@ -1034,8 +1034,8 @@ class TreeViewForm(DataStoreForm):
             self.remove_relationship_parameter_definitions()
         elif name == "relationship parameter value":
             self.remove_relationship_parameter_values()
-        elif name == "parameter enum":
-            self.remove_parameter_enums()
+        elif name == "parameter value list":
+            self.remove_parameter_value_lists()
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_definition_selection_changed")
     def _handle_object_parameter_definition_selection_changed(self, selected, deselected):
@@ -1061,11 +1061,11 @@ class TreeViewForm(DataStoreForm):
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         self.rel_parameter_value_selection_available.emit(not selection.isEmpty())
 
-    @Slot("QItemSelection", "QItemSelection", name="_handle_parameter_enum_selection_changed")
-    def _handle_parameter_enum_selection_changed(self, selected, deselected):
+    @Slot("QItemSelection", "QItemSelection", name="_handle_parameter_value_list_selection_changed")
+    def _handle_parameter_value_list_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
-        selection = self.ui.treeView_parameter_enum.selectionModel().selection()
-        self.parameter_enum_selection_available.emit(not selection.isEmpty())
+        selection = self.ui.treeView_parameter_value_list.selectionModel().selection()
+        self.parameter_value_list_selection_available.emit(not selection.isEmpty())
 
     @Slot("int", name="_handle_object_parameter_tab_changed")
     def _handle_object_parameter_tab_changed(self, index):
@@ -1548,22 +1548,22 @@ class TreeViewForm(DataStoreForm):
         self.relationship_parameter_context_menu.deleteLater()
         self.relationship_parameter_context_menu = None
 
-    @Slot("QPoint", name="show_parameter_enum_context_menu")
-    def show_parameter_enum_context_menu(self, pos):
+    @Slot("QPoint", name="show_parameter_value_list_context_menu")
+    def show_parameter_value_list_context_menu(self, pos):
         """Context menu for relationship parameter table view.
 
         Args:
             pos (QPoint): Mouse position
         """
-        index = self.ui.treeView_parameter_enum.indexAt(pos)
-        global_pos = self.ui.treeView_parameter_enum.viewport().mapToGlobal(pos)
-        self.parameter_enum_context_menu = ParameterEnumContextMenu(self, global_pos, index)
-        self.parameter_enum_context_menu.deleteLater()
-        option = self.parameter_enum_context_menu.get_action()
+        index = self.ui.treeView_parameter_value_list.indexAt(pos)
+        global_pos = self.ui.treeView_parameter_value_list.viewport().mapToGlobal(pos)
+        self.parameter_value_list_context_menu = ParameterValueListContextMenu(self, global_pos, index)
+        self.parameter_value_list_context_menu.deleteLater()
+        option = self.parameter_value_list_context_menu.get_action()
         if option == "Copy":
-            self.ui.treeView_parameter_enum.copy()
+            self.ui.treeView_parameter_value_list.copy()
         elif option == "Remove selection":
-            self.remove_parameter_enums()
+            self.remove_parameter_value_lists()
 
     @busy_effect
     def remove_object_parameter_values(self):
@@ -1682,10 +1682,10 @@ class TreeViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
 
     @busy_effect
-    def remove_parameter_enums(self):
-        """Remove selection parameter enums.
+    def remove_parameter_value_lists(self):
+        """Remove selection parameter value_lists.
         """
-        indexes = self.ui.treeView_parameter_enum.selectionModel().selectedIndexes()
+        indexes = self.ui.treeView_parameter_value_list.selectionModel().selectedIndexes()
         parented_indexes = {}
         toplevel_indexes = []
         for index in indexes:
@@ -1698,7 +1698,7 @@ class TreeViewForm(DataStoreForm):
         for index in toplevel_indexes:
             parented_indexes.pop(index, None)
         # Get items to update
-        model = self.parameter_enum_model
+        model = self.parameter_value_list_model
         to_update = list()
         for parent, indexes in parented_indexes.items():
             id = parent.data(Qt.UserRole + 1)
@@ -1711,17 +1711,17 @@ class TreeViewForm(DataStoreForm):
         # Get ids to remove
         removed_ids = [ind.data(Qt.UserRole + 1) for ind in toplevel_indexes]
         try:
-            self.db_map.update_wide_parameter_enums(*to_update)
-            self.db_map.remove_items(parameter_enum_ids=removed_ids)
+            self.db_map.update_wide_parameter_value_lists(*to_update)
+            self.db_map.remove_items(parameter_value_list_ids=removed_ids)
             self.commit_available.emit(True)
             for row in sorted([ind.row() for ind in toplevel_indexes], reverse=True):
-                self.parameter_enum_model.removeRow(row)
+                self.parameter_value_list_model.removeRow(row)
             for parent, indexes in parented_indexes.items():
                 for row in sorted([ind.row() for ind in indexes], reverse=True):
-                    self.parameter_enum_model.removeRow(row, parent)
-            self.object_parameter_definition_model.clear_parameter_enums(removed_ids)
-            self.relationship_parameter_definition_model.clear_parameter_enums(removed_ids)
-            self.msg.emit("Successfully removed parameter enum(s).")
+                    self.parameter_value_list_model.removeRow(row, parent)
+            self.object_parameter_definition_model.clear_parameter_value_lists(removed_ids)
+            self.relationship_parameter_definition_model.clear_parameter_value_lists(removed_ids)
+            self.msg.emit("Successfully removed parameter value list(s).")
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self._tree_view_form.msg_error.emit(e.msg)
 

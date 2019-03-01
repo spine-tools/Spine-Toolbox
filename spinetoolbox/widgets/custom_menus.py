@@ -333,7 +333,7 @@ class ParameterContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
-class ParameterEnumContextMenu(CustomContextMenu):
+class ParameterValueListContextMenu(CustomContextMenu):
     """Context menu class for parameter enum view in tree view form.
 
     Attributes:

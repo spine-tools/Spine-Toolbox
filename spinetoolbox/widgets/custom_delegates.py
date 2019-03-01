@@ -241,12 +241,13 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
             if parameter:
-                enum = self.db_map.wide_parameter_enum_list(id_list=[parameter.enum_id]).one_or_none()
+                value_list = self.db_map.wide_parameter_value_list_list(id_list=[parameter.parameter_value_list_id]).\
+                    one_or_none()
             else:
-                enum = None
-            if enum:
+                value_list = None
+            if value_list:
                 editor = SearchBarEditor(self._parent, parent)
-                editor.set_data(index.data(Qt.EditRole), enum.value_list.split(","))
+                editor.set_data(index.data(Qt.EditRole), value_list.value_list.split(","))
             else:
                 editor = CustomLineEditor(parent)
                 editor.set_data(index.data(Qt.EditRole))
@@ -286,9 +287,9 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
             except AttributeError:
                 parameter_tag_list = []
             editor.set_data(all_parameter_tag_list, parameter_tag_list)
-        elif header[index.column()] == 'enum_name':
+        elif header[index.column()] == 'value_list_name':
             editor = SearchBarEditor(self._parent, parent)
-            name_list = [x.name for x in self.db_map.wide_parameter_enum_list()]
+            name_list = [x.name for x in self.db_map.wide_parameter_value_list_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         else:
             editor = CustomLineEditor(parent)
@@ -341,12 +342,13 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
             if parameter:
-                enum = self.db_map.wide_parameter_enum_list(id_list=[parameter.enum_id]).one_or_none()
+                value_list = self.db_map.wide_parameter_value_list_list(id_list=[parameter.parameter_value_list_id]).\
+                    one_or_none()
             else:
-                enum = None
-            if enum:
+                value_list = None
+            if value_list:
                 editor = SearchBarEditor(self._parent, parent)
-                editor.set_data(index.data(Qt.EditRole), enum.value_list.split(","))
+                editor.set_data(index.data(Qt.EditRole), value_list.value_list.split(","))
             else:
                 editor = CustomLineEditor(parent)
                 editor.set_data(index.data(Qt.EditRole))
@@ -387,9 +389,9 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
             except AttributeError:
                 parameter_tag_list = []
             editor.set_data(all_parameter_tag_list, parameter_tag_list)
-        elif header[index.column()] == 'enum_name':
+        elif header[index.column()] == 'value_list_name':
             editor = SearchBarEditor(self._parent, parent)
-            name_list = [x.name for x in self.db_map.wide_parameter_enum_list()]
+            name_list = [x.name for x in self.db_map.wide_parameter_value_list_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         else:
             editor = CustomLineEditor(parent)
