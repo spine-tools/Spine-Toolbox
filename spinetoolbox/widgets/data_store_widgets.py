@@ -1701,7 +1701,7 @@ class TreeViewForm(DataStoreForm):
         model = self.parameter_value_list_model
         to_update = list()
         for parent, indexes in parented_indexes.items():
-            id = parent.data(Qt.UserRole + 1)
+            id = parent.internalPointer().id
             removed_rows = [ind.row() for ind in indexes]
             all_rows = range(model.rowCount(parent) - 1)
             value_list = [
@@ -1709,7 +1709,7 @@ class TreeViewForm(DataStoreForm):
             ]
             to_update.append(dict(id=id, value_list=value_list))
         # Get ids to remove
-        removed_ids = [ind.data(Qt.UserRole + 1) for ind in toplevel_indexes]
+        removed_ids = [ind.internalPointer().id for ind in toplevel_indexes]
         try:
             self.db_map.update_wide_parameter_value_lists(*to_update)
             self.db_map.remove_items(parameter_value_list_ids=removed_ids)

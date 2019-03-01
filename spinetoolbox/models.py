@@ -3848,6 +3848,14 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
 
 
 class TreeNode(object):
+    """A helper class to use as the internalPointer of indexes in ParameterValueListModel.
+
+    Attributes
+        parent (TreeNode): the parent node
+        row (int): the row, needed in ParameterValueListModel.parent()
+        text (str, NoneType): the text to show
+        id (int, NoneType): the id from the db table
+    """
     def __init__(self, parent, row, text=None, id=None):
         self.parent = parent
         self.row = row
@@ -3857,7 +3865,7 @@ class TreeNode(object):
 
 
 class ParameterValueListModel(QAbstractItemModel):
-    """A class to display parameter value_list data in a treeview."""
+    """A class to display parameter value list data in a treeview."""
 
     def __init__(self, tree_view_form):
         """Initialize class"""
@@ -3871,7 +3879,7 @@ class ParameterValueListModel(QAbstractItemModel):
         self.dataChanged.connect(self._handle_data_changed)
 
     def build_tree(self):
-        """Build the value list tree"""
+        """Initialize the internal data structure of TreeNode instances."""
         self.beginResetModel()
         self._root_nodes = list()
         i = 0
@@ -3889,12 +3897,20 @@ class ParameterValueListModel(QAbstractItemModel):
         self.endResetModel()
 
     def index(self, row, column, parent=QModelIndex()):
+        """Returns the index of the item in the model specified by the given row, column and parent index.
+        Toplevel indexes get their pointer from the `_root_nodes` attribute;
+        whereas inner indexes get their pointer from the `child_nodes` attribute of the parent node.
+        """
         if not parent.isValid():
             return self.createIndex(row, column, self._root_nodes[row])
         parent_node = parent.internalPointer()
         return self.createIndex(row, column, parent_node.child_nodes[row])
 
     def parent(self, index):
+        """Returns the parent of the model item with the given index.
+        Use the internal pointer to retrieve the parent node and use it
+        to create the parent index.
+        """
         if not index.isValid():
             return QModelIndex()
         node = index.internalPointer()
@@ -3903,15 +3919,23 @@ class ParameterValueListModel(QAbstractItemModel):
         return self.createIndex(node.parent.row, 0, node.parent)
 
     def rowCount(self, parent=QModelIndex()):
+        """Returns the number of rows under the given parent.
+        Get it from the lenght of the appropriate list.
+        """
         if not parent.isValid():
             return len(self._root_nodes)
         node = parent.internalPointer()
         return len(node.child_nodes)
 
     def columnCount(self, parent=QModelIndex()):
+        """Returns the number of columns under the given parent. Always 1.
+        """
         return 1
 
     def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index.
+        Bold toplevel items. Get the DisplayRole from the `text` attribute of the internal pointer.
+        """
         if not index.isValid():
             return None
         if role == Qt.FontRole:
@@ -3924,9 +3948,15 @@ class ParameterValueListModel(QAbstractItemModel):
         return node.text
 
     def flags(self, index):
+        """Returns the item flags for the given index.
+        """
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def setData(self, index, value, role=Qt.EditRole):
+        """Sets the role data for the item at index to value.
+        Returns True if successful; otherwise returns False.
+        Basically just update the `text` attribute of the internal pointer.
+        """
         if not index.isValid():
             return False
         if role != Qt.EditRole:
@@ -3939,6 +3969,9 @@ class ParameterValueListModel(QAbstractItemModel):
         return True
 
     def appendRows(self, count, parent=QModelIndex()):
+        """Append count rows into the model.
+        Items in the new row will be children of the item represented by the parent model index.
+        """
         row = self.rowCount(parent)
         self.beginInsertRows(parent, row, row + count -1 )
         if not parent.isValid():
@@ -3948,85 +3981,102 @@ class ParameterValueListModel(QAbstractItemModel):
             root_node.child_nodes.append(TreeNode(root_node, row, text=self.empty_str))
         self.endInsertRows()
 
-    def is_last(self, index):
-        """Return True if this item is the last one for its parent."""
-        return self.rowCount(index.parent()) == index.row() + 1
-
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
     def _handle_data_changed(self, top_left, bottom_right, roles=[]):
-        # TODO: Don't handle repetead
+        """Called when data in the model changes.
+        """
         if Qt.EditRole not in roles:
             return
         parent = self.parent(top_left)
-        to_add_list = []
-        to_update_list = []
-        for row in range(top_left.row(), bottom_right.row() + 1):
-            index = self.index(row, 0, parent)
-            self._handle_index_changed(index)
-            to_add, to_update = self.items_to_add_and_update(index, parent)
-            to_add_list.append(to_add)
-            to_update_list.append(to_update)
-        self._tree_view_form.add_parameter_value_lists(*to_add_list)
-        self._tree_view_form.update_parameter_value_lists(*to_update_list)
+        if parent != self.parent(bottom_right):
+            return
+        self.append_empty_rows(bottom_right, parent)
+        to_add, to_update = self.items_to_add_and_update(top_left.row(), bottom_right.row(), parent)
+        self._tree_view_form.add_parameter_value_lists(*to_add)
+        self._tree_view_form.update_parameter_value_lists(*to_update)
 
-    def _handle_index_changed(self, index):
-        """Ensure there's always one empty item at the bottom of each parent.
-        Return value_list dict to add or to update.
+    def append_empty_rows(self, index, parent):
+        """Append emtpy rows if index is the last children, so the user can continue editing the model.
+        The argument `parent` is given for convenience.
         """
-        parent = index.parent()
-        if self.is_last(index):
+        if self.rowCount(parent) == index.row() + 1:
             self.appendRows(1, parent)
             if not parent.isValid():
                 self.appendRows(1, index)
 
-    def items_to_add_and_update(self, index, parent):
-        to_add = None
-        to_update = None
-        if parent.isValid():
-            # The changed index corresponds to a value
-            value_list = [self.index(i, 0, parent).internalPointer().text for i in range(self.rowCount(parent) - 1)]
+    def items_to_add_and_update(self, first, last, parent):
+        """Return list of items to add and update in the db.
+        """
+        to_add = list()
+        to_update = list()
+        if not parent.isValid():
+            # The changes correspond to list *names*.
+            # We need to check them all
+            for row in range(first, last + 1):
+                index = self.index(row, 0, parent)
+                node = index.internalPointer()
+                id = node.id
+                name = node.text
+                if id:
+                    # Update
+                    to_update.append(dict(id=id, name=name))
+                else:
+                    # Add
+                    value_list = [
+                        self.index(i, 0, index).internalPointer().text
+                        for i in range(self.rowCount(index) - 1)
+                    ]
+                    if value_list:
+                        to_add.append(dict(parent=index, name=name, value_list=value_list))
+        else:
+            # The changes correspond to list *values*, so it's enough to check the parent
+            value_list = [
+                self.index(i, 0, parent).internalPointer().text
+                for i in range(self.rowCount(parent) - 1)
+            ]
             id = parent.internalPointer().id
             if id:
                 # Update
-                to_update = dict(id=id, value_list=value_list)
+                to_update.append(dict(id=id, value_list=value_list))
             else:
                 # Add
                 name = parent.internalPointer().text
-                to_add = dict(parent=parent, name=name, value_list=value_list)
-        else:
-            # The changed index corresponds to a name
-            id = index.internalPointer().id
-            name = index.internalPointer().text
-            if id:
-                # Update
-                to_update = dict(id=id, name=name)
-            else:
-                # Add
-                value_list = [self.index(i, 0, index).internalPointer().text for i in range(self.rowCount(index) - 1)]
-                if value_list:
-                    to_add = dict(parent=index, name=name, value_list=value_list)
+                to_add.append(dict(parent=parent, name=name, value_list=value_list))
         return to_add, to_update
 
     def batch_set_data(self, indexes, values):
         """Set edit role for indexes to values in batch."""
-        # TODO: this needs testing
+        # NOTE: Not in use at the moment
         parented_rows = dict()
         for index, value in zip(indexes, values):
-            item = self.itemFromIndex(index)
-            item.setData(value, role=Qt.EditRole)
-            parent = item.parent()
-            parented_rows.setdefault(parent, list()).append(item.row())
-        # Handle item changed, but only for the last item under each parent
+            index.internalPointer().text = value
+            parent = self.parent(index)
+            parented_rows.setdefault(parent, list()).append(index.row())
+        # Emit dataChanged parent-wise
         for parent, rows in parented_rows.items():
-            item = parent.child(max(rows))
-            to_add, to_update = self._handle_item_changed(item)
-
+            top_left = self.index(min(rows), 0, parent)
+            bottom_right = self.index(max(rows), 0, parent)
+            self.dataChanged.emit(top_left, bottom_right, [Qt.EditRole])
 
     def removeRow(self, row, parent=QModelIndex()):
         """Remove row under parent, but never the last row (which is the empty one)"""
         if row == self.rowCount(parent) - 1:
             return
-        super().removeRow(row, parent)
+        self.beginRemoveRows(parent, row, row)
+        if not parent.isValid():
+            # Row is at the top level
+            self._root_nodes.pop(row)
+            # Update row attribute of tail items. This is awful but we need it.
+            for r in range(row, len(self._root_nodes)):
+                node = self._root_nodes[r]
+                node.row = r
+        else:
+            # Row is at the low level
+            parent_node = parent.internalPointer()
+            child_nodes = parent_node.child_nodes
+            child_nodes.pop(row)
+            # We don't need to update the row attribute of the childs, since they're not used.
+        self.endRemoveRows()
 
 
 class JSONArrayModel(EmptyRowModel):
