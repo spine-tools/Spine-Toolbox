@@ -69,12 +69,12 @@ class TestTreeViewForm(unittest.TestCase):
                 mock.patch("spinedatabase_api.DiffDatabaseMapping") as mock_db_map:
             mock_db_map.object_parameter_fields.return_value = [
                 'id', 'object_class_id', 'object_class_name', 'parameter_name',
-                'enum_id', 'enum_name', 'parameter_tag_id_list', 'parameter_tag_list'
+                'value_list_id', 'value_list_name', 'parameter_tag_id_list', 'parameter_tag_list'
             ]
             mock_db_map.relationship_parameter_fields.return_value = [
                 'id', 'relationship_class_id', 'relationship_class_name',
                 'object_class_id_list', 'object_class_name_list', 'parameter_name',
-                'enum_id', 'enum_name', 'parameter_tag_id_list', 'parameter_tag_list'
+                'value_list_id', 'value_list_name', 'parameter_tag_id_list', 'parameter_tag_list'
             ]
             mock_db_map.object_parameter_value_fields.return_value = [
                 'id', 'object_class_id', 'object_class_name', 'object_id', 'object_name',

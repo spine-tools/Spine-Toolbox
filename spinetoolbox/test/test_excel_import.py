@@ -66,14 +66,14 @@ class TestExcelIntegration(unittest.TestCase):
         db_map = DiffDatabaseMapping(
             'sqlite:///' + TEMP_SQLITE_FILENAME,
             username='IntegrationTest',
-            migrate=True)
+            upgrade=True)
 
         # create empty database for loading excel into
         create_new_spine_database('sqlite:///' + TEMP_SQLITE_TEST_FILENAME)
         db_map_test = DiffDatabaseMapping(
             'sqlite:///' + TEMP_SQLITE_TEST_FILENAME,
             username='IntegrationTest',
-            migrate=True)
+            upgrade=True)
 
         # delete all object_classes to empty database
         oc = set(oc. id for oc in db_map_test.object_class_list().all())
