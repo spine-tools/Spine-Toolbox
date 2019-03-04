@@ -551,7 +551,7 @@ class Link(QGraphicsPathItem):
             e.ignore()
 
     def mouseDoubleClickEvent(self, e):
-        """Accept event to prevent unwanted feedback icons to be created when propagating this event
+        """Accept event to prevent unwanted feedback links to be created when propagating this event
         to connector buttons underneath.
         """
         if self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
