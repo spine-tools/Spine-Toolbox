@@ -546,9 +546,9 @@ class Link(QGraphicsPathItem):
         else:
             # Trigger connector button if underneath
             if self.src_icon.conn_button().isUnderMouse():
-                self.src_icon.mousePressEvent(e)
+                self.src_icon.conn_button().mousePressEvent(e)
             elif self.dst_icon.conn_button().isUnderMouse():
-                self.dst_icon.mousePressEvent(e)
+                self.dst_icon.conn_button().mousePressEvent(e)
 
     def contextMenuEvent(self, e):
         """Show context menu unless mouse is over one of the slot buttons.
