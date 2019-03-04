@@ -18,10 +18,11 @@ Functions to make and handle QToolBars.
 
 # TODO: QToolBars should be added to the UI in Qt Designer
 
-from PySide2.QtCore import Qt, QMimeData, Signal
+from PySide2.QtCore import Qt, QMimeData, Signal, QSize
 from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QButtonGroup, \
     QPushButton, QWidget, QSizePolicy
 from PySide2.QtGui import QIcon, QPixmap, QDrag
+from PySide2.QtSvg import QSvgRenderer, QGraphicsSvgItem
 from config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 
 
@@ -34,28 +35,26 @@ class ItemToolBar(QToolBar):
     def __init__(self, parent):
         """Init class"""
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
-        label = QLabel("Add Item")
+        label = QLabel("Drag & Drop Icon")
         self.addWidget(label)
-        # TODO: Use QSvgRenderer to load svg files
         # DS
-        data_store_pixmap = QPixmap(":/icons/project_item_icons/database.svg")
+        data_store_pixmap = QIcon(":/icons/project_item_icons/database.svg").pixmap(24, 24)
         data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
         data_store_action = self.addWidget(data_store_widget)
         # DC
-        data_connection_pixmap = QPixmap(":/icons/project_item_icons/file-alt.svg")
+        data_connection_pixmap = QIcon(":/icons/project_item_icons/file-alt.svg").pixmap(24, 24)
         data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
         data_connection_action = self.addWidget(data_connection_widget)
         # Tool
-        tool_pixmap = QPixmap(":/icons/project_item_icons/hammer.svg")
+        tool_pixmap = QIcon(":/icons/project_item_icons/hammer.svg").pixmap(24, 24)
         tool_widget = DraggableWidget(self, tool_pixmap, "Tool")
         tool_action = self.addWidget(tool_widget)
         # View
-        view_pixmap = QPixmap(":/icons/project_item_icons/binoculars.svg")
+        view_pixmap = QIcon(":/icons/project_item_icons/binoculars.svg").pixmap(24, 24)
         view_widget = DraggableWidget(self, view_pixmap, "View")
         view_action = self.addWidget(view_widget)
         # set remove all action
-        remove_all_icon = QIcon()
-        remove_all_icon.addPixmap(QPixmap(":/icons/remove_all.png"), QIcon.Normal, QIcon.On)
+        remove_all_icon = QIcon(":/icons/remove_all.png").pixmap(24, 24)
         remove_all = QAction(remove_all_icon, "Remove All", parent)
         remove_all.triggered.connect(parent.remove_all_items)
         self.addSeparator()
@@ -76,10 +75,10 @@ class DraggableWidget(QLabel):
     def __init__(self, parent, pixmap, text):
         super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
         self.text = text
-        self.setPixmap(pixmap.scaled(28, 28))
+        self.setPixmap(pixmap)
         self.drag_start_pos = None
         self.setToolTip("""
-            <p>Drag-and-drop this icon into the Main View to create a new <b>{}</b> item.</p>
+            <p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>
         """.format(self.text))
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
