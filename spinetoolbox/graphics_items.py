@@ -260,7 +260,7 @@ class DataConnectionIcon(ProjectItemIcon):
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.ignore()
+        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
         self.connector_button.setParentItem(self)
@@ -344,7 +344,7 @@ class ToolIcon(ProjectItemIcon):
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.ignore()
+        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         # NOTE: setting the parent item moves the items as one!!
         self.name_item.setParentItem(self)
@@ -419,7 +419,7 @@ class DataStoreIcon(ProjectItemIcon):
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.ignore()
+        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
         self.connector_button.setParentItem(self)
@@ -451,7 +451,7 @@ class ViewIcon(ProjectItemIcon):
         self.connector_button.mousePressEvent = self.connector_mouse_press_event
         self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
         self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.ignore()
+        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
         self.connector_button.setParentItem(self)
@@ -546,12 +546,16 @@ class Link(QGraphicsPathItem):
         """
         if e.button() != Qt.LeftButton:
             e.ignore()
-        else:
-            # Trigger connector button if underneath
-            if self.src_icon.conn_button().isUnderMouse():
-                self.src_icon.conn_button().mousePressEvent(e)
-            elif self.dst_icon.conn_button().isUnderMouse():
-                self.dst_icon.conn_button().mousePressEvent(e)
+        elif self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
+            # Ignore event so it gets propagated to the connector button.
+            e.ignore()
+
+    def mouseDoubleClickEvent(self, e):
+        """Accept event to prevent unwanted feedback icons to be created when propagating this event
+        to connector buttons underneath.
+        """
+        if self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
+            e.accept()
 
     def contextMenuEvent(self, e):
         """Show context menu unless mouse is over one of the slot buttons.
