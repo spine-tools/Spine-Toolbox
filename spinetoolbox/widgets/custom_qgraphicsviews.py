@@ -45,7 +45,8 @@ class CustomQGraphicsView(QGraphicsView):
         self.min_rel_zoom_factor = 0.1
 
     def keyPressEvent(self, event):
-        """Overridden method. Enable zooming with plus and minus keyboard keys.
+        """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
+        Send event downstream to QGraphicsItems if pressed key is not handled here.
 
         Args:
             event (QKeyEvent): Pressed key
