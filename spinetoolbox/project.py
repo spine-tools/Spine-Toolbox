@@ -189,8 +189,8 @@ class SpineToolboxProject(MetaObject):
                 item_dict[category][name] = dict()
                 item_dict[category][name]["short name"] = item.short_name
                 item_dict[category][name]["description"] = item.description
-                x = item.get_icon().master().sceneBoundingRect().center().x()
-                y = item.get_icon().master().sceneBoundingRect().center().y()
+                x = item.get_icon().sceneBoundingRect().center().x()
+                y = item.get_icon().sceneBoundingRect().center().y()
                 item_dict[category][name]["x"] = x
                 item_dict[category][name]["y"] = y
                 # Save item type specific things
