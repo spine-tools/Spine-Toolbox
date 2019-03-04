@@ -27,7 +27,7 @@ from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication, QCheckBox
 from project_item import ProjectItem
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
-from graphics_items import DataStoreImage
+from graphics_items import DataStoreIcon
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
@@ -72,7 +72,7 @@ class DataStore(ProjectItem):
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                          " Check permissions.".format(self.data_dir))
-        self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = DataStoreIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._reference = reference
         self.load_reference_into_selections()
         self._sigs = self.make_signal_handler_dict()

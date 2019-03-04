@@ -190,7 +190,7 @@ class Ui_MainWindow(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 269, 345))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 349, 361))
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_15 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
         self.verticalLayout_15.setObjectName("verticalLayout_15")
@@ -560,7 +560,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 117, 264))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 349, 361))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.verticalLayout_16 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_2)
         self.verticalLayout_16.setObjectName("verticalLayout_16")
@@ -731,7 +731,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 269, 230))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 349, 361))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.verticalLayout_17 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout_17.setObjectName("verticalLayout_17")
@@ -881,7 +881,7 @@ class Ui_MainWindow(object):
         self.scrollArea_4.setWidgetResizable(True)
         self.scrollArea_4.setObjectName("scrollArea_4")
         self.scrollAreaWidgetContents_4 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 101, 157))
+        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 349, 361))
         self.scrollAreaWidgetContents_4.setObjectName("scrollAreaWidgetContents_4")
         self.verticalLayout_18 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_4)
         self.verticalLayout_18.setObjectName("verticalLayout_18")
@@ -1090,22 +1090,22 @@ class Ui_MainWindow(object):
         self.actionAbout.setObjectName("actionAbout")
         self.actionAdd_Data_Connection = QtWidgets.QAction(MainWindow)
         icon9 = QtGui.QIcon()
-        icon9.addPixmap(QtGui.QPixmap(":/icons/dc_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon9.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/file-alt.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionAdd_Data_Connection.setIcon(icon9)
         self.actionAdd_Data_Connection.setObjectName("actionAdd_Data_Connection")
         self.actionAdd_Data_Store = QtWidgets.QAction(MainWindow)
         icon10 = QtGui.QIcon()
-        icon10.addPixmap(QtGui.QPixmap(":/icons/ds_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon10.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/database.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionAdd_Data_Store.setIcon(icon10)
         self.actionAdd_Data_Store.setObjectName("actionAdd_Data_Store")
         self.actionAdd_Tool = QtWidgets.QAction(MainWindow)
         icon11 = QtGui.QIcon()
-        icon11.addPixmap(QtGui.QPixmap(":/icons/tool_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon11.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/hammer.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionAdd_Tool.setIcon(icon11)
         self.actionAdd_Tool.setObjectName("actionAdd_Tool")
         self.actionAdd_View = QtWidgets.QAction(MainWindow)
         icon12 = QtGui.QIcon()
-        icon12.addPixmap(QtGui.QPixmap(":/icons/view_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon12.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/binoculars.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionAdd_View.setIcon(icon12)
         self.actionAdd_View.setObjectName("actionAdd_View")
         self.actionSave = QtWidgets.QAction(MainWindow)
@@ -1321,7 +1321,7 @@ class Ui_MainWindow(object):
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
 from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 import resources_icons_rc

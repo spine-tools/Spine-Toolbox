@@ -16,13 +16,13 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-import logging
-from PySide2.QtGui import QIcon, QPixmap, QDrag
+# TODO: QToolBars should be added to the UI in Qt Designer
+
+from PySide2.QtCore import Qt, QMimeData, Signal
 from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QButtonGroup, \
     QPushButton, QWidget, QSizePolicy
-from PySide2.QtCore import Qt, QMimeData, Signal, Slot
+from PySide2.QtGui import QIcon, QPixmap, QDrag
 from config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
-from graphics_items import ItemImage
 
 
 class ItemToolBar(QToolBar):
@@ -36,20 +36,21 @@ class ItemToolBar(QToolBar):
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         label = QLabel("Add Item")
         self.addWidget(label)
+        # TODO: Use QSvgRenderer to load svg files
         # DS
-        data_store_pixmap = QPixmap(":/icons/ds_icon.png")
+        data_store_pixmap = QPixmap(":/icons/project_item_icons/database.svg")
         data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
         data_store_action = self.addWidget(data_store_widget)
         # DC
-        data_connection_pixmap = QPixmap(":/icons/dc_icon.png")
+        data_connection_pixmap = QPixmap(":/icons/project_item_icons/file-alt.svg")
         data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
         data_connection_action = self.addWidget(data_connection_widget)
         # Tool
-        tool_pixmap = QPixmap(":/icons/tool_icon.png")
+        tool_pixmap = QPixmap(":/icons/project_item_icons/hammer.svg")
         tool_widget = DraggableWidget(self, tool_pixmap, "Tool")
         tool_action = self.addWidget(tool_widget)
         # View
-        view_pixmap = QPixmap(":/icons/view_icon.png")
+        view_pixmap = QPixmap(":/icons/project_item_icons/binoculars.svg")
         view_widget = DraggableWidget(self, view_pixmap, "View")
         view_action = self.addWidget(view_widget)
         # set remove all action

@@ -18,9 +18,9 @@ Custom QGraphicsScene used in the Design View.
 
 import logging
 from PySide2.QtWidgets import QGraphicsScene
-from PySide2.QtCore import Signal, Qt
+from PySide2.QtCore import Signal
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import ItemImage
+from graphics_items import ToolIcon
 from widgets.toolbars import DraggableWidget
 
 
@@ -76,23 +76,28 @@ class CustomQGraphicsScene(QGraphicsScene):
         y = pos.y() - 35
         w = 70
         h = 70
+        # TODO: Check if the item_shadow stays on scene or if its deleted?
         if text == "Data Store":
-            brush = QBrush(QColor(0, 255, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
+            # brush = QBrush(QColor(0, 255, 255, 160))
+            # self.item_shadow = ItemImage(None, x, y, w, h, "")
+            # self.item_shadow.set_item_attributes(pen, brush)
             self._toolbox.show_add_data_store_form(pos.x(), pos.y())
         elif text == "Data Connection":
-            brush = QBrush(QColor(0, 0, 255, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_data_master(pen, brush)
+            # brush = QBrush(QColor(0, 0, 255, 160))
+            # self.item_shadow = ItemImage(None, x, y, w, h, '')
+            # self.item_shadow.set_item_attributes(pen, brush)
             self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
         elif text == "Tool":
-            brush = QBrush(QColor(255, 0, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
+            # brush = QBrush(QColor(255, 0, 0, 160))
+            # self.item_shadow = ItemImage(None, x, y, w, h, '')
+            # self.item_shadow.set_item_attributes(pen, brush)
             self._toolbox.show_add_tool_form(pos.x(), pos.y())
         elif text == "View":
-            brush = QBrush(QColor(0, 255, 0, 160))
-            self.item_shadow = ItemImage(None, x, y, w, h, '').make_master(pen, brush)
+            # brush = QBrush(QColor(0, 255, 0, 160))
+            # self.item_shadow = ItemImage(None, x, y, w, h, '')
+            # self.item_shadow.set_item_attributes(pen, brush)
             self._toolbox.show_add_view_form(pos.x(), pos.y())
-        self.addItem(self.item_shadow)
+        # self.addItem(self.item_shadow)
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.
@@ -103,7 +108,8 @@ class CustomQGraphicsScene(QGraphicsScene):
         """
         step = 20  # Grid step
         rect = self.sceneRect()  # Override to only draw background for the scene rectangle
-        # logging.debug("sceneRect pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})".format(rect.x(), rect.y(), rect.width(), rect.height()))
+        # logging.debug("sceneRect pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
+        #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
         painter.setPen(QPen(QColor(200, 200, 255, 125)))
         # Draw horizontal grid
         start = round(rect.top(), step)

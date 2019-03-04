@@ -27,7 +27,7 @@ from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
-from graphics_items import ToolImage
+from graphics_items import ToolIcon
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from helpers import create_dir
 
@@ -80,7 +80,7 @@ class Tool(ProjectItem):
                                          " Check permissions.".format(self.data_dir))
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        self._graphics_item = ToolImage(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
+        self._graphics_item = ToolIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
         self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):

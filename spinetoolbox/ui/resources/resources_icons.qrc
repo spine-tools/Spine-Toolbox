@@ -4,6 +4,10 @@
     <file>app.ico</file>
   </qresource>
   <qresource prefix="icons">
+    <file>project_item_icons/binoculars.svg</file>
+    <file>project_item_icons/file-alt.svg</file>
+    <file>project_item_icons/database.svg</file>
+    <file>project_item_icons/hammer.svg</file>
     <file>minus_object_icon.png</file>
     <file>import_ds.png</file>
     <file>close.png</file>

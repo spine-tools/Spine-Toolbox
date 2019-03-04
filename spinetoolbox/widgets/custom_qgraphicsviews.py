@@ -44,22 +44,20 @@ class CustomQGraphicsView(QGraphicsView):
         self.max_rel_zoom_factor = 10.0
         self.min_rel_zoom_factor = 0.1
 
-    # def keyPressEvent(self, event):
-    #     """Overridden method. Enable zooming with plus and minus keyboard keys.
-    #
-    #     Args:
-    #         event (QKeyEvent): Pressed key
-    #     """
-    #     logging.debug("scene keyPressEvent")
-    #     if event.key() == Qt.Key_Plus:
-    #         self.zoom_in()
-    #     elif event.key() == Qt.Key_Minus:
-    #         self.zoom_out()
-    #     elif event.key() == Qt.Key_Comma:
-    #         self.reset_zoom()
-    #     else:
-    #         event.ignore()
-    #     # TODO: Check that this does not conflict with other key presses (Delete in particular)
+    def keyPressEvent(self, event):
+        """Overridden method. Enable zooming with plus and minus keyboard keys.
+
+        Args:
+            event (QKeyEvent): Pressed key
+        """
+        if event.key() == Qt.Key_Plus:
+            self.zoom_in()
+        elif event.key() == Qt.Key_Minus:
+            self.zoom_out()
+        elif event.key() == Qt.Key_Comma:
+            self.reset_zoom()
+        else:
+            super().keyPressEvent(event)
 
     def enterEvent(self, event):
         """Overridden method. Do not show the stupid open hand mouse cursor.

@@ -541,7 +541,7 @@ class ToolboxUI(QMainWindow):
                 previous_item = self.project_item_model.project_item(previous)
                 # self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
                 # Deselect previous item's QGraphicsItem
-                previous_item.get_icon().master().setSelected(False)
+                previous_item.get_icon().setSelected(False)
                 ret = previous_item.deactivate()
                 if not ret:
                     self.msg_error.emit("Something went wrong in disconnecting {0} signals.".format(previous_item.name))
@@ -563,13 +563,13 @@ class ToolboxUI(QMainWindow):
             previous_item = self.project_item_model.project_item(previous)
             # self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
             # Deselect previous item's QGraphicsItem
-            previous_item.get_icon().master().setSelected(False)
+            previous_item.get_icon().setSelected(False)
             ret = previous_item.deactivate()
             if not ret:
                 self.msg_error.emit("Something went wrong in disconnecting {0} signals".format(previous_item.name))
         # self.msg.emit("Connecting signals of {0}".format(current_item.name))
         # Set current item QGraphicsItem selected as well
-        current_item.get_icon().master().setSelected(True)
+        current_item.get_icon().setSelected(True)
         current_item.activate()
         self.activate_item_tab(current_item)
 
@@ -822,7 +822,7 @@ class ToolboxUI(QMainWindow):
         except AttributeError:
             data_dir = None
         # Remove item icon (QGraphicsItems) from scene
-        self.ui.graphicsView.scene().removeItem(project_item.get_icon().master())
+        self.ui.graphicsView.scene().removeItem(project_item.get_icon())
         # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
         if not self.connection_model.remove_item(project_item.name):
             self.msg_error.emit("Removing item {0} from connection model failed".format(project_item.name))
