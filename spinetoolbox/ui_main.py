@@ -821,14 +821,14 @@ class ToolboxUI(QMainWindow):
             data_dir = project_item.data_dir
         except AttributeError:
             data_dir = None
-        # Remove item icon (QGraphicsItems) from scene
-        self.ui.graphicsView.scene().removeItem(project_item.get_icon())
         # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
         if not self.connection_model.remove_item(project_item.name):
             self.msg_error.emit("Removing item {0} from connection model failed".format(project_item.name))
         # Remove item from project model
         if not self.project_item_model.remove_item(project_item, parent=ind.parent()):
             self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
+        # Remove item icon (QGraphicsItems) from scene
+        self.ui.graphicsView.scene().removeItem(project_item.get_icon())
         if delete_item:
             if data_dir:
                 # Remove data directory and all its contents
