@@ -90,9 +90,12 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item.setElementId("")  # guess empty string loads the whole file
         dim_max = max(size.width(), size.height())
         # logging.debug("p_max:{0}".format(p_max))
-        rect_w = self.rect().width()  # Parent rect width
-        self.svg_item.setScale(rect_w/dim_max)
-        self.svg_item.setPos(self.rect().x(), self.rect().y())  # TODO: Set to center of the background rectangle and leave a margin
+        rect_w = self.rect().width() # Parent rect width
+        margin = 5
+        self.svg_item.setScale((rect_w - margin)/dim_max)
+        x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
+        y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
+        self.svg_item.setPos(self.rect().x() + x_offset, self.rect().y() + y_offset)
         scaled_img_rect = self.svg_item.sceneBoundingRect()
         # logging.debug("scaled rect:{0}".format(scaled_img_rect))
         self.svg_item.setGraphicsEffect(self.colorizer)
