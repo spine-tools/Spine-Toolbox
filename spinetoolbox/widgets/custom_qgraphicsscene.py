@@ -18,9 +18,9 @@ Custom QGraphicsScene used in the Design View.
 
 import logging
 from PySide2.QtWidgets import QGraphicsScene
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, Qt
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import ToolIcon
+from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon
 from widgets.toolbars import DraggableWidget
 
 
@@ -71,33 +71,23 @@ class CustomQGraphicsScene(QGraphicsScene):
         event.acceptProposedAction()
         text = event.mimeData().text()
         pos = event.scenePos()
-        pen = QPen(QColor('white'))
         x = pos.x() - 35
         y = pos.y() - 35
         w = 70
         h = 70
         # TODO: Check if the item_shadow stays on scene or if its deleted?
         if text == "Data Store":
-            # brush = QBrush(QColor(0, 255, 255, 160))
-            # self.item_shadow = ItemImage(None, x, y, w, h, "")
-            # self.item_shadow.set_item_attributes(pen, brush)
+            self.item_shadow = DataStoreIcon(self._toolbox, x, y, w, h, "")
             self._toolbox.show_add_data_store_form(pos.x(), pos.y())
         elif text == "Data Connection":
-            # brush = QBrush(QColor(0, 0, 255, 160))
-            # self.item_shadow = ItemImage(None, x, y, w, h, '')
-            # self.item_shadow.set_item_attributes(pen, brush)
+            self.item_shadow = DataConnectionIcon(self._toolbox, x, y, w, h, "")
             self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
         elif text == "Tool":
-            # brush = QBrush(QColor(255, 0, 0, 160))
-            # self.item_shadow = ItemImage(None, x, y, w, h, '')
-            # self.item_shadow.set_item_attributes(pen, brush)
+            self.item_shadow = ToolIcon(self._toolbox, x, y, w, h, "")
             self._toolbox.show_add_tool_form(pos.x(), pos.y())
         elif text == "View":
-            # brush = QBrush(QColor(0, 255, 0, 160))
-            # self.item_shadow = ItemImage(None, x, y, w, h, '')
-            # self.item_shadow.set_item_attributes(pen, brush)
+            self.item_shadow = ViewIcon(self._toolbox, x, y, w, h, "")
             self._toolbox.show_add_view_form(pos.x(), pos.y())
-        # self.addItem(self.item_shadow)
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.
