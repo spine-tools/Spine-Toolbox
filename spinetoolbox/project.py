@@ -170,8 +170,11 @@ class SpineToolboxProject(MetaObject):
         project_dict['work_dir'] = self.work_dir
         project_dict['tool_templates'] = tool_def_paths
         connection_table = self._toolbox.connection_model.get_connections()
-        bool_con_table = [[False if not j else True for j in connection_table[i]] for i in range(len(connection_table))]
-        project_dict['connections'] = bool_con_table
+        from_to_conn_table = [
+            [False if not j else (j.src_connector.position, j.dst_connector.position) for j in connection_table[i]]
+            for i in range(len(connection_table))
+        ]
+        project_dict['connections'] = from_to_conn_table
         project_dict["scene_x"] = self._toolbox.ui.graphicsView.scene().sceneRect().x()
         project_dict["scene_y"] = self._toolbox.ui.graphicsView.scene().sceneRect().y()
         project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()

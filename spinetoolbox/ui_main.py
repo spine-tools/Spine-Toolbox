@@ -1241,6 +1241,9 @@ class ToolboxUI(QMainWindow):
         if option == "Remove connection":
             self.ui.graphicsView.remove_link(link.model_index)
             return
+        elif option == "Take connection":
+            self.ui.graphicsView.take_link(link.model_index)
+            return
         elif option == "Send to bottom":
             link.send_to_bottom()
         else:  # No option selected

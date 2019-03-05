@@ -136,6 +136,7 @@ class LinkContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         self.add_action("Remove connection")
+        self.add_action("Take connection")
         if parallel_link:
             self.add_action("Send to bottom")
         self.exec_(position)
