@@ -360,7 +360,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 data = self._connection_model.data(index, Qt.UserRole)
                 # NOTE: data UserRole returns a list with source and destination positions
                 if data:
-                    src_pos, dst_pos = data
+                    try:
+                        src_pos, dst_pos = data
+                    except TypeError:
+                        # Happens when first loading a project that wasn't saved with the current version
+                        src_pos = dst_pos = "bottom"
                     src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                     dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
                     src = self._project_item_model.find_item(src_name)
