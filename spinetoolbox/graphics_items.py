@@ -30,6 +30,67 @@ from math import atan2, degrees, sin, cos, pi
 from spinedatabase_api import SpineDBAPIError
 
 
+class ConnectorButton(QGraphicsRectItem):
+    """Connector button graphics item. Used for Link drawing between project items.
+
+    Attributes:
+        parent (QGraphicsItem): Project item bg rectangle
+        toolbox (ToolBoxUI): QMainWindow instance
+        w (int): Project item bg rectangle width
+        h (int): Project item bg rectangle height
+    """
+    def __init__(self, parent, toolbox, w, h):
+        """Class constructor."""
+        super().__init__()
+        self._parent = parent
+        self._toolbox = toolbox
+        self.setPen(QPen(Qt.NoPen))
+        # Regular and hover brushes
+        self.brush = QBrush(QColor(255, 255, 255, 0))  # Used in filling the item
+        self.hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
+        self.setBrush(self.brush)
+        self.setRect(self._parent.rect().adjusted(2.5*w/7, 2.5*h/7, -2.5*w/7, -2.5*h/7))
+        self.setAcceptHoverEvents(True)
+
+    def mousePressEvent(self, event):
+        """Connector button mouse press event. Starts drawing a link.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        if not event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            self._parent.show_item_info()
+            # Start drawing a link
+            rect = self.sceneBoundingRect()
+            self._toolbox.ui.graphicsView.draw_links(rect, self._parent.name())
+
+    def mouseDoubleClickEvent(self, event):
+        """Connector button mouse double click event. Makes sure the LinkDrawer is hidden.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        event.accept()
+
+    def hoverEnterEvent(self, event):
+        """Sets a darker shade to connector button when mouse enters its boundaries.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        self.setBrush(self.hover_brush)
+
+    def hoverLeaveEvent(self, event):
+        """Restore original brush when mouse leaves connector button boundaries.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        self.setBrush(self.brush)
+
+
 class ProjectItemIcon(QGraphicsRectItem):
     """Base class for Tool and View project item icons drawn in Design View.
 
@@ -53,18 +114,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         # Make item name graphics item.
         self.name_item = QGraphicsSimpleTextItem(name)
         self.set_name_attributes()  # Set font, size, position, etc.
-        # Make pen and brush for the connector button
-        # connector_pen = QPen(QColor('black'))  # Used in drawing the item outline
-        # connector_pen.setStyle(Qt.DotLine)
-        connector_pen = QPen(Qt.NoPen)
-        self.connector_brush = QBrush(QColor(255, 255, 255, 0))  # Used in filling the item
-        self.connector_hover_brush = QBrush(QColor(50, 0, 50, 128))
-        # Make connector button graphics item
-        self.connector_button = QGraphicsRectItem()
-        self.connector_button.setPen(connector_pen)
-        self.connector_button.setBrush(self.connector_brush)
-        self.connector_button.setRect(self.rect().adjusted(2.5*w/7, 2.5*h/7, -2.5*w/7, -2.5*h/7))
-        self.connector_button.setAcceptHoverEvents(True)
+        # Make connector button
+        self.connector_button = ConnectorButton(self, toolbox, w, h)
 
     def setup(self, pen, brush, svg, svg_color):
         """Setup item's attributes according to project item type.
@@ -181,30 +232,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         super().mouseReleaseEvent(event)
 
-    def connector_mouse_press_event(self, event):
-        """Catch connector button click. Starts drawing a link."""
-        if not event.button() == Qt.LeftButton:
-            event.accept()
-        else:
-            self.show_item_info()
-            self.draw_link()
-
-    def connector_hover_enter_event(self, event):
-        """Set a darker shade to connector button when mouse enters icon boundaries.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        self.connector_button.setBrush(self.connector_hover_brush)
-
-    def connector_hover_leave_event(self, event):
-        """Restore original brush when mouse leaves icon boundaries.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        self.connector_button.setBrush(self.connector_brush)
-
     def contextMenuEvent(self, event):
         """Show item context menu.
 
@@ -232,11 +259,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         ind = self._toolbox.project_item_model.find_item(self.name())
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
-    def draw_link(self):
-        """Start or stop drawing a link from or to the center point of the connector button."""
-        rect = self.conn_button().sceneBoundingRect()
-        self._toolbox.ui.graphicsView.draw_links(rect, self.name())
-
 
 class DataConnectionIcon(ProjectItemIcon):
     """Data Connection icon for the Design View.
@@ -256,12 +278,8 @@ class DataConnectionIcon(ProjectItemIcon):
         self.brush = QBrush(QColor("#e6e6ff"))  # QBrush for the background rectangle
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/file-alt.svg", QColor(0, 0, 255, 160))
         self.setAcceptDrops(True)
-        # Overridden events in order to avoid subclassing QGraphicsRectItem for a custom connector_button
-        self.connector_button.mousePressEvent = self.connector_mouse_press_event
-        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
-        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
+        # NOTE: setting the parent item moves the items as one!
         self.name_item.setParentItem(self)
         self.connector_button.setParentItem(self)
         self.svg_item.setParentItem(self)
@@ -340,13 +358,7 @@ class ToolIcon(ProjectItemIcon):
         # Draw icon
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/hammer.svg", QColor("red"))
         self.setAcceptDrops(False)
-        # Override connector button events
-        self.connector_button.mousePressEvent = self.connector_mouse_press_event
-        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
-        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
-        # NOTE: setting the parent item moves the items as one!!
         self.name_item.setParentItem(self)
         self.connector_button.setParentItem(self)
         self.svg_item.setParentItem(self)
@@ -415,11 +427,6 @@ class DataStoreIcon(ProjectItemIcon):
         # Setup icons and attributes
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/database.svg", QColor("#cc33ff"))
         self.setAcceptDrops(False)
-        # Override connector button events
-        self.connector_button.mousePressEvent = self.connector_mouse_press_event
-        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
-        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
         self.connector_button.setParentItem(self)
@@ -447,11 +454,6 @@ class ViewIcon(ProjectItemIcon):
         # Setup icons and attributes
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/binoculars.svg", QColor("#33cc33"))
         self.setAcceptDrops(False)
-        # Override connector button events
-        self.connector_button.mousePressEvent = self.connector_mouse_press_event
-        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
-        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
         self.connector_button.setParentItem(self)
@@ -641,11 +643,7 @@ class Link(QGraphicsPathItem):
 
 
 class LinkDrawer(QGraphicsPathItem):
-    """An item that allows one to draw links between slot buttons in QGraphicsView.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-    """
+    """An item that allows one to draw links between slot buttons in QGraphicsView."""
     def __init__(self):
         """Initializes instance."""
         super().__init__()
