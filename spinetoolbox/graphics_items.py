@@ -30,27 +30,51 @@ from math import atan2, degrees, sin, cos, pi
 from spinedatabase_api import SpineDBAPIError
 
 
-class ConnectorButton(QGraphicsRectItem):
+class ConnectorButton(QGraphicsEllipseItem):
     """Connector button graphics item. Used for Link drawing between project items.
 
     Attributes:
         parent (QGraphicsItem): Project item bg rectangle
         toolbox (ToolBoxUI): QMainWindow instance
-        w (int): Project item bg rectangle width
-        h (int): Project item bg rectangle height
+        position (str): Eiter "center", "left", "bottom", or "right"
     """
-    def __init__(self, parent, toolbox, w, h):
+    def __init__(self, parent, toolbox, position="center"):
         """Class constructor."""
         super().__init__()
         self._parent = parent
         self._toolbox = toolbox
-        self.setPen(QPen(Qt.NoPen))
+        self._position = position
+        self.setPen(QPen(Qt.DotLine))
         # Regular and hover brushes
         self.brush = QBrush(QColor(255, 255, 255, 0))  # Used in filling the item
         self.hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
         self.setBrush(self.brush)
-        self.setRect(self._parent.rect().adjusted(2.5*w/7, 2.5*h/7, -2.5*w/7, -2.5*h/7))
+        extent = 20
+        rect = QRectF(0, 0, extent, extent)
+        parent_rect = parent.rect()
+        if position == "center":
+            rect.moveCenter(parent_rect.center())
+        elif position == "top":
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top()))
+        elif position == "left":
+            rect.moveCenter(QPointF(parent_rect.left(), parent_rect.center().y()))
+        elif position == "bottom":
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom()))
+        elif position == "right":
+            rect.moveCenter(QPointF(parent_rect.right(), parent_rect.center().y()))
+        self.setRect(rect)
+        #if position == "center":
+        #    self.setRect(self._parent.rect().adjusted((2.5/7)*w, (2.5/7)*h, -(2.5/7)*w, -(2.5/7)*h))
+        #elif position == "top":
+        #    self.setRect(self._parent.rect().adjusted((2.5/7)*w, -(1/7)*h, -(2.5/7)*w, -(6/7)*h))
+        #elif position == "left":
+        #    self.setRect(self._parent.rect().adjusted(-(1/7)*w, (2.5/7)*h, -(6/7)*w, -(2.5/7)*h))
+        #elif position == "bottom":
+        #    self.setRect(self._parent.rect().adjusted((2.5/7)*w, (6/7)*h, -(2.5/7)*w, (1/7)*h))
+        #elif position == "right":
+        #    self.setRect(self._parent.rect().adjusted((6/7)*w, (2.5/7)*h, (1/7)*w, -(2.5/7)*h))
         self.setAcceptHoverEvents(True)
+        self.setCursor(Qt.PointingHandCursor)
 
     def mousePressEvent(self, event):
         """Connector button mouse press event. Starts drawing a link.
@@ -63,8 +87,8 @@ class ConnectorButton(QGraphicsRectItem):
         else:
             self._parent.show_item_info()
             # Start drawing a link
-            rect = self.sceneBoundingRect()
-            self._toolbox.ui.graphicsView.draw_links(rect, self._parent.name())
+            self._toolbox.ui.graphicsView.draw_links(self)
+            # self._toolbox.ui.graphicsView.draw_links(rect, self._parent.name())
 
     def mouseDoubleClickEvent(self, event):
         """Connector button mouse double click event. Makes sure the LinkDrawer is hidden.
@@ -110,12 +134,15 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item = QGraphicsSvgItem()
         self.colorizer = QGraphicsColorizeEffect()
         self.setRect(QRectF(x, y, w, h))  # Set ellipse coordinates and size
-        self.name_font_size = 8  # point size
+        self.name_font_size = 10  # point size
         # Make item name graphics item.
         self.name_item = QGraphicsSimpleTextItem(name)
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector button
-        self.connector_button = ConnectorButton(self, toolbox, w, h)
+        self.top_connector = ConnectorButton(self, toolbox, position="top")
+        self.bottom_connector = ConnectorButton(self, toolbox, position="bottom")
+        self.left_connector = ConnectorButton(self, toolbox, position="left")
+        self.right_connector = ConnectorButton(self, toolbox, position="right")
 
     def setup(self, pen, brush, svg, svg_color):
         """Setup item's attributes according to project item type.
@@ -142,7 +169,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         dim_max = max(size.width(), size.height())
         # logging.debug("p_max:{0}".format(p_max))
         rect_w = self.rect().width() # Parent rect width
-        margin = 5
+        margin = 10
         self.svg_item.setScale((rect_w - margin)/dim_max)
         x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
         y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
@@ -176,11 +203,14 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.name_item.setFont(font)
         # Set name item position (centered on top of the master icon)
         name_width = self.name_item.boundingRect().width()
-        self.name_item.setPos(self.rect().x() + self.rect().width()/2 - name_width/2, self.rect().y() - 20)
+        name_height = self.name_item.boundingRect().height()
+        self.name_item.setPos(
+            self.rect().x() + self.rect().width()/2 - name_width/2,
+            self.rect().y() - name_height - 10)
 
     def conn_button(self):
         """Returns items connector button (QWidget)."""
-        return self.connector_button
+        return self.bottom_connector
 
     def hoverEnterEvent(self, event):
         """Set a darker shade to icon when mouse enters icon boundaries.
@@ -281,7 +311,10 @@ class DataConnectionIcon(ProjectItemIcon):
         # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         # NOTE: setting the parent item moves the items as one!
         self.name_item.setParentItem(self)
-        self.connector_button.setParentItem(self)
+        self.top_connector.setParentItem(self)
+        self.bottom_connector.setParentItem(self)
+        self.left_connector.setParentItem(self)
+        self.right_connector.setParentItem(self)
         self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
@@ -360,7 +393,10 @@ class ToolIcon(ProjectItemIcon):
         self.setAcceptDrops(False)
         # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
-        self.connector_button.setParentItem(self)
+        self.top_connector.setParentItem(self)
+        self.bottom_connector.setParentItem(self)
+        self.left_connector.setParentItem(self)
+        self.right_connector.setParentItem(self)
         self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)  # Adds also child items automatically
@@ -429,7 +465,10 @@ class DataStoreIcon(ProjectItemIcon):
         self.setAcceptDrops(False)
         # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
-        self.connector_button.setParentItem(self)
+        self.top_connector.setParentItem(self)
+        self.bottom_connector.setParentItem(self)
+        self.left_connector.setParentItem(self)
+        self.right_connector.setParentItem(self)
         self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
@@ -456,7 +495,10 @@ class ViewIcon(ProjectItemIcon):
         self.setAcceptDrops(False)
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
-        self.connector_button.setParentItem(self)
+        self.top_connector.setParentItem(self)
+        self.bottom_connector.setParentItem(self)
+        self.left_connector.setParentItem(self)
+        self.right_connector.setParentItem(self)
         self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
@@ -467,17 +509,17 @@ class Link(QGraphicsPathItem):
 
     Attributes:
         toolbox (ToolboxUI): main UI class instance
-        src_icon (ItemImage): Source icon
-        dst_icon(ItemImage): Destination icon
+        src_connector (ConnectorButton): Source connector button
+        dst_connector (ConnectorButton): Destination connector button
     """
-    def __init__(self, toolbox, src_icon, dst_icon):
+    def __init__(self, toolbox, src_connector, dst_connector):
         """Initializes item."""
         super().__init__()
         self._toolbox = toolbox
-        self.src_icon = src_icon
-        self.dst_icon = dst_icon
-        self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
-        self.dst_connector = self.dst_icon.conn_button()
+        self.src_connector = src_connector  # QGraphicsRectItem
+        self.dst_connector = dst_connector
+        self.src_icon = src_connector._parent
+        self.dst_icon = dst_connector._parent
         self.setZValue(1)
         self.conn_width = self.src_connector.rect().width()
         self.arrow_angle = pi/4  # In rads
@@ -548,7 +590,7 @@ class Link(QGraphicsPathItem):
         """
         if e.button() != Qt.LeftButton:
             e.ignore()
-        elif self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
+        elif self.src_connector.isUnderMouse() or self.dst_connector.isUnderMouse():
             # Ignore event so it gets propagated to the connector button.
             e.ignore()
 
@@ -556,7 +598,7 @@ class Link(QGraphicsPathItem):
         """Accept event to prevent unwanted feedback links to be created when propagating this event
         to connector buttons underneath.
         """
-        if self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
+        if self.src_connector.isUnderMouse() or self.dst_connector.isUnderMouse():
             e.accept()
 
     def contextMenuEvent(self, e):
@@ -589,11 +631,7 @@ class Link(QGraphicsPathItem):
             angle = 0
         else:  # normal link
             line = QLineF(src_center, dst_center)
-            try:
-                t = (line.length() - self.conn_width/2) / line.length()
-            except ZeroDivisionError:
-                t = 1
-            arrow_p0 = line.pointAt(t)  # arrow tip is where the line intersects the button
+            arrow_p0 = dst_center
             angle = atan2(-line.dy(), line.dx())
         # Path coordinates. We just need to draw the arrow and the ellipse, lines are drawn automatically
         d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))

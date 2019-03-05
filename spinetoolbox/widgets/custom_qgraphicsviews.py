@@ -18,6 +18,7 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 
 import logging
 from PySide2.QtWidgets import QGraphicsView
+from PySide2.QtGui import QCursor
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine, QMarginsF
 from graphics_items import LinkDrawer, Link
 from widgets.custom_qlistview import DragListView
@@ -198,6 +199,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
+        self.src_connector = None  # Source connector of a link drawing operation
+        self.dst_connector = None  # Destination connector of a link drawing operation
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
         self.show()
@@ -309,18 +312,16 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._connection_model.rowsAboutToBeRemoved.connect(self.connection_rows_removed)
         self._connection_model.columnsAboutToBeRemoved.connect(self.connection_columns_removed)
 
-    def add_link(self, src_name, dst_name, index):
+    def add_link(self, src_connector, dst_connector, index):
         """Draws link between source and sink items on scene and
         appends connection model. Refreshes View references if needed."""
-        src_item_index = self._project_item_model.find_item(src_name)
-        dst_item_index = self._project_item_model.find_item(dst_name)
-        src_item = self._project_item_model.project_item(src_item_index)
-        dst_item = self._project_item_model.project_item(dst_item_index)
-        # logging.debug("Adding link {0} -> {1}".format(src_name, dst_name))
-        link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
+        link = Link(self._toolbox, src_connector, dst_connector)
         self.scene().addItem(link)
         self._connection_model.setData(index, link)
         # Refresh View references
+        dst_name = dst_connector._parent.name()
+        dst_item_index = self._project_item_model.find_item(dst_name)
+        dst_item = self._project_item_model.project_item(dst_item_index)
         if dst_item.item_type == "View":
             dst_item.view_refresh_signal.emit()
 
@@ -340,6 +341,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if dst_item.item_type == "View":
             dst_item.view_refresh_signal.emit()
 
+    def take_link(self, index):
+        """Remove link, then start drawing another one from the same source connector."""
+        link = self._connection_model.data(index, Qt.UserRole)
+        self.remove_link(index)
+        self.draw_links(link.src_connector)
+        self.link_drawer.dst = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
+        self.link_drawer.update_geometry()
+
     def restore_links(self):
         """Iterate connection model and draw links to all that are 'True'
         Should be called only when a project is loaded from a save file."""
@@ -349,15 +358,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
             for column in range(columns):
                 index = self._connection_model.index(row, column)
                 data = self._connection_model.data(index, Qt.DisplayRole)  # NOTE: data DisplayRole returns a string
-                src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
-                dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
-                src = self._project_item_model.find_item(src_name)
-                src_item = self._project_item_model.project_item(src)
-                dst = self._project_item_model.find_item(dst_name)
-                dst_item = self._project_item_model.project_item(dst)
                 if data == "True":
+                    src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
+                    dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
+                    src = self._project_item_model.find_item(src_name)
+                    src_item = self._project_item_model.project_item(src)
+                    dst = self._project_item_model.find_item(dst_name)
+                    dst_item = self._project_item_model.project_item(dst)
                     # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
-                    link = Link(self._toolbox, src_item.get_icon(), dst_item.get_icon())
+                    src_icon = src_item.get_icon()
+                    dst_icon = dst_item.get_icon()
+                    link = Link(self._toolbox, src_icon.conn_button(), dst_icon.conn_button())
                     self.scene().addItem(link)
                     self._connection_model.setData(index, link)
                 else:
@@ -382,37 +393,37 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 if link:
                     self.scene().removeItem(link)
 
-    def draw_links(self, src_rect, name):
+    def draw_links(self, connector):
         """Draw links when slot button is clicked.
 
         Args:
-            src_rect (QRectF): Position on scene where to start drawing. Rect of connector button.
-            name (str): Name of item where to start drawing
+            connector (ConnectorButton): Connector button that triggered the drawing
         """
         if not self.link_drawer.drawing:
-            # start drawing and remember connector
+            # start drawing and remember source connector
             self.link_drawer.drawing = True
-            self.link_drawer.start_drawing_at(src_rect)
-            self.src_item_name = name
+            self.link_drawer.start_drawing_at(connector.sceneBoundingRect())
+            self.src_connector = connector
         else:
             # stop drawing and make connection
             self.link_drawer.drawing = False
-            self.dst_item_name = name
+            self.dst_connector = connector
+            self.src_item_name = self.src_connector._parent.name()
+            self.dst_item_name = self.dst_connector._parent.name()
             # create connection
             row = self._connection_model.header.index(self.src_item_name)
             column = self._connection_model.header.index(self.dst_item_name)
             index = self._connection_model.createIndex(row, column)
-            if self._connection_model.data(index, Qt.DisplayRole) == "False":
-                self.add_link(self.src_item_name, self.dst_item_name, index)
-            elif self._connection_model.data(index, Qt.DisplayRole) == "True":
-                self._toolbox.msg_warning.emit("Items already connected")
-                return
+            if self._connection_model.data(index, Qt.DisplayRole) == "True":
+                # Remove current link, so it gets updated
+                self.remove_link(index)
+            self.add_link(self.src_connector, self.dst_connector, index)
             self.emit_connection_information_message()
 
     def emit_connection_information_message(self):
         """Inform user about what connections are implemented and how they work."""
         if self.src_item_name == self.dst_item_name:
-            self._toolbox.msg_warning.emit("Link added. Feedback link functionality not implemented.")
+            self._toolbox.msg_warning.emit("Link established. Feedback link functionality not implemented.")
         else:
             src_index = self._project_item_model.find_item(self.src_item_name)
             if not src_index:
@@ -425,31 +436,31 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_item_type = self._project_item_model.project_item(src_index).item_type
             dst_item_type = self._project_item_model.project_item(dst_index).item_type
             if src_item_type == "Data Connection" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("Link added. Tool <b>{0}</b> will look for input "
+                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> will look for input "
                                        "files from <b>{1}</b>'s references and data directory."
                                        .format(self.dst_item_name, self.src_item_name))
             elif src_item_type == "Data Store" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("Link added. Tool <b>{0}</b> will look for input "
+                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> will look for input "
                                        "files from <b>{1}</b>'s data directory."
                                        .format(self.dst_item_name, self.src_item_name))
             elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("Link added. Tool <b>{0}</b> output files will be "
+                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> output files will be "
                                        "passed as reference to <b>{1}</b>'s data directory."
                                        .format(self.src_item_name, self.dst_item_name))
             elif src_item_type in ["Data Connection", "Data Store"] \
                     and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("Link added. Input files for a tool's execution "
+                self._toolbox.msg.emit("Link established. Input files for a tool's execution "
                                        "will be looked up in <b>{0}</b> if not found in <b>{1}</b>."
                                        .format(self.src_item_name, self.dst_item_name))
             elif src_item_type == "Data Store" and dst_item_type == "View":
-                self._toolbox.msg_warning.emit("Link added. You can visualize Data Store "
+                self._toolbox.msg_warning.emit("Link established. You can visualize Data Store "
                                                "<b>{0}</b> in View <b>{1}</b>."
                                                .format(self.src_item_name, self.dst_item_name))
             elif src_item_type == "Tool" and dst_item_type == "Tool":
-                self._toolbox.msg_warning.emit("Link added. Interaction between two "
+                self._toolbox.msg_warning.emit("Link established. Interaction between two "
                                                "Tool items has not been implemented yet.")
             else:
-                self._toolbox.msg_warning.emit("Link added. Interaction between a "
+                self._toolbox.msg_warning.emit("Link established. Interaction between a "
                                                "<b>{0}</b> and a <b>{1}</b> has not been "
                                                "implemented yet.".format(src_item_type, dst_item_type))
 
