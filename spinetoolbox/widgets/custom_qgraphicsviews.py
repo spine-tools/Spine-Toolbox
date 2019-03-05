@@ -404,18 +404,15 @@ class DesignQGraphicsView(CustomQGraphicsView):
             index = self._connection_model.createIndex(row, column)
             if self._connection_model.data(index, Qt.DisplayRole) == "False":
                 self.add_link(self.src_item_name, self.dst_item_name, index)
-                self._toolbox.msg.emit("<b>{}</b>'s output is now connected to <b>{}</b>'s input."
-                                       .format(self.src_item_name, self.dst_item_name))
             elif self._connection_model.data(index, Qt.DisplayRole) == "True":
-                self._toolbox.msg.emit("<b>{}</b>'s output is already connected to <b>{}</b>'s input."
-                                       .format(self.src_item_name, self.dst_item_name))
+                self._toolbox.msg_warning.emit("Items already connected")
+                return
             self.emit_connection_information_message()
 
     def emit_connection_information_message(self):
         """Inform user about what connections are implemented and how they work."""
         if self.src_item_name == self.dst_item_name:
-            self._toolbox.msg_warning.emit("<b>Not implemented</b>. The functionality for feedback links "
-                                           "is not implemented yet.")
+            self._toolbox.msg_warning.emit("Link added. Feedback link functionality not implemented.")
         else:
             src_index = self._project_item_model.find_item(self.src_item_name)
             if not src_index:
@@ -428,31 +425,33 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_item_type = self._project_item_model.project_item(src_index).item_type
             dst_item_type = self._project_item_model.project_item(dst_index).item_type
             if src_item_type == "Data Connection" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("-> Input files for <b>{0}</b>'s execution "
-                                       "will be looked up in <b>{1}</b>'s references and data directory."
+                self._toolbox.msg.emit("Link added. Tool <b>{0}</b> will look for input "
+                                       "files from <b>{1}</b>'s references and data directory."
                                        .format(self.dst_item_name, self.src_item_name))
             elif src_item_type == "Data Store" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("-> Input files for <b>{0}</b>'s execution "
-                                       "will be looked up in <b>{1}</b>'s data directory."
+                self._toolbox.msg.emit("Link added. Tool <b>{0}</b> will look for input "
+                                       "files from <b>{1}</b>'s data directory."
                                        .format(self.dst_item_name, self.src_item_name))
             elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("-> Output files from <b>{0}</b>'s execution "
-                                       "will be passed as reference to <b>{1}</b>'s data directory."
+                self._toolbox.msg.emit("Link added. Tool <b>{0}</b> output files will be "
+                                       "passed as reference to <b>{1}</b>'s data directory."
                                        .format(self.src_item_name, self.dst_item_name))
             elif src_item_type in ["Data Connection", "Data Store"] \
                     and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("-> Input files for a tool's execution "
+                self._toolbox.msg.emit("Link added. Input files for a tool's execution "
                                        "will be looked up in <b>{0}</b> if not found in <b>{1}</b>."
                                        .format(self.src_item_name, self.dst_item_name))
             elif src_item_type == "Data Store" and dst_item_type == "View":
-                self._toolbox.msg_warning.emit("-> Database references in <b>{0}</b> will be viewed by <b>{1}</b>."
+                self._toolbox.msg_warning.emit("Link added. You can visualize Data Store "
+                                               "<b>{0}</b> in View <b>{1}</b>."
                                                .format(self.src_item_name, self.dst_item_name))
             elif src_item_type == "Tool" and dst_item_type == "Tool":
-                self._toolbox.msg_warning.emit("<b>Not implemented</b>. Interaction between two "
-                                               "Tool items is not implemented yet.")
+                self._toolbox.msg_warning.emit("Link added. Interaction between two "
+                                               "Tool items has not been implemented yet.")
             else:
-                self._toolbox.msg_warning.emit("<b>Not implemented</b>. Whatever you are trying to do "
-                                               "is not implemented yet :)")
+                self._toolbox.msg_warning.emit("Link added. Interaction between a "
+                                               "<b>{0}</b> and a <b>{1}</b> has not been "
+                                               "implemented yet.".format(src_item_type, dst_item_type))
 
 
 class GraphQGraphicsView(CustomQGraphicsView):
