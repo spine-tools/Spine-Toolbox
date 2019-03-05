@@ -34,6 +34,27 @@ class CustomQGraphicsScene(QGraphicsScene):
         super().__init__(parent)
         self._toolbox = toolbox
         self.item_shadow = None
+        # Set background attributes
+        grid = self._toolbox.qsettings().value("appSettings/bgGrid", defaultValue="false")
+        self.bg_grid = False if grid == "false" else True
+        bg_color = self._toolbox.qsettings().value("appSettings/bgColor", defaultValue="false")
+        self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
+
+    def set_bg_color(self, color):
+        """Change background color when this is changed in Settings.
+
+        Args:
+            color (QColor): Background color
+        """
+        self.bg_color = color
+
+    def set_bg_grid(self, bg):
+        """Enable or disable background grid.
+
+        Args:
+            bg (boolean): True to draw grid, False to fill background with a solid color
+        """
+        self.bg_grid = bg
 
     def dragLeaveEvent(self, event):
         """Accept event."""
@@ -96,11 +117,14 @@ class CustomQGraphicsScene(QGraphicsScene):
             painter (QPainter): Painter that is used to paint background
             rect (QRectF): The exposed (viewport) rectangle in scene coordinates
         """
-        step = 20  # Grid step
         rect = self.sceneRect()  # Override to only draw background for the scene rectangle
+        if not self.bg_grid:
+            painter.fillRect(rect, QBrush(self.bg_color))
+            return
+        step = 20  # Grid step
         # logging.debug("sceneRect pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
         #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
-        painter.setPen(QPen(QColor(200, 200, 255, 125)))
+        painter.setPen(QPen(QColor(0, 0, 0, 40)))
         # Draw horizontal grid
         start = round(rect.top(), step)
         if start > rect.top():

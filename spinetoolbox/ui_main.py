@@ -64,6 +64,7 @@ class ToolboxUI(QMainWindow):
     def __init__(self):
         """ Initialize application and main window."""
         super().__init__(flags=Qt.Window)
+        self._qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set number formatting to use user's default settings
         locale.setlocale(locale.LC_NUMERIC, '')
         # Setup the user interface from Qt Designer files
@@ -72,7 +73,6 @@ class ToolboxUI(QMainWindow):
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers
         self.ui.graphicsView.set_ui(self)
-        self._qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Class variables
         self._config = None
         self._project = None

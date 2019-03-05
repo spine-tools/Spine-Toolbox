@@ -8,6 +8,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 - Zooming (by using the mouse wheel) is now enabled in Design View. You can also select multiple project items by pressing 
   the Ctrl-key down and dragging the mouse.
+- New project item icons on Design View
+- Two options for the Design View background (grid or solid). See Settings (F1).
 
 ### Changed
 

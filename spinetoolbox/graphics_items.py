@@ -18,12 +18,12 @@ Classes for drawing graphics items on QGraphicsScene.
 
 import logging
 import os
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer, Slot
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle, \
     QGraphicsColorizeEffect, QGraphicsDropShadowEffect
-from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, \
+from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, \
     QFont, QTextCursor
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from math import atan2, degrees, sin, cos, pi
@@ -507,10 +507,8 @@ class Link(QGraphicsPathItem):
         # Tooltip
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name()))
-        # self.selected_brush = QBrush(QColor(255, 0, 255, 204))
-        # self.normal_brush = QBrush(QColor(255, 255, 0, 204))
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
-        self.selected_pen = QPen(Qt.black, 0.5, Qt.DashLine)
+        self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
         self.model_index = None
         self.parallel_link = None
