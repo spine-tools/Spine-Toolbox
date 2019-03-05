@@ -350,15 +350,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.link_drawer.update_geometry()
 
     def restore_links(self):
-        """Iterate connection model and draw links to all that are 'True'
+        """Iterate connection model and draw links for each valid entry.
         Should be called only when a project is loaded from a save file."""
         rows = self._connection_model.rowCount()
         columns = self._connection_model.columnCount()
         for row in range(rows):
             for column in range(columns):
                 index = self._connection_model.index(row, column)
-                data = self._connection_model.data(index, Qt.DisplayRole)  # NOTE: data DisplayRole returns a string
-                if data == "True":
+                data = self._connection_model.data(index, Qt.UserRole)
+                # NOTE: data UserRole returns a list with source and destination positions
+                if data:
+                    src_pos, dst_pos = data
                     src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                     dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
                     src = self._project_item_model.find_item(src_name)
@@ -368,7 +370,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
                     src_icon = src_item.get_icon()
                     dst_icon = dst_item.get_icon()
-                    link = Link(self._toolbox, src_icon.conn_button(), dst_icon.conn_button())
+                    link = Link(self._toolbox, src_icon.conn_button(src_pos), dst_icon.conn_button(dst_pos))
                     self.scene().addItem(link)
                     self._connection_model.setData(index, link)
                 else:
