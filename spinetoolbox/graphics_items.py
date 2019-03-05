@@ -127,7 +127,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             svg (str): Path to SVG icon file
             svg_color (QColor): Color of SVG icon
         """
-        self.setPen(pen)  # Qt.NoPen
+        self.setPen(QPen(Qt.black, 0.5, Qt.SolidLine))  # Override Qt.NoPen to make an outline for all items
         self.setBrush(brush)
         self.colorizer.setColor(svg_color)
         # Load SVG
@@ -140,15 +140,12 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item.setSharedRenderer(self.renderer)
         self.svg_item.setElementId("")  # guess empty string loads the whole file
         dim_max = max(size.width(), size.height())
-        # logging.debug("p_max:{0}".format(p_max))
-        rect_w = self.rect().width() # Parent rect width
+        rect_w = self.rect().width()  # Parent rect width
         margin = 5
         self.svg_item.setScale((rect_w - margin)/dim_max)
         x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
         y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
         self.svg_item.setPos(self.rect().x() + x_offset, self.rect().y() + y_offset)
-        scaled_img_rect = self.svg_item.sceneBoundingRect()
-        # logging.debug("scaled rect:{0}".format(scaled_img_rect))
         self.svg_item.setGraphicsEffect(self.colorizer)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
