@@ -241,9 +241,11 @@ class SettingsWidget(QWidget):
         b = int(self.ui.checkBox_exit_prompt.checkState())
         f = str(int(self.ui.checkBox_save_at_exit.checkState()))
         g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
-        h = True if int(self.ui.checkBox_use_smooth_zoom.checkState()) else False
+        # NOTE: on Linux, True and False are actually saved as boolean values into QSettings...
+        # ...which doesn't work for us, we need to save strings
+        h = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
         d = int(self.ui.checkBox_datetime.checkState())
-        bg_grid = True if self.ui.radioButton_bg_grid.isChecked() else False
+        bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
         delete_data = int(self.ui.checkBox_delete_data.checkState())
         # Check that GAMS directory is valid. Set it empty if not.
         gams_path = self.ui.lineEdit_gams_path.text()

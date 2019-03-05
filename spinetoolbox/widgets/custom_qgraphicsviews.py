@@ -109,9 +109,8 @@ class CustomQGraphicsView(QGraphicsView):
         event.accept()
         ui = self.parent().parent()
         qsettings = ui.qsettings()
-        smooth_zoom_str = qsettings.value("appSettings/smoothZoom", defaultValue="false")
-        smooth_zoom = True if smooth_zoom_str == "true" else False
-        if smooth_zoom:
+        smooth_zoom = qsettings.value("appSettings/smoothZoom", defaultValue="false")
+        if smooth_zoom == "true":
             num_degrees = event.delta() / 8
             num_steps = num_degrees / 15
             self._num_scheduled_scalings += num_steps

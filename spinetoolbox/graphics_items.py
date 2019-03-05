@@ -159,7 +159,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         dim_max = max(size.width(), size.height())
         # logging.debug("p_max:{0}".format(p_max))
         rect_w = self.rect().width() # Parent rect width
-        margin = 10
+        margin = 24
         self.svg_item.setScale((rect_w - margin)/dim_max)
         x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
         y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
@@ -512,7 +512,7 @@ class Link(QGraphicsPathItem):
         arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
         self.t1 = (arrow_base - self.line_width) / arrow_base/2
         self.t2 = 1.0 - self.t1
-        # Inner rect of feedback link (works, but it's probably too hard)
+        # Inner rect of feedback link
         self.inner_rect = QRectF(0, 0, 7.5*self.feedback_size, 6*self.feedback_size - self.line_width)
         inner_shift_x = self.arrow_length/2
         angle = atan2(self.conn_width, self.inner_rect.height())
