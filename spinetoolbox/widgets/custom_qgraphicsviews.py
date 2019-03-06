@@ -17,7 +17,7 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 """
 
 import logging
-from PySide2.QtWidgets import QGraphicsView
+from PySide2.QtWidgets import QGraphicsView, QGraphicsRectItem
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine, QMarginsF
 from graphics_items import LinkDrawer, Link
@@ -166,7 +166,7 @@ class CustomQGraphicsView(QGraphicsView):
         self.rel_zoom_factor = new_rel_zoom_factor
         self.scale(factor, factor)
         self.centerOn(self.target_scene_pos)
-        delta_viewport_pos = self.target_viewport_pos - self.viewport().geometry().center()
+        delta_viewport_pos = self.target_viewport_pos - self.viewport().rect().center()
         viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
         self.centerOn(self.mapToScene(viewport_center))
 
@@ -202,6 +202,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.dst_connector = None  # Destination connector of a link drawing operation
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
+        self.rug_item = QGraphicsRectItem()  # Experimental, used to prevent 'shifting' when items are dropped
+                                             # outside scene boundaries
+        self.rug_item.setPen(Qt.NoPen)
+        self.rug_item.setZValue(-100)
         self.show()
 
     def mousePressEvent(self, e):
@@ -260,6 +264,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._toolbox = toolbox
         self.setScene(CustomQGraphicsScene(self, toolbox))
         self.scene().changed.connect(self.scene_changed)
+        self.scene().item_about_to_be_dropped.connect(self._handle_scene_item_about_to_be_dropped)
 
     def init_scene(self, empty=False):
         """Resize scene and add a link drawer on scene.
@@ -284,6 +289,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.scene().setSceneRect(rect)
             self.centerOn(rect.center())
         self.reset_zoom()  # Reset zoom
+        self.scene().addItem(self.rug_item)
 
     def resize_scene(self):
         """Resize scene to be at least the size of items bounding rectangle.
@@ -296,10 +302,22 @@ class DesignQGraphicsView(CustomQGraphicsView):
     @Slot("QList<QRectF>", name="scene_changed")
     def scene_changed(self, rects):
         """Resize scene as it changes."""
-        rect = self.scene().sceneRect()
+        # rect = self.scene().sceneRect()
         # logging.debug("scene_changed pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
         #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
         self.resize_scene()
+
+    @Slot(name="_handle_scene_item_about_to_be_dropped")
+    def _handle_scene_item_about_to_be_dropped(self):
+        """Called when the user is about to drop a new item onto the scene.
+        Extend `bg_item` to fill the viewport. This prevents the whole scene to be shifted
+        after the item is dropped.
+        """
+        view_rect = self.viewport().rect()
+        top_left = self.mapToScene(view_rect.topLeft())
+        bottom_right = self.mapToScene(view_rect.bottomRight())
+        rectf = QRectF(top_left, bottom_right)
+        self.rug_item.setRect(rectf)
 
     def set_project_item_model(self, model):
         """Set project item model."""

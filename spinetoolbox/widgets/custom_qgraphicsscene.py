@@ -28,6 +28,7 @@ class CustomQGraphicsScene(QGraphicsScene):
     """A scene that handles drag and drop events of DraggableWidget sources."""
 
     files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
+    item_about_to_be_dropped = Signal(name="item_about_to_be_dropped")
 
     def __init__(self, parent, toolbox):
         """Initialize class."""
@@ -96,18 +97,19 @@ class CustomQGraphicsScene(QGraphicsScene):
         y = pos.y() - 35
         w = 70
         h = 70
+        self.item_about_to_be_dropped.emit()
         # TODO: Check if the item_shadow stays on scene or if its deleted?
         if text == "Data Store":
-            self.item_shadow = DataStoreIcon(self._toolbox, x, y, w, h, "")
+            self.item_shadow = DataStoreIcon(self._toolbox, x, y, w, h, "...")
             self._toolbox.show_add_data_store_form(pos.x(), pos.y())
         elif text == "Data Connection":
-            self.item_shadow = DataConnectionIcon(self._toolbox, x, y, w, h, "")
+            self.item_shadow = DataConnectionIcon(self._toolbox, x, y, w, h, "...")
             self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
         elif text == "Tool":
-            self.item_shadow = ToolIcon(self._toolbox, x, y, w, h, "")
+            self.item_shadow = ToolIcon(self._toolbox, x, y, w, h, "...")
             self._toolbox.show_add_tool_form(pos.x(), pos.y())
         elif text == "View":
-            self.item_shadow = ViewIcon(self._toolbox, x, y, w, h, "")
+            self.item_shadow = ViewIcon(self._toolbox, x, y, w, h, "...")
             self._toolbox.show_add_view_form(pos.x(), pos.y())
 
     def drawBackground(self, painter, rect):
