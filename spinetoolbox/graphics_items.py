@@ -194,7 +194,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         name_height = self.name_item.boundingRect().height()
         self.name_item.setPos(
             self.rect().x() + self.rect().width()/2 - name_width/2,
-            self.rect().y() - name_height - 10)
+            self.rect().y() - name_height - 4)
 
     def conn_button(self, position="left"):
         """Returns items connector button (QWidget)."""
@@ -593,7 +593,6 @@ class Link(QGraphicsPathItem):
         if e.button() != Qt.LeftButton:
             e.ignore()
         elif any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
-            logging.debug("Ignoring")
             e.ignore()
 
     def mouseDoubleClickEvent(self, e):
