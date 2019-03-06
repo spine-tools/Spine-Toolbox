@@ -24,7 +24,7 @@ from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextIte
     QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle, \
     QGraphicsColorizeEffect, QGraphicsDropShadowEffect
 from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, \
-    QFont, QTextCursor
+    QFont, QTextCursor, QTransform
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from math import atan2, degrees, sin, cos, pi
 from spinedatabase_api import SpineDBAPIError
@@ -38,28 +38,29 @@ class ConnectorButton(QGraphicsRectItem):
         toolbox (ToolBoxUI): QMainWindow instance
         position (str): Either "top", "left", "bottom", or "right"
     """
-    def __init__(self, parent, toolbox, position="bottom"):
+    def __init__(self, parent, toolbox, position="left"):
         """Class constructor."""
         super().__init__()
         self._parent = parent
         self._toolbox = toolbox
         self.position = position
-        self.setPen(QPen(Qt.DotLine))
+        self.setPen(QPen(Qt.black, 0.5, Qt.SolidLine))
+        # self.setPen(QPen(Qt.NoPen))
         # Regular and hover brushes
-        self.brush = QBrush(QColor(255, 255, 255, 0))  # Used in filling the item
+        self.brush = QBrush(QColor(255, 255, 255))  # Used in filling the item
         self.hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
         self.setBrush(self.brush)
-        extent = 16
+        extent = 12
         rect = QRectF(0, 0, extent, extent)
         parent_rect = parent.rect()
         if position == "top":
-            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top()))
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top()+extent/2))
         elif position == "left":
-            rect.moveCenter(QPointF(parent_rect.left(), parent_rect.center().y()))
+            rect.moveCenter(QPointF(parent_rect.left()+extent/2+1, parent_rect.center().y()))
         elif position == "bottom":
-            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom()))
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom()-extent/2-1))
         elif position == "right":
-            rect.moveCenter(QPointF(parent_rect.right(), parent_rect.center().y()))
+            rect.moveCenter(QPointF(parent_rect.right()-extent/2-1, parent_rect.center().y()))
         self.setRect(rect)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
@@ -128,7 +129,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
-            top=ConnectorButton(self, toolbox, position="top"),
             bottom=ConnectorButton(self, toolbox, position="bottom"),
             left=ConnectorButton(self, toolbox, position="left"),
             right=ConnectorButton(self, toolbox, position="right")
@@ -144,7 +144,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             svg (str): Path to SVG icon file
             svg_color (QColor): Color of SVG icon
         """
-        self.setPen(QPen(Qt.black, 0.5, Qt.SolidLine))  # Override Qt.NoPen to make an outline for all items
+        self.setPen(QPen(Qt.black, 1, Qt.SolidLine))  # Override Qt.NoPen to make an outline for all items
         self.setBrush(brush)
         self.colorizer.setColor(svg_color)
         # Load SVG
@@ -196,9 +196,13 @@ class ProjectItemIcon(QGraphicsRectItem):
             self.rect().x() + self.rect().width()/2 - name_width/2,
             self.rect().y() - name_height - 10)
 
-    def conn_button(self, position="bottom"):
+    def conn_button(self, position="left"):
         """Returns items connector button (QWidget)."""
-        return self.connectors[position]
+        try:
+            connector = self.connectors[position]
+        except KeyError:
+            connector = self.connectors["left"]
+        return connector
 
     def hoverEnterEvent(self, event):
         """Set a darker shade to icon when mouse enters icon boundaries.
@@ -268,6 +272,24 @@ class ProjectItemIcon(QGraphicsRectItem):
         if event.key() == Qt.Key_Delete and self.isSelected():
             ind = self._toolbox.project_item_model.find_item(self.name())
             self._toolbox.remove_item(ind, delete_item=self._toolbox._config.getboolean("settings", "delete_data"))
+            event.accept()
+        elif event.key() == Qt.Key_R and self.isSelected():
+            # TODO:
+            # 1. Change name item text direction when rotating
+            # 2. Find Links from ConnectionModel
+            # 3. Save rotation into project file
+            rect = self.mapToScene(self.boundingRect()).boundingRect()
+            center = rect.center()
+            t = QTransform()
+            t.translate(center.x(), center.y())
+            t.rotate(90)
+            t.translate(-center.x(), -center.y())
+            self.setPos(t.map(self.pos()))
+            self.setRotation(self.rotation() + 90)
+            items = self.scene().items()
+            for item in items:
+                if isinstance(item, Link):
+                    item.update_geometry()
             event.accept()
         else:
             super().keyPressEvent(event)
