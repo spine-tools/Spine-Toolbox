@@ -592,15 +592,15 @@ class Link(QGraphicsPathItem):
         """
         if e.button() != Qt.LeftButton:
             e.ignore()
-        elif self.src_connector.isUnderMouse() or self.dst_connector.isUnderMouse():
-            # Ignore event so it gets propagated to the connector button.
+        elif any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
+            logging.debug("Ignoring")
             e.ignore()
 
     def mouseDoubleClickEvent(self, e):
         """Accept event to prevent unwanted feedback links to be created when propagating this event
         to connector buttons underneath.
         """
-        if self.src_connector.isUnderMouse() or self.dst_connector.isUnderMouse():
+        if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
             e.accept()
 
     def contextMenuEvent(self, e):
