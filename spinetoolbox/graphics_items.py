@@ -529,7 +529,6 @@ class Link(QGraphicsPathItem):
         self.feedback_size = 12
         # Path parameters
         self.ellipse_rect = QRectF(0, 0, self.conn_width, self.conn_width)
-        self.ellipse_rect.moveCenter(self.src_connector.sceneBoundingRect().center())
         self.line_width = self.conn_width/2
         self.arrow_length = self.line_width
         self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
@@ -653,6 +652,7 @@ class Link(QGraphicsPathItem):
         if self.src_connector == self.dst_connector:
             self.inner_rect.moveCenter(dst_center - self.inner_shift)
             path.arcTo(self.inner_rect, 270 - self.inner_angle, 2*self.inner_angle - 360)
+        self.ellipse_rect.moveCenter(src_rect.center())
         path.arcTo(self.ellipse_rect, degrees(angle) + self.ellipse_angle, 360 - 2*self.ellipse_angle)
         # Draw outer part of feedback link
         if self.src_connector == self.dst_connector:
