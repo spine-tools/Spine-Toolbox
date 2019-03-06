@@ -202,10 +202,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.dst_connector = None  # Destination connector of a link drawing operation
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
-        self.rug_item = QGraphicsRectItem()  # Experimental, used to prevent 'shifting' when items are dropped
-                                             # outside scene boundaries
-        self.rug_item.setPen(Qt.NoPen)
-        self.rug_item.setZValue(-100)
+        self.rug_item = None  # Experimental, to prevent 'shifting' when dropping items outside scene boundaries
         self.show()
 
     def mousePressEvent(self, e):
@@ -289,6 +286,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.scene().setSceneRect(rect)
             self.centerOn(rect.center())
         self.reset_zoom()  # Reset zoom
+        # Add rug
+        self.rug_item = QGraphicsRectItem()
+        self.rug_item.setPen(Qt.NoPen)
+        self.rug_item.setZValue(-100)
         self.scene().addItem(self.rug_item)
 
     def resize_scene(self):
