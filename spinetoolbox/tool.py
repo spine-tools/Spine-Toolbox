@@ -303,7 +303,7 @@ class Tool(ProjectItem):
                 self._toolbox.msg.emit("*** Searching for required input files ***")
                 file_paths = self.find_input_files()
                 if not file_paths:
-                    self._toolbox.msg_error.emit("Input files not found. Tool execution aborted.")
+                    self._toolbox.msg_error.emit("Tool execution aborted")
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
@@ -330,7 +330,7 @@ class Tool(ProjectItem):
                     self._toolbox.msg.emit("*** Creating subdirectories to source directory ***")
                 if not self.create_subdirectories():
                     # Creating directories failed -> abort
-                    self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted")
+                    self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted.")
                     return
             else:  # just for testing
                 # logging.debug("No directories to create")
@@ -422,7 +422,7 @@ class Tool(ProjectItem):
                 continue
             found_file = self.find_file(filename)
             if not found_file:
-                self._toolbox.msg_error.emit("\tRequired file <b>{0}</b> not found".format(filename))
+                self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
                 return None
             else:
                 file_paths[req_file_path] = found_file
