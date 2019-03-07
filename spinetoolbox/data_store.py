@@ -703,6 +703,9 @@ class DataStore(ProjectItem):
                                            "connections and try again. Detected at {0}.".format(self.name))
             return None
         reference = self.current_reference()
+        if not reference:
+            # Data Store has no reference
+            return None
         db_url = reference['url']
         if not db_url.lower().startswith('sqlite'):
             return None
