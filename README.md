@@ -49,8 +49,8 @@ and a package for deploying the application (cx_Freeze).
  
 ### Installing requirements
 
-After cloning or downloading the repository, open terminal (e.g. command prompt 
-on Windows). Change directory to Spine Toolbox root directory (the one that contains 
+After cloning or downloading the repository, open terminal (e.g. elevated command prompt 
+on Windows (run as administrator)). Change directory to Spine Toolbox root directory (the one that contains 
 requirements.txt)  
 
 Run
