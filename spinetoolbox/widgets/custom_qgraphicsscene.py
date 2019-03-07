@@ -28,7 +28,7 @@ class CustomQGraphicsScene(QGraphicsScene):
     """A scene that handles drag and drop events of DraggableWidget sources."""
 
     files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
-    item_about_to_be_dropped = Signal(name="item_about_to_be_dropped")
+    item_about_to_be_dropped = Signal(int, int, name="item_about_to_be_dropped")
 
     def __init__(self, parent, toolbox):
         """Initialize class."""
@@ -97,7 +97,7 @@ class CustomQGraphicsScene(QGraphicsScene):
         y = pos.y() - 35
         w = 70
         h = 70
-        self.item_about_to_be_dropped.emit()
+        self.item_about_to_be_dropped.emit(x, y)
         # TODO: Check if the item_shadow stays on scene or if its deleted?
         if text == "Data Store":
             self.item_shadow = DataStoreIcon(self._toolbox, x, y, w, h, "...")

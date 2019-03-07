@@ -202,7 +202,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.dst_connector = None  # Destination connector of a link drawing operation
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
-        self.rug_item = None  # Experimental, to prevent 'shifting' when dropping items outside scene boundaries
         self.show()
 
     def mousePressEvent(self, e):
@@ -286,11 +285,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.scene().setSceneRect(rect)
             self.centerOn(rect.center())
         self.reset_zoom()  # Reset zoom
-        # Add rug
-        self.rug_item = QGraphicsRectItem()
-        self.rug_item.setPen(Qt.NoPen)
-        self.rug_item.setZValue(-100)
-        self.scene().addItem(self.rug_item)
 
     def resize_scene(self):
         """Resize scene to be at least the size of items bounding rectangle.
@@ -308,17 +302,17 @@ class DesignQGraphicsView(CustomQGraphicsView):
         #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
         self.resize_scene()
 
-    @Slot(name="_handle_scene_item_about_to_be_dropped")
-    def _handle_scene_item_about_to_be_dropped(self):
+    @Slot(int, int, name="_handle_scene_item_about_to_be_dropped")
+    def _handle_scene_item_about_to_be_dropped(self, x, y):
         """Called when the user is about to drop a new item onto the scene.
         Extend `bg_item` to fill the viewport. This prevents the whole scene to be shifted
         after the item is dropped.
         """
-        view_rect = self.viewport().rect()
-        top_left = self.mapToScene(view_rect.topLeft())
-        bottom_right = self.mapToScene(view_rect.bottomRight())
-        rectf = QRectF(top_left, bottom_right)
-        self.rug_item.setRect(rectf)
+        scene_rect = self.sceneRect()
+        x1, y1, x2, y2 = scene_rect.getCoords()
+        new_rect = QRectF(min(x, x1), min(y, y1), max(x, x2), max(y, y2))
+        new_rect.moveCenter(scene_rect.center())
+        self.setSceneRect(new_rect)
 
     def set_project_item_model(self, model):
         """Set project item model."""
