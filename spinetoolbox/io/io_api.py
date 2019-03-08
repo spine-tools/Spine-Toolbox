@@ -1,29 +1,19 @@
 # -*- coding: utf-8 -*-
 
-from pyside2.QtWidgets import QFileDialog
-from pyside2.QtQui import QIcon
+from PySide2.QtWidgets import QFileDialog
+from PySide2.QtGui import QIcon
+from PySide2.QtCore import QObject, Signal
 
-class DataSourceImportTemplate():
+class DataSourceImportTemplate(QObject):
     """
     Base class for interfaces to import data from different sources.
     
     """
-    
+    refreshDataRequest = Signal()
     def __init__(self, parent=None):
+        super(DataSourceImportTemplate, self).__init__(parent)
         self.parent = parent
-        self._preview_data = {} # store data for preview for each table
-        self._tables = [] # lits of strings of avaliable tables in data source
-    
-    @property
-    def tables(self):
-        """Read only"""
-        return self._tables
 
-    @property
-    def preview_data(self):
-        """Read only"""
-        return self._preview_data
-    
     @property
     def source_icon(self):
         """
@@ -34,7 +24,12 @@ class DataSourceImportTemplate():
     @property
     def source_name(self):
         """Name of data source, must return string"""
-        return NotImplementedError
+        raise NotImplementedError
+    
+    @property
+    def tables(self):
+        """Return a list of table names if source has multiple tables"""
+        raise NotImplementedError
     
     @property
     def can_have_multiple_tables(self):
@@ -42,25 +37,37 @@ class DataSourceImportTemplate():
         Return boolean if data source can contain multiple tables
         """
         raise NotImplementedError
+    
+    def set_table(self, table):
+        """
+        Sets the current table of the data source. If data source doesn't have
+        mulitple tables just pass this function.
+        """
+        raise NotImplementedError
 
     def source_selector(self):
         """
-        Select launches file/source UI
+        launches file/source select UI
+        return True if successful, otherwise False
         """
         raise NotImplementedError
     
-    def read_data(self, table, max_rows=100):
+    def read_data(self, table):
         """
         Return data read from data source table in table. If max_rows is 
         specified only that number of rows.
         """
         raise NotImplementedError
     
-    def option_widget(self, table):
+    def option_widget(self):
         """
         Return a Qwidget with options for reading data from a table in source
         """
         raise NotImplementedError
+    
+    def preview_data(self, table):
+        """Returns a preview of the table in data source"""
+        return self._preview_data
 
 class FileImportTemplate(DataSourceImportTemplate):
     """
