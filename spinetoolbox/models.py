@@ -24,7 +24,7 @@ import json
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, \
-    QPainter, QGuiApplication
+    QPainter, QGuiApplication, QPalette
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir, fix_name_ambiguity, busy_effect
@@ -1847,7 +1847,7 @@ class SubParameterModel(MinimalTableModel):
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
-        self.gray_brush = self._parent._tree_view_form.palette().button()
+        self.gray_brush = QGuiApplication.palette().button()
         self.error_log = []
         self.updated_count = 0
 
@@ -3874,7 +3874,11 @@ class ParameterValueListModel(QAbstractItemModel):
         self.db_map = tree_view_form.db_map
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self.empty_str = "..."
+        gray_color = QGuiApplication.palette().text().color()
+        gray_color.setAlpha(128)
+        self.gray_brush = QBrush(gray_color)
+        self.empty_list = "Type new list name here..."
+        self.empty_value = "Type new list value here..."
         self._root_nodes = list()
         self.dataChanged.connect(self._handle_data_changed)
 
@@ -3892,8 +3896,8 @@ class ParameterValueListModel(QAbstractItemModel):
                 child_node = TreeNode(root_node, j, text=value)
                 j += 1
                 root_node.child_nodes.append(child_node)
-            root_node.child_nodes.append(TreeNode(root_node, j, text=self.empty_str))
-        self._root_nodes.append(TreeNode(None, i, text=self.empty_str))
+            root_node.child_nodes.append(TreeNode(root_node, j, text=self.empty_value))
+        self._root_nodes.append(TreeNode(None, i, text=self.empty_list))
         self.endResetModel()
 
     def index(self, row, column, parent=QModelIndex()):
@@ -3942,6 +3946,10 @@ class ParameterValueListModel(QAbstractItemModel):
             if not index.parent().isValid():
                 return self.bold_font
             return None
+        if role == Qt.ForegroundRole:
+            if index.row() == self.rowCount(index.parent()) - 1:
+                return self.gray_brush
+            return None
         if role not in (Qt.DisplayRole, Qt.EditRole):
             return None
         node = index.internalPointer()
@@ -3975,10 +3983,10 @@ class ParameterValueListModel(QAbstractItemModel):
         row = self.rowCount(parent)
         self.beginInsertRows(parent, row, row + count -1 )
         if not parent.isValid():
-            self._root_nodes.append(TreeNode(None, row, text=self.empty_str))
+            self._root_nodes.append(TreeNode(None, row, text=self.empty_list))
         else:
             root_node = parent.internalPointer()
-            root_node.child_nodes.append(TreeNode(root_node, row, text=self.empty_str))
+            root_node.child_nodes.append(TreeNode(root_node, row, text=self.empty_value))
         self.endInsertRows()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
