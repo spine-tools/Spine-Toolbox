@@ -231,8 +231,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self._toolbox.ui.graphicsView.scene().clearSelection()
-        self.show_item_info()
+        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
         """Move icon while the mouse button is pressed.

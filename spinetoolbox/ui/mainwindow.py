@@ -1005,6 +1005,7 @@ class Ui_MainWindow(object):
         self.treeView_project.setMaximumSize(QtCore.QSize(16777215, 16777215))
         self.treeView_project.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_project.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
+        self.treeView_project.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
         self.treeView_project.setAnimated(True)
         self.treeView_project.setObjectName("treeView_project")
         self.verticalLayout_5.addWidget(self.treeView_project)
@@ -1320,8 +1321,8 @@ class Ui_MainWindow(object):
         self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1))
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qgraphicsviews import DesignQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc

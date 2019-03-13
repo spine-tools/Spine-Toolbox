@@ -430,6 +430,6 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
+from widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qtreeview import CustomTreeView, SourcesTreeView
 import resources_icons_rc

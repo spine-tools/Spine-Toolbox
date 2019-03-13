@@ -338,6 +338,7 @@ class Ui_SettingsForm(object):
         self.label_7.setText(QtWidgets.QApplication.translate("SettingsForm", "Design View background", None, -1))
         self.radioButton_bg_grid.setText(QtWidgets.QApplication.translate("SettingsForm", "Grid", None, -1))
         self.radioButton_bg_solid.setText(QtWidgets.QApplication.translate("SettingsForm", "Solid", None, -1))
+        self.toolButton_bg_color.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "Pick background color", None, -1))
         self.groupBox_gams.setTitle(QtWidgets.QApplication.translate("SettingsForm", "GAMS", None, -1))
         self.label_4.setText(QtWidgets.QApplication.translate("SettingsForm", "Path to GAMS executable", None, -1))
         self.lineEdit_gams_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Path to directory where GAMS and GAMSIDE executables are found</p></body></html>", None, -1))

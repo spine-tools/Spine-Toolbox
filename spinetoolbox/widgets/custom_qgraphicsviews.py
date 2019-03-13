@@ -259,7 +259,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """Set a new scene into the Design View when app is started."""
         self._toolbox = toolbox
         self.setScene(CustomQGraphicsScene(self, toolbox))
-        self.scene().changed.connect(self.scene_changed)
         self.scene().item_about_to_be_dropped.connect(self._handle_scene_item_about_to_be_dropped)
 
     def init_scene(self, empty=False):
@@ -285,22 +284,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.scene().setSceneRect(rect)
             self.centerOn(rect.center())
         self.reset_zoom()  # Reset zoom
-
-    def resize_scene(self):
-        """Resize scene to be at least the size of items bounding rectangle.
-        Does not let the scene shrink."""
-        scene_rect = self.scene().sceneRect()
-        items_rect = self.scene().itemsBoundingRect()
-        union_rect = scene_rect | items_rect
-        self.scene().setSceneRect(union_rect)
-
-    @Slot("QList<QRectF>", name="scene_changed")
-    def scene_changed(self, rects):
-        """Resize scene as it changes."""
-        # rect = self.scene().sceneRect()
-        # logging.debug("scene_changed pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
-        #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
-        self.resize_scene()
 
     @Slot(int, int, name="_handle_scene_item_about_to_be_dropped")
     def _handle_scene_item_about_to_be_dropped(self, x, y):

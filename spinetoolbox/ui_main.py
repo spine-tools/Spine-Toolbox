@@ -20,7 +20,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QRectF
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QItemSelection
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction, QWidgetAction
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
@@ -383,7 +383,7 @@ class ToolboxUI(QMainWindow):
             tool_template_paths (list): List of tool definition file paths used in this project
         """
         self.init_project_item_model()
-        self.ui.treeView_project.selectionModel().currentChanged.connect(self.selected_item_changed)
+        self.ui.treeView_project.selectionModel().currentChanged.connect(self.current_item_changed)
         self.init_tool_template_model(tool_template_paths)
         self.init_connection_model()
 
@@ -514,23 +514,19 @@ class ToolboxUI(QMainWindow):
         for name in item_names:
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind)
-        self.activate_item_tab()  # Clear widget info from QDockWidget
+        self.activate_no_selection_tab()  # Clear widget info from QDockWidget
         self._project = None
         self.tool_template_model = None
         self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_process_output.clear()
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
 
-    @Slot("QModelIndex", "QModelIndex", name="selected_item_changed")
-    def selected_item_changed(self, current, previous):
+    @Slot("QModelIndex", "QModelIndex", name="current_item_changed")
+    def current_item_changed(self, current, previous):
         """Disconnect signals of previous item, connect signals of current item
         and show correct properties tab for the current item."""
-        for selected_item in self.ui.graphicsView.scene().selectedItems():
-            selected_item.setSelected(False)  # Clear QGraphicsItem selections
-        if not current.isValid():  # Current item is root
-            self.msg_error.emit("Current selected item is the root item. This should not happen.")
-            return
-        if not current.parent().isValid():  # Current is category
+        # TODO: Fix multiple selection in project tree view.
+        if not current.isValid() or not current.parent().isValid():  # Current is root or category
             if not previous:  # Previous is None
                 return
             elif not previous.isValid():  # Previous is root
@@ -539,19 +535,17 @@ class ToolboxUI(QMainWindow):
                 return
             else:  # Previous is a ProjectItem -> disconnect
                 previous_item = self.project_item_model.project_item(previous)
-                # self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
+                # self.msg.emit("Deactivating {0}".format(previous_item.name))
                 # Deselect previous item's QGraphicsItem
-                previous_item.get_icon().setSelected(False)
+                if previous_item.get_icon().isSelected():
+                    previous_item.get_icon().setSelected(False)  # Emits selectionChanged signal to scene
                 ret = previous_item.deactivate()
                 if not ret:
                     self.msg_error.emit("Something went wrong in disconnecting {0} signals.".format(previous_item.name))
                 # Show No Selection tab because the item has been deactivated anyway
-                for i in range(self.ui.tabWidget_item_properties.count()):
-                    if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
-                        self.ui.tabWidget_item_properties.setCurrentIndex(i)
-                        break
-                self.ui.dockWidget_item.setWindowTitle("Properties")
+                self.activate_no_selection_tab()
             return
+        # Current item is a project item
         current_item = self.project_item_model.project_item(current)
         if not previous:
             pass  # Previous item was None
@@ -561,42 +555,42 @@ class ToolboxUI(QMainWindow):
             pass  # Previous item was a category
         else:
             previous_item = self.project_item_model.project_item(previous)
-            # self.msg.emit("Disconnecting signals of {0}".format(previous_item.name))
+            # self.msg.emit("Deactivating {0}".format(previous_item.name))
             # Deselect previous item's QGraphicsItem
-            previous_item.get_icon().setSelected(False)
+            if previous_item.get_icon().isSelected():
+                previous_item.get_icon().setSelected(False)  # Emits selectionChanged signal to scene
             ret = previous_item.deactivate()
             if not ret:
                 self.msg_error.emit("Something went wrong in disconnecting {0} signals".format(previous_item.name))
-        # self.msg.emit("Connecting signals of {0}".format(current_item.name))
-        # Set current item QGraphicsItem selected as well
-        current_item.get_icon().setSelected(True)
+        # self.msg.emit("Activating {0}".format(current_item.name))
+        # Set current item QGraphicsItem selected
+        if not current_item.get_icon().isSelected():
+            current_item.get_icon().setSelected(True)  # Emits selectionChanged signal to scene
         current_item.activate()
         self.activate_item_tab(current_item)
 
-    def activate_item_tab(self, item=None):
-        """Show project item properties tab according to item type.
-        If no item given, sets the No Selection tab active.
+    def activate_no_selection_tab(self):
+        """Shows 'No Selection' tab."""
+        for i in range(self.ui.tabWidget_item_properties.count()):
+            if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
+                self.ui.tabWidget_item_properties.setCurrentIndex(i)
+                break
+        self.ui.dockWidget_item.setWindowTitle("Properties")
+
+    def activate_item_tab(self, item):
+        """Shows project item properties tab according to item type.
+        Note: Does not work if a category item is given as argument.
 
         Args:
             item (ProjectItem): Instance of a project item
         """
-        if not item:
-            # Set No Selection Tab active and clear item selections
-            self.ui.treeView_project.clearSelection()
-            self.ui.graphicsView.scene().clearSelection()
-            for i in range(self.ui.tabWidget_item_properties.count()):
-                if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
-                    self.ui.tabWidget_item_properties.setCurrentIndex(i)
-                    break
-            self.ui.dockWidget_item.setWindowTitle("Properties")
-        else:
-            # Find tab index according to item type
-            for i in range(self.ui.tabWidget_item_properties.count()):
-                if self.ui.tabWidget_item_properties.tabText(i) == item.item_type:
-                    self.ui.tabWidget_item_properties.setCurrentIndex(i)
-                    break
-            # Set QDockWidget title to selected item's type
-            self.ui.dockWidget_item.setWindowTitle(item.item_type + " Properties")
+        # Find tab index according to item type
+        for i in range(self.ui.tabWidget_item_properties.count()):
+            if self.ui.tabWidget_item_properties.tabText(i) == item.item_type:
+                self.ui.tabWidget_item_properties.setCurrentIndex(i)
+                break
+        # Set QDockWidget title to selected item's type
+        self.ui.dockWidget_item.setWindowTitle(item.item_type + " Properties")
 
     @Slot(name="open_tool_template")
     def open_tool_template(self):
