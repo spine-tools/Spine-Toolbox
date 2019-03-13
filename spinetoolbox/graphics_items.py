@@ -241,7 +241,8 @@ class ProjectItemIcon(QGraphicsRectItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         super().mouseMoveEvent(event)
-        links = self._toolbox.connection_model.connected_links(self.name())
+        selected_icons = set([x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)] + [self])
+        links = set(y for x in selected_icons for y in self._toolbox.connection_model.connected_links(x.name()))
         for link in links:
             link.update_geometry()
 
@@ -275,8 +276,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         elif event.key() == Qt.Key_R and self.isSelected():
             # TODO:
             # 1. Change name item text direction when rotating
-            # 2. Find Links from ConnectionModel
-            # 3. Save rotation into project file
+            # 2. Save rotation into project file
             rect = self.mapToScene(self.boundingRect()).boundingRect()
             center = rect.center()
             t = QTransform()
@@ -285,10 +285,9 @@ class ProjectItemIcon(QGraphicsRectItem):
             t.translate(-center.x(), -center.y())
             self.setPos(t.map(self.pos()))
             self.setRotation(self.rotation() + 90)
-            items = self.scene().items()
-            for item in items:
-                if isinstance(item, Link):
-                    item.update_geometry()
+            links = self._toolbox.connection_model.connected_links(self.name())
+            for link in links:
+                link.update_geometry()
             event.accept()
         else:
             super().keyPressEvent(event)
