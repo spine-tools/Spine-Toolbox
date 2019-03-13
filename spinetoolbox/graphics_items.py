@@ -234,8 +234,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """Move icon while the mouse button is pressed.
-        Update links that are connected to this icon.
+        """Moves icon(s) while the mouse button is pressed.
+        Update links that are connected to selected icons.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
@@ -264,7 +264,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox.show_item_image_context_menu(event.screenPos(), self.name())
 
     def keyPressEvent(self, event):
-        """Remove item when pressing delete if it is selected.
+        """Handles deleting and rotating the selected
+        item when dedicated keys are pressed.
 
         Args:
             event (QKeyEvent): Key event
