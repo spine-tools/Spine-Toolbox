@@ -492,6 +492,8 @@ class DataStoreForm(QMainWindow):
 
     def add_object_classes(self, object_classes):
         """Insert new object classes."""
+        if not object_classes.count():
+            return
         self.object_tree_model.add_object_classes(object_classes)
         self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
@@ -499,6 +501,8 @@ class DataStoreForm(QMainWindow):
 
     def add_objects(self, objects):
         """Insert new objects."""
+        if not objects.count():
+            return
         self.object_tree_model.add_objects(objects)
         self.commit_available.emit(True)
         msg = "Successfully added new object(s) '{}'.".format("', '".join([x.name for x in objects]))
@@ -506,6 +510,8 @@ class DataStoreForm(QMainWindow):
 
     def add_relationship_classes(self, relationship_classes):
         """Insert new relationship classes."""
+        if not relationship_classes.count():
+            return
         self.object_tree_model.add_relationship_classes(relationship_classes)
         self.commit_available.emit(True)
         relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
@@ -514,6 +520,8 @@ class DataStoreForm(QMainWindow):
 
     def add_relationships(self, relationships):
         """Insert new relationships."""
+        if not relationships.count():
+            return
         self.object_tree_model.add_relationships(relationships)
         self.commit_available.emit(True)
         relationship_name_list = "', '".join([x.name for x in relationships])
@@ -575,6 +583,8 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def update_object_classes(self, object_classes):
         """Update object classes."""
+        if not object_classes.count():
+            return
         self.object_tree_model.update_object_classes(object_classes)
         self.object_parameter_value_model.rename_object_classes(object_classes)
         self.object_parameter_definition_model.rename_object_classes(object_classes)
@@ -587,6 +597,8 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def update_objects(self, objects):
         """Update objects."""
+        if not objects.count():
+            return
         self.object_tree_model.update_objects(objects)
         self.object_parameter_value_model.rename_objects(objects)
         self.relationship_parameter_value_model.rename_objects(objects)
@@ -597,6 +609,8 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def update_relationship_classes(self, wide_relationship_classes):
         """Update relationship classes."""
+        if not wide_relationship_classes.count():
+            return
         self.object_tree_model.update_relationship_classes(wide_relationship_classes)
         self.relationship_parameter_value_model.rename_relationship_classes(wide_relationship_classes)
         self.relationship_parameter_definition_model.rename_relationship_classes(wide_relationship_classes)
@@ -608,6 +622,8 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def update_relationships(self, wide_relationships):
         """Update relationships."""
+        if not wide_relationships.count():
+            return
         self.object_tree_model.update_relationships(wide_relationships)
         self.commit_available.emit(True)
         relationship_name_list = "', '".join([x.name for x in wide_relationships])
@@ -621,24 +637,30 @@ class DataStoreForm(QMainWindow):
         for item in to_add:
             parents.append(item.pop("parent"))
         try:
-            value_lists = self.db_map.add_wide_parameter_value_lists(*to_add)
+            value_lists, error_log = self.db_map.add_wide_parameter_value_lists(*to_add)
+            if value_lists.count():
+                self.commit_available.emit(True)
+                self.msg.emit("Successfully added new parameter value list(s).")
             for k, value_list in enumerate(value_lists):
                 parents[k].internalPointer().id = value_list.id
-            self.commit_available.emit(True)
-            self.msg.emit("Successfully added new parameter value list(s).")
-        except (SpineIntegrityError, SpineDBAPIError) as e:
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
+        except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
     def update_parameter_value_lists(self, *to_update):
         if not any(to_update):
             return
         try:
-            value_lists = self.db_map.update_wide_parameter_value_lists(*to_update)
-            self.object_parameter_definition_model.rename_parameter_value_lists(value_lists)
-            self.relationship_parameter_definition_model.rename_parameter_value_lists(value_lists)
-            self.commit_available.emit(True)
-            self.msg.emit("Successfully updated parameter value list(s).")
-        except (SpineIntegrityError, SpineDBAPIError) as e:
+            value_lists, error_log = self.db_map.update_wide_parameter_value_lists(*to_update)
+            if value_lists.count():
+                self.object_parameter_definition_model.rename_parameter_value_lists(value_lists)
+                self.relationship_parameter_definition_model.rename_parameter_value_lists(value_lists)
+                self.commit_available.emit(True)
+                self.msg.emit("Successfully updated parameter value list(s).")
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
+        except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
     @Slot("bool", name="show_manage_parameter_tags_form")
@@ -1102,7 +1124,7 @@ class TreeViewForm(DataStoreForm):
                 self.msg.emit("Datapackage successfully imported.")
                 self.commit_available.emit(True)
                 self.init_models()
-            except (SpineDBAPIError, SpineIntegrityError) as e:
+            except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
         elif file_path.lower().endswith('xlsx'):
             error_log = []
@@ -1112,8 +1134,6 @@ class TreeViewForm(DataStoreForm):
                 self.commit_available.emit(True)
                 # logging.debug(insert_log)
                 self.init_models()
-            except SpineIntegrityError as e:
-                self.msg_error.emit(e.msg)
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import Excel file: {}".format(e.msg))
             finally:
@@ -1694,7 +1714,7 @@ class TreeViewForm(DataStoreForm):
                 parented_indexes.setdefault(parent, list()).append(index)
             else:
                 toplevel_indexes.append(index)
-        # Remove top level indexes from parented indexes, since they will be fully removed
+        # Remove top level indexes from parented indexes, since they will be fully removed anyways
         for index in toplevel_indexes:
             parented_indexes.pop(index, None)
         # Get items to update
@@ -1710,7 +1730,11 @@ class TreeViewForm(DataStoreForm):
             to_update.append(dict(id=id, value_list=value_list))
         # Get ids to remove
         removed_ids = [ind.internalPointer().id for ind in toplevel_indexes]
+        if not removed_ids:
+            return
         try:
+            # NOTE: this below should never fail with SpineIntegrityError,
+            # since we're removing from items that were already there
             self.db_map.update_wide_parameter_value_lists(*to_update)
             self.db_map.remove_items(parameter_value_list_ids=removed_ids)
             self.commit_available.emit(True)
@@ -1722,7 +1746,7 @@ class TreeViewForm(DataStoreForm):
             self.object_parameter_definition_model.clear_parameter_value_lists(removed_ids)
             self.relationship_parameter_definition_model.clear_parameter_value_lists(removed_ids)
             self.msg.emit("Successfully removed parameter value list(s).")
-        except (SpineIntegrityError, SpineDBAPIError) as e:
+        except SpineDBAPIError as e:
             self._tree_view_form.msg_error.emit(e.msg)
 
     def close_editors(self):
@@ -2463,7 +2487,7 @@ class GraphViewForm(DataStoreForm):
             'class_id': class_id
         }
         try:
-            wide_relationship = self.db_map.add_wide_relationships(wide_kwargs)[0]
+            wide_relationships, _ = self.db_map.add_wide_relationships(wide_kwargs, strict=True)
             for item in object_items:
                 del item.template_id_dim[template_id]
             items = self.ui.graphicsView.scene().items()
@@ -2473,13 +2497,10 @@ class GraphViewForm(DataStoreForm):
                 item.template_id = None
                 item.object_id_list = ",".join([str(x) for x in object_id_list])
             self.commit_available.emit(True)
-            msg = "Successfully added new relationship '{}'.".format(wide_relationship.name)
+            msg = "Successfully added new relationship '{}'.".format(wide_relationship.one().name)
             self.msg.emit(msg)
             return True
-        except SpineIntegrityError as e:
-            self.msg_error.emit(e.msg)
-            return False
-        except SpineDBAPIError as e:
+        except (SpineIntegrityError, SpineDBAPIError) as e:
             self.msg_error.emit(e.msg)
             return False
 

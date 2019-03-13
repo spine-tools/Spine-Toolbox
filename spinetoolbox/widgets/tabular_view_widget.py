@@ -86,7 +86,7 @@ class TabularViewForm(QMainWindow):
         self.ui.actionRefresh.setIcon(refresh_icon)
         self.ui.actionCommit.setIcon(commit_icon)
         self.ui.actionRollback.setIcon(rollback_icon)
-        
+
         # settings
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.settings_key = 'tabularViewWidget'
@@ -151,7 +151,7 @@ class TabularViewForm(QMainWindow):
 
         # Set window title
         self.setWindowTitle("Data store tabular view    -- {} --".format(self.database))
-        
+
         # restore previous ui state
         self.restore_ui()
 
@@ -416,10 +416,10 @@ class TabularViewForm(QMainWindow):
             elif k not in [INDEX_NAME, JSON_TIME_NAME]:
                 new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
         if new_objects:
-            new_objects = self.db_map.add_objects(*new_objects)
+            new_objects, error_log = self.db_map.add_objects(*new_objects)
             db_edited = True
         if new_parameters:
-            new_parameters = self.db_map.add_parameters(*new_parameters)
+            new_parameters, error_log = self.db_map.add_parameters(*new_parameters)
             db_edited = True
         return db_edited
 
@@ -811,7 +811,7 @@ class TabularViewForm(QMainWindow):
         else:
             config.set("settings", "commit_at_exit", "1")
         return
-    
+
     def restore_ui(self):
         """Restore UI state from previous session."""
         window_size = self.qsettings.value("{0}/windowSize".format(self.settings_key))
@@ -835,7 +835,7 @@ class TabularViewForm(QMainWindow):
         for state, splitter in zip(splitter_states, splitters):
             if state:
                 splitter.restoreState(state)
-    
+
     def save_ui(self):
         """Saves UI state"""
         # save qsettings

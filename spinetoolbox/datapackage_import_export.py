@@ -19,7 +19,7 @@ Functions to import/export between spine database and frictionless data's datapa
 import getpass
 from PySide2.QtCore import QRunnable, Signal, QObject
 from datapackage import Package
-from spinedatabase_api import SpineDBAPIError, SpineIntegrityError, DiffDatabaseMapping, \
+from spinedatabase_api import SpineDBAPIError, DiffDatabaseMapping, \
     create_new_spine_database
 from helpers import busy_effect
 import logging
@@ -76,7 +76,7 @@ class DatapackageToSpineConverter(QRunnable):
         try:
             self._run()
             self.signaler.finished.emit()
-        except (SpineDBAPIError, SpineIntegrityError) as e:
+        except SpineDBAPIError as e:
             self.signaler.failed.emit(e.msg)
 
     def _run(self):

@@ -383,3 +383,14 @@ def tuple_itemgetter(itemgetter_func, num_indexes):
         return g
     else:
         return itemgetter_func
+
+
+def format_string_list(str_list):
+    """
+    Return an unordered html list with all elements in str_list.
+    Intended to print error logs as returned by spinedatabase_api.
+
+    Args:
+        str_list (list(str))
+    """
+    return "<ul>" + "".join(["<li>" + x + "</li>" for x in str_list]) + "</ul>"

@@ -27,7 +27,7 @@ from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, \
     QFont, QTextCursor, QTransform
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from math import atan2, degrees, sin, cos, pi
-from spinedatabase_api import SpineDBAPIError
+from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
 
 
 class ConnectorButton(QGraphicsRectItem):
@@ -945,23 +945,23 @@ class ObjectItem(QGraphicsPixmapItem):
         if self.is_template:
             try:
                 kwargs = dict(class_id=self.object_class_id, name=name)
-                object_ = self._graph_view_form.db_map.add_objects(kwargs)
+                object_, _ = self._graph_view_form.db_map.add_objects(kwargs, strict=True)
                 self._graph_view_form.add_objects(object_)
                 self.object_name = name
                 self.object_id = object_.first().id
                 if self.template_id_dim:
                     self.add_into_relationship()
                 self.remove_template()
-            except SpineDBAPIError as e:
+            except (SpineDBAPIError, SpineIntegrityError) as e:
                 self.label_item.setPlainText(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
         else:
             try:
                 kwargs = dict(id=self.object_id, name=name)
-                object_ = self._graph_view_form.db_map.update_objects(kwargs)
+                object_, _ = self._graph_view_form.db_map.update_objects(kwargs, strict=True)
                 self._graph_view_form.update_objects(object_)
                 self.object_name = name
-            except SpineDBAPIError as e:
+            except (SpineDBAPIError, SpineIntegrityError) as e:
                 self.label_item.setPlainText(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
 

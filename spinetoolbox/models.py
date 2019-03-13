@@ -28,7 +28,7 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIco
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir, fix_name_ambiguity, busy_effect
-from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
+from spinedatabase_api import SpineDBAPIError
 
 
 class ProjectItemModel(QAbstractItemModel):
@@ -1909,9 +1909,11 @@ class SubParameterValueModel(SubParameterModel):
         id_column = header.index('id')
         for k, index in enumerate(indexes):
             index_data = index.data(Qt.EditRole)
-            if str(data[k]) == str(index_data):
+            if not data[k] or str(data[k]).isspace():
+                data[k] = None
+            if data[k] == index_data:
                 continue
-            if not data[k] and not index_data:
+            if str(data[k]) == str(index_data):
                 continue
             row = index.row()
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
@@ -1928,8 +1930,7 @@ class SubParameterValueModel(SubParameterModel):
         if not items_to_update:
             return
         try:
-            upd_items, error_log = self._parent.db_map.update_parameter_values(
-                *items_to_update, raise_intgr_error=False)
+            upd_items, error_log = self._parent.db_map.update_parameter_values(*items_to_update)
             self.updated_count += upd_items.count()
             self.error_log += error_log
         except SpineDBAPIError as e:
@@ -1977,6 +1978,8 @@ class SubParameterDefinitionModel(SubParameterModel):
                 continue
             if not data[k] and not index_data:
                 continue
+            if str(data[k]).isspace():
+                data[k] = None
             row = index.row()
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
             if not id_:
@@ -2025,9 +2028,8 @@ class SubParameterDefinitionModel(SubParameterModel):
                 if parameter_tag_id_list is None:
                     continue
                 tag_dict[item["id"]] = parameter_tag_id_list
-            upd_items, error_log = self._parent.db_map.set_parameter_definition_tags(
-                tag_dict, raise_intgr_error=False)
-            upd_items_, error_log_ = self._parent.db_map.update_parameters(*items_to_update, raise_intgr_error=False)
+            upd_items, error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
+            upd_items_, error_log_ = self._parent.db_map.update_parameters(*items_to_update)
             self.updated_count += upd_items.count() + upd_items_.count()
             self.error_log += error_log + error_log_
         except SpineDBAPIError as e:
@@ -2077,12 +2079,13 @@ class EmptyParameterValueModel(EmptyParameterModel):
             return
         try:
             items = list(items_to_add.values())
-            parameter_values= self._parent.db_map.add_parameter_values(*items)
+            parameter_values, error_log = self._parent.db_map.add_parameter_values(*items)
             self.added_rows = list(items_to_add.keys())
             id_column = self._parent.horizontal_header_labels().index('id')
             for i, parameter_value in enumerate(parameter_values):
                 self._main_data[self.added_rows[i]][id_column] = parameter_value.id
-        except (SpineIntegrityError, SpineDBAPIError) as e:
+            self.error_log.extend(error_log)
+        except SpineDBAPIError as e:
             self.error_log.append(e.msg)
 
 
@@ -2301,10 +2304,11 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         try:
             items = list(relationships_to_add.values())
             rows = list(relationships_to_add.keys())
-            relationships = self._parent.db_map.add_wide_relationships(*items)
+            relationships, error_log = self._parent.db_map.add_wide_relationships(*items)
             self._parent._tree_view_form.object_tree_model.add_relationships(relationships)
+            self.error_log.extend(error_log)
             return dict(zip(rows, [x.id for x in relationships]))
-        except (SpineIntegrityError, SpineDBAPIError) as e:
+        except SpineDBAPIError as e:
             self.error_log.append(e.msg)
             return {}
 
@@ -2359,7 +2363,7 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
                 if parameter_tag_id_list is None:
                     continue
                 name_tag_dict[item["name"]] = parameter_tag_id_list
-            parameters = self._parent.db_map.add_parameters(*items)
+            parameters, error_log = self._parent.db_map.add_parameters(*items)
             self.added_rows = list(items_to_add.keys())
             id_column = self._parent.horizontal_header_labels().index('id')
             tag_dict = dict()
@@ -2368,7 +2372,8 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
                     tag_dict[parameter.id] = name_tag_dict[parameter.name]
                 self._main_data[self.added_rows[i]][id_column] = parameter.id
             upd_items = self._parent.db_map.set_parameter_definition_tags(tag_dict)
-        except (SpineIntegrityError, SpineDBAPIError) as e:
+            self.error_log.extend(error_log)
+        except SpineDBAPIError as e:
             self.error_log.append(e.msg)
 
 
