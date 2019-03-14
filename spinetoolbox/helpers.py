@@ -393,4 +393,4 @@ def format_string_list(str_list):
     Args:
         str_list (list(str))
     """
-    return "<ul>" + "".join(["<li>" + x + "</li>" for x in str_list]) + "</ul>"
+    return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
