@@ -245,7 +245,7 @@ class ToolTemplateWidget(QWidget):
             return
         try:
             with open(file_path, "w") as fp:
-                logging.debug("Created file:{0}".format(file_path))
+                self.statusbar.showMessage("New main program file {0} now available".format(file_path), 8000)
         except OSError:
             msg = "Please check directory permissions."
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
@@ -507,7 +507,7 @@ class ToolTemplateWidget(QWidget):
         self.definition["description"] = self.ui.textEdit_description.toPlainText()
         self.definition["tooltype"] = self.ui.comboBox_tooltype.currentText().lower()
         flags = Qt.MatchContains
-        # Check that main program file is valid before saving it
+        # Check that path of main program file is valid before saving it
         main_program = self.ui.lineEdit_main_program.text().strip()
         if not os.path.isfile(main_program):
             self.statusbar.showMessage("Main program file is not valid", 6000)
@@ -560,7 +560,7 @@ class ToolTemplateWidget(QWidget):
             self._toolbox.update_tool_template(row, tool)
         else:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getSaveFileName(self, "Save tool template file", self.def_file_path, "JSON (*.json)")
+            answer = QFileDialog.getSaveFileName(self, "Save Tool template file", self.def_file_path, "JSON (*.json)")
             if answer[0] == "":  # Cancel button clicked
                 return False
             def_file = os.path.abspath(answer[0])

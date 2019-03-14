@@ -777,11 +777,9 @@ class ToolboxUI(QMainWindow):
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"))
         self.msg.emit("All {0} items removed from project".format(n))
-        for i in range(self.ui.tabWidget_item_properties.count()):
-            if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
-                self.ui.tabWidget_item_properties.setCurrentIndex(i)
-                break
-        self.ui.dockWidget_item.setWindowTitle("Properties")
+        self.activate_no_selection_tab()
+        self.ui.graphicsView.scene().clear()
+        self.ui.graphicsView.init_scene()
 
     def remove_item(self, ind, delete_item=False, check_dialog=False):
         """Remove item from project when it's index in the project model is known.

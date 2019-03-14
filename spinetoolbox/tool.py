@@ -26,7 +26,7 @@ from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from tool_instance import ToolInstance
-from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
+from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 from graphics_items import ToolIcon
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from helpers import create_dir
@@ -742,6 +742,18 @@ class Tool(ProjectItem):
                     r'empty!(ARGS);'\
                     r'append!(ARGS, {});'\
                     r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
+        elif self.tool_template().tooltype == "python":
+            # Prepare prompt command "python script.py"
+            python_dir = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+            if not python_dir == "":
+                python_exe = os.path.join(python_dir, PYTHON_EXECUTABLE)
+            else:
+                python_exe = PYTHON_EXECUTABLE
+            work_dir = self.instance.basedir
+            script_path = os.path.join(work_dir, self.tool_template().main_prgm)
+            self.instance.program = python_exe
+            self.instance.args.append(script_path)
+            self.append_instance_args()
         elif self.tool_template().tooltype == "executable":
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
             if not sys.platform == "win32":

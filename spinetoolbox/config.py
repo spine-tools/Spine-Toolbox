@@ -67,8 +67,14 @@ if not sys.platform == "win32":
 else:
     JULIA_EXECUTABLE = "julia.exe"
 
+# Python
+if not sys.platform == "win32":
+    PYTHON_EXECUTABLE = "python"
+else:
+    PYTHON_EXECUTABLE = "python.exe"
+
 # Tool types
-TOOL_TYPES = ["GAMS", "Julia", "Executable"]
+TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
 
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']

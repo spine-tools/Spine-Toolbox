@@ -125,6 +125,11 @@ class ToolInstance(QObject):
                 # On Julia the Qprocess workdir must be set to the path where the main script is
                 # Otherwise it doesn't find input files in subdirectories
                 self.tool_process.start_process(workdir=self.basedir)
+        if self.tool_template.tooltype == "python":
+            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+            self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
+            # TODO: Check if settings the workdir is necessary with Python
+            self.tool_process.start_process(workdir=self.basedir)
         elif self.tool_template.tooltype == "gams":
             self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
@@ -183,6 +188,31 @@ class ToolInstance(QObject):
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tJulia Tool template finished successfully. Return code:{0}".format(ret))
+        self.tool_process.deleteLater()
+        self.tool_process = None
+        self.save_output_files(ret)
+
+    @Slot(int, name="python_tool_finished")
+    def python_tool_finished(self, ret):
+        """Run when Python tool from command line has finished processing.
+
+        Args:
+            ret (int): Return code given by tool
+        """
+        self.tool_process.subprocess_finished_signal.disconnect(self.python_tool_finished)  # Disconnect signal
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
+                                             "Python is installed properly on your computer."
+                                             .format(self.tool_process.program()))
+            else:
+                try:
+                    return_msg = self.tool_template.return_codes[ret]
+                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:  # Return code 0: success
+            self._toolbox.msg.emit("\tPython Tool template finished successfully. Return code:{0}".format(ret))
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)

@@ -26,7 +26,7 @@ from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
-from tool_templates import GAMSTool, JuliaTool, ExecutableTool
+from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 
 
@@ -354,10 +354,12 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
                                          "'gams', 'julia' and 'executable'")
             return None
-        if _tooltype == "gams":
-            return GAMSTool.load(self._toolbox, path, definition)
-        elif _tooltype == "julia":
+        if _tooltype == "julia":
             return JuliaTool.load(self._toolbox, path, definition)
+        if _tooltype == "python":
+            return PythonTool.load(self._toolbox, path, definition)
+        elif _tooltype == "gams":
+            return GAMSTool.load(self._toolbox, path, definition)
         elif _tooltype == "executable":
             return ExecutableTool.load(self._toolbox, path, definition)
         else:

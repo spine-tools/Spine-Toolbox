@@ -23,7 +23,7 @@ from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QPixmap, QColor
 import ui.settings
 from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, STATUSBAR_SS, \
-    SETTINGS_SS, GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
+    SETTINGS_SS, GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 
 
 class SettingsWidget(QWidget):
@@ -50,6 +50,7 @@ class SettingsWidget(QWidget):
         self.ui.setupUi(self)
         self.ui.toolButton_browse_gams.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.ui.toolButton_browse_julia.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.ui.toolButton_browse_python.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.ui.toolButton_browse_work.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
@@ -74,6 +75,7 @@ class SettingsWidget(QWidget):
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
         self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_path)
+        self.ui.toolButton_browse_python.clicked.connect(self.browse_python_path)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
         self.ui.radioButton_bg_grid.clicked.connect(self.update_scene_bg)
@@ -95,7 +97,7 @@ class SettingsWidget(QWidget):
             self.ui.lineEdit_gams_path.setText("")
             return
         else:
-            self.statusbar.showMessage("Selected directory is valid GAMS directory", 10000)
+            self.statusbar.showMessage("Selected directory is a valid GAMS directory", 10000)
             self.ui.lineEdit_gams_path.setText(selected_path)
         return
 
@@ -113,8 +115,26 @@ class SettingsWidget(QWidget):
             self.ui.lineEdit_julia_path.setText("")
             return
         else:
-            self.statusbar.showMessage("Selected directory is valid Julia directory", 10000)
+            self.statusbar.showMessage("Selected directory is a valid Julia directory", 10000)
             self.ui.lineEdit_julia_path.setText(selected_path)
+        return
+
+    @Slot(bool, name="browse_python_path")
+    def browse_python_path(self, checked=False):
+        """Open file browser where user can select the path to wanted Python version."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        answer = QFileDialog.getExistingDirectory(self, 'Select Python Directory', os.path.abspath('C:\\'))
+        if answer == '':  # Cancel button clicked
+            return
+        selected_path = os.path.abspath(answer)
+        python_path = os.path.join(selected_path, PYTHON_EXECUTABLE)
+        if not os.path.isfile(python_path):
+            self.statusbar.showMessage("python.exe not found in selected directory", 10000)
+            self.ui.lineEdit_python_path.setText("")
+            return
+        else:
+            self.statusbar.showMessage("Selected directory is a valid Python directory", 10000)
+            self.ui.lineEdit_python_path.setText(selected_path)
         return
 
     @Slot(bool, name="browse_work_path")
@@ -153,7 +173,7 @@ class SettingsWidget(QWidget):
 
     @Slot(bool, name="update_scene_bg")
     def update_scene_bg(self, checked):
-        """Set background drawing type on scene depending on radiobutton states.
+        """Draw background on scene depending on radiobutton states.
 
         Args:
             checked (boolean): Toggle state
@@ -178,6 +198,7 @@ class SettingsWidget(QWidget):
         gams_path = self._configs.get("settings", "gams_path")
         use_repl = self._configs.getboolean("settings", "use_repl")
         julia_path = self._configs.get("settings", "julia_path")
+        python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         delete_data = self._configs.getboolean("settings", "delete_data")
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
@@ -223,6 +244,7 @@ class SettingsWidget(QWidget):
         if use_repl:
             self.ui.checkBox_use_repl.setCheckState(Qt.Checked)
         self.ui.lineEdit_julia_path.setText(julia_path)
+        self.ui.lineEdit_python_path.setText(python_path)
 
     def read_project_settings(self):
         """Read project settings from config object and update settings widgets accordingly."""
@@ -263,6 +285,13 @@ class SettingsWidget(QWidget):
             if not os.path.isfile(julia_exe_path):
                 self.statusbar.showMessage("Julia executable not found in selected directory", 10000)
                 return
+        # Check that Python directory is valid. Set it empty if not.
+        python_path = self.ui.lineEdit_python_path.text()
+        if not python_path.strip() == "":  # Skip this if using Julia in system path
+            python_exe_path = os.path.join(python_path, PYTHON_EXECUTABLE)
+            if not os.path.isfile(python_exe_path):
+                self.statusbar.showMessage("Python executable not found in selected directory", 10000)
+                return
         # Write to config object
         self._configs.setboolean("settings", "open_previous_project", a)
         self._configs.setboolean("settings", "show_exit_prompt", b)
@@ -274,6 +303,7 @@ class SettingsWidget(QWidget):
         self._configs.set("settings", "gams_path", gams_path)
         self._configs.setboolean("settings", "use_repl", e)
         self._configs.set("settings", "julia_path", julia_path)
+        self._qsettings.setValue("appSettings/pythonPath", python_path)
         self._qsettings.setValue("appSettings/bgGrid", bg_grid)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         # Update project settings
