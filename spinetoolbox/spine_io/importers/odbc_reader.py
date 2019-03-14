@@ -2,13 +2,16 @@
 
 import pyodbc
 
-from io_api import FileImportTemplate
+from spine_io.io_api import FileImportTemplate
 
 from PySide2.QtWidgets import QWidget, QFormLayout, QLabel, QLineEdit, QCheckBox, QSpinBox, QGroupBox, QVBoxLayout, QInputDialog, QErrorMessage
 from PySide2.QtCore import QObject, Signal
 
 
 class ODBCConnector(FileImportTemplate):
+    HAS_TABLES = True
+    
+    DISPLAY_NAME = 'ODBC'
     def __init__(self):
         super(ODBCConnector, self).__init__()
 
@@ -21,15 +24,6 @@ class ODBCConnector(FileImportTemplate):
     
     def set_table(self, table):
         pass
-    
-    @property
-    def source_name(self):
-        """Name of data source, must return string"""
-        return 'ODBC'
-    
-    @property
-    def can_have_multiple_tables(self):
-        return True
         
     def source_selector(self, parent=None):
         value, ok = QInputDialog.getText(parent, "ODBC", "ODBC connection string:")

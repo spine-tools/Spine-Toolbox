@@ -1,15 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from PySide2.QtWidgets import QWidget, QApplication, QListWidget, QVBoxLayout, QDialogButtonBox, QMainWindow, QGridLayout, QComboBox, QPushButton, QTableView, QHBoxLayout, QSpacerItem, QSpinBox, QGroupBox, QLabel, QMenu, QListWidgetItem, QListView
-from PySide2.QtCore import Qt, QAbstractTableModel, QPoint, Signal, QItemSelectionModel, QAbstractListModel,QModelIndex
+from PySide2.QtWidgets import QWidget, QVBoxLayout, QDialogButtonBox, QGridLayout, QComboBox, QPushButton, QTableView, QHBoxLayout, QSpinBox, QGroupBox, QLabel, QListView
+from PySide2.QtCore import Qt, QAbstractTableModel, Signal, QAbstractListModel,QModelIndex
 
-from functools import partial
-
-import sys
-sys.path.append("c:/data/GIT/spine-data/spinedatabase_api/")
-
-
-from json_mapping import DataMapping, RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
+from spinedatabase_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
 
 
 class MappingTableModel(QAbstractTableModel):
@@ -224,7 +218,7 @@ class MappingTableModel(QAbstractTableModel):
                 return non_editable
 
         if mapping is None:
-            if index.column() <= 1:
+            if index.column() <= 2:
                 return editable
             else:
                 return non_editable
@@ -273,9 +267,21 @@ class MappingTableModel(QAbstractTableModel):
     
     def set_value(self, name, value):
         mapping = self.get_mapping_from_name(name)
-        if mapping != None:
+        if mapping is None and value.isdigit():
+            # create new mapping
+            mapping = Mapping(map_type='column', value_reference=int(value))
+        elif mapping is None:
+            # string mapping
+            if value == '':
+                return False
+            mapping = value
+        else:
+            # update mapping value
             if type(mapping) == str:
-                mapping = value
+                if value == '':
+                    mapping = None
+                else:
+                    mapping = value
             else:
                 if value.isdigit():
                     value = int(value)
@@ -286,9 +292,7 @@ class MappingTableModel(QAbstractTableModel):
                 elif value == '':
                     value = None
                 mapping.value_reference = value
-            return self.set_mapping_from_name(name, mapping)
-        else:
-            return False
+        return self.set_mapping_from_name(name, mapping)
     
     def set_append_str(self, name, value):
         mapping = self.get_mapping_from_name(name)
