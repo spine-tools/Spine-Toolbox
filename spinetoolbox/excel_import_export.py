@@ -519,6 +519,7 @@ def read_spine_xlsx(filepath):
     """
     wb = load_workbook(filepath, read_only=True)
     sheets = wb.sheetnames
+    ErrorLogMsg = namedtuple('ErrorLogMsg',('msg','db_type','imported_from','other'))
 
     obj_data = []
     rel_data = []
@@ -546,8 +547,7 @@ def read_spine_xlsx(filepath):
                 else:
                     obj_data.append(data)
             except Exception as e:
-                error_log.append(["sheet", ws.title,
-                                  "Error reading sheet {}: {}".format(ws.title, e)])
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e),"sheet", filepath,''))
         elif sheet_data == "json array":
             # read sheet with data type: 'json array'
             try:
@@ -557,8 +557,7 @@ def read_spine_xlsx(filepath):
                 else:
                     obj_json_data.append(data)
             except Exception as e:
-                error_log.append(["sheet", ws.title,
-                                  "Error reading sheet {}: {}".format(ws.title, e)])
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e),"sheet", filepath,''))
     wb.close()
 
     # merge sheets that have the same class.
