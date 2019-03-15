@@ -139,6 +139,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.kernel_name = kernel_name
         self.kernel_execution_state = None
         kernel_specs = find_kernel_specs()
+        # logging.debug("kernel_specs:{0}".format(kernel_specs))
         julia_kernel_names = [x for x in kernel_specs if x.startswith('julia')]
         if self.kernel_name in julia_kernel_names:
             return self.start_available_jupyter_kernel()
@@ -154,7 +155,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             False if the kernel cannot be started and the user chooses not to reconfigure IJulia
         """
         self.starting = True
-        self._toolbox.msg.emit("*** Starting Julia REPL ***")
+        self._toolbox.msg.emit("*** Starting Julia Console ***")
         kernel_manager = CustomQtKernelManager(kernel_name=self.kernel_name)
         try:
             kernel_manager.start_kernel()
@@ -388,7 +389,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Shut down the jupyter kernel."""
         if not self.kernel_client:
             return
-        self._toolbox.msg.emit("Shutting down Julia REPL...")
+        self._toolbox.msg.emit("Shutting down Julia Console...")
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
 

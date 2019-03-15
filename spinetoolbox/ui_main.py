@@ -20,7 +20,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QItemSelection
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction, QWidgetAction
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
@@ -40,6 +40,7 @@ from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import ZoomWidget
 from widgets.julia_repl_widget import JuliaREPLWidget
+from widgets.python_repl_widget import PythonReplWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
@@ -115,6 +116,9 @@ class ToolboxUI(QMainWindow):
         # Make julia REPL
         self.julia_repl = JuliaREPLWidget(self)
         self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
+        # Make Python REPL
+        self.python_repl = PythonReplWidget(self)
+        self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
         # Application main menu
         self.setup_zoom_action()
         # QActions
@@ -1535,6 +1539,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
+        self.python_repl.shutdown_kernel()
         self.close_view_forms()
         if event:
             event.accept()

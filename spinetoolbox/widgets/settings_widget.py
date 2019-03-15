@@ -199,6 +199,7 @@ class SettingsWidget(QWidget):
         use_repl = self._configs.getboolean("settings", "use_repl")
         julia_path = self._configs.get("settings", "julia_path")
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
+        # use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="false")
         delete_data = self._configs.getboolean("settings", "delete_data")
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")

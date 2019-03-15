@@ -107,8 +107,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>366</width>
-          <height>503</height>
+          <width>338</width>
+          <height>475</height>
          </rect>
         </property>
         <property name="autoFillBackground">
@@ -251,6 +251,9 @@
               <property name="focusPolicy">
                <enum>Qt::NoFocus</enum>
               </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Directory where Spine Toolbox projects are stored. Non-editable at the moment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
@@ -319,7 +322,7 @@
                  </size>
                 </property>
                 <property name="toolTip">
-                 <string>Pick background color</string>
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick solid background color&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                 </property>
                 <property name="iconSize">
                  <size>
@@ -351,7 +354,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Path to GAMS executable</string>
+               <string>GAMS directory</string>
               </property>
              </widget>
             </item>
@@ -370,10 +373,10 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to directory where GAMS and GAMSIDE executables are found&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selected GAMS directory. Leave blank to use system path GAMS.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Using GAMS executable in system path</string>
+               <string>Using GAMS in system path</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
@@ -387,6 +390,9 @@
                 <width>22</width>
                 <height>22</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS by browsing to a directory containing gams executable (gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="iconSize">
                <size>
@@ -408,13 +414,6 @@
             <property name="spacing">
              <number>6</number>
             </property>
-            <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_use_repl">
-              <property name="text">
-               <string>Run Julia Scripts in REPL</string>
-              </property>
-             </widget>
-            </item>
             <item row="2" column="0">
              <widget class="QLabel" name="label_5">
               <property name="font">
@@ -423,7 +422,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Path to Julia executable</string>
+               <string>Julia environment</string>
               </property>
              </widget>
             </item>
@@ -434,6 +433,9 @@
                 <width>22</width>
                 <height>22</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia environment by browsing to a directory containing a Julia executable&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="iconSize">
                <size>
@@ -458,13 +460,23 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path where julia executable is found&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selected Julia directory. Leave blank to use system path Julia.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Using Julia executable in system path</string>
+               <string>Using Julia environment in system path</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QCheckBox" name="checkBox_use_embedded_julia">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). If unchecked, Julia Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `julia script.jl` in terminal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="text">
+               <string>Use embedded Julia Console</string>
               </property>
              </widget>
             </item>
@@ -496,20 +508,30 @@
           <string>Python</string>
          </property>
          <layout class="QGridLayout" name="gridLayout_3">
-          <item row="0" column="0">
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox_use_embedded_python">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Python Tools and scripts will be executed in the embedded Python Console (Shell). If unchecked, Python Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `python script.py` in terminal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Use embedded Python Console</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
            <widget class="QLineEdit" name="lineEdit_python_path">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python executable directory&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selected Python directory. Leave blank to use system path Python.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="placeholderText">
-             <string>Using Python executable in system path</string>
+             <string>Using Python environment in system path</string>
             </property>
             <property name="clearButtonEnabled">
              <bool>true</bool>
             </property>
            </widget>
           </item>
-          <item row="0" column="1">
+          <item row="1" column="1">
            <widget class="QToolButton" name="toolButton_browse_python">
             <property name="maximumSize">
              <size>
@@ -517,11 +539,26 @@
               <height>22</height>
              </size>
             </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python environment by browsing to a directory containing python executable (python.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
             <property name="iconSize">
              <size>
               <width>20</width>
               <height>20</height>
              </size>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Python environment</string>
             </property>
            </widget>
           </item>
@@ -650,7 +687,7 @@
              <enum>Qt::StrongFocus</enum>
             </property>
             <property name="toolTip">
-             <string>Project Description</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Project description&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="styleSheet">
              <string notr="true">:focus {border: 1px solid black;}</string>
@@ -665,8 +702,8 @@
              <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:7.8pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="acceptRichText">
              <bool>false</bool>
@@ -705,7 +742,7 @@ p, li { white-space: pre-wrap; }
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave this empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
                <string>Using default directory</string>
@@ -892,11 +929,12 @@ p, li { white-space: pre-wrap; }
   <tabstop>toolButton_bg_color</tabstop>
   <tabstop>lineEdit_gams_path</tabstop>
   <tabstop>toolButton_browse_gams</tabstop>
-  <tabstop>checkBox_use_repl</tabstop>
   <tabstop>lineEdit_julia_path</tabstop>
   <tabstop>toolButton_browse_julia</tabstop>
+  <tabstop>checkBox_use_embedded_julia</tabstop>
   <tabstop>lineEdit_python_path</tabstop>
   <tabstop>toolButton_browse_python</tabstop>
+  <tabstop>checkBox_use_embedded_python</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
   <tabstop>textEdit_project_description</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
