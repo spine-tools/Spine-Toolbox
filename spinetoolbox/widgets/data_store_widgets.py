@@ -1139,7 +1139,7 @@ class TreeViewForm(DataStoreForm):
             finally:
                 if not len(error_log) == 0:
                     msg = "Something went wrong in importing an Excel file " \
-                          "into the current session. Here is the error log:\n\n{0}".format(error_log)
+                          "into the current session. Here is the error log:\n\n{0}".format([e.msg for e in error_log])
                     # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
                     self.msg_error.emit(msg)
                     # logging.debug(error_log)
