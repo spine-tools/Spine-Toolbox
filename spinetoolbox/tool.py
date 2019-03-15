@@ -352,7 +352,7 @@ class Tool(ProjectItem):
                 self._toolbox.msg_warning.emit("Copying optional input files failed")
         self._toolbox.ui.pushButton_tool_stop.setEnabled(True)
         self._toolbox.ui.pushButton_tool_execute.setEnabled(False)
-        self._graphics_item.start_wheel_animation()
+        self._graphics_item.start_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
         self.instance.execute()
@@ -692,7 +692,7 @@ class Tool(ProjectItem):
         """Tool execution finished."""
         self._toolbox.ui.pushButton_tool_stop.setEnabled(False)
         self._toolbox.ui.pushButton_tool_execute.setEnabled(True)
-        self._graphics_item.stop_wheel_animation()
+        self._graphics_item.stop_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execution_finished)
         if return_code == 0:

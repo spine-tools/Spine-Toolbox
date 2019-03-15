@@ -406,45 +406,41 @@ class ToolIcon(ProjectItemIcon):
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)  # Adds also child items automatically
         # animation stuff
-        self.wheel = QGraphicsPixmapItem()
-        pixmap = QPixmap(":/icons/wheel.png").scaled(0.5*self.rect().width(), 0.5*self.rect().height())
-        self.wheel.setPixmap(pixmap)
-        self.wheel_w = pixmap.width()
-        self.wheel_h = pixmap.height()
-        self.wheel.setPos(self.sceneBoundingRect().center())
-        self.wheel.moveBy(-0.5*self.wheel_w, -0.5*self.wheel_h)
-        self.wheel_center = self.wheel.sceneBoundingRect().center()
-        self.wheel.setParentItem(self)
-        self.wheel.hide()
         self.timer = QTimeLine()
         self.timer.setLoopCount(0)  # loop forever
         self.timer.setFrameRange(0, 10)
-        self.wheel_animation = QGraphicsItemAnimation()
-        self.wheel_animation.setItem(self.wheel)
-        self.wheel_animation.setTimeLine(self.timer)
+        # self.timer.setCurveShape(QTimeLine.CosineCurve)
+        self.timer.valueForTime = self.value_for_time
+        self.tool_animation = QGraphicsItemAnimation()
+        self.tool_animation.setItem(self.svg_item)
+        self.tool_animation.setTimeLine(self.timer)
         # self.timer.frameChanged.connect(self.test)
+        self.delta = .25 * self.svg_item.sceneBoundingRect().height()
 
-    def test(self, frame):
-        logging.debug(self.wheel_center)
+    def value_for_time(self, msecs):
+        rem = (msecs % 1000) / 1000
+        return 1.0 - rem
 
-    def start_wheel_animation(self):
-        """Start the animation that plays when the Tool associated to this GraphicsItem
-        is running (spinning wheel).
+    def start_animation(self):
+        """Start the animation that plays when the Tool associated to this GraphicsItem is running.
         """
-        for angle in range(360):
-            step = angle / 360.0
-            self.wheel_animation.setTranslationAt(step, 0.5*self.wheel_w, 0.5*self.wheel_h)
-            self.wheel_animation.setRotationAt(step, angle)
-            self.wheel_animation.setTranslationAt(step, -0.5*self.wheel_w, -0.5*self.wheel_h)
-            self.wheel_animation.setPosAt(step, self.wheel_center)
-        self.wheel.show()
+        self.svg_item.moveBy(0, -self.delta)
+        offset = .75 * self.svg_item.sceneBoundingRect().height()
+        for angle in range(1, 45):
+            step = angle / 45.0
+            self.tool_animation.setTranslationAt(step, 0, offset)
+            self.tool_animation.setRotationAt(step, angle)
+            self.tool_animation.setTranslationAt(step, 0, -offset)
+            self.tool_animation.setPosAt(
+                step,
+                QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
         self.timer.start()
 
-    def stop_wheel_animation(self):
-        """Stop wheel animation"""
+    def stop_animation(self):
+        """Stop animation"""
         self.timer.stop()
-        self.timer.setCurrentTime(0)
-        self.wheel.hide()
+        self.svg_item.moveBy(0, self.delta)
+        self.timer.setCurrentTime(999)
 
 
 class DataStoreIcon(ProjectItemIcon):

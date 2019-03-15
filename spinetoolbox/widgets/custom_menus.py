@@ -19,7 +19,7 @@ Classes for custom context menus and pop-up menus.
 import logging
 from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction, QWidget
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer
+from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer, QTimeLine
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
 from widgets.custom_qwidgets import FilterWidget
@@ -99,7 +99,7 @@ class ProjectItemContextMenu(CustomContextMenu):
         elif d.item_type == "Tool":
             self.add_action("Execute")
             self.add_action("Results...")
-            if d.get_icon().wheel.isVisible():
+            if d.get_icon().timer.state() == QTimeLine.Running:
                 self.add_action("Stop")
             else:
                 self.add_action("Stop", enabled=False)

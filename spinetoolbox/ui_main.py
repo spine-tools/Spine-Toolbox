@@ -20,7 +20,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QItemSelection
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QItemSelection, QTimeLine
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction, QWidgetAction
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
@@ -1195,7 +1195,7 @@ class ToolboxUI(QMainWindow):
             d.open_results()
         elif option == "Stop":
             # Check that the wheel is still visible, because execution may have stopped before the user clicks Stop
-            if not d.get_icon().wheel.isVisible():
+            if d.get_icon().timer.state() != QTimeLine.Running:
                 self.msg.emit("Tool <b>{0}</b> is not running".format(d.name))
             else:
                 d.stop_process()  # Proceed with stopping
