@@ -56,10 +56,10 @@ def import_xlsx_to_db(db, filepath):
     object_values = []
     for sheet in obj_data:
         object_classes.append(sheet.class_name)
-        objects.extend([(o, sheet.class_name) for o in sheet.objects])
-        object_parameters.extend([(o, sheet.class_name) for o in sheet.parameters])
+        objects.extend([(sheet.class_name, o) for o in sheet.objects])
+        object_parameters.extend([(sheet.class_name, o) for o in sheet.parameters])
         d_getter = itemgetter(*[1,2,0,3])
-        object_values.extend([d_getter(d) for d in sheet.parameter_values])
+        object_values.extend([(sheet.class_name,) + d_getter(d) for d in sheet.parameter_values])
 
     rel_classes = []
     rels = []
@@ -71,7 +71,7 @@ def import_xlsx_to_db(db, filepath):
         d_getter = itemgetter(*[num_oc+1, 0, num_oc+2])
         rel_classes.append((sheet.class_name, sheet.object_classes))
         rels.extend([(sheet.class_name, o) for o in sheet.objects])
-        rel_parameters.extend([(o, sheet.class_name) for o in sheet.parameters])
+        rel_parameters.extend([(sheet.class_name, o) for o in sheet.parameters])
         rel_values.extend([(sheet.class_name, rel_getter(d)) + d_getter(d) for d in sheet.parameter_values])
 
     num_imported, errors = import_data(db, object_classes, rel_classes, object_parameters, rel_parameters, objects, rels, object_values, rel_values)
