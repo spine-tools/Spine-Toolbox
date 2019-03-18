@@ -945,10 +945,22 @@ class TreeViewForm(DataStoreForm):
     def restore_dock_widgets(self):
         """Dock all floating and or hidden QDockWidgets back to the window."""
         for dock in self.findChildren(QDockWidget):
-            if not dock.isVisible():
-                dock.setVisible(True)
-            if dock.isFloating():
-                dock.setFloating(False)
+            dock.setVisible(False)
+        self.ui.dockWidget_parameter_value_list.setVisible(True)
+        self.ui.dockWidget_parameter_value_list.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_parameter_value_list)
+        self.ui.dockWidget_object_parameter_value.setVisible(True)
+        self.ui.dockWidget_object_parameter_value.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_value)
+        self.ui.dockWidget_object_parameter_definition.setVisible(True)
+        self.ui.dockWidget_object_parameter_definition.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_definition)
+        self.ui.dockWidget_relationship_parameter_value.setVisible(True)
+        self.ui.dockWidget_relationship_parameter_value.setFloating(False)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_relationship_parameter_value)
+        self.ui.dockWidget_relationship_parameter_definition.setVisible(True)
+        self.ui.dockWidget_relationship_parameter_definition.setFloating(False)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_relationship_parameter_definition)
 
     def update_copy_and_remove_actions(self):
         """Update copy and remove actions according to selections across the widgets."""
@@ -1968,10 +1980,28 @@ class GraphViewForm(DataStoreForm):
     def restore_dock_widgets(self):
         """Dock all floating and or hidden QDockWidgets back to the window."""
         for dock in self.findChildren(QDockWidget):
-            if not dock.isVisible():
-                dock.setVisible(True)
-            if dock.isFloating():
-                dock.setFloating(False)
+            dock.setVisible(False)
+        self.ui.dockWidget_parameter_value_list.setVisible(True)
+        self.ui.dockWidget_parameter_value_list.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_parameter_value_list)
+        self.ui.dockWidget_object_parameter_value.setVisible(True)
+        self.ui.dockWidget_object_parameter_value.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_value)
+        self.ui.dockWidget_object_parameter_definition.setVisible(True)
+        self.ui.dockWidget_object_parameter_definition.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_definition)
+        self.ui.dockWidget_relationship_parameter_value.setVisible(True)
+        self.ui.dockWidget_relationship_parameter_value.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_relationship_parameter_value)
+        self.ui.dockWidget_relationship_parameter_definition.setVisible(True)
+        self.ui.dockWidget_relationship_parameter_definition.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_relationship_parameter_definition)
+        self.ui.dockWidget_object_tree.setVisible(True)
+        self.ui.dockWidget_object_tree.setFloating(False)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.ui.dockWidget_object_tree)
+        self.ui.dockWidget_item_palette.setVisible(True)
+        self.ui.dockWidget_item_palette.setFloating(False)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_item_palette)
 
     @Slot(name="_handle_zoom_widget_minus_pressed")
     def _handle_zoom_widget_minus_pressed(self):
