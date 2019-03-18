@@ -847,20 +847,7 @@ class TreeViewForm(DataStoreForm):
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
-        self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_parameter_value_list,
-            Qt.Horizontal)
-        self.splitDockWidget(
-            self.ui.dockWidget_object_parameter_value,
-            self.ui.dockWidget_relationship_parameter_value,
-            Qt.Vertical)
-        self.tabifyDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
-        self.tabifyDockWidget(
-            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition)
-        self.ui.dockWidget_object_parameter_value.raise_()
-        self.ui.dockWidget_relationship_parameter_value.raise_()
+        self.restore_dock_widgets()
         # init models and views
         self.init_models()
         self.init_views()
@@ -875,7 +862,7 @@ class TreeViewForm(DataStoreForm):
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
-        # qApp.focusChanged.connect(self.update_paste_action)  # TODO: What is this? qApp does not exist
+        qApp.focusChanged.connect(self.update_paste_action)  # qApp comes with PySide2.QtWidgets.QApplication
         # Action availability
         self.object_class_selection_available.connect(self.ui.actionEdit_object_classes.setEnabled)
         self.object_selection_available.connect(self.ui.actionEdit_objects.setEnabled)
@@ -943,24 +930,27 @@ class TreeViewForm(DataStoreForm):
 
     @Slot(name="restore_dock_widgets")
     def restore_dock_widgets(self):
-        """Dock all floating and or hidden QDockWidgets back to the window."""
+        """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        # Place docks
         for dock in self.findChildren(QDockWidget):
-            dock.setVisible(False)
-        self.ui.dockWidget_parameter_value_list.setVisible(True)
-        self.ui.dockWidget_parameter_value_list.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_parameter_value_list)
-        self.ui.dockWidget_object_parameter_value.setVisible(True)
-        self.ui.dockWidget_object_parameter_value.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_value)
-        self.ui.dockWidget_object_parameter_definition.setVisible(True)
-        self.ui.dockWidget_object_parameter_definition.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_definition)
-        self.ui.dockWidget_relationship_parameter_value.setVisible(True)
-        self.ui.dockWidget_relationship_parameter_value.setFloating(False)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_relationship_parameter_value)
-        self.ui.dockWidget_relationship_parameter_definition.setVisible(True)
-        self.ui.dockWidget_relationship_parameter_definition.setFloating(False)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_relationship_parameter_definition)
+            dock.setVisible(True)
+            dock.setFloating(False)
+            self.addDockWidget(Qt.RightDockWidgetArea, dock)
+        # Split and tabify
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_parameter_value_list,
+            Qt.Horizontal)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_parameter_value,
+            self.ui.dockWidget_relationship_parameter_value,
+            Qt.Vertical)
+        self.tabifyDockWidget(
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
+        self.tabifyDockWidget(
+            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition)
+        self.ui.dockWidget_object_parameter_value.raise_()
+        self.ui.dockWidget_relationship_parameter_value.raise_()
 
     def update_copy_and_remove_actions(self):
         """Update copy and remove actions according to selections across the widgets."""
@@ -1868,12 +1858,7 @@ class GraphViewForm(DataStoreForm):
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
         # Set up dock widgets
-        self.tabifyDockWidget(
-            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
-        self.tabifyDockWidget(
-            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition)
-        self.ui.dockWidget_object_parameter_value.raise_()
-        self.ui.dockWidget_relationship_parameter_value.raise_()
+        self.restore_dock_widgets()
         # Initialize stuff
         self.init_models()
         self.init_views()
@@ -1978,12 +1963,8 @@ class GraphViewForm(DataStoreForm):
 
     @Slot(name="restore_dock_widgets")
     def restore_dock_widgets(self):
-        """Dock all floating and or hidden QDockWidgets back to the window."""
-        for dock in self.findChildren(QDockWidget):
-            dock.setVisible(False)
-        self.ui.dockWidget_parameter_value_list.setVisible(True)
-        self.ui.dockWidget_parameter_value_list.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_parameter_value_list)
+        """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        # Place docks
         self.ui.dockWidget_object_parameter_value.setVisible(True)
         self.ui.dockWidget_object_parameter_value.setFloating(False)
         self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_value)
@@ -2002,6 +1983,16 @@ class GraphViewForm(DataStoreForm):
         self.ui.dockWidget_item_palette.setVisible(True)
         self.ui.dockWidget_item_palette.setFloating(False)
         self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_item_palette)
+        self.ui.dockWidget_parameter_value_list.setVisible(True)
+        self.ui.dockWidget_parameter_value_list.setFloating(False)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_parameter_value_list)
+        # Tabify
+        self.tabifyDockWidget(
+            self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
+        self.tabifyDockWidget(
+            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition)
+        self.ui.dockWidget_object_parameter_value.raise_()
+        self.ui.dockWidget_relationship_parameter_value.raise_()
 
     @Slot(name="_handle_zoom_widget_minus_pressed")
     def _handle_zoom_widget_minus_pressed(self):
