@@ -69,7 +69,7 @@ else:
 
 # Python
 if not sys.platform == "win32":
-    PYTHON_EXECUTABLE = "python"
+    PYTHON_EXECUTABLE = "python3"
 else:
     PYTHON_EXECUTABLE = "python.exe"
 

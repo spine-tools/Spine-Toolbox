@@ -38,8 +38,8 @@ class SpineModelConfigurationAssistant(QObject):
         """Init class."""
         super().__init__(toolbox)
         self._toolbox = toolbox
-        julia_dir = self._toolbox._config.get("settings", "julia_path")
-        if not julia_dir == '':
+        julia_dir = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+        if not julia_dir == "":
             julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
         else:
             julia_exe = JULIA_EXECUTABLE

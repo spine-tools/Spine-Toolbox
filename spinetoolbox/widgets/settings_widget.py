@@ -196,10 +196,10 @@ class SettingsWidget(QWidget):
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._configs.get("settings", "gams_path")
-        use_repl = self._configs.getboolean("settings", "use_repl")
-        julia_path = self._configs.get("settings", "julia_path")
+        use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue=2)
+        julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
+        use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue=0)
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
-        # use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="false")
         delete_data = self._configs.getboolean("settings", "delete_data")
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
         bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
@@ -242,9 +242,11 @@ class SettingsWidget(QWidget):
             proj_dir = DEFAULT_PROJECT_DIR
         self.ui.lineEdit_project_dir.setText(proj_dir)
         self.ui.lineEdit_gams_path.setText(gams_path)
-        if use_repl:
-            self.ui.checkBox_use_repl.setCheckState(Qt.Checked)
+        if use_embedded_julia == 2:
+            self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)
         self.ui.lineEdit_julia_path.setText(julia_path)
+        if use_embedded_python == 2:
+            self.ui.checkBox_use_embedded_python.setCheckState(Qt.Checked)
         self.ui.lineEdit_python_path.setText(python_path)
 
     def read_project_settings(self):
@@ -259,52 +261,56 @@ class SettingsWidget(QWidget):
 
     @Slot(name='ok_clicked')
     def ok_clicked(self):
-        """Get selections and save them to conf file."""
-        a = int(self.ui.checkBox_open_previous_project.checkState())
-        b = int(self.ui.checkBox_exit_prompt.checkState())
-        f = str(int(self.ui.checkBox_save_at_exit.checkState()))
-        g = str(int(self.ui.checkBox_commit_at_exit.checkState()))
-        # NOTE: on Linux, True and False are actually saved as boolean values into QSettings...
-        # ...which doesn't work for us, we need to save strings
-        h = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
-        d = int(self.ui.checkBox_datetime.checkState())
-        bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
-        delete_data = int(self.ui.checkBox_delete_data.checkState())
+        """Get selections and save them to persistent memory.
+        Note: On Linux, True and False are saved as boolean values into QSettings.
+        On Windows, booleans and integers are saved as strings. To make it consistent,
+        we need to use strings.
+        """
         # Check that GAMS directory is valid. Set it empty if not.
-        gams_path = self.ui.lineEdit_gams_path.text()
-        if not gams_path == "":  # Skip this if using GAMS in system path
+        gams_path = self.ui.lineEdit_gams_path.text().strip()
+        if not gams_path == "":  # Skip if using system path GAMS
             gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
             gamside_exe_path = os.path.join(gams_path, GAMSIDE_EXECUTABLE)
             if not os.path.isfile(gams_exe_path) and not os.path.isfile(gamside_exe_path):
                 self.statusbar.showMessage("GAMS executables not found in selected directory", 10000)
                 return
-        e = int(self.ui.checkBox_use_repl.checkState())
         # Check that Julia directory is valid. Set it empty if not.
-        julia_path = self.ui.lineEdit_julia_path.text()
-        if not julia_path == "":  # Skip this if using Julia in system path
+        julia_path = self.ui.lineEdit_julia_path.text().strip()
+        if not julia_path == "":  # Skip if using system path Julia
             julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
             if not os.path.isfile(julia_exe_path):
                 self.statusbar.showMessage("Julia executable not found in selected directory", 10000)
                 return
         # Check that Python directory is valid. Set it empty if not.
-        python_path = self.ui.lineEdit_python_path.text()
-        if not python_path.strip() == "":  # Skip this if using Julia in system path
+        python_path = self.ui.lineEdit_python_path.text().strip()
+        if not python_path == "":  # Skip if using system path Python
             python_exe_path = os.path.join(python_path, PYTHON_EXECUTABLE)
             if not os.path.isfile(python_exe_path):
                 self.statusbar.showMessage("Python executable not found in selected directory", 10000)
                 return
-        # Write to config object
-        self._configs.setboolean("settings", "open_previous_project", a)
-        self._configs.setboolean("settings", "show_exit_prompt", b)
-        self._configs.set("settings", "save_at_exit", f)
-        self._configs.set("settings", "commit_at_exit", g)
-        self._qsettings.setValue("appSettings/smoothZoom", h)
-        self._configs.setboolean("settings", "datetime", d)
-        self._configs.setboolean("settings", "delete_data", delete_data)
-        self._configs.set("settings", "gams_path", gams_path)
-        self._configs.setboolean("settings", "use_repl", e)
-        self._configs.set("settings", "julia_path", julia_path)
+        # Write to persistent memory
+        open_prev_proj = int(self.ui.checkBox_open_previous_project.checkState())
+        self._configs.setboolean("settings", "open_previous_project", open_prev_proj)  # TODO: Move to QSettings
+        exit_prompt = int(self.ui.checkBox_exit_prompt.checkState())
+        self._configs.setboolean("settings", "show_exit_prompt", exit_prompt)  # TODO: Move to QSettings
+        save_at_exit = str(int(self.ui.checkBox_save_at_exit.checkState()))
+        self._configs.set("settings", "save_at_exit", save_at_exit)  # TODO: Move to QSettings
+        commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
+        self._configs.set("settings", "commit_at_exit", commit_at_exit)  # TODO: Move to QSettings
+        smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
+        self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
+        datetime = int(self.ui.checkBox_datetime.checkState())
+        self._configs.setboolean("settings", "datetime", datetime)  # TODO: Move to QSettings
+        delete_data = int(self.ui.checkBox_delete_data.checkState())
+        self._configs.setboolean("settings", "delete_data", delete_data)  # TODO: Move to QSettings
+        self._configs.set("settings", "gams_path", gams_path)  # TODO: Move to QSettings
+        use_emb_julia = int(self.ui.checkBox_use_embedded_julia.checkState())  # 0:unchecked, 2:checked
+        self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
+        self._qsettings.setValue("appSettings/juliaPath", julia_path)
+        use_emb_python = int(self.ui.checkBox_use_embedded_python.checkState())
+        self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
         self._qsettings.setValue("appSettings/pythonPath", python_path)
+        bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
         self._qsettings.setValue("appSettings/bgGrid", bg_grid)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         # Update project settings

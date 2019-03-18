@@ -99,8 +99,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         Return None if julia version can't be determined.
         """
         self._toolbox.msg.emit("\tInitializing Julia...")
-        julia_dir = self._toolbox._config.get("settings", "julia_path")
-        if not julia_dir == '':
+        julia_dir = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+        if not julia_dir == "":
             self.julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
         else:
             self.julia_exe = JULIA_EXECUTABLE

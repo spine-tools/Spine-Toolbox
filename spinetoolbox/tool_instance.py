@@ -114,7 +114,7 @@ class ToolInstance(QObject):
         """Start executing tool template instance in QProcess."""
         self._toolbox.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
         if self.tool_template.tooltype == "julia":
-            if self._toolbox._config.getboolean("settings", "use_repl"):
+            if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue=2) == 2:
                 self.tool_process = self._toolbox.julia_repl
                 self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
                 self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))

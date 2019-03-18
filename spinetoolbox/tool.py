@@ -722,8 +722,8 @@ class Tool(ProjectItem):
             self.append_instance_args()  # Append Tool specific cmd line args into args list
         elif self.tool_template().tooltype == "julia":
             # Prepare prompt command "julia script.jl"
-            julia_dir = self._toolbox._config.get("settings", "julia_path")
-            if not julia_dir == '':
+            julia_dir = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+            if not julia_dir == "":
                 julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
             else:
                 julia_exe = JULIA_EXECUTABLE
@@ -732,8 +732,8 @@ class Tool(ProjectItem):
             self.instance.program = julia_exe
             self.instance.args.append(script_path)
             self.append_instance_args()
-            use_repl = self._toolbox._config.getboolean("settings", "use_repl")
-            if use_repl:
+            use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue=2)
+            if use_embedded_julia == 2:
                 # Prepare Julia REPL command
                 # TODO: See if this can be simplified
                 mod_work_dir = work_dir.__repr__().strip("'")
