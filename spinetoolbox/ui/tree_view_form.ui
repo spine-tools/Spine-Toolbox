@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -91,7 +91,7 @@
      <x>0</x>
      <y>0</y>
      <width>1077</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -149,6 +149,8 @@
      <property name="title">
       <string>Dock Widgets</string>
      </property>
+     <addaction name="actionRestore_Dock_Widgets"/>
+     <addaction name="separator"/>
     </widget>
     <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
@@ -703,6 +705,11 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Del</string>
+   </property>
+  </action>
+  <action name="actionRestore_Dock_Widgets">
+   <property name="text">
+    <string>Restore Dock Widgets</string>
    </property>
   </action>
  </widget>

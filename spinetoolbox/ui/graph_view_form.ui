@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -72,7 +72,7 @@
      <x>0</x>
      <y>0</y>
      <width>944</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuGraph">
@@ -93,6 +93,8 @@
      <property name="title">
       <string>Dock Widgets</string>
      </property>
+     <addaction name="actionRestore_Dock_Widgets"/>
+     <addaction name="separator"/>
     </widget>
     <widget class="QMenu" name="menuToolbars">
      <property name="title">
@@ -665,7 +667,7 @@
   </widget>
   <widget class="QDockWidget" name="dockWidget_relationship_parameter_definition">
    <property name="windowTitle">
-    <string>Relationship parameter value</string>
+    <string>Relationship parameter definition</string>
    </property>
    <attribute name="dockWidgetArea">
     <number>8</number>
@@ -806,6 +808,11 @@
   <action name="actionGraph_prune_selected">
    <property name="text">
     <string>Prune selected items</string>
+   </property>
+  </action>
+  <action name="actionRestore_Dock_Widgets">
+   <property name="text">
+    <string>Restore Dock Widgets</string>
    </property>
   </action>
  </widget>

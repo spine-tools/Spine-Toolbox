@@ -23,11 +23,10 @@ import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
-    QFileDialog, QApplication, QErrorMessage, QLabel, QGraphicsScene, QGraphicsRectItem, QAction, \
-    QButtonGroup, QSizePolicy, QWidgetAction, QFrame, QWidget, QHBoxLayout
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QPointF, QRectF, QSize, QEvent
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, \
-    QStandardItemModel, QStandardItem, QKeySequence
+    QFileDialog, QApplication, QErrorMessage, QGraphicsScene, QGraphicsRectItem, QAction, QWidgetAction, \
+    QDockWidget
+from PySide2.QtCore import Qt, Signal, Slot, QPointF, QRectF, QSize, QEvent
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
@@ -46,7 +45,7 @@ from widgets.toolbars import ParameterTagToolBar
 from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
-    ParameterValueListModel, JSONArrayModel
+    ParameterValueListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedatabase_api import copy_database
@@ -158,6 +157,7 @@ class DataStoreForm(QMainWindow):
             connect(self._handle_relationship_parameter_value_visibility_changed)
         self.ui.dockWidget_relationship_parameter_definition.visibilityChanged.\
             connect(self._handle_relationship_parameter_definition_visibility_changed)
+        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
 
     def qsettings(self):
         """Returns the QSettings instance from ToolboxUI."""
@@ -875,7 +875,7 @@ class TreeViewForm(DataStoreForm):
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
-        qApp.focusChanged.connect(self.update_paste_action)
+        # qApp.focusChanged.connect(self.update_paste_action)  # TODO: What is this? qApp does not exist
         # Action availability
         self.object_class_selection_available.connect(self.ui.actionEdit_object_classes.setEnabled)
         self.object_selection_available.connect(self.ui.actionEdit_objects.setEnabled)
@@ -911,6 +911,8 @@ class TreeViewForm(DataStoreForm):
         self.ui.actionRemove_selection.triggered.connect(self.remove_selection)
         # Parameter tags
         self.ui.actionManage_parameter_tags.triggered.connect(self.show_manage_parameter_tags_form)
+        # Dock Widgets
+        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # Object tree misc
         self.ui.treeView_object.edit_key_pressed.connect(self.edit_object_tree_items)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
@@ -938,6 +940,15 @@ class TreeViewForm(DataStoreForm):
             connect(self.show_relationship_parameter_value_context_menu)
         # Parameter value_list context menu requested
         self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(self.show_parameter_value_list_context_menu)
+
+    @Slot(name="restore_dock_widgets")
+    def restore_dock_widgets(self):
+        """Dock all floating and or hidden QDockWidgets back to the window."""
+        for dock in self.findChildren(QDockWidget):
+            if not dock.isVisible():
+                dock.setVisible(True)
+            if dock.isFloating():
+                dock.setFloating(False)
 
     def update_copy_and_remove_actions(self):
         """Update copy and remove actions according to selections across the widgets."""
@@ -1945,11 +1956,22 @@ class GraphViewForm(DataStoreForm):
         self.ui.actionGraph_show_hidden.triggered.connect(self.show_hidden_items)
         self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
         self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
+        # Dock Widgets menu action
+        self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
         self.zoom_widget_action.hovered.connect(self._handle_zoom_widget_action_hovered)
         self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
         self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+
+    @Slot(name="restore_dock_widgets")
+    def restore_dock_widgets(self):
+        """Dock all floating and or hidden QDockWidgets back to the window."""
+        for dock in self.findChildren(QDockWidget):
+            if not dock.isVisible():
+                dock.setVisible(True)
+            if dock.isFloating():
+                dock.setFloating(False)
 
     @Slot(name="_handle_zoom_widget_minus_pressed")
     def _handle_zoom_widget_minus_pressed(self):

@@ -48,7 +48,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_2.addWidget(self.treeView_object)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 1077, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 1077, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuSession = QtWidgets.QMenu(self.menubar)
@@ -285,6 +285,8 @@ class Ui_MainWindow(object):
         self.actionRemove_selection = QtWidgets.QAction(MainWindow)
         self.actionRemove_selection.setEnabled(False)
         self.actionRemove_selection.setObjectName("actionRemove_selection")
+        self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
+        self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
         self.menuSession.addAction(self.actionRollback)
@@ -309,6 +311,8 @@ class Ui_MainWindow(object):
         self.menuFile.addAction(self.actionExport)
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionClose)
+        self.menuDock_Widgets.addAction(self.actionRestore_Dock_Widgets)
+        self.menuDock_Widgets.addSeparator()
         self.menuView.addAction(self.menuToolbars.menuAction())
         self.menuView.addAction(self.menuDock_Widgets.menuAction())
         self.menubar.addAction(self.menuFile.menuAction())
@@ -373,6 +377,7 @@ class Ui_MainWindow(object):
         self.actionManage_parameter_tags.setText(QtWidgets.QApplication.translate("MainWindow", "Manage parameter tags", None, -1))
         self.actionRemove_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Remove selection", None, -1))
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
+        self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
 from widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView

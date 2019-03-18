@@ -43,7 +43,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 21))
         self.menubar.setObjectName("menubar")
         self.menuGraph = QtWidgets.QMenu(self.menubar)
         self.menuGraph.setObjectName("menuGraph")
@@ -333,11 +333,15 @@ class Ui_MainWindow(object):
         self.actionGraph_show_hidden.setObjectName("actionGraph_show_hidden")
         self.actionGraph_prune_selected = QtWidgets.QAction(MainWindow)
         self.actionGraph_prune_selected.setObjectName("actionGraph_prune_selected")
+        self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
+        self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
         self.menuGraph.addAction(self.actionGraph_hide_selected)
         self.menuGraph.addAction(self.actionGraph_show_hidden)
         self.menuGraph.addSeparator()
         self.menuGraph.addAction(self.actionGraph_prune_selected)
         self.menuGraph.addAction(self.actionGraph_reinstate_pruned)
+        self.menuDock_Widgets.addAction(self.actionRestore_Dock_Widgets)
+        self.menuDock_Widgets.addSeparator()
         self.menuView.addAction(self.menuToolbars.menuAction())
         self.menuView.addAction(self.menuDock_Widgets.menuAction())
         self.menuSession.addAction(self.actionRefresh)
@@ -371,7 +375,7 @@ class Ui_MainWindow(object):
         self.tableView_object_parameter_definition.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "object parameter definition", None, -1))
         self.dockWidget_relationship_parameter_value.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter value", None, -1))
         self.tableView_relationship_parameter_value.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "relationship parameter value", None, -1))
-        self.dockWidget_relationship_parameter_definition.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter value", None, -1))
+        self.dockWidget_relationship_parameter_definition.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter definition", None, -1))
         self.tableView_relationship_parameter_definition.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "relationship parameter definition", None, -1))
         self.actionGraph_reinstate_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Reinstate pruned items", None, -1))
         self.actionDock_widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Dock Widgets", None, -1))
@@ -387,8 +391,9 @@ class Ui_MainWindow(object):
         self.actionGraph_hide_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Hide selected items", None, -1))
         self.actionGraph_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
+        self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
+from widgets.custom_qgraphicsviews import GraphQGraphicsView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from widgets.custom_qlistview import DragListView
-from widgets.custom_qgraphicsviews import GraphQGraphicsView
 import resources_icons_rc
