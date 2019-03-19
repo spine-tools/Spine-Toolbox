@@ -72,7 +72,7 @@ class ToolboxUI(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        set_taskbar_icon()  # in helpers
+        set_taskbar_icon()  # in helpers.py
         self.ui.graphicsView.set_ui(self)
         # Class variables
         self._config = None
@@ -103,7 +103,6 @@ class ToolboxUI(QMainWindow):
         self.connections_tab = None
         self.zoom_widget = None
         self.zoom_widget_action = None
-        # self.scene_bg = SceneBackground(self)
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
@@ -173,9 +172,7 @@ class ToolboxUI(QMainWindow):
         # Debug QActions
         self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
         self.show_connections_tab.triggered.connect(self.toggle_connections_tab_visibility)
-        self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers
-        # QGraphicsView and QGraphicsScene
-        # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
+        self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
         # Tool templates tab
         self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
         self.ui.toolButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)

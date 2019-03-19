@@ -123,18 +123,22 @@ class SettingsWidget(QWidget):
     def browse_python_path(self, checked=False):
         """Open file browser where user can select the path to wanted Python version."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, 'Select Python Directory', os.path.abspath('C:\\'))
-        if answer == '':  # Cancel button clicked
+        # answer = QFileDialog.getExistingDirectory(self, 'Select Python Directory', os.path.abspath('C:\\'))
+        # getOpenFileName(QWidget * parent = nullptr, const QString & caption = QString(), const QString & dir = QString(), const
+        # QString & filter = QString(), QString * selectedFilter = nullptr, QFileDialog::Options
+        # options = ...)
+        answer = QFileDialog.getOpenFileName(self, "Select Python Executable", os.path.abspath('C:\\'))
+        logging.debug("browse python path answer:{0}".format(answer))
+        if answer[0] == "":  # Cancel button clicked
             return
-        selected_path = os.path.abspath(answer)
-        python_path = os.path.join(selected_path, PYTHON_EXECUTABLE)
-        if not os.path.isfile(python_path):
-            self.statusbar.showMessage("python.exe not found in selected directory", 10000)
-            self.ui.lineEdit_python_path.setText("")
+        selected_path = answer[0]
+        # Check that selected file at least starts with string 'python'
+        path, selected_file = os.path.split(selected_path)
+        if not selected_file.lower().startswith("python"):
+            self.statusbar.showMessage("Selected file is probably not a valid "
+                                       "Python executable (does not start with 'python')", 10000)
             return
-        else:
-            self.statusbar.showMessage("Selected directory is a valid Python directory", 10000)
-            self.ui.lineEdit_python_path.setText(selected_path)
+        self.ui.lineEdit_python_path.setText(selected_path)
         return
 
     @Slot(bool, name="browse_work_path")
@@ -281,13 +285,6 @@ class SettingsWidget(QWidget):
             if not os.path.isfile(julia_exe_path):
                 self.statusbar.showMessage("Julia executable not found in selected directory", 10000)
                 return
-        # Check that Python directory is valid. Set it empty if not.
-        python_path = self.ui.lineEdit_python_path.text().strip()
-        if not python_path == "":  # Skip if using system path Python
-            python_exe_path = os.path.join(python_path, PYTHON_EXECUTABLE)
-            if not os.path.isfile(python_exe_path):
-                self.statusbar.showMessage("Python executable not found in selected directory", 10000)
-                return
         # Write to persistent memory
         open_prev_proj = int(self.ui.checkBox_open_previous_project.checkState())
         self._configs.setboolean("settings", "open_previous_project", open_prev_proj)  # TODO: Move to QSettings
@@ -309,6 +306,7 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/juliaPath", julia_path)
         use_emb_python = int(self.ui.checkBox_use_embedded_python.checkState())
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
+        python_path = self.ui.lineEdit_python_path.text().strip()
         self._qsettings.setValue("appSettings/pythonPath", python_path)
         bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
         self._qsettings.setValue("appSettings/bgGrid", bg_grid)

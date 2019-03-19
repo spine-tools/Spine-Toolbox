@@ -706,8 +706,8 @@ class Tool(ProjectItem):
             self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
 
     def update_instance(self):
-        """Initialize and update instance so that it is ready for processing. Maybe this is where Tool
-        type specific initialization should happen (whether instance is GAMS or Julia Model)."""
+        """Initialize and update instance so that it is ready for processing. This is where Tool
+        type specific initialization happens (whether the tool is GAMS, Python or Julia script)."""
         if self.tool_template().tooltype == "gams":
             gams_path = self._toolbox._config.get("settings", "gams_path")
             if not gams_path == '':
@@ -744,9 +744,10 @@ class Tool(ProjectItem):
                     r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
         elif self.tool_template().tooltype == "python":
             # Prepare prompt command "python script.py"
-            python_dir = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
-            if not python_dir == "":
-                python_exe = os.path.join(python_dir, PYTHON_EXECUTABLE)
+            python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+            if not python_path == "":
+                # python_exe = os.path.join(python_dir, PYTHON_EXECUTABLE)
+                python_exe = python_path
             else:
                 python_exe = PYTHON_EXECUTABLE
             work_dir = self.instance.basedir

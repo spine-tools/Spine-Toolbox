@@ -44,7 +44,7 @@ class PythonReplWidget(RichJupyterWidget):
 
     def setup_python_kernel(self):
         self._toolbox.msg.emit("Setting up Python kernel")
-        # kernel_specs = find_kernel_specs()
+        kernel_specs = find_kernel_specs()
         # logging.debug("kernel_specs:{0}".format(kernel_specs))
         # python_kernels = [x for x in kernel_specs if x.startswith('python')]
         # if self.kernel_name in python_kernels:
