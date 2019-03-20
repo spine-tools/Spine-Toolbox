@@ -83,9 +83,9 @@ class JuliaREPLWidget(RichJupyterWidget):
         self._copy_input_action.triggered.connect(lambda checked: self.copy_input())
         self._copy_input_action.setEnabled(False)
         self.copy_available.connect(self._copy_input_action.setEnabled)
-        self.start_repl_action = QAction("Start REPL", self)
+        self.start_repl_action = QAction("Start", self)
         self.start_repl_action.triggered.connect(lambda checked: self.start_jupyter_kernel())
-        self.restart_repl_action = QAction("Restart REPL", self)
+        self.restart_repl_action = QAction("Restart", self)
         self.restart_repl_action.triggered.connect(lambda checked: self.restart_jupyter_kernel())
         # Set logging level for jupyter module loggers
         traitlets_logger = logging.getLogger("traitlets")
@@ -135,7 +135,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         if not kernel_name:
             return False
         if self.kernel_manager and kernel_name == self.kernel_name:
-            self._toolbox.msg.emit("*** Using previously started Julia REPL ***")
+            self._toolbox.msg.emit("*** Using previously started Julia Console ***")
             return True
         self.kernel_name = kernel_name
         self.kernel_execution_state = None
@@ -350,7 +350,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                                                "the {} kernel specification".format(self.kernel_name))
                 self._control.viewport().setCursor(self.normal_cursor)
             elif self.command and not self.running:
-                self._toolbox.msg_warning.emit("\tExecution is in progress. See Julia Console for messages.")
+                self._toolbox.msg_warning.emit("\tExecution in progress. See <b>Julia Console</b> for messages.")
                 self.running = True
                 self.execute(self.command)
 
@@ -377,7 +377,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             return
         # Kernel is started or in process of being started
         if self.kernel_execution_state == 'idle' and not self.running:
-            self._toolbox.msg_warning.emit("\tExecution is in progress. See Julia Console for messages.")
+            self._toolbox.msg_warning.emit("\tExecution in progress. See <b>Julia Console</b> for messages.")
             self.running = True
             self.execute(self.command)
 

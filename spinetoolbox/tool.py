@@ -746,7 +746,6 @@ class Tool(ProjectItem):
             # Prepare command "python script.py"
             python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
             if not python_path == "":
-                # python_exe = os.path.join(python_dir, PYTHON_EXECUTABLE)
                 python_cmd = python_path
             else:
                 python_cmd = PYTHON_EXECUTABLE
@@ -755,6 +754,13 @@ class Tool(ProjectItem):
             self.instance.program = python_cmd
             self.instance.args.append(script_path)
             self.append_instance_args()
+            use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue=0)
+            if use_embedded_python == 2:
+                # Prepare command for Python Console
+                # Cast args from list to string and combine them to a single string
+                # Skip first arg since it's the script path
+                args = " ".join([str(x) for x in self.instance.args[1:]])
+                self.instance.python_console_cmd = "%run \"{0}\" {1}".format(script_path, args)
         elif self.tool_template().tooltype == "executable":
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
             if not sys.platform == "win32":
