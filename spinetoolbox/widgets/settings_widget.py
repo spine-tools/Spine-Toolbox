@@ -18,12 +18,12 @@ Widget for controlling user settings.
 
 import logging
 import os
-from PySide2.QtWidgets import QWidget, QStatusBar, QFileDialog, QStyle, QColorDialog
+from PySide2.QtWidgets import QWidget, QStyle, QStatusBar, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QPixmap, QColor
 import ui.settings
 from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, STATUSBAR_SS, \
-    SETTINGS_SS, GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
+    SETTINGS_SS, GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
 
 
 class SettingsWidget(QWidget):
@@ -103,40 +103,37 @@ class SettingsWidget(QWidget):
 
     @Slot(bool, name="browse_julia_path")
     def browse_julia_path(self, checked=False):
-        """Open file browser where user can select the path to wanted Julia version."""
+        """Open file browser where user can select the Julia interpreter (i.e. julia.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, 'Select Julia Directory', os.path.abspath('C:\\'))
-        if answer == '':  # Cancel button clicked
+        answer = QFileDialog.getOpenFileName(self, "Select Julia Interpreter (e.g. julia.exe on Windows)",
+                                             os.path.abspath('C:\\'))
+        if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
             return
-        selected_path = os.path.abspath(answer)
-        julia_path = os.path.join(selected_path, JULIA_EXECUTABLE)
-        if not os.path.isfile(julia_path):
-            self.statusbar.showMessage("julia.exe not found in selected directory", 10000)
-            self.ui.lineEdit_julia_path.setText("")
+        # Check that selected file at least starts with string 'julia'
+        path, selected_file = os.path.split(answer[0])
+        if not selected_file.lower().startswith("julia"):
+            msg = "Selected file <b>{0}</b> is not a valid Julia interpreter".format(selected_file)
+            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
+            self.ui.lineEdit_julia_path.clear()
             return
-        else:
-            self.statusbar.showMessage("Selected directory is a valid Julia directory", 10000)
-            self.ui.lineEdit_julia_path.setText(selected_path)
+        self.ui.lineEdit_julia_path.setText(answer[0])
         return
 
     @Slot(bool, name="browse_python_path")
     def browse_python_path(self, checked=False):
-        """Open file browser where user can select the path to wanted Python version."""
+        """Open file browser where user can select the python executable (i.e. python.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        # answer = QFileDialog.getExistingDirectory(self, 'Select Python Directory', os.path.abspath('C:\\'))
-        # getOpenFileName(QWidget * parent = nullptr, const QString & caption = QString(), const QString & dir = QString(), const
-        # QString & filter = QString(), QString * selectedFilter = nullptr, QFileDialog::Options
-        # options = ...)
-        answer = QFileDialog.getOpenFileName(self, "Select Python Executable", os.path.abspath('C:\\'))
-        logging.debug("browse python path answer:{0}".format(answer))
-        if answer[0] == "":  # Cancel button clicked
+        answer = QFileDialog.getOpenFileName(self, "Select Python Interpreter (e.g. python.exe on Windows)",
+                                             os.path.abspath('C:\\'))
+        if answer[0] == "":  # Canceled
             return
         selected_path = answer[0]
         # Check that selected file at least starts with string 'python'
         path, selected_file = os.path.split(selected_path)
         if not selected_file.lower().startswith("python"):
-            self.statusbar.showMessage("Selected file is probably not a valid "
-                                       "Python executable (does not start with 'python')", 10000)
+            msg = "Selected file <b>{0}</b> is not a valid Python interpreter".format(selected_file)
+            QMessageBox.warning(self, "Invalid Python Environment", msg)
+            self.ui.lineEdit_python_path.clear()
             return
         self.ui.lineEdit_python_path.setText(selected_path)
         return
@@ -145,7 +142,7 @@ class SettingsWidget(QWidget):
     def browse_work_path(self, checked=False):
         """Open file browser where user can select the path to wanted work directory."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, 'Select work directory', os.path.abspath('C:\\'))
+        answer = QFileDialog.getExistingDirectory(self, 'Select Work Directory', os.path.abspath('C:\\'))
         if answer == '':  # Cancel button clicked
             return
         selected_path = os.path.abspath(answer)
@@ -268,7 +265,7 @@ class SettingsWidget(QWidget):
         """Get selections and save them to persistent memory.
         Note: On Linux, True and False are saved as boolean values into QSettings.
         On Windows, booleans and integers are saved as strings. To make it consistent,
-        we need to use strings.
+        we should use strings.
         """
         # Check that GAMS directory is valid. Set it empty if not.
         gams_path = self.ui.lineEdit_gams_path.text().strip()
@@ -278,41 +275,40 @@ class SettingsWidget(QWidget):
             if not os.path.isfile(gams_exe_path) and not os.path.isfile(gamside_exe_path):
                 self.statusbar.showMessage("GAMS executables not found in selected directory", 10000)
                 return
-        # Check that Julia directory is valid. Set it empty if not.
-        julia_path = self.ui.lineEdit_julia_path.text().strip()
-        if not julia_path == "":  # Skip if using system path Julia
-            julia_exe_path = os.path.join(julia_path, JULIA_EXECUTABLE)
-            if not os.path.isfile(julia_exe_path):
-                self.statusbar.showMessage("Julia executable not found in selected directory", 10000)
-                return
-        # Write to persistent memory
+        # General
         open_prev_proj = int(self.ui.checkBox_open_previous_project.checkState())
         self._configs.setboolean("settings", "open_previous_project", open_prev_proj)  # TODO: Move to QSettings
         exit_prompt = int(self.ui.checkBox_exit_prompt.checkState())
         self._configs.setboolean("settings", "show_exit_prompt", exit_prompt)  # TODO: Move to QSettings
         save_at_exit = str(int(self.ui.checkBox_save_at_exit.checkState()))
         self._configs.set("settings", "save_at_exit", save_at_exit)  # TODO: Move to QSettings
-        commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
-        self._configs.set("settings", "commit_at_exit", commit_at_exit)  # TODO: Move to QSettings
-        smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
-        self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
         datetime = int(self.ui.checkBox_datetime.checkState())
         self._configs.setboolean("settings", "datetime", datetime)  # TODO: Move to QSettings
         delete_data = int(self.ui.checkBox_delete_data.checkState())
         self._configs.setboolean("settings", "delete_data", delete_data)  # TODO: Move to QSettings
+        smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
+        self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
+        bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
+        self._qsettings.setValue("appSettings/bgGrid", bg_grid)
+        self._qsettings.setValue("appSettings/bgColor", self.bg_color)
+        # GAMS
         self._configs.set("settings", "gams_path", gams_path)  # TODO: Move to QSettings
+        # Julia
         use_emb_julia = int(self.ui.checkBox_use_embedded_julia.checkState())  # 0:unchecked, 2:checked
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
+        julia_path = self.ui.lineEdit_julia_path.text().strip()
         self._qsettings.setValue("appSettings/juliaPath", julia_path)
+        # Python
         use_emb_python = int(self.ui.checkBox_use_embedded_python.checkState())
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
         python_path = self.ui.lineEdit_python_path.text().strip()
         self._qsettings.setValue("appSettings/pythonPath", python_path)
-        bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
-        self._qsettings.setValue("appSettings/bgGrid", bg_grid)
-        self._qsettings.setValue("appSettings/bgColor", self.bg_color)
-        # Update project settings
+        # Data Store Views
+        commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
+        self._configs.set("settings", "commit_at_exit", commit_at_exit)  # TODO: Move to QSettings
+        # Project
         self.update_project_settings()
+        # Save to settings.conf
         self._configs.save()
         self.close()
 

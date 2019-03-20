@@ -721,15 +721,15 @@ class Tool(ProjectItem):
             self.instance.args.append("logoption=3")  # TODO: This should be an option in Settings
             self.append_instance_args()  # Append Tool specific cmd line args into args list
         elif self.tool_template().tooltype == "julia":
-            # Prepare prompt command "julia script.jl"
-            julia_dir = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
-            if not julia_dir == "":
-                julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+            # Prepare command "julia script.jl"
+            julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+            if not julia_path == "":
+                julia_cmd = julia_path
             else:
-                julia_exe = JULIA_EXECUTABLE
+                julia_cmd = JULIA_EXECUTABLE
             work_dir = self.instance.basedir
             script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-            self.instance.program = julia_exe
+            self.instance.program = julia_cmd
             self.instance.args.append(script_path)
             self.append_instance_args()
             use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue=2)
@@ -743,16 +743,16 @@ class Tool(ProjectItem):
                     r'append!(ARGS, {});'\
                     r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
         elif self.tool_template().tooltype == "python":
-            # Prepare prompt command "python script.py"
+            # Prepare command "python script.py"
             python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
             if not python_path == "":
                 # python_exe = os.path.join(python_dir, PYTHON_EXECUTABLE)
-                python_exe = python_path
+                python_cmd = python_path
             else:
-                python_exe = PYTHON_EXECUTABLE
+                python_cmd = PYTHON_EXECUTABLE
             work_dir = self.instance.basedir
             script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-            self.instance.program = python_exe
+            self.instance.program = python_cmd
             self.instance.args.append(script_path)
             self.append_instance_args()
         elif self.tool_template().tooltype == "executable":

@@ -95,13 +95,14 @@ class JuliaREPLWidget(RichJupyterWidget):
 
     @busy_effect
     def julia_kernel_name(self):
-        """Return the name of the julia kernel specification, according to julia executable from settings.
-        Return None if julia version can't be determined.
+        """Returns the name of the julia kernel specification, according to the
+        selected julia interpreter in settings. Returns None if julia version
+        cannot be determined.
         """
         self._toolbox.msg.emit("\tInitializing Julia...")
-        julia_dir = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
-        if not julia_dir == "":
-            self.julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+        julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+        if not julia_path == "":
+            self.julia_exe = julia_path
         else:
             self.julia_exe = JULIA_EXECUTABLE
         program = "{0}".format(self.julia_exe)

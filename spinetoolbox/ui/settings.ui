@@ -354,7 +354,7 @@
                </font>
               </property>
               <property name="text">
-               <string>GAMS directory</string>
+               <string>GAMS program</string>
               </property>
              </widget>
             </item>
@@ -373,7 +373,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selected GAMS directory. Leave blank to use system path GAMS.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to GAMS executable. Leave blank to use GAMS defined in your system path&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
                <string>Using GAMS in system path</string>
@@ -392,7 +392,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS by browsing to a directory containing gams executable (gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS by browsing and selecting a GAMS executable (gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="iconSize">
                <size>
@@ -435,7 +435,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia environment by browsing to a directory containing a Julia executable&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia environment by selecting a Julia interpreter (e.g. julia.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="iconSize">
                <size>
@@ -460,7 +460,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selected Julia directory. Leave blank to use system path Julia.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia environment. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
                <string>Using Julia environment in system path</string>
@@ -521,7 +521,7 @@
           <item row="1" column="0">
            <widget class="QLineEdit" name="lineEdit_python_path">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Selected Python directory. Leave blank to use system path Python.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python environment. Leave blank to use Python defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="placeholderText">
              <string>Using Python environment in system path</string>
@@ -540,7 +540,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python environment by browsing to a directory containing python executable (python.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python environment by selecting a Python interpreter (e.g. python.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="iconSize">
              <size>
