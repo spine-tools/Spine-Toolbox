@@ -126,10 +126,16 @@ class ToolInstance(QObject):
                 # Otherwise it doesn't find input files in subdirectories
                 self.tool_process.start_process(workdir=self.basedir)
         if self.tool_template.tooltype == "python":
-            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
-            self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
-            # TODO: Check if settings the workdir is necessary with Python
-            self.tool_process.start_process(workdir=self.basedir)
+            if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue=0) == 2:
+                self.tool_process = self._toolbox.python_repl
+                self.tool_process.execution_finished_signal.connect(self.python_console_tool_finished)
+                self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.python_console_command))
+                self.tool_process.execute_instance(self.python_console_command)
+            else:
+                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+                self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
+                # TODO: Check if settings the workdir is necessary with Python
+                self.tool_process.start_process(workdir=self.basedir)
         elif self.tool_template.tooltype == "gams":
             self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)

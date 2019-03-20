@@ -18,12 +18,11 @@ Widget for controlling user settings.
 
 import logging
 import os
-from PySide2.QtWidgets import QWidget, QStyle, QStatusBar, QFileDialog, QMessageBox, QColorDialog
+from PySide2.QtWidgets import QWidget, QStyle, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt
-from PySide2.QtGui import QPixmap, QColor
+from PySide2.QtGui import QPixmap
 import ui.settings
-from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, STATUSBAR_SS, \
-    SETTINGS_SS, GAMS_EXECUTABLE, GAMSIDE_EXECUTABLE, JULIA_EXECUTABLE
+from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, SETTINGS_SS
 
 
 class SettingsWidget(QWidget):
@@ -55,11 +54,6 @@ class SettingsWidget(QWidget):
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         self.setStyleSheet(SETTINGS_SS)
         self.ui.pushButton_ok.setDefault(True)
         self._mousePressPos = None

@@ -1331,8 +1331,8 @@ class Ui_MainWindow(object):
         self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1))
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc
