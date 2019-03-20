@@ -709,9 +709,9 @@ class Tool(ProjectItem):
         """Initialize and update instance so that it is ready for processing. This is where Tool
         type specific initialization happens (whether the tool is GAMS, Python or Julia script)."""
         if self.tool_template().tooltype == "gams":
-            gams_path = self._toolbox._config.get("settings", "gams_path")
+            gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
             if not gams_path == '':
-                gams_exe = os.path.join(gams_path, GAMS_EXECUTABLE)
+                gams_exe = gams_path
             else:
                 gams_exe = GAMS_EXECUTABLE
             self.instance.program = gams_exe

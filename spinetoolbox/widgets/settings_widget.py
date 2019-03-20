@@ -83,27 +83,25 @@ class SettingsWidget(QWidget):
 
     @Slot(bool, name="browse_gams_path")
     def browse_gams_path(self, checked=False):
-        """Open file browser where user can select the directory of
-        GAMS that the user wants to use."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getExistingDirectory(self, 'Select GAMS Directory', os.path.abspath('C:\\'))
-        if answer == '':  # Cancel button clicked
+        """Open file browser where user can select a GAMS program."""
+        # noinspection PyCallByClass, PyArgumentList
+        answer = QFileDialog.getOpenFileName(self, "Select GAMS Program (e.g. gams.exe on Windows)",
+                                             os.path.abspath('C:\\'))
+        if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
             return
-        selected_path = os.path.abspath(answer)
-        gams_path = os.path.join(selected_path, GAMS_EXECUTABLE)
-        gamside_path = os.path.join(selected_path, GAMSIDE_EXECUTABLE)
-        if not os.path.isfile(gams_path) and not os.path.isfile(gamside_path):
-            self.statusbar.showMessage("gams.exe and gamside.exe not found in selected directory", 10000)
-            self.ui.lineEdit_gams_path.setText("")
+        # Check that selected file at least starts with string 'gams'
+        path, selected_file = os.path.split(answer[0])
+        if not selected_file.lower().startswith("gams"):
+            msg = "Selected file <b>{0}</b> may not be a valid GAMS program".format(selected_file)
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Invalid GAMS Program", msg)
             return
-        else:
-            self.statusbar.showMessage("Selected directory is a valid GAMS directory", 10000)
-            self.ui.lineEdit_gams_path.setText(selected_path)
+        self.ui.lineEdit_gams_path.setText(answer[0])
         return
 
     @Slot(bool, name="browse_julia_path")
     def browse_julia_path(self, checked=False):
-        """Open file browser where user can select the Julia interpreter (i.e. julia.exe on Windows)."""
+        """Open file browser where user can select a Julia interpreter (i.e. julia.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(self, "Select Julia Interpreter (e.g. julia.exe on Windows)",
                                              os.path.abspath('C:\\'))
@@ -113,15 +111,15 @@ class SettingsWidget(QWidget):
         path, selected_file = os.path.split(answer[0])
         if not selected_file.lower().startswith("julia"):
             msg = "Selected file <b>{0}</b> is not a valid Julia interpreter".format(selected_file)
+            # noinspection PyCallByClass, PyArgumentList
             QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
-            self.ui.lineEdit_julia_path.clear()
             return
         self.ui.lineEdit_julia_path.setText(answer[0])
         return
 
     @Slot(bool, name="browse_python_path")
     def browse_python_path(self, checked=False):
-        """Open file browser where user can select the python executable (i.e. python.exe on Windows)."""
+        """Open file browser where user can select a python interpreter (i.e. python.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(self, "Select Python Interpreter (e.g. python.exe on Windows)",
                                              os.path.abspath('C:\\'))
@@ -132,8 +130,8 @@ class SettingsWidget(QWidget):
         path, selected_file = os.path.split(selected_path)
         if not selected_file.lower().startswith("python"):
             msg = "Selected file <b>{0}</b> is not a valid Python interpreter".format(selected_file)
+            # noinspection PyCallByClass, PyArgumentList
             QMessageBox.warning(self, "Invalid Python Environment", msg)
-            self.ui.lineEdit_python_path.clear()
             return
         self.ui.lineEdit_python_path.setText(selected_path)
         return
@@ -196,7 +194,7 @@ class SettingsWidget(QWidget):
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
-        gams_path = self._configs.get("settings", "gams_path")
+        gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
         use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue=2)
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
         use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue=0)
@@ -267,14 +265,6 @@ class SettingsWidget(QWidget):
         On Windows, booleans and integers are saved as strings. To make it consistent,
         we should use strings.
         """
-        # Check that GAMS directory is valid. Set it empty if not.
-        gams_path = self.ui.lineEdit_gams_path.text().strip()
-        if not gams_path == "":  # Skip if using system path GAMS
-            gams_exe_path = os.path.join(gams_path, GAMS_EXECUTABLE)
-            gamside_exe_path = os.path.join(gams_path, GAMSIDE_EXECUTABLE)
-            if not os.path.isfile(gams_exe_path) and not os.path.isfile(gamside_exe_path):
-                self.statusbar.showMessage("GAMS executables not found in selected directory", 10000)
-                return
         # General
         open_prev_proj = int(self.ui.checkBox_open_previous_project.checkState())
         self._configs.setboolean("settings", "open_previous_project", open_prev_proj)  # TODO: Move to QSettings
@@ -292,7 +282,8 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/bgGrid", bg_grid)
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         # GAMS
-        self._configs.set("settings", "gams_path", gams_path)  # TODO: Move to QSettings
+        gams_path = self.ui.lineEdit_gams_path.text().strip()
+        self._qsettings.setValue("appSettings/gamsPath", gams_path)
         # Julia
         use_emb_julia = int(self.ui.checkBox_use_embedded_julia.checkState())  # 0:unchecked, 2:checked
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
