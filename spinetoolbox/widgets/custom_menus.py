@@ -522,10 +522,10 @@ class FilterMenu(QMenu):
     """Filter menu to use together with FilterWidget in TabularViewForm."""
     filterChanged = Signal(object, set, bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, show_empty=True):
         super().__init__(parent)
         self._remove_filter = QAction('Remove filters', None)
-        self._filter = FilterWidget()
+        self._filter = FilterWidget(show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._remove_filter)
