@@ -266,13 +266,13 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
         layout = QHBoxLayout(widget)
         layout.addWidget(QLabel("Number of dimensions"))
         self.spin_box = QSpinBox(self)
-        self.spin_box.setMinimum(2)
+        self.spin_box.setMinimum(1)
         layout.addWidget(self.spin_box)
         layout.addStretch()
         self.layout().insertWidget(0, widget)
         self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
         self.table_view.setItemDelegate(AddRelationshipClassesDelegate(parent))
-        self.number_of_dimensions = 2
+        self.number_of_dimensions = 1
         self.object_class_one_name = None
         if object_class_one_id:
             object_class_one = self._parent.db_map.single_object_class(id=object_class_one_id).one_or_none()
@@ -280,7 +280,7 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
                 self.object_class_one_name = object_class_one.name
         self.connect_signals()
         self.model.set_horizontal_header_labels(
-            ['object class 1 name', 'object class 2 name', 'relationship class name'])
+            ['object class 1 name', 'relationship class name'])
         self.model.set_default_row(**{'object class 1 name': self.object_class_one_name})
         self.model.clear()
         self.table_view.resizeColumnsToContents()
@@ -360,9 +360,6 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
                         "Couldn't find object class '{}' at row {}".format(object_class_name, i + 1))
                     return
                 object_class_id_list.append(object_class.id)
-            if len(object_class_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
             wide_kwargs = {
                 'name': relationship_class_name,
                 'object_class_id_list': object_class_id_list
@@ -507,9 +504,6 @@ class AddRelationshipsDialog(ManageItemsDialog):
                     self._parent.msg_error.emit("Couldn't find object '{}' at row {}".format(object_name, i + 1))
                     return
                 object_id_list.append(object_.id)
-            if len(object_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
             wide_kwargs = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
@@ -800,9 +794,6 @@ class EditRelationshipsDialog(ManageItemsDialog):
                     self._parent.msg_error.emit("Couldn't find object '{}' at row {}".format(object_name, i + 1))
                     return
                 object_id_list.append(object_.id)
-            if len(object_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
             if orig_relationship_name == relationship_name and orig_object_id_list == object_id_list:
                 continue
             kwargs = {
