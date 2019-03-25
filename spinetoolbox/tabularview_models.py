@@ -1397,23 +1397,29 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
 
 class FilterCheckboxListModel(QAbstractListModel):
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, show_empty=True):
         """Initialize class."""
         super().__init__(parent)
-        self._data = []
-        self._data_set = set()
-        self._all_selected = True
-        self._empty_selected = True
-        self._selected = set()
-        self._selected_filtered = set()
-        self._list_filter = None
-        self._index_offset = 2
-        self._is_filtered = False
-        self._filter_index = []
-        self._select_all_str = '(Select All)'
-        self._empty_str ='(Empty)'
+        self._data = [] # sorted self._data_set
+        self._data_set = set() # set of data to display in filter list
+        self._all_selected = True # if all is selected
+        self._empty_selected = True # if empty row is selected
+        self._selected = set() # current selected
+        self._selected_filtered = set() # current selected in filter state
+        self._list_filter = None # string for filter
+        self._index_offset = 2 # how many special operations available
+        self._is_filtered = False # if filter is in filtered state
+        self._filter_index = [] #stores index to currently filtered items
+        self._select_all_str = '(Select All)' #display str for select all action
+        self._show_empty = show_empty # show empty select
+        self._empty_str ='(Empty)' # display str for None
         self._add_to_selection_str = 'Add current selection to filter'
         self._add_to_selection = False
+        
+        if self._show_empty:
+            self._index_offset = 2
+        else:
+            self._index_offset = 1
 
     def reset_selection(self):
         self._selected = set(self._data_set)
@@ -1440,7 +1446,11 @@ class FilterCheckboxListModel(QAbstractListModel):
         if self._is_filtered:
             return len(self._selected_filtered) == len(self._filter_index)
         else:
-            return len(self._selected) == len(self._data_set) and self._empty_selected
+            if self._show_empty:
+                empty_selected = self._empty_selected
+            else:
+                empty_selected = True
+            return len(self._selected) == len(self._data_set) and empty_selected
 
     def rowCount(self, parent=QModelIndex()):
         if self._is_filtered:
@@ -1464,16 +1474,19 @@ class FilterCheckboxListModel(QAbstractListModel):
             selected = self._selected_filtered
         else:
             i = index.row() - self._index_offset
-            action_rows = [self._select_all_str, self._empty_str]
-            action_state = [self._all_selected, self._empty_selected]
+            action_rows = [self._select_all_str]
+            action_state = [self._all_selected]
+            if self._show_empty:
+                action_rows.append(self._empty_str)
+                action_state.append(self._empty_selected)
             selected = self._selected
         if role == Qt.DisplayRole:
-            if index.row() > 1:
+            if index.row() >= len(action_rows):
                 return self._data[i]
             else:
                 return action_rows[index.row()]
         elif role == Qt.CheckStateRole:
-            if index.row() < 2:
+            if index.row() < len(action_state):
                 return action_state[index.row()]
             else:
                 return self._data[i] in selected
@@ -1482,11 +1495,10 @@ class FilterCheckboxListModel(QAbstractListModel):
         if index.row() == 0:
             self._select_all_clicked()
         else:
-            if index.row() == 1:
-                if self._is_filtered:
-                    self._add_to_selection = not self._add_to_selection
-                else:
-                    self._empty_selected = not self._empty_selected
+            if index.row() == 1 and self._is_filtered:
+                self._add_to_selection = not self._add_to_selection
+            elif index.row() == 1 and self._show_empty:
+                self._empty_selected = not self._empty_selected
             else:
                 if self._is_filtered:
                     f_i = self._filter_index[index.row() - self._index_offset]
@@ -1507,13 +1519,18 @@ class FilterCheckboxListModel(QAbstractListModel):
             self.dataChanged.emit(index, index, [Qt.CheckStateRole])
             self.dataChanged.emit(0, 0, [Qt.CheckStateRole])
 
-    def set_list(self, data):
+    def set_list(self, data, all_selected=True):
         self.beginResetModel()
         self._data_set = set(data)
         self._data = sorted(data)
-        self._selected = set(self._data_set)
-        self._all_selected = True
-        self._empty_selected = True
+        if all_selected:
+            self._selected = set(self._data_set)
+            self._all_selected = True
+            self._empty_selected = True
+        else:
+            self._selected = set()
+            self._all_selected = False
+            self._empty_selected = False
         self.remove_filter()
         self.endResetModel()
 

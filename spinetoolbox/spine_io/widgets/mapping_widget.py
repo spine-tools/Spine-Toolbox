@@ -1,7 +1,9 @@
 # -*- coding: utf-8 -*-
 
-from PySide2.QtWidgets import QWidget, QVBoxLayout, QDialogButtonBox, QGridLayout, QComboBox, QPushButton, QTableView, QHBoxLayout, QSpinBox, QGroupBox, QLabel, QListView
+from PySide2.QtWidgets import QWidget, QVBoxLayout, QDialogButtonBox, QGridLayout, QComboBox, QPushButton, QTableView, QHBoxLayout, QSpinBox, QGroupBox, QLabel, QListView, QCheckBox
 from PySide2.QtCore import Qt, QAbstractTableModel, Signal, QAbstractListModel,QModelIndex
+
+from widgets.custom_menus import FilterMenu
 
 from spinedatabase_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
 
@@ -366,11 +368,15 @@ class MappingTableModel(QAbstractTableModel):
         if name in self._display_names:
             self.dataChanged.emit(QModelIndex, QModelIndex, [])
         return True
-
+    
+    def set_skip_columns(self, columns=[]):
+        self._model.skip_columns = list(set(columns))
+        self.dataChanged.emit(0 ,0, [])
 
 
 class MappingWidget(QWidget):
     mappingChanged = Signal(MappingTableModel)
+    mappingDataChanged = Signal()
     def __init__(self, parent=None):
         super().__init__(parent)
         
@@ -403,6 +409,9 @@ class MappingWidget(QWidget):
         self.mappingChanged.connect(lambda m: self._ui_table.setModel(m))
         self.mappingChanged.connect(lambda m: self._ui_options.set_model(m))
     
+    def set_data_source_column_num(self, num):
+        self._ui_options.set_num_available_columns(num)
+    
     def set_model(self, model):
         """
         Sets new model
@@ -410,13 +419,23 @@ class MappingWidget(QWidget):
         if self._select_handle and self._ui_list.selectionModel():
             self._ui_list.selectionModel().selectionChanged.disconnect(self.select_mapping)
             self._select_handle = None
+        if self._model:
+            self._model.dataChanged.disconnect(self.data_changed)
         self._model = model
         self._ui_list.setModel(model)
         self._select_handle = self._ui_list.selectionModel().selectionChanged.connect(self.select_mapping)
+        self._model.dataChanged.connect(self.data_changed)
         if self._model.rowCount() > 0:
             self._ui_list.setCurrentIndex(self._model.index(0,0))
         else:
             self._ui_list.clearSelection()
+    
+    def data_changed(self):
+        m = None
+        indexes = self._ui_list.selectedIndexes()
+        if self._model and indexes:
+            m = self._model.data_mapping(indexes()[0])
+        self.mappingDataChanged.emit(m)
     
     def new_mapping(self):
         """
@@ -523,6 +542,9 @@ class MappingOptionWidget(QWidget):
         self._ui_ignore_columns = QPushButton()
         self._ui_ignore_columns_label = QLabel("Ignore columns:")
         self._ui_dimension_label = QLabel("Dimension:")
+        self._ui_import_objects = QCheckBox("Import objects")
+        self._ui_ignore_columns_filtermenu = FilterMenu(self._ui_ignore_columns, show_empty=False) 
+        self._ui_ignore_columns.setMenu(self._ui_ignore_columns_filtermenu)
         
         self._ui_class_type.addItems(['Object','Relationship'])
         self._ui_parameter_type.addItems(['Single value','Time series','None'])
@@ -535,11 +557,12 @@ class MappingOptionWidget(QWidget):
         layout = QGridLayout()
         layout.addWidget(QLabel("Class type:"), 0, 0)
         layout.addWidget(QLabel("Parameter type:"), 1, 0)
-        layout.addWidget(self._ui_ignore_columns_label, 2, 0)
+        layout.addWidget(self._ui_ignore_columns_label, 3, 0)
         layout.addWidget(self._ui_dimension_label, 0, 2)
         layout.addWidget(self._ui_class_type, 0, 1)
         layout.addWidget(self._ui_parameter_type, 1, 1)
-        layout.addWidget(self._ui_ignore_columns, 2, 1)
+        layout.addWidget(self._ui_import_objects, 2, 1)
+        layout.addWidget(self._ui_ignore_columns, 3, 1)
         layout.addWidget(self._ui_dimension, 0, 3)
         groupbox.setLayout(layout)
         self.layout().addWidget(groupbox)
@@ -548,18 +571,35 @@ class MappingOptionWidget(QWidget):
         self._ui_dimension.valueChanged.connect(self.change_dimension)
         self._ui_class_type.currentTextChanged.connect(self.change_class)
         self._ui_parameter_type.currentTextChanged.connect(self.change_parameter)
+        self._ui_import_objects.stateChanged.connect(self.change_import_objects)
+        self._ui_ignore_columns_filtermenu.filterChanged.connect(self.change_skip_columns)
         
         self._model_reset_signal = None
+        self._model_data_signal = None
         
         
         self.update_ui()
         
+    def set_num_available_columns(self, num):
+        selected = self._ui_ignore_columns_filtermenu._filter._filter_model.get_selected()
+        self._ui_ignore_columns_filtermenu._filter._filter_model.set_list(set(range(num)))
+        self._ui_ignore_columns_filtermenu._filter._filter_model.set_selected(selected)
+    
+    def change_skip_columns(self, filterw, skip_cols, has_filter):
+        if self._model:
+            self._model.set_skip_columns(skip_cols)
+
     def set_model(self, model):
         if self._model_reset_signal and self._model:
             self._model.modelReset.disconnect(self.update_ui)
+            self._model_reset_signal = None
+        if self._model_data_signal and self._model:
+            self._model.dataChanged.disconnect(self.update_ui)
+            self._model_data_signal = None
         self._model = model
         if self._model:
             self._model_reset_signal = self._model.modelReset.connect(self.update_ui)
+            self._model_data_signal = self._model.dataChanged.connect(self.update_ui)
         self.update_ui()
             
     def update_ui(self):
@@ -577,7 +617,13 @@ class MappingOptionWidget(QWidget):
             self._ui_dimension.show()
             self._ui_class_type.setCurrentIndex(1)
             self._ui_dimension.setValue(len(self._model._model.objects))
+            self._ui_import_objects.show()
+            if self._model._model.import_objects:
+                self._ui_import_objects.setCheckState(Qt.Checked)
+            else:
+                self._ui_import_objects.setCheckState(Qt.Unchecked)
         else:
+            self._ui_import_objects.hide()
             self._ui_dimension_label.hide()
             self._ui_dimension.hide()
             self._ui_class_type.setCurrentIndex(0)
@@ -594,7 +640,16 @@ class MappingOptionWidget(QWidget):
         else:
             self._ui_ignore_columns.hide()
             self._ui_ignore_columns_label.hide()
-            
+        # update ignore columns filter
+        skip_cols = []
+        if self._model._model.skip_columns:
+            skip_cols = self._model._model.skip_columns
+        self._ui_ignore_columns_filtermenu._filter._filter_model.set_selected(skip_cols)
+        skip_text = ",".join(str(c) for c in skip_cols)
+        if len(skip_text) > 20:
+            skip_text = skip_text[:20] + '...'
+        self._ui_ignore_columns.setText(skip_text)
+        
         self.block_signals = False
     
     def change_class(self, new_class):
@@ -607,5 +662,8 @@ class MappingOptionWidget(QWidget):
     def change_parameter(self, par):
         if self._model and not self.block_signals:
             self._model.change_parameter_type(par)
+    def change_import_objects(self, state):
+        if self._model and not self.block_signals:
+            self._model._model.import_objects = state
         
 

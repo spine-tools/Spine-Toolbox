@@ -14,6 +14,7 @@ sys.path.append("c:/data/GIT/spine-data/spinedatabase_api/")
 class ImportPreviewWidget(QWidget):
     rejected = Signal()
     mappedDataReady = Signal(dict, list)
+    previewDataUpdated = Signal()
     def __init__(self, connector, parent=None):
         super().__init__(parent)
         
@@ -83,12 +84,16 @@ class ImportPreviewWidget(QWidget):
         # current mapping changed
         self._ui_mapper.mappingChanged.connect(self._ui_preview_menu.set_model)
         self._ui_mapper.mappingChanged.connect(self.table.set_mapping)
+        self._ui_mapper.mappingDataChanged.connect(self.table.set_mapping)
+        
+        # preview new preview data
+        self.previewDataUpdated.connect(lambda: self._ui_mapper.set_data_source_column_num(self.table.columnCount()))
         
         # ok button
         self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.ok_pressed)
         self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.close_connection)
         self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(lambda: self.rejected.emit())
-        
+
     def set_loading_status(self, status):
         """
         Sets widgets enable state
@@ -191,6 +196,7 @@ class ImportPreviewWidget(QWidget):
             self.table.set_data(data, header)
         else:
             self.table.set_data([], [])
+        self.previewDataUpdated.emit()
     
     def close_connection(self):
         """
@@ -261,7 +267,7 @@ class MappingPreviewModel(TableModel):
             self._model.dataChanged.disconnect(self.update_colors)
             self._data_changed_signal = None
         self._mapping = mapping
-        self._mapping.dataChanged.connect(self.update_colors)
+        self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
         self.update_colors()
     
     def update_colors(self):
@@ -336,12 +342,18 @@ class MappingPreviewModel(TableModel):
         if not self._mapping:
             return []
         non_pivoted_columns = self._mapping._model.non_pivoted_columns()
+        skip_cols = self._mapping._model.skip_columns
+        if skip_cols is None:
+            skip_cols = []
         int_non_piv_cols = []
-        for pc in non_pivoted_columns:
+        for pc in set(non_pivoted_columns + skip_cols):
             if type(pc) == str:
                 if pc in self._headers:
                     pc = self._headers.index(pc)
+                else:
+                    continue
             int_non_piv_cols.append(pc)
+        
         return int_non_piv_cols
                 
 
@@ -359,6 +371,9 @@ class MappingTableMenu(QMenu):
             return
         mapping = Mapping(map_type=map_type, value_reference=value)
         self._model.set_mapping_from_name(name, mapping)
+    
+    def ignore_columns(self, columns=[]):
+        pass
 
     def request_menu(self, QPos=None):
         if not self._model:
