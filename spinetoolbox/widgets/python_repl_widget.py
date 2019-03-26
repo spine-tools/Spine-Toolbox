@@ -87,13 +87,11 @@ class PythonReplWidget(RichJupyterWidget):
         self._control.viewport().setCursor(self.normal_cursor)
         self._running = False
         if msg['content']['status'] == 'ok':
-            # Check if cmd buffer has more commands to execute
+            # Run next command or finish up if no more commands to execute
             if len(self.commands) == 0:
-                self.execution_finished_signal.emit(0)  # Finish execution
+                self.execution_finished_signal.emit(0)
             else:
-                # Execute next command
                 cmd = self.commands.pop(0)
-                self._toolbox.msg.emit("c Executing:{0}".format(cmd))
                 self.execute(cmd)
         else:
             # TODO: if status='error' you can get the exception and more info from msg
@@ -181,12 +179,11 @@ class PythonReplWidget(RichJupyterWidget):
                         # Kernel is idle after starting up -> execute pending command
                         self._kernel_starting = False
                         # Start executing the first command in command buffer immediately
-                        if len(self.commands) == 0:
-                            self._toolbox.msg_error.emit("No commands to execute")
+                        if len(self.commands) == 0:  # Happens if Python console is started from context-menu
                             return
                         else:
+                            # Happens if Python console is started by clicking on Tool's Execute button
                             cmd = self.commands.pop(0)
-                            self._toolbox.msg.emit("b Executing:{0}".format(cmd))
                             self.execute(cmd)
                 else:  # Should not happen
                     self._toolbox.msg_error.emit("Unhandled execution_state '{0}' after "
@@ -199,7 +196,6 @@ class PythonReplWidget(RichJupyterWidget):
         if self.kernel_manager and self.kernel_name == 'python3':
             self._toolbox.msg.emit("*** Using previously started Python Console ***")
             cmd = self.commands.pop(0)
-            self._toolbox.msg.emit("a Executing:{0}".format(cmd))
             self.execute(cmd)
         else:
             self.start_python_kernel()  # This will execute the pending command when the kernel has started
