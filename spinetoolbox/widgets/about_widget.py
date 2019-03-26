@@ -20,7 +20,7 @@ from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, QPoint
 from PySide2.QtGui import QTextCursor
 import ui.about
-import spinedatabase_api
+import spine_dbapi
 
 
 class AboutWidget(QWidget):
@@ -41,7 +41,7 @@ class AboutWidget(QWidget):
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.label_version_str.setText("v{0}".format(version))
-        self.ui.label_api_version_str.setText("v{0}".format(spinedatabase_api.__version__))
+        self.ui.label_api_version_str.setText("v{0}".format(spine_dbapi.__version__))
         self.setup_license_text()
         self._mousePressPos = None
         self._mouseReleasePos = None

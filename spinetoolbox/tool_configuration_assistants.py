@@ -84,8 +84,8 @@ class SpineModelConfigurationAssistant(QObject):
         q_process.start_process()
         return q_process
 
-    def spinedatabase_api_installed_check(self):
-        """Start qsubprocess that checks if spinedatabase_api is installed in PyCall's python.
+    def spine_dbapi_installed_check(self):
+        """Start qsubprocess that checks if spine_dbapi is installed in PyCall's python.
         Return the qsubprocess.
         """
         program = self.py_call_python_program
@@ -93,7 +93,7 @@ class SpineModelConfigurationAssistant(QObject):
         args.append("-m")
         args.append("pip")
         args.append("show")
-        args.append("spinedatabase_api")
+        args.append("spine_dbapi")
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         return q_process
@@ -125,8 +125,8 @@ class SpineModelConfigurationAssistant(QObject):
         q_process.start_process()
         return q_process
 
-    def install_spinedatabase_api(self):
-        """Start qsubprocess that installs spinedatabase_api in PyCall's python.
+    def install_spine_dbapi(self):
+        """Start qsubprocess that installs spine_dbapi in PyCall's python.
         Return the qsubprocess.
         """
         program = self.py_call_python_program

@@ -21,7 +21,7 @@ import unittest
 from unittest import mock
 from unittest.mock import MagicMock
 from collections import namedtuple
-from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
+from spine_dbapi import DiffDatabaseMapping, create_new_spine_database
 from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, validate_sheet, SheetData, \
     read_parameter_sheet, read_json_sheet, merge_spine_xlsx_data, read_spine_xlsx, export_spine_database_to_xlsx, \
     import_xlsx_to_db

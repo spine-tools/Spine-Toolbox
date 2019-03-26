@@ -27,7 +27,7 @@ from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, \
     QFont, QTextCursor, QTransform
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from math import atan2, degrees, sin, cos, pi
-from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
+from spine_dbapi import SpineDBAPIError, SpineIntegrityError
 
 
 class ConnectorButton(QGraphicsRectItem):

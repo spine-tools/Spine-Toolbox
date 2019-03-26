@@ -30,7 +30,7 @@ from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, 
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
-from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
+from spine_dbapi import SpineDBAPIError, SpineIntegrityError
 from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, ParameterValueListContextMenu, \
     ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDefinitionDelegate, \
@@ -48,7 +48,7 @@ from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListM
     ParameterValueListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
-from spinedatabase_api import copy_database
+from spine_dbapi import copy_database
 from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity
 

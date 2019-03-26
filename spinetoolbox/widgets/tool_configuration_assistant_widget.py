@@ -99,10 +99,10 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.add_spine_model_msg("Installing PyCall. This operation can take a few moments...")
             self.q_process = self.spine_model_config_asst.install_py_call()
             self.q_process.subprocess_finished_signal.connect(self._handle_py_call_installation_finished)
-        elif link == "Install spinedatabase_api in PyCall python":
-            self.add_spine_model_msg("Installing spinedatabase_api. This operation can take a few moments...")
-            self.q_process = self.spine_model_config_asst.install_spinedatabase_api()
-            self.q_process.subprocess_finished_signal.connect(self._handle_spinedatabase_api_installation_finished)
+        elif link == "Install spine_dbapi in PyCall python":
+            self.add_spine_model_msg("Installing spine_dbapi. This operation can take a few moments...")
+            self.q_process = self.spine_model_config_asst.install_spine_dbapi()
+            self.q_process.subprocess_finished_signal.connect(self._handle_spine_dbapi_installation_finished)
         elif link == "Use same python as SpineToolbox":
             self.add_spine_model_msg("Reconfiguring PyCall to use the same python as Spine Toolbox. "
                                      "This operation can take a few moments...")
@@ -137,16 +137,16 @@ class ToolConfigurationAssistantWidget(QWidget):
         self.end_spine_model_operation()
         self.check_spine_model_configuration()
 
-    @Slot(int, name="_handle_spinedatabase_api_installation_finished")
-    def _handle_spinedatabase_api_installation_finished(self, ret):
-        """Run when the Spine Model configuration assistant has finished installing spinedatabase_api.
+    @Slot(int, name="_handle_spine_dbapi_installation_finished")
+    def _handle_spine_dbapi_installation_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished installing spine_dbapi.
         Restart SpineModel configuration check.
         """
         if ret != 0:
             self.end_spine_model_operation()
             self.add_spine_model_error_msg("Installation failed.")
             return
-        self.add_spine_model_success_msg("spinedatabase_api succesfully installed.")
+        self.add_spine_model_success_msg("spine_dbapi succesfully installed.")
         self.end_spine_model_operation()
         self.check_spine_model_configuration()
 
@@ -204,7 +204,7 @@ class ToolConfigurationAssistantWidget(QWidget):
     @Slot(int, name="_handle_py_call_program_check_finished")
     def _handle_py_call_program_check_finished(self, ret):
         """Run when the Spine Model configuration assistant has finished checking the python program used by PyCall.
-        Continue SpineModel configuration check, by checking if spinedatabase_api is installed.
+        Continue SpineModel configuration check, by checking if spine_dbapi is installed.
         """
         if self.q_process.process_failed_to_start:
             self.add_spine_model_error_msg("Check failed. Make sure that Julia is correctly installed and try again.")
@@ -220,12 +220,12 @@ class ToolConfigurationAssistantWidget(QWidget):
         self.add_spine_model_msg("PyCall is configured to use the python program at "
                                  "<b>{0}</b>".format(py_call_python_program))
         self.spine_model_config_asst.py_call_python_program = py_call_python_program
-        self.q_process = self.spine_model_config_asst.spinedatabase_api_installed_check()
-        self.q_process.subprocess_finished_signal.connect(self._handle_spinedatabase_api_installed_check_finished)
+        self.q_process = self.spine_model_config_asst.spine_dbapi_installed_check()
+        self.q_process.subprocess_finished_signal.connect(self._handle_spine_dbapi_installed_check_finished)
 
-    @Slot(int, name="_handle_spinedatabase_api_installed_check_finished")
-    def _handle_spinedatabase_api_installed_check_finished(self, ret):
-        """Run when the Spine Model configuration assistant has finished checking if spinedatabase_api is installed.
+    @Slot(int, name="_handle_spine_dbapi_installed_check_finished")
+    def _handle_spine_dbapi_installed_check_finished(self, ret):
+        """Run when the Spine Model configuration assistant has finished checking if spine_dbapi is installed.
         End SpineModel configuration check.
         """
         if self.q_process.process_failed_to_start:
@@ -234,17 +234,17 @@ class ToolConfigurationAssistantWidget(QWidget):
             return
         py_call_python_program = self.spine_model_config_asst.py_call_python_program
         if ret != 0:
-            self.add_spine_model_error_msg("spinedatabase_api is not installed in PyCall's python.")
-            anchor1 = "<a style='color:#99CCFF;' href='Install spinedatabase_api in PyCall python'>here</a>"
+            self.add_spine_model_error_msg("spine_dbapi is not installed in PyCall's python.")
+            anchor1 = "<a style='color:#99CCFF;' href='Install spine_dbapi in PyCall python'>here</a>"
             anchor2 = "<a style='color:#99CCFF;' href='Use same python as SpineToolbox'>here</a>"
             self.add_spine_model_msg("You have two options:"
-                                     "<ul><li>To install spinedatabase_api in PyCall's python, "
+                                     "<ul><li>To install spine_dbapi in PyCall's python, "
                                      "please click {0}.</li>"
                                      "<li>To reconfigure PyCall to use the same python as SpineToolbox, "
                                      "please click {1}.</li></ul>".format(anchor1, anchor2))
             self.end_spine_model_operation()
             return
-        self.add_spine_model_msg("spinedatabase_api is correctly installed in PyCall's python.")
+        self.add_spine_model_msg("spine_dbapi is correctly installed in PyCall's python.")
         self.add_spine_model_success_msg("<b>SpineModel is ready to use.</b>")
         self.end_spine_model_operation()
 

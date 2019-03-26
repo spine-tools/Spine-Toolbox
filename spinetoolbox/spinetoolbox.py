@@ -19,8 +19,13 @@ Spine Toolbox application main file.
 import sys
 import logging
 from PySide2.QtWidgets import QApplication
+try:
+    import spine_dbapi
+except ModuleNotFoundError:
+    import spinedatabase_api
+    sys.modules['spine_dbapi'] = spinedatabase_api  # So `import spine_dbapi` does not fail before the check
 from ui_main import ToolboxUI
-from helpers import spinedatabase_api_version_check, pyside2_version_check
+from helpers import spine_dbapi_version_check, pyside2_version_check
 
 
 def main(argv):
@@ -34,7 +39,7 @@ def main(argv):
                         datefmt='%Y-%m-%d %H:%M:%S')
     if not pyside2_version_check():
         return 0
-    if not spinedatabase_api_version_check():
+    if not spine_dbapi_version_check():
         return 0
     # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
     app = QApplication(argv)
