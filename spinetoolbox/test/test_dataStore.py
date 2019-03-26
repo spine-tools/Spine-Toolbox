@@ -25,7 +25,7 @@ import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
 from config import APPLICATION_PATH
-from spine_dbapi import create_new_spine_database
+from spinedb_api import create_new_spine_database
 
 
 class TestDataStore(unittest.TestCase):

@@ -74,7 +74,7 @@ class TestTreeViewForm(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes."""
         with mock.patch("data_store.DataStore") as mock_data_store, \
-                mock.patch("spine_dbapi.DiffDatabaseMapping") as mock_db_map:
+                mock.patch("spinedb_api.DiffDatabaseMapping") as mock_db_map:
             mock_db_map.object_parameter_fields.return_value = [
                 'id', 'object_class_id', 'object_class_name', 'parameter_name',
                 'value_list_id', 'value_list_name', 'parameter_tag_id_list', 'parameter_tag_list'

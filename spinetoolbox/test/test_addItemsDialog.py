@@ -23,7 +23,7 @@ import os
 import sys
 from PySide2.QtWidgets import QApplication, QToolButton
 from widgets.data_store_widgets import TreeViewForm
-from spine_dbapi import DiffDatabaseMapping, create_new_spine_database
+from spinedb_api import DiffDatabaseMapping, create_new_spine_database
 from widgets.custom_qdialog import AddObjectClassesDialog
 
 
@@ -43,7 +43,7 @@ class TestAddItemsDialog(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
         with mock.patch("data_store.DataStore") as mock_data_store, \
-                mock.patch("spine_dbapi.DiffDatabaseMapping") as mock_db_map:
+                mock.patch("spinedb_api.DiffDatabaseMapping") as mock_db_map:
             mock_data_store._toolbox.qsettings.return_value.value.return_value = False
             self.tree_view_form = TreeViewForm(mock_data_store, mock_db_map, "mock_db")
 

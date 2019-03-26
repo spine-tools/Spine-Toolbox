@@ -23,7 +23,7 @@ import os
 import time
 import shutil
 import glob
-import spine_dbapi
+import spinedb_api
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
@@ -72,22 +72,22 @@ def pyside2_version_check():
     return True
 
 
-def spine_dbapi_version_check():
-    """Check if spine_dbapi is the correct version and explain how to upgrade if it is not."""
+def spinedb_api_version_check():
+    """Check if spinedb_api is the correct version and explain how to upgrade if it is not."""
     try:
-        current_version = spine_dbapi.__version__
+        current_version = spinedb_api.__version__
         current_split = [int(x) for x in current_version.split(".")]
         required_split = [int(x) for x in REQUIRED_SPINE_DBAPI_VERSION.split(".")]
         if current_split >= required_split:
             return True
     except AttributeError:
         current_version = "not reported"
-    script = "upgrade_spine_dbapi.bat" if sys.platform == "win32" else "upgrade_spine_dbapi.sh"
+    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.sh"
     print(
         """ERROR:
-        Spine Toolbox failed to start because spine_dbapi is outdated.
+        Spine Toolbox failed to start because spinedb_api is outdated.
         (Required version is {0}, whereas current is {1})
-        Please upgrade spine_dbapi to v{0} and start Spine Toolbox again.
+        Please upgrade spinedb_api to v{0} and start Spine Toolbox again.
 
         To upgrade, run script '{2}' in the '/bin' folder.
 
@@ -388,7 +388,7 @@ def tuple_itemgetter(itemgetter_func, num_indexes):
 def format_string_list(str_list):
     """
     Return an unordered html list with all elements in str_list.
-    Intended to print error logs as returned by spine_dbapi.
+    Intended to print error logs as returned by spinedb_api.
 
     Args:
         str_list (list(str))

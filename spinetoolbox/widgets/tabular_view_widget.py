@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushBu
 from PySide2.QtCore import Qt, QPoint, QSettings
 from PySide2.QtGui import QIcon, QPixmap, QGuiApplication
 from sqlalchemy.sql import literal_column
-from spine_dbapi import SpineDBAPIError
+from spinedb_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
 from widgets.custom_menus import FilterMenu, PivotTableModelMenu
 from helpers import fix_name_ambiguity, tuple_itemgetter

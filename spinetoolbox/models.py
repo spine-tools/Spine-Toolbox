@@ -28,7 +28,7 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIco
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir, fix_name_ambiguity, busy_effect
-from spine_dbapi import SpineDBAPIError
+from spinedb_api import SpineDBAPIError
 
 
 class ProjectItemModel(QAbstractItemModel):

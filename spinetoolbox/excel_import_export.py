@@ -24,7 +24,7 @@ import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 
-from spine_dbapi import SpineDBAPIError, import_data
+from spinedb_api import SpineDBAPIError, import_data
 import logging
 from operator import itemgetter
 
@@ -40,7 +40,7 @@ def import_xlsx_to_db(db, filepath):
     when trying to write to database.
 
     Args:
-        db (spine_dbapi.DatabaseMapping): database mapping for database to write to
+        db (spinedb_api.DatabaseMapping): database mapping for database to write to
         filepath (str): str with filepath to excel file to read from
 
     Returns:
@@ -83,7 +83,7 @@ def get_objects_and_parameters(db):
     """Exports all object data from spine database into unstacked list of lists
 
     Args:
-        db (spine_dbapi.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List) First list contains parameter data, second one json data
@@ -120,7 +120,7 @@ def get_relationships_and_parameters(db):
     """Exports all relationship data from spine database into unstacked list of lists
 
     Args:
-        db (spine_dbapi.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List) First list contains parameter data, second one json data
@@ -272,7 +272,7 @@ def get_unstacked_relationships(db):
     """Gets all data for relationships in a unstacked list of list
 
     Args:
-        db (spine_dbapi.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List): Two list of data for relationship, one with parameter values
@@ -321,7 +321,7 @@ def get_unstacked_objects(db):
     """Gets all data for objects in a unstacked list of list
 
     Args:
-        db (spine_dbapi.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List): Two list of data for objects, one with parameter values
@@ -497,7 +497,7 @@ def export_spine_database_to_xlsx(db, filepath):
     """Writes all data in a spine database into an excel file.
 
     Args:
-        db (spine_dbapi.DatabaseMapping): database mapping for database.
+        db (spinedb_api.DatabaseMapping): database mapping for database.
         filepath (str): str with filepath to save excel file to.
     """
     obj_data, obj_json_data = get_unstacked_objects(db)

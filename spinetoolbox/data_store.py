@@ -33,7 +33,7 @@ from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
-import spine_dbapi
+import spinedb_api
 
 
 class DataStore(ProjectItem):
@@ -534,8 +534,8 @@ class DataStore(ProjectItem):
         """Return a DiffDatabaseMapping instance to work with.
         """
         try:
-            return spine_dbapi.DiffDatabaseMapping(db_url, username, upgrade=upgrade)
-        except spine_dbapi.SpineDBVersionError:
+            return spinedb_api.DiffDatabaseMapping(db_url, username, upgrade=upgrade)
+        except spinedb_api.SpineDBVersionError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
@@ -551,7 +551,7 @@ class DataStore(ProjectItem):
             if ret == QMessageBox.Cancel:
                 return None
             return self.get_db_map(db_url, username, upgrade=True)
-        except spine_dbapi.SpineDBAPIError as e:
+        except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return None
 
@@ -817,7 +817,7 @@ class DataStore(ProjectItem):
             pass
         url = "sqlite:///" + file_path
         for_spine_model = check_box.isChecked()
-        spine_dbapi.create_new_spine_database(url, for_spine_model=for_spine_model)
+        spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
         database = os.path.basename(file_path)
         username = getpass.getuser()
         # Update UI
