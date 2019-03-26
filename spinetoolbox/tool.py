@@ -359,7 +359,6 @@ class Tool(ProjectItem):
 
     def count_files_and_dirs(self):
         """Count the number of files and directories in required input files model.
-        TODO: Change name of 'required input files' because it can contain dir names too.
 
         Returns:
             Tuple containing the number of required files and directories.
@@ -756,11 +755,17 @@ class Tool(ProjectItem):
             self.append_instance_args()
             use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue=0)
             if use_embedded_python == 2:
-                # Prepare command for Python Console
-                # Cast args from list to string and combine them to a single string
+                # Prepare a command list (FIFO queue) with two commands for Python Console
+                # 1st cmd: Change current work directory
+                # 2nd cmd: Run script with given args
+                # Cast args in list to strings and combine them to a single string
                 # Skip first arg since it's the script path
                 args = " ".join([str(x) for x in self.instance.args[1:]])
-                self.instance.python_console_cmd = "%run \"{0}\" {1}".format(script_path, args)
+                cd_work_dir_cmd = "%cd {0}".format(work_dir)
+                run_script_cmd = "%run \"{0}\" {1};".format(self.tool_template().main_prgm, args)
+                # FIFO queue
+                self.instance.ipython_command_list.append(cd_work_dir_cmd)
+                self.instance.ipython_command_list.append(run_script_cmd)
         elif self.tool_template().tooltype == "executable":
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
             if not sys.platform == "win32":

@@ -178,7 +178,7 @@ MAINWINDOW_SS = "QMainWindow::separator{width: 3px; background-color: lightgray;
                 "QCheckBox{padding: 2px; spacing: 10px; outline-style: dashed; outline-width: 1px; outline-color: black;}" \
                 "QComboBox:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
-                "QTextEdit:focus{border-color: black; border-width: 2px; border-style: ridge;}" \
+                "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
 
 TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ecd8c6; font-size: 12px;}"

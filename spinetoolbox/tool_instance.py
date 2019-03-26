@@ -54,7 +54,7 @@ class ToolInstance(QObject):
         else:  # Execute in source directory
             self.basedir = self.tool_template.path
         self.julia_repl_command = None
-        self.python_console_cmd = None
+        self.ipython_command_list = list()
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
         self.inputfiles = [os.path.join(self.basedir, f) for f in tool_template.inputfiles]
@@ -112,13 +112,13 @@ class ToolInstance(QObject):
         return True
 
     def execute(self):
-        """Start executing tool template instance in QProcess."""
+        """Start executing tool template instance in console or in QProcess."""
         self._toolbox.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
         if self.tool_template.tooltype == "julia":
             if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue=2) == 2:
                 self.tool_process = self._toolbox.julia_repl
                 self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
-                self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
+                # self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
                 self.tool_process.execute_instance(self.julia_repl_command)
             else:
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
@@ -130,12 +130,11 @@ class ToolInstance(QObject):
             if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue=0) == 2:
                 self.tool_process = self._toolbox.python_repl
                 self.tool_process.execution_finished_signal.connect(self.python_console_tool_finished)
-                self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.python_console_cmd))
-                self.tool_process.execute_instance(self.python_console_cmd)
+                # self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.python_console_cmd))
+                self.tool_process.execute_instance(self.ipython_command_list)
             else:
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
-                # TODO: Check if settings the workdir is necessary with Python
                 self.tool_process.start_process(workdir=self.basedir)
         elif self.tool_template.tooltype == "gams":
             self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
@@ -148,6 +147,7 @@ class ToolInstance(QObject):
             self.tool_process.subprocess_finished_signal.connect(self.executable_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)
 
+    @Slot(int, name="julia_repl_tool_finished")
     def julia_repl_tool_finished(self, ret):
         """Run when Julia tool using REPL has finished processing.
 
@@ -199,6 +199,7 @@ class ToolInstance(QObject):
         self.tool_process = None
         self.save_output_files(ret)
 
+    @Slot(int, name="python_console_tool_finished")
     def python_console_tool_finished(self, ret):
         """Run when Python Tool in Python Console has finished processing.
 
