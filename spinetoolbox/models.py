@@ -1941,7 +1941,7 @@ class SubParameterValueModel(SubParameterModel):
         data = super().data(index, role)
         if role != Qt.DisplayRole:
             return data
-        if self._parent.header[index.column()] == 'json' and data:
+        if self._parent.header[index.column()] == 'value' and data:
             try:
                 stripped_data = json.dumps(json.loads(data))
             except json.JSONDecodeError:

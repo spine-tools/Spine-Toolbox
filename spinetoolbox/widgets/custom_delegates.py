@@ -191,7 +191,7 @@ class ParameterValueDelegate(ParameterDelegate):
         self.last_index = index
         self.destroy_json_popup()
         header = index.model().horizontal_header_labels()
-        if header[index.column()] != 'json':
+        if header[index.column()] != 'value':
             return super().editorEvent(event, model, option, index)
         if not index.data(Qt.EditRole):
             return super().editorEvent(event, model, option, index)
@@ -238,6 +238,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
             name_list = [x.parameter_name for x in self.db_map.object_parameter_list(object_class_id=object_class_id)]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'value':
+            self.destroy_json_popup()
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
             if parameter:
@@ -249,13 +250,9 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
                 editor = SearchBarEditor(self._parent, parent)
                 editor.set_data(index.data(Qt.EditRole), value_list.value_list.split(","))
             else:
-                editor = CustomLineEditor(parent)
-                editor.set_data(index.data(Qt.EditRole))
-        elif header[index.column()] == 'json':
-            self.destroy_json_popup()
-            editor = JSONEditor(self._parent, parent)
-            editor.currentChanged.connect(self._handle_json_editor_current_changed)
-            editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
+                editor = JSONEditor(self._parent, parent)
+                editor.currentChanged.connect(self._handle_json_editor_current_changed)
+                editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
         else:
             editor = CustomLineEditor(parent)
         model = index.model()
@@ -339,6 +336,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'value':
+            self.destroy_json_popup()
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
             if parameter:
@@ -350,13 +348,9 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
                 editor = SearchBarEditor(self._parent, parent)
                 editor.set_data(index.data(Qt.EditRole), value_list.value_list.split(","))
             else:
-                editor = CustomLineEditor(parent)
-                editor.set_data(index.data(Qt.EditRole))
-        elif header[index.column()] == 'json':
-            self.destroy_json_popup()
-            editor = JSONEditor(self._parent, parent)
-            editor.currentChanged.connect(self._handle_json_editor_current_changed)
-            editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
+                editor = JSONEditor(self._parent, parent)
+                editor.currentChanged.connect(self._handle_json_editor_current_changed)
+                editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))

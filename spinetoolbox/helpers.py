@@ -29,7 +29,7 @@ from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QCursor, QPainter, QPixmap, QImageReader
-from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
+from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
 def set_taskbar_icon():
@@ -77,7 +77,7 @@ def spinedb_api_version_check():
     try:
         current_version = spinedb_api.__version__
         current_split = [int(x) for x in current_version.split(".")]
-        required_split = [int(x) for x in REQUIRED_SPINE_DBAPI_VERSION.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINEDB_API_VERSION.split(".")]
         if current_split >= required_split:
             return True
     except AttributeError:
@@ -95,7 +95,7 @@ def spinedb_api_version_check():
 
             pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
-        """.format(REQUIRED_SPINE_DBAPI_VERSION, current_version, script))
+        """.format(REQUIRED_SPINEDB_API_VERSION, current_version, script))
     return False
 
 
