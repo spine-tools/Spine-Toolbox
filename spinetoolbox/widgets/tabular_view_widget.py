@@ -863,8 +863,6 @@ class TabularViewForm(QMainWindow):
             self.show_commit_session_prompt()
         # save ui state
         self.save_ui()
-        # close db
-        self.db_map.close()
         if event:
             event.accept()
 

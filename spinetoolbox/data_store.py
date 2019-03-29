@@ -585,11 +585,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tree_view(self, db_map, database):
         """Open reference in tree view form."""
-        try:
-            self.tree_view_form = TreeViewForm(self, db_map, database)
-        except:
-            db_map.close()
-            raise
+        self.tree_view_form = TreeViewForm(self, db_map, database)
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -627,11 +623,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_graph_view(self, db_map, database):
         """Open reference in graph view form."""
-        try:
-            self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
-        except:
-            db_map.close()
-            raise
+        self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
@@ -668,11 +660,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tabular_view(self, db_map, database):
         """Open reference in tabular view form."""
-        try:
-            self.tabular_view_form = TabularViewForm(self, db_map, database)
-        except:
-            db_map.close()
-            raise
+        self.tabular_view_form = TabularViewForm(self, db_map, database)
         self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
         self.tabular_view_form.show()
 

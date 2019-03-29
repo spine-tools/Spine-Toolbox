@@ -35,13 +35,6 @@ TEMP_SQLITE_TEST_FILENAME = UUID_STR + '-second.sqlite'
 class TestExcelIntegration(unittest.TestCase):
 
     def delete_temp_files(self):
-        # delete temp excel file if it exists
-        # close mappings
-        if hasattr(self, 'db_map'):
-            self.db_map.close()
-        if hasattr(self, 'empty_db_map'):
-            self.empty_db_map.close()
-
         # remove temp files
         try:
             os.remove(TEMP_EXCEL_FILENAME)
