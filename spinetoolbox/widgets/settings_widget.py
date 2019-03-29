@@ -84,6 +84,12 @@ class SettingsWidget(QWidget):
                                              os.path.abspath('C:\\'))
         if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
             return
+        # Check that it's not a directory
+        if os.path.isdir(answer[0]):
+            msg = "Please select a valid GAMS program (file) and not a directory"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Invalid GAMS program", msg)
+            return
         # Check that selected file at least starts with string 'gams'
         path, selected_file = os.path.split(answer[0])
         if not selected_file.lower().startswith("gams"):
@@ -101,6 +107,12 @@ class SettingsWidget(QWidget):
         answer = QFileDialog.getOpenFileName(self, "Select Julia Interpreter (e.g. julia.exe on Windows)",
                                              os.path.abspath('C:\\'))
         if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
+            return
+        # Check that it's not a directory
+        if os.path.isdir(answer[0]):
+            msg = "Please select a valid Julia interpreter (file) and not a directory"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
             return
         # Check that selected file at least starts with string 'julia'
         path, selected_file = os.path.split(answer[0])
@@ -120,15 +132,20 @@ class SettingsWidget(QWidget):
                                              os.path.abspath('C:\\'))
         if answer[0] == "":  # Canceled
             return
-        selected_path = answer[0]
+        # Check that it's not a directory
+        if os.path.isdir(answer[0]):
+            msg = "Please select a valid Python interpreter (file) and not a directory"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Invalid Python Interpreter", msg)
+            return
         # Check that selected file at least starts with string 'python'
-        path, selected_file = os.path.split(selected_path)
+        path, selected_file = os.path.split(answer[0])
         if not selected_file.lower().startswith("python"):
             msg = "Selected file <b>{0}</b> is not a valid Python interpreter".format(selected_file)
             # noinspection PyCallByClass, PyArgumentList
             QMessageBox.warning(self, "Invalid Python Environment", msg)
             return
-        self.ui.lineEdit_python_path.setText(selected_path)
+        self.ui.lineEdit_python_path.setText(answer[0])
         return
 
     @Slot(bool, name="browse_work_path")
@@ -289,6 +306,7 @@ class SettingsWidget(QWidget):
         # Python
         use_emb_python = str(int(self.ui.checkBox_use_embedded_python.checkState()))  # Cast to str because of Linux
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
+        # TODO: check for a python path (needs to be a python executable)
         python_path = self.ui.lineEdit_python_path.text().strip()
         self._qsettings.setValue("appSettings/pythonPath", python_path)
         self.check_if_python_env_changed(python_path)

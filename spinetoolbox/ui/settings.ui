@@ -422,7 +422,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Julia environment</string>
+               <string>Julia interpreter</string>
               </property>
              </widget>
             </item>
@@ -435,7 +435,7 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia environment by selecting a Julia interpreter (e.g. julia.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia interpreter by using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="iconSize">
                <size>
@@ -460,10 +460,10 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia environment. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia interpreter. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Using Julia environment in system path</string>
+               <string>Using Julia interpreter in system path</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
@@ -521,10 +521,10 @@
           <item row="1" column="0">
            <widget class="QLineEdit" name="lineEdit_python_path">
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python environment. Leave blank to use Python defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter. Leave blank to use Python defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="placeholderText">
-             <string>Using Python environment in system path</string>
+             <string>Using Python interpreter in system path</string>
             </property>
             <property name="clearButtonEnabled">
              <bool>true</bool>
@@ -540,7 +540,7 @@
              </size>
             </property>
             <property name="toolTip">
-             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python environment by selecting a Python interpreter (e.g. python.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter by using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="iconSize">
              <size>
@@ -558,7 +558,7 @@
              </font>
             </property>
             <property name="text">
-             <string>Python environment</string>
+             <string>Python interpreter</string>
             </property>
            </widget>
           </item>
