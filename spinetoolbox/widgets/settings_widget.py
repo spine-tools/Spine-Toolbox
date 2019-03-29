@@ -88,7 +88,13 @@ class SettingsWidget(QWidget):
         if os.path.isdir(answer[0]):
             msg = "Please select a valid GAMS program (file) and not a directory"
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid GAMS program", msg)
+            QMessageBox.warning(self, "Invalid GAMS Program", msg)
+            return
+        # Check that it's a file that actually exists
+        if not os.path.exists(answer[0]):
+            msg = "File {0} does not exist".format(answer[0])
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Invalid GAMS Program", msg)
             return
         # Check that selected file at least starts with string 'gams'
         path, selected_file = os.path.split(answer[0])
@@ -111,6 +117,12 @@ class SettingsWidget(QWidget):
         # Check that it's not a directory
         if os.path.isdir(answer[0]):
             msg = "Please select a valid Julia interpreter (file) and not a directory"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
+            return
+        # Check that it's a file that actually exists
+        if not os.path.exists(answer[0]):
+            msg = "File {0} does not exist".format(answer[0])
             # noinspection PyCallByClass, PyArgumentList
             QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
             return
@@ -143,7 +155,7 @@ class SettingsWidget(QWidget):
         if not selected_file.lower().startswith("python"):
             msg = "Selected file <b>{0}</b> is not a valid Python interpreter".format(selected_file)
             # noinspection PyCallByClass, PyArgumentList
-            QMessageBox.warning(self, "Invalid Python Environment", msg)
+            QMessageBox.warning(self, "Invalid Python Interpreter", msg)
             return
         self.ui.lineEdit_python_path.setText(answer[0])
         return
@@ -296,18 +308,23 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/bgColor", self.bg_color)
         # GAMS
         gams_path = self.ui.lineEdit_gams_path.text().strip()
+        if not self.file_is_valid(gams_path, "Invalid GAMS Program"):  # Check it's a file and it exists
+            return
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
         # Julia (cast to str because of Linux)
         use_emb_julia = str(int(self.ui.checkBox_use_embedded_julia.checkState()))  # Cast to str because of Linux
         # 0:unchecked, 2:checked
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
         julia_path = self.ui.lineEdit_julia_path.text().strip()
+        if not self.file_is_valid(julia_path, "Invalid Julia Interpreter"):  # Check it's a file and it exists
+            return
         self._qsettings.setValue("appSettings/juliaPath", julia_path)
         # Python
         use_emb_python = str(int(self.ui.checkBox_use_embedded_python.checkState()))  # Cast to str because of Linux
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
-        # TODO: check for a python path (needs to be a python executable)
         python_path = self.ui.lineEdit_python_path.text().strip()
+        if not self.file_is_valid(python_path, "Invalid Python Interpreter"):  # Check it's a file and it exists
+            return
         self._qsettings.setValue("appSettings/pythonPath", python_path)
         self.check_if_python_env_changed(python_path)
         # Data Store Views
@@ -350,6 +367,23 @@ class SettingsWidget(QWidget):
             self._toolbox.python_repl.may_need_restart = True
         else:
             self._toolbox.python_repl.may_need_restart = False
+
+    def file_is_valid(self, file_path, msgbox_title):
+        """Checks that given path is not a directory and it's a file that actually exists.
+        Needed because the QLineEdits are editable."""
+        if file_path == "":
+            return True
+        if os.path.isdir(file_path):
+            msg = "Please select a file and not a directory"
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, msgbox_title, msg)
+            return False
+        if not os.path.exists(file_path):
+            msg = "File {0} does not exist".format(file_path)
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, msgbox_title, msg)
+            return False
+        return True
 
     def keyPressEvent(self, e):
         """Close settings form when escape key is pressed.
