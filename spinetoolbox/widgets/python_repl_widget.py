@@ -393,9 +393,9 @@ class PythonReplWidget(RichJupyterWidget):
 
     def shutdown_kernel(self, hush=False):
         """Shut down Python kernel."""
-        self.disconnect_signals()
         if not self.kernel_client:
             return
+        self.disconnect_signals()
         if not hush:
             self._toolbox.msg.emit("Shutting down Python Console...")
         self.kernel_client.stop_channels()
