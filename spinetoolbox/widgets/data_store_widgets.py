@@ -933,6 +933,8 @@ class TreeViewForm(DataStoreForm):
         """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
         # Place docks
         for dock in self.findChildren(QDockWidget):
+            if dock in (self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree):
+                continue
             dock.setVisible(True)
             dock.setFloating(False)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
