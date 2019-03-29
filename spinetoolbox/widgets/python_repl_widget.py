@@ -46,7 +46,7 @@ class PythonReplWidget(RichJupyterWidget):
         self._running = False  # Not used
         self.execution_failed_to_start = False  # Set this somewhere. Used in ToolInstance()
         self._kernel_state = None  # Not used
-        self.kernel_name = ""
+        self.kernel_name = None
         self.kernel_display_name = ""
         self.kernel_manager = None
         self.kernel_client = None
@@ -91,9 +91,8 @@ class PythonReplWidget(RichJupyterWidget):
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
-            self._toolbox.msg_error.emit("\tCouldn't determine Python version. Please "
-                                         "make sure the selected Python ({0}) is "
-                                         "correctly installed and try again.".format(self.python_cmd))
+            self._toolbox.msg_error.emit("Couldn't determine Python version. Please check "
+                                         "the <b>Python interpreter</b> option in Settings.")
             return None
         python_version_str = q_process.output
         if python_version_str == "":
@@ -108,8 +107,10 @@ class PythonReplWidget(RichJupyterWidget):
     @Slot(name="setup_python_kernel")
     def setup_python_kernel(self):
         """Context menu Start action handler."""
-        kern_name, kern_display_name = self.python_kernel_name()
-        self.launch_kernel(kern_name, kern_display_name)
+        k_tuple = self.python_kernel_name()
+        if not k_tuple:
+            return
+        self.launch_kernel(k_tuple[0], k_tuple[1])
 
     def launch_kernel(self, k_name, k_display_name):
         """Check if selected kernel exists or if it needs to be set up before launching."""

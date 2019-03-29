@@ -130,8 +130,14 @@ class ToolInstance(QObject):
             if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
                 self.tool_process = self._toolbox.python_repl
                 self.tool_process.execution_finished_signal.connect(self.python_console_tool_finished)
-                kern_name, kern_display_name = self.tool_process.python_kernel_name()
+                k_tuple = self.tool_process.python_kernel_name()
+                if not k_tuple:
+                    self.python_console_tool_finished(-999)
+                    return
+                kern_name = k_tuple[0]
+                kern_display_name = k_tuple[1]
                 # Check if this kernel is already running
+                logging.debug("self.kernel_name:{0} kern_name:{1} kernel client:{2}".format(self.tool_process.kernel_name, kern_name, self.tool_process.kernel_client))
                 if self.tool_process.kernel_name == kern_name:
                     self.tool_process.execute_instance(self.ipython_command_list)
                 else:
@@ -176,7 +182,7 @@ class ToolInstance(QObject):
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self._toolbox.msg.emit("\tJulia Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process = None
         self.save_output_files(ret)
 
@@ -200,7 +206,7 @@ class ToolInstance(QObject):
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tJulia Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -228,7 +234,7 @@ class ToolInstance(QObject):
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self._toolbox.msg.emit("\tPython Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process = None
         self.save_output_files(ret)
 
@@ -252,7 +258,7 @@ class ToolInstance(QObject):
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tPython Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -279,7 +285,7 @@ class ToolInstance(QObject):
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tGAMS Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -305,7 +311,7 @@ class ToolInstance(QObject):
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tExecutable Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
