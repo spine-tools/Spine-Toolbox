@@ -731,8 +731,8 @@ class Tool(ProjectItem):
             self.instance.program = julia_cmd
             self.instance.args.append(script_path)
             self.append_instance_args()
-            use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue=2)
-            if use_embedded_julia == 2:
+            use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
+            if use_embedded_julia == "2":
                 # Prepare Julia REPL command
                 # TODO: See if this can be simplified
                 mod_work_dir = work_dir.__repr__().strip("'")
@@ -751,19 +751,19 @@ class Tool(ProjectItem):
             work_dir = self.instance.basedir
             script_path = os.path.join(work_dir, self.tool_template().main_prgm)
             self.instance.program = python_cmd
-            self.instance.args.append(script_path)
+            self.instance.args.append(script_path)  # TODO: Why are we doing this?
             self.append_instance_args()
-            use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue=0)
-            if use_embedded_python == 2:
+            use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0")
+            if use_embedded_python == "2":
                 # Prepare a command list (FIFO queue) with two commands for Python Console
                 # 1st cmd: Change current work directory
                 # 2nd cmd: Run script with given args
                 # Cast args in list to strings and combine them to a single string
-                # Skip first arg since it's the script path
+                # Skip first arg since it's the script path (see above)
                 args = " ".join([str(x) for x in self.instance.args[1:]])
-                cd_work_dir_cmd = "%cd {0}".format(work_dir)
-                run_script_cmd = "%run \"{0}\" {1};".format(self.tool_template().main_prgm, args)
-                # FIFO queue
+                cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
+                run_script_cmd = "%run \"{0}\" {1}".format(self.tool_template().main_prgm, args)
+                # Populate FIFO command queue
                 self.instance.ipython_command_list.append(cd_work_dir_cmd)
                 self.instance.ipython_command_list.append(run_script_cmd)
         elif self.tool_template().tooltype == "executable":

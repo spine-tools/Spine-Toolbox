@@ -16,15 +16,18 @@ Class for a custom RichJupyterWidget to use as Python REPL.
 :date:   14.3.2019
 """
 
-import sys
 import logging
+import sys
+import subprocess
 from PySide2.QtCore import Qt, Signal, Slot
-from PySide2.QtWidgets import QAction
+from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from widgets.toolbars import DraggableWidget
 from helpers import busy_effect
+from config import PYTHON_EXECUTABLE
+import qsubprocess
 
 
 class PythonReplWidget(RichJupyterWidget):
@@ -42,10 +45,14 @@ class PythonReplWidget(RichJupyterWidget):
         self._toolbox = toolbox
         self._kernel_starting = False  # Warning: Do not use self._starting (protected class variable in JupyterWidget)
         self._running = False  # Not used
+        self.execution_failed_to_start = False  # Set this somewhere. Used in ToolInstance()
         self._kernel_state = None  # Not used
-        self.kernel_name = "python3"
+        self.kernel_name = ""
+        self.kernel_display_name = ""
         self.kernel_manager = None
         self.kernel_client = None
+        self.python_cmd = None  # Contains the path to selected python executable (i.e. pythondir/python.exe on wind.)
+        self.install_process = None  # QSubProcess instance for installing required packages
         self.commands = list()  # FIFO command queue (buffer)
         self.normal_cursor = self._control.viewport().cursor()
         # QActions
@@ -57,6 +64,228 @@ class PythonReplWidget(RichJupyterWidget):
         self.executing.connect(self.execution_in_progress)  # Signal defined in FrontEndWidget class
         self.executed.connect(self.execution_done)  # Signal defined in FrontEndWidget class
         self.kernel_client.iopub_channel.message_received.connect(self.iopub_msg_received)
+
+    def disconnect_signals(self):
+        """Connect signals."""
+        self.executing.disconnect(self.execution_in_progress)  # Signal defined in FrontEndWidget class
+        self.executed.disconnect(self.execution_done)  # Signal defined in FrontEndWidget class
+        self.kernel_client.iopub_channel.message_received.disconnect(self.iopub_msg_received)
+
+    @busy_effect
+    def python_kernel_name(self):
+        """Returns the name of the Python kernel specification and its display name, according to the
+        selected Python environment in Settings. Returns None if Python version
+        cannot be determined.
+        """
+        self._toolbox.msg.emit("\tInitializing Python Console...")
+        python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+        if not python_path == "":
+            self.python_cmd = python_path
+        else:
+            self.python_cmd = PYTHON_EXECUTABLE
+        program = "{0}".format(self.python_cmd)
+        args = list()
+        args.append("-V")
+        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process.start_process()
+        if not q_process.wait_for_finished(msecs=5000):
+            self._toolbox.msg_error.emit("\tCouldn't determine Python version. Please "
+                                         "make sure the selected Python ({0}) is "
+                                         "correctly installed and try again.".format(self.python_cmd))
+            return None
+        python_version_str = q_process.output
+        if python_version_str == "":
+            # The version str might be in stderr instead of stdout (happens at least with Python 2.7.14)
+            python_version_str = q_process.error_output
+        logging.debug("'{0}'".format(python_version_str))
+        python_str, ver = python_version_str.split()
+        kernel_name = "python-" + ver[:3]
+        kernel_display_name = "Python-" + ver
+        # self._toolbox.msg.emit("\tUsing <b>{0}</b>. Setting up kernel <b>{1}</b>"
+        #                        .format(python_version_str, self.kernel_name))
+        return kernel_name, kernel_display_name
+
+    @Slot(name="setup_python_kernel")
+    def setup_python_kernel(self):
+        """Context menu Start action handler."""
+        kern_name, kern_display_name = self.python_kernel_name()
+        self.launch_kernel(kern_name, kern_display_name)
+
+    def launch_kernel(self, k_name, k_display_name):
+        """Check if selected kernel exists or if it needs to be set up before launching."""
+        if self.kernel_manager:
+            if self.kernel_name == k_name:
+                self._toolbox.msg.emit("Kernel {0} already running in Python Console".format(self.kernel_name))
+                return
+            else:
+                self._toolbox.msg_warning.emit("Launching kernel {0}".format(k_name))
+                self.shutdown_kernel()
+        self.kernel_name = k_name
+        self.kernel_display_name = k_display_name
+        self.check_and_install_requirements()
+
+    def is_package_installed(self, package_name):
+        """Check if given package is installed to selected Python environment.
+
+        Args:
+            package_name (str): Package name
+
+        Returns:
+            (bool): True if installed, False if not
+        """
+        response = subprocess.check_output([self.python_cmd, '-m', 'pip', 'freeze', '-q'])
+        installed_packages = [r.decode().split('==')[0] for r in response.split()]
+        if package_name in installed_packages:
+            return True
+        return False
+
+    def check_and_install_requirements(self):
+        """Prompts user to install IPython and ipykernel if they are missing.
+        After installing the required packages, installs kernelspecs for the
+        selected Python if they are missing.
+
+        Returns:
+            Boolean value depending on whether or not the user chooses to proceed.
+        """
+        if not self.is_package_installed("ipython"):
+            message = "Python Console requires package <b>IPython</b>." \
+                      "<p>Do you want to install the package now?</p>"
+            # noinspection PyTypeChecker, PyCallByClass
+            answer = QMessageBox.question(self, "IPython missing", message, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                self._control.viewport().setCursor(self.normal_cursor)
+                return False
+            self._toolbox.msg.emit("*** Installing IPython ***")
+            self.start_package_install_process("ipython")
+            return True
+        if not self.is_package_installed("ipykernel"):
+            message = "Python Console requires package <b>ipykernel</b>." \
+                      "<p>Do you want to install the package now?</p>"
+            # noinspection PyTypeChecker, PyCallByClass
+            answer = QMessageBox.question(self, "ipykernel missing", message, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                self._control.viewport().setCursor(self.normal_cursor)
+                return False
+            self._toolbox.msg.emit("*** Installing ipykernel ***")
+            self.start_package_install_process("ipykernel")
+            return True
+        # Install kernelspecs for self.kernel_name if not already present
+        kernel_specs = find_kernel_specs()
+        if self.kernel_name not in kernel_specs.keys():
+            message = "Jupyter kernel specifications for the selected environment are missing. " \
+                      "<p>Do you want to install kernel <b>{0}</b> specs now?</p>".format(self.kernel_name)
+            # noinspection PyTypeChecker, PyCallByClass
+            answer = QMessageBox.question(self, "Kernel specs missing", message, QMessageBox.Yes, QMessageBox.No)
+            if not answer == QMessageBox.Yes:
+                self._control.viewport().setCursor(self.normal_cursor)
+                return False
+            self._toolbox.msg.emit("*** Installing kernel <b>{0}</b> specs ***".format(self.kernel_name))
+            self.start_kernelspec_install_process()
+        else:  # Everything ready, start Python Console
+            kernel_dir = kernel_specs[self.kernel_name]
+            self._toolbox.msg.emit("\tPython kernel specs <b>{0}</b> found in {1}".format(self.kernel_name, kernel_dir))
+            self.start_python_kernel()
+        return True
+
+    def start_package_install_process(self, package_name):
+        """Start installing ipython or ipykernel.
+
+        Args:
+            package_name (str): Package name to install using pip
+        """
+        program = "{0}".format(self.python_cmd)  # selected python environment
+        args = list()
+        args.append("-m")
+        args.append("pip")
+        args.append("install")
+        args.append(package_name)
+        self.install_process = qsubprocess.QSubProcess(self._toolbox, program, args, semisilent=True)
+        self.install_process.subprocess_finished_signal.connect(self.package_install_process_finished)
+        self.install_process.start_process()
+
+    @Slot(int, name="package_install_process_finished")
+    def package_install_process_finished(self, retval):
+        """Installing package finished.
+
+        Args:
+            retval (int): Process return value. 0: success, !0: failure
+        """
+        self.install_process.subprocess_finished_signal.disconnect()
+        self.install_process.deleteLater()
+        self.install_process = None
+        if retval != 0:
+            self._toolbox.msg_error.emit("Installing required package failed. Please install it manually.")
+            return
+        else:
+            self._toolbox.msg_success.emit("Installing package to environment {0} succeeded".format(self.python_cmd))
+        self.check_and_install_requirements()  # Check reqs again
+
+    def start_kernelspec_install_process(self):
+        """Install kernel specifications for the selected Python environment."""
+        # python -m ipykernel install --user --name python-3.4 --display-name Python3.4
+        # Creates kernelspecs to
+        # C:\Users\ttepsa\AppData\Roaming\jupyter\kernels\python-3.4
+        program = "{0}".format(self.python_cmd)  # selected python environment
+        args = list()
+        args.append("-m")
+        args.append("ipykernel")
+        args.append("install")
+        args.append("--user")
+        args.append("--name")
+        args.append(self.kernel_name)
+        args.append("--display-name")
+        args.append(self.kernel_display_name)
+        self.install_process = qsubprocess.QSubProcess(self._toolbox, program, args, semisilent=True)
+        self.install_process.subprocess_finished_signal.connect(self.kernelspec_install_process_finished)
+        self.install_process.start_process()
+
+    @Slot(int, name="kernelspec_install_process_finished")
+    def kernelspec_install_process_finished(self, retval):
+        """Installing package finished.
+
+        Args:
+            retval (int): Process return value. 0: success, !0: failure
+        """
+        self.install_process.subprocess_finished_signal.disconnect()
+        self.install_process.deleteLater()
+        self.install_process = None
+        if retval != 0:
+            self._toolbox.msg_error.emit("Installing kernel specs failed. Please install them manually.")
+            return
+        else:
+            self._toolbox.msg_success.emit("Kernel specs <b>{0}</b> installed".format(self.kernel_name))
+            self.start_python_kernel()
+
+    def start_python_kernel(self):
+        """Start IPython kernel and attach it to the Python Console."""
+        self._kernel_starting = True
+        self._toolbox.msg.emit("*** Starting Python Console ***")
+        km = QtKernelManager(kernel_name=self.kernel_name)
+        try:
+            km.start_kernel()
+            kc = km.client()
+            kc.start_channels()
+            self.kernel_manager = km
+            self.kernel_client = kc
+            self.connect_signals()
+            return True
+        except FileNotFoundError:
+            self._toolbox.msg_error.emit("\tCouldn't find the Python executable specified by the Jupyter kernel.")
+            self._kernel_starting = False
+            return self.check_and_install_requirements()
+        except NoSuchKernel:  # kernelspecs for the selected kernel_name not available
+            self._toolbox.msg_error.emit("\t[NoSuchKernel] Couldn't find the specified Python Jupyter kernel.")
+            self._kernel_starting = False
+            return self.check_and_install_requirements()
+
+    def execute_instance(self, commands):
+        """Start executing the first command in the command
+        queue in Python Console, which should be running
+        already.
+        """
+        self.commands = commands
+        cmd = self.commands.pop(0)
+        self.execute(cmd)
 
     @Slot(str, name="execution_in_progress")
     def execution_in_progress(self, code):
@@ -70,8 +299,7 @@ class PythonReplWidget(RichJupyterWidget):
         self._control.viewport().setCursor(Qt.BusyCursor)
         self._running = True
         if len(self.commands) == 0:
-            self._toolbox.msg.emit("Executing manually typed console command")
-            # pass  # Happens when users type commands directly to iPython Console
+            pass  # Happens when users type commands directly to iPython Console
         else:
             self._toolbox.msg_warning.emit("\tExecution in progress. See <b>Python Console</b> for messages.")
 
@@ -98,47 +326,6 @@ class PythonReplWidget(RichJupyterWidget):
             # TODO: If there are more commands to execute should we stop or continue to next command
             self.execution_finished_signal.emit(-9999)  # any error code
 
-    def setup_python_kernel(self):
-        # self._toolbox.msg.emit("Setting up Python kernel")
-        kernel_specs = find_kernel_specs()
-        # logging.debug("kernel_specs:{0}".format(kernel_specs))
-        # python_kernels = [x for x in kernel_specs if x.startswith('python')]
-        # if self.kernel_name in python_kernels:
-        return self.start_python_kernel()
-        # else:
-        #     self._toolbox.msg_error.emit("\tCouldn't find the {0} kernel specification".format(self.kernel_name))
-
-    def start_python_kernel(self):
-        """Start IPython kernel and attach it to the Python Console."""
-        self._kernel_starting = True
-        if self.kernel_manager and self.kernel_name == 'python3':
-            self._toolbox.msg.emit("*** Using previously started Python Console ***")
-            self._kernel_starting = False
-            return True
-        self._toolbox.msg.emit("*** Starting Python Console ***")
-        km = QtKernelManager(kernel_name=self.kernel_name)
-        try:
-            km.start_kernel()
-            kc = km.client()
-            kc.start_channels()
-            self.kernel_manager = km
-            self.kernel_client = kc
-            self.connect_signals()
-            return True
-        except FileNotFoundError:
-            self._toolbox.msg_error.emit("\tCouldn't find the Python executable specified by the Jupyter kernel.")
-            self._kernel_starting = False
-            return self.handle_failed_to_start()
-        except NoSuchKernel:  # TODO: In which case does this exactly happen?
-            self._toolbox.msg_error.emit("\t[NoSuchKernel] Couldn't find the specified Python Jupyter kernel.")
-            self._kernel_starting = False
-            return self.handle_failed_to_start()
-
-    def handle_failed_to_start(self):
-        """In case of FileNotFoundError or NoSuchKernel exception"""
-        self._toolbox.msg.emit("Handling failed to start")
-        return False
-
     @Slot(dict, "iopub_msg_received")
     def iopub_msg_received(self, msg):
         """Message received from the IOPUB channel.
@@ -152,20 +339,26 @@ class PythonReplWidget(RichJupyterWidget):
         Args:
             msg (dict): Received message from IOPUB channel
         """
-        parent_msg_type = msg["parent_header"]["msg_type"]  # msg that the received msg is replying to
-        msg_type = msg["header"]["msg_type"]
-        # When msg_type:'status, content has the kernel execution_state
-        # When msg_type:'execute_input', content has the code to be executed
-        # When msg_type:'stream', content has the stream name (e.g. stdout) and the text
-        if msg_type == "status":
+        if msg["header"]["msg_type"] == "status":
+            # When msg_type:'status, content has the kernel execution_state
+            # When msg_type:'execute_input', content has the code to be executed
+            # When msg_type:'stream', content has the stream name (e.g. stdout) and the text
             self._kernel_state = msg['content']['execution_state']
+            try:
+                parent_msg_type = msg["parent_header"]["msg_type"]  # msg that the received msg is replying to
+            except KeyError:  # debugging
+                # Some weird message received
+                logging.debug("msg:{0}".format(msg))
+                return
+            if self._kernel_state == "starting":  # debugging
+                self._toolbox.msg.emit("Kernel is in starting state. parent msg_type:{0}".format(parent_msg_type))
             if parent_msg_type == "kernel_info_request":
                 # If kernel_state:'busy', kernel_info_request is being processed
                 # If kernel_state:'idle', kernel_info_request is done
                 pass
             elif parent_msg_type == "history_request":
                 # If kernel_state:'busy', history_request is being processed
-                # If kernel_state:'idle', histroy_request is done
+                # If kernel_state:'idle', history_request is done
                 pass
             elif parent_msg_type == "execute_request":
                 # If kernel_state:'busy', execute_request is being processed (i.e. execution or start-up in progress)
@@ -178,27 +371,17 @@ class PythonReplWidget(RichJupyterWidget):
                     if self._kernel_starting:
                         # Kernel is idle after starting up -> execute pending command
                         self._kernel_starting = False
-                        # Start executing the first command in command buffer immediately
+                        # Start executing the first command (if available) from the command buffer immediately
                         if len(self.commands) == 0:  # Happens if Python console is started from context-menu
                             return
                         else:
                             # Happens if Python console is started by clicking on Tool's Execute button
                             cmd = self.commands.pop(0)
                             self.execute(cmd)
-                else:  # Should not happen
+                else:
+                    # This should probably happen when _kernel_state is 'starting' but it doesn't seem to show up
                     self._toolbox.msg_error.emit("Unhandled execution_state '{0}' after "
                                                  "execute_request".format(self._kernel_state))
-
-    def execute_instance(self, commands):
-        """Start IPython kernel if not running already.
-        Execute command if kernel is not executing a previous command."""
-        self.commands = commands
-        if self.kernel_manager and self.kernel_name == 'python3':
-            self._toolbox.msg.emit("*** Using previously started Python Console ***")
-            cmd = self.commands.pop(0)
-            self.execute(cmd)
-        else:
-            self.start_python_kernel()  # This will execute the pending command when the kernel has started
 
     def terminate_process(self):
         """Send interrupt signal to kernel."""
@@ -206,6 +389,7 @@ class PythonReplWidget(RichJupyterWidget):
 
     def shutdown_kernel(self):
         """Shut down Python kernel."""
+        self.disconnect_signals()
         if not self.kernel_client:
             return
         self._toolbox.msg.emit("Shutting down Python Console...")

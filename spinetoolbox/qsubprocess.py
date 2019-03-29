@@ -25,7 +25,7 @@ class QSubProcess(QObject):
 
     subprocess_finished_signal = Signal(int, name="subprocess_finished_signal")
 
-    def __init__(self, toolbox, program=None, args=None, silent=False):
+    def __init__(self, toolbox, program=None, args=None, silent=False, semisilent=False):
         """Class constructor.
 
         Args:
@@ -38,12 +38,14 @@ class QSubProcess(QObject):
         self._toolbox = toolbox
         self._program = program
         self._args = args
-        self._silent = silent
+        self._silent = silent  # Do not show Event Log nor Process Log messages
+        self._semisilent = semisilent  # Do not show Event Log messages but show Process Log messages
         self.process_failed = False
         self.process_failed_to_start = False
         self._user_stopped = False
         self._process = QProcess(self)
-        self.output = None
+        self.output = None  # stdout when running silent
+        self.error_output = None  # stderr when running silent
 
     def program(self):
         """Program getter method."""
@@ -58,17 +60,20 @@ class QSubProcess(QObject):
         """Start the execution of a command in a QProcess.
 
         Args:
-            workdir (str): Directory for the script (at least with Julia this is a must)
+            workdir (str): Script directory
         """
         if workdir is not None:
             self._process.setWorkingDirectory(workdir)
         self._process.started.connect(self.process_started)
         self._process.finished.connect(self.process_finished)
-        if not self._silent:
+        if not self._silent and not self._semisilent:  # Loud
             self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
             self._process.readyReadStandardError.connect(self.on_ready_stderr)
             self._process.error.connect(self.on_process_error)  # errorOccurred available in Qt 5.6
             self._process.stateChanged.connect(self.on_state_changed)
+        elif self._semisilent:  # semi-silent
+            self._process.readyReadStandardOutput.connect(self.on_ready_stdout)
+            self._process.readyReadStandardError.connect(self.on_ready_stderr)
         # self._toolbox.msg.emit("\tStarting program: <b>{0}</b>".format(self._program))
         self._process.start(self._program, self._args)
         if not self._process.waitForStarted(msecs=10000):  # This blocks until process starts or timeout happens
@@ -175,8 +180,7 @@ class QSubProcess(QObject):
                 self._toolbox.msg_error.emit("\tProcess crashed")
             exit_code = -1
         elif exit_status == QProcess.NormalExit:
-            if not self._silent:
-                self._toolbox.msg.emit("\tProcess finished")
+            pass
         else:
             if not self._silent:
                 self._toolbox.msg_error.emit("Unknown QProcess exit status [{0}]".format(exit_status))
@@ -185,11 +189,13 @@ class QSubProcess(QObject):
             self.process_failed = True
         if not self._user_stopped:
             out = str(self._process.readAllStandardOutput().data(), "utf-8")
+            errout = str(self._process.readAllStandardError().data(), "utf-8")
             if out is not None:
                 if not self._silent:
                     self._toolbox.msg_proc.emit(out.strip())
                 else:
                     self.output = out.strip()
+                    self.error_output = errout.strip()
         else:
             self._toolbox.msg.emit("*** Terminating process ***")
         # Delete QProcess

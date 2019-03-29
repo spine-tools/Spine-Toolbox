@@ -197,7 +197,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Prompt user to install IJulia if missing, or rebuild it otherwise.
 
         Returns:
-            Bolean value depending on whether or not the user chooses to proceed.
+            Boolean value depending on whether or not the user chooses to proceed.
         """
         is_ijulia_installed = self.is_ijulia_installed()
         if is_ijulia_installed is None:

@@ -189,9 +189,9 @@ class SettingsWidget(QWidget):
         proj_dir = self._configs.get("settings", "project_directory")
         datetime = self._configs.getboolean("settings", "datetime")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
-        use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue=2)
+        use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2")
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
-        use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue=0)
+        use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="0")
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         delete_data = self._configs.getboolean("settings", "delete_data")
         bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
@@ -235,10 +235,10 @@ class SettingsWidget(QWidget):
             proj_dir = DEFAULT_PROJECT_DIR
         self.ui.lineEdit_project_dir.setText(proj_dir)
         self.ui.lineEdit_gams_path.setText(gams_path)
-        if use_embedded_julia == 2:
+        if use_embedded_julia == "2":
             self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)
         self.ui.lineEdit_julia_path.setText(julia_path)
-        if use_embedded_python == 2:
+        if use_embedded_python == "2":
             self.ui.checkBox_use_embedded_python.setCheckState(Qt.Checked)
         self.ui.lineEdit_python_path.setText(python_path)
 
@@ -278,13 +278,14 @@ class SettingsWidget(QWidget):
         # GAMS
         gams_path = self.ui.lineEdit_gams_path.text().strip()
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
-        # Julia
-        use_emb_julia = int(self.ui.checkBox_use_embedded_julia.checkState())  # 0:unchecked, 2:checked
+        # Julia (cast to str because of Linux)
+        use_emb_julia = str(int(self.ui.checkBox_use_embedded_julia.checkState()))  # Cast to str because of Linux
+        # 0:unchecked, 2:checked
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
         julia_path = self.ui.lineEdit_julia_path.text().strip()
         self._qsettings.setValue("appSettings/juliaPath", julia_path)
         # Python
-        use_emb_python = int(self.ui.checkBox_use_embedded_python.checkState())
+        use_emb_python = str(int(self.ui.checkBox_use_embedded_python.checkState()))  # Cast to str because of Linux
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
         python_path = self.ui.lineEdit_python_path.text().strip()
         self._qsettings.setValue("appSettings/pythonPath", python_path)

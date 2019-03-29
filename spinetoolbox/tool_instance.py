@@ -115,7 +115,7 @@ class ToolInstance(QObject):
         """Start executing tool template instance in console or in QProcess."""
         self._toolbox.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
         if self.tool_template.tooltype == "julia":
-            if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue=2) == 2:
+            if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
                 self.tool_process = self._toolbox.julia_repl
                 self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
                 # self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
@@ -127,11 +127,18 @@ class ToolInstance(QObject):
                 # Otherwise it doesn't find input files in subdirectories
                 self.tool_process.start_process(workdir=self.basedir)
         if self.tool_template.tooltype == "python":
-            if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue=0) == 2:
+            if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
                 self.tool_process = self._toolbox.python_repl
                 self.tool_process.execution_finished_signal.connect(self.python_console_tool_finished)
-                # self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.python_console_cmd))
-                self.tool_process.execute_instance(self.ipython_command_list)
+                kern_name, kern_display_name = self.tool_process.python_kernel_name()
+                # Check if this kernel is already running
+                if self.tool_process.kernel_name == kern_name:
+                    self._toolbox.msg.emit("\tUsing previously started Python kernel <b>{0}</b>".format(kern_name))
+                    self.tool_process.execute_instance(self.ipython_command_list)
+                else:
+                    # Append command to buffer and start executing them when the kernel is up and running
+                    self.tool_process.commands = self.ipython_command_list
+                    self.tool_process.launch_kernel(kern_name, kern_display_name)
             else:
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
