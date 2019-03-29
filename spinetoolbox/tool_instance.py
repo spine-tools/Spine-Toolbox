@@ -133,10 +133,9 @@ class ToolInstance(QObject):
                 kern_name, kern_display_name = self.tool_process.python_kernel_name()
                 # Check if this kernel is already running
                 if self.tool_process.kernel_name == kern_name:
-                    self._toolbox.msg.emit("\tUsing previously started Python kernel <b>{0}</b>".format(kern_name))
                     self.tool_process.execute_instance(self.ipython_command_list)
                 else:
-                    # Append command to buffer and start executing them when the kernel is up and running
+                    # Append command to buffer and start executing when kernel is up and running
                     self.tool_process.commands = self.ipython_command_list
                     self.tool_process.launch_kernel(kern_name, kern_display_name)
             else:

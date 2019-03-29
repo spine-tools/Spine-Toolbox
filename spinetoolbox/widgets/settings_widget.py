@@ -26,14 +26,14 @@ from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, SETTINGS_SS
 
 
 class SettingsWidget(QWidget):
-    """ A widget to change user's preferred settings.
+    """A widget to change user's preferred settings.
 
     Attributes:
         toolbox (ToolboxUI): Parent widget.
         configs (ConfigurationParser): Configuration object
     """
     def __init__(self, toolbox, configs):
-        """ Initialize class. """
+        """Initialize class."""
         # FIXME: setting the parent to toolbox causes the checkboxes in the
         # groupBox_general to not layout correctly, this might be caused elsewhere?
         super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
@@ -42,6 +42,7 @@ class SettingsWidget(QWidget):
         self._project = self._toolbox.project()
         self._qsettings = self._toolbox.qsettings()
         self.orig_work_dir = ""  # Work dir when this widget was opened
+        self.orig_python_env = ""  # Used in determining if Python environment was changed
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         # Set up the ui from Qt Designer files
@@ -64,7 +65,7 @@ class SettingsWidget(QWidget):
         self.read_project_settings()
 
     def connect_signals(self):
-        """ Connect PyQt signals. """
+        """Connect signals."""
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
@@ -179,7 +180,7 @@ class SettingsWidget(QWidget):
             self._toolbox.ui.graphicsView.scene().update()
 
     def read_settings(self):
-        """Read current settings from config object and update UI to show them."""
+        """Read current settings from config and qsettings objects and update UI to display them."""
         open_previous_project = self._configs.getboolean("settings", "open_previous_project")
         show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
         save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
@@ -241,6 +242,7 @@ class SettingsWidget(QWidget):
         if use_embedded_python == "2":
             self.ui.checkBox_use_embedded_python.setCheckState(Qt.Checked)
         self.ui.lineEdit_python_path.setText(python_path)
+        self.orig_python_env = python_path
 
     def read_project_settings(self):
         """Read project settings from config object and update settings widgets accordingly."""
@@ -252,7 +254,7 @@ class SettingsWidget(QWidget):
         self.ui.lineEdit_work_dir.setText(work_dir)
         self.orig_work_dir = work_dir
 
-    @Slot(name='ok_clicked')
+    @Slot(name="ok_clicked")
     def ok_clicked(self):
         """Get selections and save them to persistent memory.
         Note: On Linux, True and False are saved as boolean values into QSettings.
@@ -289,6 +291,7 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
         python_path = self.ui.lineEdit_python_path.text().strip()
         self._qsettings.setValue("appSettings/pythonPath", python_path)
+        self.check_if_python_env_changed(python_path)
         # Data Store Views
         commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
         self._configs.set("settings", "commit_at_exit", commit_at_exit)  # TODO: Move to QSettings
@@ -310,7 +313,7 @@ class SettingsWidget(QWidget):
         # Check if work directory was changed
         if not self.orig_work_dir == work_dir:
             if not self._project.change_work_dir(work_dir):
-                self._toolbox.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed "
+                self._toolbox.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed."
                                              .format(work_dir))
             else:
                 save = True
@@ -321,6 +324,14 @@ class SettingsWidget(QWidget):
         if save:
             self._toolbox.msg.emit("Project settings changed. Saving project...")
             self._toolbox.save_project()
+
+    def check_if_python_env_changed(self, new_path):
+        """Checks if Python environment was changed.
+        This indicates that the Python Console may need a restart."""
+        if not self.orig_python_env == new_path:
+            self._toolbox.python_repl.may_need_restart = True
+        else:
+            self._toolbox.python_repl.may_need_restart = False
 
     def keyPressEvent(self, e):
         """Close settings form when escape key is pressed.
