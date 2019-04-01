@@ -938,6 +938,8 @@ class TreeViewForm(DataStoreForm):
             dock.setVisible(True)
             dock.setFloating(False)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.ui.dockWidget_object_tree)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.ui.dockWidget_relationship_tree)
         # Split and tabify
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value,
