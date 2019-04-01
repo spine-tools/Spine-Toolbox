@@ -616,6 +616,7 @@ class DataStoreForm(QMainWindow):
         if not wide_relationship_classes.count():
             return
         self.object_tree_model.update_relationship_classes(wide_relationship_classes)
+        self.relationship_tree_model.update_relationship_classes(wide_relationship_classes)
         self.relationship_parameter_value_model.rename_relationship_classes(wide_relationship_classes)
         self.relationship_parameter_definition_model.rename_relationship_classes(wide_relationship_classes)
         self.commit_available.emit(True)
@@ -629,6 +630,7 @@ class DataStoreForm(QMainWindow):
         if not wide_relationships.count():
             return
         self.object_tree_model.update_relationships(wide_relationships)
+        self.relationship_tree_model.update_relationships(wide_relationships)
         self.commit_available.emit(True)
         relationship_name_list = "', '".join([x.name for x in wide_relationships])
         msg = "Successfully updated relationships '{}'.".format(relationship_name_list)

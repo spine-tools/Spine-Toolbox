@@ -1479,6 +1479,32 @@ class RelationshipTreeModel(QStandardItemModel):
             # Already fetched, add new items manually
             self.add_relationships_to_class(relationship_list, relationship_class_item)
 
+    def update_relationship_classes(self, updated_items):
+        """Update relationship classes in the model."""
+        updated_items_dict = {x.id: x for x in updated_items}
+        for i in range(self.root_item.rowCount()):
+            visited_item = self.root_item.child(i)
+            visited_id = visited_item.data(Qt.UserRole + 1)['id']
+            updated_item = updated_items_dict.pop(visited_id, None)
+            if not updated_item:
+                continue
+            visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+            visited_item.setText(updated_item.name)
+
+    def update_relationships(self, updated_items):
+        """Update relationships in the model."""
+        updated_items_dict = {x.id: x for x in updated_items}
+        for i in range(self.root_item.rowCount()):
+            relationship_class_item = self.root_item.child(i)
+            for j in range(relationship_class_item.rowCount()):
+                visited_item = relationship_class_item.child(j)
+                visited_id = visited_item.data(Qt.UserRole + 1)['id']
+                updated_item = updated_items_dict.pop(visited_id, None)
+                if not updated_item:
+                    continue
+                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                visited_item.setText(updated_item.object_name_list)
+
 
 class ObjectTreeModel(QStandardItemModel):
     """A class to display Spine data structure in a treeview
@@ -1835,19 +1861,15 @@ class ObjectTreeModel(QStandardItemModel):
 
     def update_object_classes(self, updated_items):
         """Update object classes in the model."""
-        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         updated_items_dict = {x.id: x for x in updated_items}
-        for visited_item in items:
-            visited_type = visited_item.data(Qt.UserRole)
-            if visited_type != 'object_class':
-                continue
+        for i in range(self.root_item.rowCount()):
+            visited_item = self.root_item.child(i)
             visited_id = visited_item.data(Qt.UserRole + 1)['id']
-            try:
-                updated_item = updated_items_dict[visited_id]
-                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-                visited_item.setText(updated_item.name)
-            except KeyError:
+            updated_item = updated_items_dict.pop(visited_id, None)
+            if not updated_item:
                 continue
+            visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+            visited_item.setText(updated_item.name)
 
     def update_objects(self, updated_items):
         """Update object in the model.
@@ -1901,7 +1923,7 @@ class ObjectTreeModel(QStandardItemModel):
 
     def update_relationships(self, updated_items):
         """Update relationships in the model.
-        NOTE: This may require moving rows if the objects in the relationship have changed."""
+        Move rows if the objects in the relationship change."""
         items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         updated_items_dict = {x.id: x for x in updated_items}
         relationships_to_add = set()
