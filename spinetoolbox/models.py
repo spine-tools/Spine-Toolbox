@@ -1416,15 +1416,17 @@ class RelationshipTreeModel(QStandardItemModel):
             self._fetched_relationship_class_id.add(relationship_class['id'])
         self.dataChanged.emit(parent, parent)
 
-    def build_tree(self):
+    def build_tree(self, database):
         """Build the first level of the tree"""
         self.clear()
         self._fetched = {
             "relationship_class": set(),
             "relationship": set()
         }
-        self.root_item = self.invisibleRootItem()
+        self.root_item = QStandardItem(database)
         self.root_item.setData('root', Qt.UserRole)
+        icon = QIcon(":/symbols/Spine_symbol.png")
+        self.root_item.setData(icon, Qt.DecorationRole)
         relationship_class_item_list = list()
         for relationship_class in self.db_map.wide_relationship_class_list():
             relationship_icon = self._tree_view_form.relationship_icon(relationship_class.object_class_name_list)
@@ -1435,6 +1437,7 @@ class RelationshipTreeModel(QStandardItemModel):
             relationship_class_item.setData(self.bold_font, Qt.FontRole)
             relationship_class_item_list.append(relationship_class_item)
         self.root_item.appendRows(relationship_class_item_list)
+        self.appendRow(self.root_item)
 
 
 class ObjectTreeModel(QStandardItemModel):
@@ -1622,7 +1625,7 @@ class ObjectTreeModel(QStandardItemModel):
             self._fetched['relationship_class'].add((object_['id'], relationship_class['id']))
         self.dataChanged.emit(parent, parent)
 
-    def build_tree(self, flat=False):
+    def build_tree(self, database, flat=False):
         """Build the first level of the tree"""
         self.clear()
         self._fetched = {
@@ -1630,8 +1633,10 @@ class ObjectTreeModel(QStandardItemModel):
             "object": set(),
             "relationship_class": set()
         }
-        self.root_item = self.invisibleRootItem()
+        self.root_item = QStandardItem(database)
         self.root_item.setData('root', Qt.UserRole)
+        icon = QIcon(":/symbols/Spine_symbol.png")
+        self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in self.db_map.object_class_list():
             object_icon = self._tree_view_form.object_icon(object_class.name)
@@ -1643,6 +1648,7 @@ class ObjectTreeModel(QStandardItemModel):
             object_class_item.setData(self.bold_font, Qt.FontRole)
             object_class_item_list.append(object_class_item)
         self.root_item.appendRows(object_class_item_list)
+        self.appendRow(self.root_item)
 
     def new_object_class_item(self, object_class):
         """Returns new object class item."""

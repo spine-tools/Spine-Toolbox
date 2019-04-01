@@ -550,7 +550,10 @@
       <number>0</number>
      </property>
      <item>
-      <widget class="QTreeView" name="treeView_relationship">
+      <widget class="ObjectTreeView" name="treeView_relationship">
+       <property name="editTriggers">
+        <set>QAbstractItemView::EditKeyPressed</set>
+       </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>

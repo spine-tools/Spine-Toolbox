@@ -89,6 +89,8 @@ class DataStoreForm(QMainWindow):
         self.relationship_icon_dict = {}
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
+        # Object tree selected indexes
+        self.selected_obj_tree_indexes = {}
         self.selected_object_class_ids = set()
         self.selected_object_ids = dict()
         self.selected_relationship_class_ids = set()
@@ -115,12 +117,12 @@ class DataStoreForm(QMainWindow):
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
-        self.ui.menuToolbars.addAction(self.parameter_tag_toolbar.toggleViewAction())
-        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_parameter_value.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_parameter_definition.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_relationship_parameter_value.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_relationship_parameter_definition.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_parameter_value_list.toggleViewAction())
+        self.ui.menuToolbars.addAction(self.parameter_tag_toolbar.toggleViewAction())
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -136,28 +138,28 @@ class DataStoreForm(QMainWindow):
         # Object tree
         self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
         # Parameter tables delegate commit data
-        self.ui.tableView_object_parameter_definition.itemDelegate().data_committed.\
-            connect(self.set_parameter_definition_data)
-        self.ui.tableView_object_parameter_value.itemDelegate().data_committed.\
-            connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter_definition.itemDelegate().data_committed.\
-            connect(self.set_parameter_definition_data)
-        self.ui.tableView_relationship_parameter_value.itemDelegate().data_committed.\
-            connect(self.set_parameter_value_data)
+        self.ui.tableView_object_parameter_definition.itemDelegate().data_committed.connect(
+            self.set_parameter_definition_data)
+        self.ui.tableView_object_parameter_value.itemDelegate().data_committed.connect(
+            self.set_parameter_value_data)
+        self.ui.tableView_relationship_parameter_definition.itemDelegate().data_committed.connect(
+            self.set_parameter_definition_data)
+        self.ui.tableView_relationship_parameter_value.itemDelegate().data_committed.connect(
+            self.set_parameter_value_data)
         # DS destroyed
         self._data_store.destroyed.connect(self.close)
         # Parameter tags
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
         # Dock widgets visibility
-        self.ui.dockWidget_object_parameter_value.visibilityChanged.\
-            connect(self._handle_object_parameter_value_visibility_changed)
-        self.ui.dockWidget_object_parameter_definition.visibilityChanged.\
-            connect(self._handle_object_parameter_definition_visibility_changed)
-        self.ui.dockWidget_relationship_parameter_value.visibilityChanged.\
-            connect(self._handle_relationship_parameter_value_visibility_changed)
-        self.ui.dockWidget_relationship_parameter_definition.visibilityChanged.\
-            connect(self._handle_relationship_parameter_definition_visibility_changed)
+        self.ui.dockWidget_object_parameter_value.visibilityChanged.connect(
+            self._handle_object_parameter_value_visibility_changed)
+        self.ui.dockWidget_object_parameter_definition.visibilityChanged.connect(
+            self._handle_object_parameter_definition_visibility_changed)
+        self.ui.dockWidget_relationship_parameter_value.visibilityChanged.connect(
+            self._handle_relationship_parameter_value_visibility_changed)
+        self.ui.dockWidget_relationship_parameter_definition.visibilityChanged.connect(
+            self._handle_relationship_parameter_definition_visibility_changed)
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
 
     def qsettings(self):
@@ -362,8 +364,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().\
-            setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_object_parameter_definition_view(self):
@@ -388,12 +389,12 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
-            setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_relationship_parameter_definition.verticalHeader().\
-            setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().\
-            setResizeContentsPrecision(self.visible_rows)
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().setSectionResizeMode(
+            QHeaderView.Interactive)
+        self.ui.tableView_relationship_parameter_definition.verticalHeader().setDefaultSectionSize(
+            self.default_row_height)
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().setResizeContentsPrecision(
+            self.visible_rows)
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
     def init_parameter_value_list_view(self):
@@ -532,7 +533,7 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
         try:
-            indexes = self.selected_tree_indexes['object_class']
+            indexes = self.selected_obj_tree_indexes['object_class']
         except KeyError:
             return
         kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
@@ -542,7 +543,7 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_edit_objects_form")
     def show_edit_objects_form(self, checked=False):
         try:
-            indexes = self.selected_tree_indexes['object']
+            indexes = self.selected_obj_tree_indexes['object']
         except KeyError:
             return
         kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
@@ -552,7 +553,7 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_edit_relationship_classes_form")
     def show_edit_relationship_classes_form(self, checked=False):
         try:
-            indexes = self.selected_tree_indexes['relationship_class']
+            indexes = self.selected_obj_tree_indexes['relationship_class']
         except KeyError:
             return
         kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
@@ -570,7 +571,7 @@ class DataStoreForm(QMainWindow):
         if not wide_relationship_class:
             return
         try:
-            indexes = self.selected_tree_indexes['relationship']
+            indexes = self.selected_obj_tree_indexes['relationship']
         except KeyError:
             return
         kwargs_list = list()
@@ -724,8 +725,8 @@ class DataStoreForm(QMainWindow):
             except ValueError:
                 try:
                     relationship_class_id_column = header.index('relationship_class_id')
-                    relationship_class_id = index.sibling(index.row(), relationship_class_id_column).\
-                        data(Qt.DisplayRole)
+                    relationship_class_id = index.sibling(index.row(), relationship_class_id_column).data(
+                        Qt.DisplayRole)
                     self.relationship_parameter_value_model.rename_parameter(
                         parameter_id, relationship_class_id, new_value)
                 except ValueError:
@@ -821,6 +822,7 @@ class TreeViewForm(DataStoreForm):
     relationship_class_selection_available = Signal("bool", name="relationship_class_selection_available")
     relationship_selection_available = Signal("bool", name="relationship_selection_available")
     object_tree_selection_available = Signal("bool", name="object_tree_selection_available")
+    relationship_tree_selection_available = Signal("bool", name="relationship_tree_selection_available")
     obj_parameter_definition_selection_available = Signal("bool", name="obj_parameter_definition_selection_available")
     obj_parameter_value_selection_available = Signal("bool", name="obj_parameter_value_selection_available")
     rel_parameter_definition_selection_available = Signal("bool", name="rel_parameter_definition_selection_available")
@@ -832,8 +834,7 @@ class TreeViewForm(DataStoreForm):
         tic = time.clock()
         super().__init__(data_store, db_map, database, tree_view_form_ui())
         self.relationship_tree_model = RelationshipTreeModel(self)
-        # Object tree selected indexes
-        self.selected_tree_indexes = {}
+        self.selected_rel_tree_indexes = {}
         # Context menus
         self.object_tree_context_menu = None
         self.object_parameter_value_context_menu = None
@@ -860,6 +861,11 @@ class TreeViewForm(DataStoreForm):
         toc = time.clock()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
+    def add_toggle_view_actions(self):
+        """Add toggle view actions to View menu."""
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_relationship_tree.toggleViewAction())
+        super().add_toggle_view_actions()
+
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
@@ -870,14 +876,14 @@ class TreeViewForm(DataStoreForm):
         self.relationship_class_selection_available.connect(self.ui.actionEdit_relationship_classes.setEnabled)
         self.relationship_selection_available.connect(self.ui.actionEdit_relationships.setEnabled)
         self.object_tree_selection_available.connect(self._handle_object_tree_selection_available)
-        self.obj_parameter_definition_selection_available.\
-            connect(self._handle_obj_parameter_definition_selection_available)
-        self.obj_parameter_value_selection_available.\
-            connect(self._handle_obj_parameter_value_selection_available)
-        self.rel_parameter_definition_selection_available.\
-            connect(self._handle_rel_parameter_definition_selection_available)
-        self.rel_parameter_value_selection_available.\
-            connect(self._handle_rel_parameter_value_selection_available)
+        self.obj_parameter_definition_selection_available.connect(
+            self._handle_obj_parameter_definition_selection_available)
+        self.obj_parameter_value_selection_available.connect(
+            self._handle_obj_parameter_value_selection_available)
+        self.rel_parameter_definition_selection_available.connect(
+            self._handle_rel_parameter_definition_selection_available)
+        self.rel_parameter_value_selection_available.connect(
+            self._handle_rel_parameter_value_selection_available)
         self.parameter_value_list_selection_available.connect(self._handle_parameter_value_list_selection_available)
         # Menu actions
         # Import export
@@ -905,29 +911,33 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.edit_key_pressed.connect(self.edit_object_tree_items)
         self.ui.treeView_object.customContextMenuRequested.connect(self.show_object_tree_context_menu)
         self.ui.treeView_object.doubleClicked.connect(self.find_next_leaf)
+        # Relationship tree
+        self.ui.treeView_relationship.selectionModel().selectionChanged.connect(
+            self._handle_relationship_tree_selection_changed)
         # Parameter tables selection changes
-        self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.\
-            connect(self._handle_object_parameter_definition_selection_changed)
-        self.ui.tableView_object_parameter_value.selectionModel().selectionChanged.\
-            connect(self._handle_object_parameter_value_selection_changed)
-        self.ui.tableView_relationship_parameter_definition.selectionModel().selectionChanged.\
-            connect(self._handle_relationship_parameter_definition_selection_changed)
-        self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.\
-            connect(self._handle_relationship_parameter_value_selection_changed)
+        self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.connect(
+            self._handle_object_parameter_definition_selection_changed)
+        self.ui.tableView_object_parameter_value.selectionModel().selectionChanged.connect(
+            self._handle_object_parameter_value_selection_changed)
+        self.ui.tableView_relationship_parameter_definition.selectionModel().selectionChanged.connect(
+            self._handle_relationship_parameter_definition_selection_changed)
+        self.ui.tableView_relationship_parameter_value.selectionModel().selectionChanged.connect(
+            self._handle_relationship_parameter_value_selection_changed)
         # Parameter value_list tree selection changed
-        self.ui.treeView_parameter_value_list.selectionModel().selectionChanged.\
-            connect(self._handle_parameter_value_list_selection_changed)
+        self.ui.treeView_parameter_value_list.selectionModel().selectionChanged.connect(
+            self._handle_parameter_value_list_selection_changed)
         # Parameter tables context menu requested
-        self.ui.tableView_object_parameter_definition.customContextMenuRequested.\
-            connect(self.show_object_parameter_context_menu)
-        self.ui.tableView_object_parameter_value.customContextMenuRequested.\
-            connect(self.show_object_parameter_value_context_menu)
-        self.ui.tableView_relationship_parameter_definition.customContextMenuRequested.\
-            connect(self.show_relationship_parameter_context_menu)
-        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.\
-            connect(self.show_relationship_parameter_value_context_menu)
+        self.ui.tableView_object_parameter_definition.customContextMenuRequested.connect(
+            self.show_object_parameter_context_menu)
+        self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
+            self.show_object_parameter_value_context_menu)
+        self.ui.tableView_relationship_parameter_definition.customContextMenuRequested.connect(
+            self.show_relationship_parameter_context_menu)
+        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.connect(
+            self.show_relationship_parameter_value_context_menu)
         # Parameter value_list context menu requested
-        self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(self.show_parameter_value_list_context_menu)
+        self.ui.treeView_parameter_value_list.customContextMenuRequested.connect(
+            self.show_parameter_value_list_context_menu)
 
     @Slot(name="restore_dock_widgets")
     def restore_dock_widgets(self):
@@ -1205,12 +1215,12 @@ class TreeViewForm(DataStoreForm):
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        self.object_tree_model.build_tree()
+        self.object_tree_model.build_tree(self.database)
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
 
     def init_relationship_tree_model(self):
         """Initialize relationship tree model."""
-        self.relationship_tree_model.build_tree()
+        self.relationship_tree_model.build_tree(self.database)
 
     def init_views(self):
         """Initialize model views."""
@@ -1256,17 +1266,35 @@ class TreeViewForm(DataStoreForm):
         self.set_default_parameter_rows()
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
-            self.selected_tree_indexes.setdefault(item_type, set()).remove(index)
+            self.selected_obj_tree_indexes.setdefault(item_type, set()).remove(index)
         for index in selected.indexes():
             item_type = index.data(Qt.UserRole)
-            self.selected_tree_indexes.setdefault(item_type, set()).add(index)
-        self.object_class_selection_available.emit(len(self.selected_tree_indexes.get('object_class', [])) > 0)
-        self.object_selection_available.emit(len(self.selected_tree_indexes.get('object', [])) > 0)
-        self.relationship_class_selection_available.\
-            emit(len(self.selected_tree_indexes.get('relationship_class', [])) > 0)
-        self.relationship_selection_available.emit(len(self.selected_tree_indexes.get('relationship', [])) > 0)
-        self.object_tree_selection_available.emit(any(v for v in self.selected_tree_indexes.values()))
-        self.update_filter()
+            self.selected_obj_tree_indexes.setdefault(item_type, set()).add(index)
+        self.object_class_selection_available.emit(len(self.selected_obj_tree_indexes.get('object_class', [])) > 0)
+        self.object_selection_available.emit(len(self.selected_obj_tree_indexes.get('object', [])) > 0)
+        self.relationship_class_selection_available.emit(
+            len(self.selected_obj_tree_indexes.get('relationship_class', [])) > 0)
+        self.relationship_selection_available.emit(len(self.selected_obj_tree_indexes.get('relationship', [])) > 0)
+        self.object_tree_selection_available.emit(any(v for v in self.selected_obj_tree_indexes.values()))
+        self.update_filter(self.selected_obj_tree_indexes)
+
+    @busy_effect
+    @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_tree_selection_changed")
+    def _handle_relationship_tree_selection_changed(self, selected, deselected):
+        """Called when the relationship tree selection changes.
+        Set default rows and apply filters on parameter models."""
+        #self.set_default_parameter_rows()
+        for index in deselected.indexes():
+            item_type = index.data(Qt.UserRole)
+            self.selected_rel_tree_indexes.setdefault(item_type, set()).remove(index)
+        for index in selected.indexes():
+            item_type = index.data(Qt.UserRole)
+            self.selected_rel_tree_indexes.setdefault(item_type, set()).add(index)
+        self.relationship_class_selection_available.emit(
+            len(self.selected_rel_tree_indexes.get('relationship_class', [])) > 0)
+        self.relationship_selection_available.emit(len(self.selected_rel_tree_indexes.get('relationship', [])) > 0)
+        self.relationship_tree_selection_available.emit(any(v for v in self.selected_rel_tree_indexes.values()))
+        self.update_filter(self.selected_rel_tree_indexes)
 
     def set_default_parameter_rows(self):
         """Set default rows for parameter models according to selection in object tree."""
@@ -1341,60 +1369,63 @@ class TreeViewForm(DataStoreForm):
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
 
-    def update_filter(self):
+    def update_filter(self, tree_indexes):
         """Update filters on parameter models according to selected and deselected object tree indexes."""
-        self.update_selected_object_class_ids()
-        self.update_selected_object_ids()
-        self.update_selected_relationship_class_ids()
-        self.update_selected_object_id_lists()
+        self.update_selected_object_class_ids(tree_indexes)
+        self.update_selected_object_ids(tree_indexes)
+        self.update_selected_relationship_class_ids(tree_indexes)
+        self.update_selected_object_id_lists(tree_indexes)
         self.do_update_filter()
 
-    def update_selected_object_class_ids(self):
-        """Update set of selected object class id, by combining selectiong from object tree
+    def update_selected_object_class_ids(self, tree_indexes):
+        """Update set of selected object class id, by combining selectiong from tree
         and parameter tag.
         """
+        if tree_indexes == self.selected_rel_tree_indexes:
+            self.selected_object_class_ids = {}
+            return
         self.selected_object_class_ids = set(
             ind.data(Qt.UserRole + 1)['id']
-            for ind in self.selected_tree_indexes.get('object_class', {}))
+            for ind in tree_indexes.get('object_class', {}))
         self.selected_object_class_ids.update(set(
             ind.data(Qt.UserRole + 1)['class_id']
-            for ind in self.selected_tree_indexes.get('object', {})))
+            for ind in tree_indexes.get('object', {})))
         self.selected_object_class_ids.update(set(
             ind.parent().data(Qt.UserRole + 1)['class_id']
-            for ind in self.selected_tree_indexes.get('relationship_class', {})))
+            for ind in tree_indexes.get('relationship_class', {})))
         self.selected_object_class_ids.update(set(
             ind.parent().parent().data(Qt.UserRole + 1)['class_id']
-            for ind in self.selected_tree_indexes.get('relationship', {})))
+            for ind in tree_indexes.get('relationship', {})))
 
-    def update_selected_object_ids(self):
+    def update_selected_object_ids(self, tree_indexes):
         """Update set of selected object id."""
         self.selected_object_ids = {}
-        for ind in self.selected_tree_indexes.get('object', {}):
+        if tree_indexes == self.selected_rel_tree_indexes:
+            return
+        for ind in tree_indexes.get('object', {}):
             object_class_id = ind.data(Qt.UserRole + 1)['class_id']
             object_id = ind.data(Qt.UserRole + 1)['id']
             self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
-        for ind in self.selected_tree_indexes.get('relationship_class', {}):
+        for ind in tree_indexes.get('relationship_class', {}):
             object_class_id = ind.parent().data(Qt.UserRole + 1)['class_id']
             object_id = ind.parent().data(Qt.UserRole + 1)['id']
             self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
-        for ind in self.selected_tree_indexes.get('relationship', {}):
+        for ind in tree_indexes.get('relationship', {}):
             object_class_id = ind.parent().parent().data(Qt.UserRole + 1)['class_id']
             object_id = ind.parent().parent().data(Qt.UserRole + 1)['id']
             self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
 
-    def update_selected_relationship_class_ids(self):
+    def update_selected_relationship_class_ids(self, tree_indexes):
         """Update set of selected relationship class id."""
         self.selected_relationship_class_ids = set(
-            ind.data(Qt.UserRole + 1)['id']
-            for ind in self.selected_tree_indexes.get('relationship_class', {}))
+            ind.data(Qt.UserRole + 1)['id'] for ind in tree_indexes.get('relationship_class', {}))
         self.selected_relationship_class_ids.update(set(
-            ind.data(Qt.UserRole + 1)['class_id']
-            for ind in self.selected_tree_indexes.get('relationship', {})))
+            ind.data(Qt.UserRole + 1)['class_id'] for ind in tree_indexes.get('relationship', {})))
 
-    def update_selected_object_id_lists(self):
+    def update_selected_object_id_lists(self, tree_indexes):
         """Update set of selected object id list."""
         self.selected_object_id_lists = {}
-        for ind in self.selected_tree_indexes.get('relationship', {}):
+        for ind in tree_indexes.get('relationship', {}):
             relationship_class_id = ind.data(Qt.UserRole + 1)['class_id']
             object_id_list = ind.data(Qt.UserRole + 1)['object_id_list']
             self.selected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
@@ -1490,7 +1521,7 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="remove_object_tree_items")
     def remove_object_tree_items(self, checked=False):
         """Remove all selected items from the object treeview."""
-        indexes = self.selected_tree_indexes
+        indexes = self.selected_obj_tree_indexes
         object_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object_class', [])]
         objects = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object', [])]
         relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', [])]
@@ -1914,7 +1945,7 @@ class GraphViewForm(DataStoreForm):
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        self.object_tree_model.build_tree()
+        self.object_tree_model.build_tree(self.database)
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
