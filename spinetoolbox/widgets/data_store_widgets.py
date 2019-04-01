@@ -515,6 +515,7 @@ class DataStoreForm(QMainWindow):
         if not relationship_classes.count():
             return
         self.object_tree_model.add_relationship_classes(relationship_classes)
+        self.relationship_tree_model.add_relationship_classes(relationship_classes)
         self.commit_available.emit(True)
         relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
         msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
@@ -525,6 +526,7 @@ class DataStoreForm(QMainWindow):
         if not relationships.count():
             return
         self.object_tree_model.add_relationships(relationships)
+        self.relationship_tree_model.add_relationships(relationships)
         self.commit_available.emit(True)
         relationship_name_list = "', '".join([x.name for x in relationships])
         msg = "Successfully added new relationship(s) '{}'.".format(relationship_name_list)
@@ -2655,7 +2657,6 @@ class GraphViewForm(DataStoreForm):
 
     def add_relationship_classes(self, wide_relationship_classes):
         """Insert new relationship classes."""
-        dim_count_list = list()
         for wide_relationship_class in wide_relationship_classes:
             self.relationship_class_list_model.add_relationship_class(wide_relationship_class)
         self.commit_available.emit(True)

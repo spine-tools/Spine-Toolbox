@@ -1403,16 +1403,8 @@ class RelationshipTreeModel(QStandardItemModel):
         if parent_type == 'relationship_class':
             relationship_class_item = self.itemFromIndex(parent)
             relationship_class = parent.data(Qt.UserRole + 1)
-            relationship_icon = parent.data(Qt.DecorationRole)
             relationship_list = self.db_map.wide_relationship_list(class_id=relationship_class['id'])
-            relationship_item_list = list()
-            for relationship in relationship_list:
-                relationship_item = QStandardItem(relationship.object_name_list)
-                relationship_item.setData('relationship', Qt.UserRole)
-                relationship_item.setData(relationship._asdict(), Qt.UserRole + 1)
-                relationship_item.setData(relationship_icon, Qt.DecorationRole)
-                relationship_item_list.append(relationship_item)
-            relationship_class_item.appendRows(relationship_item_list)
+            self.add_relationships_to_class(relationship_list, relationship_class_item)
             self._fetched_relationship_class_id.add(relationship_class['id'])
         self.dataChanged.emit(parent, parent)
 
@@ -1427,17 +1419,65 @@ class RelationshipTreeModel(QStandardItemModel):
         self.root_item.setData('root', Qt.UserRole)
         icon = QIcon(":/symbols/Spine_symbol.png")
         self.root_item.setData(icon, Qt.DecorationRole)
+        self.add_relationship_classes(self.db_map.wide_relationship_class_list().all())
+        self.appendRow(self.root_item)
+
+    def new_relationship_class_item(self, wide_relationship_class):
+        """Returns new relationship class item."""
+        relationship_class_item = QStandardItem(wide_relationship_class.name)
+        icon = self._tree_view_form.relationship_icon(wide_relationship_class.object_class_name_list)
+        relationship_class_item.setData(icon, Qt.DecorationRole)
+        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
+        relationship_class_item.setData('relationship_class', Qt.UserRole)
+        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+        relationship_class_item.setData(self.bold_font, Qt.FontRole)
+        return relationship_class_item
+
+    def new_relationship_item(self, wide_relationship, icon):
+        """Returns new relationship item."""
+        relationship_item = QStandardItem(wide_relationship.object_name_list)
+        relationship_item.setData(icon, Qt.DecorationRole)
+        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+        relationship_item.setData('relationship', Qt.UserRole)
+        return relationship_item
+
+    def add_relationship_classes(self, relationship_classes):
+        """Add relationship class items to the model."""
         relationship_class_item_list = list()
-        for relationship_class in self.db_map.wide_relationship_class_list():
-            relationship_icon = self._tree_view_form.relationship_icon(relationship_class.object_class_name_list)
-            relationship_class_item = QStandardItem(relationship_class.name)
-            relationship_class_item.setData('relationship_class', Qt.UserRole)
-            relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
-            relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
-            relationship_class_item.setData(self.bold_font, Qt.FontRole)
+        for relationship_class in relationship_classes:
+            relationship_class_item = self.new_relationship_class_item(relationship_class)
             relationship_class_item_list.append(relationship_class_item)
         self.root_item.appendRows(relationship_class_item_list)
-        self.appendRow(self.root_item)
+
+    def add_relationships_to_class(self, relationship_list, relationship_class_item):
+        """Add relationship class items to the model."""
+        icon = relationship_class_item.data(Qt.DecorationRole)
+        relationship_item_list = list()
+        for relationship in relationship_list:
+            relationship_item = self.new_relationship_item(relationship, icon)
+            relationship_item_list.append(relationship_item)
+        relationship_class_item.appendRows(relationship_item_list)
+
+    def add_relationships(self, relationships):
+        """Add relationship items to the model."""
+        relationship_dict = {}
+        for relationship in relationships:
+            relationship_dict.setdefault(relationship.class_id, list()).append(relationship)
+        # Sweep first level and check if there's something to append
+        for i in range(self.root_item.rowCount()):
+            relationship_class_item = self.root_item.child(i)
+            relationship_class_id = relationship_class_item.data(Qt.UserRole + 1)['id']
+            try:
+                relationship_list = relationship_dict[relationship_class_id]
+            except KeyError:
+                continue
+            # If not fetched, fetch it and continue
+            relationship_class_index = self.indexFromItem(relationship_class_item)
+            if self.canFetchMore(relationship_class_index):
+                self.fetchMore(relationship_class_index)  # NOTE: this also adds the new items, which are now in the db
+                continue
+            # Already fetched, add new items manually
+            self.add_relationships_to_class(relationship_list, relationship_class_item)
 
 
 class ObjectTreeModel(QStandardItemModel):
