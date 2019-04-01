@@ -119,7 +119,7 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.add_spine_model_error_msg("Installation failed. "
                                            "Make sure that Julia is correctly installed and try again.")
             return
-        self.add_spine_model_success_msg("SpineModel succesfully installed.")
+        self.add_spine_model_success_msg("SpineModel successfully installed.")
         self.end_spine_model_operation()
         self.check_spine_model_configuration()
 

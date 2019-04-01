@@ -83,9 +83,9 @@ class JuliaREPLWidget(RichJupyterWidget):
         self._copy_input_action.triggered.connect(lambda checked: self.copy_input())
         self._copy_input_action.setEnabled(False)
         self.copy_available.connect(self._copy_input_action.setEnabled)
-        self.start_repl_action = QAction("Start REPL", self)
+        self.start_repl_action = QAction("Start", self)
         self.start_repl_action.triggered.connect(lambda checked: self.start_jupyter_kernel())
-        self.restart_repl_action = QAction("Restart REPL", self)
+        self.restart_repl_action = QAction("Restart", self)
         self.restart_repl_action.triggered.connect(lambda checked: self.restart_jupyter_kernel())
         # Set logging level for jupyter module loggers
         traitlets_logger = logging.getLogger("traitlets")
@@ -95,13 +95,14 @@ class JuliaREPLWidget(RichJupyterWidget):
 
     @busy_effect
     def julia_kernel_name(self):
-        """Return the name of the julia kernel specification, according to julia executable from settings.
-        Return None if julia version can't be determined.
+        """Returns the name of the julia kernel specification, according to the
+        selected julia interpreter in settings. Returns None if julia version
+        cannot be determined.
         """
         self._toolbox.msg.emit("\tInitializing Julia...")
-        julia_dir = self._toolbox._config.get("settings", "julia_path")
-        if not julia_dir == '':
-            self.julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+        julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+        if not julia_path == "":
+            self.julia_exe = julia_path
         else:
             self.julia_exe = JULIA_EXECUTABLE
         program = "{0}".format(self.julia_exe)
@@ -134,11 +135,12 @@ class JuliaREPLWidget(RichJupyterWidget):
         if not kernel_name:
             return False
         if self.kernel_manager and kernel_name == self.kernel_name:
-            self._toolbox.msg.emit("*** Using previously started Julia REPL ***")
+            self._toolbox.msg.emit("*** Using previously started Julia Console ***")
             return True
         self.kernel_name = kernel_name
         self.kernel_execution_state = None
         kernel_specs = find_kernel_specs()
+        # logging.debug("kernel_specs:{0}".format(kernel_specs))
         julia_kernel_names = [x for x in kernel_specs if x.startswith('julia')]
         if self.kernel_name in julia_kernel_names:
             return self.start_available_jupyter_kernel()
@@ -154,7 +156,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             False if the kernel cannot be started and the user chooses not to reconfigure IJulia
         """
         self.starting = True
-        self._toolbox.msg.emit("*** Starting Julia REPL ***")
+        self._toolbox.msg.emit("*** Starting Julia Console ***")
         kernel_manager = CustomQtKernelManager(kernel_name=self.kernel_name)
         try:
             kernel_manager.start_kernel()
@@ -195,7 +197,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Prompt user to install IJulia if missing, or rebuild it otherwise.
 
         Returns:
-            Bolean value depending on whether or not the user chooses to proceed.
+            Boolean value depending on whether or not the user chooses to proceed.
         """
         is_ijulia_installed = self.is_ijulia_installed()
         if is_ijulia_installed is None:
@@ -348,7 +350,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                                                "the {} kernel specification".format(self.kernel_name))
                 self._control.viewport().setCursor(self.normal_cursor)
             elif self.command and not self.running:
-                self._toolbox.msg_warning.emit("\tExecution is in progress. See Julia Console for messages.")
+                self._toolbox.msg_warning.emit("\tExecution in progress. See <b>Julia Console</b> for messages.")
                 self.running = True
                 self.execute(self.command)
 
@@ -375,7 +377,7 @@ class JuliaREPLWidget(RichJupyterWidget):
             return
         # Kernel is started or in process of being started
         if self.kernel_execution_state == 'idle' and not self.running:
-            self._toolbox.msg_warning.emit("\tExecution is in progress. See Julia Console for messages.")
+            self._toolbox.msg_warning.emit("\tExecution in progress. See <b>Julia Console</b> for messages.")
             self.running = True
             self.execute(self.command)
 
@@ -388,7 +390,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Shut down the jupyter kernel."""
         if not self.kernel_client:
             return
-        self._toolbox.msg.emit("Shutting down Julia REPL...")
+        self._toolbox.msg.emit("Shutting down Julia Console...")
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel(now=True)
 

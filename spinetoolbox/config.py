@@ -20,7 +20,7 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-SPINE_TOOLBOX_VERSION = "0.2"
+SPINE_TOOLBOX_VERSION = "0.21"
 REQUIRED_SPINEDB_API_VERSION = "0.0.22"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
@@ -67,8 +67,14 @@ if not sys.platform == "win32":
 else:
     JULIA_EXECUTABLE = "julia.exe"
 
+# Python
+if not sys.platform == "win32":
+    PYTHON_EXECUTABLE = "python3"
+else:
+    PYTHON_EXECUTABLE = "python.exe"
+
 # Tool types
-TOOL_TYPES = ["GAMS", "Julia", "Executable"]
+TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
 
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']
@@ -172,7 +178,7 @@ MAINWINDOW_SS = "QMainWindow::separator{width: 3px; background-color: lightgray;
                 "QCheckBox{padding: 2px; spacing: 10px; outline-style: dashed; outline-width: 1px; outline-color: black;}" \
                 "QComboBox:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
-                "QTextEdit:focus{border-color: black; border-width: 2px; border-style: ridge;}" \
+                "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
 
 TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ecd8c6; font-size: 12px;}"

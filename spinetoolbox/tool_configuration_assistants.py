@@ -17,9 +17,8 @@ Classes for tool configuration assistants.
 """
 
 import sys
-import os
 import qsubprocess
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide2.QtCore import QObject, Signal
 from config import JULIA_EXECUTABLE
 
 
@@ -38,9 +37,9 @@ class SpineModelConfigurationAssistant(QObject):
         """Init class."""
         super().__init__(toolbox)
         self._toolbox = toolbox
-        julia_dir = self._toolbox._config.get("settings", "julia_path")
-        if not julia_dir == '':
-            julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+        julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+        if not julia_path == "":
+            julia_exe = julia_path
         else:
             julia_exe = JULIA_EXECUTABLE
         self.julia_program = "{0}".format(julia_exe)

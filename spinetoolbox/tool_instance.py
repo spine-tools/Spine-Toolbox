@@ -54,6 +54,7 @@ class ToolInstance(QObject):
         else:  # Execute in source directory
             self.basedir = self.tool_template.path
         self.julia_repl_command = None
+        self.ipython_command_list = list()
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
         self.inputfiles = [os.path.join(self.basedir, f) for f in tool_template.inputfiles]
@@ -111,19 +112,40 @@ class ToolInstance(QObject):
         return True
 
     def execute(self):
-        """Start executing tool template instance in QProcess."""
+        """Start executing tool template instance in console or in QProcess."""
         self._toolbox.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
         if self.tool_template.tooltype == "julia":
-            if self._toolbox._config.getboolean("settings", "use_repl"):
+            if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
                 self.tool_process = self._toolbox.julia_repl
                 self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
-                self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
+                # self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
                 self.tool_process.execute_instance(self.julia_repl_command)
             else:
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 # On Julia the Qprocess workdir must be set to the path where the main script is
                 # Otherwise it doesn't find input files in subdirectories
+                self.tool_process.start_process(workdir=self.basedir)
+        if self.tool_template.tooltype == "python":
+            if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
+                self.tool_process = self._toolbox.python_repl
+                self.tool_process.execution_finished_signal.connect(self.python_console_tool_finished)
+                k_tuple = self.tool_process.python_kernel_name()
+                if not k_tuple:
+                    self.python_console_tool_finished(-999)
+                    return
+                kern_name = k_tuple[0]
+                kern_display_name = k_tuple[1]
+                # Check if this kernel is already running
+                if self.tool_process.kernel_name == kern_name:
+                    self.tool_process.execute_instance(self.ipython_command_list)
+                else:
+                    # Append command to buffer and start executing when kernel is up and running
+                    self.tool_process.commands = self.ipython_command_list
+                    self.tool_process.launch_kernel(kern_name, kern_display_name)
+            else:
+                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+                self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
         elif self.tool_template.tooltype == "gams":
             self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
@@ -136,6 +158,7 @@ class ToolInstance(QObject):
             self.tool_process.subprocess_finished_signal.connect(self.executable_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)
 
+    @Slot(int, name="julia_repl_tool_finished")
     def julia_repl_tool_finished(self, ret):
         """Run when Julia tool using REPL has finished processing.
 
@@ -158,7 +181,7 @@ class ToolInstance(QObject):
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self._toolbox.msg.emit("\tJulia Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process = None
         self.save_output_files(ret)
 
@@ -182,7 +205,59 @@ class ToolInstance(QObject):
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tJulia Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
+        self.tool_process.deleteLater()
+        self.tool_process = None
+        self.save_output_files(ret)
+
+    @Slot(int, name="python_console_tool_finished")
+    def python_console_tool_finished(self, ret):
+        """Run when Python Tool in Python Console has finished processing.
+
+        Args:
+            ret (int): Return code given by tool
+        """
+        self.tool_process.execution_finished_signal.disconnect(self.python_console_tool_finished)
+        if ret != 0:
+            if self.tool_process.execution_failed_to_start:
+                # TODO: This should be a choice given to the user. It's a bit confusing now.
+                self._toolbox.msg.emit("")
+                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
+                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+                self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
+                self.tool_process.start_process(workdir=self.basedir)
+                return
+            try:
+                return_msg = self.tool_template.return_codes[ret]
+                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+            except KeyError:
+                self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:
+            self._toolbox.msg.emit("\tTool template execution finished")
+        self.tool_process = None
+        self.save_output_files(ret)
+
+    @Slot(int, name="python_tool_finished")
+    def python_tool_finished(self, ret):
+        """Run when Python tool from command line has finished processing.
+
+        Args:
+            ret (int): Return code given by tool
+        """
+        self.tool_process.subprocess_finished_signal.disconnect(self.python_tool_finished)  # Disconnect signal
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
+                                             "Python is installed properly on your computer."
+                                             .format(self.tool_process.program()))
+            else:
+                try:
+                    return_msg = self.tool_template.return_codes[ret]
+                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:  # Return code 0: success
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -209,7 +284,7 @@ class ToolInstance(QObject):
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tGAMS Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)
@@ -235,7 +310,7 @@ class ToolInstance(QObject):
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tExecutable Tool template finished successfully. Return code:{0}".format(ret))
+            self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.save_output_files(ret)

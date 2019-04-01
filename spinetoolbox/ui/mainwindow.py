@@ -148,7 +148,7 @@ class Ui_MainWindow(object):
         self.dockWidget_process_output.setWidget(self.dockWidgetContents_2)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_process_output)
         self.dockWidget_item = QtWidgets.QDockWidget(MainWindow)
-        self.dockWidget_item.setMinimumSize(QtCore.QSize(356, 175))
+        self.dockWidget_item.setMinimumSize(QtCore.QSize(356, 182))
         self.dockWidget_item.setObjectName("dockWidget_item")
         self.dockWidgetContents_3 = QtWidgets.QWidget()
         self.dockWidgetContents_3.setObjectName("dockWidgetContents_3")
@@ -951,13 +951,10 @@ class Ui_MainWindow(object):
         self.verticalLayout_9.setSpacing(0)
         self.verticalLayout_9.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_9.setObjectName("verticalLayout_9")
-        self.widget_2 = QtWidgets.QWidget(self.dockWidgetContents_julia_repl)
-        self.widget_2.setObjectName("widget_2")
-        self.verticalLayout_9.addWidget(self.widget_2)
         self.dockWidget_julia_repl.setWidget(self.dockWidgetContents_julia_repl)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_julia_repl)
         self.dockWidget_project = QtWidgets.QDockWidget(MainWindow)
-        self.dockWidget_project.setMinimumSize(QtCore.QSize(135, 281))
+        self.dockWidget_project.setMinimumSize(QtCore.QSize(135, 320))
         self.dockWidget_project.setObjectName("dockWidget_project")
         self.dockWidgetContents_4 = QtWidgets.QWidget()
         self.dockWidgetContents_4.setObjectName("dockWidgetContents_4")
@@ -1081,6 +1078,18 @@ class Ui_MainWindow(object):
         self.verticalLayout_4.addWidget(self.tabWidget)
         self.dockWidget_project.setWidget(self.dockWidgetContents_4)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(1), self.dockWidget_project)
+        self.dockWidget_python_repl = QtWidgets.QDockWidget(MainWindow)
+        self.dockWidget_python_repl.setFloating(False)
+        self.dockWidget_python_repl.setFeatures(QtWidgets.QDockWidget.AllDockWidgetFeatures)
+        self.dockWidget_python_repl.setObjectName("dockWidget_python_repl")
+        self.dockWidgetContents_python_repl = QtWidgets.QWidget()
+        self.dockWidgetContents_python_repl.setObjectName("dockWidgetContents_python_repl")
+        self.verticalLayout_20 = QtWidgets.QVBoxLayout(self.dockWidgetContents_python_repl)
+        self.verticalLayout_20.setSpacing(0)
+        self.verticalLayout_20.setContentsMargins(0, 0, 0, 0)
+        self.verticalLayout_20.setObjectName("verticalLayout_20")
+        self.dockWidget_python_repl.setWidget(self.dockWidgetContents_python_repl)
+        MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(8), self.dockWidget_python_repl)
         self.actionQuit = QtWidgets.QAction(MainWindow)
         self.actionQuit.setObjectName("actionQuit")
         self.actionData_Store = QtWidgets.QAction(MainWindow)
@@ -1280,6 +1289,7 @@ class Ui_MainWindow(object):
         self.toolButton_remove_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove (selected) Tool template from project</p></body></html>", None, -1))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_items), QtWidgets.QApplication.translate("MainWindow", "Items", None, -1))
         self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_connections), QtWidgets.QApplication.translate("MainWindow", "Connections", None, -1))
+        self.dockWidget_python_repl.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Python Console", None, -1))
         self.actionQuit.setText(QtWidgets.QApplication.translate("MainWindow", "Quit", None, -1))
         self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Q", None, -1))
         self.actionData_Store.setText(QtWidgets.QApplication.translate("MainWindow", "Data Store", None, -1))
@@ -1321,8 +1331,8 @@ class Ui_MainWindow(object):
         self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1))
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
 from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qgraphicsviews import DesignQGraphicsView
 import resources_icons_rc

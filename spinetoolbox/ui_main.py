@@ -20,7 +20,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QItemSelection, QTimeLine
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QTimeLine
 from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
     QCheckBox, QInputDialog, QDockWidget, QStyle, QAction, QWidgetAction
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
@@ -40,6 +40,7 @@ from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import ZoomWidget
 from widgets.julia_repl_widget import JuliaREPLWidget
+from widgets.python_repl_widget import PythonReplWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from configuration import ConfigurationParser
@@ -71,7 +72,7 @@ class ToolboxUI(QMainWindow):
         self.ui = Ui_MainWindow()
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
-        set_taskbar_icon()  # in helpers
+        set_taskbar_icon()  # in helpers.py
         self.ui.graphicsView.set_ui(self)
         # Class variables
         self._config = None
@@ -102,7 +103,6 @@ class ToolboxUI(QMainWindow):
         self.connections_tab = None
         self.zoom_widget = None
         self.zoom_widget_action = None
-        # self.scene_bg = SceneBackground(self)
         # Initialize application
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
@@ -115,6 +115,9 @@ class ToolboxUI(QMainWindow):
         # Make julia REPL
         self.julia_repl = JuliaREPLWidget(self)
         self.ui.dockWidgetContents_julia_repl.layout().addWidget(self.julia_repl)
+        # Make Python REPL
+        self.python_repl = PythonReplWidget(self)
+        self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
         # Application main menu
         self.setup_zoom_action()
         # QActions
@@ -169,9 +172,7 @@ class ToolboxUI(QMainWindow):
         # Debug QActions
         self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
         self.show_connections_tab.triggered.connect(self.toggle_connections_tab_visibility)
-        self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers
-        # QGraphicsView and QGraphicsScene
-        # self.ui.graphicsView.scene().sceneRectChanged.connect(self.scene_bg.update_scene_bg)
+        self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
         # Tool templates tab
         self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
         self.ui.toolButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
@@ -777,11 +778,9 @@ class ToolboxUI(QMainWindow):
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"))
         self.msg.emit("All {0} items removed from project".format(n))
-        for i in range(self.ui.tabWidget_item_properties.count()):
-            if self.ui.tabWidget_item_properties.tabText(i) == "No Selection":
-                self.ui.tabWidget_item_properties.setCurrentIndex(i)
-                break
-        self.ui.dockWidget_item.setWindowTitle("Properties")
+        self.activate_no_selection_tab()
+        self.ui.graphicsView.scene().clear()
+        self.ui.graphicsView.init_scene()
 
     def remove_item(self, ind, delete_item=False, check_dialog=False):
         """Remove item from project when it's index in the project model is known.
@@ -975,6 +974,7 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_eventlog.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_process_output.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_item.toggleViewAction())
+        self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_repl.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
 
     def toggle_tabbar_visibility(self):
@@ -1537,6 +1537,7 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
+        self.python_repl.shutdown_kernel()
         self.close_view_forms()
         if event:
             event.accept()
