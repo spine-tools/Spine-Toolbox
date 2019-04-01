@@ -1505,6 +1505,23 @@ class RelationshipTreeModel(QStandardItemModel):
                 visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
                 visited_item.setText(updated_item.object_name_list)
 
+    def remove_items(self, removed_type, removed_ids):
+        """Remove all matched items and their 'childs'."""
+        # TODO: try and remove all rows at once, if possible
+        if not removed_ids:
+            return
+        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        for visited_item in reversed(items):
+            visited_type = visited_item.data(Qt.UserRole)
+            visited = visited_item.data(Qt.UserRole + 1)
+            if visited_type == 'root':
+                continue
+            # Get visited id
+            visited_id = visited['id']
+            visited_index = self.indexFromItem(visited_item)
+            if visited_type == removed_type and visited_id in removed_ids:
+                self.removeRows(visited_index.row(), 1, visited_index.parent())
+
 
 class ObjectTreeModel(QStandardItemModel):
     """A class to display Spine data structure in a treeview

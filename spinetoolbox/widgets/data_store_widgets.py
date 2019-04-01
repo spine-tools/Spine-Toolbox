@@ -24,7 +24,7 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
     QFileDialog, QApplication, QErrorMessage, QGraphicsScene, QGraphicsRectItem, QAction, QWidgetAction, \
-    QDockWidget
+    QDockWidget, QTreeView, QTableView
 from PySide2.QtCore import Qt, Signal, Slot, QPointF, QRectF, QSize, QEvent
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
@@ -847,12 +847,13 @@ class TreeViewForm(DataStoreForm):
         self.relationship_parameter_context_menu = None
         self.parameter_value_list_context_menu = None
         # Others
-        self.widgets_with_selection = list()
+        self.widget_with_selection = None
         self.paste_to_widget = None
         self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
         self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
         self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
         self.settings_key = 'treeViewWidget'
+        self.do_clear_selections = True
         self.restore_dock_widgets()
         # init models and views
         self.init_models()
@@ -973,17 +974,13 @@ class TreeViewForm(DataStoreForm):
 
     def update_copy_and_remove_actions(self):
         """Update copy and remove actions according to selections across the widgets."""
-        if not self.widgets_with_selection:
+        if not self.widget_with_selection:
             self.ui.actionCopy.setEnabled(False)
-            self.ui.actionCopy.setText("Copy")
             self.ui.actionRemove_selection.setEnabled(False)
-            self.ui.actionRemove_selection.setText("Remove selection")
         else:
-            name = self.widgets_with_selection[-1].accessibleName()
+            name = self.widget_with_selection.accessibleName()
             self.ui.actionCopy.setEnabled(True)
-            self.ui.actionCopy.setText("Copy from {}".format(name))
             self.ui.actionRemove_selection.setEnabled(True)
-            self.ui.actionRemove_selection.setText("Removed {} selection".format(name))
             if name == "object tree":
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_icon.png"))
             elif name == "object parameter definition":
@@ -999,61 +996,59 @@ class TreeViewForm(DataStoreForm):
 
     @Slot("bool", name="_handle_object_tree_selection_available")
     def _handle_object_tree_selection_available(self, on):
-        if self.ui.treeView_object in self.widgets_with_selection:
-            self.widgets_with_selection.remove(self.ui.treeView_object)
         if on:
-            self.widgets_with_selection.append(self.ui.treeView_object)
+            self.widget_with_selection = self.ui.treeView_object
+        elif self.ui.treeView_object == self.widget_with_selection:
+            self.widget_with_selection = None
         self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_obj_parameter_definition_selection_available")
     def _handle_obj_parameter_definition_selection_available(self, on):
-        if self.ui.tableView_object_parameter_definition in self.widgets_with_selection:
-            self.widgets_with_selection.remove(self.ui.tableView_object_parameter_definition)
         if on:
-            self.widgets_with_selection.append(self.ui.tableView_object_parameter_definition)
+            self.widget_with_selection = self.ui.tableView_object_parameter_definition
+        elif self.ui.tableView_object_parameter_definition == self.widget_with_selection:
+            self.widget_with_selection = None
         self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_obj_parameter_value_selection_available")
     def _handle_obj_parameter_value_selection_available(self, on):
-        if self.ui.tableView_object_parameter_value in self.widgets_with_selection:
-            self.widgets_with_selection.remove(self.ui.tableView_object_parameter_value)
         if on:
-            self.widgets_with_selection.append(self.ui.tableView_object_parameter_value)
+            self.widget_with_selection = self.ui.tableView_object_parameter_value
+        elif self.ui.tableView_object_parameter_value == self.widget_with_selection:
+            self.widget_with_selection = None
         self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_rel_parameter_definition_selection_available")
     def _handle_rel_parameter_definition_selection_available(self, on):
-        if self.ui.tableView_relationship_parameter_definition in self.widgets_with_selection:
-            self.widgets_with_selection.remove(self.ui.tableView_relationship_parameter_definition)
         if on:
-            self.widgets_with_selection.append(self.ui.tableView_relationship_parameter_definition)
+            self.widget_with_selection = self.ui.tableView_relationship_parameter_definition
+        elif self.ui.tableView_relationship_parameter_definition == self.widget_with_selection:
+            self.widget_with_selection = None
         self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_rel_parameter_value_selection_available")
     def _handle_rel_parameter_value_selection_available(self, on):
-        if self.ui.tableView_relationship_parameter_value in self.widgets_with_selection:
-            self.widgets_with_selection.remove(self.ui.tableView_relationship_parameter_value)
         if on:
-            self.widgets_with_selection.append(self.ui.tableView_relationship_parameter_value)
+            self.widget_with_selection = self.ui.tableView_relationship_parameter_value
+        elif self.ui.tableView_relationship_parameter_value == self.widget_with_selection:
+            self.widget_with_selection = None
         self.update_copy_and_remove_actions()
 
     @Slot("bool", name="_handle_parameter_value_list_selection_available")
     def _handle_parameter_value_list_selection_available(self, on):
-        if self.ui.treeView_parameter_value_list in self.widgets_with_selection:
-            self.widgets_with_selection.remove(self.ui.treeView_parameter_value_list)
         if on:
-            self.widgets_with_selection.append(self.ui.treeView_parameter_value_list)
+            self.widget_with_selection = self.ui.treeView_parameter_value_list
+        elif self.ui.treeView_parameter_value_list == self.widget_with_selection:
+            self.widget_with_selection = None
         self.update_copy_and_remove_actions()
 
     @Slot("QWidget", "QWidget", name="update_paste_action")
     def update_paste_action(self, old, new):
         self.paste_to_widget = None
-        self.ui.actionPaste.setText("Paste")
         self.ui.actionPaste.setEnabled(False)
         try:
             if new.canPaste():
                 self.paste_to_widget = new
-                self.ui.actionPaste.setText("Paste to {}".format(self.paste_to_widget.accessibleName()))
                 self.ui.actionPaste.setEnabled(True)
         except AttributeError:
             pass
@@ -1061,9 +1056,9 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="copy")
     def copy(self, checked=False):
         """Copy data to clipboard."""
-        if not self.widgets_with_selection:
+        if not self.widget_with_selection:
             return
-        self.widgets_with_selection[-1].copy()
+        self.widget_with_selection.copy()
 
     @Slot("bool", name="paste")
     def paste(self, checked=False):
@@ -1075,9 +1070,9 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="remove_selection")
     def remove_selection(self, checked=False):
         """Remove selection items."""
-        if not self.widgets_with_selection:
+        if not self.widget_with_selection:
             return
-        name = self.widgets_with_selection[-1].accessibleName()
+        name = self.widget_with_selection.accessibleName()
         if name == "object tree":
             self.remove_object_tree_items()
         elif name == "object parameter definition":
@@ -1094,32 +1089,42 @@ class TreeViewForm(DataStoreForm):
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_definition_selection_changed")
     def _handle_object_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
-        selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        self.obj_parameter_definition_selection_available.emit(not selection.isEmpty())
+        model = self.ui.tableView_object_parameter_definition.selectionModel()
+        self.obj_parameter_definition_selection_available.emit(model.hasSelection())
+        if self.do_clear_selections:
+            self.clear_selections(self.ui.tableView_object_parameter_definition)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_value_selection_changed")
     def _handle_object_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
-        selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        self.obj_parameter_value_selection_available.emit(not selection.isEmpty())
+        model = self.ui.tableView_object_parameter_value.selectionModel()
+        self.obj_parameter_value_selection_available.emit(model.hasSelection())
+        if self.do_clear_selections:
+            self.clear_selections(self.ui.tableView_object_parameter_value)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_definition_selection_changed")
     def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
-        selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
-        self.rel_parameter_definition_selection_available.emit(not selection.isEmpty())
+        model = self.ui.tableView_relationship_parameter_definition.selectionModel()
+        self.rel_parameter_definition_selection_available.emit(model.hasSelection())
+        if self.do_clear_selections:
+            self.clear_selections(self.ui.tableView_relationship_parameter_definition)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_value_selection_changed")
     def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
-        selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        self.rel_parameter_value_selection_available.emit(not selection.isEmpty())
+        model = self.ui.tableView_relationship_parameter_value.selectionModel()
+        self.rel_parameter_value_selection_available.emit(model.hasSelection())
+        if self.do_clear_selections:
+            self.clear_selections(self.ui.tableView_relationship_parameter_value)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_parameter_value_list_selection_changed")
     def _handle_parameter_value_list_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
-        selection = self.ui.treeView_parameter_value_list.selectionModel().selection()
-        self.parameter_value_list_selection_available.emit(not selection.isEmpty())
+        model = self.ui.treeView_parameter_value_list.selectionModel()
+        self.parameter_value_list_selection_available.emit(model.hasSelection())
+        if self.do_clear_selections:
+            self.clear_selections(self.ui.treeView_parameter_value_list)
 
     @Slot("int", name="_handle_object_parameter_tab_changed")
     def _handle_object_parameter_tab_changed(self, index):
@@ -1262,6 +1267,15 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.scrollTo(next_index)
         self.ui.treeView_object.expand(next_index)
 
+    def clear_selections(self, *skip_widgets):
+        """Clear selections in all widgets except `skip`."""
+        for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
+            if w in skip_widgets:
+                continue
+            self.do_clear_selections = False
+            w.selectionModel().clearSelection()
+            self.do_clear_selections = True
+
     @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
     def _handle_object_tree_selection_changed(self, selected, deselected):
@@ -1280,14 +1294,16 @@ class TreeViewForm(DataStoreForm):
             len(self.selected_obj_tree_indexes.get('relationship_class', [])) > 0)
         self.relationship_selection_available.emit(len(self.selected_obj_tree_indexes.get('relationship', [])) > 0)
         self.object_tree_selection_available.emit(any(v for v in self.selected_obj_tree_indexes.values()))
-        self.update_filter(self.selected_obj_tree_indexes)
+        if self.do_clear_selections:
+            self.clear_selections(self.ui.treeView_object)
+            self.update_filter(self.selected_obj_tree_indexes)
 
     @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_tree_selection_changed")
     def _handle_relationship_tree_selection_changed(self, selected, deselected):
         """Called when the relationship tree selection changes.
         Set default rows and apply filters on parameter models."""
-        #self.set_default_parameter_rows()
+        # self.set_default_parameter_rows()
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_rel_tree_indexes.setdefault(item_type, set()).remove(index)
@@ -1298,10 +1314,13 @@ class TreeViewForm(DataStoreForm):
             len(self.selected_rel_tree_indexes.get('relationship_class', [])) > 0)
         self.relationship_selection_available.emit(len(self.selected_rel_tree_indexes.get('relationship', [])) > 0)
         self.relationship_tree_selection_available.emit(any(v for v in self.selected_rel_tree_indexes.values()))
-        self.update_filter(self.selected_rel_tree_indexes)
+        if self.do_clear_selections:
+            self.clear_selections(self.ui.treeView_relationship)
+            self.update_filter(self.selected_rel_tree_indexes)
 
     def set_default_parameter_rows(self):
         """Set default rows for parameter models according to selection in object tree."""
+        # FIXME
         selection = self.ui.treeView_object.selectionModel().selection()
         if selection.count() != 1:
             return
@@ -1545,6 +1564,8 @@ class TreeViewForm(DataStoreForm):
             self.object_tree_model.remove_items("object", object_ids)
             self.object_tree_model.remove_items("relationship_class", relationship_class_ids)
             self.object_tree_model.remove_items("relationship", relationship_ids)
+            self.relationship_tree_model.remove_items("relationship_class", relationship_class_ids)
+            self.relationship_tree_model.remove_items("relationship", relationship_ids)
             # Parameter models
             self.object_parameter_value_model.remove_object_classes(object_classes)
             self.object_parameter_value_model.remove_objects(objects)
