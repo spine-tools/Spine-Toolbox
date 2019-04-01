@@ -802,7 +802,6 @@ class DataStoreForm(QMainWindow):
             self.qsettings().setValue("{0}/windowMaximized".format(self.settings_key), False)
         if self.db_map.has_pending_changes():
             self.show_commit_session_prompt()
-        self.db_map.close()
         if event:
             event.accept()
 
