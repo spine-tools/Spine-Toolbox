@@ -1303,7 +1303,7 @@ class TreeViewForm(DataStoreForm):
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
-        self.set_default_parameter_rows()
+        self.set_default_parameter_rows(self.ui.treeView_object.selectionModel().selection())
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_obj_tree_indexes.setdefault(item_type, set()).remove(index)
@@ -1328,7 +1328,7 @@ class TreeViewForm(DataStoreForm):
     def _handle_relationship_tree_selection_changed(self, selected, deselected):
         """Called when the relationship tree selection changes.
         Set default rows and apply filters on parameter models."""
-        # self.set_default_parameter_rows()
+        self.set_default_parameter_rows(self.ui.treeView_relationship.selectionModel().selection())
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_rel_tree_indexes.setdefault(item_type, set()).remove(index)
@@ -1344,10 +1344,9 @@ class TreeViewForm(DataStoreForm):
             self.clear_selections(self.ui.treeView_relationship)
             self.update_filter(self.selected_rel_tree_indexes)
 
-    def set_default_parameter_rows(self):
+    def set_default_parameter_rows(self, selection):
         """Set default rows for parameter models according to selection in object tree."""
         # TODO: Check if this is doing what we want
-        selection = self.ui.treeView_object.selectionModel().selection()
         if selection.isEmpty():
             return
         index = selection.indexes()[-1]
