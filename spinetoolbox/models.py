@@ -1348,8 +1348,99 @@ class RelationshipClassListModel(QStandardItemModel):
         self.insertRow(self.rowCount() - 1, relationship_class_item)
 
 
+class RelationshipTreeModel(QStandardItemModel):
+    """A class to display Spine data structure in a treeview
+    with relationship classes at the outer level.
+    """
+    def __init__(self, tree_view_form):
+        """Initialize class"""
+        super().__init__(tree_view_form)
+        self._tree_view_form = tree_view_form
+        self.db_map = tree_view_form.db_map
+        self.root_item = None
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
+        self._fetched_relationship_class_id = set()
+
+    def hasChildren(self, parent):
+        """Return True if not fetched, so the user can try and expand it."""
+        if not parent.isValid():
+            return super().hasChildren(parent)
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'root':
+            return super().hasChildren(parent)
+        if parent_type == 'relationship_class':
+            relationship_class_id = parent.data(Qt.UserRole + 1)['id']
+            if relationship_class_id in self._fetched_relationship_class_id:
+                return super().hasChildren(parent)
+            return True
+        elif parent_type == 'relationship':
+            return False
+        return super().hasChildren(parent)
+
+    def canFetchMore(self, parent):
+        """Return True if not fetched."""
+        if not parent.isValid():
+            return True
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'root':
+            return True
+        if parent_type == 'relationship_class':
+            parent_id = parent.data(Qt.UserRole + 1)['id']
+            return parent_id not in self._fetched_relationship_class_id
+        if parent_type == 'relationship':
+            return False
+
+    @busy_effect
+    def fetchMore(self, parent):
+        """Build the deeper level of the tree"""
+        if not parent.isValid():
+            return False
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'root':
+            return False
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'relationship_class':
+            relationship_class_item = self.itemFromIndex(parent)
+            relationship_class = parent.data(Qt.UserRole + 1)
+            relationship_icon = parent.data(Qt.DecorationRole)
+            relationship_list = self.db_map.wide_relationship_list(class_id=relationship_class['id'])
+            relationship_item_list = list()
+            for relationship in relationship_list:
+                relationship_item = QStandardItem(relationship.object_name_list)
+                relationship_item.setData('relationship', Qt.UserRole)
+                relationship_item.setData(relationship._asdict(), Qt.UserRole + 1)
+                relationship_item.setData(relationship_icon, Qt.DecorationRole)
+                relationship_item_list.append(relationship_item)
+            relationship_class_item.appendRows(relationship_item_list)
+            self._fetched_relationship_class_id.add(relationship_class['id'])
+        self.dataChanged.emit(parent, parent)
+
+    def build_tree(self):
+        """Build the first level of the tree"""
+        self.clear()
+        self._fetched = {
+            "relationship_class": set(),
+            "relationship": set()
+        }
+        self.root_item = self.invisibleRootItem()
+        self.root_item.setData('root', Qt.UserRole)
+        relationship_class_item_list = list()
+        for relationship_class in self.db_map.wide_relationship_class_list():
+            relationship_icon = self._tree_view_form.relationship_icon(relationship_class.object_class_name_list)
+            relationship_class_item = QStandardItem(relationship_class.name)
+            relationship_class_item.setData('relationship_class', Qt.UserRole)
+            relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
+            relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
+            relationship_class_item.setData(self.bold_font, Qt.FontRole)
+            relationship_class_item_list.append(relationship_class_item)
+        self.root_item.appendRows(relationship_class_item_list)
+
+
 class ObjectTreeModel(QStandardItemModel):
-    """A class to display Spine data structure in a treeview."""
+    """A class to display Spine data structure in a treeview
+    with object classes at the outer level.
+    ."""
 
     def __init__(self, tree_view_form):
         """Initialize class"""
@@ -1531,7 +1622,7 @@ class ObjectTreeModel(QStandardItemModel):
             self._fetched['relationship_class'].add((object_['id'], relationship_class['id']))
         self.dataChanged.emit(parent, parent)
 
-    def build_tree(self, db_name, flat=False):
+    def build_tree(self, flat=False):
         """Build the first level of the tree"""
         self.clear()
         self._fetched = {
@@ -1539,10 +1630,8 @@ class ObjectTreeModel(QStandardItemModel):
             "object": set(),
             "relationship_class": set()
         }
-        self.root_item = QStandardItem(db_name)
+        self.root_item = self.invisibleRootItem()
         self.root_item.setData('root', Qt.UserRole)
-        icon = QIcon(":/icons/Spine_db_icon.png")
-        self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in self.db_map.object_class_list():
             object_icon = self._tree_view_form.object_icon(object_class.name)
@@ -1554,7 +1643,6 @@ class ObjectTreeModel(QStandardItemModel):
             object_class_item.setData(self.bold_font, Qt.FontRole)
             object_class_item_list.append(object_class_item)
         self.root_item.appendRows(object_class_item_list)
-        self.appendRow(self.root_item)
 
     def new_object_class_item(self, object_class):
         """Returns new object class item."""

@@ -42,7 +42,8 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
     ManageParameterTagsDialog, CommitDialog
 from widgets.custom_qwidgets import ZoomWidget
 from widgets.toolbars import ParameterTagToolBar
-from models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel, \
+from models import ObjectTreeModel, RelationshipTreeModel, \
+    ObjectClassListModel, RelationshipClassListModel, \
     ObjectParameterDefinitionModel, ObjectParameterValueModel, \
     RelationshipParameterDefinitionModel, RelationshipParameterValueModel, \
     ParameterValueListModel
@@ -830,6 +831,7 @@ class TreeViewForm(DataStoreForm):
         """Initialize class."""
         tic = time.clock()
         super().__init__(data_store, db_map, database, tree_view_form_ui())
+        self.relationship_tree_model = RelationshipTreeModel(self)
         # Object tree selected indexes
         self.selected_tree_indexes = {}
         # Context menus
@@ -1196,10 +1198,31 @@ class TreeViewForm(DataStoreForm):
         copy_database(dst_url, self.db_map.db_url, overwrite=True)
         self.msg.emit("SQlite file successfully exported.")
 
+    def init_models(self):
+        """Initialize models."""
+        super().init_models()
+        self.init_relationship_tree_model()
+
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        self.object_tree_model.build_tree(self.database)
+        self.object_tree_model.build_tree()
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
+
+    def init_relationship_tree_model(self):
+        """Initialize relationship tree model."""
+        self.relationship_tree_model.build_tree()
+
+    def init_views(self):
+        """Initialize model views."""
+        super().init_views()
+        self.init_relationship_tree_view()
+
+    def init_relationship_tree_view(self):
+        """Init object tree view."""
+        self.ui.treeView_relationship.setModel(self.relationship_tree_model)
+        self.ui.treeView_relationship.header().hide()
+        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_item.index())
+        self.ui.treeView_relationship.resizeColumnToContents(0)
 
     @Slot("QModelIndex", name="find_next_leaf")
     def find_next_leaf(self, index):
@@ -1891,7 +1914,7 @@ class GraphViewForm(DataStoreForm):
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        self.object_tree_model.build_tree(self.database)
+        self.object_tree_model.build_tree()
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
