@@ -734,7 +734,7 @@ class EditRelationshipsDialog(ManageItemsDialog):
     Attributes:
         parent (TreeViewForm): data store widget
         kwargs_list (list): list of dictionaries corresponding to relationships to edit/update
-        relationship_class (KeyedTuple): the relationship class item (all edited relationships must be of this class)
+        relationship_class (dict): the relationship class item (all edited relationships must be of this class)
     """
     def __init__(self, parent, kwargs_list, relationship_class):
         super().__init__(parent, kwargs_list)
@@ -743,7 +743,7 @@ class EditRelationshipsDialog(ManageItemsDialog):
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
         self.table_view.horizontalHeader().setStretchLastSection(True)
-        object_class_name_list = relationship_class.object_class_name_list.split(",")
+        object_class_name_list = relationship_class['object_class_name_list'].split(",")
         self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
         self.orig_data = list()
         self.orig_object_id_lists = list()

@@ -256,6 +256,35 @@ class ToolTemplateWidget(QWidget):
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
 
+
+    @Slot(name="new_main_program_file")
+    def new_main_program_file(self):
+        """Create a new blank main program file. Let user decide the file name and location.
+        Alternative version using only one getSaveFileName dialog.
+        """
+        answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
+        file_path = answer[0]
+        if not file_path:  # Cancel button clicked
+            return
+        # Remove file if exists. getSaveFileName has asked confirmation for us.
+        try:
+            os.remove(file_path)
+        except OSError:
+            pass
+        try:
+            with open(file_path, "w") as fp:
+                logging.debug("Created file:{0}".format(file_path))
+        except OSError:
+            msg = "Please check directory permissions."
+            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+            QMessageBox.information(self, "Creating file failed", msg)
+            return
+        main_dir = os.path.dirname(file_path)
+        self.program_path = os.path.abspath(main_dir)
+        # Update UI
+        self.ui.lineEdit_main_program.setText(file_path)
+        self.ui.label_mainpath.setText(self.program_path)
+
     @Slot(name="new_source_file")
     def new_source_file(self):
         """Let user create a new source file for this tool template."""
