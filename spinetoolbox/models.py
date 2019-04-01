@@ -27,7 +27,7 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIco
     QPainter, QGuiApplication, QPalette
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
-from helpers import rename_dir, fix_name_ambiguity, busy_effect
+from helpers import rename_dir, fix_name_ambiguity, busy_effect, format_string_list
 from spinedb_api import SpineDBAPIError
 
 
@@ -2633,10 +2633,7 @@ class ObjectParameterModel(MinimalTableModel):
             self._tree_view_form.msg.emit("Successfully updated entries.")
         error_log = add_error_log + update_error_log
         if error_log:
-            msg = "<ul>"
-            for err in error_log:
-                msg += "<li>" + err + "</li>"
-            msg += "</ul>"
+            msg = format_string_list(error_log)
             self._tree_view_form.msg_error.emit(msg)
         return True
 
@@ -3202,10 +3199,7 @@ class RelationshipParameterModel(MinimalTableModel):
             self._tree_view_form.msg.emit("Successfully updated entries.")
         error_log = add_error_log + update_error_log
         if error_log:
-            msg = "<ul>"
-            for err in error_log:
-                msg += "<li>" + err + "</li>"
-            msg += "</ul>"
+            msg = format_string_list(error_log)
             self._tree_view_form.msg_error.emit(msg)
         return True
 
