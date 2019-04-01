@@ -551,6 +551,12 @@
      </property>
      <item>
       <widget class="ObjectTreeView" name="treeView_relationship">
+       <property name="contextMenuPolicy">
+        <enum>Qt::CustomContextMenu</enum>
+       </property>
+       <property name="accessibleName">
+        <string>relationship tree</string>
+       </property>
        <property name="editTriggers">
         <set>QAbstractItemView::EditKeyPressed</set>
        </property>

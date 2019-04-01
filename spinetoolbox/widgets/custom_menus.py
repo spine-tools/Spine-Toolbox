@@ -311,6 +311,40 @@ class ObjectTreeContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
+class RelationshipTreeContextMenu(CustomContextMenu):
+    """Context menu class for relationship tree items in tree view form.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
+        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
+        remove_icon = QIcon(":/icons/minus_relationship_icon.png")
+        item_type = index.data(Qt.UserRole)
+        self.add_action("Copy text", copy_icon)
+        self.addSeparator()
+        if item_type == 'root':
+            self.add_action("Add relationship classes", plus_relationship_icon)
+        elif item_type == 'relationship_class':
+            self.add_action("Add relationships", plus_relationship_icon)
+            self.addSeparator()
+            self.add_action("Edit relationship classes", edit_relationship_icon)
+        elif item_type == 'relationship':
+            self.add_action("Edit relationships", edit_relationship_icon)
+        if item_type != 'root':
+            self.addSeparator()
+            self.add_action("Remove selection", remove_icon)
+        self.exec_(position)
+
+
 class ParameterContextMenu(CustomContextMenu):
     """Context menu class for object (relationship) parameter (value) items in tree views.
 

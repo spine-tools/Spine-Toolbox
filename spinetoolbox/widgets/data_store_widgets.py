@@ -31,7 +31,8 @@ from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
-from widgets.custom_menus import ObjectTreeContextMenu, ParameterContextMenu, ParameterValueListContextMenu, \
+from widgets.custom_menus import ObjectTreeContextMenu, RelationshipTreeContextMenu, \
+    ParameterContextMenu, ParameterValueListContextMenu, \
     ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_delegates import ObjectParameterValueDelegate, ObjectParameterDefinitionDelegate, \
     RelationshipParameterValueDelegate, RelationshipParameterDefinitionDelegate
@@ -554,9 +555,13 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_edit_relationship_classes_form")
     def show_edit_relationship_classes_form(self, checked=False):
-        try:
-            indexes = self.selected_obj_tree_indexes['relationship_class']
-        except KeyError:
+        if self.widget_with_selection == self.ui.treeView_object:
+            indexes = self.selected_obj_tree_indexes.get('relationship_class')
+        elif self.widget_with_selection == self.ui.treeView_relationship:
+            indexes = self.selected_rel_tree_indexes.get('relationship_class')
+        else:
+            return
+        if not indexes:
             return
         kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
         dialog = EditRelationshipClassesDialog(self, kwargs_list)
@@ -564,18 +569,21 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_edit_relationships_form")
     def show_edit_relationships_form(self, checked=False):
-        # Only edit relationships of the same class as the one in current index, for now...
-        current = self.ui.treeView_object.currentIndex()
-        if current.data(Qt.UserRole) != "relationship":
-            return
-        class_id = current.data(Qt.UserRole + 1)['class_id']
-        wide_relationship_class = self.db_map.single_wide_relationship_class(id=class_id).one_or_none()
-        if not wide_relationship_class:
-            return
-        try:
-            indexes = self.selected_obj_tree_indexes['relationship']
-        except KeyError:
-            return
+        # NOTE: Only edit relationships of the same class as the one in current index, for now...
+        if self.widget_with_selection == self.ui.treeView_object:
+            current = self.ui.treeView_object.currentIndex()
+            if current.data(Qt.UserRole) != "relationship":
+                return
+            class_id = current.data(Qt.UserRole + 1)['class_id']
+            wide_relationship_class = current.parent().data(Qt.UserRole + 1)
+            indexes = self.selected_obj_tree_indexes.get('relationship')
+        elif self.widget_with_selection == self.ui.treeView_relationship:
+            current = self.ui.treeView_relationship.currentIndex()
+            if current.data(Qt.UserRole) != "relationship":
+                return
+            class_id = current.data(Qt.UserRole + 1)['class_id']
+            wide_relationship_class = current.parent().data(Qt.UserRole + 1)
+            indexes = self.selected_rel_tree_indexes.get('relationship')
         kwargs_list = list()
         for index in indexes:
             if index.data(Qt.UserRole + 1)['class_id'] != class_id:
@@ -841,6 +849,7 @@ class TreeViewForm(DataStoreForm):
         self.selected_rel_tree_indexes = {}
         # Context menus
         self.object_tree_context_menu = None
+        self.relationship_tree_context_menu = None
         self.object_parameter_value_context_menu = None
         self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
@@ -881,6 +890,7 @@ class TreeViewForm(DataStoreForm):
         self.relationship_class_selection_available.connect(self.ui.actionEdit_relationship_classes.setEnabled)
         self.relationship_selection_available.connect(self.ui.actionEdit_relationships.setEnabled)
         self.object_tree_selection_available.connect(self._handle_object_tree_selection_available)
+        self.relationship_tree_selection_available.connect(self._handle_relationship_tree_selection_available)
         self.obj_parameter_definition_selection_available.connect(
             self._handle_obj_parameter_definition_selection_available)
         self.obj_parameter_value_selection_available.connect(
@@ -919,6 +929,8 @@ class TreeViewForm(DataStoreForm):
         # Relationship tree
         self.ui.treeView_relationship.selectionModel().selectionChanged.connect(
             self._handle_relationship_tree_selection_changed)
+        self.ui.treeView_relationship.edit_key_pressed.connect(self.edit_relationship_tree_items)
+        self.ui.treeView_relationship.customContextMenuRequested.connect(self.show_relationship_tree_context_menu)
         # Parameter tables selection changes
         self.ui.tableView_object_parameter_definition.selectionModel().selectionChanged.connect(
             self._handle_object_parameter_definition_selection_changed)
@@ -1002,6 +1014,14 @@ class TreeViewForm(DataStoreForm):
             self.widget_with_selection = None
         self.update_copy_and_remove_actions()
 
+    @Slot("bool", name="_handle_relationship_tree_selection_available")
+    def _handle_relationship_tree_selection_available(self, on):
+        if on:
+            self.widget_with_selection = self.ui.treeView_relationship
+        elif self.ui.treeView_relationship == self.widget_with_selection:
+            self.widget_with_selection = None
+        self.update_copy_and_remove_actions()
+
     @Slot("bool", name="_handle_obj_parameter_definition_selection_available")
     def _handle_obj_parameter_definition_selection_available(self, on):
         if on:
@@ -1075,6 +1095,8 @@ class TreeViewForm(DataStoreForm):
         name = self.widget_with_selection.accessibleName()
         if name == "object tree":
             self.remove_object_tree_items()
+        elif name == "relationship tree":
+            self.remove_relationship_tree_items()
         elif name == "object parameter definition":
             self.remove_object_parameter_definitions()
         elif name == "object parameter value":
@@ -1245,7 +1267,7 @@ class TreeViewForm(DataStoreForm):
 
     @Slot("QModelIndex", name="find_next_leaf")
     def find_next_leaf(self, index):
-        """If index corresponds to a relationship, then expand the next ocurrence of it."""
+        """If object tree index corresponds to a relationship, then expand the next ocurrence of it."""
         if not index.isValid():
             return  # just to be safe
         clicked_type = index.data(Qt.UserRole)
@@ -1259,7 +1281,7 @@ class TreeViewForm(DataStoreForm):
         self.find_next(index)
 
     def find_next(self, index):
-        """Expand next occurrence of a relationship."""
+        """Expand next occurrence of a relationship in object tree."""
         next_index = self.object_tree_model.next_relationship_index(index)
         if not next_index:
             return
@@ -1268,7 +1290,7 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.expand(next_index)
 
     def clear_selections(self, *skip_widgets):
-        """Clear selections in all widgets except `skip`."""
+        """Clear selections in all widgets except `skip_widgets`."""
         for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
             if w in skip_widgets:
                 continue
@@ -1288,13 +1310,16 @@ class TreeViewForm(DataStoreForm):
         for index in selected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_obj_tree_indexes.setdefault(item_type, set()).add(index)
-        self.object_class_selection_available.emit(len(self.selected_obj_tree_indexes.get('object_class', [])) > 0)
-        self.object_selection_available.emit(len(self.selected_obj_tree_indexes.get('object', [])) > 0)
-        self.relationship_class_selection_available.emit(
-            len(self.selected_obj_tree_indexes.get('relationship_class', [])) > 0)
-        self.relationship_selection_available.emit(len(self.selected_obj_tree_indexes.get('relationship', [])) > 0)
         self.object_tree_selection_available.emit(any(v for v in self.selected_obj_tree_indexes.values()))
+        self.object_class_selection_available.emit(
+            len(self.selected_obj_tree_indexes.get('object_class', [])) > 0)
+        self.object_selection_available.emit(
+            len(self.selected_obj_tree_indexes.get('object', [])) > 0)
         if self.do_clear_selections:
+            self.relationship_class_selection_available.emit(
+                len(self.selected_obj_tree_indexes.get('relationship_class', [])) > 0)
+            self.relationship_selection_available.emit(
+                len(self.selected_obj_tree_indexes.get('relationship', [])) > 0)
             self.clear_selections(self.ui.treeView_object)
             self.update_filter(self.selected_obj_tree_indexes)
 
@@ -1310,21 +1335,22 @@ class TreeViewForm(DataStoreForm):
         for index in selected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_rel_tree_indexes.setdefault(item_type, set()).add(index)
-        self.relationship_class_selection_available.emit(
-            len(self.selected_rel_tree_indexes.get('relationship_class', [])) > 0)
-        self.relationship_selection_available.emit(len(self.selected_rel_tree_indexes.get('relationship', [])) > 0)
         self.relationship_tree_selection_available.emit(any(v for v in self.selected_rel_tree_indexes.values()))
         if self.do_clear_selections:
+            self.relationship_class_selection_available.emit(
+                len(self.selected_rel_tree_indexes.get('relationship_class', [])) > 0)
+            self.relationship_selection_available.emit(
+                len(self.selected_rel_tree_indexes.get('relationship', [])) > 0)
             self.clear_selections(self.ui.treeView_relationship)
             self.update_filter(self.selected_rel_tree_indexes)
 
     def set_default_parameter_rows(self):
         """Set default rows for parameter models according to selection in object tree."""
-        # FIXME
+        # TODO: Check if this is doing what we want
         selection = self.ui.treeView_object.selectionModel().selection()
-        if selection.count() != 1:
+        if selection.isEmpty():
             return
-        index = selection.indexes()[0]
+        index = selection.indexes()[-1]
         item_type = index.data(Qt.UserRole)
         if item_type == 'object_class':
             default_row = dict(
@@ -1464,7 +1490,7 @@ class TreeViewForm(DataStoreForm):
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
         self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)
         option = self.object_tree_context_menu.get_action()
-        if option == "Copy":
+        if option == "Copy text":
             self.ui.treeView_object.copy()
         elif option == "Add object classes":
             self.show_add_object_classes_form()
@@ -1495,6 +1521,34 @@ class TreeViewForm(DataStoreForm):
         self.object_tree_context_menu.deleteLater()
         self.object_tree_context_menu = None
 
+    @Slot("QPoint", name="show_relationship_tree_context_menu")
+    def show_relationship_tree_context_menu(self, pos):
+        """Context menu for relationship tree.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        index = self.ui.treeView_relationship.indexAt(pos)
+        global_pos = self.ui.treeView_relationship.viewport().mapToGlobal(pos)
+        self.relationship_tree_context_menu = RelationshipTreeContextMenu(self, global_pos, index)
+        option = self.relationship_tree_context_menu.get_action()
+        if option == "Copy text":
+            self.ui.treeView_relationship.copy()
+        elif option == "Add relationship classes":
+            self.show_add_relationship_classes_form()
+        elif option == "Add relationships":
+            self.call_show_add_relationships_form(index)
+        elif option == "Edit relationship classes":
+            self.show_edit_relationship_classes_form()
+        elif option == "Edit relationships":
+            self.show_edit_relationships_form()
+        elif option.startswith("Remove selection"):
+            self.remove_relationship_tree_items()
+        else:  # No option selected
+            pass
+        self.relationship_tree_context_menu.deleteLater()
+        self.relationship_tree_context_menu = None
+
     def fully_expand_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
             self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.expand)
@@ -1513,12 +1567,15 @@ class TreeViewForm(DataStoreForm):
 
     def call_show_add_relationships_form(self, index):
         relationship_class = index.data(Qt.UserRole + 1)
-        object_ = index.parent().data(Qt.UserRole + 1)
-        object_class = index.parent().parent().data(Qt.UserRole + 1)
-        self.show_add_relationships_form(
-            relationship_class_id=relationship_class['id'],
-            object_id=object_['id'],
-            object_class_id=object_class['id'])
+        if index.model() == self.object_tree_model:
+            object_ = index.parent().data(Qt.UserRole + 1)
+            object_class = index.parent().parent().data(Qt.UserRole + 1)
+            self.show_add_relationships_form(
+                relationship_class_id=relationship_class['id'],
+                object_id=object_['id'],
+                object_class_id=object_class['id'])
+        else:
+            self.show_add_relationships_form(relationship_class_id=relationship_class['id'])
 
     def add_object_classes(self, object_classes):
         """Insert new object classes."""
@@ -1536,6 +1593,17 @@ class TreeViewForm(DataStoreForm):
         elif current_type == 'object':
             self.show_edit_objects_form()
         elif current_type == 'relationship_class':
+            self.show_edit_relationship_classes_form()
+        elif current_type == 'relationship':
+            self.show_edit_relationships_form()
+
+    def edit_relationship_tree_items(self):
+        """Called when F2 is pressed while the relationship tree has focus.
+        Call the appropriate method to show the edit form,
+        depending on the current index."""
+        current = self.ui.treeView_object.currentIndex()
+        current_type = current.data(Qt.UserRole)
+        if current_type == 'relationship_class':
             self.show_edit_relationship_classes_form()
         elif current_type == 'relationship':
             self.show_edit_relationships_form()
@@ -1580,6 +1648,34 @@ class TreeViewForm(DataStoreForm):
             self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
             self.msg.emit("Successfully removed items.")
             self.object_tree_selection_available.emit(False)
+        except SpineDBAPIError as e:
+            self.msg_error.emit(e.msg)
+
+    @busy_effect
+    @Slot("bool", name="remove_relationship_tree_items")
+    def remove_relationship_tree_items(self, checked=False):
+        """Remove all selected items from the relationship treeview."""
+        indexes = self.selected_rel_tree_indexes
+        relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', [])]
+        relationships = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship', [])]
+        relationship_class_ids = set(x['id'] for x in relationship_classes)
+        relationship_ids = set(x['id'] for x in relationships)
+        try:
+            self.db_map.remove_items(
+                relationship_class_ids=relationship_class_ids,
+                relationship_ids=relationship_ids
+            )
+            self.object_tree_model.remove_items("relationship_class", relationship_class_ids)
+            self.object_tree_model.remove_items("relationship", relationship_ids)
+            self.relationship_tree_model.remove_items("relationship_class", relationship_class_ids)
+            self.relationship_tree_model.remove_items("relationship", relationship_ids)
+            # Parameter models
+            self.relationship_parameter_value_model.remove_relationship_classes(relationship_classes)
+            self.relationship_parameter_value_model.remove_relationships(relationships)
+            self.relationship_parameter_definition_model.remove_relationship_classes(relationship_classes)
+            self.commit_available.emit(True)
+            self.msg.emit("Successfully removed items.")
+            self.relationship_tree_selection_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
 
