@@ -56,8 +56,10 @@ class PythonReplWidget(RichJupyterWidget):
         self.may_need_restart = True  # Has the user changed the Python environment in Settings
         self.normal_cursor = self._control.viewport().cursor()
         # QActions
-        self.start_console_action = QAction("Start", self)
-        self.start_console_action.triggered.connect(lambda checked: self.setup_python_kernel())
+        self.start_action = QAction("Start", self)
+        self.start_action.triggered.connect(lambda checked: self.setup_python_kernel())
+        self.restart_action = QAction("Restart", self)
+        self.restart_action.triggered.connect(lambda a: self.restart_kernel("Do you want to restart the kernel?"))
 
     def connect_signals(self):
         """Connect signals."""
@@ -304,6 +306,7 @@ class PythonReplWidget(RichJupyterWidget):
         self._control.viewport().setCursor(Qt.BusyCursor)
         self._running = True
         if len(self.commands) == 0:
+            # self._toolbox.msg.emit("Executing code:{0}".format(code))
             pass  # Happens when users type commands directly to iPython Console
         else:
             self._toolbox.msg_warning.emit("\tExecution in progress. See <b>Python Console</b> for messages.")
@@ -320,6 +323,7 @@ class PythonReplWidget(RichJupyterWidget):
         self._control.viewport().setCursor(self.normal_cursor)
         self._running = False
         if msg['content']['status'] == 'ok':
+            # TODO: If user Stops execution, it should be handled here
             # Run next command or finish up if no more commands to execute
             if len(self.commands) == 0:
                 self.execution_finished_signal.emit(0)
@@ -351,12 +355,10 @@ class PythonReplWidget(RichJupyterWidget):
             self._kernel_state = msg['content']['execution_state']
             try:
                 parent_msg_type = msg["parent_header"]["msg_type"]  # msg that the received msg is replying to
-            except KeyError:  # debugging
-                # Some weird message received
-                logging.debug("msg:{0}".format(msg))
-                return
-            if self._kernel_state == "starting":  # debugging
-                self._toolbox.msg.emit("Kernel is in starting state. parent msg_type:{0}".format(parent_msg_type))
+            except KeyError:
+                # execution_state: 'starting' -> no parent_header
+                parent_msg_type = "na"  # status msg has no parent header
+                # self._toolbox.msg.emit(msg)
             if parent_msg_type == "kernel_info_request":
                 # If kernel_state:'busy', kernel_info_request is being processed
                 # If kernel_state:'idle', kernel_info_request is done
@@ -406,7 +408,8 @@ class PythonReplWidget(RichJupyterWidget):
         """Reimplemented to add custom actions."""
         menu = super()._context_menu_make(pos)
         first_action = menu.actions()[0]
-        menu.insertAction(first_action, self.start_console_action)
+        menu.insertAction(first_action, self.start_action)
+        menu.insertAction(first_action, self.restart_action)
         menu.insertSeparator(first_action)
         return menu
 
