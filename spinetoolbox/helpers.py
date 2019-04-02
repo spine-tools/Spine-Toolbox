@@ -23,6 +23,7 @@ import os
 import time
 import shutil
 import glob
+import json
 import spinedb_api
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtCore import __version__ as qt_version
@@ -394,3 +395,17 @@ def format_string_list(str_list):
         str_list (list(str))
     """
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
+
+
+def strip_json_data(data, maxlen):
+    """Return a json equivalent to data, stripped to maxlen characters.
+    """
+    if not data:
+        return data
+    try:
+        stripped_data = json.dumps(json.loads(data))
+    except json.JSONDecodeError:
+        stripped_data = data
+    if len(stripped_data) > 2 * maxlen:
+        stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
+    return stripped_data

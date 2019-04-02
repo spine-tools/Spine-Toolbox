@@ -27,7 +27,7 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIco
     QPainter, QGuiApplication, QPalette
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
-from helpers import rename_dir, fix_name_ambiguity, busy_effect, format_string_list
+from helpers import rename_dir, fix_name_ambiguity, busy_effect, format_string_list, strip_json_data
 from spinedb_api import SpineDBAPIError
 
 
@@ -2111,18 +2111,10 @@ class SubParameterValueModel(SubParameterModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
-        if role in (Qt.DisplayRole, Qt.ToolTipRole):
-            data = super().data(index, Qt.DisplayRole)
-            maxlen = 16 if role == Qt.DisplayRole else 512
-            if self._parent.header[index.column()] == 'value' and data:
-                try:
-                    stripped_data = json.dumps(json.loads(data))
-                except json.JSONDecodeError:
-                    stripped_data = data
-                if len(stripped_data) > 2 * maxlen:
-                    stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
-                return stripped_data
-            return data
+        if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'value':
+            return strip_json_data(super().data(index, Qt.DisplayRole), 512)
+        if role == Qt.DisplayRole and self._parent.header[index.column()] == 'value':
+            return strip_json_data(super().data(index, Qt.DisplayRole), 256)
         return super().data(index, role)
 
 
@@ -2211,18 +2203,10 @@ class SubParameterDefinitionModel(SubParameterModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
-        if role in (Qt.DisplayRole, Qt.ToolTipRole):
-            data = super().data(index, Qt.DisplayRole)
-            maxlen = 16 if role == Qt.DisplayRole else 512
-            if self._parent.header[index.column()] == 'default_value' and data:
-                try:
-                    stripped_data = json.dumps(json.loads(data))
-                except json.JSONDecodeError:
-                    stripped_data = data
-                if len(stripped_data) > 2 * maxlen:
-                    stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
-                return stripped_data
-            return data
+        if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'default_value':
+            return strip_json_data(super().data(index, Qt.DisplayRole), 512)
+        if role == Qt.DisplayRole and self._parent.header[index.column()] == 'default_value':
+            return strip_json_data(super().data(index, Qt.DisplayRole), 256)
         return super().data(index, role)
 
 
