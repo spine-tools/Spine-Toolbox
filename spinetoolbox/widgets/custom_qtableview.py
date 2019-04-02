@@ -69,7 +69,7 @@ class CopyPasteTableView(QTableView):
             for j in range(first.left(), first.right()+1):
                 if h_header.isSectionHidden(j):
                     continue
-                data = self.model().index(i, j).data(Qt.DisplayRole)
+                data = self.model().index(i, j).data(Qt.EditRole)
                 str_data = str(data) if data is not None else ""
                 row.append(str_data)
             rows.append("\t".join(row))

@@ -845,6 +845,7 @@ class TreeViewForm(DataStoreForm):
         """Initialize class."""
         tic = time.clock()
         super().__init__(data_store, db_map, database, tree_view_form_ui())
+        self.takeCentralWidget()
         self.relationship_tree_model = RelationshipTreeModel(self)
         self.selected_rel_tree_indexes = {}
         # Context menus
@@ -961,14 +962,18 @@ class TreeViewForm(DataStoreForm):
         """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
         # Place docks
         for dock in self.findChildren(QDockWidget):
-            if dock in (self.ui.dockWidget_object_tree, self.ui.dockWidget_relationship_tree):
-                continue
             dock.setVisible(True)
             dock.setFloating(False)
             self.addDockWidget(Qt.RightDockWidgetArea, dock)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.ui.dockWidget_object_tree)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.ui.dockWidget_relationship_tree)
+        self.splitDockWidget(
+            self.ui.dockWidget_object_tree,
+            self.ui.dockWidget_object_parameter_value,
+            Qt.Horizontal)
         # Split and tabify
+        self.splitDockWidget(
+            self.ui.dockWidget_object_tree,
+            self.ui.dockWidget_relationship_tree,
+            Qt.Vertical)
         self.splitDockWidget(
             self.ui.dockWidget_object_parameter_value,
             self.ui.dockWidget_parameter_value_list,
