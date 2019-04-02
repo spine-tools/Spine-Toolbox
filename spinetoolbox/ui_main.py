@@ -73,6 +73,7 @@ class ToolboxUI(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
+        self.set_menu_icons()
         self.ui.graphicsView.set_ui(self)
         # Class variables
         self._config = None
@@ -134,6 +135,15 @@ class ToolboxUI(QMainWindow):
         # Initialize widgets that are shared among multiple project items
         self.init_shared_widgets()
         self.restore_ui()
+
+    def set_menu_icons(self):
+        """Set icons to main menu."""
+        self.ui.actionNew.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
+        self.ui.actionOpen.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        self.ui.actionSave.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
+        self.ui.actionSettings.setIcon(self.style().standardIcon(QStyle.SP_FileDialogContentsView))
+        self.ui.actionQuit.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
+        self.ui.actionUser_Guide.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
     def init_conf(self):
         """Load settings from configuration file."""

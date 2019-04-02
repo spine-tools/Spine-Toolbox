@@ -4,6 +4,7 @@
     <file>app.ico</file>
   </qresource>
   <qresource prefix="icons">
+    <file>qt_extended_48x48.png</file>
     <file>project_item_icons/binoculars.svg</file>
     <file>project_item_icons/file-alt.svg</file>
     <file>project_item_icons/database.svg</file>

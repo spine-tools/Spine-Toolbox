@@ -1097,26 +1097,29 @@ class Ui_MainWindow(object):
         self.actionDocumentation = QtWidgets.QAction(MainWindow)
         self.actionDocumentation.setObjectName("actionDocumentation")
         self.actionAbout = QtWidgets.QAction(MainWindow)
+        icon9 = QtGui.QIcon()
+        icon9.addPixmap(QtGui.QPixmap(":/symbols/app.ico"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAbout.setIcon(icon9)
         self.actionAbout.setObjectName("actionAbout")
         self.actionAdd_Data_Connection = QtWidgets.QAction(MainWindow)
-        icon9 = QtGui.QIcon()
-        icon9.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/file-alt.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionAdd_Data_Connection.setIcon(icon9)
+        icon10 = QtGui.QIcon()
+        icon10.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/file-alt.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAdd_Data_Connection.setIcon(icon10)
         self.actionAdd_Data_Connection.setObjectName("actionAdd_Data_Connection")
         self.actionAdd_Data_Store = QtWidgets.QAction(MainWindow)
-        icon10 = QtGui.QIcon()
-        icon10.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/database.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionAdd_Data_Store.setIcon(icon10)
+        icon11 = QtGui.QIcon()
+        icon11.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/database.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAdd_Data_Store.setIcon(icon11)
         self.actionAdd_Data_Store.setObjectName("actionAdd_Data_Store")
         self.actionAdd_Tool = QtWidgets.QAction(MainWindow)
-        icon11 = QtGui.QIcon()
-        icon11.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/hammer.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionAdd_Tool.setIcon(icon11)
+        icon12 = QtGui.QIcon()
+        icon12.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/hammer.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAdd_Tool.setIcon(icon12)
         self.actionAdd_Tool.setObjectName("actionAdd_Tool")
         self.actionAdd_View = QtWidgets.QAction(MainWindow)
-        icon12 = QtGui.QIcon()
-        icon12.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/binoculars.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
-        self.actionAdd_View.setIcon(icon12)
+        icon13 = QtGui.QIcon()
+        icon13.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/binoculars.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAdd_View.setIcon(icon13)
         self.actionAdd_View.setObjectName("actionAdd_View")
         self.actionSave = QtWidgets.QAction(MainWindow)
         self.actionSave.setObjectName("actionSave")
@@ -1147,6 +1150,9 @@ class Ui_MainWindow(object):
         self.actionRestore_Dock_Widgets = QtWidgets.QAction(MainWindow)
         self.actionRestore_Dock_Widgets.setObjectName("actionRestore_Dock_Widgets")
         self.actionAbout_Qt = QtWidgets.QAction(MainWindow)
+        icon14 = QtGui.QIcon()
+        icon14.addPixmap(QtGui.QPixmap(":/icons/qt_extended_48x48.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionAbout_Qt.setIcon(icon14)
         self.actionAbout_Qt.setObjectName("actionAbout_Qt")
         self.actionPackages = QtWidgets.QAction(MainWindow)
         self.actionPackages.setObjectName("actionPackages")
@@ -1331,8 +1337,8 @@ class Ui_MainWindow(object):
         self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1))
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
-from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
+from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

@@ -2622,6 +2622,10 @@
    </property>
   </action>
   <action name="actionAbout">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/symbols/app.ico</normaloff>:/symbols/app.ico</iconset>
+   </property>
    <property name="text">
     <string>About...</string>
    </property>
@@ -2776,6 +2780,10 @@
    </property>
   </action>
   <action name="actionAbout_Qt">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/qt_extended_48x48.png</normaloff>:/icons/qt_extended_48x48.png</iconset>
+   </property>
    <property name="text">
     <string>About Qt...</string>
    </property>
