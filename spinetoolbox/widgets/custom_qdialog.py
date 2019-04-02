@@ -899,17 +899,19 @@ class ManageParameterTagsDialog(ManageItemsDialog):
                 'description': description
             }
             items_to_add.append(kwargs)
+        error_log = list()
         try:
             if items_to_update:
                 parameter_tags, upd_error_log = self._parent.db_map.update_parameter_tags(*items_to_update)
+                error_log += upd_error_log
                 self._parent.update_parameter_tags(parameter_tags)
             if self.removed_id_list:
                 self._parent.db_map.remove_items(parameter_tag_ids=self.removed_id_list)
                 self._parent.remove_parameter_tags(self.removed_id_list)
             if items_to_add:
                 parameter_tags, add_error_log = self._parent.db_map.add_parameter_tags(*items_to_add)
+                error_log += add_error_log
                 self._parent.add_parameter_tags(parameter_tags)
-            error_log = upd_error_log + add_error_log
             if error_log:
                 self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
