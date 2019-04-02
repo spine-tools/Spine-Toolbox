@@ -184,6 +184,8 @@ class ParameterValueDelegate(ParameterDelegate):
     def editorEvent(self, event, model, option, index):
         """Show json popup on hover.
         """
+        return super().editorEvent(event, model, option, index)
+        # TODO: Make the popup work
         if event.type() != QEvent.MouseMove:
             return super().editorEvent(event, model, option, index)
         if self.last_index == index:

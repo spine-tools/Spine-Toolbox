@@ -2111,18 +2111,19 @@ class SubParameterValueModel(SubParameterModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
-        data = super().data(index, role)
-        if role != Qt.DisplayRole:
+        if role in (Qt.DisplayRole, Qt.ToolTipRole):
+            data = super().data(index, Qt.DisplayRole)
+            maxlen = 16 if role == Qt.DisplayRole else 512
+            if self._parent.header[index.column()] == 'value' and data:
+                try:
+                    stripped_data = json.dumps(json.loads(data))
+                except json.JSONDecodeError:
+                    stripped_data = data
+                if len(stripped_data) > 2 * maxlen:
+                    stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
+                return stripped_data
             return data
-        if self._parent.header[index.column()] == 'value' and data:
-            try:
-                stripped_data = json.dumps(json.loads(data))
-            except json.JSONDecodeError:
-                stripped_data = data
-            if len(stripped_data) > 16:
-                return stripped_data[:8] + "..." + stripped_data[-8:]
-            return stripped_data
-        return data
+        return super().data(index, role)
 
 
 class SubParameterDefinitionModel(SubParameterModel):
@@ -2207,6 +2208,22 @@ class SubParameterDefinitionModel(SubParameterModel):
             self.error_log += error_log + error_log_
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Limit the display of json array data."""
+        if role in (Qt.DisplayRole, Qt.ToolTipRole):
+            data = super().data(index, Qt.DisplayRole)
+            maxlen = 16 if role == Qt.DisplayRole else 512
+            if self._parent.header[index.column()] == 'default_value' and data:
+                try:
+                    stripped_data = json.dumps(json.loads(data))
+                except json.JSONDecodeError:
+                    stripped_data = data
+                if len(stripped_data) > 2 * maxlen:
+                    stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
+                return stripped_data
+            return data
+        return super().data(index, role)
 
 
 class EmptyParameterModel(EmptyRowModel):

@@ -458,7 +458,7 @@ class JSONEditor(QTabWidget):
         self._parent = parent
         self._big_sibling = big_sibling
         self._popup = popup
-        # self.setTabPosition(QTabWidget.South)
+        self.setTabPosition(QTabWidget.South)
         self.tab_raw = QWidget()
         vertical_layout = QVBoxLayout(self.tab_raw)
         vertical_layout.setSpacing(0)
