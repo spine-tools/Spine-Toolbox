@@ -119,25 +119,28 @@ def busy_effect(func):
     return new_function
 
 
-def project_dir(configs=None):
+def project_dir(qsettings):
     """Returns current project directory.
 
     Args:
-        configs (ConfigurationParser): Configuration parser object. Default value is for unit tests.
+        qsettings (QSettings): Settings object
     """
-    if not configs:
-        return DEFAULT_PROJECT_DIR
-    proj_dir = configs.get('settings', 'project_directory')
+    # NOTE: This is not actually used. The key is not saved to qsettings anywhere. This is a placeholder for code
+    # if we want to be able to change the projects directory at some point.
+    proj_dir = qsettings.value("appSettings/projectsDir", defaultValue="")
     if not proj_dir:
         return DEFAULT_PROJECT_DIR
     else:
         return proj_dir
 
 
-def get_datetime(configs):
-    """Returns date and time string for appending into Event Log messages."""
-    show_date = configs.getboolean("settings", "datetime")
-    if show_date:
+def get_datetime(show):
+    """Returns date and time string for appending into Event Log messages.
+
+    Args:
+        show (boolean): True returns date and time string. False returns empty string.
+    """
+    if show:
         t = datetime.datetime.now()
         return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
     else:

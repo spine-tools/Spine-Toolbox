@@ -43,8 +43,7 @@ from widgets.julia_repl_widget import JuliaREPLWidget
 from widgets.python_repl_widget import PythonReplWidget
 import widgets.toolbars
 from project import SpineToolboxProject
-from configuration import ConfigurationParser
-from config import SPINE_TOOLBOX_VERSION, CONFIGURATION_FILE, SETTINGS, STATUSBAR_SS, TEXTBROWSER_SS, \
+from config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, \
     MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, TREEVIEW_HEADER_SS
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
@@ -76,11 +75,11 @@ class ToolboxUI(QMainWindow):
         self.set_menu_icons()
         self.ui.graphicsView.set_ui(self)
         # Class variables
-        self._config = None
         self._project = None
         self.project_item_model = None
         self.tool_template_model = None
         self.connection_model = None
+        self.show_datetime = self.update_datetime()
         # Widget and form references
         self.settings_form = None
         self.tool_config_asst_form = None
@@ -129,7 +128,6 @@ class ToolboxUI(QMainWindow):
         self.hide_tabs()
         # Add toggleview actions
         self.add_toggle_view_actions()
-        self.init_conf()
         self.connect_signals()
         self.init_project()
         # Initialize widgets that are shared among multiple project items
@@ -145,10 +143,11 @@ class ToolboxUI(QMainWindow):
         self.ui.actionQuit.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
         self.ui.actionUser_Guide.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
 
-    def init_conf(self):
-        """Load settings from configuration file."""
-        self._config = ConfigurationParser(self, CONFIGURATION_FILE, defaults=SETTINGS)
-        self._config.load()
+    def update_datetime(self):
+        """Returns a boolean, which determines whether
+        date and time is prepended to every Event Log message."""
+        d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
+        return False if d == 0 else True
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -233,10 +232,11 @@ class ToolboxUI(QMainWindow):
         """Initializes project at application start-up. Loads the last project that was open
         when app was closed or starts without a project if app is started for the first time.
         """
-        if not self._config.getboolean("settings", "open_previous_project"):
+        open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="2"))
+        if not open_previous_project == 2:  # 2: Qt.Checked, ie. open_previous_project==True
             return
-        # Get path to previous project file from configuration file
-        project_file_path = self._config.get("settings", "previous_project")
+        # Get path to previous project file
+        project_file_path = self._qsettings.value("appSettings/previousProject", defaultValue="")
         if not project_file_path:
             return
         if not os.path.isfile(project_file_path):
@@ -251,7 +251,7 @@ class ToolboxUI(QMainWindow):
     @Slot(name="new_project")
     def new_project(self):
         """Shows new project form."""
-        self.project_form = NewProjectForm(self, self._config)
+        self.project_form = NewProjectForm(self)
         self.project_form.show()
 
     def create_project(self, name, description):
@@ -262,7 +262,7 @@ class ToolboxUI(QMainWindow):
             description (str): Project description
         """
         self.clear_ui()
-        self._project = SpineToolboxProject(self, name, description, self._config)
+        self._project = SpineToolboxProject(self, name, description)
         self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
@@ -282,7 +282,8 @@ class ToolboxUI(QMainWindow):
         connections = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getOpenFileName(self, 'Open project', project_dir(self._config), 'Projects (*.proj)')
+            answer = QFileDialog.getOpenFileName(self, 'Open project',
+                                                 project_dir(self._qsettings), 'Projects (*.proj)')
             load_path = answer[0]
             if load_path == '':  # Cancel button clicked
                 return False
@@ -329,7 +330,7 @@ class ToolboxUI(QMainWindow):
         except KeyError:
             pass
         # Create project
-        self._project = SpineToolboxProject(self, proj_name, proj_desc, self._config, work_dir)
+        self._project = SpineToolboxProject(self, proj_name, proj_desc, work_dir)
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear QTextBrowsers
@@ -612,8 +613,8 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("No project open")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, 'Select tool template file',
-                                             os.path.join(project_dir(self._config), os.path.pardir),
+        answer = QFileDialog.getOpenFileName(self, 'Select Tool template file',
+                                             os.path.join(project_dir(self._qsettings), os.path.pardir),
                                              'JSON (*.json)')
         if answer[0] == '':  # Cancel button clicked
             return
@@ -786,7 +787,9 @@ class ToolboxUI(QMainWindow):
             return
         for name in item_names:
             ind = self.project_item_model.find_item(name)
-            self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"))
+            delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
+            delete_bool = False if delete_int == 0 else True
+            self.remove_item(ind, delete_item=delete_bool)
         self.msg.emit("All {0} items removed from project".format(n))
         self.activate_no_selection_tab()
         self.ui.graphicsView.scene().clear()
@@ -1010,7 +1013,7 @@ class ToolboxUI(QMainWindow):
             msg (str): String written to QTextBrowser
         """
         open_tag = "<span style='color:white;white-space: pre-wrap;'>"
-        date_str = get_datetime(self._config)
+        date_str = get_datetime(show=self.show_datetime)
         message = open_tag + date_str + msg + "</span>"
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
@@ -1024,7 +1027,7 @@ class ToolboxUI(QMainWindow):
             msg (str): String written to QTextBrowser
         """
         open_tag = "<span style='color:#00ff00;white-space: pre-wrap;'>"
-        date_str = get_datetime(self._config)
+        date_str = get_datetime(show=self.show_datetime)
         message = open_tag + date_str + msg + "</span>"
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
@@ -1038,7 +1041,7 @@ class ToolboxUI(QMainWindow):
             msg (str): String written to QTextBrowser
         """
         open_tag = "<span style='color:#ff3333;white-space: pre-wrap;'>"
-        date_str = get_datetime(self._config)
+        date_str = get_datetime(show=self.show_datetime)
         message = open_tag + date_str + msg + "</span>"
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
@@ -1052,7 +1055,7 @@ class ToolboxUI(QMainWindow):
             msg (str): String written to QTextBrowser
         """
         open_tag = "<span style='color:yellow;white-space: pre-wrap;'>"
-        date_str = get_datetime(self._config)
+        date_str = get_datetime(show=self.show_datetime)
         message = open_tag + date_str + msg + "</span>"
         self.ui.textBrowser_eventlog.append(message)
         # noinspection PyArgumentList
@@ -1132,7 +1135,7 @@ class ToolboxUI(QMainWindow):
     @Slot(name="show_settings")
     def show_settings(self):
         """Show Settings widget."""
-        self.settings_form = SettingsWidget(self, self._config)
+        self.settings_form = SettingsWidget(self)
         self.settings_form.show()
 
     @Slot(name="show_tool_config_asst")
@@ -1224,7 +1227,9 @@ class ToolboxUI(QMainWindow):
                 new_name = answer[0]
                 self.project_item_model.setData(ind, new_name)
         elif option == "Remove item":
-            self.remove_item(ind, delete_item=self._config.getboolean("settings", "delete_data"), check_dialog=True)
+            delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
+            delete_bool = False if delete_int == 0 else True
+            self.remove_item(ind, delete_item=delete_bool, check_dialog=True)
         elif option == "Open project directory...":
             file_url = "file:///" + self._project.project_dir
             self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
@@ -1458,8 +1463,8 @@ class ToolboxUI(QMainWindow):
         Returns:
             True if user clicks Yes or False if exit is cancelled
         """
-        ex = self._config.getboolean("settings", "show_exit_prompt")
-        if ex:
+        ex = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
+        if ex == 2:  # 2 as in True
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Confirm exit")
@@ -1472,10 +1477,10 @@ class ToolboxUI(QMainWindow):
             if answer == QMessageBox.Yes:
                 # Update conf file according to checkbox status
                 if not chkbox.checkState():
-                    show_prompt = True
+                    show_prompt = "2"  # 2 as in True
                 else:
-                    show_prompt = False
-                self._config.setboolean("settings", "show_exit_prompt", show_prompt)
+                    show_prompt = "0"  # 0 as in False
+                self._qsettings.setValue("appSettings/showExitPrompt", show_prompt)
                 return True
             else:
                 return False
@@ -1483,11 +1488,11 @@ class ToolboxUI(QMainWindow):
 
     def show_save_project_prompt(self):
         """Shows the save project message box."""
-        save_at_exit = self._config.get("settings", "save_at_exit")
-        if save_at_exit == "0":
+        save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
+        if save_at_exit == 0:
             # Don't save project and don't show message box
             return
-        elif save_at_exit == "1":  # Default
+        elif save_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
@@ -1502,17 +1507,17 @@ class ToolboxUI(QMainWindow):
             if answer == QMessageBox.Yes:
                 self.save_project()
                 if chk == 2:
-                    # Save preference into config file
-                    self._config.set("settings", "save_at_exit", "2")
+                    # Save preference
+                    self._qsettings.setValue("appSettings/saveAtExit", "2")
             else:
                 if chk == 2:
-                    # Save preference into config file
-                    self._config.set("settings", "save_at_exit", "0")
-        elif save_at_exit == "2":
+                    # Save preference
+                    self._qsettings.setValue("appSettings/saveAtExit", "0")
+        elif save_at_exit == 2:
             # Save project and don't show message box
             self.save_project()
         else:
-            self._config.set("settings", "save_at_exit", "1")
+            self._qsettings.setValue("appSettings/saveAtExit", "1")
         return
 
     def closeEvent(self, event=None):
@@ -1529,12 +1534,11 @@ class ToolboxUI(QMainWindow):
             return
         # Save current project (if enabled in settings)
         if not self._project:
-            self._config.set("settings", "previous_project", "")
+            self._qsettings.setValue("appSettings/previousProject", "")
         else:
-            self._config.set("settings", "previous_project", self._project.path)
+            self._qsettings.setValue("appSettings/previousProject", self._project.path)
             # Show save project prompt
             self.show_save_project_prompt()
-        self._config.save()
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
