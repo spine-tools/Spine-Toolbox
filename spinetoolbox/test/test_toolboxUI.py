@@ -41,14 +41,11 @@ class TestToolboxUI(unittest.TestCase):
                             datefmt='%Y-%m-%d %H:%M:%S')
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes an instance of ToolboxUI class.
-        We want the ToolboxUI to start with the default settings and without a project so
-        we need to mock CONFIGURATION_FILE to prevent loading user's own configs from settings.conf.
-        """
-        patched_conf_file = os.path.abspath(os.path.join(".", "default_settings.conf"))
-        with mock.patch("ui_main.CONFIGURATION_FILE", new=patched_conf_file), \
-                mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
-            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
+        """Overridden method. Runs before each test. Makes an instance of ToolboxUI class."""
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+                mock.patch("ui_main.ToolboxUI.init_project") as mock_init_project, \
+                mock.patch("ui_main.ToolboxUI.restore_ui") as mock_restore_ui:
+            # Replace Julia and Python REPLs with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             self.toolbox = ToolboxUI()
 
@@ -75,8 +72,7 @@ class TestToolboxUI(unittest.TestCase):
         mocked for the duration of with statement.
         """
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("project.create_dir") as mock_create_dir, \
-                mock.patch("ui_main.CONFIGURATION_FILE") as mock_confs:
+                mock.patch("project.create_dir") as mock_create_dir:
             self.toolbox.create_project("Unit Test Project", "Project for unit tests.")
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
         self.toolbox.init_project_item_model()
@@ -137,8 +133,7 @@ class TestToolboxUI(unittest.TestCase):
         Skips creating a .proj file and creating directories.
         """
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("project.create_dir") as mock_create_dir, \
-                mock.patch("ui_main.CONFIGURATION_FILE") as mock_confs:
+                mock.patch("project.create_dir") as mock_create_dir:
             self.toolbox.create_project("Unit Test Project", "Project for unit tests.")
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
 

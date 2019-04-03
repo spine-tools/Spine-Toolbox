@@ -46,10 +46,7 @@ class TestDataStore(unittest.TestCase):
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        patched_conf_file = os.path.abspath(os.path.join(APPLICATION_PATH,
-                                                         os.path.pardir, "conf", "unittest_settings.conf"))
-        with mock.patch("ui_main.CONFIGURATION_FILE", new=patched_conf_file), \
-                mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             self.toolbox = ToolboxUI()
@@ -81,7 +78,8 @@ class TestDataStore(unittest.TestCase):
         self.toolbox.project().add_data_store("DS", "", reference=None)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
-        with mock.patch("data_store.QFileDialog") as mock_file_dialog:
+        with mock.patch("data_store.QFileDialog") as mock_file_dialog, \
+            mock.patch("data_store.QCheckBox") as mock_checkbox:
             file_path = os.path.join(data_store.data_dir, "mock_db.sqlite")
             mock_file_dialog.getSaveFileName.return_value = [file_path]
             data_store.activate()

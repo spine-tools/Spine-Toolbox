@@ -44,9 +44,7 @@ class TestSpineToolboxProject(unittest.TestCase):
         We want the ToolboxUI to start with the default settings and without a project so
         we need to mock CONFIGURATION_FILE to prevent loading user's own configs from settings.conf.
         """
-        patched_conf_file = os.path.abspath(os.path.join(".", "default_settings.conf"))
-        with mock.patch("ui_main.CONFIGURATION_FILE", new=patched_conf_file), \
-             mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
                 mock.patch("project.create_dir") as mock_create_dir, \
                 mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed

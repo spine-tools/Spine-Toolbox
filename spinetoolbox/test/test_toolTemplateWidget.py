@@ -41,9 +41,7 @@ class TestToolTemplateWidget(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        patched_conf_file = os.path.abspath(os.path.join(".", "default_settings.conf"))
-        with mock.patch("ui_main.CONFIGURATION_FILE", new=patched_conf_file), \
-                mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             self.toolbox = ToolboxUI()
