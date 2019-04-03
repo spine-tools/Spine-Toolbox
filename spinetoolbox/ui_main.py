@@ -124,6 +124,7 @@ class ToolboxUI(QMainWindow):
         self.show_connections_tab = QAction(self)  # self is for PySide 5.6
         self.show_item_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
+        self.test_variable_push = QAction(self)
         self.set_debug_qactions()
         self.hide_tabs()
         # Add toggleview actions
@@ -182,6 +183,7 @@ class ToolboxUI(QMainWindow):
         self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
         self.show_connections_tab.triggered.connect(self.toggle_connections_tab_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
+        self.test_variable_push.triggered.connect(self.python_repl.test_push_vars)
         # Tool templates tab
         self.add_tool_template_popup_menu = AddToolTemplatePopupMenu(self)
         self.ui.toolButton_add_tool_template.setMenu(self.add_tool_template_popup_menu)
@@ -969,9 +971,11 @@ class ToolboxUI(QMainWindow):
         self.show_item_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
         self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
         self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
+        self.test_variable_push.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_7))
         self.addAction(self.show_item_tabbar)
         self.addAction(self.show_connections_tab)
         self.addAction(self.show_supported_img_formats)
+        self.addAction(self.test_variable_push)
 
     def hide_tabs(self):
         """Hides project item info tab bar and connections tab in project item QTreeView.

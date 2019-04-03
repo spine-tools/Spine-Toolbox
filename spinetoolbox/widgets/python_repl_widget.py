@@ -337,7 +337,7 @@ class PythonReplWidget(RichJupyterWidget):
             # TODO: If there are more commands to execute should we stop or continue to next command
             self.execution_finished_signal.emit(-9999)  # any error code
 
-    @Slot(dict, "iopub_msg_received")
+    @Slot(dict, name="iopub_msg_received")
     def iopub_msg_received(self, msg):
         """Message received from the IOPUB channel.
         Note: We are only monitoring when the kernel has started
@@ -405,6 +405,34 @@ class PythonReplWidget(RichJupyterWidget):
             self._toolbox.msg.emit("Shutting down Python Console...")
         self.kernel_client.stop_channels()
         self.kernel_manager.shutdown_kernel()
+
+    def push_vars(self, var_name, var_value):
+        """Push a variable to Python Console session.
+        Simply executes command 'var_name=var_value'.
+
+        Args:
+            var_name (str): Variable name
+            var_value (object): Variable value
+
+        Returns:
+            (bool): True if succeeded, False otherwise
+        """
+        if not self.kernel_manager:
+            return False
+        self.execute("{0}={1}".format(var_name, var_value))
+        return True
+
+    @Slot(name="test_push_vars")
+    def test_push_vars(self):
+        """QAction slot to test pushing variables to Python Console."""
+        a = dict()
+        a["eka"] = 1
+        a["toka"] = 2
+        a["kolmas"] = 3
+        if not self.push_vars("a", a):
+            self._toolbox.msg_error.emit("Pushing variable to Python Console failed")
+        else:
+            self._toolbox.msg.emit("Variable 'a' is now in Python Console")
 
     def _context_menu_make(self, pos):
         """Reimplemented to add custom actions."""
