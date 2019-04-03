@@ -137,7 +137,7 @@ class ToolInstance(QObject):
                 kern_name = k_tuple[0]
                 kern_display_name = k_tuple[1]
                 # Check if this kernel is already running
-                if self.tool_process.kernel_name == kern_name:
+                if self.tool_process.kernel_manager and self.tool_process.kernel_name == kern_name:
                     self.tool_process.execute_instance(self.ipython_command_list)
                 else:
                     # Append command to buffer and start executing when kernel is up and running

@@ -746,12 +746,12 @@ class DataStoreForm(QMainWindow):
 
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
-        config = self._data_store._toolbox._config
-        commit_at_exit = config.get("settings", "commit_at_exit")
-        if commit_at_exit == "0":
+        qsettings = self._data_store._toolbox.qsettings()
+        commit_at_exit = int(qsettings.value("appSettings/commitAtExit", defaultValue="1"))
+        if commit_at_exit == 0:
             # Don't commit session and don't show message box
             return
-        elif commit_at_exit == "1":  # Default
+        elif commit_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)
@@ -767,17 +767,17 @@ class DataStoreForm(QMainWindow):
             if answer == QMessageBox.Yes:
                 self.show_commit_session_dialog()
                 if chk == 2:
-                    # Save preference into config file
-                    config.set("settings", "commit_at_exit", "2")
+                    # Save preference
+                    qsettings.setValue("appSettings/commitAtExit", "2")
             else:
                 if chk == 2:
-                    # Save preference into config file
-                    config.set("settings", "commit_at_exit", "0")
-        elif commit_at_exit == "2":
+                    # Save preference
+                    qsettings.setValue("appSettings/commitAtExit", "0")
+        elif commit_at_exit == 2:
             # Commit session and don't show message box
             self.show_commit_session_dialog()
         else:
-            config.set("settings", "commit_at_exit", "1")
+            qsettings.setValue("appSettings/commitAtExit", "1")
         return
 
     def restore_ui(self):

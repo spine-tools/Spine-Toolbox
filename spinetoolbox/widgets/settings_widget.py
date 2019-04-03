@@ -30,15 +30,13 @@ class SettingsWidget(QWidget):
 
     Attributes:
         toolbox (ToolboxUI): Parent widget.
-        configs (ConfigurationParser): Configuration object
     """
-    def __init__(self, toolbox, configs):
+    def __init__(self, toolbox):
         """Initialize class."""
         # FIXME: setting the parent to toolbox causes the checkboxes in the
         # groupBox_general to not layout correctly, this might be caused elsewhere?
         super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
         self._toolbox = toolbox  # QWidget parent
-        self._configs = configs
         self._project = self._toolbox.project()
         self._qsettings = self._toolbox.qsettings()
         self.orig_work_dir = ""  # Work dir when this widget was opened
@@ -209,43 +207,37 @@ class SettingsWidget(QWidget):
             self._toolbox.ui.graphicsView.scene().update()
 
     def read_settings(self):
-        """Read current settings from config and qsettings objects and update UI to display them."""
-        open_previous_project = self._configs.getboolean("settings", "open_previous_project")
-        show_exit_prompt = self._configs.getboolean("settings", "show_exit_prompt")
-        save_at_exit = self._configs.get("settings", "save_at_exit")  # Tri-state checkBox
-        commit_at_exit = self._configs.get("settings", "commit_at_exit")  # Tri-state checkBox
+        """Read saved settings from app QSettings instance and update UI to display them."""
+        # checkBox check state 0: unchecked, 1: partially checked, 2: checked
         # QSettings value() method returns a str even if a boolean was stored
+        open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="2"))
+        show_exit_prompt = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
+        save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))  # tri-state
+        datetime = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
+        delete_data = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
         smooth_zoom = self._qsettings.value("appSettings/smoothZoom", defaultValue="false")
-        proj_dir = self._configs.get("settings", "project_directory")
-        datetime = self._configs.getboolean("settings", "datetime")
+        bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
+        bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
         use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2")
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
         use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="0")
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
-        delete_data = self._configs.getboolean("settings", "delete_data")
-        bg_grid = self._qsettings.value("appSettings/bgGrid", defaultValue="false")
-        bg_color = self._qsettings.value("appSettings/bgColor", defaultValue="false")
-        if open_previous_project:
+        commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
+        if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
-        if show_exit_prompt:
+        if show_exit_prompt == 2:
             self.ui.checkBox_exit_prompt.setCheckState(Qt.Checked)
-        if save_at_exit == "0":  # Not needed but makes the code more readable.
+        if save_at_exit == 0:  # Not needed but makes the code more readable.
             self.ui.checkBox_save_at_exit.setCheckState(Qt.Unchecked)
-        elif save_at_exit == "1":
+        elif save_at_exit == 1:
             self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
-        elif save_at_exit == "2":
+        else:  # save_at_exit == 2:
             self.ui.checkBox_save_at_exit.setCheckState(Qt.Checked)
-        else:  # default
-            self.ui.checkBox_save_at_exit.setCheckState(Qt.PartiallyChecked)
-        if commit_at_exit == "0":  # Not needed but makes the code more readable.
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
-        elif commit_at_exit == "1":
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
-        elif commit_at_exit == "2":
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
-        else:  # default
-            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+        if datetime == 2:
+            self.ui.checkBox_datetime.setCheckState(Qt.Checked)
+        if delete_data == 2:
+            self.ui.checkBox_delete_data.setCheckState(Qt.Checked)
         if smooth_zoom == "true":
             self.ui.checkBox_use_smooth_zoom.setCheckState(Qt.Checked)
         if bg_grid == "true":
@@ -257,10 +249,13 @@ class SettingsWidget(QWidget):
         else:
             self.bg_color = bg_color
         self.update_bg_color()
-        if datetime:
-            self.ui.checkBox_datetime.setCheckState(Qt.Checked)
-        if delete_data:
-            self.ui.checkBox_delete_data.setCheckState(Qt.Checked)
+        if commit_at_exit == 0:  # Not needed but makes the code more readable.
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Unchecked)
+        elif commit_at_exit == 1:
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
+        else:  # commit_at_exit == "2":
+            self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
+        proj_dir = ""  # Unused. Save/read this using QSettings, if we want to change the projects dir at some point
         if not proj_dir:
             proj_dir = DEFAULT_PROJECT_DIR
         self.ui.lineEdit_project_dir.setText(proj_dir)
@@ -290,17 +285,19 @@ class SettingsWidget(QWidget):
         On Windows, booleans and integers are saved as strings. To make it consistent,
         we should use strings.
         """
+        # checkBox check state 0: unchecked, 1: partially checked, 2: checked
+        # checkBox check states are casted from integers to string because of Linux
         # General
-        open_prev_proj = int(self.ui.checkBox_open_previous_project.checkState())
-        self._configs.setboolean("settings", "open_previous_project", open_prev_proj)  # TODO: Move to QSettings
-        exit_prompt = int(self.ui.checkBox_exit_prompt.checkState())
-        self._configs.setboolean("settings", "show_exit_prompt", exit_prompt)  # TODO: Move to QSettings
+        open_prev_proj = str(int(self.ui.checkBox_open_previous_project.checkState()))
+        self._qsettings.setValue("appSettings/openPreviousProject", open_prev_proj)
+        exit_prompt = str(int(self.ui.checkBox_exit_prompt.checkState()))
+        self._qsettings.setValue("appSettings/showExitPrompt", exit_prompt)
         save_at_exit = str(int(self.ui.checkBox_save_at_exit.checkState()))
-        self._configs.set("settings", "save_at_exit", save_at_exit)  # TODO: Move to QSettings
-        datetime = int(self.ui.checkBox_datetime.checkState())
-        self._configs.setboolean("settings", "datetime", datetime)  # TODO: Move to QSettings
-        delete_data = int(self.ui.checkBox_delete_data.checkState())
-        self._configs.setboolean("settings", "delete_data", delete_data)  # TODO: Move to QSettings
+        self._qsettings.setValue("appSettings/saveAtExit", save_at_exit)
+        datetime = str(int(self.ui.checkBox_datetime.checkState()))
+        self._qsettings.setValue("appSettings/dateTime", datetime)
+        delete_data = str(int(self.ui.checkBox_delete_data.checkState()))
+        self._qsettings.setValue("appSettings/deleteData", delete_data)
         smooth_zoom = "true" if int(self.ui.checkBox_use_smooth_zoom.checkState()) else "false"
         self._qsettings.setValue("appSettings/smoothZoom", smooth_zoom)
         bg_grid = "true" if self.ui.radioButton_bg_grid.isChecked() else "false"
@@ -313,7 +310,6 @@ class SettingsWidget(QWidget):
         self._qsettings.setValue("appSettings/gamsPath", gams_path)
         # Julia (cast to str because of Linux)
         use_emb_julia = str(int(self.ui.checkBox_use_embedded_julia.checkState()))  # Cast to str because of Linux
-        # 0:unchecked, 2:checked
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
         julia_path = self.ui.lineEdit_julia_path.text().strip()
         if not self.file_is_valid(julia_path, "Invalid Julia Interpreter"):  # Check it's a file and it exists
@@ -326,14 +322,14 @@ class SettingsWidget(QWidget):
         if not self.file_is_valid(python_path, "Invalid Python Interpreter"):  # Check it's a file and it exists
             return
         self._qsettings.setValue("appSettings/pythonPath", python_path)
-        self.check_if_python_env_changed(python_path)
         # Data Store Views
         commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
-        self._configs.set("settings", "commit_at_exit", commit_at_exit)  # TODO: Move to QSettings
+        self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
+        # Check if something in the app needs to be updated
+        self._toolbox.show_datetime = self._toolbox.update_datetime()
+        self.check_if_python_env_changed(python_path)
         # Project
         self.update_project_settings()
-        # Save to settings.conf
-        self._configs.save()
         self.close()
 
     def update_project_settings(self):
