@@ -23,10 +23,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   on Windows) instead of the directory where the GAMS program is located.
 - Selected Julia and GAMS are now stored to persisten memory using Qt's QSettings class and not into 
   settings.conf file. This means that these options have been set to factory defaults in Settings. 
+- All application Settings are now saved using Qt's QSettings class. *conf/settings.conf* file is not 
+  needed anymore.
 
 ### Deprecated
 
 ### Removed
+- ConfigurationParser class in configuration.py
 
 ### Fixed
 

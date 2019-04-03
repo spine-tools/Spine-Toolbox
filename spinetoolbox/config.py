@@ -38,13 +38,11 @@ INVALID_FILENAME_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*"]
 # Paths to application, configuration file, default project and work dirs, and documentation index page
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
-    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "conf", "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
     DOC_INDEX_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html", "index.html"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
-    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "conf", "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
     DOC_INDEX_PATH = os.path.abspath(os.path.join(
@@ -93,21 +91,6 @@ SQL_DIALECT_API = {
 # Julia REPL constants
 JL_REPL_TIME_TO_DEAD = 5.0
 JL_REPL_RESTART_LIMIT = 3
-
-# Default settings
-SETTINGS = {"project_directory": "",
-            "open_previous_project": "true",
-            "previous_project": "",
-            "show_exit_prompt": "true",
-            "logging_level": "2",
-            "datetime": "true",
-            "gams_path": "",
-            "use_repl": "true",
-            "julia_path": "",
-            "save_at_exit": "1",
-            "commit_at_exit": "1",
-            "use_smooth_zoom": "false",
-            "delete_data": "false"}
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{" \
