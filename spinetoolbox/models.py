@@ -2114,7 +2114,7 @@ class SubParameterValueModel(SubParameterModel):
         if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'value':
             return strip_json_data(super().data(index, Qt.DisplayRole), 512)
         if role == Qt.DisplayRole and self._parent.header[index.column()] == 'value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 256)
+            return strip_json_data(super().data(index, Qt.DisplayRole), 16)
         return super().data(index, role)
 
 
@@ -2206,7 +2206,7 @@ class SubParameterDefinitionModel(SubParameterModel):
         if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'default_value':
             return strip_json_data(super().data(index, Qt.DisplayRole), 512)
         if role == Qt.DisplayRole and self._parent.header[index.column()] == 'default_value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 256)
+            return strip_json_data(super().data(index, Qt.DisplayRole), 16)
         return super().data(index, role)
 
 
