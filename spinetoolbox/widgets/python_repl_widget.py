@@ -100,7 +100,9 @@ class PythonReplWidget(RichJupyterWidget):
         if python_version_str == "":
             # The version str might be in stderr instead of stdout (happens at least with Python 2.7.14)
             python_version_str = q_process.error_output
-        python_str, ver = python_version_str.split()
+        p_v_list = python_version_str.split()
+        python_str = p_v_list[0]  # This is just 'Python'
+        ver = p_v_list[1]  # version e.g. 3.7.1
         kernel_name = "python-" + ver[:3]
         kernel_display_name = "Python-" + ver
         self.may_need_restart = False
