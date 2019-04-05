@@ -72,8 +72,13 @@ class ToolboxUI(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
-        self.set_menu_icons()
         self.ui.graphicsView.set_ui(self)
+        # Set style sheets
+        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
+        self.ui.statusbar.setFixedHeight(20)
+        self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
+        self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
+        self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
         self._project = None
         self.project_item_model = None
@@ -103,12 +108,6 @@ class ToolboxUI(QMainWindow):
         self.connections_tab = None
         self.zoom_widget = None
         self.zoom_widget_action = None
-        # Initialize application
-        self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
-        self.ui.statusbar.setFixedHeight(20)
-        self.ui.textBrowser_eventlog.setStyleSheet(TEXTBROWSER_SS)
-        self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
-        self.setStyleSheet(MAINWINDOW_SS)
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
@@ -118,37 +117,21 @@ class ToolboxUI(QMainWindow):
         # Make Python REPL
         self.python_repl = PythonReplWidget(self)
         self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
-        # Application main menu
+        # Setup main window menu
         self.setup_zoom_action()
-        # QActions
+        self.add_toggle_view_actions()
+        # Hidden QActions for debugging or testing
         self.show_connections_tab = QAction(self)  # self is for PySide 5.6
         self.show_item_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
         self.test_variable_push = QAction(self)
         self.set_debug_qactions()
         self.hide_tabs()
-        # Add toggleview actions
-        self.add_toggle_view_actions()
+        # Finalize init
         self.connect_signals()
         self.init_project()
-        # Initialize widgets that are shared among multiple project items
-        self.init_shared_widgets()
+        self.init_shared_widgets()  # Shared among multiple project items
         self.restore_ui()
-
-    def set_menu_icons(self):
-        """Set icons to main menu."""
-        self.ui.actionNew.setIcon(self.style().standardIcon(QStyle.SP_FileIcon))
-        self.ui.actionOpen.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        self.ui.actionSave.setIcon(self.style().standardIcon(QStyle.SP_DialogSaveButton))
-        self.ui.actionSettings.setIcon(self.style().standardIcon(QStyle.SP_FileDialogContentsView))
-        self.ui.actionQuit.setIcon(self.style().standardIcon(QStyle.SP_DialogCloseButton))
-        self.ui.actionUser_Guide.setIcon(self.style().standardIcon(QStyle.SP_FileDialogInfoView))
-
-    def update_datetime(self):
-        """Returns a boolean, which determines whether
-        date and time is prepended to every Event Log message."""
-        d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
-        return False if d == 0 else True
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -175,6 +158,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
         self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
+        self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())
@@ -200,26 +184,6 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
         self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
-
-    @Slot(name="_handle_zoom_widget_minus_pressed")
-    def _handle_zoom_widget_minus_pressed(self):
-        self.ui.graphicsView.zoom_out()
-
-    @Slot(name="_handle_zoom_widget_plus_pressed")
-    def _handle_zoom_widget_plus_pressed(self):
-        self.ui.graphicsView.zoom_in()
-
-    @Slot(name="_handle_zoom_widget_reset_pressed")
-    def _handle_zoom_widget_reset_pressed(self):
-        self.ui.graphicsView.reset_zoom()
-
-    def setup_zoom_action(self):
-        """Setup zoom action in view menu."""
-        self.zoom_widget = ZoomWidget(self)
-        self.zoom_widget_action = QWidgetAction(self)
-        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.zoom_widget_action)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -772,7 +736,6 @@ class ToolboxUI(QMainWindow):
             json.dump(dicts, fp, indent=4)
         self.msg_success.emit("Tool template removed")
 
-    @Slot(name="remove_all_items")
     def remove_all_items(self):
         """Slot for Remove All button."""
         if not self._project:
@@ -957,6 +920,29 @@ class ToolboxUI(QMainWindow):
         else:  # Remove link
             self.ui.graphicsView.remove_link(index)
 
+    @Slot(name="_handle_zoom_widget_minus_pressed")
+    def _handle_zoom_widget_minus_pressed(self):
+        """Slot for handling case when '-' button in menu is pressed."""
+        self.ui.graphicsView.zoom_out()
+
+    @Slot(name="_handle_zoom_widget_plus_pressed")
+    def _handle_zoom_widget_plus_pressed(self):
+        """Slot for handling case when '+' button in menu is pressed."""
+        self.ui.graphicsView.zoom_in()
+
+    @Slot(name="_handle_zoom_widget_reset_pressed")
+    def _handle_zoom_widget_reset_pressed(self):
+        """Slot for handling case when 'reset zoom' button in menu is pressed."""
+        self.ui.graphicsView.reset_zoom()
+
+    def setup_zoom_action(self):
+        """Setup zoom action in view menu."""
+        self.zoom_widget = ZoomWidget(self)
+        self.zoom_widget_action = QWidgetAction(self)
+        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
+        self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.zoom_widget_action)
+
     @Slot(name="restore_dock_widgets")
     def restore_dock_widgets(self):
         """Dock all floating and or hidden QDockWidgets back to the main window."""
@@ -1008,6 +994,12 @@ class ToolboxUI(QMainWindow):
         else:
             self.connections_tab = self.ui.tabWidget.widget(1)
             self.ui.tabWidget.removeTab(1)
+
+    def update_datetime(self):
+        """Returns a boolean, which determines whether
+        date and time is prepended to every Event Log message."""
+        d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
+        return False if d == 0 else True
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
