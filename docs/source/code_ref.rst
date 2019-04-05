@@ -9,4 +9,4 @@ Source Code Reference
     :caption: Modules and Packages
 
     apidocs/modules
-    apidocs/spinedatabase_api
+    apidocs/spinedb_api

@@ -5,7 +5,6 @@ spinetoolbox
    :maxdepth: 4
 
    config
-   configuration
    data_connection
    data_store
    datapackage_import_export
