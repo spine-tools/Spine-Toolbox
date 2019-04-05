@@ -13,8 +13,7 @@
 Classes for handling models in PySide2's model/view framework.
 Note: These are Spine Toolbox internal data models.
 
-
-:author: P. Savolainen (VTT)
+:authors: P. Savolainen (VTT), M. Marin (KTH), P. Vennström (VTT)
 :date:   23.1.2018
 """
 
@@ -23,11 +22,10 @@ import os
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QPixmap, \
-    QPainter, QGuiApplication, QPalette
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
-from helpers import rename_dir, fix_name_ambiguity, busy_effect, format_string_list, strip_json_data
+from helpers import rename_dir, busy_effect, format_string_list, strip_json_data
 from spinedb_api import SpineDBAPIError
 
 
@@ -2732,13 +2730,13 @@ class ObjectParameterModel(MinimalTableModel):
                 continue
             if row < model.rowCount():
                 if role == Qt.DecorationRole and column == self.object_class_name_column:
-                     object_class_name = model.index(row, column).data(Qt.DisplayRole)
-                     return self._tree_view_form.object_icon(object_class_name)
+                    object_class_name = model.index(row, column).data(Qt.DisplayRole)
+                    return self._tree_view_form.object_icon(object_class_name)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
         if role == Qt.DecorationRole and column == self.object_class_name_column:
-             object_class_name = self.empty_row_model.index(row, column).data(Qt.DisplayRole)
-             return self._tree_view_form.object_icon(object_class_name)
+            object_class_name = self.empty_row_model.index(row, column).data(Qt.DisplayRole)
+            return self._tree_view_form.object_icon(object_class_name)
         return self.empty_row_model.index(row, column).data(role)
 
     def rowCount(self, parent=QModelIndex()):
@@ -4393,7 +4391,7 @@ class DatapackageForeignKeysModel(EmptyRowModel):
 
 class TableModel(QAbstractItemModel):
     def __init__(self, headers = [], data = []):
-    # def __init__(self, tasks=[[]]):
+        # def __init__(self, tasks=[[]]):
         super(TableModel, self).__init__()
         self._data = data
         self._headers = headers

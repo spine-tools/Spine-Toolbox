@@ -53,11 +53,6 @@
     <file>minus.png</file>
     <file>add_tool.png</file>
     <file>remove_tool.png</file>
-    <file>remove_all.png</file>
-    <file>ds_icon.png</file>
-    <file>dc_icon.png</file>
-    <file>tool_icon.png</file>
-    <file>view_icon.png</file>
     <file>object_icon.png</file>
     <file>relationship_icon.png</file>
   </qresource>
