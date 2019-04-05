@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Classes for data store widgets.
+Contains three classes: TreeViewForm, GraphViewForm, and their parent class DataStoreForm.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
@@ -62,7 +62,7 @@ class DataStoreForm(QMainWindow):
         data_store (DataStore): The DataStore instance that owns this form
         db_map (DiffDatabaseMapping): The object relational database mapping
         database (str): The database name
-        ui (Ui_MainWindow(object)): The ui to load the form with
+        ui: UI definition of the form that is initialized
     """
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")

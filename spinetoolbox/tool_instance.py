@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-ToolInstance class definition.
+Contains ToolInstance class.
 
 :authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   1.2.2018
@@ -29,16 +29,21 @@ from helpers import create_output_dir_timestamp, create_dir
 class ToolInstance(QObject):
     """Class for Tool instances.
 
-    Attributes:
+    Args:
         tool_template (ToolTemplate): Tool for which this instance is created
         toolbox (ToolboxUI): QMainWindow instance
         tool_output_dir (str): Directory where results are saved
         project (SpineToolboxProject): Current project
+        execute_in_work (bool): True executes instance in work dir, False executes in Tool template source dir
+
+    Class Variables:
+        instance_finished_signal (Signal): Signal to emit when a Tool instance has finished processing
     """
     instance_finished_signal = Signal(int, name="instance_finished_signal")
 
     def __init__(self, tool_template, toolbox, tool_output_dir, project, execute_in_work):
-        """Tool instance constructor."""
+        """class constructor."""
+
         super().__init__()
         self.tool_template = tool_template
         self._toolbox = toolbox
@@ -50,7 +55,8 @@ class ToolInstance(QObject):
         self.output_dir = None
         if self.execute_in_work:  # Execute in work directory
             wrk_dir = self._project.work_dir
-            self.basedir = tempfile.mkdtemp(suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir)
+            self.basedir = tempfile.mkdtemp(suffix='__toolbox',
+                                            prefix=self.tool_template.short_name + '__', dir=wrk_dir)
         else:  # Execute in source directory
             self.basedir = self.tool_template.path
         self.julia_repl_command = None
@@ -75,13 +81,13 @@ class ToolInstance(QObject):
 
     @property
     def _checkout(self):
-        """Copy Tool files to work directory."""
+        """Copies Tool template files to work directory."""
         n_copied_files = 0
         # Make work directory anchor with path as tooltip
-        work_anchor = "<a style='color:#99CCFF;' title='" + self.basedir + "' href='file:///" + self.basedir \
-                      + "'>work directory</a>"
+        work_anchor = "<a style='color:#99CCFF;' title='" + self.basedir + "' href='file:///" \
+                      + self.basedir + "'>work directory</a>"
         self._toolbox.msg.emit("*** Copying Tool template <b>{0}</b> source files to {1} ***"
-                         .format(self.tool_template.name, work_anchor))
+                               .format(self.tool_template.name, work_anchor))
         for filepath in self.tool_template.includes:
             dirname, file_pattern = os.path.split(filepath)
             src_dir = os.path.join(self.tool_template.path, dirname)
@@ -103,7 +109,7 @@ class ToolInstance(QObject):
                     except OSError as e:
                         logging.error(e)
                         self._toolbox.msg_error.emit("\tCopying file <b>{0}</b> to <b>{1}</b> failed"
-                                               .format(src_file, dst_file))
+                                                     .format(src_file, dst_file))
                         return False
         if n_copied_files == 0:
             self._toolbox.msg_warning.emit("Warning: No files copied")
@@ -112,7 +118,7 @@ class ToolInstance(QObject):
         return True
 
     def execute(self):
-        """Start executing tool template instance in console or in QProcess."""
+        """Starts executing Tool template instance in Julia Console, Python Console or in a sub-process."""
         self._toolbox.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
         if self.tool_template.tooltype == "julia":
             if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
@@ -160,10 +166,10 @@ class ToolInstance(QObject):
 
     @Slot(int, name="julia_repl_tool_finished")
     def julia_repl_tool_finished(self, ret):
-        """Run when Julia tool using REPL has finished processing.
+        """Runs when Julia tool using Julia Console has finished processing.
 
         Args:
-            ret (int): Return code given by tool
+            ret (int): Tool template process return value
         """
         self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)  # Disconnect after exec.
         if ret != 0:
@@ -183,14 +189,14 @@ class ToolInstance(QObject):
         else:
             self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process = None
-        self.save_output_files(ret)
+        self.handle_output_files(ret)
 
     @Slot(int, name="julia_tool_finished")
     def julia_tool_finished(self, ret):
-        """Run when Julia tool from command line (without REPL) has finished processing.
+        """Runs when Julia tool from command line (without REPL) has finished processing.
 
         Args:
-            ret (int): Return code given by tool
+            ret (int): Tool template process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -208,14 +214,14 @@ class ToolInstance(QObject):
             self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
-        self.save_output_files(ret)
+        self.handle_output_files(ret)
 
     @Slot(int, name="python_console_tool_finished")
     def python_console_tool_finished(self, ret):
-        """Run when Python Tool in Python Console has finished processing.
+        """Runs when Python Tool in Python Console has finished processing.
 
         Args:
-            ret (int): Return code given by tool
+            ret (int): Tool template process return value
         """
         self.tool_process.execution_finished_signal.disconnect(self.python_console_tool_finished)
         if ret != 0:
@@ -235,14 +241,14 @@ class ToolInstance(QObject):
         else:
             self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process = None
-        self.save_output_files(ret)
+        self.handle_output_files(ret)
 
     @Slot(int, name="python_tool_finished")
     def python_tool_finished(self, ret):
-        """Run when Python tool from command line has finished processing.
+        """Runs when Python tool from command line has finished processing.
 
         Args:
-            ret (int): Return code given by tool
+            ret (int): Tool template process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.python_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -260,15 +266,14 @@ class ToolInstance(QObject):
             self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
-        self.save_output_files(ret)
+        self.handle_output_files(ret)
 
     @Slot(int, name="gams_tool_finished")
     def gams_tool_finished(self, ret):
-        """Run when GAMS tool has finished processing. Copies output of tool
-        to project output directory.
+        """Runs when GAMS tool has finished processing.
 
         Args:
-            ret (int): Return code given by tool
+            ret (int): Tool template process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)  # Disconnect after execution
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -287,15 +292,14 @@ class ToolInstance(QObject):
             self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
-        self.save_output_files(ret)
+        self.handle_output_files(ret)
 
     @Slot(int, name="executable_tool_finished")
     def executable_tool_finished(self, ret):
-        """Run when an executable tool has finished processing. Copies output of tool
-        to project output directory.
+        """Runs when an executable tool has finished processing.
 
         Args:
-            ret (int): Return code given by tool
+            ret (int): Tool template process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.executable_tool_finished)
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -313,10 +317,16 @@ class ToolInstance(QObject):
             self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
-        self.save_output_files(ret)
+        self.handle_output_files(ret)
 
-    def save_output_files(self, ret):
-        """Copy output files from work directory to Tool output directory."""
+    def handle_output_files(self, ret):
+        """Creates a timestamped result directory for Tool template output files. Starts copying Tool
+        template output files from work directory to result directory and print messages to Event
+        Log depending on how the operation went.
+
+        Args:
+            ret (int): Tool template process return value
+        """
         output_dir_timestamp = create_output_dir_timestamp()  # Get timestamp when tool finished
         # Create an output folder with timestamp and copy output directly there
         if ret != 0:
@@ -361,76 +371,84 @@ class ToolInstance(QObject):
         self.instance_finished_signal.emit(ret)
 
     def terminate_instance(self):
-        """Terminate tool process execution."""
+        """Terminates Tool instance execution."""
         if not self.tool_process:
             return
         self.tool_process.terminate_process()
 
     def remove(self):
-        """Remove the tool instance files."""
+        """[Obsolete] Removes Tool instance files from work directory."""
         shutil.rmtree(self.basedir, ignore_errors=True)
 
     def copy_output(self, target_dir):
-            """Save output of a tool instance
+        """Copies Tool template output files from work directory to given target directory.
 
-            Args:
-                target_dir (str): Copy destination
+        Args:
+            target_dir (str): Destination directory for Tool template output files
 
-            Returns:
-                ret (bool): Operation success
-            """
-            failed_files = list()
-            saved_files = list()
-            # logging.debug("Saving result files to <{0}>".format(target_dir))
-            for pattern in self.tool_template.outputfiles:
-                # Create subdirectories if necessary
-                dst_subdir, fname_pattern = os.path.split(pattern)
-                # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern,
-                #                                                                     dst_subdir, fname_pattern))
-                if not dst_subdir:
-                    # No subdirectories to create
-                    # self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
-                    target = target_dir
-                else:
-                    # Create subdirectory structure to result directory
-                    result_subdir_path = os.path.abspath(os.path.join(target_dir, dst_subdir))
-                    if not os.path.exists(result_subdir_path):
-                        try:
-                            create_dir(result_subdir_path)
-                        except OSError:
-                            self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
-                                                         .format(result_subdir_path))
-                            continue
-                        self._toolbox.msg.emit("\tCreated result subdirectory <b>{0}{1}</b>"
-                                               .format(os.path.sep, dst_subdir))
-                    target = result_subdir_path
-                # Check for wildcards in pattern
-                if ('*' in pattern) or ('?' in pattern):
-                    for fname_path in glob.glob(os.path.join(self.basedir, pattern)):  # fname_path is a full path
-                        fname = os.path.split(fname_path)[1]  # File name (no path)
-                        dst = os.path.join(target, fname)
-                        shutil.copy(fname_path, dst)
-                        saved_files.append(os.path.join(dst_subdir, fname))
-                else:
-                    output_file = os.path.join(self.basedir, pattern)
-                    # logging.debug("Looking for {0}".format(output_file))
-                    if not os.path.isfile(output_file):
-                        failed_files.append(pattern)
+        Returns:
+            (tuple): Contains two lists. The first list contains paths to successfully
+            copied files. The second list contains paths (or patterns) of Tool template
+            output files that were not found.
+
+        Raises:
+            OSError: If creating a directory fails.
+        """
+        failed_files = list()
+        saved_files = list()
+        # logging.debug("Saving result files to <{0}>".format(target_dir))
+        for pattern in self.tool_template.outputfiles:
+            # Create subdirectories if necessary
+            dst_subdir, fname_pattern = os.path.split(pattern)
+            # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern,
+            #                                                                     dst_subdir, fname_pattern))
+            if not dst_subdir:
+                # No subdirectories to create
+                # self._toolbox.msg.emit("\tCopying file <b>{0}</b>".format(fname))
+                target = target_dir
+            else:
+                # Create subdirectory structure to result directory
+                result_subdir_path = os.path.abspath(os.path.join(target_dir, dst_subdir))
+                if not os.path.exists(result_subdir_path):
+                    try:
+                        create_dir(result_subdir_path)
+                    except OSError:
+                        self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
+                                                     .format(result_subdir_path))
                         continue
-                    # logging.debug("Saving file {0}".format(fname_pattern))
-                    dst = os.path.join(target, fname_pattern)
-                    # logging.debug("Copying to {0}".format(dst))
-                    shutil.copy(output_file, dst)
-                    saved_files.append(pattern)
-            return saved_files, failed_files
+                    self._toolbox.msg.emit("\tCreated result subdirectory <b>{0}{1}</b>"
+                                           .format(os.path.sep, dst_subdir))
+                target = result_subdir_path
+            # Check for wildcards in pattern
+            if ('*' in pattern) or ('?' in pattern):
+                for fname_path in glob.glob(os.path.join(self.basedir, pattern)):  # fname_path is a full path
+                    fname = os.path.split(fname_path)[1]  # File name (no path)
+                    dst = os.path.join(target, fname)
+                    shutil.copy(fname_path, dst)
+                    saved_files.append(os.path.join(dst_subdir, fname))
+            else:
+                output_file = os.path.join(self.basedir, pattern)
+                # logging.debug("Looking for {0}".format(output_file))
+                if not os.path.isfile(output_file):
+                    failed_files.append(pattern)
+                    continue
+                # logging.debug("Saving file {0}".format(fname_pattern))
+                dst = os.path.join(target, fname_pattern)
+                # logging.debug("Copying to {0}".format(dst))
+                shutil.copy(output_file, dst)
+                saved_files.append(pattern)
+        return saved_files, failed_files
 
     def make_work_output_dirs(self):
-        """Make sure that work directory has the necessary output directories for Tool output files.
+        """Makes sure that work directory has the necessary output directories for Tool output files.
         Checks only "outputfiles" list. Alternatively you can add directories to "inputfiles" list
         in the tool definition file.
 
         Returns:
-            Boolean value depending on operation success.
+            bool: True for success, False otherwise.
+
+        Raises:
+            OSError: If creating an output directory to work fails.
         """
         # TODO: Remove duplicate directory names from the list of created directories.
         for path in self.tool_template.outputfiles:

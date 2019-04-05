@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Class for main application GUI functions.
+Contains ToolboxUI class.
 
 :author: P. Savolainen (VTT)
 :date:   14.12.2017

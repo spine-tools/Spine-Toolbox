@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Spine Toolbox grid view
+Contains TabularViewForm class and some related constants.
 
 :author: P. Vennström (VTT)
 :date:   1.11.2018
@@ -36,6 +36,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
 
+# TODO: How about moving these constants to config.py?
 ParameterValue = namedtuple('ParameterValue',['id','has_value','has_json'])
 
 # constant strings
@@ -51,6 +52,7 @@ JSON_TIME_NAME = "json time"
 PARAMETER_NAME = "db parameter"
 
 
+# TODO: Move to helpers.py?
 def unpack_json(data):
     expanded_data = []
     for d in data:
