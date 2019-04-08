@@ -566,7 +566,7 @@ class MappingOptionWidget(QWidget):
         self._ui_class_type.addItems(['Object','Relationship'])
         self._ui_parameter_type.addItems(['Single value','Time series','None'])
 
-        self._ui_dimension.setMinimum(2)
+        self._ui_dimension.setMinimum(1)
 
         # layout
         groupbox = QGroupBox("Mapping:")
