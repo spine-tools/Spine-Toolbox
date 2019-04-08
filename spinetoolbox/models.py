@@ -2050,8 +2050,12 @@ class SubParameterModel(MinimalTableModel):
         if len(indexes) != len(data):
             return False
         items_to_update = self.items_to_update(indexes, data)
-        self.update_items_in_db(items_to_update)
+        upd_ids = self.update_items_in_db(items_to_update)
+        header = self._parent.horizontal_header_labels()
+        id_column = header.index('id')
         for k, index in enumerate(indexes):
+            if self._main_data[index.row()][id_column] not in upd_ids:
+                continue
             self._main_data[index.row()][index.column()] = data[k]
         return True
 
@@ -2060,8 +2064,8 @@ class SubParameterModel(MinimalTableModel):
         return []
 
     def update_items_in_db(self, items_to_update):
-        """Try and update parameter values in database. Reimplement in subclasses."""
-        pass
+        """A list of ids of items updated in the database. Reimplement in subclasses."""
+        return []
 
 
 class SubParameterValueModel(SubParameterModel):
@@ -2099,13 +2103,15 @@ class SubParameterValueModel(SubParameterModel):
     def update_items_in_db(self, items_to_update):
         """Try and update parameter values in database."""
         if not items_to_update:
-            return
+            return []
         try:
             upd_items, error_log = self._parent.db_map.update_parameter_values(*items_to_update)
             self.updated_count += upd_items.count()
             self.error_log += error_log
+            return [x.id for x in upd_items]
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
+            return []
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
@@ -2183,7 +2189,7 @@ class SubParameterDefinitionModel(SubParameterModel):
     def update_items_in_db(self, items_to_update):
         """Try and update parameter definitions in database."""
         if not items_to_update:
-            return
+            return []
         try:
             error_log = []
             tag_dict = dict()
@@ -2192,12 +2198,14 @@ class SubParameterDefinitionModel(SubParameterModel):
                 if parameter_tag_id_list is None:
                     continue
                 tag_dict[item["id"]] = parameter_tag_id_list
-            upd_items, error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
-            upd_items_, error_log_ = self._parent.db_map.update_parameters(*items_to_update)
-            self.updated_count += upd_items.count() + upd_items_.count()
-            self.error_log += error_log + error_log_
+            upd_def_tags, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
+            upd_params, param_error_log = self._parent.db_map.update_parameters(*items_to_update)
+            self.updated_count += upd_def_tags.count() + upd_params.count()
+            self.error_log += def_tag_error_log + param_error_log
+            return [x.id for x in upd_params]
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
+            return []
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""

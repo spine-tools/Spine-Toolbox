@@ -52,7 +52,7 @@ from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity
+from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity, format_string_list
 
 
 class DataStoreForm(QMainWindow):
