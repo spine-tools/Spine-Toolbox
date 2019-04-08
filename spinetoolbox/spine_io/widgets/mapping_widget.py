@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide2.QtWidgets import QWidget, QVBoxLayout, QDialogButtonBox, QGridLayout, QComboBox, QPushButton, QTableView, QHBoxLayout, QSpinBox, QGroupBox, QLabel, QListView, QCheckBox
+from PySide2.QtWidgets import QWidget, QVBoxLayout, QDialogButtonBox, QGridLayout, QComboBox, QPushButton, QTableView, QHBoxLayout, QSpinBox, QGroupBox, QLabel, QListView, QCheckBox, QSplitter
 from PySide2.QtCore import Qt, QAbstractTableModel, Signal, QAbstractListModel,QModelIndex
 
 from widgets.custom_menus import FilterMenu
@@ -135,12 +135,12 @@ class MappingTableModel(QAbstractTableModel):
         elif mapping is None:
             mapping_type = 'None'
         elif type(mapping) == str:
-            mapping_type = 'String'
+            mapping_type = 'Constant'
         elif type(mapping) == Mapping:
             if mapping.map_type == 'column':
                 mapping_type = 'Row values'
             elif mapping.map_type == 'column_name':
-                mapping_type = 'Single column header'
+                mapping_type = 'Header value'
             elif mapping.map_type == 'row':
                 if mapping.value_reference == -1:
                     mapping_type = 'Pivoted Headers'
@@ -150,7 +150,7 @@ class MappingTableModel(QAbstractTableModel):
     
     def get_map_value_display(self, mapping, name):
         if name == "Parameter values:" and self._model.is_pivoted():
-            mapping_value = "Columns values under pivoted columns"
+            mapping_value = "Pivoted values"
         elif mapping is None:
             mapping_value = ''
         elif type(mapping) == str:
@@ -161,8 +161,10 @@ class MappingTableModel(QAbstractTableModel):
                     mapping_value = 'Headers'
                 else:
                     mapping_value = 'Row: ' +  str(mapping.value_reference)
-            else:
+            elif mapping.map_type == 'column':
                 mapping_value = 'Column: ' +  str(mapping.value_reference)
+            else:
+                mapping_value = 'Header: ' +  str(mapping.value_reference)
         return mapping_value
     
     def get_map_append_display(self, mapping, name):
@@ -393,14 +395,29 @@ class MappingWidget(QWidget):
 
         # layout
         self.setLayout(QVBoxLayout())
+        splitter = QSplitter()
+        
+        top_widget = QWidget()
+        top_widget.setLayout(QVBoxLayout())
         bl = QHBoxLayout()
         bl.addWidget(self._ui_add_mapping)
         bl.addWidget(self._ui_remove_mapping)
+        top_widget.layout().addLayout(bl)
+        top_widget.layout().addWidget(self._ui_list)
+        
+        bottom_widget = QWidget()
+        bottom_widget.setLayout(QVBoxLayout())
+        bottom_widget.layout().addWidget(self._ui_options)
+        bottom_widget.layout().addWidget(self._ui_table)
+        
+        splitter.addWidget(top_widget)
+        splitter.addWidget(bottom_widget)
+        splitter.setOrientation(Qt.Vertical)
 
-        self.layout().addLayout(bl)
-        self.layout().addWidget(self._ui_list)
-        self.layout().addWidget(self._ui_options)
-        self.layout().addWidget(self._ui_table)
+        self.layout().addWidget(splitter)
+        #self.layout().addWidget(self._ui_list)
+        #self.layout().addWidget(self._ui_options)
+        #self.layout().addWidget(self._ui_table)
         
         # connect signals
         self._select_handle = None

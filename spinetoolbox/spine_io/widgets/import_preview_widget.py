@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from PySide2.QtWidgets import QWidget, QListWidget, QVBoxLayout, QDialogButtonBox, QHBoxLayout, QTableView, QMenu, QListWidgetItem, QErrorMessage
+from PySide2.QtWidgets import QWidget, QListWidget, QVBoxLayout, QDialogButtonBox, QHBoxLayout, QTableView, QMenu, QListWidgetItem, QErrorMessage, QSplitter
 from PySide2.QtCore import Signal, QModelIndex, QAbstractItemModel, Qt, QItemSelectionModel, QPoint
 from PySide2.QtGui import QColor
 
@@ -39,18 +39,27 @@ class ImportPreviewWidget(QWidget):
 
         # layout
         self.setLayout(QVBoxLayout())
-        main_layout = QHBoxLayout()
-        self.layout().addLayout(main_layout)
+        main_splitter = QSplitter()
+        self.layout().addWidget(main_splitter)
 
+        # splitter for layout
         list_layout = QVBoxLayout()
         preview_layout = QVBoxLayout()
         mapping_layout = QVBoxLayout()
+        list_widget = QWidget()
+        preview_widget = QWidget()
+        mapping_widget = QWidget()
+        list_widget.setLayout(list_layout)
+        preview_widget.setLayout(preview_layout)
+        mapping_widget.setLayout(mapping_layout)
+        main_splitter.addWidget(list_widget)
+        main_splitter.addWidget(preview_widget)
+        main_splitter.addWidget(mapping_widget)
+        
+        
         mapping_layout.addWidget(self._ui_mapper)
         list_layout.addWidget(self._ui_list)
-        main_layout.addLayout(list_layout)
         preview_layout.addWidget(self.connector.option_widget())
-        main_layout.addLayout(preview_layout)
-        main_layout.addLayout(mapping_layout)
         self.layout().addWidget(self._dialog_buttons)
         preview_layout.addWidget(self._ui_table)
         
@@ -202,7 +211,6 @@ class ImportPreviewWidget(QWidget):
         """
         close connector connection
         """
-        print('connection closed')
         self.connector.close_connection()
 
 
