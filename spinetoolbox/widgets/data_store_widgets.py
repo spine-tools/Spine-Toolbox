@@ -1925,8 +1925,6 @@ class TreeViewForm(DataStoreForm):
             to_update.append(dict(id=id, value_list=value_list))
         # Get ids to remove
         removed_ids = [ind.internalPointer().id for ind in toplevel_indexes]
-        if not removed_ids:
-            return
         try:
             # NOTE: this below should never fail with SpineIntegrityError,
             # since we're removing from items that were already there
