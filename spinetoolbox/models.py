@@ -2198,11 +2198,11 @@ class SubParameterDefinitionModel(SubParameterModel):
                 if parameter_tag_id_list is None:
                     continue
                 tag_dict[item["id"]] = parameter_tag_id_list
-            upd_def_tags, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
+            upd_def_tag_list, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
             upd_params, param_error_log = self._parent.db_map.update_parameters(*items_to_update)
-            self.updated_count += upd_def_tags.count() + upd_params.count()
+            self.updated_count += len(upd_def_tag_list) + upd_params.count()
             self.error_log += def_tag_error_log + param_error_log
-            return [x.id for x in upd_params]
+            return [x.parameter_definition_id for x in upd_def_tag_list] + [x.id for x in upd_params]
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
             return []
@@ -2545,14 +2545,15 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
                 name_tag_dict[item["name"]] = parameter_tag_id_list
             parameters, error_log = self._parent.db_map.add_parameters(*items)
             self.added_rows = list(items_to_add.keys())
+            self.error_log.extend(error_log)
             id_column = self._parent.horizontal_header_labels().index('id')
             tag_dict = dict()
             for i, parameter in enumerate(parameters):
                 if parameter.name in name_tag_dict:
                     tag_dict[parameter.id] = name_tag_dict[parameter.name]
                 self._main_data[self.added_rows[i]][id_column] = parameter.id
-            upd_items = self._parent.db_map.set_parameter_definition_tags(tag_dict)
-            self.error_log.extend(error_log)
+            upd_def_tag_list, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
+            self.error_log.extend(def_tag_error_log)
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
 
