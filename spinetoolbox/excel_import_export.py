@@ -24,7 +24,7 @@ import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 
-from spinedatabase_api import SpineDBAPIError, import_data
+from spinedb_api import SpineDBAPIError, import_data
 import logging
 from operator import itemgetter
 
@@ -40,7 +40,7 @@ def import_xlsx_to_db(db, filepath):
     when trying to write to database.
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database to write to
+        db (spinedb_api.DatabaseMapping): database mapping for database to write to
         filepath (str): str with filepath to excel file to read from
 
     Returns:
@@ -56,10 +56,10 @@ def import_xlsx_to_db(db, filepath):
     object_values = []
     for sheet in obj_data:
         object_classes.append(sheet.class_name)
-        objects.extend([(o, sheet.class_name) for o in sheet.objects])
-        object_parameters.extend([(o, sheet.class_name) for o in sheet.parameters])
+        objects.extend([(sheet.class_name, o) for o in sheet.objects])
+        object_parameters.extend([(sheet.class_name, o) for o in sheet.parameters])
         d_getter = itemgetter(*[1,2,0,3])
-        object_values.extend([d_getter(d) for d in sheet.parameter_values])
+        object_values.extend([(sheet.class_name,) + d_getter(d) for d in sheet.parameter_values])
 
     rel_classes = []
     rels = []
@@ -71,7 +71,7 @@ def import_xlsx_to_db(db, filepath):
         d_getter = itemgetter(*[num_oc+1, 0, num_oc+2])
         rel_classes.append((sheet.class_name, sheet.object_classes))
         rels.extend([(sheet.class_name, o) for o in sheet.objects])
-        rel_parameters.extend([(o, sheet.class_name) for o in sheet.parameters])
+        rel_parameters.extend([(sheet.class_name, o) for o in sheet.parameters])
         rel_values.extend([(sheet.class_name, rel_getter(d)) + d_getter(d) for d in sheet.parameter_values])
 
     num_imported, errors = import_data(db, object_classes, rel_classes, object_parameters, rel_parameters, objects, rels, object_values, rel_values)
@@ -83,7 +83,7 @@ def get_objects_and_parameters(db):
     """Exports all object data from spine database into unstacked list of lists
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List) First list contains parameter data, second one json data
@@ -120,7 +120,7 @@ def get_relationships_and_parameters(db):
     """Exports all relationship data from spine database into unstacked list of lists
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List) First list contains parameter data, second one json data
@@ -272,7 +272,7 @@ def get_unstacked_relationships(db):
     """Gets all data for relationships in a unstacked list of list
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List): Two list of data for relationship, one with parameter values
@@ -321,7 +321,7 @@ def get_unstacked_objects(db):
     """Gets all data for objects in a unstacked list of list
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List): Two list of data for objects, one with parameter values
@@ -497,7 +497,7 @@ def export_spine_database_to_xlsx(db, filepath):
     """Writes all data in a spine database into an excel file.
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database.
+        db (spinedb_api.DatabaseMapping): database mapping for database.
         filepath (str): str with filepath to save excel file to.
     """
     obj_data, obj_json_data = get_unstacked_objects(db)
@@ -519,6 +519,7 @@ def read_spine_xlsx(filepath):
     """
     wb = load_workbook(filepath, read_only=True)
     sheets = wb.sheetnames
+    ErrorLogMsg = namedtuple('ErrorLogMsg',('msg','db_type','imported_from','other'))
 
     obj_data = []
     rel_data = []
@@ -546,8 +547,7 @@ def read_spine_xlsx(filepath):
                 else:
                     obj_data.append(data)
             except Exception as e:
-                error_log.append(["sheet", ws.title,
-                                  "Error reading sheet {}: {}".format(ws.title, e)])
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e),"sheet", filepath,''))
         elif sheet_data == "json array":
             # read sheet with data type: 'json array'
             try:
@@ -557,8 +557,7 @@ def read_spine_xlsx(filepath):
                 else:
                     obj_json_data.append(data)
             except Exception as e:
-                error_log.append(["sheet", ws.title,
-                                  "Error reading sheet {}: {}".format(ws.title, e)])
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e),"sheet", filepath,''))
     wb.close()
 
     # merge sheets that have the same class.

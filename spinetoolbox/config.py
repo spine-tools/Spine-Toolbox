@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Spine Toolbox default configurations.
+Application constants and style sheets
 
 :author: P. Savolainen (VTT)
 :date:   2.1.2018
@@ -20,8 +20,8 @@ import sys
 import os
 from PySide2.QtGui import QColor
 
-SPINE_TOOLBOX_VERSION = "0.2"
-REQUIRED_SPINE_DBAPI_VERSION = "0.0.16"
+SPINE_TOOLBOX_VERSION = "0.2.3"
+REQUIRED_SPINEDB_API_VERSION = "0.0.22"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -38,13 +38,11 @@ INVALID_FILENAME_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*"]
 # Paths to application, configuration file, default project and work dirs, and documentation index page
 if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
-    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, "conf", "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
     DOC_INDEX_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html", "index.html"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
-    CONFIGURATION_FILE = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "conf", "settings.conf"))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
     DOC_INDEX_PATH = os.path.abspath(os.path.join(
@@ -67,8 +65,14 @@ if not sys.platform == "win32":
 else:
     JULIA_EXECUTABLE = "julia.exe"
 
+# Python
+if not sys.platform == "win32":
+    PYTHON_EXECUTABLE = "python3"
+else:
+    PYTHON_EXECUTABLE = "python.exe"
+
 # Tool types
-TOOL_TYPES = ["GAMS", "Julia", "Executable"]
+TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
 
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']
@@ -87,21 +91,6 @@ SQL_DIALECT_API = {
 # Julia REPL constants
 JL_REPL_TIME_TO_DEAD = 5.0
 JL_REPL_RESTART_LIMIT = 3
-
-# Default settings
-SETTINGS = {"project_directory": "",
-            "open_previous_project": "true",
-            "previous_project": "",
-            "show_exit_prompt": "true",
-            "logging_level": "2",
-            "datetime": "true",
-            "gams_path": "",
-            "use_repl": "true",
-            "julia_path": "",
-            "save_at_exit": "1",
-            "commit_at_exit": "1",
-            "use_smooth_zoom": "false",
-            "delete_data": "false"}
 
 # Stylesheets
 STATUSBAR_SS = "QStatusBar{" \
@@ -172,7 +161,7 @@ MAINWINDOW_SS = "QMainWindow::separator{width: 3px; background-color: lightgray;
                 "QCheckBox{padding: 2px; spacing: 10px; outline-style: dashed; outline-width: 1px; outline-color: black;}" \
                 "QComboBox:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
-                "QTextEdit:focus{border-color: black; border-width: 2px; border-style: ridge;}" \
+                "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
                 "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
 
 TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ecd8c6; font-size: 12px;}"

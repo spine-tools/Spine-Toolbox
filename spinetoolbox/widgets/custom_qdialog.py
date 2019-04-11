@@ -23,12 +23,12 @@ from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit,
     QComboBox, QSpinBox
 from PySide2.QtCore import Signal, Slot, Qt, QSize
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
-from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
+from spinedb_api import SpineDBAPIError
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
     AddParameterEnumsDelegate, LineEditDelegate
 from widgets.custom_qtableview import CopyPasteTableView
-from helpers import busy_effect, object_pixmap
+from helpers import busy_effect, object_pixmap, format_string_list
 
 
 class ManageItemsDialog(QDialog):
@@ -159,11 +159,11 @@ class AddObjectClassesDialog(ManageItemsDialog):
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            object_classes = self._parent.db_map.add_object_classes(*kwargs_list)
+            object_classes, error_log = self._parent.db_map.add_object_classes(*kwargs_list)
             self._parent.add_object_classes(object_classes)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
@@ -240,11 +240,11 @@ class AddObjectsDialog(ManageItemsDialog):
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            objects = self._parent.db_map.add_objects(*kwargs_list)
+            objects, error_log = self._parent.db_map.add_objects(*kwargs_list)
             self._parent.add_objects(objects)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
@@ -266,13 +266,13 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
         layout = QHBoxLayout(widget)
         layout.addWidget(QLabel("Number of dimensions"))
         self.spin_box = QSpinBox(self)
-        self.spin_box.setMinimum(2)
+        self.spin_box.setMinimum(1)
         layout.addWidget(self.spin_box)
         layout.addStretch()
         self.layout().insertWidget(0, widget)
         self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
         self.table_view.setItemDelegate(AddRelationshipClassesDelegate(parent))
-        self.number_of_dimensions = 2
+        self.number_of_dimensions = 1
         self.object_class_one_name = None
         if object_class_one_id:
             object_class_one = self._parent.db_map.single_object_class(id=object_class_one_id).one_or_none()
@@ -280,7 +280,7 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
                 self.object_class_one_name = object_class_one.name
         self.connect_signals()
         self.model.set_horizontal_header_labels(
-            ['object class 1 name', 'object class 2 name', 'relationship class name'])
+            ['object class 1 name', 'relationship class name'])
         self.model.set_default_row(**{'object class 1 name': self.object_class_one_name})
         self.model.clear()
         self.table_view.resizeColumnsToContents()
@@ -360,9 +360,6 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
                         "Couldn't find object class '{}' at row {}".format(object_class_name, i + 1))
                     return
                 object_class_id_list.append(object_class.id)
-            if len(object_class_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
             wide_kwargs = {
                 'name': relationship_class_name,
                 'object_class_id_list': object_class_id_list
@@ -372,11 +369,11 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            wide_relationship_classes = self._parent.db_map.add_wide_relationship_classes(*wide_kwargs_list)
+            wide_relationship_classes, error_log = self._parent.db_map.add_wide_relationship_classes(*wide_kwargs_list)
             self._parent.add_relationship_classes(wide_relationship_classes)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
@@ -507,9 +504,6 @@ class AddRelationshipsDialog(ManageItemsDialog):
                     self._parent.msg_error.emit("Couldn't find object '{}' at row {}".format(object_name, i + 1))
                     return
                 object_id_list.append(object_.id)
-            if len(object_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
             wide_kwargs = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
@@ -520,11 +514,11 @@ class AddRelationshipsDialog(ManageItemsDialog):
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            wide_relationships = self._parent.db_map.add_wide_relationships(*wide_kwargs_list)
+            wide_relationships, error_log = self._parent.db_map.add_wide_relationships(*wide_kwargs_list)
             self._parent.add_relationships(wide_relationships)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
@@ -590,8 +584,10 @@ class EditObjectClassesDialog(ManageItemsDialog):
             self._parent.msg_error.emit("Nothing to update")
             return
         try:
-            object_classes = self._parent.db_map.update_object_classes(*kwargs_list)
+            object_classes, error_log = self._parent.db_map.update_object_classes(*kwargs_list)
             self._parent.update_object_classes(object_classes)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -658,8 +654,10 @@ class EditObjectsDialog(ManageItemsDialog):
             self._parent.msg_error.emit("Nothing to update")
             return
         try:
-            objects = self._parent.db_map.update_objects(*kwargs_list)
+            objects, error_log = self._parent.db_map.update_objects(*kwargs_list)
             self._parent.update_objects(objects)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -721,8 +719,10 @@ class EditRelationshipClassesDialog(ManageItemsDialog):
             self._parent.msg_error.emit("Nothing to update")
             return
         try:
-            wide_relationship_classes = self._parent.db_map.update_wide_relationship_classes(*kwargs_list)
+            wide_relationship_classes, error_log = self._parent.db_map.update_wide_relationship_classes(*kwargs_list)
             self._parent.update_relationship_classes(wide_relationship_classes)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -734,7 +734,7 @@ class EditRelationshipsDialog(ManageItemsDialog):
     Attributes:
         parent (TreeViewForm): data store widget
         kwargs_list (list): list of dictionaries corresponding to relationships to edit/update
-        relationship_class (KeyedTuple): the relationship class item (all edited relationships must be of this class)
+        relationship_class (dict): the relationship class item (all edited relationships must be of this class)
     """
     def __init__(self, parent, kwargs_list, relationship_class):
         super().__init__(parent, kwargs_list)
@@ -743,7 +743,7 @@ class EditRelationshipsDialog(ManageItemsDialog):
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
         self.table_view.horizontalHeader().setStretchLastSection(True)
-        object_class_name_list = relationship_class.object_class_name_list.split(",")
+        object_class_name_list = relationship_class['object_class_name_list'].split(",")
         self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
         self.orig_data = list()
         self.orig_object_id_lists = list()
@@ -794,9 +794,6 @@ class EditRelationshipsDialog(ManageItemsDialog):
                     self._parent.msg_error.emit("Couldn't find object '{}' at row {}".format(object_name, i + 1))
                     return
                 object_id_list.append(object_.id)
-            if len(object_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
             if orig_relationship_name == relationship_name and orig_object_id_list == object_id_list:
                 continue
             kwargs = {
@@ -809,8 +806,10 @@ class EditRelationshipsDialog(ManageItemsDialog):
             self._parent.msg_error.emit("Nothing to update")
             return
         try:
-            wide_relationships = self._parent.db_map.update_wide_relationships(*kwargs_list)
+            wide_relationships, error_log = self._parent.db_map.update_wide_relationships(*kwargs_list)
             self._parent.update_relationships(wide_relationships)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -900,19 +899,22 @@ class ManageParameterTagsDialog(ManageItemsDialog):
                 'description': description
             }
             items_to_add.append(kwargs)
+        error_log = list()
         try:
             if items_to_update:
-                parameter_tags = self._parent.db_map.update_parameter_tags(*items_to_update)
+                parameter_tags, upd_error_log = self._parent.db_map.update_parameter_tags(*items_to_update)
+                error_log += upd_error_log
                 self._parent.update_parameter_tags(parameter_tags)
             if self.removed_id_list:
                 self._parent.db_map.remove_items(parameter_tag_ids=self.removed_id_list)
                 self._parent.remove_parameter_tags(self.removed_id_list)
             if items_to_add:
-                parameter_tags = self._parent.db_map.add_parameter_tags(*items_to_add)
+                parameter_tags, add_error_log = self._parent.db_map.add_parameter_tags(*items_to_add)
+                error_log += add_error_log
                 self._parent.add_parameter_tags(parameter_tags)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 

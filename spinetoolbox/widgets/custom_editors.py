@@ -458,8 +458,7 @@ class JSONEditor(QTabWidget):
         self._parent = parent
         self._big_sibling = big_sibling
         self._popup = popup
-        self._minimum_size = QSize(200, 0)
-        # self.setTabPosition(QTabWidget.South)
+        self.setTabPosition(QTabWidget.South)
         self.tab_raw = QWidget()
         vertical_layout = QVBoxLayout(self.tab_raw)
         vertical_layout.setSpacing(0)
@@ -589,14 +588,19 @@ class JSONEditor(QTabWidget):
         """
         self.table_view.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.table_view.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        # TODO: Try and get rid of the 16 here
-        size = QSize(self._base_size.width(), self._base_size.height() * 16).boundedTo(self._parent.size()).\
-            expandedTo(self._minimum_size)
-        self.resize(size)
-        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         if self._popup:
-            offset = QPoint(self._base_size.width(), 0)
-            self.move(self.pos() + offset)
+            base_width = 0.6 * self._base_size.width()
+            offset = QPoint(0.4 * self._base_size.width(), 0)
+            min_size = QSize(0, 0)
+        else:
+            base_width = self._base_size.width()
+            offset = QPoint(0, 0)
+            min_size = QSize(200, 0)
+        size = QSize(base_width, self._base_size.height() * 16)  # TODO: Try and get rid of the 16 here
+        size = size.boundedTo(self._parent.size())
+        size = size.expandedTo(min_size)
+        self.resize(size)
+        self.move(offset + self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())

@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Spine Toolbox"
-#define MyAppVersion "0.2"
+#define MyAppVersion "0.2.3"
 #define MyAppPublisher "Spine Project Consortium"
 #define MyAppURL "https://github.com/Spine-project"
 #define MyAppExeName "spinetoolbox.exe"
@@ -58,7 +58,6 @@ Source: "spinetoolbox\build\exe.win-amd64-3.6\*"; DestDir: "{app}"; Flags: ignor
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Dirs]
-Name: "{app}\conf"; Permissions: users-full
 Name: "{app}\projects"; Permissions: users-full
 Name: "{app}\work"; Permissions: users-full
 

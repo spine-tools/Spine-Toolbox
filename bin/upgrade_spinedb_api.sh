@@ -1,16 +1,16 @@
 #!/bin/bash
-#@TITLE Upgrading spinedatabase_api
+#@TITLE Upgrading spinedb_api
 
 printf '\n'
-echo "This is a script for upgrading spinedatabase_api.
+echo "This is a script for upgrading spinedb_api.
 Copyright (C) <2017-2018>  <Spine project consortium>
 This program comes with ABSOLUTELY NO WARRANTY; This is free software, and you are welcome to redistribute it
 under certain conditions; See files COPYING and COPYING.LESSER for details."
 printf '\n'
 
 echo "USAGE:
-'bash upgrade_spinedatabase_api.sh'            upgrade from master branch
-'bash upgrade_spinedatabase_api.sh dev'        upgrade from dev branch"
+'bash upgrade_spinedb_api.sh'            upgrade from master branch
+'bash upgrade_spinedb_api.sh dev'        upgrade from dev branch"
 printf '\n'
 
 

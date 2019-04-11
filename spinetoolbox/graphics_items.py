@@ -18,16 +18,90 @@ Classes for drawing graphics items on QGraphicsScene.
 
 import logging
 import os
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer, Slot
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle, \
     QGraphicsColorizeEffect, QGraphicsDropShadowEffect
-from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, QRadialGradient, \
-    QFont, QTextCursor
+from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, \
+    QFont, QTextCursor, QTransform
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from math import atan2, degrees, sin, cos, pi
-from spinedatabase_api import SpineDBAPIError
+from spinedb_api import SpineDBAPIError, SpineIntegrityError
+
+
+class ConnectorButton(QGraphicsRectItem):
+    """Connector button graphics item. Used for Link drawing between project items.
+
+    Attributes:
+        parent (QGraphicsItem): Project item bg rectangle
+        toolbox (ToolBoxUI): QMainWindow instance
+        position (str): Either "top", "left", "bottom", or "right"
+    """
+    def __init__(self, parent, toolbox, position="left"):
+        """Class constructor."""
+        super().__init__()
+        self._parent = parent
+        self._toolbox = toolbox
+        self.position = position
+        self.setPen(QPen(Qt.black, 0.5, Qt.SolidLine))
+        # self.setPen(QPen(Qt.NoPen))
+        # Regular and hover brushes
+        self.brush = QBrush(QColor(255, 255, 255))  # Used in filling the item
+        self.hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
+        self.setBrush(self.brush)
+        extent = 12
+        rect = QRectF(0, 0, extent, extent)
+        parent_rect = parent.rect()
+        if position == "top":
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top()+extent/2))
+        elif position == "left":
+            rect.moveCenter(QPointF(parent_rect.left()+extent/2+1, parent_rect.center().y()))
+        elif position == "bottom":
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom()-extent/2-1))
+        elif position == "right":
+            rect.moveCenter(QPointF(parent_rect.right()-extent/2-1, parent_rect.center().y()))
+        self.setRect(rect)
+        self.setAcceptHoverEvents(True)
+        self.setCursor(Qt.PointingHandCursor)
+
+    def mousePressEvent(self, event):
+        """Connector button mouse press event. Starts drawing a link.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        if not event.button() == Qt.LeftButton:
+            event.accept()
+        else:
+            self._parent.show_item_info()
+            # Start drawing a link
+            self._toolbox.ui.graphicsView.draw_links(self)
+            # self._toolbox.ui.graphicsView.draw_links(rect, self._parent.name())
+
+    def mouseDoubleClickEvent(self, event):
+        """Connector button mouse double click event. Makes sure the LinkDrawer is hidden.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        event.accept()
+
+    def hoverEnterEvent(self, event):
+        """Sets a darker shade to connector button when mouse enters its boundaries.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        self.setBrush(self.hover_brush)
+
+    def hoverLeaveEvent(self, event):
+        """Restore original brush when mouse leaves connector button boundaries.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        self.setBrush(self.brush)
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -49,22 +123,16 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item = QGraphicsSvgItem()
         self.colorizer = QGraphicsColorizeEffect()
         self.setRect(QRectF(x, y, w, h))  # Set ellipse coordinates and size
-        self.name_font_size = 8  # point size
+        self.name_font_size = 10  # point size
         # Make item name graphics item.
         self.name_item = QGraphicsSimpleTextItem(name)
         self.set_name_attributes()  # Set font, size, position, etc.
-        # Make pen and brush for the connector button
-        # connector_pen = QPen(QColor('black'))  # Used in drawing the item outline
-        # connector_pen.setStyle(Qt.DotLine)
-        connector_pen = QPen(Qt.NoPen)
-        self.connector_brush = QBrush(QColor(255, 255, 255, 0))  # Used in filling the item
-        self.connector_hover_brush = QBrush(QColor(50, 0, 50, 128))
-        # Make connector button graphics item
-        self.connector_button = QGraphicsRectItem()
-        self.connector_button.setPen(connector_pen)
-        self.connector_button.setBrush(self.connector_brush)
-        self.connector_button.setRect(self.rect().adjusted(2.5*w/7, 2.5*h/7, -2.5*w/7, -2.5*h/7))
-        self.connector_button.setAcceptHoverEvents(True)
+        # Make connector buttons
+        self.connectors = dict(
+            bottom=ConnectorButton(self, toolbox, position="bottom"),
+            left=ConnectorButton(self, toolbox, position="left"),
+            right=ConnectorButton(self, toolbox, position="right")
+        )
 
     def setup(self, pen, brush, svg, svg_color):
         """Setup item's attributes according to project item type.
@@ -76,7 +144,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             svg (str): Path to SVG icon file
             svg_color (QColor): Color of SVG icon
         """
-        self.setPen(pen)  # Qt.NoPen
+        self.setPen(QPen(Qt.black, 1, Qt.SolidLine))  # Override Qt.NoPen to make an outline for all items
         self.setBrush(brush)
         self.colorizer.setColor(svg_color)
         # Load SVG
@@ -91,13 +159,11 @@ class ProjectItemIcon(QGraphicsRectItem):
         dim_max = max(size.width(), size.height())
         # logging.debug("p_max:{0}".format(p_max))
         rect_w = self.rect().width() # Parent rect width
-        margin = 5
+        margin = 24
         self.svg_item.setScale((rect_w - margin)/dim_max)
         x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
         y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
         self.svg_item.setPos(self.rect().x() + x_offset, self.rect().y() + y_offset)
-        scaled_img_rect = self.svg_item.sceneBoundingRect()
-        # logging.debug("scaled rect:{0}".format(scaled_img_rect))
         self.svg_item.setGraphicsEffect(self.colorizer)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
@@ -125,11 +191,18 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.name_item.setFont(font)
         # Set name item position (centered on top of the master icon)
         name_width = self.name_item.boundingRect().width()
-        self.name_item.setPos(self.rect().x() + self.rect().width()/2 - name_width/2, self.rect().y() - 20)
+        name_height = self.name_item.boundingRect().height()
+        self.name_item.setPos(
+            self.rect().x() + self.rect().width()/2 - name_width/2,
+            self.rect().y() - name_height - 4)
 
-    def conn_button(self):
+    def conn_button(self, position="left"):
         """Returns items connector button (QWidget)."""
-        return self.connector_button
+        try:
+            connector = self.connectors[position]
+        except KeyError:
+            connector = self.connectors["left"]
+        return connector
 
     def hoverEnterEvent(self, event):
         """Set a darker shade to icon when mouse enters icon boundaries.
@@ -158,18 +231,18 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self._toolbox.ui.graphicsView.scene().clearSelection()
-        self.show_item_info()
+        super().mousePressEvent(event)
 
     def mouseMoveEvent(self, event):
-        """Move icon while the mouse button is pressed.
-        Update links that are connected to this icon.
+        """Moves icon(s) while the mouse button is pressed.
+        Update links that are connected to selected icons.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
         super().mouseMoveEvent(event)
-        links = self._toolbox.connection_model.connected_links(self.name())
+        selected_icons = set([x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)] + [self])
+        links = set(y for x in selected_icons for y in self._toolbox.connection_model.connected_links(x.name()))
         for link in links:
             link.update_geometry()
 
@@ -181,30 +254,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         super().mouseReleaseEvent(event)
 
-    def connector_mouse_press_event(self, event):
-        """Catch connector button click. Starts drawing a link."""
-        if not event.button() == Qt.LeftButton:
-            event.accept()
-        else:
-            self.show_item_info()
-            self.draw_link()
-
-    def connector_hover_enter_event(self, event):
-        """Set a darker shade to connector button when mouse enters icon boundaries.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        self.connector_button.setBrush(self.connector_hover_brush)
-
-    def connector_hover_leave_event(self, event):
-        """Restore original brush when mouse leaves icon boundaries.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        self.connector_button.setBrush(self.connector_brush)
-
     def contextMenuEvent(self, event):
         """Show item context menu.
 
@@ -215,14 +264,33 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox.show_item_image_context_menu(event.screenPos(), self.name())
 
     def keyPressEvent(self, event):
-        """Remove item when pressing delete if it is selected.
+        """Handles deleting and rotating the selected
+        item when dedicated keys are pressed.
 
         Args:
             event (QKeyEvent): Key event
         """
         if event.key() == Qt.Key_Delete and self.isSelected():
             ind = self._toolbox.project_item_model.find_item(self.name())
-            self._toolbox.remove_item(ind, delete_item=self._toolbox._config.getboolean("settings", "delete_data"))
+            delete_int = int(self._toolbox.qsettings().value("appSettings/deleteData", defaultValue="0"))
+            delete_bool = False if delete_int == 0 else True
+            self._toolbox.remove_item(ind, delete_item=delete_bool)
+            event.accept()
+        elif event.key() == Qt.Key_R and self.isSelected():
+            # TODO:
+            # 1. Change name item text direction when rotating
+            # 2. Save rotation into project file
+            rect = self.mapToScene(self.boundingRect()).boundingRect()
+            center = rect.center()
+            t = QTransform()
+            t.translate(center.x(), center.y())
+            t.rotate(90)
+            t.translate(-center.x(), -center.y())
+            self.setPos(t.map(self.pos()))
+            self.setRotation(self.rotation() + 90)
+            links = self._toolbox.connection_model.connected_links(self.name())
+            for link in links:
+                link.update_geometry()
             event.accept()
         else:
             super().keyPressEvent(event)
@@ -231,11 +299,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         """Update GUI to show the details of the selected item."""
         ind = self._toolbox.project_item_model.find_item(self.name())
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
-
-    def draw_link(self):
-        """Start or stop drawing a link from or to the center point of the connector button."""
-        rect = self.conn_button().sceneBoundingRect()
-        self._toolbox.ui.graphicsView.draw_links(rect, self.name())
 
 
 class DataConnectionIcon(ProjectItemIcon):
@@ -256,14 +319,11 @@ class DataConnectionIcon(ProjectItemIcon):
         self.brush = QBrush(QColor("#e6e6ff"))  # QBrush for the background rectangle
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/file-alt.svg", QColor(0, 0, 255, 160))
         self.setAcceptDrops(True)
-        # Overridden events in order to avoid subclassing QGraphicsRectItem for a custom connector_button
-        self.connector_button.mousePressEvent = self.connector_mouse_press_event
-        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
-        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
+        # NOTE: setting the parent item moves the items as one!
         self.name_item.setParentItem(self)
-        self.connector_button.setParentItem(self)
+        for conn in self.connectors.values():
+            conn.setParentItem(self)
         self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
@@ -340,58 +400,49 @@ class ToolIcon(ProjectItemIcon):
         # Draw icon
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/hammer.svg", QColor("red"))
         self.setAcceptDrops(False)
-        # Override connector button events
-        self.connector_button.mousePressEvent = self.connector_mouse_press_event
-        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
-        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
-        # NOTE: setting the parent item moves the items as one!!
         self.name_item.setParentItem(self)
-        self.connector_button.setParentItem(self)
+        for conn in self.connectors.values():
+            conn.setParentItem(self)
         self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)  # Adds also child items automatically
         # animation stuff
-        self.wheel = QGraphicsPixmapItem()
-        pixmap = QPixmap(":/icons/wheel.png").scaled(0.5*self.rect().width(), 0.5*self.rect().height())
-        self.wheel.setPixmap(pixmap)
-        self.wheel_w = pixmap.width()
-        self.wheel_h = pixmap.height()
-        self.wheel.setPos(self.sceneBoundingRect().center())
-        self.wheel.moveBy(-0.5*self.wheel_w, -0.5*self.wheel_h)
-        self.wheel_center = self.wheel.sceneBoundingRect().center()
-        self.wheel.setParentItem(self)
-        self.wheel.hide()
         self.timer = QTimeLine()
         self.timer.setLoopCount(0)  # loop forever
         self.timer.setFrameRange(0, 10)
-        self.wheel_animation = QGraphicsItemAnimation()
-        self.wheel_animation.setItem(self.wheel)
-        self.wheel_animation.setTimeLine(self.timer)
+        # self.timer.setCurveShape(QTimeLine.CosineCurve)
+        self.timer.valueForTime = self.value_for_time
+        self.tool_animation = QGraphicsItemAnimation()
+        self.tool_animation.setItem(self.svg_item)
+        self.tool_animation.setTimeLine(self.timer)
         # self.timer.frameChanged.connect(self.test)
+        self.delta = .25 * self.svg_item.sceneBoundingRect().height()
 
-    def test(self, frame):
-        logging.debug(self.wheel_center)
+    def value_for_time(self, msecs):
+        rem = (msecs % 1000) / 1000
+        return 1.0 - rem
 
-    def start_wheel_animation(self):
-        """Start the animation that plays when the Tool associated to this GraphicsItem
-        is running (spinning wheel).
+    def start_animation(self):
+        """Start the animation that plays when the Tool associated to this GraphicsItem is running.
         """
-        for angle in range(360):
-            step = angle / 360.0
-            self.wheel_animation.setTranslationAt(step, 0.5*self.wheel_w, 0.5*self.wheel_h)
-            self.wheel_animation.setRotationAt(step, angle)
-            self.wheel_animation.setTranslationAt(step, -0.5*self.wheel_w, -0.5*self.wheel_h)
-            self.wheel_animation.setPosAt(step, self.wheel_center)
-        self.wheel.show()
+        self.svg_item.moveBy(0, -self.delta)
+        offset = .75 * self.svg_item.sceneBoundingRect().height()
+        for angle in range(1, 45):
+            step = angle / 45.0
+            self.tool_animation.setTranslationAt(step, 0, offset)
+            self.tool_animation.setRotationAt(step, angle)
+            self.tool_animation.setTranslationAt(step, 0, -offset)
+            self.tool_animation.setPosAt(
+                step,
+                QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
         self.timer.start()
 
-    def stop_wheel_animation(self):
-        """Stop wheel animation"""
+    def stop_animation(self):
+        """Stop animation"""
         self.timer.stop()
-        self.timer.setCurrentTime(0)
-        self.wheel.hide()
+        self.svg_item.moveBy(0, self.delta)
+        self.timer.setCurrentTime(999)
 
 
 class DataStoreIcon(ProjectItemIcon):
@@ -415,14 +466,10 @@ class DataStoreIcon(ProjectItemIcon):
         # Setup icons and attributes
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/database.svg", QColor("#cc33ff"))
         self.setAcceptDrops(False)
-        # Override connector button events
-        self.connector_button.mousePressEvent = self.connector_mouse_press_event
-        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
-        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
-        self.connector_button.setParentItem(self)
+        for conn in self.connectors.values():
+            conn.setParentItem(self)
         self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
@@ -447,14 +494,10 @@ class ViewIcon(ProjectItemIcon):
         # Setup icons and attributes
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/binoculars.svg", QColor("#33cc33"))
         self.setAcceptDrops(False)
-        # Override connector button events
-        self.connector_button.mousePressEvent = self.connector_mouse_press_event
-        self.connector_button.hoverEnterEvent = self.connector_hover_enter_event
-        self.connector_button.hoverLeaveEvent = self.connector_hover_leave_event
-        self.connector_button.mouseDoubleClickEvent = lambda e: e.accept()
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
-        self.connector_button.setParentItem(self)
+        for conn in self.connectors.values():
+            conn.setParentItem(self)
         self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
@@ -465,30 +508,31 @@ class Link(QGraphicsPathItem):
 
     Attributes:
         toolbox (ToolboxUI): main UI class instance
-        src_icon (ItemImage): Source icon
-        dst_icon(ItemImage): Destination icon
+        src_connector (ConnectorButton): Source connector button
+        dst_connector (ConnectorButton): Destination connector button
     """
-    def __init__(self, toolbox, src_icon, dst_icon):
+    def __init__(self, toolbox, src_connector, dst_connector):
         """Initializes item."""
         super().__init__()
         self._toolbox = toolbox
-        self.src_icon = src_icon
-        self.dst_icon = dst_icon
-        self.src_connector = self.src_icon.conn_button()  # QGraphicsRectItem
-        self.dst_connector = self.dst_icon.conn_button()
+        self.src_connector = src_connector  # QGraphicsRectItem
+        self.dst_connector = dst_connector
+        self.src_icon = src_connector._parent
+        self.dst_icon = dst_connector._parent
         self.setZValue(1)
-        self.conn_width = self.src_connector.rect().width()
+        self.conn_width = 1.25 * self.src_connector.rect().width()
         self.arrow_angle = pi/4  # In rads
         self.ellipse_angle = 30  # In degrees
         self.feedback_size = 12
         # Path parameters
+        self.ellipse_rect = QRectF(0, 0, self.conn_width, self.conn_width)
         self.line_width = self.conn_width/2
         self.arrow_length = self.line_width
         self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
         arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
         self.t1 = (arrow_base - self.line_width) / arrow_base/2
         self.t2 = 1.0 - self.t1
-        # Inner rect of feedback link (works, but it's probably too hard)
+        # Inner rect of feedback link
         self.inner_rect = QRectF(0, 0, 7.5*self.feedback_size, 6*self.feedback_size - self.line_width)
         inner_shift_x = self.arrow_length/2
         angle = atan2(self.conn_width, self.inner_rect.height())
@@ -505,10 +549,8 @@ class Link(QGraphicsPathItem):
         # Tooltip
         self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
                         "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name()))
-        # self.selected_brush = QBrush(QColor(255, 0, 255, 204))
-        # self.normal_brush = QBrush(QColor(255, 255, 0, 204))
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
-        self.selected_pen = QPen(Qt.black, 0.5, Qt.DashLine)
+        self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
         self.model_index = None
         self.parallel_link = None
@@ -546,15 +588,14 @@ class Link(QGraphicsPathItem):
         """
         if e.button() != Qt.LeftButton:
             e.ignore()
-        elif self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
-            # Ignore event so it gets propagated to the connector button.
+        elif any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
             e.ignore()
 
     def mouseDoubleClickEvent(self, e):
         """Accept event to prevent unwanted feedback links to be created when propagating this event
         to connector buttons underneath.
         """
-        if self.src_icon.conn_button().isUnderMouse() or self.dst_icon.conn_button().isUnderMouse():
+        if any(isinstance(x, ConnectorButton) for x in self.scene().items(e.scenePos())):
             e.accept()
 
     def contextMenuEvent(self, e):
@@ -587,11 +628,7 @@ class Link(QGraphicsPathItem):
             angle = 0
         else:  # normal link
             line = QLineF(src_center, dst_center)
-            try:
-                t = (line.length() - self.conn_width/2) / line.length()
-            except ZeroDivisionError:
-                t = 1
-            arrow_p0 = line.pointAt(t)  # arrow tip is where the line intersects the button
+            arrow_p0 = dst_center
             angle = atan2(-line.dy(), line.dx())
         # Path coordinates. We just need to draw the arrow and the ellipse, lines are drawn automatically
         d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
@@ -612,7 +649,8 @@ class Link(QGraphicsPathItem):
         if self.src_connector == self.dst_connector:
             self.inner_rect.moveCenter(dst_center - self.inner_shift)
             path.arcTo(self.inner_rect, 270 - self.inner_angle, 2*self.inner_angle - 360)
-        path.arcTo(src_rect, degrees(angle) + self.ellipse_angle, 360 - 2*self.ellipse_angle)
+        self.ellipse_rect.moveCenter(src_rect.center())
+        path.arcTo(self.ellipse_rect, degrees(angle) + self.ellipse_angle, 360 - 2*self.ellipse_angle)
         # Draw outer part of feedback link
         if self.src_connector == self.dst_connector:
             self.outer_rect.moveCenter(dst_center - self.outer_shift)
@@ -641,11 +679,7 @@ class Link(QGraphicsPathItem):
 
 
 class LinkDrawer(QGraphicsPathItem):
-    """An item that allows one to draw links between slot buttons in QGraphicsView.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-    """
+    """An item that allows one to draw links between slot buttons in QGraphicsView."""
     def __init__(self):
         """Initializes instance."""
         super().__init__()
@@ -684,7 +718,7 @@ class LinkDrawer(QGraphicsPathItem):
         self.dst = self.src
         # Path parameters
         conn_width = self.src_rect.width()
-        self.ellipse_width = (3/4)*conn_width
+        self.ellipse_width = conn_width
         self.line_width = self.ellipse_width/2
         self.arrow_length = self.line_width
         self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
@@ -910,23 +944,23 @@ class ObjectItem(QGraphicsPixmapItem):
         if self.is_template:
             try:
                 kwargs = dict(class_id=self.object_class_id, name=name)
-                object_ = self._graph_view_form.db_map.add_objects(kwargs)
+                object_, _ = self._graph_view_form.db_map.add_objects(kwargs, strict=True)
                 self._graph_view_form.add_objects(object_)
                 self.object_name = name
                 self.object_id = object_.first().id
                 if self.template_id_dim:
                     self.add_into_relationship()
                 self.remove_template()
-            except SpineDBAPIError as e:
+            except (SpineDBAPIError, SpineIntegrityError) as e:
                 self.label_item.setPlainText(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
         else:
             try:
                 kwargs = dict(id=self.object_id, name=name)
-                object_ = self._graph_view_form.db_map.update_objects(kwargs)
+                object_, _ = self._graph_view_form.db_map.update_objects(kwargs, strict=True)
                 self._graph_view_form.update_objects(object_)
                 self.object_name = name
-            except SpineDBAPIError as e:
+            except (SpineDBAPIError, SpineIntegrityError) as e:
                 self.label_item.setPlainText(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
 

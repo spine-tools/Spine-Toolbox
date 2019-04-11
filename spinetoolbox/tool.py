@@ -26,7 +26,7 @@ from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from tool_instance import ToolInstance
-from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE
+from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 from graphics_items import ToolIcon
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from helpers import create_dir
@@ -303,7 +303,7 @@ class Tool(ProjectItem):
                 self._toolbox.msg.emit("*** Searching for required input files ***")
                 file_paths = self.find_input_files()
                 if not file_paths:
-                    self._toolbox.msg_error.emit("Input files not found. Tool execution aborted.")
+                    self._toolbox.msg_error.emit("Tool execution aborted")
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
@@ -330,7 +330,7 @@ class Tool(ProjectItem):
                     self._toolbox.msg.emit("*** Creating subdirectories to source directory ***")
                 if not self.create_subdirectories():
                     # Creating directories failed -> abort
-                    self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted")
+                    self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted.")
                     return
             else:  # just for testing
                 # logging.debug("No directories to create")
@@ -352,14 +352,13 @@ class Tool(ProjectItem):
                 self._toolbox.msg_warning.emit("Copying optional input files failed")
         self._toolbox.ui.pushButton_tool_stop.setEnabled(True)
         self._toolbox.ui.pushButton_tool_execute.setEnabled(False)
-        self._graphics_item.start_wheel_animation()
+        self._graphics_item.start_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
         self.instance.execute()
 
     def count_files_and_dirs(self):
         """Count the number of files and directories in required input files model.
-        TODO: Change name of 'required input files' because it can contain dir names too.
 
         Returns:
             Tuple containing the number of required files and directories.
@@ -422,7 +421,7 @@ class Tool(ProjectItem):
                 continue
             found_file = self.find_file(filename)
             if not found_file:
-                self._toolbox.msg_error.emit("\tRequired file <b>{0}</b> not found".format(filename))
+                self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
                 return None
             else:
                 file_paths[req_file_path] = found_file
@@ -692,7 +691,7 @@ class Tool(ProjectItem):
         """Tool execution finished."""
         self._toolbox.ui.pushButton_tool_stop.setEnabled(False)
         self._toolbox.ui.pushButton_tool_execute.setEnabled(True)
-        self._graphics_item.stop_wheel_animation()
+        self._graphics_item.stop_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execution_finished)
         if return_code == 0:
@@ -706,12 +705,12 @@ class Tool(ProjectItem):
             self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
 
     def update_instance(self):
-        """Initialize and update instance so that it is ready for processing. Maybe this is where Tool
-        type specific initialization should happen (whether instance is GAMS or Julia Model)."""
+        """Initialize and update instance so that it is ready for processing. This is where Tool
+        type specific initialization happens (whether the tool is GAMS, Python or Julia script)."""
         if self.tool_template().tooltype == "gams":
-            gams_path = self._toolbox._config.get("settings", "gams_path")
+            gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
             if not gams_path == '':
-                gams_exe = os.path.join(gams_path, GAMS_EXECUTABLE)
+                gams_exe = gams_path
             else:
                 gams_exe = GAMS_EXECUTABLE
             self.instance.program = gams_exe
@@ -721,19 +720,19 @@ class Tool(ProjectItem):
             self.instance.args.append("logoption=3")  # TODO: This should be an option in Settings
             self.append_instance_args()  # Append Tool specific cmd line args into args list
         elif self.tool_template().tooltype == "julia":
-            # Prepare prompt command "julia script.jl"
-            julia_dir = self._toolbox._config.get("settings", "julia_path")
-            if not julia_dir == '':
-                julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+            # Prepare command "julia script.jl"
+            julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+            if not julia_path == "":
+                julia_cmd = julia_path
             else:
-                julia_exe = JULIA_EXECUTABLE
+                julia_cmd = JULIA_EXECUTABLE
             work_dir = self.instance.basedir
             script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-            self.instance.program = julia_exe
+            self.instance.program = julia_cmd
             self.instance.args.append(script_path)
             self.append_instance_args()
-            use_repl = self._toolbox._config.getboolean("settings", "use_repl")
-            if use_repl:
+            use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
+            if use_embedded_julia == "2":
                 # Prepare Julia REPL command
                 # TODO: See if this can be simplified
                 mod_work_dir = work_dir.__repr__().strip("'")
@@ -742,6 +741,31 @@ class Tool(ProjectItem):
                     r'empty!(ARGS);'\
                     r'append!(ARGS, {});'\
                     r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
+        elif self.tool_template().tooltype == "python":
+            # Prepare command "python script.py"
+            python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+            if not python_path == "":
+                python_cmd = python_path
+            else:
+                python_cmd = PYTHON_EXECUTABLE
+            work_dir = self.instance.basedir
+            script_path = os.path.join(work_dir, self.tool_template().main_prgm)
+            self.instance.program = python_cmd
+            self.instance.args.append(script_path)  # TODO: Why are we doing this?
+            self.append_instance_args()
+            use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0")
+            if use_embedded_python == "2":
+                # Prepare a command list (FIFO queue) with two commands for Python Console
+                # 1st cmd: Change current work directory
+                # 2nd cmd: Run script with given args
+                # Cast args in list to strings and combine them to a single string
+                # Skip first arg since it's the script path (see above)
+                args = " ".join([str(x) for x in self.instance.args[1:]])
+                cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
+                run_script_cmd = "%run \"{0}\" {1}".format(self.tool_template().main_prgm, args)
+                # Populate FIFO command queue
+                self.instance.ipython_command_list.append(cd_work_dir_cmd)
+                self.instance.ipython_command_list.append(run_script_cmd)
         elif self.tool_template().tooltype == "executable":
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
             if not sys.platform == "win32":

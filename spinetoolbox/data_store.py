@@ -33,7 +33,7 @@ from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
-import spinedatabase_api
+import spinedb_api
 
 
 class DataStore(ProjectItem):
@@ -534,8 +534,8 @@ class DataStore(ProjectItem):
         """Return a DiffDatabaseMapping instance to work with.
         """
         try:
-            return spinedatabase_api.DiffDatabaseMapping(db_url, username, upgrade=upgrade)
-        except spinedatabase_api.SpineDBVersionError:
+            return spinedb_api.DiffDatabaseMapping(db_url, username, upgrade=upgrade)
+        except spinedb_api.SpineDBVersionError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
@@ -551,7 +551,7 @@ class DataStore(ProjectItem):
             if ret == QMessageBox.Cancel:
                 return None
             return self.get_db_map(db_url, username, upgrade=True)
-        except spinedatabase_api.SpineDBAPIError as e:
+        except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return None
 
@@ -585,11 +585,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tree_view(self, db_map, database):
         """Open reference in tree view form."""
-        try:
-            self.tree_view_form = TreeViewForm(self, db_map, database)
-        except:
-            db_map.close()
-            raise
+        self.tree_view_form = TreeViewForm(self, db_map, database)
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -627,11 +623,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_graph_view(self, db_map, database):
         """Open reference in graph view form."""
-        try:
-            self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
-        except:
-            db_map.close()
-            raise
+        self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
@@ -668,11 +660,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tabular_view(self, db_map, database):
         """Open reference in tabular view form."""
-        try:
-            self.tabular_view_form = TabularViewForm(self, db_map, database)
-        except:
-            db_map.close()
-            raise
+        self.tabular_view_form = TabularViewForm(self, db_map, database)
         self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
         self.tabular_view_form.show()
 
@@ -703,6 +691,9 @@ class DataStore(ProjectItem):
                                            "connections and try again. Detected at {0}.".format(self.name))
             return None
         reference = self.current_reference()
+        if not reference:
+            # Data Store has no reference
+            return None
         db_url = reference['url']
         if not db_url.lower().startswith('sqlite'):
             return None
@@ -814,7 +805,7 @@ class DataStore(ProjectItem):
             pass
         url = "sqlite:///" + file_path
         for_spine_model = check_box.isChecked()
-        spinedatabase_api.create_new_spine_database(url, for_spine_model=for_spine_model)
+        spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
         database = os.path.basename(file_path)
         username = getpass.getuser()
         # Update UI

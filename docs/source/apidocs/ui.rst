@@ -28,46 +28,6 @@ ui.add\_data\_store module
     :undoc-members:
     :show-inheritance:
 
-ui.add\_db\_reference module
-----------------------------
-
-.. automodule:: ui.add_db_reference
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.add\_object\_classes module
-------------------------------
-
-.. automodule:: ui.add_object_classes
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.add\_objects module
-----------------------
-
-.. automodule:: ui.add_objects
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.add\_relationship\_classes module
-------------------------------------
-
-.. automodule:: ui.add_relationship_classes
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.add\_relationships module
-----------------------------
-
-.. automodule:: ui.add_relationships
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
 ui.add\_tool module
 -------------------
 
@@ -80,14 +40,6 @@ ui.add\_view module
 -------------------
 
 .. automodule:: ui.add_view
-    :members:
-    :undoc-members:
-    :show-inheritance:
-
-ui.edit\_data\_items module
----------------------------
-
-.. automodule:: ui.edit_data_items
     :members:
     :undoc-members:
     :show-inheritance:

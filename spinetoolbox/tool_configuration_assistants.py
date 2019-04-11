@@ -17,9 +17,8 @@ Classes for tool configuration assistants.
 """
 
 import sys
-import os
 import qsubprocess
-from PySide2.QtCore import QObject, Signal, Slot
+from PySide2.QtCore import QObject, Signal
 from config import JULIA_EXECUTABLE
 
 
@@ -38,9 +37,9 @@ class SpineModelConfigurationAssistant(QObject):
         """Init class."""
         super().__init__(toolbox)
         self._toolbox = toolbox
-        julia_dir = self._toolbox._config.get("settings", "julia_path")
-        if not julia_dir == '':
-            julia_exe = os.path.join(julia_dir, JULIA_EXECUTABLE)
+        julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+        if not julia_path == "":
+            julia_exe = julia_path
         else:
             julia_exe = JULIA_EXECUTABLE
         self.julia_program = "{0}".format(julia_exe)
@@ -84,8 +83,8 @@ class SpineModelConfigurationAssistant(QObject):
         q_process.start_process()
         return q_process
 
-    def spinedatabase_api_installed_check(self):
-        """Start qsubprocess that checks if spinedatabase_api is installed in PyCall's python.
+    def spinedb_api_installed_check(self):
+        """Start qsubprocess that checks if spinedb_api is installed in PyCall's python.
         Return the qsubprocess.
         """
         program = self.py_call_python_program
@@ -93,7 +92,7 @@ class SpineModelConfigurationAssistant(QObject):
         args.append("-m")
         args.append("pip")
         args.append("show")
-        args.append("spinedatabase_api")
+        args.append("spinedb_api")
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         return q_process
@@ -125,8 +124,8 @@ class SpineModelConfigurationAssistant(QObject):
         q_process.start_process()
         return q_process
 
-    def install_spinedatabase_api(self):
-        """Start qsubprocess that installs spinedatabase_api in PyCall's python.
+    def install_spinedb_api(self):
+        """Start qsubprocess that installs spinedb_api in PyCall's python.
         Return the qsubprocess.
         """
         program = self.py_call_python_program

@@ -32,6 +32,12 @@
    <set>QMainWindow::AllowNestedDocks|QMainWindow::AllowTabbedDocks|QMainWindow::AnimatedDocks|QMainWindow::GroupedDragging</set>
   </property>
   <widget class="QWidget" name="centralwidget">
+   <property name="sizePolicy">
+    <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+     <horstretch>0</horstretch>
+     <verstretch>0</verstretch>
+    </sizepolicy>
+   </property>
    <layout class="QVBoxLayout" name="verticalLayout_2">
     <property name="spacing">
      <number>0</number>
@@ -48,41 +54,6 @@
     <property name="bottomMargin">
      <number>0</number>
     </property>
-    <item>
-     <widget class="QLabel" name="label_object_tree">
-      <property name="text">
-       <string>Object tree</string>
-      </property>
-     </widget>
-    </item>
-    <item>
-     <widget class="ObjectTreeView" name="treeView_object">
-      <property name="sizePolicy">
-       <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-        <horstretch>1</horstretch>
-        <verstretch>0</verstretch>
-       </sizepolicy>
-      </property>
-      <property name="contextMenuPolicy">
-       <enum>Qt::CustomContextMenu</enum>
-      </property>
-      <property name="accessibleName">
-       <string>object tree</string>
-      </property>
-      <property name="editTriggers">
-       <set>QAbstractItemView::EditKeyPressed</set>
-      </property>
-      <property name="selectionMode">
-       <enum>QAbstractItemView::ExtendedSelection</enum>
-      </property>
-      <property name="iconSize">
-       <size>
-        <width>20</width>
-        <height>20</height>
-       </size>
-      </property>
-     </widget>
-    </item>
    </layout>
   </widget>
   <widget class="QMenuBar" name="menubar">
@@ -149,6 +120,8 @@
      <property name="title">
       <string>Dock Widgets</string>
      </property>
+     <addaction name="actionRestore_Dock_Widgets"/>
+     <addaction name="separator"/>
     </widget>
     <addaction name="menuToolbars"/>
     <addaction name="menuDock_Widgets"/>
@@ -488,6 +461,119 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_object_tree">
+   <property name="features">
+    <set>QDockWidget::NoDockWidgetFeatures</set>
+   </property>
+   <property name="allowedAreas">
+    <set>Qt::LeftDockWidgetArea</set>
+   </property>
+   <property name="windowTitle">
+    <string>Object tree</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_6">
+    <layout class="QVBoxLayout" name="verticalLayout_4">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="ObjectTreeView" name="treeView_object">
+       <property name="sizePolicy">
+        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+         <horstretch>1</horstretch>
+         <verstretch>0</verstretch>
+        </sizepolicy>
+       </property>
+       <property name="contextMenuPolicy">
+        <enum>Qt::CustomContextMenu</enum>
+       </property>
+       <property name="accessibleName">
+        <string>object tree</string>
+       </property>
+       <property name="editTriggers">
+        <set>QAbstractItemView::EditKeyPressed</set>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
+  <widget class="QDockWidget" name="dockWidget_relationship_tree">
+   <property name="allowedAreas">
+    <set>Qt::AllDockWidgetAreas</set>
+   </property>
+   <property name="windowTitle">
+    <string>Relationship tree</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>1</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_7">
+    <layout class="QVBoxLayout" name="verticalLayout_6">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+     <item>
+      <widget class="ObjectTreeView" name="treeView_relationship">
+       <property name="contextMenuPolicy">
+        <enum>Qt::CustomContextMenu</enum>
+       </property>
+       <property name="accessibleName">
+        <string>relationship tree</string>
+       </property>
+       <property name="editTriggers">
+        <set>QAbstractItemView::EditKeyPressed</set>
+       </property>
+       <property name="selectionMode">
+        <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
+       </property>
+      </widget>
+     </item>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionCommit">
    <property name="enabled">
     <bool>false</bool>
@@ -705,6 +791,11 @@
     <string>Ctrl+Del</string>
    </property>
   </action>
+  <action name="actionRestore_Dock_Widgets">
+   <property name="text">
+    <string>Restore Dock Widgets</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -724,7 +815,6 @@
   </customwidget>
  </customwidgets>
  <tabstops>
-  <tabstop>treeView_object</tabstop>
   <tabstop>tableView_object_parameter_value</tabstop>
   <tabstop>tableView_object_parameter_definition</tabstop>
   <tabstop>tableView_relationship_parameter_value</tabstop>

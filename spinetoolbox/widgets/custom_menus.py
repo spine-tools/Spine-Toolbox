@@ -19,7 +19,7 @@ Classes for custom context menus and pop-up menus.
 import logging
 from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction, QWidget
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer
+from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer, QTimeLine
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
 from widgets.custom_qwidgets import FilterWidget
@@ -99,7 +99,7 @@ class ProjectItemContextMenu(CustomContextMenu):
         elif d.item_type == "Tool":
             self.add_action("Execute")
             self.add_action("Results...")
-            if d.get_icon().wheel.isVisible():
+            if d.get_icon().timer.state() == QTimeLine.Running:
                 self.add_action("Stop")
             else:
                 self.add_action("Stop", enabled=False)
@@ -136,6 +136,7 @@ class LinkContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         self.add_action("Remove connection")
+        self.add_action("Take connection")
         if parallel_link:
             self.add_action("Send to bottom")
         self.exec_(position)
@@ -303,6 +304,40 @@ class ObjectTreeContextMenu(CustomContextMenu):
             self.add_action("Edit relationship classes", edit_relationship_icon)
         elif item_type == 'relationship':
             self.addSeparator()
+            self.add_action("Edit relationships", edit_relationship_icon)
+        if item_type != 'root':
+            self.addSeparator()
+            self.add_action("Remove selection", remove_icon)
+        self.exec_(position)
+
+
+class RelationshipTreeContextMenu(CustomContextMenu):
+    """Context menu class for relationship tree items in tree view form.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
+        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
+        remove_icon = QIcon(":/icons/minus_relationship_icon.png")
+        item_type = index.data(Qt.UserRole)
+        self.add_action("Copy text", copy_icon)
+        self.addSeparator()
+        if item_type == 'root':
+            self.add_action("Add relationship classes", plus_relationship_icon)
+        elif item_type == 'relationship_class':
+            self.add_action("Add relationships", plus_relationship_icon)
+            self.addSeparator()
+            self.add_action("Edit relationship classes", edit_relationship_icon)
+        elif item_type == 'relationship':
             self.add_action("Edit relationships", edit_relationship_icon)
         if item_type != 'root':
             self.addSeparator()

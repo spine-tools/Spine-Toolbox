@@ -24,10 +24,19 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
-from config import APPLICATION_PATH
-from spinedatabase_api import create_new_spine_database
+from spinedb_api import create_new_spine_database
 
 
+class MockQWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+    # noinspection PyMethodMayBeStatic
+    def test_push_vars(self):
+        return True
+
+
+# noinspection PyUnusedLocal
 class TestDataStore(unittest.TestCase):
 
     @classmethod
@@ -46,12 +55,11 @@ class TestDataStore(unittest.TestCase):
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        patched_conf_file = os.path.abspath(os.path.join(APPLICATION_PATH,
-                                                         os.path.pardir, "conf", "unittest_settings.conf"))
-        with mock.patch("ui_main.CONFIGURATION_FILE", new=patched_conf_file), \
-                mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+                mock.patch("ui_main.PythonReplWidget") as mock_python_repl:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
+            mock_python_repl.return_value = MockQWidget()
             self.toolbox = ToolboxUI()
             self.toolbox.create_project("UnitTest Project", "")
 
@@ -59,9 +67,10 @@ class TestDataStore(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        # with mock.patch("ui_main.QMessageBox") as mock_messagebox:
-        #     self.toolbox.remove_all_items()
-        shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
+        try:
+            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
+        except OSError:
+            pass
         try:
             os.remove(self.toolbox.project().path)  # Remove project file
         except OSError:
@@ -72,20 +81,14 @@ class TestDataStore(unittest.TestCase):
     def test_create_new_spine_database(self):
         """Test that a new Spine database is created when clicking on Spine-icon tool button.
         """
-        # with mock.patch("data_store.create_dir") as mock_create_dir:
-        #     self.toolbox.project().add_data_store(name, "", reference=None)
-        #     # Check that an item with the created name is found from project item model
-
-        # name = "DS"
-        # data_store = DataStore(self.toolbox, "DS", "", dict(), 0, 0)
         self.toolbox.project().add_data_store("DS", "", reference=None)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
-        with mock.patch("data_store.QFileDialog") as mock_file_dialog:
+        with mock.patch("data_store.QFileDialog.selectedFiles") as mock_sf, \
+                mock.patch("data_store.QFileDialog.exec_") as mock_exec:
             file_path = os.path.join(data_store.data_dir, "mock_db.sqlite")
-            mock_file_dialog.getSaveFileName.return_value = [file_path]
-            data_store.activate()
-            self.toolbox.ui.toolButton_new_spine.click()
+            mock_sf.return_value = [file_path]
+            data_store.create_new_spine_database()
         self.assertTrue(os.path.isfile(file_path), "mock_db.sqlite file not found.")
         sqlite_file = self.toolbox.ui.lineEdit_SQLite_file.text()
         self.assertEqual(sqlite_file, file_path)
@@ -100,7 +103,8 @@ class TestDataStore(unittest.TestCase):
         # FIXME: For now it only tests sqlite references
         file_path = os.path.join(self.toolbox.project().project_dir, "mock_db.sqlite")
         if not os.path.exists(file_path):
-            with open(file_path, 'w'): pass
+            with open(file_path, 'w'):
+                pass
         url = "sqlite:///" + file_path
         create_new_spine_database(url)
         reference = dict(database="foo", username="bar", url=url)
@@ -149,7 +153,8 @@ class TestDataStore(unittest.TestCase):
         # First create a DS with an sqlite db reference
         file_path = os.path.join(self.toolbox.project().project_dir, "mock_db.sqlite")
         if not os.path.exists(file_path):
-            with open(file_path, 'w'): pass
+            with open(file_path, 'w'):
+                pass
         url = "sqlite:///" + file_path
         create_new_spine_database(url)
         reference = dict(database="foo", username="bar", url=url)
@@ -159,6 +164,7 @@ class TestDataStore(unittest.TestCase):
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
         self.toolbox.ui.toolButton_copy_db_url.click()
+        # noinspection PyArgumentList
         clipboard_text = QApplication.clipboard().text()
         self.assertEqual(clipboard_text, url)
 

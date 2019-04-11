@@ -23,13 +23,14 @@ import os
 import time
 import shutil
 import glob
-import spinedatabase_api
+import json
+import spinedb_api
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox
 from PySide2.QtGui import QCursor, QPainter, QPixmap, QImageReader
-from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
+from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
 def set_taskbar_icon():
@@ -72,22 +73,22 @@ def pyside2_version_check():
     return True
 
 
-def spinedatabase_api_version_check():
-    """Check if spinedatabase_api is the correct version and explain how to upgrade if it is not."""
+def spinedb_api_version_check():
+    """Check if spinedb_api is the correct version and explain how to upgrade if it is not."""
     try:
-        current_version = spinedatabase_api.__version__
+        current_version = spinedb_api.__version__
         current_split = [int(x) for x in current_version.split(".")]
-        required_split = [int(x) for x in REQUIRED_SPINE_DBAPI_VERSION.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINEDB_API_VERSION.split(".")]
         if current_split >= required_split:
             return True
     except AttributeError:
         current_version = "not reported"
-    script = "upgrade_spinedatabase_api.bat" if sys.platform == "win32" else "upgrade_spinedatabase_api.sh"
+    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.sh"
     print(
         """ERROR:
-        Spine Toolbox failed to start because spinedatabase_api is outdated.
+        Spine Toolbox failed to start because spinedb_api is outdated.
         (Required version is {0}, whereas current is {1})
-        Please upgrade spinedatabase_api to v{0} and start Spine Toolbox again.
+        Please upgrade spinedb_api to v{0} and start Spine Toolbox again.
 
         To upgrade, run script '{2}' in the '/bin' folder.
 
@@ -95,7 +96,7 @@ def spinedatabase_api_version_check():
 
             pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
-        """.format(REQUIRED_SPINE_DBAPI_VERSION, current_version, script))
+        """.format(REQUIRED_SPINEDB_API_VERSION, current_version, script))
     return False
 
 
@@ -119,25 +120,28 @@ def busy_effect(func):
     return new_function
 
 
-def project_dir(configs=None):
+def project_dir(qsettings):
     """Returns current project directory.
 
     Args:
-        configs (ConfigurationParser): Configuration parser object. Default value is for unit tests.
+        qsettings (QSettings): Settings object
     """
-    if not configs:
-        return DEFAULT_PROJECT_DIR
-    proj_dir = configs.get('settings', 'project_directory')
+    # NOTE: This is not actually used. The key is not saved to qsettings anywhere. This is a placeholder for code
+    # if we want to be able to change the projects directory at some point.
+    proj_dir = qsettings.value("appSettings/projectsDir", defaultValue="")
     if not proj_dir:
         return DEFAULT_PROJECT_DIR
     else:
         return proj_dir
 
 
-def get_datetime(configs):
-    """Returns date and time string for appending into Event Log messages."""
-    show_date = configs.getboolean("settings", "datetime")
-    if show_date:
+def get_datetime(show):
+    """Returns date and time string for appending into Event Log messages.
+
+    Args:
+        show (boolean): True returns date and time string. False returns empty string.
+    """
+    if show:
         t = datetime.datetime.now()
         return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
     else:
@@ -383,3 +387,28 @@ def tuple_itemgetter(itemgetter_func, num_indexes):
         return g
     else:
         return itemgetter_func
+
+
+def format_string_list(str_list):
+    """
+    Return an unordered html list with all elements in str_list.
+    Intended to print error logs as returned by spinedb_api.
+
+    Args:
+        str_list (list(str))
+    """
+    return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
+
+
+def strip_json_data(data, maxlen):
+    """Return a json equivalent to data, stripped to maxlen characters.
+    """
+    if not data:
+        return data
+    try:
+        stripped_data = json.dumps(json.loads(data))
+    except json.JSONDecodeError:
+        stripped_data = data
+    if len(stripped_data) > 2 * maxlen:
+        stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
+    return stripped_data

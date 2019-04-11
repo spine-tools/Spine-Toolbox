@@ -18,11 +18,10 @@ Functions to make and handle QToolBars.
 
 # TODO: QToolBars should be added to the UI in Qt Designer
 
-from PySide2.QtCore import Qt, QMimeData, Signal, QSize
+from PySide2.QtCore import Qt, QMimeData, Signal, Slot
 from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QButtonGroup, \
-    QPushButton, QWidget, QSizePolicy
-from PySide2.QtGui import QIcon, QPixmap, QDrag
-from PySide2.QtSvg import QSvgRenderer, QGraphicsSvgItem
+    QPushButton, QWidget, QSizePolicy, QToolButton
+from PySide2.QtGui import QIcon, QDrag
 from config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 
 
@@ -33,8 +32,9 @@ class ItemToolBar(QToolBar):
         parent (ToolboxUI): QMainWindow instance
     """
     def __init__(self, parent):
-        """Init class"""
+        """Init class."""
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
+        self._toolbox = parent
         label = QLabel("Drag & Drop Icon")
         self.addWidget(label)
         # DS
@@ -54,14 +54,23 @@ class ItemToolBar(QToolBar):
         view_widget = DraggableWidget(self, view_pixmap, "View")
         view_action = self.addWidget(view_widget)
         # set remove all action
-        remove_all_icon = QIcon(":/icons/remove_all.png").pixmap(24, 24)
-        remove_all = QAction(remove_all_icon, "Remove All", parent)
-        remove_all.triggered.connect(parent.remove_all_items)
+        remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
+        # remove_all = QAction(remove_all_icon, "Remove All", parent)
+        remove_all = QToolButton(parent)
+        remove_all.setIcon(remove_all_icon)
+        remove_all.clicked.connect(self.remove_all_clicked)
         self.addSeparator()
-        self.addAction(remove_all)
+        self.addWidget(remove_all)
+        # self.addAction(remove_all)
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
+
+    @Slot(bool, name="remove_all_clicked")
+    def remove_all_clicked(self, checked=False):
+        """Slot for handling the remove all tool button clicked signal.
+        Calls ToolboxUI remove_all_items() method."""
+        self._toolbox.remove_all_items()
 
 
 class DraggableWidget(QLabel):

@@ -26,7 +26,7 @@ from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
-from tool_templates import GAMSTool, JuliaTool, ExecutableTool
+from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 
 
@@ -37,22 +37,21 @@ class SpineToolboxProject(MetaObject):
         toolbox (ToolboxUI): toolbox of this project
         name (str): Project name
         description (str): Project description
-        configs (ConfigurationParser): Application settings
         work_dir (str): Project work directory
         ext (str): Project save file extension(.proj)
     """
-    def __init__(self, toolbox, name, description, configs, work_dir=None, ext='.proj'):
+    def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
-        self._configs = configs
-        self.project_dir = os.path.join(project_dir(self._configs), self.short_name)
+        self._qsettings = self._toolbox.qsettings()
+        self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
         else:
             self.work_dir = work_dir
         self.filename = self.short_name + ext
-        self.path = os.path.join(project_dir(self._configs), self.filename)
+        self.path = os.path.join(project_dir(self._qsettings), self.filename)
         self.dirty = False  # TODO: Indicates if project has changed since loading
         # Make project directory
         try:
@@ -75,7 +74,7 @@ class SpineToolboxProject(MetaObject):
         """
         super().set_name(name)
         # Update project dir instance variable
-        self.project_dir = os.path.join(project_dir(self._configs), self.short_name)
+        self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         # Update file name and path
         self.change_filename(self.short_name + ".proj")
 
@@ -94,7 +93,7 @@ class SpineToolboxProject(MetaObject):
             new_filename (str): Filename used in saving the project. No full path. Example 'project.proj'
         """
         self.filename = new_filename
-        self.path = os.path.join(project_dir(self._configs), self.filename)
+        self.path = os.path.join(project_dir(self._qsettings), self.filename)
 
     def change_work_dir(self, new_work_path):
         """Change project work directory.
@@ -135,7 +134,7 @@ class SpineToolboxProject(MetaObject):
             QMessageBox.information(self._toolbox, "Invalid characters", msg)
             return False
         # Check that the new project name directory is not taken
-        projects_path = project_dir(self._configs)  # Path to directory where project files (.proj) are
+        projects_path = project_dir(self._qsettings)  # Path to directory where project files (.proj) are
         new_project_dir = os.path.join(projects_path, new_short_name)  # New project directory
         taken_dirs = list()
         dir_contents = [os.path.join(projects_path, x) for x in os.listdir(projects_path)]
@@ -170,8 +169,11 @@ class SpineToolboxProject(MetaObject):
         project_dict['work_dir'] = self.work_dir
         project_dict['tool_templates'] = tool_def_paths
         connection_table = self._toolbox.connection_model.get_connections()
-        bool_con_table = [[False if not j else True for j in connection_table[i]] for i in range(len(connection_table))]
-        project_dict['connections'] = bool_con_table
+        from_to_conn_table = [
+            [False if not j else (j.src_connector.position, j.dst_connector.position) for j in connection_table[i]]
+            for i in range(len(connection_table))
+        ]
+        project_dict['connections'] = from_to_conn_table
         project_dict["scene_x"] = self._toolbox.ui.graphicsView.scene().sceneRect().x()
         project_dict["scene_y"] = self._toolbox.ui.graphicsView.scene().sceneRect().y()
         project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
@@ -351,10 +353,12 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
                                          "'gams', 'julia' and 'executable'")
             return None
-        if _tooltype == "gams":
-            return GAMSTool.load(self._toolbox, path, definition)
-        elif _tooltype == "julia":
+        if _tooltype == "julia":
             return JuliaTool.load(self._toolbox, path, definition)
+        if _tooltype == "python":
+            return PythonTool.load(self._toolbox, path, definition)
+        elif _tooltype == "gams":
+            return GAMSTool.load(self._toolbox, path, definition)
         elif _tooltype == "executable":
             return ExecutableTool.load(self._toolbox, path, definition)
         else:
