@@ -5,7 +5,7 @@ from PySide2.QtCore import Signal, QModelIndex, QAbstractItemModel, Qt, QItemSel
 from PySide2.QtGui import QColor
 
 from spine_io.widgets.mapping_widget import MappingWidget, DataMappingListModel
-from spinedatabase_api import ObjectClassMapping, Mapping
+from spinedb_api import ObjectClassMapping, Mapping
 
 
 import sys
@@ -160,9 +160,13 @@ class ImportPreviewWidget(QWidget):
         Update list of tables
         """
         # create and delete mappings for tables
-        for t in tables:
-            if t not in self.table_mappings:
-                self.table_mappings[t] = DataMappingListModel([ObjectClassMapping()])
+        if isinstance(tables, list):
+            tables = {t: None for t in tables}
+        for t_name, t_mapping in tables.items():
+            if t_mapping == None:
+                t_mapping = ObjectClassMapping()
+            if t_name not in self.table_mappings:
+                self.table_mappings[t_name] = DataMappingListModel([t_mapping])
         for k in list(self.table_mappings.keys()):
             if k not in tables:
                 self.table_mappings.pop(k)
@@ -271,8 +275,8 @@ class MappingPreviewModel(TableModel):
         self._data_changed_signal = None
     
     def set_mapping(self, mapping):
-        if not self._data_changed_signal is None and self._model:
-            self._model.dataChanged.disconnect(self.update_colors)
+        if not self._data_changed_signal is None and self._mapping:
+            self._mapping.dataChanged.disconnect(self.update_colors)
             self._data_changed_signal = None
         self._mapping = mapping
         self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)

@@ -4,7 +4,7 @@ from PySide2.QtWidgets import QFileDialog
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import QObject, Signal
 
-from spinedatabase_api import read_with_mapping
+from spinedb_api import read_with_mapping
 
 class DataSourceImportTemplate(QObject):
     """
@@ -29,7 +29,7 @@ class DataSourceImportTemplate(QObject):
     dataReady = Signal(list, list)
     
     # tables from source is ready, should send a list of str of availible tables
-    tablesReady = Signal(list)
+    tablesReady = Signal(dict)
     
     # mapped data read from data source
     mappedDataReady = Signal(dict, list)
@@ -181,6 +181,7 @@ class IOWorker(QObject):
             self.dataReady.emit(data, header)
         except Exception as e:
             self.error.emit(f'Error when reading data: {e}')
+            print(e)
     
     def read_mapped_data(self, tables_mappings, options, max_rows=-1):
         mapped_data = {'object_classes': [],
@@ -197,6 +198,7 @@ class IOWorker(QObject):
                 opt = options.get(table, {})
                 data, header, num_cols = self.get_data_iterator(table, opt)
                 data, error = read_with_mapping(data, mapping, num_cols, header)
+                print(data)
                 for k, v in data.items():
                     mapped_data[k].extend(v)
                 errors.extend(error)

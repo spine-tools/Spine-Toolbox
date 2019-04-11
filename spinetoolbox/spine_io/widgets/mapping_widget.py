@@ -5,7 +5,7 @@ from PySide2.QtCore import Qt, QAbstractTableModel, Signal, QAbstractListModel,Q
 
 from widgets.custom_menus import FilterMenu
 
-from spinedatabase_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
+from spinedb_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
 
 
 class MappingTableModel(QAbstractTableModel):
@@ -26,7 +26,7 @@ class MappingTableModel(QAbstractTableModel):
     
     def set_mapping(self, mapping):
         if type(mapping) not in (RelationshipClassMapping, ObjectClassMapping):
-            raise TypeError("mapping must be of type: RelationshipClassMapping, ObjectClassMapping")
+            raise TypeError(f"mapping must be of type: RelationshipClassMapping, ObjectClassMapping instead got {type(mapping)}")
         self.beginResetModel()
         self._model = mapping
         if type(self._model) == RelationshipClassMapping:

@@ -1,6 +1,7 @@
 # -*- coding: utf-8 -*-
 
-from itertools import islice
+from itertools import islice, takewhile
+import io
 
 from spine_io.io_api import FileImportTemplate, IOWorker
 
@@ -8,6 +9,8 @@ from PySide2.QtWidgets import QWidget, QFormLayout, QLabel, QCheckBox, QSpinBox,
 from PySide2.QtCore import Signal, QThread
 
 from openpyxl import load_workbook
+
+from spinedb_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
 
 class ExcelConnector(FileImportTemplate):
     DISPLAY_NAME = 'Excel file'
@@ -72,14 +75,17 @@ class ExcelConnector(FileImportTemplate):
         return True
 
     def init_connection(self):
-        self.thread = QThread()
-        self.worker = ExcelWorker(self._filename)
-        self.worker.moveToThread(self.thread)
         # close existing thread
         self.close_connection()
+        
+        self.thread = QThread()
+        self.worker = ExcelWorker(self._filename)
+        #self.worker.moveToThread(self.thread)
+        
+        
         # connect worker signals
         self.worker.connectionReady.connect(lambda: self.connectionReady.emit())
-        self.worker.tablesReady.connect(lambda tables: self.tablesReady.emit(tables))
+        self.worker.tablesReady.connect(self.handle_tables_ready)
         self.worker.dataReady.connect(lambda data, header: self.dataReady.emit(data, header))
         self.worker.mappedDataReady.connect(lambda data, error: self.mappedDataReady.emit(data, error))
         self.worker.error.connect(lambda error_str: self.error.emit(error_str))
@@ -89,6 +95,14 @@ class ExcelConnector(FileImportTemplate):
         self.startMappedDataGet.connect(self.worker.read_mapped_data)
         self.thread.started.connect(self.worker.connect_excel)
         self.thread.start()
+    
+    def handle_tables_ready(self, table_options):
+        self.sheet_options.update({k: t['options'] for k, t in table_options.items()})
+        tables = {k: t['mapping'] for k, t in table_options.items()}
+        self.tablesReady.emit(tables)
+        # update options if a sheet is selected
+        if self.current_sheet and self.current_sheet in self.sheet_options:
+            self._option_widget.update_values(**self.sheet_options[self.current_sheet])
     
     def request_tables(self):
         self.fetchingData.emit()
@@ -120,12 +134,16 @@ class ExcelConnector(FileImportTemplate):
         return self._option_widget
     
     def close_connection(self):
+        if self.worker:
+            self.worker.deleteLater()
+            self.worker = None
         if self.thread:
             self.thread.quit()
             self.thread.wait()
 
 
 class ExcelWorker(IOWorker):
+    tablesReady = Signal(dict)
     
     def __init__(self, filename,parent=None):
         super(ExcelWorker, self).__init__(parent)
@@ -139,7 +157,12 @@ class ExcelWorker(IOWorker):
         """
         if self._filename:
             try:
-                self._wb = load_workbook(self._filename, read_only=True)
+                #FIXME: there seems to be no way of closing the workbook
+                # when read_only=True, read file into memory first and then
+                # open to avoid locking file while toolbox is running.
+                with open(self._filename, "rb") as f:
+                    in_mem_file = io.BytesIO(f.read())
+                self._wb = load_workbook(in_mem_file, read_only=True)
                 self.connectionReady.emit()
             except Exception as e:
                 print(e)
@@ -150,10 +173,108 @@ class ExcelWorker(IOWorker):
             self.tablesReady.emit([])
         else:
             try:
-                sheets = self._wb.sheetnames
+                sheets = {}
+                for s in self._wb.sheetnames:
+                    m, o = self.create_mapping_from_sheet(self._wb[s])
+                    sheets[s] = {'mapping': m, 'options': o}
+                #sheets = self._wb.sheetnames
                 self.tablesReady.emit(sheets)
-            except:
+            except Exception as e:
                 self.error.emit('could not get sheets from excel file')
+                print(e)
+    
+    def create_mapping_from_sheet(self, ws):
+        """
+        Checks if sheet is a valid spine excel template, if so creates a
+        mapping object for each sheet.
+        """
+        options = {"header": False,
+                   "row": 0,
+                   "column": 0,
+                   "read_until_col": False,
+                   "read_until_row": False}
+        mapping = ObjectClassMapping()
+        sheet_type = ws['A2'].value
+        sheet_data = ws['B2'].value
+        if not isinstance(sheet_type, str):
+            return mapping, options
+        if not isinstance(sheet_data, str):
+            return mapping, options
+        if sheet_type.lower() not in ["relationship", "object"]:
+            return mapping, options
+        if sheet_data.lower() not in ["parameter", "json array"]:
+            return mapping, options
+        if sheet_type.lower() == "relationship":
+            mapping = RelationshipClassMapping()
+            rel_dimension = ws['D2'].value
+            rel_name = ws['C2'].value
+            if not isinstance(rel_name, str):
+                return mapping, options
+            if not rel_name:
+                return mapping, options
+            if not isinstance(rel_dimension, int):
+                return mapping, options
+            if not rel_dimension >= 1:
+                return mapping, options
+            if sheet_data.lower() == 'parameter':
+                obj_classes = next(islice(ws.iter_rows(), 3, 4))
+                obj_classes = [r.value for r in obj_classes[:rel_dimension]]
+            else:
+                obj_classes = islice(ws.iter_rows(), 3, 3 + rel_dimension)
+                obj_classes = [r[0].value for r in obj_classes]
+            if not all(isinstance(r, str) for r in obj_classes) or any(r == None or r.isspace() for r in obj_classes):
+                return mapping, options
+            if sheet_data.lower() == 'parameter':
+                options.update({"header":True, "row":3, "read_until_col": True, "read_until_row": True})
+                mapping = RelationshipClassMapping.from_dict(
+                        {"map_type": "RelationshipClass",
+                         "name": rel_name,
+                         "object_classes": obj_classes,
+                         "objects": list(range(rel_dimension)),
+                         "parameters": {'map_type': 'parameter',
+                                        'name': {'map_type': 'row', 'value_reference': -1}}
+                         })
+            else:
+                options.update({"header":False, "row":3, "read_until_col": True, "read_until_row": False})
+                mapping = RelationshipClassMapping.from_dict(
+                        {"map_type": "RelationshipClass",
+                         "name": rel_name,
+                         "object_classes": obj_classes,
+                         "objects": [{'map_type': 'row', 'value_reference': i} for i in range(rel_dimension)],
+                         "parameters": {'map_type': 'parameter',
+                                        'name': {'map_type': 'row', 'value_reference': rel_dimension},
+                                        'extra_dimensions': [0]}
+                         })
+                
+            
+        elif sheet_type.lower() == "object":
+            obj_name = ws['C2'].value
+            if not isinstance(obj_name, str):
+                return mapping, options
+            if not obj_name:
+                return mapping, options
+            if sheet_data.lower() == 'parameter':
+                options.update({"header":True, "row":3, "read_until_col": True, "read_until_row": True})
+                mapping = ObjectClassMapping.from_dict(
+                        {"map_type": "ObjectClass",
+                         "name": obj_name,
+                         "object": 0,
+                         "parameters": {'map_type': 'parameter',
+                                        'name': {'map_type': 'row', 'value_reference': -1}}
+                         })
+            else:
+                options.update({"header":False, "row":3, "read_until_col": True, "read_until_row": False})
+                mapping = ObjectClassMapping.from_dict(
+                        {"map_type": "ObjectClass",
+                         "name": obj_name,
+                         "object": {'map_type': 'row', 'value_reference': 0},
+                         "parameters": {'map_type': 'parameter',
+                                        'name': {'map_type': 'row', 'value_reference': 1},
+                                        'extra_dimensions': [0]}
+                         })
+        else:
+            return mapping, options
+        return mapping, options
     
     def get_data_iterator(self, table, options, max_rows=-1):
         """
@@ -180,20 +301,22 @@ class ExcelWorker(IOWorker):
         else:
             max_rows += skip_rows
 
-        # find first empty col in top row and use that as a stop
-        read_to_col = None
         
+        read_to_col = None
         try:
             first_row = next(islice(ws.iter_rows(), skip_rows, max_rows))
             if stop_at_empty_col:
+                # find first empty col in top row and use that as a stop
                 for i, c in enumerate(islice(first_row,skip_columns, None)):
                     if c.value is None:
                         read_to_col = i + skip_columns
                         break
-                num_cols = read_to_col - skip_columns
+                
+                num_cols = i
             else:
                 num_cols = len(first_row)
         except StopIteration:
+            num_cols = 0
             # no data
             pass
         
@@ -213,7 +336,7 @@ class ExcelWorker(IOWorker):
         if stop_at_empty_row:
             # add condition to iterator
             condition = lambda row: row[0] is not None
-            data_iterator = filter(data_iterator, condition)
+            data_iterator = takewhile(condition, data_iterator)
         
         return data_iterator, header, num_cols
 
