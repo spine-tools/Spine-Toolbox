@@ -517,6 +517,8 @@ class DataStoreForm(QMainWindow):
             return
         self.object_tree_model.add_relationship_classes(relationship_classes)
         self.relationship_tree_model.add_relationship_classes(relationship_classes)
+        self.relationship_parameter_definition_model.add_object_class_id_lists(relationship_classes)
+        self.relationship_parameter_value_model.add_object_class_id_lists(relationship_classes)
         self.commit_available.emit(True)
         relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
         msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)

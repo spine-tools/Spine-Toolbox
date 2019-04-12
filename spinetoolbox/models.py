@@ -3236,12 +3236,10 @@ class RelationshipParameterModel(MinimalTableModel):
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
 
-    def populate_object_class_id_lists(self):
+    def add_object_class_id_lists(self, wide_relationship_class_list):
         """Populate a dictionary of object class id lists per relationship class."""
-        self.object_class_id_lists = {
-            x.id: [int(x) for x in x.object_class_id_list.split(",")]
-            for x in self.db_map.wide_relationship_class_list()
-        }
+        self.object_class_id_lists.update({
+            x.id: [int(x) for x in x.object_class_id_list.split(",")] for x in wide_relationship_class_list})
 
     def flags(self, index):
         """Return flags for given index.
@@ -3612,7 +3610,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         """Reset model data. Each sub-model is filled with parameter value data
         for a different relationship class."""
         self.beginResetModel()
-        self.populate_object_class_id_lists()
+        self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
         header = self.db_map.relationship_parameter_value_fields()
         data = self.db_map.relationship_parameter_value_list()
         self.fixed_columns = [
@@ -3765,7 +3763,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         """Reset model data. Each sub-model is filled with parameter definition data
         for a different relationship class."""
         self.beginResetModel()
-        self.populate_object_class_id_lists()
+        self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
         header = self.db_map.relationship_parameter_fields()
         data = self.db_map.relationship_parameter_list()
         self.fixed_columns = [header.index(x) for x in ('relationship_class_name', 'object_class_name_list')]
