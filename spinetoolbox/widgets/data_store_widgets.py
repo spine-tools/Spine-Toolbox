@@ -861,9 +861,9 @@ class TreeViewForm(DataStoreForm):
         # Others
         self.widget_with_selection = None
         self.paste_to_widget = None
-        self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
-        self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
-        self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
+        self.fully_expand_icon = QIcon(QPixmap(":/icons/menu_icons/angle-double-right.svg"))
+        self.fully_collapse_icon = QIcon(QPixmap(":/icons/menu_icons/angle-double-left.svg"))
+        self.find_next_icon = QIcon(QPixmap(":/icons/menu_icons/ellipsis-h.png"))
         self.settings_key = 'treeViewWidget'
         self.do_clear_selections = True
         self.restore_dock_widgets()

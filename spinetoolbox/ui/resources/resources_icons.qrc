@@ -14,23 +14,24 @@
     <file>menu_icons/window-close.svg</file>
     <file>menu_icons/cog.svg</file>
     <file>menu_icons/question-circle.svg</file>
+    <file>menu_icons/copy.svg</file>
+    <file>menu_icons/paste.svg</file>
+    <file>menu_icons/file-export.svg</file>
+    <file>menu_icons/file-import.svg</file>
+    <file>menu_icons/check.svg</file>
+    <file>menu_icons/angle-double-left.svg</file>
+    <file>menu_icons/angle-double-right.svg</file>
+    <file>menu_icons/ellipsis-h.svg</file>
+    <file>menu_icons/sync.svg</file>
+    <file>menu_icons/undo.svg</file>
     <file>qt_extended_48x48.png</file>
     <file>project_item_icons/binoculars.svg</file>
     <file>project_item_icons/file-alt.svg</file>
     <file>project_item_icons/database.svg</file>
     <file>project_item_icons/hammer.svg</file>
     <file>minus_object_icon.png</file>
-    <file>import_ds.png</file>
-    <file>close.png</file>
-    <file>export_ds.png</file>
     <file>edit_object_icon.png</file>
-    <file>refresh.png</file>
     <file>edit_relationship_icon.png</file>
-    <file>paste.png</file>
-    <file>copy.png</file>
-    <file>fully_expand.png</file>
-    <file>fully_collapse.png</file>
-    <file>find_next.png</file>
     <file>minus_relationship_icon.png</file>
     <file>minus_object_parameter_icon.png</file>
     <file>minus_relationship_parameter_icon.png</file>
@@ -46,8 +47,6 @@
     <file>wheel.png</file>
     <file>datapkg.png</file>
     <file>tool_options.png</file>
-    <file>ok.png</file>
-    <file>nok.png</file>
     <file>keys.png</file>
     <file>plus.png</file>
     <file>minus.png</file>

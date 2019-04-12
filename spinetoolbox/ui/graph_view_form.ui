@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -72,7 +72,7 @@
      <x>0</x>
      <y>0</y>
      <width>944</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuGraph">
@@ -750,7 +750,7 @@
   <action name="actionRefresh">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
+     <normaloff>:/icons/menu_icons/sync.svg</normaloff>:/icons/menu_icons/sync.svg</iconset>
    </property>
    <property name="text">
     <string>Refresh</string>
@@ -762,7 +762,7 @@
   <action name="actionCommit">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/ok.png</normaloff>:/icons/ok.png</iconset>
+     <normaloff>:/icons/menu_icons/check.svg</normaloff>:/icons/menu_icons/check.svg</iconset>
    </property>
    <property name="text">
     <string>Commit</string>
@@ -774,7 +774,7 @@
   <action name="actionRollback">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/nok.png</normaloff>:/icons/nok.png</iconset>
+     <normaloff>:/icons/menu_icons/undo.svg</normaloff>:/icons/menu_icons/undo.svg</iconset>
    </property>
    <property name="text">
     <string>Rollback</string>
@@ -786,7 +786,7 @@
   <action name="actionClose">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
+     <normaloff>:/icons/menu_icons/window-close.svg</normaloff>:/icons/menu_icons/window-close.svg</iconset>
    </property>
    <property name="text">
     <string>Close</string>

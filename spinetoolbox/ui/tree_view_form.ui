@@ -580,7 +580,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/ok.png</normaloff>:/icons/ok.png</iconset>
+     <normaloff>:/icons/menu_icons/check.svg</normaloff>:/icons/menu_icons/check.svg</iconset>
    </property>
    <property name="text">
     <string>Commit</string>
@@ -595,7 +595,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/nok.png</normaloff>:/icons/nok.png</iconset>
+     <normaloff>:/icons/menu_icons/undo.svg</normaloff>:/icons/menu_icons/undo.svg</iconset>
    </property>
    <property name="text">
     <string>Rollback</string>
@@ -607,7 +607,7 @@
   <action name="actionClose">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/close.png</normaloff>:/icons/close.png</iconset>
+     <normaloff>:/icons/menu_icons/window-close.svg</normaloff>:/icons/menu_icons/window-close.svg</iconset>
    </property>
    <property name="text">
     <string>Close</string>
@@ -667,7 +667,7 @@
   <action name="actionImport">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/import_ds.png</normaloff>:/icons/import_ds.png</iconset>
+     <normaloff>:/icons/menu_icons/file-import.svg</normaloff>:/icons/menu_icons/file-import.svg</iconset>
    </property>
    <property name="text">
     <string>Import</string>
@@ -679,7 +679,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/export_ds.png</normaloff>:/icons/export_ds.png</iconset>
+     <normaloff>:/icons/menu_icons/file-export.svg</normaloff>:/icons/menu_icons/file-export.svg</iconset>
    </property>
    <property name="text">
     <string>Export</string>
@@ -691,7 +691,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/copy.png</normaloff>:/icons/copy.png</iconset>
+     <normaloff>:/icons/menu_icons/copy.svg</normaloff>:/icons/menu_icons/copy.svg</iconset>
    </property>
    <property name="text">
     <string>Copy</string>
@@ -706,7 +706,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/paste.png</normaloff>:/icons/paste.png</iconset>
+     <normaloff>:/icons/menu_icons/paste.svg</normaloff>:/icons/menu_icons/paste.svg</iconset>
    </property>
    <property name="text">
     <string>Paste</string>
@@ -718,7 +718,7 @@
   <action name="actionRefresh">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/refresh.png</normaloff>:/icons/refresh.png</iconset>
+     <normaloff>:/icons/menu_icons/sync.svg</normaloff>:/icons/menu_icons/sync.svg</iconset>
    </property>
    <property name="text">
     <string>Refresh</string>
