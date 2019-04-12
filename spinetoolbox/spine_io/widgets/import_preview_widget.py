@@ -178,6 +178,7 @@ class ImportPreviewWidget(QWidget):
         
         # current selected table
         selected = self._ui_list.selectedItems()
+        
 
         # empty tables list and add new tables
         self._ui_list.blockSignals(True)

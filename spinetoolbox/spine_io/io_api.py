@@ -181,7 +181,6 @@ class IOWorker(QObject):
             self.dataReady.emit(data, header)
         except Exception as e:
             self.error.emit(f'Error when reading data: {e}')
-            print(e)
     
     def read_mapped_data(self, tables_mappings, options, max_rows=-1):
         mapped_data = {'object_classes': [],
@@ -198,7 +197,6 @@ class IOWorker(QObject):
                 opt = options.get(table, {})
                 data, header, num_cols = self.get_data_iterator(table, opt)
                 data, error = read_with_mapping(data, mapping, num_cols, header)
-                print(data)
                 for k, v in data.items():
                     mapped_data[k].extend(v)
                 errors.extend(error)

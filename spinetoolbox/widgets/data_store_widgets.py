@@ -55,7 +55,7 @@ from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity, format_string_list
 
 from spine_io.widgets.import_widget import ImportDialog
-from spinedatabase_api import import_data
+from spinedb_api import import_data
 
 
 class DataStoreForm(QMainWindow):

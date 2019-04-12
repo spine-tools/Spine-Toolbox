@@ -165,7 +165,6 @@ class ExcelWorker(IOWorker):
                 self._wb = load_workbook(in_mem_file, read_only=True)
                 self.connectionReady.emit()
             except Exception as e:
-                print(e)
                 self.error.emit('Could not connect to excel file!')
     
     def tables(self):
@@ -181,7 +180,6 @@ class ExcelWorker(IOWorker):
                 self.tablesReady.emit(sheets)
             except Exception as e:
                 self.error.emit('could not get sheets from excel file')
-                print(e)
     
     def create_mapping_from_sheet(self, ws):
         """
