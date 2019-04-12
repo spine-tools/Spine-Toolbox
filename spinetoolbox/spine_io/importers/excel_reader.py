@@ -80,7 +80,9 @@ class ExcelConnector(FileImportTemplate):
         
         self.thread = QThread()
         self.worker = ExcelWorker(self._filename)
-        #self.worker.moveToThread(self.thread)
+        # move worker to QThread, you can comment out this line if you want
+        # to run the worker in UI thread for easier debugging.
+        self.worker.moveToThread(self.thread)
         
         
         # connect worker signals
@@ -97,7 +99,7 @@ class ExcelConnector(FileImportTemplate):
         self.thread.start()
     
     def handle_tables_ready(self, table_options):
-        self.sheet_options.update({k: t['options'] for k, t in table_options.items()})
+        self.sheet_options.update({k: t['options'] for k, t in table_options.items() if t['options'] != None})
         tables = {k: t['mapping'] for k, t in table_options.items()}
         self.tablesReady.emit(tables)
         # update options if a sheet is selected
@@ -195,25 +197,25 @@ class ExcelWorker(IOWorker):
         sheet_type = ws['A2'].value
         sheet_data = ws['B2'].value
         if not isinstance(sheet_type, str):
-            return mapping, options
+            return None, None
         if not isinstance(sheet_data, str):
-            return mapping, options
+            return None, None
         if sheet_type.lower() not in ["relationship", "object"]:
-            return mapping, options
+            return None, None
         if sheet_data.lower() not in ["parameter", "json array"]:
-            return mapping, options
+            return None, None
         if sheet_type.lower() == "relationship":
             mapping = RelationshipClassMapping()
             rel_dimension = ws['D2'].value
             rel_name = ws['C2'].value
             if not isinstance(rel_name, str):
-                return mapping, options
+                return None, None
             if not rel_name:
-                return mapping, options
+                return None, None
             if not isinstance(rel_dimension, int):
-                return mapping, options
+                return None, None
             if not rel_dimension >= 1:
-                return mapping, options
+                return None, None
             if sheet_data.lower() == 'parameter':
                 obj_classes = next(islice(ws.iter_rows(), 3, 4))
                 obj_classes = [r.value for r in obj_classes[:rel_dimension]]
@@ -221,7 +223,7 @@ class ExcelWorker(IOWorker):
                 obj_classes = islice(ws.iter_rows(), 3, 3 + rel_dimension)
                 obj_classes = [r[0].value for r in obj_classes]
             if not all(isinstance(r, str) for r in obj_classes) or any(r == None or r.isspace() for r in obj_classes):
-                return mapping, options
+                return None, None
             if sheet_data.lower() == 'parameter':
                 options.update({"header":True, "row":3, "read_until_col": True, "read_until_row": True})
                 mapping = RelationshipClassMapping.from_dict(
@@ -248,9 +250,9 @@ class ExcelWorker(IOWorker):
         elif sheet_type.lower() == "object":
             obj_name = ws['C2'].value
             if not isinstance(obj_name, str):
-                return mapping, options
+                return None, None
             if not obj_name:
-                return mapping, options
+                return None, None
             if sheet_data.lower() == 'parameter':
                 options.update({"header":True, "row":3, "read_until_col": True, "read_until_row": True})
                 mapping = ObjectClassMapping.from_dict(
@@ -271,7 +273,7 @@ class ExcelWorker(IOWorker):
                                         'extra_dimensions': [0]}
                          })
         else:
-            return mapping, options
+            return None, None
         return mapping, options
     
     def get_data_iterator(self, table, options, max_rows=-1):

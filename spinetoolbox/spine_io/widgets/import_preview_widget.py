@@ -163,9 +163,14 @@ class ImportPreviewWidget(QWidget):
         if isinstance(tables, list):
             tables = {t: None for t in tables}
         for t_name, t_mapping in tables.items():
-            if t_mapping == None:
-                t_mapping = ObjectClassMapping()
+            
             if t_name not in self.table_mappings:
+                if t_mapping == None:
+                    t_mapping = ObjectClassMapping()
+                else:
+                    # add table to selected if connector gave a mapping object
+                    # for the table
+                    self.selected_source_tables.add(t_name)
                 self.table_mappings[t_name] = DataMappingListModel([t_mapping])
         for k in list(self.table_mappings.keys()):
             if k not in tables:
