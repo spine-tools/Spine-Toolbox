@@ -24,9 +24,10 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
     QFileDialog, QApplication, QErrorMessage, QGraphicsScene, QGraphicsRectItem, QAction, QWidgetAction, \
-    QDockWidget, QTreeView, QTableView
+    QDockWidget, QTreeView, QTableView, QGraphicsColorizeEffect, QGraphicsScene
+from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from PySide2.QtCore import Qt, Signal, Slot, QPointF, QRectF, QSize, QEvent
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, QPainter, QColor
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
@@ -52,7 +53,88 @@ from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity, format_string_list
+from helpers import busy_effect, fix_name_ambiguity, format_string_list
+
+
+class IconMaker(object):
+    def __init__(self):
+        super().__init__()
+        self.renderer = QSvgRenderer(":/icons/cube.svg")
+        self.svg_item = QGraphicsSvgItem()
+        self.svg_item.setSharedRenderer(self.renderer)
+        self.svg_item.setElementId("")
+        self.colorizer = QGraphicsColorizeEffect()
+        self.scene = QGraphicsScene()
+        self.scene.addItem(self.svg_item)
+        self.object_class_icons = {}  # To store already created icons
+        self.relationship_class_icons = {}
+        color_count = 32
+        golden_ratio = 0.618033988749895
+        self.class_colors = [
+            QColor.fromHsv(golden_ratio * (360 / color_count) * i, 255, 255, 255) for i in range(color_count)]
+
+    def set_object_icon(self, display_icon, object_class_name):
+        """Set and return an object pixmap for object an object class."""
+        try:
+            color = self.class_colors[display_icon]
+        except IndexError:
+            color = QColor("black")
+        self.colorizer.setColor(color)
+        self.svg_item.setGraphicsEffect(self.colorizer)
+        pixmap = QPixmap(self.renderer.defaultSize())
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        self.scene.render(painter)
+        painter.end()
+        icon = QIcon(pixmap)
+        self.object_class_icons[object_class_name] = icon
+        return icon
+
+    def get_object_icon(self, object_class_name):
+        try:
+            return self.object_class_icons[object_class_name]
+        except KeyError:
+            return QIcon(":/icons/cube.svg")
+
+    def relationship_icon(self, str_object_class_name_list):
+        """A pixmap rendered by painting several object pixmaps together."""
+        if not str_object_class_name_list:
+            return QIcon(":/icons/cubes.svg")
+        object_class_name_list = str_object_class_name_list.split(",")
+        extent = 64
+        x_step = extent - 8
+        y_offset = extent - 16 + 2
+        pixmap_list = list()
+        for object_class_name in object_class_name_list:
+            pixmap = self.get_object_icon(object_class_name).pixmap(extent)
+            pixmap_list.append(pixmap.scaled(extent, extent))
+        pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)] # Two pixmaps per row...
+        combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
+        combo_height = extent + y_offset
+        combo_extent = max(combo_width, combo_height)
+        x_padding = (combo_extent - combo_width) / 2 if combo_extent > combo_width else 0
+        y_padding = (combo_extent - combo_height) / 2 if combo_extent > combo_height else 0
+        # Add extra vertical padding in case the list contains only one element, so this one's centered
+        if len(object_class_name_list) == 1:
+            y_padding += y_offset / 2
+        relationship_pixmap = QPixmap(combo_extent, combo_extent)
+        relationship_pixmap.fill(Qt.transparent)
+        painter = QPainter(relationship_pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        x_offset = 0
+        for pixmap_row in pixmap_matrix:
+            for j, pixmap in enumerate(pixmap_row):
+                if j % 2 == 1:
+                    x = x_offset + x_step / 2 + x_padding
+                    y = y_offset + y_padding
+                else:
+                    x = x_offset + x_padding
+                    y = y_padding
+                painter.drawPixmap(x, y, pixmap)
+            x_offset += x_step
+        painter.end()
+        return QIcon(relationship_pixmap)
 
 
 class DataStoreForm(QMainWindow):
@@ -86,6 +168,7 @@ class DataStoreForm(QMainWindow):
         # DB db_map
         self.db_map = db_map
         self.database = database
+        self.icon_maker = IconMaker()
         self.object_icon_dict = {}
         self.relationship_icon_dict = {}
         # Object tree model
@@ -279,28 +362,6 @@ class DataStoreForm(QMainWindow):
         msg = "Session refreshed."
         self.msg.emit(msg)
         self.init_models()
-
-    def object_icon(self, object_class_name):
-        """An appropriate object icon for `object_class_name`."""
-        if not object_class_name:
-            return QIcon()
-        try:
-            icon = self.object_icon_dict[object_class_name]
-        except KeyError:
-            icon = QIcon(object_pixmap(object_class_name))
-            self.object_icon_dict[object_class_name] = icon
-        return icon
-
-    def relationship_icon(self, object_class_name_list):
-        """An appropriate relationship icon for `object_class_name_list`."""
-        if not object_class_name_list:
-            return QIcon()
-        try:
-            icon = self.relationship_icon_dict[object_class_name_list]
-        except KeyError:
-            icon = QIcon(relationship_pixmap(object_class_name_list.split(",")))
-            self.relationship_icon_dict[object_class_name_list] = icon
-        return icon
 
     def init_models(self):
         """Initialize models."""
@@ -1001,15 +1062,15 @@ class TreeViewForm(DataStoreForm):
             self.ui.actionCopy.setEnabled(True)
             self.ui.actionRemove_selection.setEnabled(True)
             if name == "object tree":
-                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_icon.png"))
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
             elif name == "object parameter definition":
-                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/menu_icons/cog_minus.svg"))
             elif name == "object parameter value":
-                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/menu_icons/cog_minus.svg"))
             elif name == "relationship parameter definition":
-                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/menu_icons/cog_minus.svg"))
             elif name == "relationship parameter value":
-                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus_object_parameter_icon.png"))
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/menu_icons/cog_minus.svg"))
             elif name == "parameter value list":
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/minus.png"))
 

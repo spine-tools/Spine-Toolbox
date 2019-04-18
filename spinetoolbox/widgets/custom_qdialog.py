@@ -28,7 +28,7 @@ from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
     AddParameterEnumsDelegate, LineEditDelegate
 from widgets.custom_qtableview import CopyPasteTableView
-from helpers import busy_effect, object_pixmap, format_string_list
+from helpers import busy_effect, format_string_list
 
 
 class ManageItemsDialog(QDialog):
@@ -120,7 +120,7 @@ class AddObjectClassesDialog(ManageItemsDialog):
         self.combo_box = QComboBox(self)
         self.layout().insertWidget(0, self.combo_box)
         self.object_class_list = self._parent.db_map.object_class_list()
-        self.remove_row_icon = QIcon(":/icons/minus_object_icon.png")
+        self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self.table_view.setItemDelegate(LineEditDelegate(parent))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'description'])
@@ -182,7 +182,7 @@ class AddObjectsDialog(ManageItemsDialog):
         self.model = EmptyRowModel(self)
         self.model.force_default = force_default
         self.table_view.setModel(self.model)
-        self.remove_row_icon = QIcon(":/icons/minus_object_icon.png")
+        self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self.table_view.setItemDelegate(AddObjectsDelegate(parent))
         self.connect_signals()
         default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
@@ -210,7 +210,7 @@ class AddObjectsDialog(ManageItemsDialog):
                 object_class_name = index.data(Qt.DisplayRole)
                 if not object_class_name:
                     return
-                icon = QIcon(object_pixmap(object_class_name))
+                icon = self.parent().icon_maker.get_object_icon(object_class_name)
                 self.model.setData(index, icon, Qt.DecorationRole)
 
     @busy_effect
@@ -270,7 +270,7 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
         layout.addWidget(self.spin_box)
         layout.addStretch()
         self.layout().insertWidget(0, widget)
-        self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
+        self.remove_row_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
         self.table_view.setItemDelegate(AddRelationshipClassesDelegate(parent))
         self.number_of_dimensions = 1
         self.object_class_one_name = None
@@ -400,7 +400,7 @@ class AddRelationshipsDialog(ManageItemsDialog):
         layout.addWidget(self.combo_box)
         layout.addStretch()
         self.layout().insertWidget(0, widget)
-        self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
+        self.remove_row_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
         self.relationship_class_list = \
             [x for x in self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)]
         self.relationship_class = None

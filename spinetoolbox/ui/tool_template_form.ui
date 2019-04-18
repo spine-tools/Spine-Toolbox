@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -184,7 +184,7 @@
          </property>
          <property name="icon">
           <iconset resource="resources/resources_icons.qrc">
-           <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
+           <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
          </property>
          <property name="popupMode">
           <enum>QToolButton::InstantPopup</enum>
@@ -314,6 +314,10 @@
              <property name="text">
               <string/>
              </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
+             </property>
             </widget>
            </item>
            <item>
@@ -332,6 +336,10 @@
              </property>
              <property name="toolTip">
               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add source code &lt;span style=&quot; font-weight:600;&quot;&gt;directory&lt;/span&gt; and all its contents.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/folder.svg</normaloff>:/icons/folder.svg</iconset>
              </property>
             </widget>
            </item>
@@ -367,6 +375,10 @@
              </property>
              <property name="text">
               <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
              </property>
             </widget>
            </item>
@@ -469,6 +481,10 @@
              <property name="text">
               <string/>
              </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
+             </property>
             </widget>
            </item>
            <item>
@@ -503,6 +519,10 @@
              </property>
              <property name="text">
               <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
              </property>
             </widget>
            </item>
@@ -593,6 +613,10 @@
              <property name="text">
               <string/>
              </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
+             </property>
             </widget>
            </item>
            <item>
@@ -627,6 +651,10 @@
              </property>
              <property name="text">
               <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
              </property>
             </widget>
            </item>
@@ -717,6 +745,10 @@
              <property name="text">
               <string/>
              </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
+             </property>
             </widget>
            </item>
            <item>
@@ -751,6 +783,10 @@
              </property>
              <property name="text">
               <string/>
+             </property>
+             <property name="icon">
+              <iconset resource="resources/resources_icons.qrc">
+               <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
              </property>
             </widget>
            </item>

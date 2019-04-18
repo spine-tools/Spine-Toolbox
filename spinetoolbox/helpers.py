@@ -29,7 +29,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox
-from PySide2.QtGui import QCursor, QPainter, QPixmap, QImageReader
+from PySide2.QtGui import QCursor, QImageReader
 from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
@@ -319,51 +319,6 @@ def rename_dir(widget, old_dir, new_dir):
         QMessageBox.information(widget, "Renaming directory failed", msg)
         return False
     return True
-
-
-def object_pixmap(object_class_name):
-    """An object pixmap defined for `object_class_name` if any, or a generic one if none."""
-    pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
-    if pixmap.isNull():
-        pixmap = QPixmap(":/icons/object_icon.png")
-    return pixmap
-
-
-def relationship_pixmap(object_class_name_list):
-    """A pixmap rendered by painting several object pixmaps together."""
-    extent = 64
-    x_step = extent - 8
-    y_offset = extent - 16 + 2
-    pixmap_list = list()
-    for object_class_name in object_class_name_list:
-        pixmap = object_pixmap(object_class_name)
-        pixmap_list.append(pixmap.scaled(extent, extent))
-    pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)] # Two pixmaps per row...
-    combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
-    combo_height = extent + y_offset
-    combo_extent = max(combo_width, combo_height)
-    x_padding = (combo_extent - combo_width) / 2 if combo_extent > combo_width else 0
-    y_padding = (combo_extent - combo_height) / 2 if combo_extent > combo_height else 0
-    # Add extra vertical padding in case the list contains only one element, so this one's centered
-    if len(object_class_name_list) == 1:
-        y_padding += y_offset / 2
-    relationship_pixmap = QPixmap(combo_extent, combo_extent)
-    relationship_pixmap.fill(Qt.transparent)
-    painter = QPainter(relationship_pixmap)
-    painter.setRenderHint(QPainter.Antialiasing, True)
-    x_offset = 0
-    for pixmap_row in pixmap_matrix:
-        for j, pixmap in enumerate(pixmap_row):
-            if j % 2 == 1:
-                x = x_offset + x_step / 2 + x_padding
-                y = y_offset + y_padding
-            else:
-                x = x_offset + x_padding
-                y = y_padding
-            painter.drawPixmap(x, y, pixmap)
-        x_offset += x_step
-    painter.end()
-    return relationship_pixmap
 
 
 def fix_name_ambiguity(name_list, offset=0):

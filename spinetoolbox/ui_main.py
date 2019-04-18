@@ -442,22 +442,23 @@ class ToolboxUI(QMainWindow):
 
     def init_shared_widgets(self):
         """Initialize widgets that are shared among all ProjectItems of the same type."""
+        # NOTE: Trying out fontawesome
         # Data Stores
         self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
         self.ui.comboBox_dialect.setCurrentIndex(-1)
-        self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        self.ui.toolButton_ds_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # self.ui.toolButton_ds_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Data Connections
         self.ui.treeView_dc_references.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Tools (Tool template combobox is initialized in init_tool_template_model)
         self.ui.pushButton_tool_stop.setEnabled(False)
         self.ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Views
         self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
 
     def restore_ui(self):
         """Restore UI state from previous session."""

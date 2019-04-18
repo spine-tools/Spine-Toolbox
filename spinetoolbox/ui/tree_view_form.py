@@ -208,7 +208,6 @@ class Ui_MainWindow(object):
         self.treeView_object.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_object.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_object.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.treeView_object.setIconSize(QtCore.QSize(20, 20))
         self.treeView_object.setObjectName("treeView_object")
         self.verticalLayout_4.addWidget(self.treeView_object)
         self.dockWidget_object_tree.setWidget(self.dockWidgetContents_6)
@@ -226,7 +225,6 @@ class Ui_MainWindow(object):
         self.treeView_relationship.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_relationship.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_relationship.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
-        self.treeView_relationship.setIconSize(QtCore.QSize(20, 20))
         self.treeView_relationship.setObjectName("treeView_relationship")
         self.verticalLayout_6.addWidget(self.treeView_relationship)
         self.dockWidget_relationship_tree.setWidget(self.dockWidgetContents_7)
@@ -250,7 +248,7 @@ class Ui_MainWindow(object):
         self.actionClose.setObjectName("actionClose")
         self.actionAdd_object_classes = QtWidgets.QAction(MainWindow)
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/icons/plus_object_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cube_plus.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionAdd_object_classes.setIcon(icon3)
         self.actionAdd_object_classes.setObjectName("actionAdd_object_classes")
         self.actionAdd_objects = QtWidgets.QAction(MainWindow)
@@ -258,7 +256,7 @@ class Ui_MainWindow(object):
         self.actionAdd_objects.setObjectName("actionAdd_objects")
         self.actionAdd_relationship_classes = QtWidgets.QAction(MainWindow)
         icon4 = QtGui.QIcon()
-        icon4.addPixmap(QtGui.QPixmap(":/icons/plus_relationship_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon4.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cubes_plus.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionAdd_relationship_classes.setIcon(icon4)
         self.actionAdd_relationship_classes.setObjectName("actionAdd_relationship_classes")
         self.actionAdd_relationships = QtWidgets.QAction(MainWindow)
@@ -295,13 +293,13 @@ class Ui_MainWindow(object):
         self.actionEdit_object_classes = QtWidgets.QAction(MainWindow)
         self.actionEdit_object_classes.setEnabled(False)
         icon10 = QtGui.QIcon()
-        icon10.addPixmap(QtGui.QPixmap(":/icons/edit_object_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon10.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cube_pen.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionEdit_object_classes.setIcon(icon10)
         self.actionEdit_object_classes.setObjectName("actionEdit_object_classes")
         self.actionEdit_relationship_classes = QtWidgets.QAction(MainWindow)
         self.actionEdit_relationship_classes.setEnabled(False)
         icon11 = QtGui.QIcon()
-        icon11.addPixmap(QtGui.QPixmap(":/icons/edit_relationship_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon11.addPixmap(QtGui.QPixmap(":/icons/menu_icons/cubes_pen.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionEdit_relationship_classes.setIcon(icon11)
         self.actionEdit_relationship_classes.setObjectName("actionEdit_relationship_classes")
         self.actionEdit_objects = QtWidgets.QAction(MainWindow)
@@ -412,6 +410,6 @@ class Ui_MainWindow(object):
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
 import resources_icons_rc

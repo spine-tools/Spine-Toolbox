@@ -511,12 +511,6 @@
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
-       <property name="iconSize">
-        <size>
-         <width>20</width>
-         <height>20</height>
-        </size>
-       </property>
       </widget>
      </item>
     </layout>
@@ -562,12 +556,6 @@
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
-       </property>
-       <property name="iconSize">
-        <size>
-         <width>20</width>
-         <height>20</height>
-        </size>
        </property>
       </widget>
      </item>
@@ -619,7 +607,7 @@
   <action name="actionAdd_object_classes">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_object_icon.png</normaloff>:/icons/plus_object_icon.png</iconset>
+     <normaloff>:/icons/menu_icons/cube_plus.svg</normaloff>:/icons/menu_icons/cube_plus.svg</iconset>
    </property>
    <property name="text">
     <string>Add object classes</string>
@@ -631,7 +619,7 @@
   <action name="actionAdd_objects">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_object_icon.png</normaloff>:/icons/plus_object_icon.png</iconset>
+     <normaloff>:/icons/menu_icons/cube_plus.svg</normaloff>:/icons/menu_icons/cube_plus.svg</iconset>
    </property>
    <property name="text">
     <string>Add objects</string>
@@ -643,7 +631,7 @@
   <action name="actionAdd_relationship_classes">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_relationship_icon.png</normaloff>:/icons/plus_relationship_icon.png</iconset>
+     <normaloff>:/icons/menu_icons/cubes_plus.svg</normaloff>:/icons/menu_icons/cubes_plus.svg</iconset>
    </property>
    <property name="text">
     <string>Add relationship classes</string>
@@ -655,7 +643,7 @@
   <action name="actionAdd_relationships">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/plus_relationship_icon.png</normaloff>:/icons/plus_relationship_icon.png</iconset>
+     <normaloff>:/icons/menu_icons/cubes_plus.svg</normaloff>:/icons/menu_icons/cubes_plus.svg</iconset>
    </property>
    <property name="text">
     <string>Add relationships</string>
@@ -733,7 +721,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/edit_object_icon.png</normaloff>:/icons/edit_object_icon.png</iconset>
+     <normaloff>:/icons/menu_icons/cube_pen.svg</normaloff>:/icons/menu_icons/cube_pen.svg</iconset>
    </property>
    <property name="text">
     <string>Edit object classes</string>
@@ -745,7 +733,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/edit_relationship_icon.png</normaloff>:/icons/edit_relationship_icon.png</iconset>
+     <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
    </property>
    <property name="text">
     <string>Edit relationship classes</string>
@@ -757,7 +745,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/edit_object_icon.png</normaloff>:/icons/edit_object_icon.png</iconset>
+     <normaloff>:/icons/menu_icons/cube_pen.svg</normaloff>:/icons/menu_icons/cube_pen.svg</iconset>
    </property>
    <property name="text">
     <string>Edit objects</string>
@@ -769,7 +757,7 @@
    </property>
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/edit_relationship_icon.png</normaloff>:/icons/edit_relationship_icon.png</iconset>
+     <normaloff>:/icons/menu_icons/cubes_pen.svg</normaloff>:/icons/menu_icons/cubes_pen.svg</iconset>
    </property>
    <property name="text">
     <string>Edit relationships</string>

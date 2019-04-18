@@ -24,46 +24,34 @@
     <file>menu_icons/ellipsis-h.svg</file>
     <file>menu_icons/sync.svg</file>
     <file>menu_icons/undo.svg</file>
+    <file>menu_icons/cube_plus.svg</file>
+    <file>menu_icons/cube_pen.svg</file>
+    <file>menu_icons/cube_minus.svg</file>
+    <file>menu_icons/cubes_plus.svg</file>
+    <file>menu_icons/cubes_pen.svg</file>
+    <file>menu_icons/cubes_minus.svg</file>
+    <file>menu_icons/cog_minus.svg</file>
+    <file>cube.svg</file>
+    <file>cubes.svg</file>
     <file>qt_extended_48x48.png</file>
     <file>project_item_icons/binoculars.svg</file>
     <file>project_item_icons/file-alt.svg</file>
     <file>project_item_icons/database.svg</file>
     <file>project_item_icons/hammer.svg</file>
-    <file>minus_object_icon.png</file>
-    <file>edit_object_icon.png</file>
-    <file>edit_relationship_icon.png</file>
-    <file>minus_relationship_icon.png</file>
-    <file>minus_object_parameter_icon.png</file>
-    <file>minus_relationship_parameter_icon.png</file>
-    <file>object_parameter_icon.png</file>
-    <file>relationship_parameter_icon.png</file>
     <file>Spine_db_ref_icon.png</file>
-    <file>plus_object_icon.png</file>
-    <file>plus_relationship_icon.png</file>
-    <file>plus_object_parameter_icon.png</file>
-    <file>plus_relationship_parameter_icon.png</file>
     <file>Spine_db_icon.png</file>
     <file>import.png</file>
-    <file>wheel.png</file>
     <file>datapkg.png</file>
     <file>tool_options.png</file>
-    <file>keys.png</file>
-    <file>plus.png</file>
-    <file>minus.png</file>
+    <file>plus.svg</file>
+    <file>minus.svg</file>
     <file>add_tool.png</file>
     <file>remove_tool.png</file>
-    <file>object_icon.png</file>
-    <file>relationship_icon.png</file>
-  </qresource>
-  <qresource prefix="object_class_icons">
-    <file alias="direction.png">object_class_icons/direction.png</file>
-    <file alias="unit.png">object_class_icons/unit.png</file>
-    <file alias="commodity.png">object_class_icons/commodity.png</file>
-    <file alias="node.png">object_class_icons/node.png</file>
-    <file alias="connection.png">object_class_icons/connection.png</file>
-    <file alias="grid.png">object_class_icons/grid.png</file>
-    <file alias="time_stage.png">object_class_icons/time_stage.png</file>
-    <file alias="unit_group.png">object_class_icons/unit_group.png</file>
-    <file alias="commodity_group.png">object_class_icons/commodity_group.png</file>
+    <file>folder.svg</file>
+    <file>file.svg</file>
+    <file>wrench.svg</file>
+    <file>wrench_plus.svg</file>
+    <file>wrench_minus.svg</file>
+    <file>file-download.svg</file>
   </qresource>
 </RCC>

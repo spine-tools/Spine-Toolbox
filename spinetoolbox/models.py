@@ -1278,7 +1278,8 @@ class ObjectClassListModel(QStandardItemModel):
         self.clear()
         object_class_list = [x for x in self.db_map.object_class_list()]
         for object_class in object_class_list:
-            icon = self._graph_view_form.object_icon(object_class.name)
+            icon = self._graph_view_form.icon_maker.set_object_icon(
+                object_class.display_icon, object_class.name)
             object_class_item = QStandardItem(object_class.name)
             data = {"type": "object_class"}
             data.update(object_class._asdict())
@@ -1293,7 +1294,8 @@ class ObjectClassListModel(QStandardItemModel):
 
     def add_object_class(self, object_class):
         """Add object class item to model."""
-        icon = self._graph_view_form.object_icon(object_class.name)
+        icon = self._graph_view_form.icon_maker.set_object_icon(
+            object_class.display_icon, object_class.name)
         object_class_item = QStandardItem(object_class.name)
         data = {"type": "object_class", **object_class._asdict()}
         object_class_item.setData(data, Qt.UserRole + 1)
@@ -1322,7 +1324,7 @@ class RelationshipClassListModel(QStandardItemModel):
         self.clear()
         relationship_class_list = [x for x in self.db_map.wide_relationship_class_list()]
         for relationship_class in relationship_class_list:
-            icon = self._graph_view_form.relationship_icon(relationship_class.object_class_name_list)
+            icon = self._graph_view_form.icon_maker.relationship_icon(relationship_class.object_class_name_list)
             relationship_class_item = QStandardItem(relationship_class.name)
             data = {"type": "relationship_class"}
             data.update(relationship_class._asdict())
@@ -1337,7 +1339,7 @@ class RelationshipClassListModel(QStandardItemModel):
 
     def add_relationship_class(self, relationship_class):
         """Add relationship class."""
-        icon = self._graph_view_form.relationship_icon(relationship_class.object_class_name_list)
+        icon = self._graph_view_form.icon_maker.relationship_icon(relationship_class.object_class_name_list)
         relationship_class_item = QStandardItem(relationship_class.name)
         data = {"type": "relationship_class", **relationship_class._asdict()}
         relationship_class_item.setData(data, Qt.UserRole + 1)
@@ -1423,7 +1425,7 @@ class RelationshipTreeModel(QStandardItemModel):
     def new_relationship_class_item(self, wide_relationship_class):
         """Returns new relationship class item."""
         relationship_class_item = QStandardItem(wide_relationship_class.name)
-        icon = self._tree_view_form.relationship_icon(wide_relationship_class.object_class_name_list)
+        icon = self._tree_view_form.icon_maker.relationship_icon(wide_relationship_class.object_class_name_list)
         relationship_class_item.setData(icon, Qt.DecorationRole)
         relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
@@ -1680,7 +1682,8 @@ class ObjectTreeModel(QStandardItemModel):
                 relationship_class_item.setData('relationship_class', Qt.UserRole)
                 relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
                 relationship_class_item.setData(relationship_class.object_class_name_list, Qt.ToolTipRole)
-                relationship_icon = self._tree_view_form.relationship_icon(relationship_class.object_class_name_list)
+                relationship_icon = self._tree_view_form.icon_maker.relationship_icon(
+                    relationship_class.object_class_name_list)
                 relationship_class_item.setData(relationship_icon, Qt.DecorationRole)
                 relationship_class_item.setData(self.bold_font, Qt.FontRole)
                 relationship_class_item_list.append(relationship_class_item)
@@ -1720,7 +1723,8 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in self.db_map.object_class_list():
-            object_icon = self._tree_view_form.object_icon(object_class.name)
+            object_icon = self._tree_view_form.icon_maker.set_object_icon(
+                object_class.display_icon, object_class.name)
             object_class_item = QStandardItem(object_class.name)
             object_class_item.setData('object_class', Qt.UserRole)
             object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
@@ -1768,7 +1772,8 @@ class ObjectTreeModel(QStandardItemModel):
         """Add object class items to the model."""
         for object_class in object_classes:
             object_class_item = self.new_object_class_item(object_class)
-            icon = self._tree_view_form.object_icon(object_class.name)
+            icon = self._tree_view_form.icon_maker.set_object_icon(
+                object_class.display_icon, object_class.name)
             object_class_item.setData(icon, Qt.DecorationRole)
             for i in range(self.root_item.rowCount()):
                 visited_object_class_item = self.root_item.child(i)
@@ -1836,7 +1841,7 @@ class ObjectTreeModel(QStandardItemModel):
             relationship_class_item_list = list()
             for relationship_class in relationship_class_list:
                 relationship_class_item = self.new_relationship_class_item(relationship_class, visited_object)
-                icon = self._tree_view_form.relationship_icon(relationship_class.object_class_name_list)
+                icon = self._tree_view_form.icon_maker.relationship_icon(relationship_class.object_class_name_list)
                 relationship_class_item.setData(icon, Qt.DecorationRole)
                 relationship_class_item_list.append(relationship_class_item)
             visited_item.appendRows(relationship_class_item_list)
@@ -2740,12 +2745,12 @@ class ObjectParameterModel(MinimalTableModel):
             if row < model.rowCount():
                 if role == Qt.DecorationRole and column == self.object_class_name_column:
                     object_class_name = model.index(row, column).data(Qt.DisplayRole)
-                    return self._tree_view_form.object_icon(object_class_name)
+                    return self._tree_view_form.icon_maker.get_object_icon(object_class_name)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
         if role == Qt.DecorationRole and column == self.object_class_name_column:
             object_class_name = self.empty_row_model.index(row, column).data(Qt.DisplayRole)
-            return self._tree_view_form.object_icon(object_class_name)
+            return self._tree_view_form.icon_maker.get_object_icon(object_class_name)
         return self.empty_row_model.index(row, column).data(role)
 
     def rowCount(self, parent=QModelIndex()):
@@ -3288,13 +3293,13 @@ class RelationshipParameterModel(MinimalTableModel):
                 if role == Qt.DecorationRole and column == self.relationship_class_name_column:
                      object_class_name_list = model.index(row, self.object_class_name_list_column).\
                         data(Qt.DisplayRole)
-                     return self._tree_view_form.relationship_icon(object_class_name_list)
+                     return self._tree_view_form.icon_maker.relationship_icon(object_class_name_list)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
         if role == Qt.DecorationRole and column == self.relationship_class_name_column:
              object_class_name_list = self.empty_row_model.index(row, self.object_class_name_list_column).\
                 data(Qt.DisplayRole)
-             return self._tree_view_form.relationship_icon(object_class_name_list)
+             return self._tree_view_form.icon_maker.relationship_icon(object_class_name_list)
         return self.empty_row_model.index(row, column).data(role)
 
     def rowCount(self, parent=QModelIndex()):

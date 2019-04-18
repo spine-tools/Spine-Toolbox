@@ -275,7 +275,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
         edit_object_icon = self._parent.ui.actionEdit_objects.icon()
         edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        remove_icon = QIcon(":/icons/minus_object_icon.png")
+        remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         fully_expand_icon = self._parent.fully_expand_icon
         fully_collapse_icon = self._parent.fully_collapse_icon
         find_next_icon = self._parent.find_next_icon
@@ -327,7 +327,7 @@ class RelationshipTreeContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
         edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        remove_icon = QIcon(":/icons/minus_relationship_icon.png")
+        remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
         item_type = index.data(Qt.UserRole)
         self.add_action("Copy text", copy_icon)
         self.addSeparator()
@@ -360,7 +360,7 @@ class ParameterContextMenu(CustomContextMenu):
             return
         copy_icon = self._parent.ui.actionCopy.icon()
         paste_icon = self._parent.ui.actionPaste.icon()
-        remove_icon = QIcon(":/icons/minus_object_parameter_icon.png")
+        remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()

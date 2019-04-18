@@ -822,7 +822,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._views_cursor = {}
         self.shade = QGraphicsRectItem()
         self._selected_color = graph_view_form.palette().highlight()
-        pixmap = self._graph_view_form.object_icon(object_class_name).pixmap(extent)
+        pixmap = self._graph_view_form.icon_maker.get_object_icon(object_class_name).pixmap(extent)
         self.setPixmap(pixmap.scaled(extent, extent))
         self.setPos(x, y)
         self.setOffset(-0.5 * extent, -0.5 * extent)
@@ -1199,7 +1199,7 @@ class ArcItem(QGraphicsLineItem):
         if object_class_name_list:
             extent = 3 * width
             join_object_class_name_list = ",".join(object_class_name_list)
-            pixmap = self._graph_view_form.relationship_icon(join_object_class_name_list).pixmap(extent)
+            pixmap = self._graph_view_form.icon_maker.relationship_icon(join_object_class_name_list).pixmap(extent)
             self.token_item.setPixmap(pixmap.scaled(extent, extent))
             self.token_item.setOffset(-0.5 * extent, -0.5 * extent)
             diameter = extent / sin(pi / 4)
