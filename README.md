@@ -87,23 +87,23 @@ The recommended way to install dependencies using Anaconda or Miniconda is:
 
         pip install -r optional-requirements.txt
 
-### Upgrading spinedatabase_api
+### Upgrading spinedb_api
 
-The package `spinedatabase_api` is required for running Spine Toolbox. It is being 
+The package `spinedb_api` is required for running Spine Toolbox. It is being 
 actively developed in 
 [Spine-Database-API](https://github.com/Spine-project/Spine-Database-API) GitHub 
 project by the Spine project consortium. Starting the application may require 
 upgrading this package to the latest version. You can either upgrade the package 
 manually or run an upgrade script, which has been added for convenience.  
 
-To upgrade `spinedatabase_api` manually, run
+To upgrade `spinedb_api` manually, run
 
     pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
-Or run `upgrade_spinedatabase_api.bat` on Windows or `upgrade_spinedatabase_api.sh` 
+Or run `upgrade_spinedb_api.bat` on Windows or `upgrade_spinedb_api.sh` 
 on Linux and Mac OS X. The scripts are located in the `/bin` directory.
 
-**Note:** You don't need to clone or download the `spinedatabase_api` source code. 
+**Note:** You don't need to clone or download the `spinedb_api` source code. 
 *pip* takes care of installing the latest version from GitHub to your system 
 automatically.
 
@@ -120,10 +120,11 @@ since you first installed the requirements.
 ## Building the User Guide
 
 Source files for the User Guide can be found in `/docs/source` directory. In order to 
-build the HTML docs, you need to first follow the above 'Upgrading all dependencies'
-(among other things this installs Sphinx, which is the documentation builder).
-After that, you can build HTML pages from the source files by using `/bin/build_doc.bat` 
-(Windows) or `/bin/build_doc.sh` (Linux) scripts. After running the script, the 
+build the HTML docs, you need to install the *optional requirements* (see section 
+'Installing requirements' above). This installs Sphinx (among other things), which 
+is required in building the documentation. When Sphinx is installed, you can build the 
+HTML pages from the user guide source files by using the `/bin/build_doc.bat` script on 
+Windows or the `/bin/build_doc.sh` script on Linux and Mac. After running the script, the 
 index page can be found in `/docs/build/html/index.html`. The User Guide can also 
 be opened from Spine Toolbox menu Help->User Guide (F2).
 
