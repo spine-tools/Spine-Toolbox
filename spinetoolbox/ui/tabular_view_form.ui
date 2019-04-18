@@ -195,16 +195,24 @@
    <property name="enabled">
     <bool>true</bool>
    </property>
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/sync.svg</normaloff>:/icons/menu_icons/sync.svg</iconset>
+   </property>
    <property name="text">
     <string>Refresh</string>
    </property>
    <property name="shortcut">
-    <string>Ctrl+Shift+Return</string>
+    <string>F5</string>
    </property>
   </action>
   <action name="actionCommit">
    <property name="enabled">
     <bool>true</bool>
+   </property>
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/check.svg</normaloff>:/icons/menu_icons/check.svg</iconset>
    </property>
    <property name="text">
     <string>Commit</string>
@@ -217,6 +225,10 @@
    <property name="enabled">
     <bool>true</bool>
    </property>
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/undo.svg</normaloff>:/icons/menu_icons/undo.svg</iconset>
+   </property>
    <property name="text">
     <string>Rollback</string>
    </property>
@@ -225,6 +237,10 @@
    </property>
   </action>
   <action name="actionClose">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/window-close.svg</normaloff>:/icons/menu_icons/window-close.svg</iconset>
+   </property>
    <property name="text">
     <string>Close</string>
    </property>
@@ -250,6 +266,8 @@
    <header>widgets/custom_qlistview.h</header>
   </customwidget>
  </customwidgets>
- <resources/>
+ <resources>
+  <include location="resources/resources_icons.qrc"/>
+ </resources>
  <connections/>
 </ui>

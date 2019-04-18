@@ -52,7 +52,7 @@ from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity
+from helpers import busy_effect, relationship_pixmap, object_pixmap, fix_name_ambiguity, format_string_list
 
 
 class DataStoreForm(QMainWindow):
@@ -517,6 +517,8 @@ class DataStoreForm(QMainWindow):
             return
         self.object_tree_model.add_relationship_classes(relationship_classes)
         self.relationship_tree_model.add_relationship_classes(relationship_classes)
+        self.relationship_parameter_definition_model.add_object_class_id_lists(relationship_classes)
+        self.relationship_parameter_value_model.add_object_class_id_lists(relationship_classes)
         self.commit_available.emit(True)
         relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
         msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
@@ -859,9 +861,9 @@ class TreeViewForm(DataStoreForm):
         # Others
         self.widget_with_selection = None
         self.paste_to_widget = None
-        self.fully_expand_icon = QIcon(QPixmap(":/icons/fully_expand.png"))
-        self.fully_collapse_icon = QIcon(QPixmap(":/icons/fully_collapse.png"))
-        self.find_next_icon = QIcon(QPixmap(":/icons/find_next.png"))
+        self.fully_expand_icon = QIcon(QPixmap(":/icons/menu_icons/angle-double-right.svg"))
+        self.fully_collapse_icon = QIcon(QPixmap(":/icons/menu_icons/angle-double-left.svg"))
+        self.find_next_icon = QIcon(QPixmap(":/icons/menu_icons/ellipsis-h.png"))
         self.settings_key = 'treeViewWidget'
         self.do_clear_selections = True
         self.restore_dock_widgets()
@@ -1925,8 +1927,6 @@ class TreeViewForm(DataStoreForm):
             to_update.append(dict(id=id, value_list=value_list))
         # Get ids to remove
         removed_ids = [ind.internalPointer().id for ind in toplevel_indexes]
-        if not removed_ids:
-            return
         try:
             # NOTE: this below should never fail with SpineIntegrityError,
             # since we're removing from items that were already there

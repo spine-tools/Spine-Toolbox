@@ -2050,8 +2050,12 @@ class SubParameterModel(MinimalTableModel):
         if len(indexes) != len(data):
             return False
         items_to_update = self.items_to_update(indexes, data)
-        self.update_items_in_db(items_to_update)
+        upd_ids = self.update_items_in_db(items_to_update)
+        header = self._parent.horizontal_header_labels()
+        id_column = header.index('id')
         for k, index in enumerate(indexes):
+            if self._main_data[index.row()][id_column] not in upd_ids:
+                continue
             self._main_data[index.row()][index.column()] = data[k]
         return True
 
@@ -2060,8 +2064,8 @@ class SubParameterModel(MinimalTableModel):
         return []
 
     def update_items_in_db(self, items_to_update):
-        """Try and update parameter values in database. Reimplement in subclasses."""
-        pass
+        """A list of ids of items updated in the database. Reimplement in subclasses."""
+        return []
 
 
 class SubParameterValueModel(SubParameterModel):
@@ -2099,13 +2103,15 @@ class SubParameterValueModel(SubParameterModel):
     def update_items_in_db(self, items_to_update):
         """Try and update parameter values in database."""
         if not items_to_update:
-            return
+            return []
         try:
             upd_items, error_log = self._parent.db_map.update_parameter_values(*items_to_update)
             self.updated_count += upd_items.count()
             self.error_log += error_log
+            return [x.id for x in upd_items]
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
+            return []
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
@@ -2183,7 +2189,7 @@ class SubParameterDefinitionModel(SubParameterModel):
     def update_items_in_db(self, items_to_update):
         """Try and update parameter definitions in database."""
         if not items_to_update:
-            return
+            return []
         try:
             error_log = []
             tag_dict = dict()
@@ -2192,12 +2198,14 @@ class SubParameterDefinitionModel(SubParameterModel):
                 if parameter_tag_id_list is None:
                     continue
                 tag_dict[item["id"]] = parameter_tag_id_list
-            upd_items, error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
-            upd_items_, error_log_ = self._parent.db_map.update_parameters(*items_to_update)
-            self.updated_count += upd_items.count() + upd_items_.count()
-            self.error_log += error_log + error_log_
+            upd_def_tag_list, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
+            upd_params, param_error_log = self._parent.db_map.update_parameters(*items_to_update)
+            self.updated_count += len(upd_def_tag_list) + upd_params.count()
+            self.error_log += def_tag_error_log + param_error_log
+            return [x.parameter_definition_id for x in upd_def_tag_list] + [x.id for x in upd_params]
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
+            return []
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
@@ -2537,14 +2545,15 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
                 name_tag_dict[item["name"]] = parameter_tag_id_list
             parameters, error_log = self._parent.db_map.add_parameters(*items)
             self.added_rows = list(items_to_add.keys())
+            self.error_log.extend(error_log)
             id_column = self._parent.horizontal_header_labels().index('id')
             tag_dict = dict()
             for i, parameter in enumerate(parameters):
                 if parameter.name in name_tag_dict:
                     tag_dict[parameter.id] = name_tag_dict[parameter.name]
                 self._main_data[self.added_rows[i]][id_column] = parameter.id
-            upd_items = self._parent.db_map.set_parameter_definition_tags(tag_dict)
-            self.error_log.extend(error_log)
+            upd_def_tag_list, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
+            self.error_log.extend(def_tag_error_log)
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
 
@@ -3227,12 +3236,10 @@ class RelationshipParameterModel(MinimalTableModel):
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
 
-    def populate_object_class_id_lists(self):
+    def add_object_class_id_lists(self, wide_relationship_class_list):
         """Populate a dictionary of object class id lists per relationship class."""
-        self.object_class_id_lists = {
-            x.id: [int(x) for x in x.object_class_id_list.split(",")]
-            for x in self.db_map.wide_relationship_class_list()
-        }
+        self.object_class_id_lists.update({
+            x.id: [int(x) for x in x.object_class_id_list.split(",")] for x in wide_relationship_class_list})
 
     def flags(self, index):
         """Return flags for given index.
@@ -3603,7 +3610,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         """Reset model data. Each sub-model is filled with parameter value data
         for a different relationship class."""
         self.beginResetModel()
-        self.populate_object_class_id_lists()
+        self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
         header = self.db_map.relationship_parameter_value_fields()
         data = self.db_map.relationship_parameter_value_list()
         self.fixed_columns = [
@@ -3756,7 +3763,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         """Reset model data. Each sub-model is filled with parameter definition data
         for a different relationship class."""
         self.beginResetModel()
-        self.populate_object_class_id_lists()
+        self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
         header = self.db_map.relationship_parameter_fields()
         data = self.db_map.relationship_parameter_list()
         self.fixed_columns = [header.index(x) for x in ('relationship_class_name', 'object_class_name_list')]

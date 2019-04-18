@@ -79,16 +79,6 @@ class TabularViewForm(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
-        # Add icons to menu items
-        close_icon = QIcon(QPixmap(":/icons/close.png"))
-        refresh_icon = QIcon(QPixmap(":/icons/refresh.png"))
-        commit_icon = QIcon(QPixmap(":/icons/ok.png"))
-        rollback_icon = QIcon(QPixmap(":/icons/nok.png"))
-        self.ui.actionClose.setIcon(close_icon)
-        self.ui.actionRefresh.setIcon(refresh_icon)
-        self.ui.actionCommit.setIcon(commit_icon)
-        self.ui.actionRollback.setIcon(rollback_icon)
-
         # settings
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.settings_key = 'tabularViewWidget'
