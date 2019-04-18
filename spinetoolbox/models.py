@@ -125,7 +125,7 @@ class ProjectItemModel(QAbstractItemModel):
             role (int): Role to return
 
         Returns:
-            Data depending on role.
+            object: Data depending on role.
         """
         if not index.isValid():
             return None
@@ -155,7 +155,7 @@ class ProjectItemModel(QAbstractItemModel):
             category_name (str): Name of category item to find
 
         Returns:
-             QModelIndex of a category item or None if it was not found
+             QModelIndex: index of a category item or None if it was not found
         """
         category_names = [category.name for category in self.root().children()]
         # logging.debug("Category names:{0}".format(category_names))
@@ -173,7 +173,7 @@ class ProjectItemModel(QAbstractItemModel):
             name (str): The searched project item (long) name
 
         Returns:
-            QModelIndex of a project item with the given name or None if not found
+            QModelIndex: Index of a project item with the given name or None if not found
         """
         for category in self.root().children():
             # logging.debug("Looking for {0} in category {1}".format(name, category.name))
@@ -189,15 +189,16 @@ class ProjectItemModel(QAbstractItemModel):
         return None
 
     def insert_item(self, item, parent=QModelIndex()):
-        """Add new item to model. Fails if parent_item is not a category item or root item.
-        Inserts new item as the last item.
+        """Adds a new item to model. Fails if given parent is not
+        a category item nor a root item. New item is inserted as
+        the last item.
 
         Args:
             item (ProjectItem): Project item to add to model
             parent (QModelIndex): Parent project item
 
         Returns:
-            True if successful, False otherwise
+            bool: True if successful, False otherwise
         """
         parent_item = self.project_item(parent)
         row = self.rowCount(parent)  # parent.child_count()
@@ -208,7 +209,7 @@ class ProjectItemModel(QAbstractItemModel):
         return retval
 
     def remove_item(self, item, parent=QModelIndex()):
-        """Remove item from model.
+        """Removes item from model.
 
         Args:
             item (ProjectItem): Project item to remove
@@ -226,16 +227,16 @@ class ProjectItemModel(QAbstractItemModel):
 
     def setData(self, index, value, role=Qt.EditRole):
         # TODO: Test this. Should this emit dataChanged signal at some point?
-        """Change name of item in index to value.
+        """Changes the name of the project item at given index to given value.
         # TODO: If the item is a Data Store the reference sqlite path must be updated.
 
         Args:
-            index (QModelIndex): Item index
-            value (str): New name
+            index (QModelIndex): Project item index
+            value (str): New project item name
             role (int): Item data role to set
 
         Returns:
-            Boolean value depending on whether the new name is accepted.
+            bool: True or False depending on whether the new name is acceptable.
         """
         if not role == Qt.EditRole:
             return super().setData(index, value, role)
@@ -300,6 +301,8 @@ class ProjectItemModel(QAbstractItemModel):
         header_index = self._toolbox.connection_model.find_index_in_header(old_name)
         self._toolbox.connection_model.setHeaderData(header_index, Qt.Horizontal, value)
         self._toolbox.connection_model.setHeaderData(header_index, Qt.Vertical, value)
+        # Rename node and edges in the graph (dag) that contains this project item
+        self._toolbox.project().dag_handler.rename_node(old_name, value)
         # Force save project
         self._toolbox.save_project()
         self._toolbox.msg_success.emit("Project item <b>{0}</b> renamed to <b>{1}</b>".format(old_name, value))
@@ -330,22 +333,30 @@ class ProjectItemModel(QAbstractItemModel):
             return category_item.internalPointer().children()
 
     def n_items(self):
-        """Return the number of all project items in the model excluding category items and root."""
+        """Returns the number of all project items in the model excluding category items and root.
+
+        Returns:
+            int: Number of items
+        """
         return len(self.items())
 
-    def return_item_names(self):
-        """Returns the names of all items in a list."""
+    def item_names(self):
+        """Returns all project item names in a list.
+
+        Returns:
+            obj:'list' of obj:'str': Item names
+        """
         return [item.name for item in self.items()]
 
     def new_item_index(self, category):
-        """Get index where a new item is appended according to category. This is needed for
-        appending the connection model.
+        """Returns the index where a new item can be appended according
+        to category. This is needed for appending the connection model.
 
         Args:
             category (str): Display Role of the parent
 
         Returns:
-            Number of items according to category
+            int: Number of items according to category
         """
         n_data_stores = self.rowCount(self.find_category("Data Stores"))
         n_data_connections = self.rowCount(self.find_category("Data Connections"))
@@ -368,7 +379,7 @@ class ProjectItemModel(QAbstractItemModel):
             return 0
 
     def short_name_reserved(self, short_name):
-        """Check if folder name derived from the name of the given item is in use.
+        """Checks if the directory name derived from the name of the given item is in use.
 
         Args:
             short_name (str): Item short name
@@ -784,7 +795,15 @@ class ConnectionModel(QAbstractTableModel):
         return True
 
     def output_items(self, name):
-        """Returns a list of input items for the given item."""
+        """Returns a list of output items for the given item.
+
+        Args:
+            name (str): Project item name
+
+        Returns:
+            (list): Output project item names in a list if they
+            exist or an empty list if they don't.
+        """
         item_row = self.header.index(name)  # Row or column of item in the model
         output_items = list()
         for column in range(self.columnCount()):
@@ -796,7 +815,15 @@ class ConnectionModel(QAbstractTableModel):
         return output_items
 
     def input_items(self, name):
-        """Returns a list of output items for the given item."""
+        """Returns a list of input items for the given item.
+
+        Args:
+            name (str): Project item name
+
+        Returns:
+            (list): Input project item names in a list if they
+            exist or an empty list if they don't.
+        """
         item_column = self.header.index(name)  # Row or column of item in the model
         input_items = list()
         for row in range(self.rowCount()):

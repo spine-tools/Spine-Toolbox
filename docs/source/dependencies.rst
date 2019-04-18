@@ -7,11 +7,13 @@ Dependencies
 
 Spine Toolbox requires Python 3.5 or higher.
 
-Spine Toolbox uses code from packages and/or projects listed in the table below. Required packages must be
-installed for the application to start. Users can choose the SQL dialect API (pymysql, pyodbc psycopg2, and cx_Oracle)
-they want to use. These can be installed in Spine Toolbox when needed. Sphinx, recommonmark, and cx_Freeze
-packages are needed for building the user guide and for deploying the application. All version numbers are
-minimum versions except pyside2 5.12 version is not supported (yet).
+Spine Toolbox uses code from packages and/or projects listed in the table below. Required packages
+must be installed for the application to start. Users can choose the SQL dialect API (pymysql,
+pyodbc psycopg2, and cx_Oracle) they want to use. These can be installed in Spine Toolbox when
+needed. Sphinx, sphinx_rtd_theme, and recommonmark packages are needed for building the user guide.
+If you want to deploy the application by using the provided *setup.py* file, you need to install
+*cx_Freeze* package (6.0b1 version or newer is recommended). All version numbers are minimum
+versions except pyside2 5.12 version is not supported (yet).
 
 +-------------------+---------------+---------------+
 | Package name      |    Version    |     License   |
@@ -36,6 +38,8 @@ minimum versions except pyside2 5.12 version is not supported (yet).
 +-------------------+---------------+---------------+
 | scipy             | 1.1.0         |    BSD        |
 +-------------------+---------------+---------------+
+| networkx          | 2.2           |    BSD        |
++-------------------+---------------+---------------+
 | **Optional packages (optional-requirements.txt)** |
 +-------------------+---------------+---------------+
 | pymysql           | 0.9.2         |     MIT       |
@@ -51,6 +55,4 @@ minimum versions except pyside2 5.12 version is not supported (yet).
 | sphinx_rtd_theme  | 0.4.0         |     MIT       |
 +-------------------+---------------+---------------+
 | recommonmark      | 0.4.0         |     MIT       |
-+-------------------+---------------+---------------+
-| cx_Freeze         | 6.0b1         | PSFL (deriv.) |
 +-------------------+---------------+---------------+

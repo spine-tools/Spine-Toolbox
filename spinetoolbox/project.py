@@ -28,6 +28,7 @@ from tool import Tool
 from view import View
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
+from executioner import DirectedGraphHandler
 
 
 class SpineToolboxProject(MetaObject):
@@ -45,6 +46,7 @@ class SpineToolboxProject(MetaObject):
         super().__init__(name, description)
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
+        self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
@@ -383,6 +385,8 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(data_store, ds_category)
         # Append connection model
         self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
         if verbosity:
             self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
         if set_selected:
@@ -406,6 +410,8 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(data_connection, dc_category)
         # Append connection model
         self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
         if verbosity:
             self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
         if set_selected:
@@ -430,6 +436,8 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(tool, tool_category)
         # Append connection model
         self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
         if verbosity:
             self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
         if set_selected:
@@ -452,6 +460,8 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(view, view_category)
         # Append connection model
         self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
         if verbosity:
             self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
         if set_selected:
@@ -461,6 +471,10 @@ class SpineToolboxProject(MetaObject):
         """Adds new item to connection model to keep project and connection model synchronized."""
         row_in_con_model = self._toolbox.project_item_model.new_item_index(category)
         self._toolbox.connection_model.append_item(item_name, row_in_con_model)
+
+    def add_to_dag(self, item_name):
+        """Add new directed graph object."""
+        self.dag_handler.add_dag_node(item_name)
 
     def set_item_selected(self, item):
         """Sets item selected and shows its info screen.

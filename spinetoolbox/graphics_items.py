@@ -65,6 +65,10 @@ class ConnectorButton(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
 
+    def parent_name(self):
+        """Returns project item name owning this connector button."""
+        return self._parent.name()
+
     def mousePressEvent(self, event):
         """Connector button mouse press event. Starts drawing a link.
 
@@ -77,7 +81,6 @@ class ConnectorButton(QGraphicsRectItem):
             self._parent.show_item_info()
             # Start drawing a link
             self._toolbox.ui.graphicsView.draw_links(self)
-            # self._toolbox.ui.graphicsView.draw_links(rect, self._parent.name())
 
     def mouseDoubleClickEvent(self, event):
         """Connector button mouse double click event. Makes sure the LinkDrawer is hidden.

@@ -387,7 +387,7 @@ class ToolInstance(QObject):
             target_dir (str): Destination directory for Tool template output files
 
         Returns:
-            (tuple): Contains two lists. The first list contains paths to successfully
+            tuple: Contains two lists. The first list contains paths to successfully
             copied files. The second list contains paths (or patterns) of Tool template
             output files that were not found.
 

@@ -16,8 +16,6 @@ Functions to make and handle QToolBars.
 :date:   19.1.2018
 """
 
-# TODO: QToolBars should be added to the UI in Qt Designer
-
 from PySide2.QtCore import Qt, QMimeData, Signal, Slot
 from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QButtonGroup, \
     QPushButton, QWidget, QSizePolicy, QToolButton
@@ -31,6 +29,7 @@ class ItemToolBar(QToolBar):
     Attributes:
         parent (ToolboxUI): QMainWindow instance
     """
+    # noinspection PyUnresolvedReferences, PyUnusedLocal
     def __init__(self, parent):
         """Init class."""
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
@@ -55,13 +54,21 @@ class ItemToolBar(QToolBar):
         view_action = self.addWidget(view_widget)
         # set remove all action
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
-        # remove_all = QAction(remove_all_icon, "Remove All", parent)
         remove_all = QToolButton(parent)
         remove_all.setIcon(remove_all_icon)
+
         remove_all.clicked.connect(self.remove_all_clicked)
         self.addSeparator()
         self.addWidget(remove_all)
-        # self.addAction(remove_all)
+        # Execute label and button
+        self.addSeparator()
+        ex_label = QLabel("Execute")
+        self.addWidget(ex_label)
+        execute_project_icon = QIcon(":/icons/project_item_icons/play-circle.svg").pixmap(24, 24)
+        execute_project = QToolButton(parent)
+        execute_project.setIcon(execute_project_icon)
+        execute_project.clicked.connect(self.execute_project_clicked)
+        self.addWidget(execute_project)
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
@@ -71,6 +78,11 @@ class ItemToolBar(QToolBar):
         """Slot for handling the remove all tool button clicked signal.
         Calls ToolboxUI remove_all_items() method."""
         self._toolbox.remove_all_items()
+
+    @Slot(bool, name="execute_project_clicked")
+    def execute_project_clicked(self, checked=False):
+        """Slot for handling the Execute project tool button clicked signal."""
+        self._toolbox.execute_project()
 
 
 class DraggableWidget(QLabel):
@@ -97,6 +109,7 @@ class DraggableWidget(QLabel):
         if event.button() == Qt.LeftButton:
             self.drag_start_pos = event.pos()
 
+    # noinspection PyArgumentList, PyUnusedLocal
     def mouseMoveEvent(self, event):
         """Start dragging action if needed"""
         if not event.buttons() & Qt.LeftButton:
@@ -106,12 +119,12 @@ class DraggableWidget(QLabel):
         if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return
         drag = QDrag(self)
-        mimeData = QMimeData()
-        mimeData.setText(self.text)
-        drag.setMimeData(mimeData)
+        mime_data = QMimeData()
+        mime_data.setText(self.text)
+        drag.setMimeData(mime_data)
         drag.setPixmap(self.pixmap())
         drag.setHotSpot(self.pixmap().rect().center())
-        dropAction = drag.exec_()
+        drop_action = drag.exec_()
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
@@ -158,6 +171,7 @@ class ParameterTagToolBar(QToolBar):
         self.empty_action = self.addWidget(empty)
         button = QPushButton("Manage tags...")
         self.addWidget(button)
+        # noinspection PyUnresolvedReferences
         button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")

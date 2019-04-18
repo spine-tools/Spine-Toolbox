@@ -241,8 +241,12 @@ class ToolboxUI(QMainWindow):
         """Load project from a save file (.proj) file.
 
         Args:
-            load_path (str): If not None, this method is used to load the
-            previously opened project at start-up
+            load_path (str): Path to project save file. If default value is used,
+            a file explorer dialog is opened where the user can select the
+            project file to load.
+
+        Returns:
+            bool: True when opening the project succeeded, False otherwise
         """
         tool_template_paths = list()
         connections = list()
@@ -461,22 +465,23 @@ class ToolboxUI(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self._qsettings.value("mainWindow/windowSize")
-        window_pos = self._qsettings.value("mainWindow/windowPosition")
-        window_state = self._qsettings.value("mainWindow/windowState")
-        splitter_state = self._qsettings.value("mainWindow/projectDockWidgetSplitterState")
+        window_size = self._qsettings.value("mainWindow/windowSize", defaultValue="false")
+        window_pos = self._qsettings.value("mainWindow/windowPosition", defaultValue="false")
+        window_state = self._qsettings.value("mainWindow/windowState", defaultValue="false")
+        splitter_state = self._qsettings.value("mainWindow/projectDockWidgetSplitterState", defaultValue="false")
         window_maximized = self._qsettings.value("mainWindow/windowMaximized", defaultValue='false')  # returns str
         n_screens = self._qsettings.value("mainWindow/n_screens", defaultValue=1)  # number of screens on last exit
         # noinspection PyArgumentList
-        n_screens_now = len(QGuiApplication.screens())  # number of screens now
-        if window_size:
-            self.resize(window_size)
-        if window_pos:
-            self.move(window_pos)
-        if window_state:
-            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
-        if splitter_state:
-            self.ui.splitter.restoreState(splitter_state)  # Project Dock Widget splitter position
+        n_screens_now = len(QGuiApplication.screens())  # Number of screens now
+        # Note: cannot use booleans since Windows saves them as strings to registry
+        if not window_size == "false":
+            self.resize(window_size)  # Expects QSize
+        if not window_pos == "false":
+            self.move(window_pos)  # Expects QPoint
+        if not window_state == "false":
+            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions. Expects QByteArray
+        if not splitter_state == "false":
+            self.ui.splitter.restoreState(splitter_state)  # Project Dock Widget splitter position. Expects QByteArray
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
         if n_screens_now < int(n_screens):
@@ -488,7 +493,7 @@ class ToolboxUI(QMainWindow):
         """Clean UI to make room for a new or opened project."""
         if not self.project():
             return
-        item_names = self.project_item_model.return_item_names()
+        item_names = self.project_item_model.item_names()
         for name in item_names:
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind)
@@ -570,13 +575,31 @@ class ToolboxUI(QMainWindow):
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(item.item_type + " Properties")
 
+    @Slot(name="execute_project")
+    def execute_project(self):
+        """Start executing all DAGs in project."""
+        if not self._project:
+            self.msg.emit("Please create a new project or open an existing one first")
+            return
+        if len(self.project().dag_handler.dags()) == 0:
+            self.msg.emit_warning("Project has no items to execute")
+            return
+        self.msg.emit("")
+        exec_dictionary = self.project().dag_handler.execution_order()
+        n_graphs = len(exec_dictionary.keys())
+        for graph_number, project_items in exec_dictionary.items():
+            self.msg.emit("Executing graph:{0}/{1}".format(graph_number, n_graphs))
+            for item in project_items:
+                self.msg.emit("Executing <b>{0}</b>".format(item))
+        return
+
     @Slot(name="open_tool_template")
     def open_tool_template(self):
         """Open a file dialog so the user can select an existing tool template .json file.
         Continue loading the tool template into the Project if successful.
         """
         if not self._project:
-            self.msg.emit("No project open")
+            self.msg.emit("Please create a new project or open an existing one first")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(self, 'Select Tool template file',
@@ -673,7 +696,7 @@ class ToolboxUI(QMainWindow):
     def remove_selected_tool_template(self):
         """Prepare to remove tool template selected in QListView."""
         if not self._project:
-            self.msg.emit("No project open")
+            self.msg.emit("Please create a new project or open an existing one first")
             return
         try:
             index = self.ui.listView_tool_templates.selectedIndexes()[0]
@@ -739,14 +762,14 @@ class ToolboxUI(QMainWindow):
     def remove_all_items(self):
         """Slot for Remove All button."""
         if not self._project:
-            self.msg.emit("No items to remove")
+            self.msg.emit("No project items to remove")
             return
         msg = "Remove all items from project?"
         # noinspection PyCallByClass, PyTypeChecker
         answer = QMessageBox.question(self, 'Removing all items', msg, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             return
-        item_names = self.project_item_model.return_item_names()
+        item_names = self.project_item_model.item_names()
         n = len(item_names)
         if n == 0:
             return
@@ -761,13 +784,14 @@ class ToolboxUI(QMainWindow):
         self.ui.graphicsView.init_scene()
 
     def remove_item(self, ind, delete_item=False, check_dialog=False):
-        """Remove item from project when it's index in the project model is known.
+        """Removes item from project when it's index in the project model is known.
         To remove all items in project, loop all indices through this method.
         This method is used in both opening and creating a new project as
         well as when item(s) are deleted from project.
         Use delete_item=False when closing the project or creating a new one.
         Setting delete_item=True deletes the item irrevocably. This means that
-        data directories will be deleted from the hard drive.
+        data directories will be deleted from the hard drive. Handles also
+        removing the node from the dag graph that contains it.
 
         Args:
             ind (QModelIndex): Index of removed item in project model
@@ -811,6 +835,7 @@ class ToolboxUI(QMainWindow):
                 except OSError:
                     self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
                     return
+        self._project.dag_handler.remove_node_from_graph(name)
         self.msg.emit("Item <b>{0}</b> removed from project".format(name))
         return
 
@@ -911,7 +936,8 @@ class ToolboxUI(QMainWindow):
 
     @Slot("QModelIndex", name="connection_data_changed")
     def connection_data_changed(self, index):
-        """Called when checkbox delegate wants to edit connection data. Add or remove Link instance accordingly."""
+        """[OBSOLETE?] Called when checkbox delegate wants to
+        edit connection data. Add or remove Link instance accordingly."""
         d = self.connection_model.data(index, Qt.DisplayRole)  # Current status
         if d == "False":  # Add link
             src_name = self.connection_model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
