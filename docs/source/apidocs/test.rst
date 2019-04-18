@@ -4,6 +4,14 @@ test package
 Submodules
 ----------
 
+test.mock\_helpers module
+-------------------------
+
+.. automodule:: test.mock_helpers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 test.test\_FilterCheckboxList module
 ------------------------------------
 
@@ -32,6 +40,14 @@ test.test\_dataStore module
 ---------------------------
 
 .. automodule:: test.test_dataStore
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+test.test\_directedGraphHandler module
+--------------------------------------
+
+.. automodule:: test.test_directedGraphHandler
     :members:
     :undoc-members:
     :show-inheritance:
