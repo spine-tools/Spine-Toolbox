@@ -437,7 +437,7 @@
             <property name="geometry">
              <rect>
               <x>0</x>
-              <y>-14</y>
+              <y>0</y>
               <width>366</width>
               <height>347</height>
              </rect>
@@ -516,7 +516,7 @@
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine (sqlite) database.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="resources/resources_icons.qrc">
+                  <iconset>
                    <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>
                  </property>
                  <property name="iconSize">
@@ -2887,6 +2887,7 @@
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
+  <include location="resources/resources_logos.qrc"/>
  </resources>
  <connections/>
 </ui>
