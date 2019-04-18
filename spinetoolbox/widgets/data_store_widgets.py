@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains three classes: TreeViewForm, GraphViewForm, and their parent class DataStoreForm.
+Contains four classes: TreeViewForm, GraphViewForm, their parent class DataStoreForm, and IconMaker.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
@@ -66,7 +66,7 @@ class IconMaker(object):
         self.colorizer = QGraphicsColorizeEffect()
         self.scene = QGraphicsScene()
         self.scene.addItem(self.svg_item)
-        self.object_class_icons = {}  # To store already created icons
+        self.object_class_pixmaps = {}  # To store already created pixmaps
         self.relationship_class_icons = {}
         color_count = 32
         golden_ratio = 0.618033988749895
@@ -87,54 +87,46 @@ class IconMaker(object):
         painter.setRenderHint(QPainter.Antialiasing, True)
         self.scene.render(painter)
         painter.end()
+        self.object_class_pixmaps[object_class_name] = pixmap
         icon = QIcon(pixmap)
-        self.object_class_icons[object_class_name] = icon
         return icon
 
     def get_object_icon(self, object_class_name):
         try:
-            return self.object_class_icons[object_class_name]
+            return QIcon(self.object_class_pixmaps[object_class_name])
         except KeyError:
             return QIcon(":/icons/cube.svg")
 
-    def relationship_icon(self, str_object_class_name_list):
+    def relationship_pixmap(self, str_object_class_name_list):
         """A pixmap rendered by painting several object pixmaps together."""
         if not str_object_class_name_list:
             return QIcon(":/icons/cubes.svg")
         object_class_name_list = str_object_class_name_list.split(",")
-        extent = 64
-        x_step = extent - 8
-        y_offset = extent - 16 + 2
-        pixmap_list = list()
-        for object_class_name in object_class_name_list:
-            pixmap = self.get_object_icon(object_class_name).pixmap(extent)
-            pixmap_list.append(pixmap.scaled(extent, extent))
-        pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)] # Two pixmaps per row...
-        combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
-        combo_height = extent + y_offset
-        combo_extent = max(combo_width, combo_height)
-        x_padding = (combo_extent - combo_width) / 2 if combo_extent > combo_width else 0
-        y_padding = (combo_extent - combo_height) / 2 if combo_extent > combo_height else 0
-        # Add extra vertical padding in case the list contains only one element, so this one's centered
-        if len(object_class_name_list) == 1:
-            y_padding += y_offset / 2
-        relationship_pixmap = QPixmap(combo_extent, combo_extent)
-        relationship_pixmap.fill(Qt.transparent)
-        painter = QPainter(relationship_pixmap)
+        scene = QGraphicsScene()
+        x = 0
+        for j, object_class_name in enumerate(object_class_name_list):
+            try:
+                pixmap = self.object_class_pixmaps[object_class_name]
+            except KeyError:
+                pixmap = QPixmap(":/icons/cube.svg")
+            pixmap_item = scene.addPixmap(pixmap)
+            if j % 2 == 0:
+                y = 0
+            else:
+                y = - 0.75 * pixmap_item.boundingRect().height()
+                pixmap_item.setZValue(-1)
+            pixmap_item.setPos(x, y)
+            x += 0.5 * pixmap_item.boundingRect().width()
+        pixmap = QPixmap(scene.itemsBoundingRect().toRect().size())
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing, True)
-        x_offset = 0
-        for pixmap_row in pixmap_matrix:
-            for j, pixmap in enumerate(pixmap_row):
-                if j % 2 == 1:
-                    x = x_offset + x_step / 2 + x_padding
-                    y = y_offset + y_padding
-                else:
-                    x = x_offset + x_padding
-                    y = y_padding
-                painter.drawPixmap(x, y, pixmap)
-            x_offset += x_step
+        scene.render(painter)
         painter.end()
-        return QIcon(relationship_pixmap)
+        return pixmap
+
+    def relationship_icon(self, str_object_class_name_list):
+        return QIcon(self.relationship_pixmap(str_object_class_name_list))
 
 
 class DataStoreForm(QMainWindow):
@@ -2163,7 +2155,7 @@ class GraphViewForm(DataStoreForm):
         # object class
         index = self.object_class_list_model.add_more_index
         action = QAction()
-        icon = QIcon(":/icons/plus_object_icon.png")
+        icon = QIcon(":/icons/menu_icons/cube_plus.svg")
         action.setIcon(icon)
         action.setText(index.data(Qt.DisplayRole))
         button = QToolButton()
@@ -2176,7 +2168,7 @@ class GraphViewForm(DataStoreForm):
         # relationship class
         index = self.relationship_class_list_model.add_more_index
         action = QAction()
-        icon = QIcon(":/icons/plus_relationship_icon.png")
+        icon = QIcon(":/icons/menu_icons/cubes_plus.svg")
         action.setIcon(icon)
         action.setText(index.data(Qt.DisplayRole))
         button = QToolButton()

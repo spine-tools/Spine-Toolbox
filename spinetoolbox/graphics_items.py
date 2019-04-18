@@ -1199,8 +1199,8 @@ class ArcItem(QGraphicsLineItem):
         if object_class_name_list:
             extent = 3 * width
             join_object_class_name_list = ",".join(object_class_name_list)
-            pixmap = self._graph_view_form.icon_maker.relationship_icon(join_object_class_name_list).pixmap(extent)
-            self.token_item.setPixmap(pixmap.scaled(extent, extent))
+            pixmap = self._graph_view_form.icon_maker.relationship_pixmap(join_object_class_name_list)
+            self.token_item.setPixmap(pixmap.scaledToWidth(extent))
             self.token_item.setOffset(-0.5 * extent, -0.5 * extent)
             diameter = extent / sin(pi / 4)
             delta = (diameter - extent) / 2
