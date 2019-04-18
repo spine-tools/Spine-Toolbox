@@ -367,3 +367,4 @@ def strip_json_data(data, maxlen):
     if len(stripped_data) > 2 * maxlen:
         stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
     return stripped_data
+    

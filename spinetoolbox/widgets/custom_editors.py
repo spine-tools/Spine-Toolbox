@@ -27,6 +27,7 @@ from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 
+
 class CustomLineEditor(QLineEdit):
     """A custom QLineEdit to handle data from models.
 
@@ -78,7 +79,7 @@ class CustomComboEditor(QComboBox):
 
 
 class CustomLineEditDelegate(QItemDelegate):
-    """A custom delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
+    """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
 
     Attributes:
         parent (SearchBarEditor): search bar editor
@@ -120,8 +121,7 @@ class CustomLineEditDelegate(QItemDelegate):
 
 
 class SearchBarEditor(QTableView):
-    """A widget that implements a Google-like search bar.
-    It's just a QTableView with a CustomLineEditDelegate in the first row.
+    """A Google-like search bar, implemented as a QTableView with a CustomLineEditDelegate in the first row.
 
     Attributes:
         parent (QWidget): the parent for this widget
@@ -366,7 +366,7 @@ class MultiSearchBarEditor(QTableView):
 
 
 class CheckListEditor(QTableView):
-    """A widget that implements a check list."""
+    """A check list editor."""
 
     data_committed = Signal(name="data_committed")
 
@@ -447,7 +447,9 @@ class CheckListEditor(QTableView):
 
 
 class JSONEditor(QTabWidget):
-    """A QTabWidget for editing JSON in raw and table format.
+    """A double JSON editor, featuring:
+    - A QTextEdit for editing arbitrary json.
+    - A QTableView for editing json array.
     """
 
     data_committed = Signal(name="data_committed")

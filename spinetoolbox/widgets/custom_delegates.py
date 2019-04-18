@@ -17,11 +17,26 @@ Custom item delegates.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
-    QApplication, QStyleOptionViewItem, QWidget
+    QApplication, QStyleOptionViewItem, QWidget, QStyledItemDelegate, QColorDialog
+from PySide2.QtGui import QColor
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, \
     MultiSearchBarEditor, CheckListEditor, JSONEditor
 from models import MinimalTableModel
 import logging
+
+
+class ColorDialogDelegate(QStyledItemDelegate):
+    def createEditor(self, parent, option, index):
+        dialog = QColorDialog(parent)
+        return dialog
+
+    def setEditorData(self, editor, index):
+        rgb = index.data(Qt.DisplayRole)
+        editor.setCurrentColor(QColor(rgb))
+
+    def setModelData(self, editor, model, index):
+        rgb = editor.currentColor().rgb()
+        model.setData(index, rgb, Qt.DisplayRole)
 
 
 class LineEditDelegate(QItemDelegate):

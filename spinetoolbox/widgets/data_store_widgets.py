@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains four classes: TreeViewForm, GraphViewForm, their parent class DataStoreForm, and IconMaker.
+Contains four classes: TreeViewForm, GraphViewForm, their parent class DataStoreForm, and IconManager.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
@@ -56,7 +56,7 @@ from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect, fix_name_ambiguity, format_string_list
 
 
-class IconMaker(object):
+class IconManager(object):
     def __init__(self):
         super().__init__()
         self.renderer = QSvgRenderer(":/icons/cube.svg")
@@ -68,30 +68,29 @@ class IconMaker(object):
         self.scene.addItem(self.svg_item)
         self.object_class_pixmaps = {}  # To store already created pixmaps
         self.relationship_class_icons = {}
-        color_count = 32
-        golden_ratio = 0.618033988749895
-        self.class_colors = [
-            QColor.fromHsv(golden_ratio * (360 / color_count) * i, 255, 255, 255) for i in range(color_count)]
 
-    def set_object_icon(self, display_icon, object_class_name):
-        """Set and return an object pixmap for object an object class."""
-        try:
-            color = self.class_colors[display_icon]
-        except IndexError:
-            color = QColor("black")
-        self.colorizer.setColor(color)
-        self.svg_item.setGraphicsEffect(self.colorizer)
-        pixmap = QPixmap(self.renderer.defaultSize())
-        pixmap.fill(Qt.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        self.scene.render(painter)
-        painter.end()
-        self.object_class_pixmaps[object_class_name] = pixmap
-        icon = QIcon(pixmap)
-        return icon
+    def set_object_icons(self, object_class_list):
+        """Set object pixmaps for object classes in list."""
 
-    def get_object_icon(self, object_class_name):
+        for object_class in object_class_list:
+            display_icon = object_class.display_icon
+            object_class_name = object_class.name
+            if type(display_icon) is not int:
+                display_icon = 0
+            if display_icon < 0:
+                display_icon = 0
+            pixmap = QPixmap(self.renderer.defaultSize())
+            pixmap.fill(Qt.transparent)
+            painter = QPainter(pixmap)
+            painter.setRenderHint(QPainter.Antialiasing, True)
+            color = QColor(display_icon)
+            self.colorizer.setColor(color)
+            self.svg_item.setGraphicsEffect(self.colorizer)
+            self.scene.render(painter)
+            self.object_class_pixmaps[object_class_name] = pixmap
+            painter.end()
+
+    def object_icon(self, object_class_name):
         try:
             return QIcon(self.object_class_pixmaps[object_class_name])
         except KeyError:
@@ -100,7 +99,7 @@ class IconMaker(object):
     def relationship_pixmap(self, str_object_class_name_list):
         """A pixmap rendered by painting several object pixmaps together."""
         if not str_object_class_name_list:
-            return QIcon(":/icons/cubes.svg")
+            return QPixmap(":/icons/cubes.svg")
         object_class_name_list = str_object_class_name_list.split(",")
         scene = QGraphicsScene()
         x = 0
@@ -160,9 +159,8 @@ class DataStoreForm(QMainWindow):
         # DB db_map
         self.db_map = db_map
         self.database = database
-        self.icon_maker = IconMaker()
-        self.object_icon_dict = {}
-        self.relationship_icon_dict = {}
+        self.icon_mngr = IconManager()
+        self.icon_mngr.set_object_icons(self.db_map.object_class_list())
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Object tree selected indexes
@@ -550,6 +548,7 @@ class DataStoreForm(QMainWindow):
         """Insert new object classes."""
         if not object_classes.count():
             return
+        self.icon_mngr.set_object_icons(object_classes)
         self.object_tree_model.add_object_classes(object_classes)
         self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
@@ -652,6 +651,7 @@ class DataStoreForm(QMainWindow):
         """Update object classes."""
         if not object_classes.count():
             return
+        self.icon_mngr.set_object_icons(object_classes)
         self.object_tree_model.update_object_classes(object_classes)
         self.object_parameter_value_model.rename_object_classes(object_classes)
         self.object_parameter_definition_model.rename_object_classes(object_classes)
@@ -2074,7 +2074,7 @@ class GraphViewForm(DataStoreForm):
         # Data of relationship templates
         self.template_id = 1
         self.relationship_class_dict = {}  # template_id => relationship_class_name, relationship_class_id
-        # Icon dicts
+        # Item palette models
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
         # Context menus

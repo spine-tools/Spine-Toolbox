@@ -26,7 +26,7 @@ from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedb_api import SpineDBAPIError
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
-    AddParameterEnumsDelegate, LineEditDelegate
+    AddParameterEnumsDelegate, LineEditDelegate, ColorDialogDelegate
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect, format_string_list
 
@@ -123,9 +123,10 @@ class AddObjectClassesDialog(ManageItemsDialog):
         self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self.table_view.setItemDelegate(LineEditDelegate(parent))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class name', 'description'])
+        self.model.set_horizontal_header_labels(['object class name', 'description', 'display_icon'])
         self.model.clear()
         self.table_view.resizeColumnsToContents()
+        self.table_view.setItemDelegateForColumn(2, ColorDialogDelegate(parent))
         insert_at_position_list = ['Insert new classes at the top']
         insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
@@ -145,13 +146,14 @@ class AddObjectClassesDialog(ManageItemsDialog):
             display_order = self.object_class_list.all()[index - 1].display_order + 1
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)[:-1]
-            name, description = row_data
+            name, description, display_icon = row_data
             if not name:
                 self._parent.msg_error.emit("Object class name missing at row {0}".format(i + 1))
                 return
             kwargs = {
                 'name': name,
                 'description': description,
+                'display_icon': display_icon,
                 'display_order': display_order
             }
             kwargs_list.append(kwargs)
@@ -210,7 +212,7 @@ class AddObjectsDialog(ManageItemsDialog):
                 object_class_name = index.data(Qt.DisplayRole)
                 if not object_class_name:
                     return
-                icon = self.parent().icon_maker.get_object_icon(object_class_name)
+                icon = self.parent().icon_mngr.object_icon(object_class_name)
                 self.model.setData(index, icon, Qt.DecorationRole)
 
     @busy_effect
@@ -534,10 +536,11 @@ class EditObjectClassesDialog(ManageItemsDialog):
         super().__init__(parent, kwargs_list)
         self.setWindowTitle("Edit object classes")
         self.model = MinimalTableModel(self)
+        self.model.set_horizontal_header_labels(['object class name', 'description', 'display_icon'])
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.setItemDelegateForColumn(2, ColorDialogDelegate(parent))
         self.table_view.horizontalHeader().setStretchLastSection(True)
-        self.model.set_horizontal_header_labels(['object class name', 'description'])
         self.orig_data = list()
         self.id_list = list()
         model_data = list()
@@ -554,7 +557,11 @@ class EditObjectClassesDialog(ManageItemsDialog):
                 description = kwargs["description"]
             except KeyError:
                 description = None
-            row_data = [name, description]
+            try:
+                display_icon = kwargs["display_icon"]
+            except KeyError:
+                display_icon = None
+            row_data = [name, description, display_icon]
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
@@ -567,17 +574,18 @@ class EditObjectClassesDialog(ManageItemsDialog):
         kwargs_list = list()
         for i in range(self.model.rowCount()):
             id = self.id_list[i]
-            name, description = self.model.row_data(i)
+            name, description, display_icon = self.model.row_data(i)
             if not name:
                 self._parent.msg_error.emit("Object class name missing at row {}".format(i + 1))
                 return
-            orig_name, orig_description = self.orig_data[i]
-            if name == orig_name and description == orig_description:
+            orig_name, orig_description, orig_display_icon = self.orig_data[i]
+            if name == orig_name and description == orig_description and display_icon == orig_display_icon:
                 continue
             kwargs = {
                 'id': id,
                 'name': name,
-                'description': description
+                'description': description,
+                'display_icon': int(display_icon)
             }
             kwargs_list.append(kwargs)
         if not kwargs_list:
