@@ -23,7 +23,7 @@ from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterPro
     QTimer, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
     QVBoxLayout, QTextEdit, QColorDialog, QDialog, QDialogButtonBox, QListWidget, QListWidgetItem, \
-    QStyle
+    QStyle, QLabel
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor, QIcon, QBrush
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
@@ -639,12 +639,16 @@ class IconColorEditor(QDialog):
         """Init class."""
         super().__init__(parent, Qt.Popup)
         self.setWindowTitle("Select icon and color")
-        self.icon_list = QListWidget(self)
+        self.icon_widget = QWidget(self)
+        self.icon_list = QListWidget(self.icon_widget)
         self.icon_list.setViewMode(QListWidget.IconMode)
         self.icon_list.setIconSize(QSize(32, 32))
         self.icon_list.setResizeMode(QListWidget.Adjust)
         self.icon_list.setItemDelegate(IconPainterDelegate(self))
         self.icon_list.setMovement(QListWidget.Static)
+        icon_widget_layout = QVBoxLayout(self.icon_widget)
+        icon_widget_layout.addWidget(QLabel("Icon library"))
+        icon_widget_layout.addWidget(self.icon_list)
         self.color_dialog = QColorDialog(self)
         self.color_dialog.setWindowFlags(Qt.Widget)
         self.color_dialog.setOption(QColorDialog.NoButtons, True)
@@ -652,7 +656,7 @@ class IconColorEditor(QDialog):
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
         layout = QVBoxLayout(self)
-        layout.addWidget(self.icon_list)
+        layout.addWidget(self.icon_widget)
         layout.addWidget(self.color_dialog)
         layout.addWidget(self.button_box)
         self.setAttribute(Qt.WA_DeleteOnClose)

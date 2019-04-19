@@ -396,7 +396,8 @@ class IconManager:
             ":/icons/object_class_icons/warehouse.svg",
             ":/icons/object_class_icons/water.svg",
             ":/icons/object_class_icons/wind.svg",
-            ":/icons/object_class_icons/exchange-alt.svg"
+            ":/icons/object_class_icons/exchange-alt.svg",
+            ":/icons/object_class_icons/clock.svg"
         ]
         self.icon_count = len(self.svg_library)
 
