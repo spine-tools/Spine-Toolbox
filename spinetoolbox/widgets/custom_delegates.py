@@ -18,14 +18,14 @@ Custom item delegates.
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
     QApplication, QStyleOptionViewItem, QWidget, QStyledItemDelegate, QColorDialog
-from PySide2.QtGui import QColor, QPixmap
+from PySide2.QtGui import QPixmap, QIcon
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, \
-    MultiSearchBarEditor, CheckListEditor, JSONEditor
+    MultiSearchBarEditor, CheckListEditor, JSONEditor, IconColorEditor
 from models import MinimalTableModel
 import logging
 
 
-class ColorDialogDelegate(QStyledItemDelegate):
+class IconColorDialogDelegate(QStyledItemDelegate):
     """A delegate that opens a color picker dialog.
 
     Attributes:
@@ -38,27 +38,28 @@ class ColorDialogDelegate(QStyledItemDelegate):
 
     def createEditor(self, parent, option, index):
         """Return QColorDialog."""
-        dialog = QColorDialog(parent)
-        return dialog
+        # TODO: Find out how to make IconColorEditor movable
+        return IconColorEditor(parent)
 
     def setEditorData(self, editor, index):
         """Set current color from index data."""
-        rgb = index.data(Qt.DisplayRole)
-        editor.setCurrentColor(QColor(rgb))
-        editor.setOption(QColorDialog.NoButtons, True)  # TODO: find out how this works
+        icon_code, color_code = self.parent().icon_mngr.icon_color_code(index.data(Qt.DisplayRole))
+        icon_mngr = self.parent().icon_mngr
+        pixmaps = [icon_mngr.create_object_pixmap(i) for i in range(icon_mngr.icon_count)]
+        editor.set_data(icon_code, color_code, pixmaps)
 
     def setModelData(self, editor, model, index):
         """Emit signal with current color."""
-        rgb = editor.currentColor().rgb()
-        self.data_committed.emit(index, rgb)
+        if editor.result():
+            icon_code, color_code = editor.data()
+            display_icon = self.parent().icon_mngr.display_icon(icon_code, color_code)
+            self.data_committed.emit(index, display_icon)
 
     def paint(self, painter, option, index):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         pixmap = self.parent().icon_mngr.create_object_pixmap(index.data(Qt.DisplayRole))
-        extent = 0.8 * min(option.rect.width(), option.rect.height())
-        rect = QRect(0, 0, extent, extent)
-        rect.moveCenter(option.rect.center())
-        painter.drawPixmap(rect, pixmap)
+        icon = QIcon(pixmap)
+        icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
 
 
 class LineEditDelegate(QItemDelegate):

@@ -375,15 +375,43 @@ class IconManager:
     def __init__(self):
         """Init instance."""
         super().__init__()
-        self.renderer = QSvgRenderer(":/icons/cube.svg")
+        self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem()
-        self.svg_item.setSharedRenderer(self.renderer)
         self.svg_item.setElementId("")
         self.colorizer = QGraphicsColorizeEffect()
         self.scene = QGraphicsScene()
         self.scene.addItem(self.svg_item)
         self.object_class_pixmaps = {}  # To store already created pixmaps
         self.relationship_class_icons = {}
+        self.svg_library = [
+            ":/icons/object_class_icons/cube.svg",
+            ":/icons/object_class_icons/broadcast-tower.svg",
+            ":/icons/object_class_icons/building.svg",
+            ":/icons/object_class_icons/car-side.svg",
+            ":/icons/object_class_icons/charging-station.svg",
+            ":/icons/object_class_icons/industry.svg",
+            ":/icons/object_class_icons/link.svg",
+            ":/icons/object_class_icons/network-wired.svg",
+            ":/icons/object_class_icons/solar-panel.svg",
+            ":/icons/object_class_icons/warehouse.svg",
+            ":/icons/object_class_icons/water.svg",
+            ":/icons/object_class_icons/wind.svg",
+            ":/icons/object_class_icons/exchange-alt.svg"
+        ]
+        self.icon_count = len(self.svg_library)
+
+    def icon_color_code(self, display_icon):
+        if type(display_icon) is not int or display_icon < 0:
+            return 0, 0
+        icon_code = display_icon & 255
+        try:
+            color_code = display_icon >> 8
+        except OverflowError:
+            color_code = 0
+        return icon_code, color_code
+
+    def display_icon(self, icon_code, color_code):
+        return icon_code + (color_code << 8)
 
     def set_object_pixmaps(self, object_class_list):
         """Create and store object pixmaps for object classes in list."""
@@ -395,17 +423,22 @@ class IconManager:
     def create_object_pixmap(self, display_icon):
         """A pixmap corresponding to display_icon (int).
         """
-        if type(display_icon) is not int:
-            display_icon = 0
-        if display_icon < 0:
-            display_icon = 0
-        pixmap = QPixmap(self.renderer.defaultSize())
+        icon_code, color_code = self.icon_color_code(display_icon)
+        try:
+            icon = self.svg_library[icon_code]
+        except IndexError:
+            icon = self.svg_library[0]
+        self.renderer.load(icon)
+        self.svg_item.setSharedRenderer(self.renderer)
+        color = QColor(color_code)
+        self.colorizer.setColor(color)
+        self.svg_item.setGraphicsEffect(self.colorizer)
+        rectf = self.scene.itemsBoundingRect()
+        self.scene.setSceneRect(rectf)
+        pixmap = QPixmap(rectf.toRect().size())
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
         painter.setRenderHint(QPainter.Antialiasing, True)
-        color = QColor(display_icon)
-        self.colorizer.setColor(color)
-        self.svg_item.setGraphicsEffect(self.colorizer)
         self.scene.render(painter)
         painter.end()
         return pixmap
@@ -415,12 +448,12 @@ class IconManager:
         try:
             return QIcon(self.object_class_pixmaps[object_class_name])
         except KeyError:
-            return QIcon(":/icons/cube.svg")
+            return QIcon(":/icons/object_class_icons/cube.svg")
 
     def relationship_pixmap(self, str_object_class_name_list):
         """A pixmap rendered by painting several object pixmaps together."""
         if not str_object_class_name_list:
-            return QPixmap(":/icons/cubes.svg")
+            return QPixmap(":/icons/object_class_icons/cubes.svg")
         object_class_name_list = str_object_class_name_list.split(",")
         scene = QGraphicsScene()
         x = 0
@@ -428,7 +461,7 @@ class IconManager:
             try:
                 pixmap = self.object_class_pixmaps[object_class_name]
             except KeyError:
-                pixmap = QPixmap(":/icons/cube.svg")
+                pixmap = QPixmap(":/icons/object_class_icons/cube.svg")
             pixmap_item = scene.addPixmap(pixmap)
             if j % 2 == 0:
                 y = 0

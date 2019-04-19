@@ -8,8 +8,6 @@
     <file>wrench_minus.svg</file>
     <file>wrench_plus.svg</file>
     <file>add_tool.png</file>
-    <file>cube.svg</file>
-    <file>cubes.svg</file>
     <file>datapkg.png</file>
     <file>file.svg</file>
     <file>file-download.svg</file>
@@ -50,5 +48,19 @@
     <file>menu_icons/trash-alt.svg</file>
     <file>menu_icons/undo.svg</file>
     <file>menu_icons/window-close.svg</file>
+    <file>object_class_icons/cube.svg</file>
+    <file>object_class_icons/cubes.svg</file>
+    <file>object_class_icons/broadcast-tower.svg</file>
+    <file>object_class_icons/building.svg</file>
+    <file>object_class_icons/car-side.svg</file>
+    <file>object_class_icons/charging-station.svg</file>
+    <file>object_class_icons/industry.svg</file>
+    <file>object_class_icons/link.svg</file>
+    <file>object_class_icons/network-wired.svg</file>
+    <file>object_class_icons/solar-panel.svg</file>
+    <file>object_class_icons/warehouse.svg</file>
+    <file>object_class_icons/water.svg</file>
+    <file>object_class_icons/wind.svg</file>
+    <file>object_class_icons/exchange-alt.svg</file>
   </qresource>
 </RCC>

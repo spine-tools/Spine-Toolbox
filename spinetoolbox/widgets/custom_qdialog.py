@@ -26,7 +26,7 @@ from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedb_api import SpineDBAPIError
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
-    AddParameterEnumsDelegate, LineEditDelegate, ColorDialogDelegate
+    AddParameterEnumsDelegate, LineEditDelegate, IconColorDialogDelegate
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect, format_string_list
 
@@ -152,7 +152,7 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.object_class_list = self._parent.db_map.object_class_list()
         self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.table_view.setItemDelegateForColumn(2, ColorDialogDelegate(parent))
+        self.table_view.setItemDelegateForColumn(2, IconColorDialogDelegate(parent))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon'])
         self.model.clear()
@@ -590,7 +590,7 @@ class EditObjectClassesDialog(EditItemsDialog):
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display_icon'])
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.table_view.setItemDelegateForColumn(2, ColorDialogDelegate(parent))
+        self.table_view.setItemDelegateForColumn(2, IconColorDialogDelegate(parent))
         self.connect_signals()
         self.orig_data = list()
         self.id_list = list()

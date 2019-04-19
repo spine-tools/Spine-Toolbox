@@ -22,8 +22,9 @@ import logging
 from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
     QTimer, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
-    QVBoxLayout, QTextEdit
-from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
+    QVBoxLayout, QTextEdit, QColorDialog, QDialog, QDialogButtonBox, QListWidget, QListWidgetItem, \
+    QStyle
+from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor, QIcon, QBrush
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 
@@ -90,7 +91,6 @@ class CustomLineEditDelegate(QItemDelegate):
         """Init class."""
         super().__init__(parent)
         self._parent = parent
-        self._editor = None
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.data())
@@ -98,10 +98,10 @@ class CustomLineEditDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         """Create editor and 'forward' `textEdited` signal.
         """
-        self._editor = CustomLineEditor(parent)
-        self._editor.set_data(index.data())
-        self._editor.textEdited.connect(lambda s: self.text_edited.emit(s))
-        return self._editor
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data())
+        editor.textEdited.connect(lambda s: self.text_edited.emit(s))
+        return editor
 
     def eventFilter(self, editor, event):
         """Handle all sort of special cases.
@@ -617,3 +617,60 @@ class JSONEditor(QTabWidget):
         elif index == 1:
             return self.model.json_data()
         return None
+
+
+class IconPainterDelegate(QItemDelegate):
+    """A delegate to highlight decorations in a QListWidget."""
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def paint(self, painter, option, index):
+        """Highlight selected items."""
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(option.rect, qApp.palette().highlight())
+        super().paint(painter, option, index)
+
+
+class IconColorEditor(QDialog):
+    """An editor to let the user select an icon and a color for an object class.
+    """
+
+    def __init__(self, parent):
+        """Init class."""
+        super().__init__(parent, Qt.Popup)
+        self.setWindowTitle("Select icon and color")
+        self.icon_list = QListWidget(self)
+        self.icon_list.setViewMode(QListWidget.IconMode)
+        self.icon_list.setIconSize(QSize(32, 32))
+        self.icon_list.setResizeMode(QListWidget.Adjust)
+        self.icon_list.setItemDelegate(IconPainterDelegate(self))
+        self.icon_list.setMovement(QListWidget.Static)
+        self.color_dialog = QColorDialog(self)
+        self.color_dialog.setWindowFlags(Qt.Widget)
+        self.color_dialog.setOption(QColorDialog.NoButtons, True)
+        self.color_dialog.setOption(QColorDialog.DontUseNativeDialog, True)
+        self.button_box = QDialogButtonBox(self)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.icon_list)
+        layout.addWidget(self.color_dialog)
+        layout.addWidget(self.button_box)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.connect_signals()
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+    def set_data(self, icon_code, color_code, pixmaps):
+        self.color_dialog.setCurrentColor(QColor(color_code))
+        for pixmap in pixmaps:
+            item = QListWidgetItem(QIcon(pixmap), None)
+            self.icon_list.addItem(item)
+        self.icon_list.setCurrentRow(icon_code)
+
+    def data(self):
+        icon_code = self.icon_list.currentRow()
+        color_code = self.color_dialog.currentColor().rgb()
+        return icon_code, color_code
