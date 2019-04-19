@@ -28,8 +28,9 @@ import spinedb_api
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox
-from PySide2.QtGui import QCursor, QImageReader
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsColorizeEffect, QGraphicsScene
+from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
+from PySide2.QtGui import QCursor, QImageReader, QPixmap, QPainter, QColor, QIcon
 from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
@@ -367,4 +368,83 @@ def strip_json_data(data, maxlen):
     if len(stripped_data) > 2 * maxlen:
         stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
     return stripped_data
-    
+
+
+class IconManager:
+    """A class to manage object class icons for data store forms."""
+    def __init__(self):
+        """Init instance."""
+        super().__init__()
+        self.renderer = QSvgRenderer(":/icons/cube.svg")
+        self.svg_item = QGraphicsSvgItem()
+        self.svg_item.setSharedRenderer(self.renderer)
+        self.svg_item.setElementId("")
+        self.colorizer = QGraphicsColorizeEffect()
+        self.scene = QGraphicsScene()
+        self.scene.addItem(self.svg_item)
+        self.object_class_pixmaps = {}  # To store already created pixmaps
+        self.relationship_class_icons = {}
+
+    def set_object_pixmaps(self, object_class_list):
+        """Create and store object pixmaps for object classes in list."""
+        for object_class in object_class_list:
+            display_icon = object_class.display_icon
+            object_class_name = object_class.name
+            self.object_class_pixmaps[object_class_name] = self.create_object_pixmap(display_icon)
+
+    def create_object_pixmap(self, display_icon):
+        """A pixmap corresponding to display_icon (int).
+        """
+        if type(display_icon) is not int:
+            display_icon = 0
+        if display_icon < 0:
+            display_icon = 0
+        pixmap = QPixmap(self.renderer.defaultSize())
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        color = QColor(display_icon)
+        self.colorizer.setColor(color)
+        self.svg_item.setGraphicsEffect(self.colorizer)
+        self.scene.render(painter)
+        painter.end()
+        return pixmap
+
+    def object_icon(self, object_class_name):
+        """An object icon from the stored pixmaps if any."""
+        try:
+            return QIcon(self.object_class_pixmaps[object_class_name])
+        except KeyError:
+            return QIcon(":/icons/cube.svg")
+
+    def relationship_pixmap(self, str_object_class_name_list):
+        """A pixmap rendered by painting several object pixmaps together."""
+        if not str_object_class_name_list:
+            return QPixmap(":/icons/cubes.svg")
+        object_class_name_list = str_object_class_name_list.split(",")
+        scene = QGraphicsScene()
+        x = 0
+        for j, object_class_name in enumerate(object_class_name_list):
+            try:
+                pixmap = self.object_class_pixmaps[object_class_name]
+            except KeyError:
+                pixmap = QPixmap(":/icons/cube.svg")
+            pixmap_item = scene.addPixmap(pixmap)
+            if j % 2 == 0:
+                y = 0
+            else:
+                y = - 0.75 * pixmap_item.boundingRect().height()
+                pixmap_item.setZValue(-1)
+            pixmap_item.setPos(x, y)
+            x += 0.5 * pixmap_item.boundingRect().width()
+        pixmap = QPixmap(scene.itemsBoundingRect().toRect().size())
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        scene.render(painter)
+        painter.end()
+        return pixmap
+
+    def relationship_icon(self, str_object_class_name_list):
+        """A relationship icon corresponding to the list of object names."""
+        return QIcon(self.relationship_pixmap(str_object_class_name_list))

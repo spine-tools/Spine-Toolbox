@@ -20,8 +20,8 @@ import logging
 from copy import deepcopy
 from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
     QDialogButtonBox, QHeaderView, QAction, QApplication, QToolButton, QWidget, QLabel, \
-    QComboBox, QSpinBox
-from PySide2.QtCore import Signal, Slot, Qt, QSize
+    QComboBox, QSpinBox, QStyle
+from PySide2.QtCore import Signal, Slot, Qt, QSize, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
 from spinedb_api import SpineDBAPIError
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
@@ -59,21 +59,63 @@ class ManageItemsDialog(QDialog):
         self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
         self.model.dataChanged.connect(self._handle_model_data_changed)
         self.model.modelReset.connect(self._handle_model_reset)
+
+    def resize_window_to_columns(self):
+        margins = self.layout().contentsMargins()
+        self.resize(
+            margins.left() + margins.right()
+            + self.table_view.frameWidth() * 2
+            + self.table_view.verticalHeader().width()
+            + self.table_view.horizontalHeader().length(),
+            # + self.table_view.style().pixelMetric(QStyle.PM_ScrollBarExtent),
+            400
+        )
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    def _handle_model_data_changed(self, top_left, bottom_right, roles):
+        """Reimplement in subclasses to handle changes in model data."""
+        pass
+
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        """Reimplement in subclasses to handle model resetting."""
+        pass
+
+    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
+    def _handle_data_committed(self, index, data):
+        """Update model data."""
+        if data is None:
+            return
+        self.model.setData(index, data, Qt.EditRole)
+
+
+class AddItemsDialog(ManageItemsDialog):
+    def __init__(self, parent, force_default=False):
+        super().__init__(parent)
+
+    def connect_signals(self):
+        super().connect_signals()
         self.model.rowsInserted.connect(self._handle_model_rows_inserted)
 
     @Slot(name="_handle_model_reset")
     def _handle_model_reset(self):
+        """Add an extra column to hold the remove row button."""
         self.model.insert_horizontal_header_labels(self.model.columnCount(), [""])
-        self.table_view.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
         self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
-        self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
+        # TODO: Try to make the stretch work with the resizing
+        # self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
+        self.table_view.resizeColumnsToContents()
+        self.table_view.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
+        self.resize_window_to_columns()
 
     @Slot("QModelIndex", "int", "int", name="_handle_model_rows_inserted")
     def _handle_model_rows_inserted(self, parent, first, last):
+        """Add remove row buttons."""
         column = self.model.columnCount() - 1
         for row in range(first, last + 1):
             index = self.model.index(row, column, parent)
-            self.create_remove_row_button(index)
+            button = self.create_remove_row_button(index)
+            self.table_view.setIndexWidget(index, button)
 
     def create_remove_row_button(self, index):
         """Create button to remove row."""
@@ -82,8 +124,8 @@ class ManageItemsDialog(QDialog):
         button = QToolButton()
         button.setDefaultAction(action)
         button.setIconSize(QSize(20, 20))
-        self.table_view.setIndexWidget(index, button)
         action.triggered.connect(lambda: self.remove_clicked_row(button))
+        return button
 
     def remove_clicked_row(self, button):
         column = self.model.columnCount() - 1
@@ -93,20 +135,8 @@ class ManageItemsDialog(QDialog):
                 self.model.removeRows(row, 1)
                 break
 
-    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
-    def _handle_data_committed(self, index, data):
-        """Update model data."""
-        if data is None:
-            return
-        self.model.setData(index, data, Qt.EditRole)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
-    def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        """Reimplement this method in subclasses to handle changes in model data."""
-        pass
-
-
-class AddObjectClassesDialog(ManageItemsDialog):
+class AddObjectClassesDialog(AddItemsDialog):
     """A dialog to query user's preferences for new object classes.
 
     Attributes:
@@ -122,15 +152,25 @@ class AddObjectClassesDialog(ManageItemsDialog):
         self.object_class_list = self._parent.db_map.object_class_list()
         self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class name', 'description', 'display_icon'])
-        self.model.clear()
-        self.table_view.resizeColumnsToContents()
         self.table_view.setItemDelegateForColumn(2, ColorDialogDelegate(parent))
+        self.connect_signals()
+        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon'])
+        self.model.clear()
         insert_at_position_list = ['Insert new classes at the top']
         insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
         self.combo_box.addItems(insert_at_position_list)
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.itemDelegateForColumn(2).data_committed.connect(self._handle_data_committed)
+
+    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
+    def _handle_data_committed(self, index, data):
+        """Update model data."""
+        if data is None:
+            return
+        self.model.setData(index, data, Qt.EditRole)
 
     @busy_effect
     def accept(self):
@@ -170,7 +210,7 @@ class AddObjectClassesDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class AddObjectsDialog(ManageItemsDialog):
+class AddObjectsDialog(AddItemsDialog):
     """A dialog to query user's preferences for new objects.
 
     Attributes:
@@ -192,7 +232,6 @@ class AddObjectsDialog(ManageItemsDialog):
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
         self.model.set_default_row(**{'object class name': self.default_class_name})
         self.model.clear()
-        self.table_view.resizeColumnsToContents()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
@@ -251,7 +290,7 @@ class AddObjectsDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class AddRelationshipClassesDialog(ManageItemsDialog):
+class AddRelationshipClassesDialog(AddItemsDialog):
     """A dialog to query user's preferences for new relationship classes.
 
     Attributes:
@@ -285,7 +324,6 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
             ['object class 1 name', 'relationship class name'])
         self.model.set_default_row(**{'object class 1 name': self.object_class_one_name})
         self.model.clear()
-        self.table_view.resizeColumnsToContents()
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -300,6 +338,7 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
         elif i < self.number_of_dimensions:
             self.remove_column()
         self.spin_box.setEnabled(True)
+        self.resize_window_to_columns()
 
     def insert_column(self):
         column = self.number_of_dimensions
@@ -380,7 +419,7 @@ class AddRelationshipClassesDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class AddRelationshipsDialog(ManageItemsDialog):
+class AddRelationshipsDialog(AddItemsDialog):
     """A dialog to query user's preferences for new relationships.
 
     Attributes:
@@ -463,7 +502,6 @@ class AddRelationshipsDialog(ManageItemsDialog):
             defaults = {header[self.default_object_column]: self.default_object_name}
             self.model.set_default_row(**defaults)
         self.model.clear()
-        self.table_view.resizeColumnsToContents()
 
     def set_default_object_name(self):
         if not self.object_id:
@@ -525,7 +563,20 @@ class AddRelationshipsDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditObjectClassesDialog(ManageItemsDialog):
+class EditItemsDialog(ManageItemsDialog):
+    def __init__(self, parent, force_default=False):
+        super().__init__(parent)
+
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        """Resize columns and form."""
+        # TODO: Try to make the stretch work with the resizing
+        # self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.resizeColumnsToContents()
+        self.resize_window_to_columns()
+
+
+class EditObjectClassesDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating object classes.
 
     Attributes:
@@ -533,14 +584,14 @@ class EditObjectClassesDialog(ManageItemsDialog):
         kwargs_list (list): list of dictionaries corresponding to object classes to edit/update
     """
     def __init__(self, parent, kwargs_list):
-        super().__init__(parent, kwargs_list)
+        super().__init__(parent)
         self.setWindowTitle("Edit object classes")
         self.model = MinimalTableModel(self)
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display_icon'])
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(LineEditDelegate(parent))
         self.table_view.setItemDelegateForColumn(2, ColorDialogDelegate(parent))
-        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.connect_signals()
         self.orig_data = list()
         self.id_list = list()
         model_data = list()
@@ -565,8 +616,10 @@ class EditObjectClassesDialog(ManageItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.table_view.resizeColumnsToContents()
-        self.connect_signals()
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.itemDelegateForColumn(2).data_committed.connect(self._handle_data_committed)
 
     @busy_effect
     def accept(self):
@@ -601,7 +654,7 @@ class EditObjectClassesDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditObjectsDialog(ManageItemsDialog):
+class EditObjectsDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating objects.
 
     Attributes:
@@ -609,12 +662,12 @@ class EditObjectsDialog(ManageItemsDialog):
         kwargs_list (list): list of dictionaries corresponding to objects to edit/update
     """
     def __init__(self, parent, kwargs_list):
-        super().__init__(parent, kwargs_list)
+        super().__init__(parent)
         self.setWindowTitle("Edit objects")
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.connect_signals()
         self.model.set_horizontal_header_labels(['object name', 'description'])
         self.orig_data = list()
         self.id_list = list()
@@ -637,7 +690,6 @@ class EditObjectsDialog(ManageItemsDialog):
             model_data.append(row_data)
         self.model.reset_model(model_data)
         self.table_view.resizeColumnsToContents()
-        self.connect_signals()
 
     @busy_effect
     def accept(self):
@@ -671,7 +723,7 @@ class EditObjectsDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditRelationshipClassesDialog(ManageItemsDialog):
+class EditRelationshipClassesDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating relationship classes.
 
     Attributes:
@@ -679,12 +731,12 @@ class EditRelationshipClassesDialog(ManageItemsDialog):
         kwargs_list (list): list of dictionaries corresponding to relationship classes to edit/update
     """
     def __init__(self, parent, kwargs_list):
-        super().__init__(parent, kwargs_list)
+        super().__init__(parent)
         self.setWindowTitle("Edit relationship classes")
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.connect_signals()
         self.model.set_horizontal_header_labels(['relationship class name'])
         self.orig_data = list()
         self.id_list = list()
@@ -703,7 +755,6 @@ class EditRelationshipClassesDialog(ManageItemsDialog):
             model_data.append(row_data)
         self.model.reset_model(model_data)
         self.table_view.resizeColumnsToContents()
-        self.connect_signals()
 
     @busy_effect
     def accept(self):
@@ -736,7 +787,7 @@ class EditRelationshipClassesDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class EditRelationshipsDialog(ManageItemsDialog):
+class EditRelationshipsDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating relationships.
 
     Attributes:
@@ -745,12 +796,12 @@ class EditRelationshipsDialog(ManageItemsDialog):
         relationship_class (dict): the relationship class item (all edited relationships must be of this class)
     """
     def __init__(self, parent, kwargs_list, relationship_class):
-        super().__init__(parent, kwargs_list)
+        super().__init__(parent)
         self.setWindowTitle("Edit relationships")
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
-        self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.connect_signals()
         object_class_name_list = relationship_class['object_class_name_list'].split(",")
         self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
         self.orig_data = list()
@@ -774,7 +825,6 @@ class EditRelationshipsDialog(ManageItemsDialog):
             model_data.append(row_data)
         self.model.reset_model(model_data)
         self.table_view.resizeColumnsToContents()
-        self.connect_signals()
 
     @busy_effect
     def accept(self):
@@ -823,7 +873,7 @@ class EditRelationshipsDialog(ManageItemsDialog):
             self._parent.msg_error.emit(e.msg)
 
 
-class ManageParameterTagsDialog(ManageItemsDialog):
+class ManageParameterTagsDialog(AddItemsDialog):
     """A dialog to query user's preferences for managing parameter tags.
 
     Attributes:
@@ -833,9 +883,10 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         super().__init__(parent)
         self.setWindowTitle("Manage parameter tags")
         self.model = HybridTableModel(self)
-        self.table_view.setItemDelegate(LineEditDelegate(parent))
         self.table_view.setModel(self.model)
-        self.remove_row_icon = QIcon(":/icons/minus.png")
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.connect_signals()
+        self.remove_row_icon = QIcon(":/icons/minus.svg")
         self.orig_data = list()
         self.removed_id_list = list()
         self.id_list = list()
@@ -851,17 +902,17 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.set_horizontal_header_labels(['parameter tag', 'description'])
-        self.connect_signals()
         self.model.reset_model(model_data)
-        self.table_view.resizeColumnsToContents()
 
     @Slot(name="_handle_model_reset")
     def _handle_model_reset(self):
+        """Call parent method, and then create remove row buttons for initial rows."""
         super()._handle_model_reset()
         column = self.model.columnCount() - 1
         for row in range(self.model.rowCount()):
             index = self.model.index(row, column)
-            self.create_remove_row_button(index)
+            button = self.create_remove_row_button(index)
+            self.table_view.setIndexWidget(index, button)
 
     def remove_clicked_row(self, button):
         column = self.model.columnCount() - 1

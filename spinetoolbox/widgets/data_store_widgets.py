@@ -24,10 +24,9 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QToolButton, QMessageBox, QCheckBox, \
     QFileDialog, QApplication, QErrorMessage, QGraphicsScene, QGraphicsRectItem, QAction, QWidgetAction, \
-    QDockWidget, QTreeView, QTableView, QGraphicsColorizeEffect, QGraphicsScene
-from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
+    QDockWidget, QTreeView, QTableView
 from PySide2.QtCore import Qt, Signal, Slot, QPointF, QRectF, QSize, QEvent
-from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPixmap, QPalette, QPainter, QColor
+from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon, QPalette
 from ui.tree_view_form import Ui_MainWindow as tree_view_form_ui
 from ui.graph_view_form import Ui_MainWindow as graph_view_form_ui
 from config import MAINWINDOW_SS, STATUSBAR_SS
@@ -53,79 +52,7 @@ from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect, fix_name_ambiguity, format_string_list
-
-
-class IconManager(object):
-    def __init__(self):
-        super().__init__()
-        self.renderer = QSvgRenderer(":/icons/cube.svg")
-        self.svg_item = QGraphicsSvgItem()
-        self.svg_item.setSharedRenderer(self.renderer)
-        self.svg_item.setElementId("")
-        self.colorizer = QGraphicsColorizeEffect()
-        self.scene = QGraphicsScene()
-        self.scene.addItem(self.svg_item)
-        self.object_class_pixmaps = {}  # To store already created pixmaps
-        self.relationship_class_icons = {}
-
-    def set_object_icons(self, object_class_list):
-        """Set object pixmaps for object classes in list."""
-
-        for object_class in object_class_list:
-            display_icon = object_class.display_icon
-            object_class_name = object_class.name
-            if type(display_icon) is not int:
-                display_icon = 0
-            if display_icon < 0:
-                display_icon = 0
-            pixmap = QPixmap(self.renderer.defaultSize())
-            pixmap.fill(Qt.transparent)
-            painter = QPainter(pixmap)
-            painter.setRenderHint(QPainter.Antialiasing, True)
-            color = QColor(display_icon)
-            self.colorizer.setColor(color)
-            self.svg_item.setGraphicsEffect(self.colorizer)
-            self.scene.render(painter)
-            self.object_class_pixmaps[object_class_name] = pixmap
-            painter.end()
-
-    def object_icon(self, object_class_name):
-        try:
-            return QIcon(self.object_class_pixmaps[object_class_name])
-        except KeyError:
-            return QIcon(":/icons/cube.svg")
-
-    def relationship_pixmap(self, str_object_class_name_list):
-        """A pixmap rendered by painting several object pixmaps together."""
-        if not str_object_class_name_list:
-            return QPixmap(":/icons/cubes.svg")
-        object_class_name_list = str_object_class_name_list.split(",")
-        scene = QGraphicsScene()
-        x = 0
-        for j, object_class_name in enumerate(object_class_name_list):
-            try:
-                pixmap = self.object_class_pixmaps[object_class_name]
-            except KeyError:
-                pixmap = QPixmap(":/icons/cube.svg")
-            pixmap_item = scene.addPixmap(pixmap)
-            if j % 2 == 0:
-                y = 0
-            else:
-                y = - 0.75 * pixmap_item.boundingRect().height()
-                pixmap_item.setZValue(-1)
-            pixmap_item.setPos(x, y)
-            x += 0.5 * pixmap_item.boundingRect().width()
-        pixmap = QPixmap(scene.itemsBoundingRect().toRect().size())
-        pixmap.fill(Qt.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        scene.render(painter)
-        painter.end()
-        return pixmap
-
-    def relationship_icon(self, str_object_class_name_list):
-        return QIcon(self.relationship_pixmap(str_object_class_name_list))
+from helpers import busy_effect, fix_name_ambiguity, format_string_list, IconManager
 
 
 class DataStoreForm(QMainWindow):
@@ -160,7 +87,7 @@ class DataStoreForm(QMainWindow):
         self.db_map = db_map
         self.database = database
         self.icon_mngr = IconManager()
-        self.icon_mngr.set_object_icons(self.db_map.object_class_list())
+        self.icon_mngr.set_object_pixmaps(self.db_map.object_class_list())
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Object tree selected indexes
@@ -548,7 +475,7 @@ class DataStoreForm(QMainWindow):
         """Insert new object classes."""
         if not object_classes.count():
             return
-        self.icon_mngr.set_object_icons(object_classes)
+        self.icon_mngr.set_object_pixmaps(object_classes)
         self.object_tree_model.add_object_classes(object_classes)
         self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
@@ -651,7 +578,7 @@ class DataStoreForm(QMainWindow):
         """Update object classes."""
         if not object_classes.count():
             return
-        self.icon_mngr.set_object_icons(object_classes)
+        self.icon_mngr.set_object_pixmaps(object_classes)
         self.object_tree_model.update_object_classes(object_classes)
         self.object_parameter_value_model.rename_object_classes(object_classes)
         self.object_parameter_definition_model.rename_object_classes(object_classes)
@@ -914,9 +841,9 @@ class TreeViewForm(DataStoreForm):
         # Others
         self.widget_with_selection = None
         self.paste_to_widget = None
-        self.fully_expand_icon = QIcon(QPixmap(":/icons/menu_icons/angle-double-right.svg"))
-        self.fully_collapse_icon = QIcon(QPixmap(":/icons/menu_icons/angle-double-left.svg"))
-        self.find_next_icon = QIcon(QPixmap(":/icons/menu_icons/ellipsis-h.png"))
+        self.fully_expand_icon = QIcon(":/icons/menu_icons/angle-double-right.svg")
+        self.fully_collapse_icon = QIcon(":/icons/menu_icons/angle-double-left.svg")
+        self.find_next_icon = QIcon(":/icons/menu_icons/ellipsis-h.png")
         self.settings_key = 'treeViewWidget'
         self.do_clear_selections = True
         self.restore_dock_widgets()
@@ -1055,6 +982,8 @@ class TreeViewForm(DataStoreForm):
             self.ui.actionRemove_selection.setEnabled(True)
             if name == "object tree":
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
+            elif name == "relationship tree":
+                self.ui.actionRemove_selection.setIcon(QIcon(":/icons/menu_icons/cubes_minus.svg"))
             elif name == "object parameter definition":
                 self.ui.actionRemove_selection.setIcon(QIcon(":/icons/menu_icons/cog_minus.svg"))
             elif name == "object parameter value":

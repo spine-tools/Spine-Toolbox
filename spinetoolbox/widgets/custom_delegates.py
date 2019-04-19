@@ -18,7 +18,7 @@ Custom item delegates.
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
     QApplication, QStyleOptionViewItem, QWidget, QStyledItemDelegate, QColorDialog
-from PySide2.QtGui import QColor
+from PySide2.QtGui import QColor, QPixmap
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, \
     MultiSearchBarEditor, CheckListEditor, JSONEditor
 from models import MinimalTableModel
@@ -26,17 +26,39 @@ import logging
 
 
 class ColorDialogDelegate(QStyledItemDelegate):
+    """A delegate that opens a color picker dialog.
+
+    Attributes:
+        parent (DataStoreForm): tree view form.
+    """
+    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
     def createEditor(self, parent, option, index):
+        """Return QColorDialog."""
         dialog = QColorDialog(parent)
         return dialog
 
     def setEditorData(self, editor, index):
+        """Set current color from index data."""
         rgb = index.data(Qt.DisplayRole)
         editor.setCurrentColor(QColor(rgb))
+        editor.setOption(QColorDialog.NoButtons, True)  # TODO: find out how this works
 
     def setModelData(self, editor, model, index):
+        """Emit signal with current color."""
         rgb = editor.currentColor().rgb()
-        model.setData(index, rgb, Qt.DisplayRole)
+        self.data_committed.emit(index, rgb)
+
+    def paint(self, painter, option, index):
+        """Get a pixmap from the index data and paint it in the middle of the cell."""
+        pixmap = self.parent().icon_mngr.create_object_pixmap(index.data(Qt.DisplayRole))
+        extent = 0.8 * min(option.rect.width(), option.rect.height())
+        rect = QRect(0, 0, extent, extent)
+        rect.moveCenter(option.rect.center())
+        painter.drawPixmap(rect, pixmap)
 
 
 class LineEditDelegate(QItemDelegate):
