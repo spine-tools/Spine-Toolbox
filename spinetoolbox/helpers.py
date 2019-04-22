@@ -24,7 +24,6 @@ import time
 import shutil
 import glob
 import json
-import yaml
 import spinedb_api
 from PySide2.QtCore import Qt, Slot, QFile, QTextStream, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
@@ -381,10 +380,11 @@ class IconManager:
         self.searchterms = {}
         self.model = QStandardItemModel()
         self.model.data = self._model_data
-        qfile = QFile(":/fonts/fontawesome5-codepoints.yml")
+        qfile = QFile(":/fonts/fontawesome5-codepoints.json")
         qfile.open(QIODevice.ReadOnly | QIODevice.Text)
-        qstream = QTextStream(qfile)
-        self.codepoints = yaml.load(qstream)
+        data = str(qfile.readAll().data(), "utf-8")
+        qfile.close()
+        self.codepoints = json.loads(data)
         self.icon_count = len(self.codepoints)
 
     @busy_effect
@@ -392,10 +392,11 @@ class IconManager:
         """Init model that can be used to display all icons in a list."""
         if self.searchterms:
             return
-        qfile = QFile(":/fonts/fontawesome5-searchterms.yml")
+        qfile = QFile(":/fonts/fontawesome5-searchterms.json")
         qfile.open(QIODevice.ReadOnly | QIODevice.Text)
-        qstream = QTextStream(qfile)
-        self.searchterms = yaml.load(qstream)
+        data = str(qfile.readAll().data(), "utf-8")
+        qfile.close()
+        self.searchterms = json.loads(data)
         items = []
         for codepoint, searchterms in self.searchterms.items():
             item = QStandardItem()

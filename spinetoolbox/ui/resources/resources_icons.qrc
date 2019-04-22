@@ -5,8 +5,8 @@
     </qresource>
   <qresource prefix="fonts">
     <file>fontawesome5-solid-webfont.ttf</file>
-    <file>fontawesome5-codepoints.yml</file>
-    <file>fontawesome5-searchterms.yml</file>
+    <file>fontawesome5-codepoints.json</file>
+    <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="icons">
     <file>wrench.svg</file>
