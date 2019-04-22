@@ -511,6 +511,12 @@
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
+       <property name="iconSize">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
+       </property>
       </widget>
      </item>
     </layout>
@@ -556,6 +562,12 @@
        </property>
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
+       </property>
+       <property name="iconSize">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
        </property>
       </widget>
      </item>
@@ -787,14 +799,14 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>ObjectTreeView</class>
-   <extends>QTreeView</extends>
-   <header>widgets/custom_qtreeview.h</header>
-  </customwidget>
-  <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
    <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+  <customwidget>
+   <class>ObjectTreeView</class>
+   <extends>QTreeView</extends>
+   <header>widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>CopyTreeView</class>

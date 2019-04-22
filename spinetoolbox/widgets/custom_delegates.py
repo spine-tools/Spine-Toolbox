@@ -39,21 +39,16 @@ class IconColorDialogDelegate(QStyledItemDelegate):
     def createEditor(self, parent, option, index):
         """Return QColorDialog."""
         # TODO: Find out how to make IconColorEditor movable
-        return IconColorEditor(parent)
+        return IconColorEditor(parent, self.parent().icon_mngr)
 
     def setEditorData(self, editor, index):
         """Set current color from index data."""
-        icon_code, color_code = self.parent().icon_mngr.icon_color_code(index.data(Qt.DisplayRole))
-        icon_mngr = self.parent().icon_mngr
-        pixmaps = [icon_mngr.create_object_pixmap(i) for i in range(icon_mngr.icon_count)]
-        editor.set_data(icon_code, color_code, pixmaps)
+        editor.set_data(index.data(Qt.DisplayRole))
 
     def setModelData(self, editor, model, index):
         """Emit signal with current color."""
         if editor.result():
-            icon_code, color_code = editor.data()
-            display_icon = self.parent().icon_mngr.display_icon(icon_code, color_code)
-            self.data_committed.emit(index, display_icon)
+            self.data_committed.emit(index, editor.data())
 
     def paint(self, painter, option, index):
         """Get a pixmap from the index data and paint it in the middle of the cell."""

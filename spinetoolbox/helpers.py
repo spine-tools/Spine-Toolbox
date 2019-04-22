@@ -24,13 +24,14 @@ import time
 import shutil
 import glob
 import json
+import yaml
 import spinedb_api
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Qt, Slot, QFile, QTextStream, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsColorizeEffect, QGraphicsScene
-from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from PySide2.QtGui import QCursor, QImageReader, QPixmap, QPainter, QColor, QIcon
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene
+from PySide2.QtGui import QCursor, QImageReader, QPixmap, QPainter, QColor, QIcon, QIconEngine, QFont, \
+    QStandardItemModel, QStandardItem
 from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
@@ -375,96 +376,95 @@ class IconManager:
     def __init__(self):
         """Init instance."""
         super().__init__()
-        self.renderer = QSvgRenderer()
-        self.svg_item = QGraphicsSvgItem()
-        self.svg_item.setElementId("")
-        self.colorizer = QGraphicsColorizeEffect()
-        self.scene = QGraphicsScene()
-        self.scene.addItem(self.svg_item)
-        self.object_class_pixmaps = {}  # To store already created pixmaps
-        self.relationship_class_icons = {}
-        self.svg_library = [
-            ":/icons/object_class_icons/cube.svg",
-            ":/icons/object_class_icons/broadcast-tower.svg",
-            ":/icons/object_class_icons/building.svg",
-            ":/icons/object_class_icons/car-side.svg",
-            ":/icons/object_class_icons/charging-station.svg",
-            ":/icons/object_class_icons/industry.svg",
-            ":/icons/object_class_icons/link.svg",
-            ":/icons/object_class_icons/network-wired.svg",
-            ":/icons/object_class_icons/solar-panel.svg",
-            ":/icons/object_class_icons/warehouse.svg",
-            ":/icons/object_class_icons/water.svg",
-            ":/icons/object_class_icons/wind.svg",
-            ":/icons/object_class_icons/exchange-alt.svg",
-            ":/icons/object_class_icons/clock.svg"
-        ]
-        self.icon_count = len(self.svg_library)
+        self.obj_cls_icon_cache = {}  # A mapping from object class name to display icon
+        self.icon_pixmap_cache = {}  # A mapping from display_icon to associated pixmap
+        self.searchterms = {}
+        self.model = QStandardItemModel()
+        self.model.data = self._model_data
+        qfile = QFile(":/fonts/fontawesome5-codepoints.yml")
+        qfile.open(QIODevice.ReadOnly | QIODevice.Text)
+        qstream = QTextStream(qfile)
+        self.codepoints = yaml.load(qstream)
+        self.icon_count = len(self.codepoints)
+
+    @busy_effect
+    def init_model(self):
+        """Init model that can be used to display all icons in a list."""
+        if self.searchterms:
+            return
+        qfile = QFile(":/fonts/fontawesome5-searchterms.yml")
+        qfile.open(QIODevice.ReadOnly | QIODevice.Text)
+        qstream = QTextStream(qfile)
+        self.searchterms = yaml.load(qstream)
+        items = []
+        for codepoint, searchterms in self.searchterms.items():
+            item = QStandardItem()
+            display_icon = int(codepoint, 16)
+            item.setData(display_icon, Qt.UserRole)
+            item.setData(searchterms, Qt.UserRole + 1)
+            items.append(item)
+        self.model.invisibleRootItem().appendRows(items)
+
+    def _model_data(self, index, role):
+        """Create pixmaps as they're requested, to reduce loading time."""
+        if role != Qt.DecorationRole:
+            return QStandardItemModel.data(self.model, index, role)
+        display_icon = index.data(Qt.UserRole)
+        pixmap = self.create_object_pixmap(display_icon)
+        return QIcon(pixmap)
 
     def icon_color_code(self, display_icon):
         """Take a display icon integer and return an equivalent tuple of icon and color code."""
         if type(display_icon) is not int or display_icon < 0:
-            return 0, 0
-        icon_code = display_icon & 255
+            return int("f1b2", 16), 0
+        icon_code = display_icon & 65535
         try:
-            color_code = display_icon >> 8
+            color_code = display_icon >> 16
         except OverflowError:
             color_code = 0
         return icon_code, color_code
 
     def display_icon(self, icon_code, color_code):
         """Take tuple of icon and color codes, and return equivalent integer."""
-        return icon_code + (color_code << 8)
+        return icon_code + (color_code << 16)
 
-    def set_object_pixmaps(self, object_class_list):
-        """Create and store object pixmaps for object classes in list."""
-        for object_class in object_class_list:
-            display_icon = object_class.display_icon
-            object_class_name = object_class.name
-            self.object_class_pixmaps[object_class_name] = self.create_object_pixmap(display_icon)
+    def setup_object_pixmaps(self, object_classes):
+        for object_class in object_classes:
+            self.create_object_pixmap(object_class.display_icon)
+            self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
 
     def create_object_pixmap(self, display_icon):
-        """A pixmap corresponding to display_icon (int).
+        """Create a pixmap corresponding to object icon, store it and return it."""
+        if display_icon not in self.icon_pixmap_cache:
+            icon_code, color_code = self.icon_color_code(display_icon)
+            engine = CharIconEngine(chr(icon_code), color_code)
+            self.icon_pixmap_cache[display_icon] = engine.pixmap(QSize(512, 512))
+        return self.icon_pixmap_cache[display_icon]
+
+    def object_pixmap(self, object_class_name):
+        """A pixmap for the given object class.
         """
-        icon_code, color_code = self.icon_color_code(display_icon)
-        try:
-            icon = self.svg_library[icon_code]
-        except IndexError:
-            icon = self.svg_library[0]
-        self.renderer.load(icon)
-        self.svg_item.setSharedRenderer(self.renderer)
-        color = QColor(color_code)
-        self.colorizer.setColor(color)
-        self.svg_item.setGraphicsEffect(self.colorizer)
-        rectf = self.scene.itemsBoundingRect()
-        self.scene.setSceneRect(rectf)
-        pixmap = QPixmap(rectf.toRect().size())
-        pixmap.fill(Qt.transparent)
-        painter = QPainter(pixmap)
-        painter.setRenderHint(QPainter.Antialiasing, True)
-        self.scene.render(painter)
-        painter.end()
-        return pixmap
+        if object_class_name in self.obj_cls_icon_cache:
+            display_icon = self.obj_cls_icon_cache[object_class_name]
+            if display_icon in self.icon_pixmap_cache:
+                return self.icon_pixmap_cache[display_icon]
+        engine = CharIconEngine("\uf1b2", 0)
+        return engine.pixmap(QSize(512, 512))
 
     def object_icon(self, object_class_name):
         """An object icon from the stored pixmaps if any."""
-        try:
-            return QIcon(self.object_class_pixmaps[object_class_name])
-        except KeyError:
-            return QIcon(":/icons/object_class_icons/cube.svg")
+        return QIcon(self.object_pixmap(object_class_name))
 
     def relationship_pixmap(self, str_object_class_name_list):
         """A pixmap rendered by painting several object pixmaps together."""
         if not str_object_class_name_list:
-            return QPixmap(":/icons/object_class_icons/cubes.svg")
+            engine = CharIconEngine("\uf1b3", 0)
+            return engine.pixmap(QSize(512, 512))
         object_class_name_list = str_object_class_name_list.split(",")
         scene = QGraphicsScene()
         x = 0
         for j, object_class_name in enumerate(object_class_name_list):
-            try:
-                pixmap = self.object_class_pixmaps[object_class_name]
-            except KeyError:
-                pixmap = QPixmap(":/icons/object_class_icons/cube.svg")
+            pixmap = self.object_pixmap(object_class_name)
             pixmap_item = scene.addPixmap(pixmap)
             if j % 2 == 0:
                 y = 0
@@ -484,3 +484,29 @@ class IconManager:
     def relationship_icon(self, str_object_class_name_list):
         """A relationship icon corresponding to the list of object names."""
         return QIcon(self.relationship_pixmap(str_object_class_name_list))
+
+
+class CharIconEngine(QIconEngine):
+
+    """Specialization of QIconEngine used to draw font-based icons."""
+
+    def __init__(self, char, color):
+        super().__init__()
+        self.char = char
+        self.color = color
+        self.font = QFont('Font Awesome 5 Free Solid')
+
+    def paint(self, painter, rect, mode=None, state=None):
+        painter.save()
+        size = 0.875 * round(rect.height())
+        self.font.setPixelSize(size)
+        painter.setFont(self.font)
+        painter.setPen(QColor(self.color))
+        painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, self.char)
+        painter.restore()
+
+    def pixmap(self, size, mode=None, state=None):
+        pm = QPixmap(size)
+        pm.fill(Qt.transparent)
+        self.paint(QPainter(pm), QRect(QPoint(0, 0), size), mode, state)
+        return pm

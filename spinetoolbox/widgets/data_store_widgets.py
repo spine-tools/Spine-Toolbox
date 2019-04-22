@@ -87,7 +87,7 @@ class DataStoreForm(QMainWindow):
         self.db_map = db_map
         self.database = database
         self.icon_mngr = IconManager()
-        self.icon_mngr.set_object_pixmaps(self.db_map.object_class_list())
+        self.icon_mngr.setup_object_pixmaps(self.db_map.object_class_list())
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
         # Object tree selected indexes
@@ -475,7 +475,7 @@ class DataStoreForm(QMainWindow):
         """Insert new object classes."""
         if not object_classes.count():
             return
-        self.icon_mngr.set_object_pixmaps(object_classes)
+        self.icon_mngr.setup_object_pixmaps(object_classes)
         self.object_tree_model.add_object_classes(object_classes)
         self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
@@ -578,7 +578,7 @@ class DataStoreForm(QMainWindow):
         """Update object classes."""
         if not object_classes.count():
             return
-        self.icon_mngr.set_object_pixmaps(object_classes)
+        self.icon_mngr.setup_object_pixmaps(object_classes)
         self.object_tree_model.update_object_classes(object_classes)
         self.object_parameter_value_model.rename_object_classes(object_classes)
         self.object_parameter_definition_model.rename_object_classes(object_classes)

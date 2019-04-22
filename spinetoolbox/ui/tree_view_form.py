@@ -208,6 +208,7 @@ class Ui_MainWindow(object):
         self.treeView_object.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_object.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_object.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.treeView_object.setIconSize(QtCore.QSize(20, 20))
         self.treeView_object.setObjectName("treeView_object")
         self.verticalLayout_4.addWidget(self.treeView_object)
         self.dockWidget_object_tree.setWidget(self.dockWidgetContents_6)
@@ -225,6 +226,7 @@ class Ui_MainWindow(object):
         self.treeView_relationship.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_relationship.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_relationship.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.treeView_relationship.setIconSize(QtCore.QSize(20, 20))
         self.treeView_relationship.setObjectName("treeView_relationship")
         self.verticalLayout_6.addWidget(self.treeView_relationship)
         self.dockWidget_relationship_tree.setWidget(self.dockWidgetContents_7)
@@ -410,6 +412,6 @@ class Ui_MainWindow(object):
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

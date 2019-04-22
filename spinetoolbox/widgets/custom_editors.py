@@ -22,8 +22,7 @@ import logging
 from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
     QTimer, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
-    QVBoxLayout, QTextEdit, QColorDialog, QDialog, QDialogButtonBox, QListWidget, QListWidgetItem, \
-    QStyle, QLabel
+    QVBoxLayout, QTextEdit, QColorDialog, QDialog, QDialogButtonBox, QListView, QStyle, QLabel
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor, QIcon, QBrush
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
@@ -635,19 +634,24 @@ class IconColorEditor(QDialog):
     """An editor to let the user select an icon and a color for an object class.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, icon_mngr):
         """Init class."""
         super().__init__(parent, Qt.Popup)
+        self.icon_mngr = icon_mngr
         self.setWindowTitle("Select icon and color")
         self.icon_widget = QWidget(self)
-        self.icon_list = QListWidget(self.icon_widget)
-        self.icon_list.setViewMode(QListWidget.IconMode)
+        self.icon_list = QListView(self.icon_widget)
+        self.icon_list.setViewMode(QListView.IconMode)
         self.icon_list.setIconSize(QSize(32, 32))
-        self.icon_list.setResizeMode(QListWidget.Adjust)
+        self.icon_list.setResizeMode(QListView.Adjust)
         self.icon_list.setItemDelegate(IconPainterDelegate(self))
-        self.icon_list.setMovement(QListWidget.Static)
+        self.icon_list.setMovement(QListView.Static)
+        self.icon_list.setMinimumHeight(400)
         icon_widget_layout = QVBoxLayout(self.icon_widget)
-        icon_widget_layout.addWidget(QLabel("Icon library"))
+        icon_widget_layout.addWidget(QLabel("Font Awesome icons"))
+        self.line_edit = QLineEdit()
+        self.line_edit.setPlaceholderText("Search icons for...")
+        icon_widget_layout.addWidget(self.line_edit)
         icon_widget_layout.addWidget(self.icon_list)
         self.color_dialog = QColorDialog(self)
         self.color_dialog.setWindowFlags(Qt.Widget)
@@ -659,22 +663,39 @@ class IconColorEditor(QDialog):
         layout.addWidget(self.icon_widget)
         layout.addWidget(self.color_dialog)
         layout.addWidget(self.button_box)
+        self.proxy_model = QSortFilterProxyModel(self)
+        self.proxy_model.setSourceModel(self.icon_mngr.model)
+        self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
+        self.icon_list.setModel(self.proxy_model)
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.connect_signals()
 
+    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
+        """Overridden method to filter icons according to search terms.
+        """
+        text = self.line_edit.text()
+        if not text:
+            return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
+        searchterms = self.icon_mngr.model.index(source_row, 0, source_parent).data(Qt.UserRole + 1)
+        return any([text in term for term in searchterms])
+
     def connect_signals(self):
         """Connect signals to slots."""
+        self.line_edit.textEdited.connect(self.proxy_model.invalidateFilter)
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
 
-    def set_data(self, icon_code, color_code, pixmaps):
+    def set_data(self, data):
+        icon_code, color_code = self.icon_mngr.icon_color_code(data)
+        self.icon_mngr.init_model()
+        for i in range(self.icon_mngr.model.rowCount()):
+            index = self.icon_mngr.model.index(i, 0)
+            if index.data(Qt.UserRole) == icon_code:
+                self.icon_list.setCurrentIndex(index)
+                break
         self.color_dialog.setCurrentColor(QColor(color_code))
-        for pixmap in pixmaps:
-            item = QListWidgetItem(QIcon(pixmap), None)
-            self.icon_list.addItem(item)
-        self.icon_list.setCurrentRow(icon_code)
 
     def data(self):
-        icon_code = self.icon_list.currentRow()
+        icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
-        return icon_code, color_code
+        return self.icon_mngr.display_icon(icon_code, color_code)

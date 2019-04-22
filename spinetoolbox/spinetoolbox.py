@@ -18,6 +18,7 @@ Spine Toolbox application main file.
 
 import sys
 import logging
+from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
 try:
     import spinedb_api
@@ -43,6 +44,8 @@ def main(argv):
         return 0
     # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
     app = QApplication(argv)
+    id_ = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+    families = QFontDatabase.applicationFontFamilies(id_)
     window = ToolboxUI()
     window.show()
     # Enter main event loop and wait until exit() is called
