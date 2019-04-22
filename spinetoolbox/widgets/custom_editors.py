@@ -636,7 +636,7 @@ class IconColorEditor(QDialog):
 
     def __init__(self, parent, icon_mngr):
         """Init class."""
-        super().__init__(parent, Qt.Popup)
+        super().__init__(parent) # , Qt.Popup)
         self.icon_mngr = icon_mngr
         self.setWindowTitle("Select icon and color")
         self.icon_widget = QWidget(self)
@@ -688,8 +688,8 @@ class IconColorEditor(QDialog):
     def set_data(self, data):
         icon_code, color_code = self.icon_mngr.icon_color_code(data)
         self.icon_mngr.init_model()
-        for i in range(self.icon_mngr.model.rowCount()):
-            index = self.icon_mngr.model.index(i, 0)
+        for i in range(self.proxy_model.rowCount()):
+            index = self.proxy_model.index(i, 0)
             if index.data(Qt.UserRole) == icon_code:
                 self.icon_list.setCurrentIndex(index)
                 break

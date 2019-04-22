@@ -407,6 +407,8 @@ class IconManager:
 
     def _model_data(self, index, role):
         """Create pixmaps as they're requested, to reduce loading time."""
+        if role == Qt.DisplayRole:
+            return None
         if role != Qt.DecorationRole:
             return QStandardItemModel.data(self.model, index, role)
         display_icon = index.data(Qt.UserRole)
