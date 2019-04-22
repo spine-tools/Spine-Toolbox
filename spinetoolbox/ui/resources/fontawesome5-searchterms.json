@@ -1,0 +1,7670 @@
+{
+	"f000": [
+		"alcohol",
+		"bar",
+		"beverage",
+		"drink",
+		"liquor"
+	],
+	"f001": [
+		"lyrics",
+		"melody",
+		"note",
+		"sing",
+		"sound"
+	],
+	"f002": [
+		"bigger",
+		"enlarge",
+		"find",
+		"magnify",
+		"preview",
+		"zoom"
+	],
+	"f004": [
+		"favorite",
+		"like",
+		"love",
+		"relationship",
+		"valentine"
+	],
+	"f005": [
+		"achievement",
+		"award",
+		"favorite",
+		"important",
+		"night",
+		"rating",
+		"score"
+	],
+	"f007": [
+		"account",
+		"avatar",
+		"head",
+		"human",
+		"man",
+		"person",
+		"profile"
+	],
+	"f008": [
+		"cinema",
+		"movie",
+		"strip",
+		"video"
+	],
+	"f009": [
+		"blocks",
+		"boxes",
+		"grid",
+		"squares"
+	],
+	"f00a": [
+		"blocks",
+		"boxes",
+		"grid",
+		"squares"
+	],
+	"f00b": [
+		"checklist",
+		"completed",
+		"done",
+		"finished",
+		"ol",
+		"todo",
+		"ul"
+	],
+	"f00c": [
+		"accept",
+		"agree",
+		"checkmark",
+		"confirm",
+		"correct",
+		"done",
+		"notice",
+		"notification",
+		"notify",
+		"ok",
+		"select",
+		"success",
+		"tick",
+		"todo",
+		"yes"
+	],
+	"f00d": [
+		"close",
+		"cross",
+		"error",
+		"exit",
+		"incorrect",
+		"notice",
+		"notification",
+		"notify",
+		"problem",
+		"wrong",
+		"x"
+	],
+	"f00e": [
+		"bigger",
+		"enlarge",
+		"magnify",
+		"positive",
+		"zoom",
+		"zoom in"
+	],
+	"f010": [
+		"minify",
+		"negative",
+		"smaller",
+		"zoom",
+		"zoom out"
+	],
+	"f011": [
+		"cancel",
+		"computer",
+		"on",
+		"reboot",
+		"restart"
+	],
+	"f012": [
+		"bars",
+		"graph",
+		"online",
+		"reception",
+		"status"
+	],
+	"f013": [
+		"gear",
+		"mechanical",
+		"settings",
+		"sprocket",
+		"wheel"
+	],
+	"f015": [
+		"abode",
+		"building",
+		"house",
+		"main"
+	],
+	"f017": [
+		"date",
+		"late",
+		"schedule",
+		"time",
+		"timer",
+		"timestamp",
+		"watch"
+	],
+	"f018": [
+		"highway",
+		"map",
+		"pavement",
+		"route",
+		"street",
+		"travel"
+	],
+	"f019": [
+		"export",
+		"hard drive",
+		"save",
+		"transfer"
+	],
+	"f01c": [
+		"archive",
+		"desk",
+		"email",
+		"mail",
+		"message"
+	],
+	"f01e": [
+		"forward",
+		"refresh",
+		"reload",
+		"repeat"
+	],
+	"f021": [
+		"exchange",
+		"refresh",
+		"reload",
+		"rotate",
+		"swap"
+	],
+	"f022": [
+		"checklist",
+		"completed",
+		"done",
+		"finished",
+		"ol",
+		"todo",
+		"ul"
+	],
+	"f023": [
+		"admin",
+		"lock",
+		"open",
+		"password",
+		"private",
+		"protect",
+		"security"
+	],
+	"f024": [
+		"country",
+		"notice",
+		"notification",
+		"notify",
+		"pole",
+		"report",
+		"symbol"
+	],
+	"f025": [
+		"audio",
+		"listen",
+		"music",
+		"sound",
+		"speaker"
+	],
+	"f026": [
+		"audio",
+		"ban",
+		"music",
+		"mute",
+		"quiet",
+		"silent",
+		"sound"
+	],
+	"f027": [
+		"audio",
+		"lower",
+		"music",
+		"quieter",
+		"sound",
+		"speaker"
+	],
+	"f028": [
+		"audio",
+		"higher",
+		"louder",
+		"music",
+		"sound",
+		"speaker"
+	],
+	"f029": [
+		"barcode",
+		"info",
+		"information",
+		"scan"
+	],
+	"f02a": [
+		"info",
+		"laser",
+		"price",
+		"scan",
+		"upc"
+	],
+	"f02b": [
+		"discount",
+		"label",
+		"price",
+		"shopping"
+	],
+	"f02c": [
+		"discount",
+		"label",
+		"price",
+		"shopping"
+	],
+	"f02d": [
+		"diary",
+		"documentation",
+		"journal",
+		"library",
+		"read"
+	],
+	"f02e": [
+		"favorite",
+		"marker",
+		"read",
+		"remember",
+		"save"
+	],
+	"f02f": [
+		"business",
+		"copy",
+		"document",
+		"office",
+		"paper"
+	],
+	"f030": [
+		"image",
+		"lens",
+		"photo",
+		"picture",
+		"record",
+		"shutter",
+		"video"
+	],
+	"f031": [
+		"alphabet",
+		"glyph",
+		"text",
+		"type",
+		"typeface"
+	],
+	"f032": [
+		"emphasis",
+		"format",
+		"text"
+	],
+	"f033": [
+		"edit",
+		"emphasis",
+		"font",
+		"format",
+		"text",
+		"type"
+	],
+	"f034": [
+		"edit",
+		"font",
+		"format",
+		"text",
+		"type"
+	],
+	"f035": [
+		"edit",
+		"font",
+		"format",
+		"text",
+		"type"
+	],
+	"f036": [
+		"format",
+		"paragraph",
+		"text"
+	],
+	"f037": [
+		"format",
+		"middle",
+		"paragraph",
+		"text"
+	],
+	"f038": [
+		"format",
+		"paragraph",
+		"text"
+	],
+	"f039": [
+		"format",
+		"paragraph",
+		"text"
+	],
+	"f03a": [
+		"checklist",
+		"completed",
+		"done",
+		"finished",
+		"ol",
+		"todo",
+		"ul"
+	],
+	"f03b": [
+		"align",
+		"justify",
+		"paragraph",
+		"tab"
+	],
+	"f03c": [
+		"align",
+		"justify",
+		"paragraph",
+		"tab"
+	],
+	"f03d": [
+		"camera",
+		"film",
+		"movie",
+		"record",
+		"video-camera"
+	],
+	"f03e": [
+		"album",
+		"landscape",
+		"photo",
+		"picture"
+	],
+	"f041": [
+		"address",
+		"coordinates",
+		"destination",
+		"gps",
+		"localize",
+		"location",
+		"map",
+		"navigation",
+		"paper",
+		"pin",
+		"place",
+		"point of interest",
+		"position",
+		"route",
+		"travel"
+	],
+	"f042": [
+		"contrast",
+		"dark",
+		"light",
+		"saturation"
+	],
+	"f043": [
+		"color",
+		"drop",
+		"droplet",
+		"raindrop",
+		"waterdrop"
+	],
+	"f044": [
+		"edit",
+		"pen",
+		"pencil",
+		"update",
+		"write"
+	],
+	"f048": [
+		"beginning",
+		"first",
+		"previous",
+		"rewind",
+		"start"
+	],
+	"f049": [
+		"beginning",
+		"first",
+		"previous",
+		"rewind",
+		"start"
+	],
+	"f04a": [
+		"previous",
+		"rewind"
+	],
+	"f04b": [
+		"audio",
+		"music",
+		"playing",
+		"sound",
+		"start",
+		"video"
+	],
+	"f04c": [
+		"hold",
+		"wait"
+	],
+	"f04d": [
+		"block",
+		"box",
+		"square"
+	],
+	"f04e": [
+		"forward",
+		"next",
+		"skip"
+	],
+	"f050": [
+		"end",
+		"last",
+		"next"
+	],
+	"f051": [
+		"end",
+		"last",
+		"next"
+	],
+	"f052": [
+		"abort",
+		"cancel",
+		"cd",
+		"discharge"
+	],
+	"f053": [
+		"arrow",
+		"back",
+		"bracket",
+		"previous"
+	],
+	"f054": [
+		"arrow",
+		"bracket",
+		"forward",
+		"next"
+	],
+	"f055": [
+		"add",
+		"create",
+		"expand",
+		"new",
+		"positive",
+		"shape"
+	],
+	"f056": [
+		"delete",
+		"hide",
+		"negative",
+		"remove",
+		"shape",
+		"trash"
+	],
+	"f057": [
+		"close",
+		"cross",
+		"exit",
+		"incorrect",
+		"notice",
+		"notification",
+		"notify",
+		"problem",
+		"wrong",
+		"x"
+	],
+	"f058": [
+		"accept",
+		"agree",
+		"confirm",
+		"correct",
+		"done",
+		"ok",
+		"select",
+		"success",
+		"tick",
+		"todo",
+		"yes"
+	],
+	"f059": [
+		"help",
+		"information",
+		"support",
+		"unknown"
+	],
+	"f05a": [
+		"details",
+		"help",
+		"information",
+		"more",
+		"support"
+	],
+	"f05b": [
+		"aim",
+		"bullseye",
+		"gpd",
+		"picker",
+		"position"
+	],
+	"f05e": [
+		"abort",
+		"ban",
+		"block",
+		"cancel",
+		"delete",
+		"hide",
+		"prohibit",
+		"remove",
+		"stop",
+		"trash"
+	],
+	"f060": [
+		"back",
+		"previous"
+	],
+	"f061": [
+		"forward",
+		"next"
+	],
+	"f062": [
+		"forward",
+		"upload"
+	],
+	"f063": [
+		"download"
+	],
+	"f064": [
+		"forward",
+		"save",
+		"send",
+		"social"
+	],
+	"f065": [
+		"arrow",
+		"bigger",
+		"enlarge",
+		"resize"
+	],
+	"f066": [
+		"collapse",
+		"fullscreen",
+		"minimize",
+		"move",
+		"resize",
+		"shrink",
+		"smaller"
+	],
+	"f067": [
+		"add",
+		"create",
+		"expand",
+		"new",
+		"positive",
+		"shape"
+	],
+	"f068": [
+		"collapse",
+		"delete",
+		"hide",
+		"minify",
+		"negative",
+		"remove",
+		"trash"
+	],
+	"f069": [
+		"annotation",
+		"details",
+		"reference",
+		"star"
+	],
+	"f06a": [
+		"alert",
+		"danger",
+		"error",
+		"important",
+		"notice",
+		"notification",
+		"notify",
+		"problem",
+		"warning"
+	],
+	"f06b": [
+		"christmas",
+		"generosity",
+		"giving",
+		"holiday",
+		"party",
+		"present",
+		"wrapped",
+		"xmas"
+	],
+	"f06c": [
+		"eco",
+		"flora",
+		"nature",
+		"plant",
+		"vegan"
+	],
+	"f06d": [
+		"burn",
+		"caliente",
+		"flame",
+		"heat",
+		"hot",
+		"popular"
+	],
+	"f06e": [
+		"look",
+		"optic",
+		"see",
+		"seen",
+		"show",
+		"sight",
+		"views",
+		"visible"
+	],
+	"f070": [
+		"blind",
+		"hide",
+		"show",
+		"toggle",
+		"unseen",
+		"views",
+		"visible",
+		"visiblity"
+	],
+	"f071": [
+		"alert",
+		"danger",
+		"error",
+		"important",
+		"notice",
+		"notification",
+		"notify",
+		"problem",
+		"warning"
+	],
+	"f072": [
+		"airplane",
+		"destination",
+		"fly",
+		"location",
+		"mode",
+		"travel",
+		"trip"
+	],
+	"f073": [
+		"calendar",
+		"date",
+		"event",
+		"schedule",
+		"time",
+		"when"
+	],
+	"f074": [
+		"arrows",
+		"shuffle",
+		"sort",
+		"swap",
+		"switch",
+		"transfer"
+	],
+	"f075": [
+		"bubble",
+		"chat",
+		"commenting",
+		"conversation",
+		"feedback",
+		"message",
+		"note",
+		"notification",
+		"sms",
+		"speech",
+		"texting"
+	],
+	"f076": [
+		"Attract",
+		"lodestone",
+		"tool"
+	],
+	"f077": [
+		"arrow",
+		"collapse",
+		"upload"
+	],
+	"f078": [
+		"arrow",
+		"download",
+		"expand"
+	],
+	"f079": [
+		"refresh",
+		"reload",
+		"share",
+		"swap"
+	],
+	"f07a": [
+		"buy",
+		"checkout",
+		"grocery",
+		"payment",
+		"purchase"
+	],
+	"f07b": [
+		"archive",
+		"directory",
+		"document",
+		"file"
+	],
+	"f07c": [
+		"archive",
+		"directory",
+		"document",
+		"empty",
+		"file",
+		"new"
+	],
+	"f080": [
+		"analytics",
+		"bar",
+		"chart",
+		"graph"
+	],
+	"f081": [
+		"social network",
+		"tweet"
+	],
+	"f082": [
+		"social network"
+	],
+	"f083": [
+		"image",
+		"lens",
+		"photo",
+		"picture",
+		"record",
+		"shutter",
+		"video"
+	],
+	"f084": [
+		"lock",
+		"password",
+		"private",
+		"secret",
+		"unlock"
+	],
+	"f085": [
+		"gears",
+		"mechanical",
+		"settings",
+		"sprocket",
+		"wheel"
+	],
+	"f086": [
+		"bubble",
+		"chat",
+		"commenting",
+		"conversation",
+		"feedback",
+		"message",
+		"note",
+		"notification",
+		"sms",
+		"speech",
+		"texting"
+	],
+	"f089": [
+		"achievement",
+		"award",
+		"rating",
+		"score",
+		"star-half-empty",
+		"star-half-full"
+	],
+	"f08c": [
+		"linkedin-square"
+	],
+	"f08d": [
+		"coordinates",
+		"location",
+		"marker",
+		"pin",
+		"thumb-tack"
+	],
+	"f091": [
+		"achievement",
+		"award",
+		"cup",
+		"game",
+		"winner"
+	],
+	"f092": [
+		"octocat"
+	],
+	"f093": [
+		"hard drive",
+		"import",
+		"publish"
+	],
+	"f094": [
+		"citrus",
+		"lemonade",
+		"lime",
+		"tart"
+	],
+	"f095": [
+		"call",
+		"earphone",
+		"number",
+		"support",
+		"telephone",
+		"voice"
+	],
+	"f098": [
+		"call",
+		"earphone",
+		"number",
+		"support",
+		"telephone",
+		"voice"
+	],
+	"f099": [
+		"social network",
+		"tweet"
+	],
+	"f09a": [
+		"facebook-official",
+		"social network"
+	],
+	"f09b": [
+		"octocat"
+	],
+	"f09c": [
+		"admin",
+		"lock",
+		"password",
+		"private",
+		"protect"
+	],
+	"f09d": [
+		"buy",
+		"checkout",
+		"credit-card-alt",
+		"debit",
+		"money",
+		"payment",
+		"purchase"
+	],
+	"f09e": [
+		"blog",
+		"feed",
+		"journal",
+		"news",
+		"writing"
+	],
+	"f0a0": [
+		"cpu",
+		"hard drive",
+		"harddrive",
+		"machine",
+		"save",
+		"storage"
+	],
+	"f0a1": [
+		"announcement",
+		"broadcast",
+		"louder",
+		"megaphone",
+		"share"
+	],
+	"f0a3": [
+		"badge",
+		"star",
+		"verified"
+	],
+	"f0a4": [
+		"finger",
+		"forward",
+		"hand-o-right",
+		"next",
+		"point",
+		"right"
+	],
+	"f0a5": [
+		"back",
+		"finger",
+		"hand-o-left",
+		"left",
+		"point",
+		"previous"
+	],
+	"f0a6": [
+		"finger",
+		"hand-o-up",
+		"point"
+	],
+	"f0a7": [
+		"finger",
+		"hand-o-down",
+		"point"
+	],
+	"f0a8": [
+		"back",
+		"previous"
+	],
+	"f0a9": [
+		"forward",
+		"next"
+	],
+	"f0aa": [
+		"upload"
+	],
+	"f0ab": [
+		"download"
+	],
+	"f0ac": [
+		"all",
+		"coordinates",
+		"country",
+		"earth",
+		"global",
+		"gps",
+		"language",
+		"localize",
+		"location",
+		"map",
+		"online",
+		"place",
+		"planet",
+		"translate",
+		"travel",
+		"world"
+	],
+	"f0ad": [
+		"construction",
+		"fix",
+		"mechanic",
+		"plumbing",
+		"settings",
+		"spanner",
+		"tool",
+		"update"
+	],
+	"f0ae": [
+		"checklist",
+		"downloading",
+		"downloads",
+		"loading",
+		"progress",
+		"project management",
+		"settings",
+		"to do"
+	],
+	"f0b0": [
+		"funnel",
+		"options",
+		"separate",
+		"sort"
+	],
+	"f0b1": [
+		"bag",
+		"business",
+		"luggage",
+		"office",
+		"work"
+	],
+	"f0b2": [
+		"arrow",
+		"arrows",
+		"bigger",
+		"enlarge",
+		"expand",
+		"fullscreen",
+		"move",
+		"position",
+		"reorder",
+		"resize"
+	],
+	"f0c0": [
+		"friends",
+		"group",
+		"people",
+		"persons",
+		"profiles",
+		"team"
+	],
+	"f0c1": [
+		"attach",
+		"attachment",
+		"chain",
+		"connect"
+	],
+	"f0c2": [
+		"atmosphere",
+		"fog",
+		"overcast",
+		"save",
+		"upload",
+		"weather"
+	],
+	"f0c3": [
+		"beaker",
+		"experimental",
+		"labs",
+		"science"
+	],
+	"f0c4": [
+		"clip",
+		"scissors",
+		"snip"
+	],
+	"f0c5": [
+		"clone",
+		"duplicate",
+		"file",
+		"files-o",
+		"paper",
+		"paste"
+	],
+	"f0c6": [
+		"attach",
+		"attachment",
+		"connect",
+		"link"
+	],
+	"f0c7": [
+		"disk",
+		"download",
+		"floppy",
+		"floppy-o"
+	],
+	"f0c8": [
+		"block",
+		"box",
+		"shape"
+	],
+	"f0c9": [
+		"checklist",
+		"drag",
+		"hamburger",
+		"list",
+		"menu",
+		"nav",
+		"navigation",
+		"ol",
+		"reorder",
+		"settings",
+		"todo",
+		"ul"
+	],
+	"f0ca": [
+		"checklist",
+		"completed",
+		"done",
+		"finished",
+		"ol",
+		"todo",
+		"ul"
+	],
+	"f0cb": [
+		"checklist",
+		"completed",
+		"done",
+		"finished",
+		"numbers",
+		"ol",
+		"todo",
+		"ul"
+	],
+	"f0cc": [
+		"cancel",
+		"edit",
+		"font",
+		"format",
+		"text",
+		"type"
+	],
+	"f0cd": [
+		"edit",
+		"emphasis",
+		"format",
+		"text",
+		"writing"
+	],
+	"f0ce": [
+		"data",
+		"excel",
+		"spreadsheet"
+	],
+	"f0d0": [
+		"autocomplete",
+		"automatic",
+		"mage",
+		"magic",
+		"spell",
+		"wand",
+		"witch",
+		"wizard"
+	],
+	"f0d1": [
+		"cargo",
+		"delivery",
+		"shipping",
+		"vehicle"
+	],
+	"f0d2": [],
+	"f0d3": [],
+	"f0d4": [
+		"social network"
+	],
+	"f0d5": [
+		"google-plus",
+		"social network"
+	],
+	"f0d6": [
+		"buy",
+		"cash",
+		"checkout",
+		"money",
+		"payment",
+		"price",
+		"purchase"
+	],
+	"f0d7": [
+		"arrow",
+		"dropdown",
+		"expand",
+		"menu",
+		"more",
+		"triangle"
+	],
+	"f0d8": [
+		"arrow",
+		"collapse",
+		"triangle"
+	],
+	"f0d9": [
+		"arrow",
+		"back",
+		"previous",
+		"triangle"
+	],
+	"f0da": [
+		"arrow",
+		"forward",
+		"next",
+		"triangle"
+	],
+	"f0db": [
+		"browser",
+		"dashboard",
+		"organize",
+		"panes",
+		"split"
+	],
+	"f0dc": [
+		"filter",
+		"order"
+	],
+	"f0dd": [
+		"arrow",
+		"descending",
+		"filter",
+		"order",
+		"sort-desc"
+	],
+	"f0de": [
+		"arrow",
+		"ascending",
+		"filter",
+		"order",
+		"sort-asc"
+	],
+	"f0e0": [
+		"e-mail",
+		"email",
+		"letter",
+		"mail",
+		"message",
+		"notification",
+		"support"
+	],
+	"f0e1": [
+		"linkedin"
+	],
+	"f0e2": [
+		"back",
+		"control z",
+		"exchange",
+		"oops",
+		"return",
+		"rotate",
+		"swap"
+	],
+	"f0e3": [
+		"hammer",
+		"judge",
+		"law",
+		"lawyer",
+		"opinion"
+	],
+	"f0e7": [
+		"electricity",
+		"lightning",
+		"weather",
+		"zap"
+	],
+	"f0e8": [
+		"directory",
+		"hierarchy",
+		"ia",
+		"information architecture",
+		"organization"
+	],
+	"f0e9": [
+		"protection",
+		"rain",
+		"storm",
+		"wet"
+	],
+	"f0ea": [
+		"clipboard",
+		"copy",
+		"document",
+		"paper"
+	],
+	"f0eb": [
+		"energy",
+		"idea",
+		"inspiration",
+		"light"
+	],
+	"f0f0": [
+		"job",
+		"medical",
+		"nurse",
+		"occupation",
+		"physician",
+		"profile",
+		"surgeon"
+	],
+	"f0f1": [
+		"diagnosis",
+		"doctor",
+		"general practitioner",
+		"hospital",
+		"infirmary",
+		"medicine",
+		"office",
+		"outpatient"
+	],
+	"f0f2": [
+		"baggage",
+		"luggage",
+		"move",
+		"suitcase",
+		"travel",
+		"trip"
+	],
+	"f0f3": [
+		"alarm",
+		"alert",
+		"chime",
+		"notification",
+		"reminder"
+	],
+	"f0f4": [
+		"beverage",
+		"breakfast",
+		"cafe",
+		"drink",
+		"fall",
+		"morning",
+		"mug",
+		"seasonal",
+		"tea"
+	],
+	"f0f8": [
+		"building",
+		"emergency room",
+		"medical center"
+	],
+	"f0f9": [
+		"emergency",
+		"emt",
+		"er",
+		"help",
+		"hospital",
+		"support",
+		"vehicle"
+	],
+	"f0fa": [
+		"first aid",
+		"firstaid",
+		"health",
+		"help",
+		"support"
+	],
+	"f0fb": [
+		"airplane",
+		"fast",
+		"fly",
+		"goose",
+		"maverick",
+		"plane",
+		"quick",
+		"top gun",
+		"transportation",
+		"travel"
+	],
+	"f0fc": [
+		"alcohol",
+		"ale",
+		"bar",
+		"beverage",
+		"brewery",
+		"drink",
+		"lager",
+		"liquor",
+		"mug",
+		"stein"
+	],
+	"f0fd": [
+		"directions",
+		"emergency",
+		"hospital",
+		"hotel",
+		"map"
+	],
+	"f0fe": [
+		"add",
+		"create",
+		"expand",
+		"new",
+		"positive",
+		"shape"
+	],
+	"f100": [
+		"arrows",
+		"back",
+		"caret",
+		"laquo",
+		"previous",
+		"quote"
+	],
+	"f101": [
+		"arrows",
+		"caret",
+		"forward",
+		"more",
+		"next",
+		"quote",
+		"raquo"
+	],
+	"f102": [
+		"arrows",
+		"caret",
+		"collapse",
+		"upload"
+	],
+	"f103": [
+		"arrows",
+		"caret",
+		"download",
+		"expand"
+	],
+	"f104": [
+		"arrow",
+		"back",
+		"caret",
+		"less",
+		"previous"
+	],
+	"f105": [
+		"arrow",
+		"care",
+		"forward",
+		"more",
+		"next"
+	],
+	"f106": [
+		"arrow",
+		"caret",
+		"collapse",
+		"upload"
+	],
+	"f107": [
+		"arrow",
+		"caret",
+		"download",
+		"expand"
+	],
+	"f108": [
+		"computer",
+		"cpu",
+		"demo",
+		"desktop",
+		"device",
+		"imac",
+		"machine",
+		"monitor",
+		"pc",
+		"screen"
+	],
+	"f109": [
+		"computer",
+		"cpu",
+		"dell",
+		"demo",
+		"device",
+		"mac",
+		"macbook",
+		"machine",
+		"pc"
+	],
+	"f10a": [
+		"apple",
+		"device",
+		"ipad",
+		"kindle",
+		"screen"
+	],
+	"f10b": [
+		"apple",
+		"call",
+		"cell phone",
+		"cellphone",
+		"device",
+		"iphone",
+		"number",
+		"screen",
+		"telephone"
+	],
+	"f10d": [
+		"mention",
+		"note",
+		"phrase",
+		"text",
+		"type"
+	],
+	"f10e": [
+		"mention",
+		"note",
+		"phrase",
+		"text",
+		"type"
+	],
+	"f110": [
+		"circle",
+		"loading",
+		"progress"
+	],
+	"f111": [
+		"circle-thin",
+		"diameter",
+		"dot",
+		"ellipse",
+		"notification",
+		"round"
+	],
+	"f113": [
+		"octocat"
+	],
+	"f118": [
+		"approve",
+		"emoticon",
+		"face",
+		"happy",
+		"rating",
+		"satisfied"
+	],
+	"f119": [
+		"disapprove",
+		"emoticon",
+		"face",
+		"rating",
+		"sad"
+	],
+	"f11a": [
+		"emoticon",
+		"face",
+		"neutral",
+		"rating"
+	],
+	"f11b": [
+		"controller",
+		"d-pad",
+		"joystick",
+		"video"
+	],
+	"f11c": [
+		"accessory",
+		"edit",
+		"input",
+		"text",
+		"type",
+		"write"
+	],
+	"f11e": [
+		"notice",
+		"notification",
+		"notify",
+		"pole",
+		"racing",
+		"report",
+		"symbol"
+	],
+	"f120": [
+		"code",
+		"command",
+		"console",
+		"development",
+		"prompt"
+	],
+	"f121": [
+		"brackets",
+		"code",
+		"development",
+		"html"
+	],
+	"f122": [
+		"mail",
+		"message",
+		"respond"
+	],
+	"f124": [
+		"address",
+		"compass",
+		"coordinate",
+		"direction",
+		"gps",
+		"map",
+		"navigation",
+		"place"
+	],
+	"f125": [
+		"design",
+		"frame",
+		"mask",
+		"resize",
+		"shrink"
+	],
+	"f126": [
+		"branch",
+		"code-fork",
+		"fork",
+		"git",
+		"github",
+		"rebase",
+		"svn",
+		"vcs",
+		"version"
+	],
+	"f127": [
+		"attachment",
+		"chain",
+		"chain-broken",
+		"remove"
+	],
+	"f128": [
+		"help",
+		"information",
+		"support",
+		"unknown"
+	],
+	"f129": [
+		"details",
+		"help",
+		"information",
+		"more",
+		"support"
+	],
+	"f12a": [
+		"alert",
+		"danger",
+		"error",
+		"important",
+		"notice",
+		"notification",
+		"notify",
+		"problem",
+		"warning"
+	],
+	"f12b": [
+		"edit",
+		"exponential",
+		"font",
+		"format",
+		"text",
+		"type"
+	],
+	"f12c": [
+		"edit",
+		"font",
+		"format",
+		"text",
+		"type"
+	],
+	"f12d": [
+		"art",
+		"delete",
+		"remove",
+		"rubber"
+	],
+	"f12e": [
+		"add-on",
+		"addon",
+		"game",
+		"section"
+	],
+	"f130": [
+		"audio",
+		"podcast",
+		"record",
+		"sing",
+		"sound",
+		"voice"
+	],
+	"f131": [
+		"audio",
+		"disable",
+		"mute",
+		"podcast",
+		"record",
+		"sing",
+		"sound",
+		"voice"
+	],
+	"f133": [
+		"calendar-o",
+		"date",
+		"event",
+		"schedule",
+		"time",
+		"when"
+	],
+	"f134": [
+		"burn",
+		"caliente",
+		"fire fighter",
+		"flame",
+		"heat",
+		"hot",
+		"rescue"
+	],
+	"f135": [
+		"aircraft",
+		"app",
+		"jet",
+		"launch",
+		"nasa",
+		"space"
+	],
+	"f136": [],
+	"f137": [
+		"arrow",
+		"back",
+		"previous"
+	],
+	"f138": [
+		"arrow",
+		"forward",
+		"next"
+	],
+	"f139": [
+		"arrow",
+		"collapse",
+		"upload"
+	],
+	"f13a": [
+		"arrow",
+		"download",
+		"dropdown",
+		"menu",
+		"more"
+	],
+	"f13b": [],
+	"f13c": [
+		"code"
+	],
+	"f13d": [
+		"berth",
+		"boat",
+		"dock",
+		"embed",
+		"link",
+		"maritime",
+		"moor",
+		"secure"
+	],
+	"f13e": [
+		"admin",
+		"lock",
+		"password",
+		"private",
+		"protect"
+	],
+	"f140": [
+		"archery",
+		"goal",
+		"objective",
+		"target"
+	],
+	"f141": [
+		"dots",
+		"drag",
+		"kebab",
+		"list",
+		"menu",
+		"nav",
+		"navigation",
+		"ol",
+		"reorder",
+		"settings",
+		"ul"
+	],
+	"f142": [
+		"dots",
+		"drag",
+		"kebab",
+		"list",
+		"menu",
+		"nav",
+		"navigation",
+		"ol",
+		"reorder",
+		"settings",
+		"ul"
+	],
+	"f143": [
+		"blog",
+		"feed",
+		"journal",
+		"news",
+		"writing"
+	],
+	"f144": [
+		"audio",
+		"music",
+		"playing",
+		"sound",
+		"start",
+		"video"
+	],
+	"f146": [
+		"collapse",
+		"delete",
+		"hide",
+		"minify",
+		"negative",
+		"remove",
+		"shape",
+		"trash"
+	],
+	"f14a": [
+		"accept",
+		"agree",
+		"checkmark",
+		"confirm",
+		"correct",
+		"done",
+		"ok",
+		"select",
+		"success",
+		"tick",
+		"todo",
+		"yes"
+	],
+	"f14b": [
+		"edit",
+		"pencil-square",
+		"update",
+		"write"
+	],
+	"f14d": [
+		"forward",
+		"save",
+		"send",
+		"social"
+	],
+	"f14e": [
+		"directions",
+		"directory",
+		"location",
+		"menu",
+		"navigation",
+		"safari",
+		"travel"
+	],
+	"f150": [
+		"arrow",
+		"caret-square-o-down",
+		"dropdown",
+		"expand",
+		"menu",
+		"more",
+		"triangle"
+	],
+	"f151": [
+		"arrow",
+		"caret-square-o-up",
+		"collapse",
+		"triangle",
+		"upload"
+	],
+	"f152": [
+		"arrow",
+		"caret-square-o-right",
+		"forward",
+		"next",
+		"triangle"
+	],
+	"f153": [
+		"currency",
+		"dollar",
+		"exchange",
+		"money"
+	],
+	"f154": [
+		"currency",
+		"gbp",
+		"money"
+	],
+	"f155": [
+		"$",
+		"cost",
+		"dollar-sign",
+		"money",
+		"price",
+		"usd"
+	],
+	"f156": [
+		"currency",
+		"indian",
+		"inr",
+		"money"
+	],
+	"f157": [
+		"currency",
+		"jpy",
+		"money"
+	],
+	"f158": [
+		"currency",
+		"money",
+		"rub"
+	],
+	"f159": [
+		"currency",
+		"krw",
+		"money"
+	],
+	"f15a": [],
+	"f15b": [
+		"document",
+		"new",
+		"page",
+		"pdf",
+		"resume"
+	],
+	"f15c": [
+		"document",
+		"file-text",
+		"invoice",
+		"new",
+		"page",
+		"pdf"
+	],
+	"f15d": [
+		"filter",
+		"order",
+		"sort-alpha-asc"
+	],
+	"f15e": [
+		"filter",
+		"order",
+		"sort-alpha-desc"
+	],
+	"f160": [
+		"filter",
+		"order",
+		"sort-amount-asc"
+	],
+	"f161": [
+		"filter",
+		"order",
+		"sort-amount-desc"
+	],
+	"f162": [
+		"filter",
+		"numbers",
+		"order",
+		"sort-numeric-asc"
+	],
+	"f163": [
+		"filter",
+		"numbers",
+		"order",
+		"sort-numeric-desc"
+	],
+	"f164": [
+		"agree",
+		"approve",
+		"favorite",
+		"hand",
+		"like",
+		"ok",
+		"okay",
+		"social",
+		"success",
+		"thumbs-o-up",
+		"yes",
+		"you got it dude"
+	],
+	"f165": [
+		"disagree",
+		"disapprove",
+		"dislike",
+		"hand",
+		"social",
+		"thumbs-o-down"
+	],
+	"f167": [
+		"film",
+		"video",
+		"youtube-play",
+		"youtube-square"
+	],
+	"f168": [],
+	"f169": [],
+	"f16b": [],
+	"f16c": [],
+	"f16d": [],
+	"f16e": [],
+	"f170": [],
+	"f171": [
+		"atlassian",
+		"bitbucket-square",
+		"git"
+	],
+	"f173": [],
+	"f174": [],
+	"f179": [
+		"fruit",
+		"ios",
+		"mac",
+		"operating system",
+		"os",
+		"osx"
+	],
+	"f17a": [
+		"microsoft",
+		"operating system",
+		"os"
+	],
+	"f17b": [
+		"robot"
+	],
+	"f17c": [
+		"tux"
+	],
+	"f17d": [],
+	"f17e": [],
+	"f180": [],
+	"f181": [
+		"atlassian"
+	],
+	"f182": [
+		"human",
+		"person",
+		"profile",
+		"user",
+		"woman"
+	],
+	"f183": [
+		"human",
+		"man",
+		"person",
+		"profile",
+		"user"
+	],
+	"f184": [
+		"favorite",
+		"heart",
+		"like",
+		"love"
+	],
+	"f185": [
+		"brighten",
+		"contrast",
+		"day",
+		"lighter",
+		"sol",
+		"solar",
+		"star",
+		"weather"
+	],
+	"f186": [
+		"contrast",
+		"crescent",
+		"dark",
+		"lunar",
+		"night"
+	],
+	"f187": [
+		"box",
+		"package",
+		"save",
+		"storage"
+	],
+	"f188": [
+		"beetle",
+		"error",
+		"insect",
+		"report"
+	],
+	"f189": [],
+	"f18a": [],
+	"f18b": [],
+	"f18c": [
+		"eco",
+		"flora",
+		"leaf",
+		"leaves",
+		"nature",
+		"plant",
+		"tree"
+	],
+	"f18d": [],
+	"f191": [
+		"arrow",
+		"back",
+		"caret-square-o-left",
+		"previous",
+		"triangle"
+	],
+	"f192": [
+		"bullseye",
+		"notification",
+		"target"
+	],
+	"f193": [
+		"accessible",
+		"handicap",
+		"person"
+	],
+	"f194": [],
+	"f195": [
+		"currency",
+		"money",
+		"try",
+		"turkish"
+	],
+	"f197": [
+		"astronaut",
+		"machine",
+		"nasa",
+		"rocket",
+		"transportation"
+	],
+	"f198": [
+		"anchor",
+		"hash",
+		"hashtag"
+	],
+	"f199": [
+		"e-mail",
+		"email",
+		"letter",
+		"mail",
+		"message",
+		"notification",
+		"support"
+	],
+	"f19a": [],
+	"f19b": [],
+	"f19c": [
+		"bank",
+		"building",
+		"college",
+		"higher education - students",
+		"institution"
+	],
+	"f19d": [
+		"ceremony",
+		"college",
+		"graduate",
+		"learning",
+		"school",
+		"student"
+	],
+	"f19e": [],
+	"f1a0": [],
+	"f1a1": [],
+	"f1a2": [],
+	"f1a3": [],
+	"f1a4": [],
+	"f1a5": [],
+	"f1a6": [],
+	"f1a7": [],
+	"f1a8": [],
+	"f1a9": [],
+	"f1aa": [],
+	"f1ab": [
+		"dialect",
+		"idiom",
+		"localize",
+		"speech",
+		"translate",
+		"vernacular"
+	],
+	"f1ac": [
+		"business",
+		"communicate",
+		"copy",
+		"facsimile",
+		"send"
+	],
+	"f1ad": [
+		"apartment",
+		"business",
+		"city",
+		"company",
+		"office",
+		"work"
+	],
+	"f1ae": [
+		"boy",
+		"girl",
+		"kid",
+		"toddler",
+		"young"
+	],
+	"f1b0": [
+		"animal",
+		"cat",
+		"dog",
+		"pet",
+		"print"
+	],
+	"f1b2": [
+		"3d",
+		"block",
+		"dice",
+		"package",
+		"square",
+		"tesseract"
+	],
+	"f1b3": [
+		"3d",
+		"block",
+		"dice",
+		"package",
+		"pyramid",
+		"square",
+		"stack",
+		"tesseract"
+	],
+	"f1b4": [],
+	"f1b5": [],
+	"f1b6": [],
+	"f1b7": [],
+	"f1b8": [
+		"Waste",
+		"compost",
+		"garbage",
+		"reuse",
+		"trash"
+	],
+	"f1b9": [
+		"auto",
+		"automobile",
+		"sedan",
+		"transportation",
+		"travel",
+		"vehicle"
+	],
+	"f1ba": [
+		"cab",
+		"cabbie",
+		"car",
+		"car service",
+		"lyft",
+		"machine",
+		"transportation",
+		"travel",
+		"uber",
+		"vehicle"
+	],
+	"f1bb": [
+		"bark",
+		"fall",
+		"flora",
+		"forest",
+		"nature",
+		"plant",
+		"seasonal"
+	],
+	"f1bc": [],
+	"f1bd": [],
+	"f1be": [],
+	"f1c0": [
+		"computer",
+		"development",
+		"directory",
+		"memory",
+		"storage"
+	],
+	"f1c1": [
+		"acrobat",
+		"document",
+		"preview",
+		"save"
+	],
+	"f1c2": [
+		"document",
+		"edit",
+		"page",
+		"text",
+		"writing"
+	],
+	"f1c3": [
+		"csv",
+		"document",
+		"numbers",
+		"spreadsheets",
+		"table"
+	],
+	"f1c4": [
+		"display",
+		"document",
+		"keynote",
+		"presentation"
+	],
+	"f1c5": [
+		"document",
+		"image",
+		"jpg",
+		"photo",
+		"png"
+	],
+	"f1c6": [
+		".zip",
+		"bundle",
+		"compress",
+		"compression",
+		"download",
+		"zip"
+	],
+	"f1c7": [
+		"document",
+		"mp3",
+		"music",
+		"page",
+		"play",
+		"sound"
+	],
+	"f1c8": [
+		"document",
+		"m4v",
+		"movie",
+		"mp4",
+		"play"
+	],
+	"f1c9": [
+		"css",
+		"development",
+		"document",
+		"html"
+	],
+	"f1ca": [],
+	"f1cb": [],
+	"f1cc": [],
+	"f1cd": [
+		"coast guard",
+		"help",
+		"overboard",
+		"save",
+		"support"
+	],
+	"f1ce": [
+		"circle-o-notch",
+		"diameter",
+		"dot",
+		"ellipse",
+		"round",
+		"spinner"
+	],
+	"f1d0": [],
+	"f1d1": [],
+	"f1d2": [],
+	"f1d3": [],
+	"f1d4": [],
+	"f1d5": [],
+	"f1d6": [],
+	"f1d7": [],
+	"f1d8": [
+		"air",
+		"float",
+		"fold",
+		"mail",
+		"paper",
+		"send"
+	],
+	"f1da": [
+		"Rewind",
+		"clock",
+		"reverse",
+		"time",
+		"time machine"
+	],
+	"f1dc": [
+		"format",
+		"header",
+		"text",
+		"title"
+	],
+	"f1dd": [
+		"edit",
+		"format",
+		"text",
+		"writing"
+	],
+	"f1de": [
+		"adjust",
+		"settings",
+		"sliders",
+		"toggle"
+	],
+	"f1e0": [
+		"forward",
+		"save",
+		"send",
+		"social"
+	],
+	"f1e1": [
+		"forward",
+		"save",
+		"send",
+		"social"
+	],
+	"f1e2": [
+		"error",
+		"explode",
+		"fuse",
+		"grenade",
+		"warning"
+	],
+	"f1e3": [
+		"ball",
+		"football",
+		"mls",
+		"soccer"
+	],
+	"f1e4": [
+		"communication",
+		"deaf",
+		"telephone",
+		"teletypewriter",
+		"text"
+	],
+	"f1e5": [
+		"glasses",
+		"magnify",
+		"scenic",
+		"spyglass",
+		"view"
+	],
+	"f1e6": [
+		"connect",
+		"electric",
+		"online",
+		"power"
+	],
+	"f1e7": [],
+	"f1e8": [],
+	"f1e9": [],
+	"f1ea": [
+		"article",
+		"editorial",
+		"headline",
+		"journal",
+		"journalism",
+		"news",
+		"press"
+	],
+	"f1eb": [
+		"connection",
+		"hotspot",
+		"internet",
+		"network",
+		"wireless"
+	],
+	"f1ec": [
+		"abacus",
+		"addition",
+		"arithmetic",
+		"counting",
+		"math",
+		"multiplication",
+		"subtraction"
+	],
+	"f1ed": [],
+	"f1ee": [],
+	"f1f0": [],
+	"f1f1": [],
+	"f1f2": [],
+	"f1f3": [
+		"amex"
+	],
+	"f1f4": [],
+	"f1f5": [],
+	"f1f6": [
+		"alert",
+		"cancel",
+		"disabled",
+		"notification",
+		"off",
+		"reminder"
+	],
+	"f1f8": [
+		"delete",
+		"garbage",
+		"hide",
+		"remove"
+	],
+	"f1f9": [
+		"brand",
+		"mark",
+		"register",
+		"trademark"
+	],
+	"f1fa": [
+		"address",
+		"author",
+		"e-mail",
+		"email",
+		"handle"
+	],
+	"f1fb": [
+		"beaker",
+		"clone",
+		"color",
+		"copy",
+		"eyedropper",
+		"pipette"
+	],
+	"f1fc": [
+		"acrylic",
+		"art",
+		"brush",
+		"color",
+		"fill",
+		"paint",
+		"pigment",
+		"watercolor"
+	],
+	"f1fd": [
+		"anniversary",
+		"bakery",
+		"candles",
+		"celebration",
+		"dessert",
+		"frosting",
+		"holiday",
+		"party",
+		"pastry"
+	],
+	"f1fe": [
+		"analytics",
+		"area",
+		"chart",
+		"graph"
+	],
+	"f200": [
+		"analytics",
+		"chart",
+		"diagram",
+		"graph",
+		"pie"
+	],
+	"f201": [
+		"activity",
+		"analytics",
+		"chart",
+		"dashboard",
+		"gain",
+		"graph",
+		"increase",
+		"line"
+	],
+	"f202": [],
+	"f203": [],
+	"f204": [
+		"switch"
+	],
+	"f205": [
+		"switch"
+	],
+	"f206": [
+		"bike",
+		"gears",
+		"pedal",
+		"transportation",
+		"vehicle"
+	],
+	"f207": [
+		"public transportation",
+		"transportation",
+		"travel",
+		"vehicle"
+	],
+	"f208": [],
+	"f209": [],
+	"f20a": [
+		"cc",
+		"deaf",
+		"hearing",
+		"subtitle",
+		"subtitling",
+		"text",
+		"video"
+	],
+	"f20b": [
+		"currency",
+		"ils",
+		"money"
+	],
+	"f20d": [],
+	"f20e": [],
+	"f210": [],
+	"f211": [],
+	"f212": [],
+	"f213": [],
+	"f214": [],
+	"f215": [],
+	"f216": [],
+	"f217": [
+		"add",
+		"create",
+		"new",
+		"positive",
+		"shopping"
+	],
+	"f218": [
+		"download",
+		"save",
+		"shopping"
+	],
+	"f21a": [
+		"boat",
+		"sea",
+		"water"
+	],
+	"f21b": [
+		"clothing",
+		"coat",
+		"hat",
+		"incognito",
+		"person",
+		"privacy",
+		"spy",
+		"whisper"
+	],
+	"f21c": [
+		"bike",
+		"machine",
+		"transportation",
+		"vehicle"
+	],
+	"f21d": [
+		"directions",
+		"location",
+		"map",
+		"navigation"
+	],
+	"f21e": [
+		"ekg",
+		"electrocardiogram",
+		"health",
+		"lifeline",
+		"vital signs"
+	],
+	"f221": [
+		"female"
+	],
+	"f222": [
+		"male"
+	],
+	"f223": [
+		"transgender"
+	],
+	"f224": [
+		"intersex"
+	],
+	"f225": [
+		"intersex"
+	],
+	"f226": [
+		"female"
+	],
+	"f227": [],
+	"f228": [
+		"Gender"
+	],
+	"f229": [],
+	"f22a": [],
+	"f22b": [],
+	"f22c": [],
+	"f22d": [
+		"androgynous",
+		"asexual",
+		"sexless"
+	],
+	"f231": [],
+	"f232": [],
+	"f233": [
+		"computer",
+		"cpu",
+		"database",
+		"hardware",
+		"network"
+	],
+	"f234": [
+		"add",
+		"avatar",
+		"positive",
+		"sign up",
+		"signup",
+		"team"
+	],
+	"f235": [
+		"archive",
+		"delete",
+		"remove",
+		"x"
+	],
+	"f236": [
+		"lodging",
+		"rest",
+		"sleep",
+		"travel"
+	],
+	"f237": [],
+	"f238": [
+		"bullet",
+		"commute",
+		"locomotive",
+		"railway",
+		"subway"
+	],
+	"f239": [
+		"machine",
+		"railway",
+		"train",
+		"transportation",
+		"vehicle"
+	],
+	"f23a": [],
+	"f23b": [],
+	"f23c": [],
+	"f23d": [],
+	"f23e": [],
+	"f240": [
+		"charge",
+		"power",
+		"status"
+	],
+	"f241": [
+		"charge",
+		"power",
+		"status"
+	],
+	"f242": [
+		"charge",
+		"power",
+		"status"
+	],
+	"f243": [
+		"charge",
+		"low",
+		"power",
+		"status"
+	],
+	"f244": [
+		"charge",
+		"dead",
+		"power",
+		"status"
+	],
+	"f245": [
+		"arrow",
+		"cursor",
+		"select"
+	],
+	"f246": [
+		"editing",
+		"i-beam",
+		"type",
+		"writing"
+	],
+	"f247": [
+		"combine",
+		"copy",
+		"design",
+		"merge",
+		"select"
+	],
+	"f248": [
+		"copy",
+		"design",
+		"merge",
+		"select",
+		"separate"
+	],
+	"f249": [
+		"message",
+		"note",
+		"paper",
+		"reminder",
+		"sticker"
+	],
+	"f24b": [],
+	"f24c": [],
+	"f24d": [
+		"arrange",
+		"copy",
+		"duplicate",
+		"paste"
+	],
+	"f24e": [
+		"balanced",
+		"justice",
+		"legal",
+		"measure",
+		"weight"
+	],
+	"f251": [
+		"hour",
+		"minute",
+		"sand",
+		"stopwatch",
+		"time"
+	],
+	"f252": [
+		"hour",
+		"minute",
+		"sand",
+		"stopwatch",
+		"time"
+	],
+	"f253": [
+		"hour",
+		"minute",
+		"sand",
+		"stopwatch",
+		"time"
+	],
+	"f254": [
+		"hour",
+		"minute",
+		"sand",
+		"stopwatch",
+		"time"
+	],
+	"f255": [
+		"fist",
+		"game",
+		"roshambo"
+	],
+	"f256": [
+		"game",
+		"halt",
+		"roshambo",
+		"stop"
+	],
+	"f257": [
+		"cut",
+		"game",
+		"roshambo"
+	],
+	"f258": [
+		"game",
+		"roshambo"
+	],
+	"f259": [
+		"live long",
+		"prosper",
+		"salute",
+		"star trek",
+		"vulcan"
+	],
+	"f25a": [
+		"arrow",
+		"cursor",
+		"select"
+	],
+	"f25b": [
+		"rest",
+		"truce"
+	],
+	"f25c": [
+		"copyright",
+		"register",
+		"symbol"
+	],
+	"f25d": [
+		"copyright",
+		"mark",
+		"trademark"
+	],
+	"f25e": [],
+	"f260": [],
+	"f261": [],
+	"f262": [],
+	"f263": [],
+	"f264": [],
+	"f265": [],
+	"f266": [],
+	"f267": [
+		"browser"
+	],
+	"f268": [
+		"browser"
+	],
+	"f269": [
+		"browser"
+	],
+	"f26a": [],
+	"f26b": [
+		"browser",
+		"ie"
+	],
+	"f26c": [
+		"computer",
+		"display",
+		"monitor",
+		"television"
+	],
+	"f26d": [],
+	"f26e": [],
+	"f270": [],
+	"f271": [
+		"add",
+		"calendar",
+		"create",
+		"date",
+		"event",
+		"new",
+		"positive",
+		"schedule",
+		"time",
+		"when"
+	],
+	"f272": [
+		"calendar",
+		"date",
+		"delete",
+		"event",
+		"negative",
+		"remove",
+		"schedule",
+		"time",
+		"when"
+	],
+	"f273": [
+		"archive",
+		"calendar",
+		"date",
+		"delete",
+		"event",
+		"remove",
+		"schedule",
+		"time",
+		"when",
+		"x"
+	],
+	"f274": [
+		"accept",
+		"agree",
+		"appointment",
+		"confirm",
+		"correct",
+		"date",
+		"done",
+		"event",
+		"ok",
+		"schedule",
+		"select",
+		"success",
+		"tick",
+		"time",
+		"todo",
+		"when"
+	],
+	"f275": [
+		"building",
+		"factory",
+		"industrial",
+		"manufacturing",
+		"mill",
+		"warehouse"
+	],
+	"f276": [
+		"address",
+		"agree",
+		"coordinates",
+		"destination",
+		"gps",
+		"localize",
+		"location",
+		"map",
+		"marker",
+		"navigation",
+		"pin",
+		"place",
+		"position",
+		"travel"
+	],
+	"f277": [
+		"directions",
+		"directory",
+		"map",
+		"signage",
+		"wayfinding"
+	],
+	"f279": [
+		"address",
+		"coordinates",
+		"destination",
+		"gps",
+		"localize",
+		"location",
+		"map",
+		"navigation",
+		"paper",
+		"pin",
+		"place",
+		"point of interest",
+		"position",
+		"route",
+		"travel"
+	],
+	"f27a": [
+		"bubble",
+		"chat",
+		"commenting",
+		"conversation",
+		"feedback",
+		"message",
+		"note",
+		"notification",
+		"sms",
+		"speech",
+		"texting"
+	],
+	"f27c": [],
+	"f27d": [
+		"vimeo"
+	],
+	"f27e": [],
+	"f280": [],
+	"f281": [],
+	"f282": [
+		"browser",
+		"ie"
+	],
+	"f284": [],
+	"f285": [],
+	"f286": [
+		"castle"
+	],
+	"f287": [],
+	"f288": [],
+	"f289": [],
+	"f28a": [],
+	"f28b": [
+		"hold",
+		"wait"
+	],
+	"f28d": [
+		"block",
+		"box",
+		"circle",
+		"square"
+	],
+	"f290": [
+		"buy",
+		"checkout",
+		"grocery",
+		"payment",
+		"purchase"
+	],
+	"f291": [
+		"buy",
+		"checkout",
+		"grocery",
+		"payment",
+		"purchase"
+	],
+	"f292": [
+		"Twitter",
+		"instagram",
+		"pound",
+		"social media",
+		"tag"
+	],
+	"f293": [],
+	"f294": [],
+	"f295": [
+		"discount",
+		"fraction",
+		"proportion",
+		"rate",
+		"ratio"
+	],
+	"f296": [
+		"Axosoft"
+	],
+	"f297": [],
+	"f298": [],
+	"f299": [
+		"leaf"
+	],
+	"f29a": [
+		"accessibility",
+		"hearing",
+		"person",
+		"seeing",
+		"visual impairment"
+	],
+	"f29d": [
+		"cane",
+		"disability",
+		"person",
+		"sight"
+	],
+	"f29e": [
+		"blind",
+		"narration",
+		"video",
+		"visual"
+	],
+	"f2a0": [
+		"call",
+		"earphone",
+		"number",
+		"sound",
+		"support",
+		"telephone",
+		"voice",
+		"volume-control-phone"
+	],
+	"f2a1": [
+		"alphabet",
+		"blind",
+		"dots",
+		"raised",
+		"vision"
+	],
+	"f2a2": [
+		"amplify",
+		"audio",
+		"deaf",
+		"ear",
+		"headset",
+		"hearing",
+		"sound"
+	],
+	"f2a3": [
+		"asl",
+		"deaf",
+		"finger",
+		"hand",
+		"interpret",
+		"speak"
+	],
+	"f2a4": [
+		"ear",
+		"hearing",
+		"sign language"
+	],
+	"f2a5": [],
+	"f2a6": [],
+	"f2a7": [
+		"Translate",
+		"asl",
+		"deaf",
+		"hands"
+	],
+	"f2a8": [
+		"blind",
+		"eye",
+		"sight"
+	],
+	"f2a9": [],
+	"f2aa": [],
+	"f2ab": [],
+	"f2ac": [],
+	"f2ad": [],
+	"f2ae": [],
+	"f2b0": [],
+	"f2b1": [],
+	"f2b2": [],
+	"f2b3": [
+		"google-plus-circle",
+		"google-plus-official"
+	],
+	"f2b4": [
+		"meanpath"
+	],
+	"f2b5": [
+		"agreement",
+		"greeting",
+		"meeting",
+		"partnership"
+	],
+	"f2b6": [
+		"e-mail",
+		"email",
+		"letter",
+		"mail",
+		"message",
+		"notification",
+		"support"
+	],
+	"f2b8": [],
+	"f2b9": [
+		"contact",
+		"directory",
+		"index",
+		"little black book",
+		"rolodex"
+	],
+	"f2bb": [
+		"about",
+		"contact",
+		"id",
+		"identification",
+		"postcard",
+		"profile"
+	],
+	"f2bd": [
+		"account",
+		"avatar",
+		"head",
+		"human",
+		"man",
+		"person",
+		"profile"
+	],
+	"f2c1": [
+		"address",
+		"contact",
+		"identification",
+		"license",
+		"profile"
+	],
+	"f2c2": [
+		"contact",
+		"demographics",
+		"document",
+		"identification",
+		"issued",
+		"profile"
+	],
+	"f2c4": [],
+	"f2c5": [],
+	"f2c6": [],
+	"f2c7": [
+		"fever",
+		"hot",
+		"mercury",
+		"status",
+		"temperature"
+	],
+	"f2c8": [
+		"mercury",
+		"status",
+		"temperature"
+	],
+	"f2c9": [
+		"mercury",
+		"status",
+		"temperature"
+	],
+	"f2ca": [
+		"mercury",
+		"status",
+		"temperature"
+	],
+	"f2cb": [
+		"cold",
+		"mercury",
+		"status",
+		"temperature"
+	],
+	"f2cc": [
+		"bath",
+		"clean",
+		"faucet",
+		"water"
+	],
+	"f2cd": [
+		"clean",
+		"shower",
+		"tub",
+		"wash"
+	],
+	"f2ce": [
+		"audio",
+		"broadcast",
+		"music",
+		"sound"
+	],
+	"f2d0": [
+		"browser",
+		"computer",
+		"development",
+		"expand"
+	],
+	"f2d1": [
+		"browser",
+		"collapse",
+		"computer",
+		"development"
+	],
+	"f2d2": [
+		"browser",
+		"computer",
+		"development"
+	],
+	"f2d5": [],
+	"f2d6": [],
+	"f2d7": [],
+	"f2d8": [],
+	"f2d9": [],
+	"f2da": [
+		"eercast"
+	],
+	"f2db": [
+		"cpu",
+		"hardware",
+		"processor",
+		"technology"
+	],
+	"f2dc": [
+		"precipitation",
+		"rain",
+		"winter"
+	],
+	"f2dd": [],
+	"f2de": [],
+	"f2e0": [],
+	"f2e5": [
+		"cutlery",
+		"dining",
+		"scoop",
+		"silverware",
+		"spoon"
+	],
+	"f2e7": [
+		"cutlery",
+		"dining",
+		"dinner",
+		"eat",
+		"food",
+		"fork",
+		"knife",
+		"restaurant"
+	],
+	"f2ea": [
+		"back",
+		"control z",
+		"exchange",
+		"oops",
+		"return",
+		"swap"
+	],
+	"f2ed": [
+		"delete",
+		"garbage",
+		"hide",
+		"remove",
+		"trash-o"
+	],
+	"f2f1": [
+		"exchange",
+		"refresh",
+		"reload",
+		"rotate",
+		"swap"
+	],
+	"f2f2": [
+		"clock",
+		"reminder",
+		"time"
+	],
+	"f2f5": [
+		"arrow",
+		"exit",
+		"leave",
+		"log out",
+		"logout",
+		"sign-out"
+	],
+	"f2f6": [
+		"arrow",
+		"enter",
+		"join",
+		"log in",
+		"login",
+		"sign in",
+		"sign up",
+		"sign-in",
+		"signin",
+		"signup"
+	],
+	"f2f9": [
+		"forward",
+		"refresh",
+		"reload",
+		"repeat"
+	],
+	"f2fe": [
+		"crap",
+		"poop",
+		"shit",
+		"smile",
+		"turd"
+	],
+	"f302": [
+		"album",
+		"landscape",
+		"photo",
+		"picture"
+	],
+	"f303": [
+		"design",
+		"edit",
+		"pencil",
+		"update",
+		"write"
+	],
+	"f304": [
+		"design",
+		"edit",
+		"update",
+		"write"
+	],
+	"f305": [
+		"design",
+		"edit",
+		"update",
+		"write"
+	],
+	"f309": [
+		"download",
+		"long-arrow-down"
+	],
+	"f30a": [
+		"back",
+		"long-arrow-left",
+		"previous"
+	],
+	"f30b": [
+		"forward",
+		"long-arrow-right",
+		"next"
+	],
+	"f30c": [
+		"long-arrow-up",
+		"upload"
+	],
+	"f31e": [
+		"arrows-alt",
+		"bigger",
+		"enlarge",
+		"move",
+		"resize"
+	],
+	"f328": [
+		"copy",
+		"notes",
+		"paste",
+		"record"
+	],
+	"f337": [
+		"arrows-h",
+		"expand",
+		"horizontal",
+		"landscape",
+		"resize",
+		"wide"
+	],
+	"f338": [
+		"arrows-v",
+		"expand",
+		"portrait",
+		"resize",
+		"tall",
+		"vertical"
+	],
+	"f358": [
+		"arrow-circle-o-down",
+		"download"
+	],
+	"f359": [
+		"arrow-circle-o-left",
+		"back",
+		"previous"
+	],
+	"f35a": [
+		"arrow-circle-o-right",
+		"forward",
+		"next"
+	],
+	"f35b": [
+		"arrow-circle-o-up"
+	],
+	"f35c": [],
+	"f35d": [
+		"external-link",
+		"new",
+		"open",
+		"share"
+	],
+	"f360": [
+		"external-link-square",
+		"new",
+		"open",
+		"share"
+	],
+	"f362": [
+		"arrow",
+		"arrows",
+		"exchange",
+		"reciprocate",
+		"return",
+		"swap",
+		"transfer"
+	],
+	"f368": [
+		"accessibility",
+		"handicap",
+		"person",
+		"wheelchair",
+		"wheelchair-alt"
+	],
+	"f369": [],
+	"f36a": [],
+	"f36b": [],
+	"f36c": [],
+	"f36d": [],
+	"f36e": [],
+	"f36f": [],
+	"f370": [],
+	"f371": [],
+	"f372": [],
+	"f373": [],
+	"f374": [],
+	"f375": [],
+	"f378": [],
+	"f379": [],
+	"f37a": [],
+	"f37b": [],
+	"f37c": [],
+	"f37d": [],
+	"f37f": [],
+	"f380": [],
+	"f381": [
+		"download",
+		"export",
+		"save"
+	],
+	"f382": [
+		"cloud-upload",
+		"import",
+		"save",
+		"upload"
+	],
+	"f383": [],
+	"f384": [],
+	"f385": [],
+	"f388": [],
+	"f38b": [],
+	"f38c": [],
+	"f38d": [],
+	"f38e": [],
+	"f38f": [],
+	"f391": [],
+	"f392": [],
+	"f393": [],
+	"f394": [],
+	"f395": [],
+	"f396": [],
+	"f397": [],
+	"f399": [],
+	"f39a": [],
+	"f39d": [],
+	"f39e": [
+		"facebook"
+	],
+	"f39f": [],
+	"f3a1": [],
+	"f3a2": [],
+	"f3a3": [
+		"castle"
+	],
+	"f3a4": [],
+	"f3a5": [
+		"diamond",
+		"jewelry",
+		"sapphire",
+		"stone",
+		"treasure"
+	],
+	"f3a6": [],
+	"f3a7": [],
+	"f3a8": [],
+	"f3a9": [],
+	"f3aa": [],
+	"f3ab": [],
+	"f3ac": [],
+	"f3ad": [],
+	"f3ae": [],
+	"f3af": [],
+	"f3b0": [],
+	"f3b1": [],
+	"f3b2": [],
+	"f3b4": [],
+	"f3b5": [],
+	"f3b6": [],
+	"f3b7": [],
+	"f3b8": [],
+	"f3b9": [],
+	"f3ba": [],
+	"f3bb": [],
+	"f3bc": [],
+	"f3bd": [],
+	"f3be": [
+		"arrow",
+		"level-down"
+	],
+	"f3bf": [
+		"arrow",
+		"level-up"
+	],
+	"f3c0": [],
+	"f3c1": [
+		"admin",
+		"lock",
+		"open",
+		"password",
+		"private",
+		"protect",
+		"security"
+	],
+	"f3c3": [],
+	"f3c4": [],
+	"f3c5": [
+		"address",
+		"coordinates",
+		"destination",
+		"gps",
+		"localize",
+		"location",
+		"map",
+		"navigation",
+		"paper",
+		"pin",
+		"place",
+		"point of interest",
+		"position",
+		"route",
+		"travel"
+	],
+	"f3c6": [],
+	"f3c7": [],
+	"f3c8": [],
+	"f3c9": [
+		"audio",
+		"podcast",
+		"record",
+		"sing",
+		"sound",
+		"voice"
+	],
+	"f3ca": [],
+	"f3cb": [],
+	"f3cc": [],
+	"f3cd": [
+		"apple",
+		"call",
+		"cell phone",
+		"cellphone",
+		"device",
+		"iphone",
+		"number",
+		"screen",
+		"telephone"
+	],
+	"f3d0": [],
+	"f3d1": [
+		"buy",
+		"cash",
+		"checkout",
+		"money",
+		"payment",
+		"price",
+		"purchase"
+	],
+	"f3d2": [],
+	"f3d3": [],
+	"f3d4": [],
+	"f3d5": [],
+	"f3d6": [],
+	"f3d7": [],
+	"f3d8": [],
+	"f3d9": [],
+	"f3da": [],
+	"f3db": [],
+	"f3dc": [],
+	"f3dd": [
+		"call",
+		"cancel",
+		"earphone",
+		"mute",
+		"number",
+		"support",
+		"telephone",
+		"voice"
+	],
+	"f3df": [],
+	"f3e0": [
+		"id",
+		"image",
+		"photo",
+		"picture",
+		"selfie"
+	],
+	"f3e1": [],
+	"f3e2": [],
+	"f3e3": [],
+	"f3e4": [
+		"rendact"
+	],
+	"f3e5": [
+		"mail",
+		"message",
+		"respond"
+	],
+	"f3e6": [],
+	"f3e7": [],
+	"f3e8": [],
+	"f3e9": [],
+	"f3ea": [],
+	"f3eb": [],
+	"f3ec": [],
+	"f3ed": [
+		"achievement",
+		"award",
+		"block",
+		"defend",
+		"security",
+		"winner"
+	],
+	"f3ee": [],
+	"f3ef": [
+		"anchor",
+		"hash",
+		"hashtag"
+	],
+	"f3f3": [],
+	"f3f5": [],
+	"f3f6": [],
+	"f3f7": [],
+	"f3f8": [],
+	"f3f9": [],
+	"f3fa": [
+		"apple",
+		"device",
+		"ipad",
+		"kindle",
+		"screen"
+	],
+	"f3fd": [
+		"dashboard",
+		"fast",
+		"odometer",
+		"speed",
+		"speedometer"
+	],
+	"f3fe": [],
+	"f3ff": [
+		"movie",
+		"pass",
+		"support",
+		"ticket"
+	],
+	"f402": [],
+	"f403": [],
+	"f404": [],
+	"f405": [],
+	"f406": [
+		"account",
+		"avatar",
+		"head",
+		"human",
+		"man",
+		"person",
+		"profile"
+	],
+	"f407": [],
+	"f408": [],
+	"f409": [],
+	"f40a": [],
+	"f40b": [],
+	"f40c": [],
+	"f40d": [],
+	"f410": [
+		"browser",
+		"cancel",
+		"computer",
+		"development"
+	],
+	"f411": [],
+	"f412": [],
+	"f413": [],
+	"f414": [],
+	"f415": [],
+	"f416": [],
+	"f417": [],
+	"f418": [],
+	"f419": [],
+	"f41a": [],
+	"f41b": [],
+	"f41c": [],
+	"f41d": [],
+	"f41e": [],
+	"f41f": [],
+	"f420": [],
+	"f421": [],
+	"f423": [],
+	"f425": [],
+	"f426": [],
+	"f427": [],
+	"f428": [],
+	"f429": [],
+	"f42a": [],
+	"f42b": [],
+	"f42c": [],
+	"f42d": [],
+	"f42e": [],
+	"f42f": [],
+	"f430": [],
+	"f431": [],
+	"f433": [
+		"foul",
+		"hardball",
+		"league",
+		"leather",
+		"mlb",
+		"softball",
+		"sport"
+	],
+	"f434": [
+		"dribble",
+		"dunk",
+		"hoop",
+		"nba"
+	],
+	"f436": [
+		"alley",
+		"candlepin",
+		"gutter",
+		"lane",
+		"strike",
+		"tenpin"
+	],
+	"f439": [
+		"board",
+		"checkmate",
+		"game",
+		"strategy",
+		"tournament"
+	],
+	"f43a": [
+		"board",
+		"checkmate",
+		"game",
+		"strategy"
+	],
+	"f43c": [
+		"board",
+		"checkmate",
+		"game",
+		"strategy"
+	],
+	"f43f": [
+		"board",
+		"checkmate",
+		"game",
+		"strategy"
+	],
+	"f441": [
+		"board",
+		"checkmate",
+		"game",
+		"horse",
+		"strategy"
+	],
+	"f443": [
+		"board",
+		"checkmate",
+		"game",
+		"strategy"
+	],
+	"f445": [
+		"board",
+		"checkmate",
+		"game",
+		"strategy"
+	],
+	"f447": [
+		"board",
+		"castle",
+		"checkmate",
+		"game",
+		"strategy"
+	],
+	"f44b": [
+		"exercise",
+		"gym",
+		"strength",
+		"weight",
+		"weight-lifting"
+	],
+	"f44d": [],
+	"f44e": [
+		"ball",
+		"fall",
+		"nfl",
+		"pigskin",
+		"seasonal"
+	],
+	"f450": [
+		"caddy",
+		"eagle",
+		"putt",
+		"tee"
+	],
+	"f452": [],
+	"f453": [
+		"ice",
+		"nhl",
+		"sport"
+	],
+	"f457": [],
+	"f458": [
+		"ball",
+		"bludger",
+		"broom",
+		"golden snitch",
+		"harry potter",
+		"hogwarts",
+		"quaffle",
+		"sport",
+		"wizard"
+	],
+	"f459": [],
+	"f45c": [
+		"block",
+		"box",
+		"shape"
+	],
+	"f45d": [
+		"ball",
+		"paddle",
+		"ping pong"
+	],
+	"f45f": [
+		"beach",
+		"olympics",
+		"sport"
+	],
+	"f461": [
+		"allergy",
+		"freckles",
+		"hand",
+		"hives",
+		"pox",
+		"skin",
+		"spots"
+	],
+	"f462": [
+		"bandage",
+		"boo boo",
+		"first aid",
+		"ouch"
+	],
+	"f466": [
+		"archive",
+		"container",
+		"package",
+		"storage"
+	],
+	"f468": [
+		"archives",
+		"inventory",
+		"storage",
+		"warehouse"
+	],
+	"f469": [
+		"doctor",
+		"emt",
+		"first aid",
+		"health"
+	],
+	"f46a": [
+		"caliente",
+		"energy",
+		"fire",
+		"flame",
+		"gas",
+		"heat",
+		"hot"
+	],
+	"f46b": [
+		"drugs",
+		"medicine",
+		"pills",
+		"prescription"
+	],
+	"f46c": [
+		"accept",
+		"agree",
+		"confirm",
+		"done",
+		"ok",
+		"select",
+		"success",
+		"tick",
+		"todo",
+		"yes"
+	],
+	"f46d": [
+		"checklist",
+		"completed",
+		"done",
+		"finished",
+		"intinerary",
+		"ol",
+		"schedule",
+		"tick",
+		"todo",
+		"ul"
+	],
+	"f470": [
+		"analyze",
+		"detect",
+		"diagnosis",
+		"examine",
+		"medicine"
+	],
+	"f471": [
+		"double helix",
+		"genetic",
+		"helix",
+		"molecule",
+		"protein"
+	],
+	"f472": [
+		"carry",
+		"shipping",
+		"transport"
+	],
+	"f474": [
+		"carry",
+		"inventory",
+		"shipping",
+		"transport"
+	],
+	"f477": [
+		"document",
+		"health",
+		"history",
+		"prescription",
+		"record"
+	],
+	"f478": [
+		"document",
+		"health",
+		"history",
+		"prescription",
+		"record"
+	],
+	"f479": [
+		"emergency",
+		"emt",
+		"health",
+		"medical",
+		"rescue"
+	],
+	"f47d": [
+		"building",
+		"emergency room",
+		"medical center"
+	],
+	"f47e": [
+		"clinic",
+		"emergency",
+		"map"
+	],
+	"f47f": [
+		"contact",
+		"demographics",
+		"document",
+		"identification",
+		"issued",
+		"profile"
+	],
+	"f481": [
+		"clipboard",
+		"doctor",
+		"ehr",
+		"health",
+		"history",
+		"records"
+	],
+	"f482": [
+		"archive",
+		"box",
+		"inventory",
+		"shipping",
+		"warehouse"
+	],
+	"f484": [
+		"drugs",
+		"medicine",
+		"prescription",
+		"tablets"
+	],
+	"f485": [
+		"drugs",
+		"medical",
+		"medicine",
+		"pharmacy",
+		"rx"
+	],
+	"f486": [
+		"drugs",
+		"medical",
+		"medicine",
+		"pharmacy",
+		"rx"
+	],
+	"f487": [
+		"EKG",
+		"bed",
+		"electrocardiogram",
+		"health",
+		"hospital",
+		"life",
+		"patient",
+		"vital"
+	],
+	"f48b": [
+		"express",
+		"fedex",
+		"mail",
+		"overnight",
+		"package",
+		"ups"
+	],
+	"f48d": [
+		"cancer",
+		"cigarette",
+		"nicotine",
+		"smoking status",
+		"tobacco"
+	],
+	"f48e": [
+		"doctor",
+		"immunizations",
+		"medical",
+		"needle"
+	],
+	"f490": [
+		"drugs",
+		"medicine",
+		"pills",
+		"prescription"
+	],
+	"f491": [
+		"mercury",
+		"status",
+		"temperature"
+	],
+	"f492": [
+		"experiment",
+		"lab",
+		"sample",
+		"science",
+		"test",
+		"test tube"
+	],
+	"f493": [
+		"experiment",
+		"lab",
+		"sample",
+		"science",
+		"test",
+		"test tube"
+	],
+	"f494": [
+		"building",
+		"capacity",
+		"garage",
+		"inventory",
+		"storage"
+	],
+	"f496": [
+		"health",
+		"measurement",
+		"scale",
+		"weight"
+	],
+	"f497": [
+		"health",
+		"medical",
+		"radiological images",
+		"radiology",
+		"skeleton"
+	],
+	"f49e": [
+		"archive",
+		"container",
+		"package",
+		"storage",
+		"unpack"
+	],
+	"f4ad": [
+		"bubble",
+		"chat",
+		"commenting",
+		"conversation",
+		"feedback",
+		"message",
+		"more",
+		"note",
+		"notification",
+		"reply",
+		"sms",
+		"speech",
+		"texting"
+	],
+	"f4b3": [
+		"bubble",
+		"cancel",
+		"chat",
+		"commenting",
+		"conversation",
+		"feedback",
+		"message",
+		"mute",
+		"note",
+		"notification",
+		"quiet",
+		"sms",
+		"speech",
+		"texting"
+	],
+	"f4b8": [
+		"chair",
+		"cushion",
+		"furniture",
+		"relax",
+		"sofa"
+	],
+	"f4b9": [
+		"contribute",
+		"generosity",
+		"gift",
+		"give"
+	],
+	"f4ba": [
+		"bird",
+		"fauna",
+		"flying",
+		"peace",
+		"war"
+	],
+	"f4bd": [
+		"carry",
+		"lift"
+	],
+	"f4be": [
+		"carry",
+		"charity",
+		"gift",
+		"lift",
+		"package"
+	],
+	"f4c0": [
+		"$",
+		"carry",
+		"dollar sign",
+		"donation",
+		"giving",
+		"lift",
+		"money",
+		"price"
+	],
+	"f4c2": [
+		"carry",
+		"hold",
+		"lift"
+	],
+	"f4c4": [
+		"aid",
+		"assistance",
+		"handshake",
+		"partnership",
+		"volunteering"
+	],
+	"f4cd": [
+		"aid",
+		"assistance",
+		"rescue",
+		"supplies"
+	],
+	"f4ce": [
+		"box",
+		"carry",
+		"fragile",
+		"help",
+		"movers",
+		"package"
+	],
+	"f4d3": [
+		"bank",
+		"save",
+		"savings"
+	],
+	"f4d5": [],
+	"f4d6": [
+		"badge",
+		"cause",
+		"lapel",
+		"pin"
+	],
+	"f4d7": [
+		"directions",
+		"navigation",
+		"travel"
+	],
+	"f4d8": [
+		"flora",
+		"grow",
+		"plant",
+		"vegan"
+	],
+	"f4d9": [
+		"directions",
+		"real estate",
+		"signage",
+		"wayfinding"
+	],
+	"f4da": [
+		"emoticon",
+		"face",
+		"happy",
+		"hint",
+		"joke"
+	],
+	"f4db": [
+		"design",
+		"package",
+		"sticky"
+	],
+	"f4de": [
+		"box",
+		"cargo",
+		"delivery",
+		"inventory",
+		"moving",
+		"rental",
+		"vehicle"
+	],
+	"f4df": [
+		"cargo",
+		"inventory",
+		"rental",
+		"vehicle"
+	],
+	"f4e2": [
+		"add",
+		"create",
+		"film",
+		"new",
+		"positive",
+		"record",
+		"video"
+	],
+	"f4e3": [
+		"alcohol",
+		"beverage",
+		"cabernet",
+		"drink",
+		"grapes",
+		"merlot",
+		"sauvignon"
+	],
+	"f4e4": [],
+	"f4e5": [
+		"clothing"
+	],
+	"f4e6": [],
+	"f4e7": [],
+	"f4e8": [],
+	"f4e9": [],
+	"f4ea": [],
+	"f4eb": [],
+	"f4ec": [],
+	"f4ed": [],
+	"f4ee": [],
+	"f4ef": [],
+	"f4f0": [],
+	"f4f1": [],
+	"f4f2": [],
+	"f4f3": [],
+	"f4f4": [],
+	"f4f5": [],
+	"f4f6": [],
+	"f4f7": [],
+	"f4f8": [],
+	"f4f9": [],
+	"f4fa": [
+		"account",
+		"avatar",
+		"head",
+		"human",
+		"man",
+		"person",
+		"profile"
+	],
+	"f4fb": [
+		"avatar",
+		"clothing",
+		"cosmonaut",
+		"nasa",
+		"space",
+		"suit"
+	],
+	"f4fc": [
+		"accept",
+		"check",
+		"person",
+		"verified"
+	],
+	"f4fd": [
+		"alert",
+		"person",
+		"remind",
+		"time"
+	],
+	"f4fe": [
+		"admin",
+		"cog",
+		"person",
+		"settings"
+	],
+	"f4ff": [
+		"edit",
+		"pen",
+		"pencil",
+		"person",
+		"update",
+		"write"
+	],
+	"f500": [
+		"group",
+		"people",
+		"person",
+		"team",
+		"users"
+	],
+	"f501": [
+		"cap",
+		"clothing",
+		"commencement",
+		"gown",
+		"graduation",
+		"person",
+		"student"
+	],
+	"f502": [
+		"admin",
+		"lock",
+		"person",
+		"private",
+		"unlock"
+	],
+	"f503": [
+		"delete",
+		"negative",
+		"remove"
+	],
+	"f504": [
+		"assassin",
+		"avatar",
+		"dangerous",
+		"deadly",
+		"sneaky"
+	],
+	"f505": [
+		"admin",
+		"person",
+		"private",
+		"protect",
+		"safe"
+	],
+	"f506": [
+		"ban",
+		"delete",
+		"remove"
+	],
+	"f507": [
+		"avatar",
+		"discount",
+		"label",
+		"person",
+		"role",
+		"special"
+	],
+	"f508": [
+		"avatar",
+		"business",
+		"clothing",
+		"formal",
+		"professional",
+		"suit"
+	],
+	"f509": [
+		"admin",
+		"cog",
+		"group",
+		"person",
+		"settings",
+		"team"
+	],
+	"f50a": [],
+	"f50b": [],
+	"f50c": [
+		"politics",
+		"star wars"
+	],
+	"f50d": [
+		"star wars"
+	],
+	"f50e": [
+		"star wars"
+	],
+	"f50f": [],
+	"f510": [
+		"politics",
+		"star wars"
+	],
+	"f511": [],
+	"f512": [],
+	"f513": [],
+	"f514": [],
+	"f517": [
+		"cocktail",
+		"milkshake",
+		"mixer",
+		"puree",
+		"smoothie"
+	],
+	"f518": [
+		"flyer",
+		"library",
+		"notebook",
+		"open book",
+		"pamphlet",
+		"reading"
+	],
+	"f519": [
+		"airwaves",
+		"antenna",
+		"radio",
+		"reception",
+		"waves"
+	],
+	"f51a": [
+		"clean",
+		"firebolt",
+		"fly",
+		"halloween",
+		"nimbus 2000",
+		"quidditch",
+		"sweep",
+		"witch"
+	],
+	"f51b": [
+		"blackboard",
+		"learning",
+		"school",
+		"teaching",
+		"whiteboard",
+		"writing"
+	],
+	"f51c": [
+		"blackboard",
+		"instructor",
+		"learning",
+		"professor",
+		"school",
+		"whiteboard",
+		"writing"
+	],
+	"f51d": [
+		"building",
+		"cathedral",
+		"chapel",
+		"community",
+		"religion"
+	],
+	"f51e": [
+		"currency",
+		"dime",
+		"financial",
+		"gold",
+		"money",
+		"penny"
+	],
+	"f51f": [
+		"album",
+		"bluray",
+		"cd",
+		"disc",
+		"dvd",
+		"media",
+		"movie",
+		"music",
+		"record",
+		"video",
+		"vinyl"
+	],
+	"f520": [
+		"bird",
+		"bullfrog",
+		"fauna",
+		"halloween",
+		"holiday",
+		"toad"
+	],
+	"f521": [
+		"award",
+		"favorite",
+		"king",
+		"queen",
+		"royal",
+		"tiara"
+	],
+	"f522": [
+		"chance",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f523": [
+		"chance",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f524": [
+		"chance",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f525": [
+		"chance",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f526": [
+		"chance",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f527": [
+		"chance",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f528": [
+		"chance",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f529": [
+		"arithmetic",
+		"calculus",
+		"division",
+		"math"
+	],
+	"f52a": [
+		"enter",
+		"exit",
+		"locked"
+	],
+	"f52b": [
+		"enter",
+		"exit",
+		"welcome"
+	],
+	"f52c": [
+		"arithmetic",
+		"even",
+		"match",
+		"math"
+	],
+	"f52d": [
+		"bird",
+		"light",
+		"plucked",
+		"quill",
+		"write"
+	],
+	"f52e": [
+		"amphibian",
+		"bullfrog",
+		"fauna",
+		"hop",
+		"kermit",
+		"kiss",
+		"prince",
+		"ribbit",
+		"toad",
+		"wart"
+	],
+	"f52f": [
+		"car",
+		"fuel",
+		"gasoline",
+		"petrol"
+	],
+	"f530": [
+		"hipster",
+		"nerd",
+		"reading",
+		"sight",
+		"spectacles",
+		"vision"
+	],
+	"f531": [
+		"arithmetic",
+		"compare",
+		"math"
+	],
+	"f532": [
+		"arithmetic",
+		"compare",
+		"math"
+	],
+	"f533": [
+		"airwolf",
+		"apache",
+		"chopper",
+		"flight",
+		"fly",
+		"travel"
+	],
+	"f534": [
+		"eternity",
+		"forever",
+		"math"
+	],
+	"f535": [
+		"bird",
+		"fauna",
+		"new zealand"
+	],
+	"f536": [
+		"arithmetic",
+		"compare",
+		"math"
+	],
+	"f537": [
+		"arithmetic",
+		"compare",
+		"math"
+	],
+	"f538": [
+		"DIMM",
+		"RAM",
+		"hardware",
+		"storage",
+		"technology"
+	],
+	"f539": [
+		"audio",
+		"disable",
+		"mute",
+		"podcast",
+		"record",
+		"sing",
+		"sound",
+		"voice"
+	],
+	"f53a": [
+		"buy",
+		"cash",
+		"checkout",
+		"money",
+		"payment",
+		"price",
+		"purchase"
+	],
+	"f53b": [
+		"buy",
+		"cash",
+		"checkout",
+		"money",
+		"payment",
+		"price",
+		"purchase"
+	],
+	"f53c": [
+		"bank check",
+		"buy",
+		"checkout",
+		"cheque",
+		"money",
+		"payment",
+		"price",
+		"purchase"
+	],
+	"f53d": [
+		"bank check",
+		"buy",
+		"checkout",
+		"cheque",
+		"money",
+		"payment",
+		"price",
+		"purchase"
+	],
+	"f53e": [
+		"arithmetic",
+		"compare",
+		"math"
+	],
+	"f53f": [
+		"acrylic",
+		"art",
+		"brush",
+		"color",
+		"fill",
+		"paint",
+		"pigment",
+		"watercolor"
+	],
+	"f540": [
+		"auto",
+		"car",
+		"garage",
+		"meter"
+	],
+	"f541": [
+		"discount",
+		"fraction",
+		"proportion",
+		"rate",
+		"ratio"
+	],
+	"f542": [
+		"chart",
+		"graph",
+		"network",
+		"pert"
+	],
+	"f543": [
+		"check",
+		"invoice",
+		"money",
+		"pay",
+		"table"
+	],
+	"f544": [
+		"android",
+		"automate",
+		"computer",
+		"cyborg"
+	],
+	"f545": [
+		"design",
+		"draft",
+		"length",
+		"measure",
+		"planning"
+	],
+	"f546": [
+		"design",
+		"draft",
+		"length",
+		"measure",
+		"planning"
+	],
+	"f547": [
+		"design",
+		"draft",
+		"length",
+		"measure",
+		"planning"
+	],
+	"f548": [
+		"design",
+		"draft",
+		"length",
+		"measure",
+		"planning"
+	],
+	"f549": [
+		"building",
+		"education",
+		"learn",
+		"student",
+		"teacher"
+	],
+	"f54a": [
+		"admin",
+		"fix",
+		"mechanic",
+		"repair",
+		"settings",
+		"tool"
+	],
+	"f54b": [
+		"feet",
+		"footprints",
+		"steps",
+		"walk"
+	],
+	"f54c": [
+		"bones",
+		"skeleton",
+		"x-ray",
+		"yorick"
+	],
+	"f54d": [
+		"ban",
+		"cancel",
+		"no smoking",
+		"non-smoking"
+	],
+	"f54e": [
+		"building",
+		"buy",
+		"purchase",
+		"shopping"
+	],
+	"f54f": [
+		"building",
+		"buy",
+		"purchase",
+		"shopping"
+	],
+	"f550": [
+		"flow",
+		"list",
+		"timeline"
+	],
+	"f551": [
+		"caramel",
+		"cookie",
+		"dessert",
+		"sweets",
+		"waffle"
+	],
+	"f552": [
+		"admin",
+		"container",
+		"fix",
+		"repair",
+		"settings",
+		"tools"
+	],
+	"f553": [
+		"clothing",
+		"fashion",
+		"garment",
+		"shirt"
+	],
+	"f554": [
+		"exercise",
+		"health",
+		"pedometer",
+		"person",
+		"steps"
+	],
+	"f555": [
+		"billfold",
+		"cash",
+		"currency",
+		"money"
+	],
+	"f556": [
+		"disapprove",
+		"emoticon",
+		"face",
+		"mad",
+		"upset"
+	],
+	"f557": [
+		"arc",
+		"monument",
+		"road",
+		"street",
+		"tunnel"
+	],
+	"f558": [
+		"book",
+		"directions",
+		"geography",
+		"globe",
+		"map",
+		"travel",
+		"wayfinding"
+	],
+	"f559": [
+		"honor",
+		"praise",
+		"prize",
+		"recognition",
+		"ribbon",
+		"trophy"
+	],
+	"f55a": [
+		"command",
+		"delete",
+		"erase",
+		"keyboard",
+		"undo"
+	],
+	"f55b": [
+		"curves",
+		"illustrator",
+		"lines",
+		"path",
+		"vector"
+	],
+	"f55c": [
+		"aparatus",
+		"cannabis",
+		"marijuana",
+		"pipe",
+		"smoke",
+		"smoking"
+	],
+	"f55d": [
+		"art",
+		"bristles",
+		"color",
+		"handle",
+		"paint"
+	],
+	"f55e": [
+		"mta",
+		"public transportation",
+		"transportation",
+		"travel",
+		"vehicle"
+	],
+	"f55f": [
+		"bud",
+		"chronic",
+		"drugs",
+		"endica",
+		"endo",
+		"ganja",
+		"marijuana",
+		"mary jane",
+		"pot",
+		"reefer",
+		"sativa",
+		"spliff",
+		"weed",
+		"whacky-tabacky"
+	],
+	"f560": [
+		"accept",
+		"agree",
+		"checkmark",
+		"confirm",
+		"correct",
+		"done",
+		"notice",
+		"notification",
+		"notify",
+		"ok",
+		"select",
+		"success",
+		"tick",
+		"todo"
+	],
+	"f561": [
+		"alcohol",
+		"beverage",
+		"drink",
+		"gin",
+		"glass",
+		"margarita",
+		"martini",
+		"vodka"
+	],
+	"f562": [
+		"attention",
+		"hotel",
+		"receptionist",
+		"service",
+		"support"
+	],
+	"f563": [
+		"baked good",
+		"chips",
+		"chocolate",
+		"eat",
+		"snack",
+		"sweet",
+		"treat"
+	],
+	"f564": [
+		"baked good",
+		"bitten",
+		"chips",
+		"chocolate",
+		"eat",
+		"snack",
+		"sweet",
+		"treat"
+	],
+	"f565": [
+		"design",
+		"frame",
+		"mask",
+		"resize",
+		"shrink"
+	],
+	"f566": [
+		"data",
+		"distance",
+		"speed",
+		"tachometer"
+	],
+	"f567": [
+		"dazed",
+		"dead",
+		"disapprove",
+		"emoticon",
+		"face"
+	],
+	"f568": [
+		"design",
+		"map",
+		"mechanical drawing",
+		"plot",
+		"plotting"
+	],
+	"f569": [
+		"instrument",
+		"music",
+		"percussion",
+		"snare",
+		"sound"
+	],
+	"f56a": [
+		"calypso",
+		"instrument",
+		"music",
+		"percussion",
+		"reggae",
+		"snare",
+		"sound",
+		"steel",
+		"tropical"
+	],
+	"f56b": [
+		"bird",
+		"light",
+		"plucked",
+		"quill",
+		"write"
+	],
+	"f56c": [
+		"agreement",
+		"binding",
+		"document",
+		"legal",
+		"signature"
+	],
+	"f56d": [
+		"document",
+		"export",
+		"save"
+	],
+	"f56e": [
+		"download",
+		"save"
+	],
+	"f56f": [
+		"copy",
+		"document",
+		"send",
+		"upload"
+	],
+	"f570": [
+		"account",
+		"bill",
+		"charge",
+		"document",
+		"payment",
+		"receipt"
+	],
+	"f571": [
+		"$",
+		"account",
+		"bill",
+		"charge",
+		"document",
+		"dollar-sign",
+		"money",
+		"payment",
+		"receipt",
+		"usd"
+	],
+	"f572": [
+		"document",
+		"drugs",
+		"medical",
+		"medicine",
+		"rx"
+	],
+	"f573": [
+		"John Hancock",
+		"contract",
+		"document",
+		"name"
+	],
+	"f574": [
+		"document",
+		"import",
+		"page",
+		"save"
+	],
+	"f575": [
+		"bucket",
+		"color",
+		"paint",
+		"paint bucket"
+	],
+	"f576": [
+		"bucket",
+		"color",
+		"drop",
+		"paint",
+		"paint bucket",
+		"spill"
+	],
+	"f577": [
+		"human",
+		"id",
+		"identification",
+		"lock",
+		"smudge",
+		"touch",
+		"unique",
+		"unlock"
+	],
+	"f578": [
+		"fauna",
+		"gold",
+		"seafood",
+		"swimming"
+	],
+	"f579": [
+		"embarrassed",
+		"emoticon",
+		"face"
+	],
+	"f57a": [
+		"disapprove",
+		"emoticon",
+		"face",
+		"rating",
+		"sad"
+	],
+	"f57b": [
+		"alcohol",
+		"bar",
+		"beverage",
+		"drink",
+		"liquor"
+	],
+	"f57c": [
+		"all",
+		"country",
+		"earth",
+		"global",
+		"gps",
+		"language",
+		"localize",
+		"location",
+		"map",
+		"online",
+		"place",
+		"planet",
+		"translate",
+		"travel",
+		"world"
+	],
+	"f57d": [
+		"all",
+		"country",
+		"earth",
+		"global",
+		"gps",
+		"language",
+		"localize",
+		"location",
+		"map",
+		"online",
+		"place",
+		"planet",
+		"translate",
+		"travel",
+		"world"
+	],
+	"f57e": [
+		"all",
+		"country",
+		"earth",
+		"global",
+		"gps",
+		"language",
+		"localize",
+		"location",
+		"map",
+		"online",
+		"place",
+		"planet",
+		"translate",
+		"travel",
+		"world"
+	],
+	"f57f": [
+		"cringe",
+		"emoticon",
+		"face",
+		"teeth"
+	],
+	"f580": [
+		"emoticon",
+		"face",
+		"laugh",
+		"smile"
+	],
+	"f581": [
+		"emoticon",
+		"face",
+		"laugh",
+		"smile"
+	],
+	"f582": [
+		"emoticon",
+		"face",
+		"laugh",
+		"smile"
+	],
+	"f583": [
+		"embarass",
+		"emoticon",
+		"face",
+		"smile"
+	],
+	"f584": [
+		"emoticon",
+		"face",
+		"love",
+		"smile"
+	],
+	"f585": [
+		"emoticon",
+		"face",
+		"laugh",
+		"smile"
+	],
+	"f586": [
+		"emoticon",
+		"face",
+		"happy",
+		"smile"
+	],
+	"f587": [
+		"emoticon",
+		"face",
+		"star-struck"
+	],
+	"f588": [
+		"LOL",
+		"emoticon",
+		"face"
+	],
+	"f589": [
+		"LOL",
+		"emoticon",
+		"face"
+	],
+	"f58a": [
+		"LOL",
+		"emoticon",
+		"face"
+	],
+	"f58b": [
+		"LOL",
+		"emoticon",
+		"face"
+	],
+	"f58c": [
+		"emoticon",
+		"face",
+		"flirt",
+		"laugh",
+		"smile"
+	],
+	"f58d": [
+		"affordance",
+		"drag",
+		"drop",
+		"grab",
+		"handle"
+	],
+	"f58e": [
+		"affordance",
+		"drag",
+		"drop",
+		"grab",
+		"handle"
+	],
+	"f58f": [
+		"audio",
+		"listen",
+		"music",
+		"sound",
+		"speaker"
+	],
+	"f590": [
+		"audio",
+		"gamer",
+		"gaming",
+		"listen",
+		"live chat",
+		"microphone",
+		"shot caller",
+		"sound",
+		"support",
+		"telemarketer"
+	],
+	"f591": [
+		"edit",
+		"marker",
+		"sharpie",
+		"update",
+		"write"
+	],
+	"f592": [],
+	"f593": [
+		"bath",
+		"jacuzzi",
+		"massage",
+		"sauna",
+		"spa"
+	],
+	"f594": [
+		"building",
+		"inn",
+		"lodging",
+		"motel",
+		"resort",
+		"travel"
+	],
+	"f595": [
+		"blunt",
+		"cannabis",
+		"doobie",
+		"drugs",
+		"marijuana",
+		"roach",
+		"smoke",
+		"smoking",
+		"spliff"
+	],
+	"f596": [
+		"beso",
+		"emoticon",
+		"face",
+		"love",
+		"smooch"
+	],
+	"f597": [
+		"beso",
+		"emoticon",
+		"face",
+		"love",
+		"smooch"
+	],
+	"f598": [
+		"beso",
+		"emoticon",
+		"face",
+		"love",
+		"smooch"
+	],
+	"f599": [
+		"LOL",
+		"emoticon",
+		"face",
+		"laugh",
+		"smile"
+	],
+	"f59a": [
+		"LOL",
+		"emoticon",
+		"face",
+		"happy",
+		"smile"
+	],
+	"f59b": [
+		"LOL",
+		"emoticon",
+		"face",
+		"happy",
+		"smile"
+	],
+	"f59c": [
+		"LOL",
+		"emoticon",
+		"face",
+		"happy",
+		"smile"
+	],
+	"f59d": [
+		"bag",
+		"baggage",
+		"suitcase",
+		"travel"
+	],
+	"f59e": [],
+	"f59f": [
+		"address",
+		"coordinates",
+		"destination",
+		"gps",
+		"localize",
+		"location",
+		"map",
+		"navigation",
+		"paper",
+		"pin",
+		"place",
+		"point of interest",
+		"position",
+		"route",
+		"travel"
+	],
+	"f5a0": [
+		"address",
+		"coordinates",
+		"destination",
+		"gps",
+		"localize",
+		"location",
+		"map",
+		"navigation",
+		"paper",
+		"pin",
+		"place",
+		"point of interest",
+		"position",
+		"route",
+		"travel"
+	],
+	"f5a1": [
+		"design",
+		"edit",
+		"sharpie",
+		"update",
+		"write"
+	],
+	"f5a2": [
+		"award",
+		"ribbon",
+		"star",
+		"trophy"
+	],
+	"f5a3": [],
+	"f5a4": [
+		"emoticon",
+		"face",
+		"neutral",
+		"rating"
+	],
+	"f5a5": [
+		"emoticon",
+		"face",
+		"neutral",
+		"rating"
+	],
+	"f5a6": [
+		"building",
+		"historic",
+		"landmark",
+		"memorable"
+	],
+	"f5a7": [
+		"crush",
+		"culinary",
+		"grind",
+		"medical",
+		"mix",
+		"pharmacy",
+		"prescription",
+		"spices"
+	],
+	"f5a8": [],
+	"f5aa": [
+		"acrylic",
+		"art",
+		"brush",
+		"color",
+		"fill",
+		"paint",
+		"pigment",
+		"watercolor"
+	],
+	"f5ab": [
+		"document",
+		"id",
+		"identification",
+		"issued",
+		"travel"
+	],
+	"f5ac": [
+		"design",
+		"edit",
+		"fountain pen",
+		"update",
+		"write"
+	],
+	"f5ad": [
+		"design",
+		"edit",
+		"fountain pen",
+		"update",
+		"write"
+	],
+	"f5ae": [
+		"design",
+		"draft",
+		"draw",
+		"pencil"
+	],
+	"f5af": [
+		"airplane",
+		"arriving",
+		"destination",
+		"fly",
+		"land",
+		"landing",
+		"location",
+		"mode",
+		"travel",
+		"trip"
+	],
+	"f5b0": [
+		"airplane",
+		"departing",
+		"destination",
+		"fly",
+		"location",
+		"mode",
+		"take off",
+		"taking off",
+		"travel",
+		"trip"
+	],
+	"f5b1": [
+		"drugs",
+		"medical",
+		"medicine",
+		"pharmacy",
+		"rx"
+	],
+	"f5b2": [],
+	"f5b3": [
+		"emoticon",
+		"face",
+		"tear",
+		"tears"
+	],
+	"f5b4": [
+		"emoticon",
+		"face",
+		"tear",
+		"tears"
+	],
+	"f5b5": [],
+	"f5b6": [
+		"airport",
+		"machine",
+		"public-transportation",
+		"transportation",
+		"travel",
+		"vehicle"
+	],
+	"f5b7": [
+		"John Hancock",
+		"cursive",
+		"name",
+		"writing"
+	],
+	"f5b8": [
+		"emoticon",
+		"face",
+		"happy",
+		"positive"
+	],
+	"f5ba": [
+		"clean",
+		"eco-friendly",
+		"energy",
+		"green",
+		"sun"
+	],
+	"f5bb": [
+		"flora",
+		"massage",
+		"mindfulness",
+		"plant",
+		"wellness"
+	],
+	"f5bc": [
+		"Ink",
+		"blob",
+		"blotch",
+		"glob",
+		"stain"
+	],
+	"f5bd": [
+		"Paint",
+		"aerosol",
+		"design",
+		"graffiti",
+		"tag"
+	],
+	"f5be": [],
+	"f5bf": [
+		"art",
+		"certificate",
+		"imprint",
+		"rubber",
+		"seal"
+	],
+	"f5c0": [
+		"achievement",
+		"award",
+		"rating",
+		"score",
+		"star-half-empty",
+		"star-half-full"
+	],
+	"f5c1": [
+		"baggage",
+		"luggage",
+		"move",
+		"suitcase",
+		"travel",
+		"trip"
+	],
+	"f5c2": [
+		"emoticon",
+		"face",
+		"shocked"
+	],
+	"f5c3": [
+		"Pantone",
+		"color",
+		"design",
+		"hue",
+		"palette"
+	],
+	"f5c4": [
+		"athlete",
+		"head",
+		"man",
+		"olympics",
+		"person",
+		"pool",
+		"water"
+	],
+	"f5c5": [
+		"ladder",
+		"recreation",
+		"swim",
+		"water"
+	],
+	"f5c6": [],
+	"f5c7": [
+		"color",
+		"drop",
+		"droplet",
+		"raindrop",
+		"waterdrop"
+	],
+	"f5c8": [
+		"angry",
+		"emoticon",
+		"face",
+		"grumpy",
+		"upset"
+	],
+	"f5c9": [
+		"bicuspid",
+		"dental",
+		"dentist",
+		"molar",
+		"mouth",
+		"teeth"
+	],
+	"f5ca": [
+		"protection",
+		"recreation",
+		"sand",
+		"shade",
+		"summer",
+		"sun"
+	],
+	"f5cb": [
+		"anchors",
+		"lines",
+		"object",
+		"render",
+		"shape"
+	],
+	"f5cc": [],
+	"f5cd": [
+		"anvil",
+		"heavy",
+		"measurement"
+	],
+	"f5ce": [
+		"alcohol",
+		"beverage",
+		"cabernet",
+		"drink",
+		"grapes",
+		"merlot",
+		"sauvignon"
+	],
+	"f5cf": [],
+	"f5d0": [
+		"car",
+		"deodorize",
+		"fresh",
+		"pine",
+		"scent"
+	],
+	"f5d1": [
+		"fall",
+		"fruit",
+		"fuji",
+		"macintosh",
+		"orchard",
+		"seasonal",
+		"vegan"
+	],
+	"f5d2": [
+		"atheism",
+		"chemistry",
+		"ion",
+		"nuclear",
+		"science"
+	],
+	"f5d7": [
+		"calcium",
+		"dog",
+		"skeletal",
+		"skeleton",
+		"tibia"
+	],
+	"f5da": [
+		"flyer",
+		"library",
+		"notebook",
+		"open book",
+		"pamphlet",
+		"reading"
+	],
+	"f5dc": [
+		"cerebellum",
+		"gray matter",
+		"intellect",
+		"medulla oblongata",
+		"mind",
+		"noodle",
+		"wit"
+	],
+	"f5de": [
+		"auto",
+		"automobile",
+		"sedan",
+		"transportation",
+		"travel",
+		"vehicle"
+	],
+	"f5df": [
+		"auto",
+		"electric",
+		"mechanic",
+		"power"
+	],
+	"f5e1": [
+		"accident",
+		"auto",
+		"automobile",
+		"insurance",
+		"sedan",
+		"transportation",
+		"vehicle",
+		"wreck"
+	],
+	"f5e4": [
+		"auto",
+		"automobile",
+		"sedan",
+		"transportation",
+		"travel",
+		"vehicle"
+	],
+	"f5e7": [
+		"electric",
+		"ev",
+		"tesla",
+		"vehicle"
+	],
+	"f5eb": [
+		"map",
+		"navigation",
+		"sign",
+		"turn"
+	],
+	"f5ee": [
+		"anchors",
+		"lines",
+		"object",
+		"render",
+		"shape"
+	],
+	"f5f1": [],
+	"f5f7": [],
+	"f5fa": [],
+	"f5fc": [
+		"computer",
+		"cpu",
+		"dell",
+		"demo",
+		"develop",
+		"device",
+		"mac",
+		"macbook",
+		"machine",
+		"pc"
+	],
+	"f5fd": [
+		"arrange",
+		"develop",
+		"layers",
+		"map",
+		"stack"
+	],
+	"f60f": [],
+	"f610": [
+		"electron",
+		"lens",
+		"optics",
+		"science",
+		"shrink"
+	],
+	"f612": [],
+	"f613": [
+		"auto",
+		"crude",
+		"gasoline",
+		"grease",
+		"lubricate",
+		"petroleum"
+	],
+	"f619": [
+		"crap",
+		"poop",
+		"shit",
+		"smile",
+		"turd"
+	],
+	"f61f": [
+		"blocks",
+		"build",
+		"circle",
+		"square",
+		"triangle"
+	],
+	"f621": [
+		"doctor",
+		"emt",
+		"first aid",
+		"health",
+		"medical"
+	],
+	"f62e": [
+		"bite",
+		"dental",
+		"dentist",
+		"gums",
+		"mouth",
+		"smile",
+		"tooth"
+	],
+	"f62f": [
+		"dental",
+		"dentist",
+		"gums bite",
+		"mouth",
+		"smile",
+		"tooth"
+	],
+	"f630": [
+		"comedy",
+		"perform",
+		"theatre",
+		"tragedy"
+	],
+	"f637": [
+		"direction",
+		"road",
+		"signal",
+		"travel"
+	],
+	"f63b": [
+		"offroad",
+		"vehicle",
+		"wheel"
+	],
+	"f63c": [
+		"cargo",
+		"vehicle"
+	],
+	"f63f": [],
+	"f641": [
+		"advertisement",
+		"media",
+		"newspaper",
+		"promotion",
+		"publicity"
+	],
+	"f642": [],
+	"f644": [
+		"amulet",
+		"copper",
+		"coptic christianity",
+		"copts",
+		"crux ansata",
+		"egypt",
+		"venus"
+	],
+	"f647": [
+		"book",
+		"catholicism",
+		"christianity",
+		"god",
+		"holy"
+	],
+	"f64a": [
+		"alarm",
+		"briefcase",
+		"business socks",
+		"clock",
+		"flight of the conchords",
+		"reminder",
+		"wednesday"
+	],
+	"f64f": [
+		"buildings",
+		"busy",
+		"skyscrapers",
+		"urban",
+		"windows"
+	],
+	"f651": [
+		"bubble",
+		"chat",
+		"commenting",
+		"conversation",
+		"feedback",
+		"message",
+		"money",
+		"note",
+		"notification",
+		"pay",
+		"sms",
+		"speech",
+		"spend",
+		"texting",
+		"transfer"
+	],
+	"f653": [
+		"bubble",
+		"chat",
+		"commenting",
+		"conversation",
+		"feedback",
+		"message",
+		"money",
+		"note",
+		"notification",
+		"pay",
+		"sms",
+		"speech",
+		"spend",
+		"texting",
+		"transfer"
+	],
+	"f654": [
+		"catholicism",
+		"christianity",
+		"church",
+		"jesus"
+	],
+	"f655": [
+		"buddhism",
+		"buddhist",
+		"wheel of dharma"
+	],
+	"f658": [
+		"e-mail",
+		"email",
+		"letter",
+		"mail",
+		"message",
+		"notification",
+		"support"
+	],
+	"f65d": [
+		"archive",
+		"delete",
+		"directory",
+		"document",
+		"file",
+		"negative",
+		"remove"
+	],
+	"f65e": [
+		"add",
+		"archive",
+		"create",
+		"directory",
+		"document",
+		"file",
+		"new",
+		"positive"
+	],
+	"f662": [
+		"filter",
+		"money",
+		"options",
+		"separate",
+		"sort"
+	],
+	"f664": [
+		"building",
+		"entrance",
+		"hinduism",
+		"temple",
+		"tower"
+	],
+	"f665": [
+		"amulet",
+		"christianity",
+		"islam",
+		"jewish",
+		"judaism",
+		"muslim",
+		"protection"
+	],
+	"f666": [
+		"bahai",
+		"bahá'í",
+		"star"
+	],
+	"f669": [
+		"crest",
+		"force",
+		"sith",
+		"skywalker",
+		"star wars",
+		"yoda"
+	],
+	"f66a": [
+		"book",
+		"force",
+		"jedi",
+		"sith",
+		"star wars",
+		"yoda"
+	],
+	"f66b": [
+		"building",
+		"cube",
+		"islam",
+		"muslim"
+	],
+	"f66d": [
+		"chakkar",
+		"sikh",
+		"sikhism",
+		"sword"
+	],
+	"f66f": [
+		"building",
+		"historic",
+		"memorable",
+		"monument",
+		"politics"
+	],
+	"f674": [
+		"archive",
+		"envelope",
+		"letter",
+		"post office",
+		"postal",
+		"postcard",
+		"send",
+		"stamp",
+		"usps"
+	],
+	"f676": [
+		"candle",
+		"hanukkah",
+		"jewish",
+		"judaism",
+		"light"
+	],
+	"f678": [
+		"building",
+		"islam",
+		"landmark",
+		"muslim"
+	],
+	"f679": [
+		"buddhism",
+		"hinduism",
+		"jainism",
+		"mantra"
+	],
+	"f67b": [
+		"agnosticism",
+		"atheism",
+		"flying spaghetti monster",
+		"fsm"
+	],
+	"f67c": [
+		"serenity",
+		"tranquility",
+		"truce",
+		"war"
+	],
+	"f67f": [
+		"building",
+		"church",
+		"holy",
+		"mosque",
+		"synagogue"
+	],
+	"f681": [
+		"results",
+		"survey",
+		"trend",
+		"vote",
+		"voting"
+	],
+	"f682": [
+		"results",
+		"survey",
+		"trend",
+		"vote",
+		"voting"
+	],
+	"f683": [
+		"kneel",
+		"preach",
+		"religion",
+		"worship"
+	],
+	"f684": [
+		"kneel",
+		"preach",
+		"religion",
+		"worship"
+	],
+	"f687": [
+		"book",
+		"islam",
+		"muslim",
+		"religion"
+	],
+	"f688": [
+		"bigger",
+		"enlarge",
+		"find",
+		"magnify",
+		"money",
+		"preview",
+		"zoom"
+	],
+	"f689": [
+		"bigger",
+		"enlarge",
+		"find",
+		"magnify",
+		"preview",
+		"zoom"
+	],
+	"f696": [
+		"business socks",
+		"business time",
+		"clothing",
+		"feet",
+		"flight of the conchords",
+		"wednesday"
+	],
+	"f698": [
+		"arithmetic",
+		"calculus",
+		"division",
+		"math"
+	],
+	"f699": [
+		"islam",
+		"muslim",
+		"religion"
+	],
+	"f69a": [
+		"jewish",
+		"judaism",
+		"religion"
+	],
+	"f69b": [
+		"building",
+		"jewish",
+		"judaism",
+		"religion",
+		"star of david",
+		"temple"
+	],
+	"f69d": [],
+	"f6a0": [
+		"book",
+		"jewish",
+		"judaism",
+		"religion"
+	],
+	"f6a1": [
+		"building",
+		"shintoism"
+	],
+	"f6a7": [
+		"buddhism",
+		"buddhist",
+		"building",
+		"monastery"
+	],
+	"f6a9": [
+		"audio",
+		"music",
+		"quiet",
+		"sound",
+		"speaker"
+	],
+	"f6ad": [
+		"daoism",
+		"opposites",
+		"taoism"
+	],
+	"f6af": [
+		"Dungeons & Dragons",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"game",
+		"gaming",
+		"tabletop"
+	],
+	"f6b6": [
+		"appliance",
+		"cocktail",
+		"communication",
+		"fantasy",
+		"milkshake",
+		"mixer",
+		"puree",
+		"silly",
+		"smoothie"
+	],
+	"f6b7": [
+		"Dungeons & Dragons",
+		"crossbones",
+		"d&d",
+		"dark arts",
+		"death",
+		"dnd",
+		"documentation",
+		"evil",
+		"fantasy",
+		"halloween",
+		"holiday",
+		"necronomicon",
+		"read",
+		"skull",
+		"spell"
+	],
+	"f6bb": [
+		"camping",
+		"fall",
+		"outdoors",
+		"teepee",
+		"tent",
+		"tipi"
+	],
+	"f6be": [
+		"feline",
+		"halloween",
+		"holiday",
+		"kitten",
+		"kitty",
+		"meow",
+		"pet"
+	],
+	"f6c0": [
+		"furniture",
+		"seat",
+		"sit"
+	],
+	"f6c3": [
+		"crescent",
+		"evening",
+		"lunar",
+		"night",
+		"partly cloudy",
+		"sky"
+	],
+	"f6c4": [
+		"clear",
+		"day",
+		"daytime",
+		"fall",
+		"outdoors",
+		"overcast",
+		"partly cloudy"
+	],
+	"f6c9": [
+		"Dungeons & Dragons",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"game",
+		"gaming",
+		"tabletop"
+	],
+	"f6ca": [
+		"Dungeons & Dragons",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"gaming",
+		"tabletop"
+	],
+	"f6cc": [],
+	"f6cf": [
+		"Dungeons & Dragons",
+		"chance",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f6d1": [
+		"Dungeons & Dragons",
+		"chance",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"gambling",
+		"game",
+		"roll"
+	],
+	"f6d3": [
+		"animal",
+		"canine",
+		"fauna",
+		"mammal",
+		"pet",
+		"pooch",
+		"puppy",
+		"woof"
+	],
+	"f6d5": [
+		"Dungeons & Dragons",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"fire",
+		"lizard",
+		"serpent"
+	],
+	"f6d7": [
+		"bone",
+		"chicken",
+		"leg",
+		"meat",
+		"poultry",
+		"turkey"
+	],
+	"f6d9": [
+		"Dungeons & Dragons",
+		"building",
+		"d&d",
+		"dnd",
+		"door",
+		"entrance",
+		"fantasy",
+		"gate"
+	],
+	"f6dc": [
+		"Dungeons & Dragons",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"game",
+		"gaming",
+		"tabletop"
+	],
+	"f6dd": [
+		"document",
+		"excel",
+		"numbers",
+		"spreadsheets",
+		"table"
+	],
+	"f6de": [
+		"Dungeons & Dragons",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"hand",
+		"ki",
+		"monk",
+		"resist",
+		"strength",
+		"unarmed combat"
+	],
+	"f6e2": [
+		"apparition",
+		"blinky",
+		"clyde",
+		"floating",
+		"halloween",
+		"holiday",
+		"inky",
+		"pinky",
+		"spirit"
+	],
+	"f6e3": [
+		"admin",
+		"fix",
+		"repair",
+		"settings",
+		"tool"
+	],
+	"f6e6": [
+		"candle",
+		"hanukkah",
+		"jewish",
+		"judaism",
+		"light"
+	],
+	"f6e8": [
+		"Dungeons & Dragons",
+		"accessory",
+		"buckle",
+		"clothing",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"halloween",
+		"head",
+		"holiday",
+		"mage",
+		"magic",
+		"pointy",
+		"witch"
+	],
+	"f6ec": [
+		"activity",
+		"backpack",
+		"fall",
+		"fitness",
+		"outdoors",
+		"person",
+		"seasonal",
+		"walking"
+	],
+	"f6ed": [
+		"animal",
+		"fauna",
+		"hippopotamus",
+		"hungry",
+		"mammal"
+	],
+	"f6f0": [
+		"equus",
+		"fauna",
+		"mammmal",
+		"mare",
+		"neigh",
+		"pony"
+	],
+	"f6f1": [
+		"building",
+		"devastation",
+		"disaster",
+		"home",
+		"insurance"
+	],
+	"f6f2": [
+		"currency",
+		"money",
+		"ukraine",
+		"ukrainian"
+	],
+	"f6fa": [
+		"carnivale",
+		"costume",
+		"disguise",
+		"halloween",
+		"secret",
+		"super hero"
+	],
+	"f6fc": [
+		"glacier",
+		"hiking",
+		"hill",
+		"landscape",
+		"travel",
+		"view"
+	],
+	"f6ff": [
+		"computer",
+		"connect",
+		"ethernet",
+		"internet",
+		"intranet"
+	],
+	"f700": [
+		"animal",
+		"badger",
+		"fauna",
+		"fur",
+		"mammal",
+		"marten"
+	],
+	"f704": [
+		"Dungeons & Dragons",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"game",
+		"gaming",
+		"pax",
+		"tabletop"
+	],
+	"f70b": [
+		"Dungeons & Dragons",
+		"Gollum",
+		"band",
+		"binding",
+		"d&d",
+		"dnd",
+		"engagement",
+		"fantasy",
+		"gold",
+		"jewelry",
+		"marriage",
+		"precious"
+	],
+	"f70c": [
+		"exercise",
+		"health",
+		"jog",
+		"person",
+		"run",
+		"sport",
+		"sprint"
+	],
+	"f70e": [
+		"Dungeons & Dragons",
+		"announcement",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"paper",
+		"script"
+	],
+	"f714": [
+		"Dungeons & Dragons",
+		"alert",
+		"bones",
+		"d&d",
+		"danger",
+		"dead",
+		"deadly",
+		"death",
+		"dnd",
+		"fantasy",
+		"halloween",
+		"holiday",
+		"jolly-roger",
+		"pirate",
+		"poison",
+		"skeleton",
+		"warning"
+	],
+	"f715": [
+		"cancel",
+		"close",
+		"mute",
+		"off",
+		"stop",
+		"x"
+	],
+	"f717": [
+		"arachnid",
+		"bug",
+		"charlotte",
+		"crawl",
+		"eight",
+		"halloween"
+	],
+	"f71e": [
+		"bathroom",
+		"halloween",
+		"holiday",
+		"lavatory",
+		"prank",
+		"restroom",
+		"roll"
+	],
+	"f722": [
+		"agriculture",
+		"farm",
+		"vehicle"
+	],
+	"f728": [
+		"cast",
+		"injury",
+		"ouch",
+		"patient",
+		"person",
+		"sling"
+	],
+	"f729": [
+		"3d",
+		"augment",
+		"google",
+		"reality",
+		"virtual"
+	],
+	"f72e": [
+		"air",
+		"blow",
+		"breeze",
+		"fall",
+		"seasonal",
+		"weather"
+	],
+	"f72f": [
+		"alcohol",
+		"beverage",
+		"cabernet",
+		"drink",
+		"glass",
+		"grapes",
+		"merlot",
+		"sauvignon"
+	],
+	"f730": [
+		"Dungeons & Dragons",
+		"d&d",
+		"dnd",
+		"fantasy",
+		"game",
+		"gaming",
+		"tabletop"
+	],
+	"f731": [],
+	"f73b": [
+		"FLDSMDFR",
+		"food",
+		"spaghetti",
+		"storm"
+	],
+	"f73c": [
+		"crescent",
+		"evening",
+		"lunar",
+		"night",
+		"partly cloudy",
+		"precipitation",
+		"rain",
+		"sky",
+		"storm"
+	],
+	"f73d": [
+		"precipitation",
+		"rain",
+		"sky",
+		"storm"
+	],
+	"f740": [
+		"precipitation",
+		"rain",
+		"sky",
+		"storm"
+	],
+	"f743": [
+		"day",
+		"overcast",
+		"precipitation",
+		"storm",
+		"summer",
+		"sunshower"
+	],
+	"f747": [
+		"american",
+		"democratic party",
+		"donkey",
+		"election",
+		"left",
+		"left-wing",
+		"liberal",
+		"politics",
+		"usa"
+	],
+	"f74d": [
+		"betsy ross",
+		"country",
+		"old glory",
+		"stars",
+		"stripes",
+		"symbol"
+	],
+	"f753": [
+		"armageddon",
+		"asteroid",
+		"comet",
+		"shooting star",
+		"space"
+	],
+	"f756": [
+		"changing",
+		"changing room",
+		"election",
+		"human",
+		"person",
+		"vote",
+		"voting"
+	],
+	"f75a": [
+		"bolt",
+		"cloud",
+		"euphemism",
+		"lightning",
+		"mess",
+		"poop",
+		"shit",
+		"turd"
+	],
+	"f75b": [
+		"gold",
+		"leprechaun",
+		"prism",
+		"rain",
+		"sky"
+	],
+	"f75d": [],
+	"f75e": [
+		"american",
+		"conservative",
+		"election",
+		"elephant",
+		"politics",
+		"republican party",
+		"right",
+		"right-wing",
+		"usa"
+	],
+	"f75f": [
+		"dragon",
+		"fog",
+		"haze",
+		"pollution",
+		"smoke",
+		"weather"
+	],
+	"f769": [
+		"cook",
+		"mercury",
+		"summer",
+		"thermometer",
+		"warm"
+	],
+	"f76b": [
+		"cold",
+		"cool",
+		"mercury",
+		"thermometer",
+		"winter"
+	],
+	"f772": [
+		"accept",
+		"cast",
+		"election",
+		"politics",
+		"positive",
+		"yes"
+	],
+	"f773": [
+		"lake",
+		"liquid",
+		"ocean",
+		"sea",
+		"swim",
+		"wet"
+	],
+	"f778": [
+		"acrobat",
+		"app",
+		"design",
+		"illustrator",
+		"indesign",
+		"photoshop"
+	],
+	"f77a": [],
+	"f77b": [],
+	"f77c": [
+		"child",
+		"diaper",
+		"doll",
+		"human",
+		"infant",
+		"kid",
+		"offspring",
+		"person",
+		"sprout"
+	],
+	"f77d": [
+		"buggy",
+		"carrier",
+		"infant",
+		"push",
+		"stroller",
+		"transportation",
+		"walk",
+		"wheels"
+	],
+	"f780": [
+		"danger",
+		"dangerous",
+		"hazmat",
+		"medical",
+		"radioactive",
+		"toxic",
+		"waste",
+		"zombie"
+	],
+	"f781": [
+		"journal",
+		"log",
+		"online",
+		"personal",
+		"post",
+		"web 2.0",
+		"wordpress",
+		"writing"
+	],
+	"f783": [
+		"date",
+		"detail",
+		"event",
+		"focus",
+		"schedule",
+		"single day",
+		"time",
+		"today",
+		"when"
+	],
+	"f784": [
+		"date",
+		"detail",
+		"event",
+		"focus",
+		"schedule",
+		"single week",
+		"time",
+		"today",
+		"when"
+	],
+	"f785": [
+		"canada",
+		"flag",
+		"flora",
+		"nature",
+		"plant"
+	],
+	"f786": [
+		"candy",
+		"christmas",
+		"holiday",
+		"mint",
+		"peppermint",
+		"striped",
+		"xmas"
+	],
+	"f787": [
+		"bugs bunny",
+		"orange",
+		"vegan",
+		"vegetable"
+	],
+	"f788": [
+		"buy",
+		"cha-ching",
+		"change",
+		"checkout",
+		"commerce",
+		"leaerboard",
+		"machine",
+		"pay",
+		"payment",
+		"purchase",
+		"store"
+	],
+	"f789": [
+		"linux",
+		"operating system",
+		"os"
+	],
+	"f78c": [
+		"collapse",
+		"fullscreen",
+		"minimize",
+		"move",
+		"resize",
+		"shrink",
+		"smaller"
+	],
+	"f78d": [
+		"atlassian"
+	],
+	"f790": [
+		"Dalsey",
+		"Hillblom and Lynn",
+		"german",
+		"package",
+		"shipping"
+	],
+	"f791": [],
+	"f793": [
+		"alley",
+		"bin",
+		"commercial",
+		"trash",
+		"waste"
+	],
+	"f794": [
+		"alley",
+		"bin",
+		"commercial",
+		"danger",
+		"dangerous",
+		"euphemism",
+		"flame",
+		"heat",
+		"hot",
+		"trash",
+		"waste"
+	],
+	"f796": [
+		"cable",
+		"cat 5",
+		"cat 6",
+		"connection",
+		"hardware",
+		"internet",
+		"network",
+		"wired"
+	],
+	"f797": [
+		"Federal Express",
+		"package",
+		"shipping"
+	],
+	"f798": [
+		"linux",
+		"operating system",
+		"os"
+	],
+	"f799": [
+		"app",
+		"design",
+		"interface"
+	],
+	"f79c": [
+		"christmas",
+		"generosity",
+		"giving",
+		"holiday",
+		"party",
+		"present",
+		"wrapped",
+		"xmas"
+	],
+	"f79f": [
+		"alcohol",
+		"bar",
+		"beverage",
+		"celebration",
+		"champagne",
+		"clink",
+		"drink",
+		"holiday",
+		"new year's eve",
+		"party",
+		"toast"
+	],
+	"f7a0": [
+		"alcohol",
+		"bar",
+		"beverage",
+		"bourbon",
+		"drink",
+		"liquor",
+		"neat",
+		"rye",
+		"scotch",
+		"whisky"
+	],
+	"f7a2": [
+		"all",
+		"country",
+		"earth",
+		"global",
+		"gps",
+		"language",
+		"localize",
+		"location",
+		"map",
+		"online",
+		"place",
+		"planet",
+		"translate",
+		"travel",
+		"world"
+	],
+	"f7a4": [
+		"affordance",
+		"drag",
+		"drop",
+		"grab",
+		"handle"
+	],
+	"f7a5": [
+		"affordance",
+		"drag",
+		"drop",
+		"grab",
+		"handle"
+	],
+	"f7a6": [
+		"acoustic",
+		"instrument",
+		"music",
+		"rock",
+		"rock and roll",
+		"song",
+		"strings"
+	],
+	"f7a9": [
+		"breakup",
+		"crushed",
+		"dislike",
+		"dumped",
+		"grief",
+		"love",
+		"lovesick",
+		"relationship",
+		"sad"
+	],
+	"f7aa": [
+		"catwoman",
+		"christmas",
+		"decoration",
+		"flora",
+		"halle",
+		"holiday",
+		"ororo munroe",
+		"plant",
+		"storm",
+		"xmas"
+	],
+	"f7ab": [
+		"equus",
+		"fauna",
+		"mammmal",
+		"mare",
+		"neigh",
+		"pony"
+	],
+	"f7ad": [
+		"cold",
+		"frozen",
+		"hanging",
+		"ice",
+		"seasonal",
+		"sharp"
+	],
+	"f7ae": [
+		"dome",
+		"dwelling",
+		"eskimo",
+		"home",
+		"house",
+		"ice",
+		"snow"
+	],
+	"f7af": [
+		"app",
+		"customer",
+		"messenger"
+	],
+	"f7b0": [
+		"app",
+		"design",
+		"interface"
+	],
+	"f7b1": [
+		"atlassian"
+	],
+	"f7b3": [],
+	"f7b5": [
+		"clothing",
+		"cold",
+		"glove",
+		"hands",
+		"knitted",
+		"seasonal",
+		"warmth"
+	],
+	"f7b6": [
+		"caliente",
+		"cocoa",
+		"coffee",
+		"cup",
+		"drink",
+		"holiday",
+		"hot chocolate",
+		"steam",
+		"tea",
+		"warmth"
+	],
+	"f7b9": [
+		"danger",
+		"dangerous",
+		"deadly",
+		"hazard",
+		"nuclear",
+		"radioactive",
+		"warning"
+	],
+	"f7ba": [
+		"danger",
+		"dangerous",
+		"deadly",
+		"hazard",
+		"nuclear",
+		"radioactive",
+		"warning"
+	],
+	"f7bb": [],
+	"f7bc": [
+		"linux",
+		"operating system",
+		"os"
+	],
+	"f7bd": [
+		"bathroom",
+		"john",
+		"loo",
+		"potty",
+		"washroom",
+		"waste",
+		"wc"
+	],
+	"f7bf": [
+		"communications",
+		"hardware",
+		"orbit",
+		"space"
+	],
+	"f7c0": [
+		"SETI",
+		"communications",
+		"hardware",
+		"receiver",
+		"saucer",
+		"signal"
+	],
+	"f7c2": [
+		"image",
+		"memory",
+		"photo",
+		"save"
+	],
+	"f7c4": [
+		"hard drive",
+		"hardware",
+		"portable",
+		"storage",
+		"technology",
+		"tiny"
+	],
+	"f7c5": [
+		"activity",
+		"figure skating",
+		"fitness",
+		"ice",
+		"person",
+		"winter"
+	],
+	"f7c6": [
+		"app",
+		"design",
+		"interface"
+	],
+	"f7c9": [
+		"activity",
+		"downhill",
+		"fast",
+		"fitness",
+		"olympics",
+		"outdoors",
+		"person",
+		"seasonal",
+		"slalom"
+	],
+	"f7ca": [
+		"activity",
+		"cross country",
+		"fitness",
+		"outdoors",
+		"person",
+		"seasonal"
+	],
+	"f7cc": [
+		"christmas",
+		"claus",
+		"fly",
+		"holiday",
+		"santa",
+		"sled",
+		"snow",
+		"xmas"
+	],
+	"f7cd": [
+		"chat",
+		"conversation",
+		"message",
+		"mobile",
+		"notification",
+		"phone",
+		"sms",
+		"texting"
+	],
+	"f7ce": [
+		"activity",
+		"fitness",
+		"olympics",
+		"outdoors",
+		"person"
+	],
+	"f7d0": [
+		"decoration",
+		"frost",
+		"frosty",
+		"holiday"
+	],
+	"f7d2": [
+		"clean up",
+		"cold",
+		"road",
+		"storm",
+		"winter"
+	],
+	"f7d3": [],
+	"f7d6": [
+		"linux",
+		"operating system",
+		"os"
+	],
+	"f7d7": [
+		"currency",
+		"kazakhstan",
+		"money",
+		"price"
+	],
+	"f7d8": [
+		"bathroom",
+		"flush",
+		"john",
+		"loo",
+		"pee",
+		"plumbing",
+		"poop",
+		"porcelain",
+		"potty",
+		"restroom",
+		"throne",
+		"washroom",
+		"waste",
+		"wc"
+	],
+	"f7d9": [
+		"admin",
+		"fix",
+		"repair",
+		"screwdriver",
+		"settings",
+		"tools",
+		"wrench"
+	],
+	"f7da": [
+		"crossing",
+		"machine",
+		"mountains",
+		"seasonal",
+		"transportation"
+	],
+	"f7df": [
+		"linux",
+		"operating system",
+		"os"
+	],
+	"f7e0": [
+		"United Parcel Service",
+		"package",
+		"shipping"
+	],
+	"f7e1": [
+		"american",
+		"package",
+		"shipping",
+		"usa"
+	],
+	"f7e3": [],
+	"f7e4": [
+		"burn",
+		"caliente",
+		"flame",
+		"heat",
+		"hot",
+		"popular"
+	],
+	"f7e5": [
+		"blt",
+		"breakfast",
+		"ham",
+		"lard",
+		"meat",
+		"pancetta",
+		"pork",
+		"rasher"
+	],
+	"f7e6": [
+		"diary",
+		"documentation",
+		"health",
+		"history",
+		"journal",
+		"library",
+		"read",
+		"record"
+	],
+	"f7ec": [
+		"bake",
+		"bakery",
+		"baking",
+		"dough",
+		"flour",
+		"gluten",
+		"grain",
+		"sandwich",
+		"sourdough",
+		"toast",
+		"wheat",
+		"yeast"
+	],
+	"f7ef": [
+		"cheddar",
+		"curd",
+		"gouda",
+		"melt",
+		"parmesan",
+		"sandwich",
+		"swiss",
+		"wedge"
+	],
+	"f7f2": [
+		"doctor",
+		"general practitioner",
+		"hospital",
+		"infirmary",
+		"medicine",
+		"office",
+		"outpatient"
+	],
+	"f7f5": [
+		"advice",
+		"bubble",
+		"chat",
+		"commenting",
+		"conversation",
+		"diagnose",
+		"feedback",
+		"message",
+		"note",
+		"notification",
+		"prescription",
+		"sms",
+		"speech",
+		"texting"
+	],
+	"f7f7": [
+		"cane",
+		"injury",
+		"mobility",
+		"wheelchair"
+	],
+	"f7fb": [
+		"breakfast",
+		"chicken",
+		"easter",
+		"shell",
+		"yolk"
+	],
+	"f805": [
+		"bacon",
+		"beef",
+		"burger",
+		"burger king",
+		"cheeseburger",
+		"fast food",
+		"grill",
+		"ground beef",
+		"mcdonalds",
+		"sandwich"
+	],
+	"f806": [
+		"flip the bird",
+		"gesture",
+		"hate",
+		"rude"
+	],
+	"f807": [
+		"construction",
+		"hardhat",
+		"helmet",
+		"safety"
+	],
+	"f80f": [
+		"bun",
+		"chili",
+		"frankfurt",
+		"frankfurter",
+		"kosher",
+		"polish",
+		"sandwich",
+		"sausage",
+		"vienna",
+		"weiner"
+	],
+	"f810": [
+		"chocolate",
+		"cone",
+		"dessert",
+		"frozen",
+		"scoop",
+		"sorbet",
+		"vanilla",
+		"yogurt"
+	],
+	"f812": [
+		"computer",
+		"device",
+		"ehr",
+		"electronic health records",
+		"history"
+	],
+	"f815": [
+		"beeper",
+		"cellphone",
+		"communication"
+	],
+	"f816": [
+		"buffalo wings",
+		"capsicum",
+		"chili",
+		"chilli",
+		"habanero",
+		"jalapeno",
+		"mexican",
+		"spicy",
+		"tabasco",
+		"vegetable"
+	],
+	"f818": [
+		"cheese",
+		"chicago",
+		"italian",
+		"mozzarella",
+		"new york",
+		"pepperoni",
+		"pie",
+		"slice",
+		"teenage mutant ninja turtles",
+		"tomato"
+	],
+	"f829": [
+		"back",
+		"control z",
+		"oops",
+		"undo"
+	],
+	"f82a": [
+		"back",
+		"control z",
+		"oops",
+		"undo"
+	],
+	"f82f": [
+		"doctor",
+		"midwife",
+		"practitioner",
+		"surgeon"
+	],
+	"f834": [],
+	"f835": [],
+	"f836": [],
+	"f837": [],
+	"f838": [],
+	"f839": [],
+	"f83a": [],
+	"f83b": [],
+	"f83c": [],
+	"f83d": [],
+	"f83e": [
+		"frequency",
+		"pulse",
+		"signal"
+	],
+	"f83f": [],
+	"f840": []
+}
