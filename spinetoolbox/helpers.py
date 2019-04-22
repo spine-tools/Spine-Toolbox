@@ -402,6 +402,7 @@ class IconManager:
         self.icon_count = len(self.svg_library)
 
     def icon_color_code(self, display_icon):
+        """Take a display icon integer and return an equivalent tuple of icon and color code."""
         if type(display_icon) is not int or display_icon < 0:
             return 0, 0
         icon_code = display_icon & 255
@@ -412,6 +413,7 @@ class IconManager:
         return icon_code, color_code
 
     def display_icon(self, icon_code, color_code):
+        """Take tuple of icon and color codes, and return equivalent integer."""
         return icon_code + (color_code << 8)
 
     def set_object_pixmaps(self, object_class_list):
