@@ -472,10 +472,10 @@ class IconManager:
             if j % 2 == 0:
                 y = 0
             else:
-                y = - 0.75 * pixmap_item.boundingRect().height()
+                y = - 0.875 * 0.75 * pixmap_item.boundingRect().height()
                 pixmap_item.setZValue(-1)
             pixmap_item.setPos(x, y)
-            x += 0.5 * pixmap_item.boundingRect().width()
+            x += 0.875 * 0.5 * pixmap_item.boundingRect().width()
         pixmap = QPixmap(scene.itemsBoundingRect().toRect().size())
         pixmap.fill(Qt.transparent)
         painter = QPainter(pixmap)
