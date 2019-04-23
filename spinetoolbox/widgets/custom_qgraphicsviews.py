@@ -327,10 +327,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if dst_item.item_type == "View":
             dst_item.view_refresh_signal.emit()
         # Add edge (connection link) to a dag as well
-        if src_name == dst_name:
-            logging.debug("Adding self-loops not implemented to dags")
-            return
-        self._toolbox.project().dag_handler.unify_graphs(src_name, dst_name)
+        self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
     def remove_link(self, index):
         """Removes link between source and sink items on scene and
@@ -350,10 +347,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if dst_item.item_type == "View":
             dst_item.view_refresh_signal.emit()
         # Remove edge (connection link) from dag
-        if src_name == dst_name:
-            logging.debug("Self-loops not implemented to dags")
-            return
-        self._toolbox.project().dag_handler.remove_dag_edge(src_name, dst_name)
+        self._toolbox.project().dag_handler.remove_graph_edge(src_name, dst_name)
 
     def take_link(self, index):
         """Remove link, then start drawing another one from the same source connector."""
@@ -393,7 +387,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     self.scene().addItem(link)
                     self._connection_model.setData(index, link)
                     # Add edge (connection link) to dag handler as well
-                    self._toolbox.project().dag_handler.unify_graphs(src_name, dst_name)
+                    self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
                 else:
                     # logging.debug("Cell ({0},{1}):{2} -> No link".format(row, column, data))
                     self._connection_model.setData(index, None)

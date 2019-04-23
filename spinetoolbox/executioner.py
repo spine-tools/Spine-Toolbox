@@ -59,7 +59,7 @@ class DirectedGraphHandler:
         dag.add_node(node_name)
         self._dags.append(dag)
 
-    def unify_graphs(self, src_node, dst_node):
+    def add_graph_edge(self, src_node, dst_node):
         """Makes a union between graphs that contain the
         given nodes and saves a reference of the resulting
         graph. Removes the graphs that were unionized.
@@ -70,9 +70,14 @@ class DirectedGraphHandler:
         """
         src_graph = self.dag_with_node(src_node)
         dst_graph = self.dag_with_node(dst_node)
+        if src_node == dst_node:
+            # Add self-loop to src graph and return
+            logging.debug("Adding self-loop for node {0}".format(src_node))
+            src_graph.add_edge(src_node, dst_node)
+            return
         common_nodes = src_graph.nodes() & dst_graph.nodes()
         if len(common_nodes) > 0:
-            logging.debug("Common nodes detected:{0}".format(common_nodes))  # TODO: Does not work
+            logging.debug("Common nodes detected:{0}".format(common_nodes))  # TODO: Does not work?
             if src_graph.nodes() == dst_graph.nodes():
                 logging.debug("src_graph==dst_graph. Adding edge")
                 # Just add edge to src_graph
@@ -92,7 +97,7 @@ class DirectedGraphHandler:
         self.remove_dag(dst_graph)
         return
 
-    def remove_dag_edge(self, src_node, dst_node):
+    def remove_graph_edge(self, src_node, dst_node):
         """Removes edge from a directed graph.
         # TODO: Handle case when graph is not a dag (has a cycle) and the offending edge is removed
 
@@ -103,6 +108,11 @@ class DirectedGraphHandler:
             dst_node (str): Destination project item node name
         """
         dag = self.dag_with_edge(src_node, dst_node)
+        if src_node == dst_node:
+            # Removing self-loop
+            logging.debug("Removing self-loop from node {0}".format(src_node))
+            dag.remove_edge(src_node, dst_node)
+            return
         dag_copy = copy.deepcopy(dag)
         logging.debug("dag nodes:{0} edges:{1}".format(dag.nodes(), dag.edges()))
         logging.debug("Removing edge {0}->{1}".format(src_node, dst_node))
