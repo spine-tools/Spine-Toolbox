@@ -1460,9 +1460,9 @@ class TreeViewForm(DataStoreForm):
     def update_selected_relationship_class_ids(self):
         """Update set of selected relationship class id."""
         rel_cls_indexes = self.selected_obj_tree_indexes.get('relationship_class', set())
-        rel_cls_indexes.update(self.selected_rel_tree_indexes.get('relationship_class', set()))
+        rel_cls_indexes = rel_cls_indexes.union(self.selected_rel_tree_indexes.get('relationship_class', set()))
         rel_indexes = self.selected_obj_tree_indexes.get('relationship', set())
-        rel_indexes.update(self.selected_rel_tree_indexes.get('relationship', set()))
+        rel_indexes = rel_indexes.union(self.selected_rel_tree_indexes.get('relationship', set()))
         self.selected_relationship_class_ids = set(
             ind.data(Qt.UserRole + 1)['id'] for ind in rel_cls_indexes)
         self.selected_relationship_class_ids.update(set(
@@ -1472,7 +1472,7 @@ class TreeViewForm(DataStoreForm):
         """Update set of selected object id list."""
         self.selected_object_id_lists = {}
         rel_indexes = self.selected_obj_tree_indexes.get('relationship', set())
-        rel_indexes.update(self.selected_rel_tree_indexes.get('relationship', set()))
+        rel_indexes = rel_indexes.union(self.selected_rel_tree_indexes.get('relationship', set()))
         for ind in rel_indexes:
             relationship_class_id = ind.data(Qt.UserRole + 1)['class_id']
             object_id_list = ind.data(Qt.UserRole + 1)['object_id_list']
