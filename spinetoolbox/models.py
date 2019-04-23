@@ -1433,10 +1433,7 @@ class RelationshipTreeModel(QStandardItemModel):
     def build_tree(self, database):
         """Build the first level of the tree"""
         self.clear()
-        self._fetched = {
-            "relationship_class": set(),
-            "relationship": set()
-        }
+        self._fetched_relationship_class_id = set()
         self.root_item = QStandardItem(database)
         self.root_item.setData('root', Qt.UserRole)
         icon = QIcon(":/symbols/Spine_symbol.png")
