@@ -477,6 +477,16 @@ class DataStoreForm(QMainWindow):
             return
         self.icon_mngr.setup_object_pixmaps(object_classes)
         self.object_tree_model.add_object_classes(object_classes)
+        if self.selected_object_class_ids:
+            # Recompute self.selected_obj_tree_indexes['object_class']
+            # since some new classes might have been inserted above those indexes
+            # NOTE: This is only needed for object classes, since all other items are inserted at the bottom
+            self.selected_obj_tree_indexes['object_class'] = sel_obj_cls_indexes = set()
+            root_index = self.object_tree_model.indexFromItem(self.object_tree_model.root_item)
+            for i in range(self.object_tree_model.root_item.rowCount()):
+                obj_cls_index = self.object_tree_model.index(i, 0, root_index)
+                if obj_cls_index.data(Qt.UserRole + 1)['id'] in self.selected_object_class_ids:
+                    sel_obj_cls_indexes.add(obj_cls_index)
         self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
@@ -1310,7 +1320,7 @@ class TreeViewForm(DataStoreForm):
             self.relationship_selection_available.emit(
                 len(self.selected_obj_tree_indexes.get('relationship', [])) > 0)
             self.clear_selections(self.ui.treeView_object)
-            self.update_filter(self.selected_obj_tree_indexes)
+            self.update_filter()
 
     @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_tree_selection_changed")
@@ -1331,7 +1341,7 @@ class TreeViewForm(DataStoreForm):
             self.relationship_selection_available.emit(
                 len(self.selected_rel_tree_indexes.get('relationship', [])) > 0)
             self.clear_selections(self.ui.treeView_relationship)
-            self.update_filter(self.selected_rel_tree_indexes)
+            self.update_filter()
 
     def set_default_parameter_rows(self, selection):
         """Set default rows for parameter models according to selection in object tree."""
@@ -1406,63 +1416,64 @@ class TreeViewForm(DataStoreForm):
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
 
-    def update_filter(self, tree_indexes):
+    def update_filter(self):
         """Update filters on parameter models according to selected and deselected object tree indexes."""
-        self.update_selected_object_class_ids(tree_indexes)
-        self.update_selected_object_ids(tree_indexes)
-        self.update_selected_relationship_class_ids(tree_indexes)
-        self.update_selected_object_id_lists(tree_indexes)
+        self.update_selected_object_class_ids()
+        self.update_selected_object_ids()
+        self.update_selected_relationship_class_ids()
+        self.update_selected_object_id_lists()
         self.do_update_filter()
 
-    def update_selected_object_class_ids(self, tree_indexes):
+    def update_selected_object_class_ids(self):
         """Update set of selected object class id, by combining selectiong from tree
         and parameter tag.
         """
-        if tree_indexes == self.selected_rel_tree_indexes:
-            self.selected_object_class_ids = {}
-            return
         self.selected_object_class_ids = set(
             ind.data(Qt.UserRole + 1)['id']
-            for ind in tree_indexes.get('object_class', {}))
+            for ind in self.selected_obj_tree_indexes.get('object_class', set()))
         self.selected_object_class_ids.update(set(
             ind.data(Qt.UserRole + 1)['class_id']
-            for ind in tree_indexes.get('object', {})))
+            for ind in self.selected_obj_tree_indexes.get('object', set())))
         self.selected_object_class_ids.update(set(
             ind.parent().data(Qt.UserRole + 1)['class_id']
-            for ind in tree_indexes.get('relationship_class', {})))
+            for ind in self.selected_obj_tree_indexes.get('relationship_class', set())))
         self.selected_object_class_ids.update(set(
             ind.parent().parent().data(Qt.UserRole + 1)['class_id']
-            for ind in tree_indexes.get('relationship', {})))
+            for ind in self.selected_obj_tree_indexes.get('relationship', set())))
 
-    def update_selected_object_ids(self, tree_indexes):
+    def update_selected_object_ids(self):
         """Update set of selected object id."""
         self.selected_object_ids = {}
-        if tree_indexes == self.selected_rel_tree_indexes:
-            return
-        for ind in tree_indexes.get('object', {}):
+        for ind in self.selected_obj_tree_indexes.get('object', set()):
             object_class_id = ind.data(Qt.UserRole + 1)['class_id']
             object_id = ind.data(Qt.UserRole + 1)['id']
             self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
-        for ind in tree_indexes.get('relationship_class', {}):
+        for ind in self.selected_obj_tree_indexes.get('relationship_class', set()):
             object_class_id = ind.parent().data(Qt.UserRole + 1)['class_id']
             object_id = ind.parent().data(Qt.UserRole + 1)['id']
             self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
-        for ind in tree_indexes.get('relationship', {}):
+        for ind in self.selected_obj_tree_indexes.get('relationship', set()):
             object_class_id = ind.parent().parent().data(Qt.UserRole + 1)['class_id']
             object_id = ind.parent().parent().data(Qt.UserRole + 1)['id']
             self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
 
-    def update_selected_relationship_class_ids(self, tree_indexes):
+    def update_selected_relationship_class_ids(self):
         """Update set of selected relationship class id."""
+        rel_cls_indexes = self.selected_obj_tree_indexes.get('relationship_class', set())
+        rel_cls_indexes.update(self.selected_rel_tree_indexes.get('relationship_class', set()))
+        rel_indexes = self.selected_obj_tree_indexes.get('relationship', set())
+        rel_indexes.update(self.selected_rel_tree_indexes.get('relationship', set()))
         self.selected_relationship_class_ids = set(
-            ind.data(Qt.UserRole + 1)['id'] for ind in tree_indexes.get('relationship_class', {}))
+            ind.data(Qt.UserRole + 1)['id'] for ind in rel_cls_indexes)
         self.selected_relationship_class_ids.update(set(
-            ind.data(Qt.UserRole + 1)['class_id'] for ind in tree_indexes.get('relationship', {})))
+            ind.data(Qt.UserRole + 1)['class_id'] for ind in rel_indexes))
 
-    def update_selected_object_id_lists(self, tree_indexes):
+    def update_selected_object_id_lists(self):
         """Update set of selected object id list."""
         self.selected_object_id_lists = {}
-        for ind in tree_indexes.get('relationship', {}):
+        rel_indexes = self.selected_obj_tree_indexes.get('relationship', set())
+        rel_indexes.update(self.selected_rel_tree_indexes.get('relationship', set()))
+        for ind in rel_indexes:
             relationship_class_id = ind.data(Qt.UserRole + 1)['class_id']
             object_id_list = ind.data(Qt.UserRole + 1)['object_id_list']
             self.selected_object_id_lists.setdefault(relationship_class_id, set()).add(object_id_list)
@@ -1601,10 +1612,10 @@ class TreeViewForm(DataStoreForm):
     def remove_object_tree_items(self, checked=False):
         """Remove all selected items from the object treeview."""
         indexes = self.selected_obj_tree_indexes
-        object_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object_class', [])]
-        objects = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object', [])]
-        relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', [])]
-        relationships = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship', [])]
+        object_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object_class', set())]
+        objects = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object', set())]
+        relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', set())]
+        relationships = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship', set())]
         object_class_ids = set(x['id'] for x in object_classes)
         object_ids = set(x['id'] for x in objects)
         relationship_class_ids = set(x['id'] for x in relationship_classes)
@@ -1644,8 +1655,8 @@ class TreeViewForm(DataStoreForm):
     def remove_relationship_tree_items(self, checked=False):
         """Remove all selected items from the relationship treeview."""
         indexes = self.selected_rel_tree_indexes
-        relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', [])]
-        relationships = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship', [])]
+        relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', set())]
+        relationships = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship', set())]
         relationship_class_ids = set(x['id'] for x in relationship_classes)
         relationship_ids = set(x['id'] for x in relationships)
         try:

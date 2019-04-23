@@ -1308,7 +1308,7 @@ class ObjectClassListModel(QStandardItemModel):
         if role == Qt.DecorationRole and index.data(Qt.UserRole + 1):
             return self._graph_view_form.icon_mngr.object_icon(index.data(Qt.UserRole + 1)["name"])
         return super().data(index, role)
-        
+
 
 class RelationshipClassListModel(QStandardItemModel):
     """A class to list relationship classes in the GraphViewForm."""
@@ -1804,8 +1804,9 @@ class ObjectTreeModel(QStandardItemModel):
                 if visited_object_class['display_order'] >= object_class.display_order:
                     self.root_item.insertRow(i, QStandardItem())
                     self.root_item.setChild(i, 0, object_class_item)
-                    return
-            self.root_item.appendRow(object_class_item)
+                    break
+            else:
+                self.root_item.appendRow(object_class_item)
 
     def add_objects(self, objects):
         """Add object items to the model."""
