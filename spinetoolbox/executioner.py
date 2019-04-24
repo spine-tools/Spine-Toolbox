@@ -77,24 +77,14 @@ class DirectedGraphHandler:
             # Add self-loop to src graph and return
             src_graph.add_edge(src_node, dst_node)
             return
-        common_nodes = src_graph.nodes() & dst_graph.nodes()
-        if len(common_nodes) > 0:
-            logging.debug("Common nodes detected:{0}".format(common_nodes))  # TODO: Does not work?
-            if src_graph.nodes() == dst_graph.nodes():
-                logging.debug("src_graph==dst_graph. Adding edge")
-                # Just add edge to src_graph
-                src_graph.add_edge(src_node, dst_node)
-                return
-            else:
-                # TODO: Add a test for this
-                logging.debug("src graph:{0} dst_graph:{1}".format(src_graph.nodes(), dst_graph.nodes()))
-                common_graph = nx.intersection(src_graph, dst_graph)
-                common_graph.add_edge(src_node, dst_node)
-                self.add_dag(common_graph)
-        else:
-            union_dag = nx.union(src_graph, dst_graph)
-            union_dag.add_edge(src_node, dst_node)
-            self.add_dag(union_dag)
+        if src_graph == dst_graph:
+            # src and dst are already in same graph. Just add edge to src_graph and return
+            src_graph.add_edge(src_node, dst_node)
+            return
+        # Unify graphs
+        union_dag = nx.union(src_graph, dst_graph)
+        union_dag.add_edge(src_node, dst_node)
+        self.add_dag(union_dag)
         # Remove src and dst graphs
         self.remove_dag(src_graph)
         self.remove_dag(dst_graph)
@@ -102,96 +92,60 @@ class DirectedGraphHandler:
 
     def remove_graph_edge(self, src_node, dst_node):
         """Removes edge from a directed graph.
-        # TODO: Handle case when graph is not a dag (has a cycle) and the offending edge is removed
-        # TODO: Clean up
 
         Args:
             src_node (str): Source project item node name
             dst_node (str): Destination project item node name
         """
         dag = self.dag_with_edge(src_node, dst_node)
-        if src_node == dst_node:
-            # Removing self-loop
-            logging.debug("Removing self-loop from node {0}".format(src_node))
+        if src_node == dst_node:  # Removing self-loop
             dag.remove_edge(src_node, dst_node)
             return
-        dag_copy = copy.deepcopy(dag)
-        logging.debug("dag nodes:{0} edges:{1}".format(dag.nodes(), dag.edges()))
-        logging.debug("Removing edge {0}->{1}".format(src_node, dst_node))
+        dag_copy = copy.deepcopy(dag)  # Make a copy before messing with the graph
+        # logging.debug("dag nodes:{0} edges:{1}".format(dag.nodes(), dag.edges()))
+        # logging.debug("Removing edge {0}->{1}".format(src_node, dst_node))
         dag.remove_edge(src_node, dst_node)
-        # Check if src or dst node is without connections (isolated) after removing the edge
+        # Check if src or dst node is isolated (without connections) after removing the edge
         if self.node_is_isolated(src_node):
-            # Remove node from original dag and make a new graph with this node
-            logging.debug("src node is isolated")
-            dag.remove_node(src_node)
+            dag.remove_node(src_node)  # Remove node from original dag
             g = nx.DiGraph()
-            g.add_node(src_node)
+            g.add_node(src_node)  # Make a new graph containing only the isolated node
             self.add_dag(g)
             return
         if self.node_is_isolated(dst_node):
-            # Remove node from original dag and make a new graph with this node
-            logging.debug("dst node is isolated")
             dag.remove_node(dst_node)
             g = nx.DiGraph()
             g.add_node(dst_node)
             self.add_dag(g)
             return
-        # Now for the fun part.
-        # If src node is still in any edge in the original graph, the src
-        # node is still part of the same graph, return and we're fine
+        # If src node still has a path to dst node, return and we're fine
         if nx.has_path(dag, src_node, dst_node):
-            logging.debug("There's still a path from {0}->{1}".format(src_node, dst_node))
             return
-        src_descendants = nx.descendants(dag_copy, src_node)  # From copy since edge has been removed in dag already
-        src_desc_edges = nx.edges(dag_copy, src_descendants)  # to descendant graph
-        other_desc_edges = dag.edges()
-
+        # Now for the fun part
+        src_descendants = nx.descendants(dag_copy, src_node)  # From copy since edge has been removed from dag already
+        src_descendant_edges = nx.edges(dag_copy, src_descendants)  # to descendant graph
         src_ancestors = nx.ancestors(dag, dst_node)  # note: from dag
-        src_ancestor_edges = nx.edges(dag, src_ancestors)  # to descendant graph
-        dst_ancestors = nx.ancestors(dag_copy, dst_node)
-        dst_ancestor_edges = nx.edges(dag_copy, dst_ancestors)  # to ancestor graph
-
-        logging.debug("src_descendants:{0} src_desc_edges:{1}".format(src_descendants, src_desc_edges))
-        logging.debug("src_ancestors:{0} src_ancestor_edges:{1}".format(src_ancestors, src_ancestor_edges))
-        logging.debug("other_desc_edges:{0}".format(other_desc_edges))
-        logging.debug("dst_ancestors:{0} dst_ancestor_edges:{1}".format(dst_ancestors, dst_ancestor_edges))
-
+        src_ancestor_edges = nx.edges(dag, src_ancestors)  # to descendant graph (note: from dag)
         # Build new graph from the remaining edges in the original DAG
+        # This is the graph that is now upstream (left-side) from the removed edge
         descendant_graph = nx.DiGraph()
-        # If there are no edges left, the remaining graph contains only one node
-        if len(src_desc_edges) == 0 and len(other_desc_edges) == 0:
-            logging.debug("Descendant graph is a single node")
-            descendant_graph.add_node(dst_node)
-        else:
-            # The remaining DAG has edges. Add them all to a graph
-            descendant_graph.add_edges_from(src_desc_edges)
-            descendant_graph.add_edges_from(src_ancestor_edges)
-            logging.debug("Descendant graph edges: {0}".format(descendant_graph.edges()))
-
-        # Build another graph from nodes and edges that are connected to src_node
+        # Populate descendant graph with src descendant and src ancestor edges
+        descendant_graph.add_edges_from(src_descendant_edges)
+        descendant_graph.add_edges_from(src_ancestor_edges)
+        # Build another graph from the edges in the original graph that are not in descendant graph already
+        # This is the graph that is now downstream (right-side) from the removed edge
         ancestor_graph = nx.DiGraph()
         # Remove all edges that are already in descendant graph
         for edge in descendant_graph.edges():
-            logging.debug("Removing edge:{0} from dag copy".format(edge))
-            dag_copy.remove_edge(edge[0], edge[1])
-        # Remove also the edge we are trying to remove from the dag copy
-        logging.debug("Removing edge {0}->{1} from dag copy".format(src_node, dst_node))
-        dag_copy.remove_edge(src_node, dst_node)
-        # If there are no edges left, the remaining graph contains only one node
-        if len(dag_copy.edges()) == 0:
-            logging.debug("Ancestor graph is a single node")
-            ancestor_graph.add_node(src_node)
-        else:
-            # The remaining DAG has edges. Add them all to a graph
-            logging.debug("Ancestor graph has edges:{0}".format(dag_copy.edges()))
-            ancestor_graph.add_edges_from(dag_copy.edges())
-
-        # logging.debug("dag nodes:{0} edges:{1}".format(dag.nodes(), dag.edges()))
-        # logging.debug("dag copy nodes:{0} edges:{1}".format(dag_copy.nodes(), dag_copy.edges()))
-        logging.debug("descendant_graph nodes:{0} edges:{1}"
-                      .format(descendant_graph.nodes(), descendant_graph.edges()))
-        logging.debug("ancestor_graph nodes:{0} edges:{1}"
-                      .format(ancestor_graph.nodes(), ancestor_graph.edges()))
+            dag.remove_edge(edge[0], edge[1])
+        # Add remaining edges to a new graph
+        # Another option is to leave the original dag in the list but
+        # then we would also need to remove isolated nodes from it (dag) as well
+        ancestor_graph.add_edges_from(dag.edges())
+        # logging.debug("descendant_graph nodes:{0} edges:{1}"
+        #               .format(descendant_graph.nodes(), descendant_graph.edges()))
+        # logging.debug("ancestor_graph nodes:{0} edges:{1}"
+        #               .format(ancestor_graph.nodes(), ancestor_graph.edges()))
         # Add new graph
         self.remove_dag(dag)
         self.add_dag(descendant_graph)
@@ -199,7 +153,7 @@ class DirectedGraphHandler:
 
     def remove_node_from_graph(self, node_name):
         """Removes node from a graph that contains
-        it when the project item is deleted.
+        it. Called when project item is removed from project.
 
         Args:
             node_name (str): Project item name
@@ -342,13 +296,13 @@ class DirectedGraphHandler:
             t += 1
         return exec_dict
 
-    def get_successors(self, graph, start_node):
-        stack = [start_node]
-        while stack:
-            node = stack.pop()
-            succs = g.successors(node)
-            stack += succs
-            print('%s -> %s' % (node, succs))
+    # def get_successors(self, graph, start_node):
+    #     stack = [start_node]
+    #     while stack:
+    #         node = stack.pop()
+    #         succs = g.successors(node)
+    #         stack += succs
+    #         print('%s -> %s' % (node, succs))
 
     def node_is_isolated(self, node):
         """Checks if the project item with the given name has any connections.
@@ -360,6 +314,4 @@ class DirectedGraphHandler:
             bool: True if project item has no in-neighbors nor out-neighbors, False if it does
         """
         g = self.dag_with_node(node)
-        ret = nx.is_isolate(g, node)
-        logging.debug("{0} is isolated: {1}".format(node, ret))
-        return ret
+        return nx.is_isolate(g, node)
