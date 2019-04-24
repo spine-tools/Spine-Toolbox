@@ -869,6 +869,23 @@ class ConnectionModel(QAbstractTableModel):
         """Returns the row or column (row==column) of the header item with the given text (item name)."""
         return self.header.index(name)
 
+    def source_items(self):
+        """Returns a set of project item names that do not have input items,
+        i.e. they are source nodes as required by the dag bfs-search algorithm.
+
+        Returns:
+            obj:'set' of obj:'str': List of source project item names
+        """
+        sources = set()
+        for name in self.header:  # Iterate all project items
+            input_items = self.input_items(name)
+            if len(input_items) == 0:
+                sources.add(name)
+            elif len(input_items) == 1 and input_items[0] == name:
+                # It only has a feedback link
+                sources.add(name)
+        return sources
+
     def link(self, row, column):
         # TODO: Modify or remove this
         """Returns Link instance stored on row and column."""

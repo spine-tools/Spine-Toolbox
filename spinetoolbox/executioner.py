@@ -60,9 +60,12 @@ class DirectedGraphHandler:
         self._dags.append(dag)
 
     def add_graph_edge(self, src_node, dst_node):
-        """Makes a union between graphs that contain the
-        given nodes and saves a reference of the resulting
-        graph. Removes the graphs that were unionized.
+        """Adds an edge between the src and dst nodes. If nodes are in
+        different graphs, the reference to union graph is saved and the
+        references to the original graphs are removed. If src and dst
+        nodes are already in the same graph, the edge is added to the graph.
+        If src and dst are the same node, a self-loop (feedback) edge is
+        added.
 
         Args:
             src_node (str): Source project item node name
@@ -72,7 +75,6 @@ class DirectedGraphHandler:
         dst_graph = self.dag_with_node(dst_node)
         if src_node == dst_node:
             # Add self-loop to src graph and return
-            logging.debug("Adding self-loop for node {0}".format(src_node))
             src_graph.add_edge(src_node, dst_node)
             return
         common_nodes = src_graph.nodes() & dst_graph.nodes()
@@ -84,6 +86,7 @@ class DirectedGraphHandler:
                 src_graph.add_edge(src_node, dst_node)
                 return
             else:
+                # TODO: Add a test for this
                 logging.debug("src graph:{0} dst_graph:{1}".format(src_graph.nodes(), dst_graph.nodes()))
                 common_graph = nx.intersection(src_graph, dst_graph)
                 common_graph.add_edge(src_node, dst_node)
@@ -100,8 +103,7 @@ class DirectedGraphHandler:
     def remove_graph_edge(self, src_node, dst_node):
         """Removes edge from a directed graph.
         # TODO: Handle case when graph is not a dag (has a cycle) and the offending edge is removed
-
-        # TODO: Clean up and change method name to split_graphs() or something
+        # TODO: Clean up
 
         Args:
             src_node (str): Source project item node name
@@ -287,7 +289,7 @@ class DirectedGraphHandler:
             dict: Key is the index number of the graph starting from 1.
             Value is an ordered list of project item names.
         """
-        sources = self.source_nodes()
+        sources = self._toolbox.connection_model.source_items()  # Give this as argument for this method
         n = len(self.dags())
         t = 1
         exec_dict = dict()
@@ -348,41 +350,16 @@ class DirectedGraphHandler:
             stack += succs
             print('%s -> %s' % (node, succs))
 
-    def source_nodes(self):
-        """Returns a set of project item names that do not have input items,
-        i.e. they are source nodes as required by the bfs-search algorithm.
-
-        Returns:
-            obj:'set' of obj:'str': List of source project item names
-        """
-        # TODO: This method should probably be in ConnectionModel class
-        names = self._toolbox.project_item_model.item_names()
-        sources = set()
-        for name in names:  # Iterate all project items
-            input_items = self._toolbox.connection_model.input_items(name)
-            if len(input_items) == 0:
-                sources.add(name)
-            elif len(input_items) == 1 and input_items[0] == name:
-                # It only has a feedback link
-                sources.add(name)
-        return sources
-
-    def node_is_isolated(self, pi_name):
+    def node_is_isolated(self, node):
         """Checks if the project item with the given name has any connections.
 
         Args:
-            pi_name (str): Project item name
+            node (str): Project item name
 
         Returns:
-            bool: True if project item has no input nor output connections, False if it does
+            bool: True if project item has no in-neighbors nor out-neighbors, False if it does
         """
-        inputs = self._toolbox.connection_model.input_items(pi_name)
-        outputs = self._toolbox.connection_model.output_items(pi_name)
-        if len(inputs) == 0 and len(outputs) == 0:
-            return True
-        elif len(inputs) == 1 and len(outputs) == 1:
-            if inputs[0] == outputs[0]:
-                logging.debug("Node is isolated since it only has a feedback loop")
-                return True
-        else:
-            return False
+        g = self.dag_with_node(node)
+        ret = nx.is_isolate(g, node)
+        logging.debug("{0} is isolated: {1}".format(node, ret))
+        return ret

@@ -297,33 +297,21 @@ class TestDirectedGraphHandler(unittest.TestCase):
         Result graph 1: Nodes: [a]. Edges: []
         Result graph 2: Nodes: [b]. Edges: []
         """
-        graph_handler = self.toolbox.project().dag_handler
-        self.toolbox.project().add_data_connection("a", "", None)
-        self.toolbox.project().add_data_connection("b", "", None)
-        # Add link (hacky)
-        src = self.toolbox.project_item_model.find_item("a")
-        src_item = self.toolbox.project_item_model.project_item(src)
-        dst = self.toolbox.project_item_model.find_item("b")
-        dst_item = self.toolbox.project_item_model.project_item(dst)
-        src_con = src_item.get_icon().conn_button("bottom")
-        dst_con = dst_item.get_icon().conn_button("bottom")
-        a_index = self.toolbox.connection_model.find_index_in_header("a")  # int: row and column number
-        index = self.toolbox.connection_model.index(a_index, a_index)
-        self.toolbox.ui.graphicsView.add_link(src_con, dst_con, index)
-
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b")])
+        self.dag_handler.add_dag(d)
         # Check that the graph was created successfully
-        self.assertTrue(len(graph_handler.dags()) == 1)
-        d = graph_handler.dags()[0]
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 2)  # a, b
         self.assertEqual(len(d.edges()), 1)  # a->b
         self.assertTrue(d.has_edge("a", "b"))
-
         # Now remove the edge
-        graph_handler.remove_graph_edge("a", "b")
+        self.dag_handler.remove_graph_edge("a", "b")
         # There should be two graphs now
-        self.assertTrue(len(graph_handler.dags()) == 2)
-        result_d = graph_handler.dag_with_node("a")
-        result_h = graph_handler.dag_with_node("b")
+        self.assertTrue(len(self.dag_handler.dags()) == 2)
+        result_d = self.dag_handler.dag_with_node("a")
+        result_h = self.dag_handler.dag_with_node("b")
         # Check that the number of nodes and edges match and they are correct
         self.assertEqual(len(result_d.nodes()), 1)
         self.assertEqual(len(result_d.edges()), 0)
@@ -332,23 +320,113 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(result_h.edges()), 0)
         self.assertTrue(result_h.has_node("b"))
 
+    def test_remove_graph_edge2(self):
+        """Test removing an edge from a graph. Splits the graph
+        into two separate graphs if the nodes are not connected
+        after removing the edge.
+        Graph 1: Nodes: [a, b, c]. Edges: [a->b->c]
+        Remove edge: a->b
+        Result graph 1: Nodes: [a]. Edges: []
+        Result graph 2: Nodes: [b, c]. Edges: [b->c]
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "c")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)  # a, b, c
+        self.assertEqual(len(d.edges()), 2)  # a->b, b->c
+        self.assertTrue(d.has_edge("a", "b"))
+        self.assertTrue(d.has_edge("b", "c"))
+        # Now remove the edge
+        self.dag_handler.remove_graph_edge("a", "b")
+        # There should be two graphs now
+        self.assertTrue(len(self.dag_handler.dags()) == 2)
+        result_d = self.dag_handler.dag_with_node("a")
+        result_h = self.dag_handler.dag_with_node("b")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(result_d.nodes()), 1)
+        self.assertEqual(len(result_d.edges()), 0)
+        self.assertTrue(result_d.has_node("a"))
+        self.assertEqual(len(result_h.nodes()), 2)
+        self.assertEqual(len(result_h.edges()), 1)
+        self.assertTrue(result_h.has_node("b"))
+        self.assertTrue(result_h.has_node("c"))
+        self.assertTrue(result_h.has_edge("b", "c"))
+
+    def test_remove_graph_edge3(self):
+        """Test removing an edge from a graph. Splits the graph
+        into two separate graphs if the nodes are not connected
+        after removing the edge.
+        Graph 1: Nodes: [a, b, c]. Edges: [a->b->c]
+        Remove edge: b->c
+        Result graph 1: Nodes: [a, b]. Edges: [a->b]
+        Result graph 2: Nodes: [c]. Edges: []
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "c")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)  # a, b, c
+        self.assertEqual(len(d.edges()), 2)  # a->b, b->c
+        self.assertTrue(d.has_edge("a", "b"))
+        self.assertTrue(d.has_edge("b", "c"))
+        # Now remove the edge
+        self.dag_handler.remove_graph_edge("b", "c")
+        # There should be two graphs now
+        self.assertTrue(len(self.dag_handler.dags()) == 2)
+        result_d = self.dag_handler.dag_with_node("a")
+        result_h = self.dag_handler.dag_with_node("c")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(result_d.nodes()), 2)
+        self.assertEqual(len(result_d.edges()), 1)
+        self.assertTrue(result_d.has_node("a"))
+        self.assertTrue(result_d.has_node("b"))
+        self.assertTrue(result_d.has_edge("a", "b"))
+        self.assertEqual(len(result_h.nodes()), 1)
+        self.assertEqual(len(result_h.edges()), 0)
+        self.assertTrue(result_h.has_node("c"))
+
+    def test_remove_graph_edge4(self):
+        """Test removing an edge from a graph. Splits the graph
+        into two separate graphs if the nodes are not connected
+        after removing the edge.
+        Graph 1: Nodes: [a, b, c, d]. Edges: [a->b->c->d]
+        Remove edge: b->c
+        Result graph 1: Nodes: [a, b]. Edges: [a->b]
+        Result graph 2: Nodes: [c]. Edges: []
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "c")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)  # a, b, c
+        self.assertEqual(len(d.edges()), 2)  # a->b, b->c
+        self.assertTrue(d.has_edge("a", "b"))
+        self.assertTrue(d.has_edge("b", "c"))
+        # Now remove the edge
+        self.dag_handler.remove_graph_edge("b", "c")
+        # There should be two graphs now
+        self.assertTrue(len(self.dag_handler.dags()) == 2)
+        result_d = self.dag_handler.dag_with_node("a")
+        result_h = self.dag_handler.dag_with_node("c")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(result_d.nodes()), 2)
+        self.assertEqual(len(result_d.edges()), 1)
+        self.assertTrue(result_d.has_node("a"))
+        self.assertTrue(result_d.has_node("b"))
+        self.assertTrue(result_d.has_edge("a", "b"))
+        self.assertEqual(len(result_h.nodes()), 1)
+        self.assertEqual(len(result_h.edges()), 0)
+        self.assertTrue(result_h.has_node("c"))
+
     def test_remove_node_from_graph(self):
         self.fail()
 
-    def test_rename_node(self):
-        self.fail()
-
-    def test_dag_with_node(self):
-        self.fail()
-
-    def test_dag_with_edge(self):
-        self.fail()
-
     def test_execution_order(self):
-        self.fail()
-
-    def test_source_nodes(self):
-        self.fail()
-
-    def test_node_is_isolated(self):
         self.fail()
