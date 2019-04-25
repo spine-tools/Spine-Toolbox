@@ -18,6 +18,7 @@ Contains classes for handling project item execution.
 
 import logging
 import copy
+from itertools import chain
 import networkx as nx
 
 
@@ -102,8 +103,6 @@ class DirectedGraphHandler:
             dag.remove_edge(src_node, dst_node)
             return
         dag_copy = copy.deepcopy(dag)  # Make a copy before messing with the graph
-        # logging.debug("dag nodes:{0} edges:{1}".format(dag.nodes(), dag.edges()))
-        # logging.debug("Removing edge {0}->{1}".format(src_node, dst_node))
         dag.remove_edge(src_node, dst_node)
         # Check if src or dst node is isolated (without connections) after removing the edge
         if self.node_is_isolated(src_node):
@@ -118,8 +117,10 @@ class DirectedGraphHandler:
             g.add_node(dst_node)
             self.add_dag(g)
             return
-        # If src node still has a path to dst node, return and we're fine
-        if nx.has_path(dag, src_node, dst_node):
+        # If src node still has a path (ignoring edge directions) to dst node -> return, we're fine
+        if self.nodes_connected(src_node, dst_node) or \
+                nx.has_path(dag, src_node, dst_node) or \
+                nx.has_path(dag, dst_node, src_node):
             return
         # Now for the fun part
         src_descendants = nx.descendants(dag_copy, src_node)  # From copy since edge has been removed from dag already
@@ -142,10 +143,6 @@ class DirectedGraphHandler:
         # Another option is to leave the original dag in the list but
         # then we would also need to remove isolated nodes from it (dag) as well
         ancestor_graph.add_edges_from(dag.edges())
-        # logging.debug("descendant_graph nodes:{0} edges:{1}"
-        #               .format(descendant_graph.nodes(), descendant_graph.edges()))
-        # logging.debug("ancestor_graph nodes:{0} edges:{1}"
-        #               .format(ancestor_graph.nodes(), ancestor_graph.edges()))
         # Add new graph
         self.remove_dag(dag)
         self.add_dag(descendant_graph)
@@ -245,8 +242,9 @@ class DirectedGraphHandler:
         exec_dict = dict()
         for dag in self.dags():
             exec_order = list()
-            if not nx.is_directed_acyclic_graph(dag):  # TODO: Does this work?
+            if not nx.is_directed_acyclic_graph(dag):
                 logging.debug("This graph is not a DAG")
+                # TODO: Do something here
             else:
                 logging.debug("Executing dag ({0}/{1}) n nodes:{2} n edges:{3}"
                               .format(t, n, len(dag.nodes()), len(dag.edges())))
@@ -285,7 +283,6 @@ class DirectedGraphHandler:
                             exec_order.append(src)
                         if dst not in exec_order:
                             exec_order.append(dst)
-
             exec_dict[t] = exec_order
             t += 1
         return exec_dict
@@ -322,3 +319,18 @@ class DirectedGraphHandler:
         if deg - 2 == 0:  # If degree - 2 is zero, it is isolated.
             return True
         return False
+
+    def nodes_connected(self, a, b):
+        """Checks if node a is connected to node b.
+        Edge directions are ignored.
+
+        Args:
+            a (str): Node name
+            b (str): Another node name
+
+        Returns:
+            bool: True if there if a is the neighbor of b, False otherwise
+        """
+        g = self.dag_with_node(a)
+        values = chain(g.predecessors(b), g.successors(b))
+        return a in values

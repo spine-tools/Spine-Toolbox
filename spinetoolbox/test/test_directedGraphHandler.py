@@ -288,6 +288,36 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertTrue(result_h.has_edge("e", "e"))
         self.assertTrue(result_h.has_edge("f", "f"))
 
+    def test_add_graph_edge8(self):
+        """Test adding an edge which makes the graph not a DAG.
+        Graph 1: Nodes: [a, b, c, d]. Edges: [a->c, b->c, c->d]
+        Add edge: c->b
+        Result graph: Nodes: [a, b, c, d]. Edges: [a->c, b->c, c->d, c->b]
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "c"), ("b", "c"), ("c", "d")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        self.assertEqual(len(d.nodes()), 4)
+        self.assertEqual(len(d.edges()), 3)
+        self.dag_handler.add_graph_edge("c", "b")
+        # Now, there should still be just one graph
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        g = self.dag_handler.dags()[0]
+        result_d = self.dag_handler.dag_with_node("a")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(result_d.nodes()), 4)
+        self.assertEqual(len(result_d.edges()), 4)
+        self.assertTrue(result_d.has_node("a"))
+        self.assertTrue(result_d.has_node("b"))
+        self.assertTrue(result_d.has_node("c"))
+        self.assertTrue(result_d.has_node("d"))
+        self.assertTrue(result_d.has_edge("a", "c"))
+        self.assertTrue(result_d.has_edge("b", "c"))
+        self.assertTrue(result_d.has_edge("c", "d"))
+        self.assertTrue(result_d.has_edge("c", "b"))
+
     def test_remove_graph_edge1(self):
         """Test removing an edge from a graph. Splits the graph
         into two separate graphs if the nodes are not connected
@@ -573,6 +603,69 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(result_h.nodes()), 1)
         self.assertEqual(len(result_h.edges()), 1)
         self.assertTrue(result_h.has_edge("d", "d"))
+
+    def test_remove_graph_edge9(self):
+        """Test removing an edge from a graph that is not a DAG.
+        Graph 1: Nodes: [a, b, c, d]. Edges: [a->c, b->c, c->d, c->b]
+        Remove edge: c->b
+        Result graph: Nodes: [a, b, c, d]. Edges: [a->c, b->c, c->d]
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "c"), ("b", "c"), ("c", "d"), ("c", "b")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        self.assertEqual(len(d.nodes()), 4)
+        self.assertEqual(len(d.edges()), 4)
+        # Now remove edge
+        self.dag_handler.remove_graph_edge("c", "b")
+        # There should still be just one graph (that is a DAG)
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        result_d = self.dag_handler.dag_with_node("a")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(result_d.nodes()), 4)
+        self.assertEqual(len(result_d.edges()), 3)
+        self.assertTrue(result_d.has_node("a"))
+        self.assertTrue(result_d.has_node("b"))
+        self.assertTrue(result_d.has_node("c"))
+        self.assertTrue(result_d.has_node("d"))
+        self.assertTrue(result_d.has_edge("a", "c"))
+        self.assertTrue(result_d.has_edge("b", "c"))
+        self.assertTrue(result_d.has_edge("c", "d"))
+
+    def test_remove_graph_edge10(self):
+        """Test removing an edge from a graph that is not a DAG.
+        Graph 1: Nodes: [a, b, c, d]. Edges: [a->c, b->c, c->d, d->a]
+        Remove edge: d->a
+        Result graph: Nodes: [a, b, c, d]. Edges: [a->c, b->c, c->d]
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "c"), ("b", "c"), ("c", "d"), ("d", "a")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        self.assertEqual(len(d.nodes()), 4)
+        self.assertEqual(len(d.edges()), 4)
+        # Now remove edge
+        self.dag_handler.remove_graph_edge("d", "a")
+        # There should still be just one graph (that is a DAG)
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        # logging.debug("n dags:{0}".format(len(self.dag_handler.dags())))
+        # out1 = self.dag_handler.dags()[0]
+        # out2 = self.dag_handler.dags()[1]
+        # logging.debug("out1 nodes:{0} edges:{1}".format(out1.nodes(), out1.edges()))
+        # logging.debug("out2 nodes:{0} edges:{1}".format(out2.nodes(), out2.edges()))
+        result_d = self.dag_handler.dag_with_node("a")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(result_d.nodes()), 4)
+        self.assertEqual(len(result_d.edges()), 3)
+        self.assertTrue(result_d.has_node("a"))
+        self.assertTrue(result_d.has_node("b"))
+        self.assertTrue(result_d.has_node("c"))
+        self.assertTrue(result_d.has_node("d"))
+        self.assertTrue(result_d.has_edge("a", "c"))
+        self.assertTrue(result_d.has_edge("b", "c"))
+        self.assertTrue(result_d.has_edge("c", "d"))
 
     def test_execution_order1(self):
         """Test that execution order is correct with all kinds of graphs.
