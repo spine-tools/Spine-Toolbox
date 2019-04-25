@@ -168,16 +168,15 @@ class DirectedGraphHandler:
         g.remove_edges_from(edges_to_remove)
         # Now remove the node itself
         g.remove_node(node_name)
-        # If only a single node with no edges remains -> return
-        if len(g.nodes()) == 1 and len(g.edges()) == 0:
-            return
         # Loop through remaining nodes and check if any of them are isolated now
         nodes_to_remove = list()
         for node in g.nodes():
-            if self.node_is_isolated(node):
+            if self.node_is_isolated(node, allow_self_loop=True):
                 nodes_to_remove.append(node)
                 h = nx.DiGraph()
                 h.add_node(node)
+                if g.has_edge(node, node):
+                    h.add_edge(node, node)
                 self.add_dag(h)
         g.remove_nodes_from(nodes_to_remove)
         if len(g.nodes()) == 0:
@@ -299,14 +298,27 @@ class DirectedGraphHandler:
     #         stack += succs
     #         print('%s -> %s' % (node, succs))
 
-    def node_is_isolated(self, node):
+    def node_is_isolated(self, node, allow_self_loop=False):
         """Checks if the project item with the given name has any connections.
 
         Args:
             node (str): Project item name
+            allow_self_loop (bool): If default (False), Self-loops are considered as an in-neighbor or an out-neighbor so the method
+            returns False. If True, single node with a self-loop is considered isolated.
 
         Returns:
-            bool: True if project item has no in-neighbors nor out-neighbors, False if it does
+            bool: True if project item has no in-neighbors nor out-neighbors, False if it does.
+                Single node with a self-loop is NOT isolated (returns False).
         """
         g = self.dag_with_node(node)
-        return nx.is_isolate(g, node)
+        if not allow_self_loop:
+            return nx.is_isolate(g, node)
+        has_self_loop = g.has_edge(node, node)
+        if not has_self_loop:
+            return nx.is_isolate(g, node)
+        # The node has a self-loop.
+        # Node degree is the number of edges that are connected to it. A self-loop increases the degree by 2
+        deg = g.degree(node)
+        if deg - 2 == 0:  # If degree - 2 is zero, it is isolated.
+            return True
+        return False

@@ -594,6 +594,9 @@ class ToolboxUI(QMainWindow):
         n_graphs = len(exec_dictionary.keys())
         for graph_number, execution_list in exec_dictionary.items():
             self.msg.emit("Executing graph:{0}/{1}".format(graph_number, n_graphs))
+            if len(execution_list) == 0:
+                self.msg_warning.emit("Not a Directed Acyclic Graph")
+                continue
             for item in execution_list:
                 self.msg.emit("Executing <b>{0}</b>".format(item))
         return

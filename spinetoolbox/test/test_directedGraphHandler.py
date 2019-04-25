@@ -717,6 +717,173 @@ class TestDirectedGraphHandler(unittest.TestCase):
         # Execution order for this graph should be empty since it's not a DAG
         self.assertEqual(0, len(exec_order))
 
-    @unittest.skip("TODO")
-    def test_remove_node_from_graph(self):
-        self.fail()
+    def test_remove_node_from_graph1(self):
+        """Test that graphs are updated correctly when project items are removed.
+        Make a Star graph and remove the center.
+        Graph 1: Nodes: [a, b, c, d, e]. Edges: [a->c, b->c, c->d, c->e]
+        Remove node "c"
+        Expected Result Graphs:
+        Result Graph 1: Nodes:[a], Edges:[]
+        Result Graph 2: Nodes:[b], Edges:[]
+        Result Graph 3: Nodes:[d], Edges:[]
+        Result Graph 4: Nodes:[e], Edges:[]
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "c"), ("b", "c"), ("c", "d"), ("c", "e")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 5)
+        self.assertEqual(len(d.edges()), 4)
+        self.dag_handler.remove_node_from_graph("c")
+        # Check that the resulting graphs are correct
+        self.assertTrue(len(self.dag_handler.dags()) == 4)
+        out1 = self.dag_handler.dag_with_node("a")
+        out2 = self.dag_handler.dag_with_node("b")
+        out3 = self.dag_handler.dag_with_node("d")
+        out4 = self.dag_handler.dag_with_node("e")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(out1.nodes()), 1)
+        self.assertEqual(len(out1.edges()), 0)
+        self.assertTrue(out1.has_node("a"))
+        self.assertEqual(len(out2.nodes()), 1)
+        self.assertEqual(len(out2.edges()), 0)
+        self.assertTrue(out2.has_node("b"))
+        self.assertEqual(len(out3.nodes()), 1)
+        self.assertEqual(len(out3.edges()), 0)
+        self.assertTrue(out3.has_node("d"))
+        self.assertEqual(len(out4.nodes()), 1)
+        self.assertEqual(len(out4.edges()), 0)
+        self.assertTrue(out4.has_node("e"))
+
+    def test_remove_node_from_graph2(self):
+        """Test that graphs are updated correctly when project items are removed.
+        Graph 1: Nodes: [a, b, c]. Edges: [a->b, b->c]
+        Remove node "a"
+        Expected Result Graph: Nodes:[b, c], Edges:[b->c]
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "c")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)
+        self.assertEqual(len(d.edges()), 2)
+        self.dag_handler.remove_node_from_graph("a")
+        # Check that the resulting graphs are correct
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        out1 = self.dag_handler.dag_with_node("b")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(out1.nodes()), 2)
+        self.assertEqual(len(out1.edges()), 1)
+        self.assertTrue(out1.has_node("b"))
+        self.assertTrue(out1.has_node("c"))
+        self.assertTrue(out1.has_edge("b", "c"))
+
+    def test_remove_node_from_graph3(self):
+        """Test that graphs are updated correctly when project items are removed.
+        Graph 1: Nodes: [a, b, c]. Edges: [a->b, b->c, a->a, b->b, c->c]
+        Remove node "b"
+        Expected Result Graph 1: Nodes:[a], Edges:[a->a]
+        Expected Result Graph 2: Nodes:[c], Edges:[c->c]
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "c"), ("a", "a"), ("b", "b"), ("c", "c")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)
+        self.assertEqual(len(d.edges()), 5)
+        self.dag_handler.remove_node_from_graph("b")
+        # Check that the resulting graphs are correct
+        self.assertTrue(len(self.dag_handler.dags()) == 2)
+        out1 = self.dag_handler.dag_with_node("a")
+        out2 = self.dag_handler.dag_with_node("c")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(out1.nodes()), 1)
+        self.assertEqual(len(out1.edges()), 1)
+        self.assertTrue(out1.has_node("a"))
+        self.assertTrue(out1.has_edge("a", "a"))
+        self.assertEqual(len(out2.nodes()), 1)
+        self.assertEqual(len(out2.edges()), 1)
+        self.assertTrue(out2.has_node("c"))
+        self.assertTrue(out2.has_edge("c", "c"))
+
+    def test_remove_node_from_graph4(self):
+        """Test that graphs are updated correctly when project items are removed.
+        Graph 1: Nodes: [a, b, c]. Edges: [a->b, b->c, b->b]
+        Remove node "c"
+        Expected Result Graph 1: Nodes:[a, b], Edges:[a->b, b->b]
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "c"), ("b", "b")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)
+        self.assertEqual(len(d.edges()), 3)
+        self.dag_handler.remove_node_from_graph("c")
+        # Check that the resulting graphs are correct
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        out1 = self.dag_handler.dag_with_node("a")
+        # Check that the number of nodes and edges match and they are correct
+        self.assertEqual(len(out1.nodes()), 2)
+        self.assertEqual(len(out1.edges()), 2)
+        self.assertTrue(out1.has_node("a"))
+        self.assertTrue(out1.has_node("b"))
+        self.assertTrue(out1.has_edge("a", "b"))
+        self.assertTrue(out1.has_edge("b", "b"))
+
+    def test_remove_node_from_graph5(self):
+        """Test that graphs are updated correctly when project items are removed.
+        Graph 1: Nodes: [a, b, c]. Edges: [a->c, b->c, a->a, b->b]
+        Remove nodes "a" -> "b" -> "c"
+        Expected Result Graph 1: None
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "c"), ("b", "c"), ("a", "a"), ("b", "b")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)
+        self.assertEqual(len(d.edges()), 4)
+        self.dag_handler.remove_node_from_graph("a")
+        self.dag_handler.remove_node_from_graph("b")
+        self.dag_handler.remove_node_from_graph("c")
+        # There should be no DAGs left
+        self.assertTrue(len(self.dag_handler.dags()) == 0)
+
+    def test_remove_node_from_graph6(self):
+        """Test that graphs are updated correctly when project items are removed.
+        Graph 1: Nodes: [a, b, c, d, e]. Edges: [a->c, b->c, c->d, c->e]
+        Remove nodes in order "c" -> "a" -> "b"-> "d"-> "e"
+        Check that the number of saved dags is correct after each node removal
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "c"), ("b", "c"), ("c", "d"), ("c", "e")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 5)
+        self.assertEqual(len(d.edges()), 4)
+        # Remove node c
+        self.dag_handler.remove_node_from_graph("c")
+        self.assertTrue(len(self.dag_handler.dags()) == 4)
+        # Remove node a
+        self.dag_handler.remove_node_from_graph("a")
+        self.assertTrue(len(self.dag_handler.dags()) == 3)
+        # Remove node b
+        self.dag_handler.remove_node_from_graph("b")
+        self.assertTrue(len(self.dag_handler.dags()) == 2)
+        # Remove node d
+        self.dag_handler.remove_node_from_graph("d")
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        # Remove node e
+        self.dag_handler.remove_node_from_graph("e")
+        self.assertTrue(len(self.dag_handler.dags()) == 0)
