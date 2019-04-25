@@ -574,10 +574,149 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(result_h.edges()), 1)
         self.assertTrue(result_h.has_edge("d", "d"))
 
-    @unittest.skip("TODO")
-    def test_remove_node_from_graph(self):
-        self.fail()
+    def test_execution_order1(self):
+        """Test that execution order is correct with all kinds of graphs.
+        Graph Nodes: [a, b, c]. Edges: [a->b, b->c]
+        Expected order: a-b-c
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "c")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)  # a, b, c
+        self.assertEqual(len(d.edges()), 2)  # a->b, b->c
+        self.assertTrue(d.has_edge("a", "b"))
+        self.assertTrue(d.has_edge("b", "c"))
+        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
+        # [1] is the key that contains the first ordered dag in the project
+        exec_order = self.dag_handler.execution_order(sources)[1]
+        self.assertEqual(len(exec_order), 3)
+        self.assertEqual(exec_order[0], "a")
+        self.assertEqual(exec_order[1], "b")
+        self.assertEqual(exec_order[2], "c")
+
+    def test_execution_order2(self):
+        """Test that execution order is correct with all kinds of graphs.
+        Graph Nodes: [a, b, c]. Edges: [a->c, b->c]
+        Expected order: a-b-c or b-a-c
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "c"), ("b", "c")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)  # a, b, c
+        self.assertEqual(len(d.edges()), 2)  # a->b, b->c
+        self.assertTrue(d.has_edge("a", "c"))
+        self.assertTrue(d.has_edge("b", "c"))
+        sources = ["a", "b"]  # Must be asked from connection_model before calling execution_order()
+        exec_order = self.dag_handler.execution_order(sources)[1]
+        self.assertEqual(len(exec_order), 3)
+        self.assertTrue(exec_order[0] == "a" or exec_order[0] == "b")
+        self.assertTrue(exec_order[1] == "a" or exec_order[1] == "b")
+        self.assertEqual(exec_order[2], "c")
+
+    def test_execution_order3(self):
+        """Test that execution order is correct with all kinds of graphs.
+        # TODO: This is a bug in execution_order()
+        # Note: This works if "a" is used as source but fails if "c" is used as source
+        Graph Nodes: [a, b, c, d]. Edges: [a->b, b->d, c->d]
+        Expected order: a-b-c-d or a-c-b-d or c-a-b-d
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "d"), ("c", "d")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 4)
+        self.assertEqual(len(d.edges()), 3)
+        sources = ["a", "c"]  # Must be asked from connection_model before calling execution_order()
+        exec_order = self.dag_handler.execution_order(sources)[1]
+        self.assertEqual(4, len(exec_order))
+        self.assertTrue(exec_order[0] == "a" or exec_order[0] == "c")
+        self.assertTrue(exec_order[1] == "b" or exec_order[1] == "c" or exec_order[1] == "a")
+        self.assertTrue(exec_order[2] == "c" or exec_order[2] == "b")
+        self.assertTrue(exec_order[3] == "d")
+
+    def test_execution_order4(self):
+        """Test that execution order is correct with all kinds of graphs.
+        Graph Nodes: [a, b, c, d]. Edges: [a->b, a->c, b->d, c->d]
+        Expected order: a-b-c-d or a-c-b-d
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("a", "c"), ("b", "d"), ("c", "d")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 4)
+        self.assertEqual(len(d.edges()), 4)
+        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
+        exec_order = self.dag_handler.execution_order(sources)[1]
+        self.assertEqual(4, len(exec_order))
+        self.assertTrue(exec_order[0] == "a")
+        self.assertTrue(exec_order[1] == "b" or exec_order[1] == "c")
+        self.assertTrue(exec_order[2] == "b" or exec_order[2] == "c")
+        self.assertTrue(exec_order[3] == "d")
+
+    def test_execution_order5(self):
+        """Test that execution order is correct with all kinds of graphs.
+        Graph Nodes: [a]. Edges: []
+        Expected order: a
+        """
+        d = nx.DiGraph()
+        d.add_node("a")
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 1)
+        self.assertEqual(len(d.edges()), 0)
+        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
+        exec_order = self.dag_handler.execution_order(sources)[1]
+        self.assertEqual(1, len(exec_order))
+        self.assertTrue(exec_order[0] == "a")
+
+    def test_execution_order6(self):
+        """Test that execution order is correct with all kinds of graphs.
+        Graph Nodes: [a, b]. Edges: [a->b, b->b]  Has self-loop (feedback)
+        Expected order: None
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "b")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 2)
+        self.assertEqual(len(d.edges()), 2)
+        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
+        exec_order = self.dag_handler.execution_order(sources)[1]
+        # Execution order for this graph should be empty since it's not a DAG
+        self.assertEqual(0, len(exec_order))
+
+    def test_execution_order7(self):
+        """Test that execution order is correct with all kinds of graphs.
+        Graph Nodes: [a, b, c]. Edges: [a->b, b->c, c->b]  Note: Has loop
+        Expected order: None
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("b", "c"), ("c", "b")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        self.assertEqual(len(d.nodes()), 3)
+        self.assertEqual(len(d.edges()), 3)
+        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
+        exec_order = self.dag_handler.execution_order(sources)[1]
+        # Execution order for this graph should be empty since it's not a DAG
+        self.assertEqual(0, len(exec_order))
 
     @unittest.skip("TODO")
-    def test_execution_order(self):
+    def test_remove_node_from_graph(self):
         self.fail()

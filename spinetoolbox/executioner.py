@@ -158,19 +158,16 @@ class DirectedGraphHandler:
         Args:
             node_name (str): Project item name
         """
+        # This is called every time a previous project is closed and another is opened.
+        # TODO: Make a new method that clears the dag list contents (may need changes in ToolboxUI.remove_item())
         g = self.dag_with_node(node_name)
         edges_to_remove = list()
-        # Loop through edges and remove all that has the node
-        logging.debug("Removing node {0}. g nodes:{1} and edges:{2}"
-                      .format(node_name, g.nodes(), g.edges()))
         for edge in g.edges():
             if edge[0] == node_name or edge[1] == node_name:
                 edges_to_remove.append(edge)
         g.remove_edges_from(edges_to_remove)
         # Now remove the node itself
         g.remove_node(node_name)
-        logging.debug("after removal g nodes:{1} and edges:{2}"
-                      .format(node_name, g.nodes(), g.edges()))
         # If only a single node with no edges remains -> return
         if len(g.nodes()) == 1 and len(g.edges()) == 0:
             return
@@ -178,14 +175,12 @@ class DirectedGraphHandler:
         nodes_to_remove = list()
         for node in g.nodes():
             if self.node_is_isolated(node):
-                logging.debug("Creating a new graph for node {0}".format(node))
                 nodes_to_remove.append(node)
                 h = nx.DiGraph()
                 h.add_node(node)
                 self.add_dag(h)
         g.remove_nodes_from(nodes_to_remove)
         if len(g.nodes()) == 0:
-            logging.debug("Removing g from dag list since its empty")
             self.remove_dag(g)
 
     def rename_node(self, old_name, new_name):
@@ -234,16 +229,18 @@ class DirectedGraphHandler:
         logging.error("Graph containing edge {0}->{1} not found. Something is wrong.".format(src_node, dst_node))
         return None
 
-    def execution_order(self):
+    def execution_order(self, sources):
         """Builds a list or an iterator of all graphs in the project.
         Returns a dictionary of project item names in the breadth-first
         search order.
+
+        Args:
+            sources (list-of-str): Source project items in project. I.e items that do not have input items.
 
         Returns:
             dict: Key is the index number of the graph starting from 1.
             Value is an ordered list of project item names.
         """
-        sources = self._toolbox.connection_model.source_items()  # Give this as argument for this method
         n = len(self.dags())
         t = 1
         exec_dict = dict()
@@ -254,13 +251,11 @@ class DirectedGraphHandler:
             else:
                 logging.debug("Executing dag ({0}/{1}) n nodes:{2} n edges:{3}"
                               .format(t, n, len(dag.nodes()), len(dag.edges())))
-                logging.debug("nodes:{0}".format(dag.nodes()))
-                if len(dag.edges()) > 0:
-                    logging.debug("edges:{0}".format(dag.edges()))
                 # Intersection of source items and nodes in current graph
                 sources_in_dag = sources & dag.nodes()
-                logging.debug("Source items in this graph:{0}".format(sources_in_dag))
+                logging.debug("Sources in current dag:{0}".format(sources_in_dag))
                 if len(sources_in_dag) == 0:
+                    # Should not happen if nx.is_directed_acyclic_graph() works
                     logging.error("No sources for this graph found. Execution failed.")
                 else:
                     source = sources_in_dag.pop()
@@ -286,7 +281,7 @@ class DirectedGraphHandler:
                     exec_order += sources_in_dag
                     for edge in edges_to_execute:
                         src, dst = edge
-                        logging.debug("src:{0} dst:{1}".format(src, dst))
+                        # logging.debug("src:{0} dst:{1}".format(src, dst))
                         if src not in exec_order:
                             exec_order.append(src)
                         if dst not in exec_order:

@@ -585,11 +585,16 @@ class ToolboxUI(QMainWindow):
             self.msg.emit_warning("Project has no items to execute")
             return
         self.msg.emit("")
-        exec_dictionary = self.project().dag_handler.execution_order()
+        sources = self.connection_model.source_items()  # Source items for the bfs-algorithm
+        if len(sources) == 0:
+            self.msg_warning.emit("There are no Directed Acyclic Graphs in the project, "
+                                  "please modify links in Design View.")
+            return
+        exec_dictionary = self.project().dag_handler.execution_order(sources)
         n_graphs = len(exec_dictionary.keys())
-        for graph_number, project_items in exec_dictionary.items():
+        for graph_number, execution_list in exec_dictionary.items():
             self.msg.emit("Executing graph:{0}/{1}".format(graph_number, n_graphs))
-            for item in project_items:
+            for item in execution_list:
                 self.msg.emit("Executing <b>{0}</b>".format(item))
         return
 
