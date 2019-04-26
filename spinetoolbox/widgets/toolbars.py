@@ -56,7 +56,6 @@ class ItemToolBar(QToolBar):
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
         remove_all = QToolButton(parent)
         remove_all.setIcon(remove_all_icon)
-
         remove_all.clicked.connect(self.remove_all_clicked)
         self.addSeparator()
         self.addWidget(remove_all)

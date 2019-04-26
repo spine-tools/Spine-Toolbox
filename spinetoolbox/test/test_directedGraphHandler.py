@@ -734,6 +734,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertTrue(exec_order[1] == "b" or exec_order[1] == "c" or exec_order[1] == "a")
         self.assertTrue(exec_order[2] == "c" or exec_order[2] == "b")
         self.assertTrue(exec_order[3] == "d")
+        self.fail("Fix me")  # Added since this passes if source is "a"
 
     def test_execution_order4(self):
         """Test that execution order is correct with all kinds of graphs.

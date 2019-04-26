@@ -581,24 +581,7 @@ class ToolboxUI(QMainWindow):
         if not self._project:
             self.msg.emit("Please create a new project or open an existing one first")
             return
-        if len(self.project().dag_handler.dags()) == 0:
-            self.msg.emit_warning("Project has no items to execute")
-            return
-        self.msg.emit("")
-        sources = self.connection_model.source_items()  # Source items for the bfs-algorithm
-        if len(sources) == 0:
-            self.msg_warning.emit("There are no Directed Acyclic Graphs in the project, "
-                                  "please modify links in Design View.")
-            return
-        exec_dictionary = self.project().dag_handler.execution_order(sources)
-        n_graphs = len(exec_dictionary.keys())
-        for graph_number, execution_list in exec_dictionary.items():
-            self.msg.emit("Executing graph:{0}/{1}".format(graph_number, n_graphs))
-            if len(execution_list) == 0:
-                self.msg_warning.emit("Not a Directed Acyclic Graph")
-                continue
-            for item in execution_list:
-                self.msg.emit("Executing <b>{0}</b>".format(item))
+        self._project.start_execution()
         return
 
     @Slot(name="open_tool_template")
