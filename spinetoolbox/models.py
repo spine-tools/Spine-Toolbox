@@ -2315,13 +2315,14 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
         parameter_id_column = header.index('parameter_id')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
-        object_class_dict = {x.name: x.id for x in self._parent.db_map.object_class_list()}
-        object_class_name_dict = {x.id: x.name for x in self._parent.db_map.object_class_list()}
+        object_class_list = self._parent.db_map.object_class_list().all()
+        object_class_dict = {x.name: x.id for x in object_class_list}
+        object_class_name_dict = {x.id: x.name for x in object_class_list}
         object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self._parent.db_map.object_list()}
-        parameter_dict = {
-            x.parameter_name: {
-                'id': x.id, 'object_class_id': x.object_class_id
-            } for x in self._parent.db_map.object_parameter_list()}
+        parameter_dict = {}
+        for x in self._parent.db_map.object_parameter_list():
+            parameter_dict.setdefault(x.parameter_name, {}).update(
+                {x.object_class_id: {'id': x.id, 'object_class_id': x.object_class_id}})
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
@@ -2344,8 +2345,13 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
                     self.error_log.append("Invalid object '{}'".format(object_name))
             if parameter_name:
                 try:
-                    parameter = parameter_dict[parameter_name]
-                    self._main_data[row][parameter_id_column] = parameter['id']
+                    dup_parameters = parameter_dict[parameter_name]
+                    if len(dup_parameters) == 1:
+                        parameter = list(dup_parameters.values())[0]
+                    elif object_class_id in dup_parameters:
+                        parameter = dup_parameters[object_class_id]
+                    if parameter is not None:
+                        self._main_data[row][parameter_id_column] = parameter['id']
                 except KeyError:
                     self.error_log.append("Invalid parameter '{}'".format(parameter_name))
             if object_class_id is None:
@@ -2430,11 +2436,10 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                 "object_class_name_list": x.object_class_name_list
             } for x in self._parent.db_map.wide_relationship_class_list()}
         relationship_class_name_dict = {x.id: x.name for x in self._parent.db_map.wide_relationship_class_list()}
-        parameter_dict = {
-            x.parameter_name: {
-                'id': x.id,
-                'relationship_class_id': x.relationship_class_id
-            } for x in self._parent.db_map.relationship_parameter_list()}
+        parameter_dict = {}
+        for x in self._parent.db_map.relationship_parameter_list():
+            parameter_dict.setdefault(x.parameter_name, {}).update(
+                {x.relationship_class_id: {'id': x.id, 'relationship_class_id': x.relationship_class_id}})
         relationship_dict = {
             (x.class_id, x.object_id_list): x.id for x in self._parent.db_map.wide_relationship_list()}
         object_dict = {x.name: x.id for x in self._parent.db_map.object_list()}
@@ -2467,8 +2472,13 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                     self.error_log.append("Invalid object '{}'".format(e))
             if parameter_name:
                 try:
-                    parameter = parameter_dict[parameter_name]
-                    self._main_data[row][parameter_id_column] = parameter['id']
+                    dup_parameters = parameter_dict[parameter_name]
+                    if len(dup_parameters) == 1:
+                        parameter = list(dup_parameters.values())[0]
+                    elif relationship_class_id in dup_parameters:
+                        parameter = dup_parameters[relationship_class_id]
+                    if parameter is not None:
+                        self._main_data[row][parameter_id_column] = parameter['id']
                 except KeyError:
                     self.error_log.append("Invalid parameter '{}'".format(parameter_name))
             if relationship_class_id is None and parameter is not None:
@@ -2526,7 +2536,6 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         parameter_id_column = header.index('parameter_id')
         parameter_name_column = header.index('parameter_name')
         # Query db and build ad-hoc dicts
-        parameter_dict = {x.parameter_name: x.id for x in self._parent.db_map.relationship_parameter_list()}
         for row in {ind.row() for ind in indexes}:
             parameter_id = self.index(row, parameter_id_column).data(Qt.DisplayRole)
             if parameter_id is None:
@@ -2582,7 +2591,7 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
             self.error_log.append(e.msg)
 
 
-class EmptyObjectParameterDefinitonModel(EmptyParameterDefinitionModel):
+class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty object parameter definition model."""
     def __init__(self, parent):
         """Initialize class."""
@@ -2642,7 +2651,7 @@ class EmptyObjectParameterDefinitonModel(EmptyParameterDefinitionModel):
         return items_to_add
 
 
-class EmptyRelationshipParameterDefinitonModel(EmptyParameterDefinitionModel):
+class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty relationship parameter definition model."""
     def __init__(self, parent):
         """Initialize class."""
@@ -3151,7 +3160,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
     def __init__(self, tree_view_form=None):
         """Init class."""
         super().__init__(tree_view_form)
-        self.empty_row_model = EmptyObjectParameterDefinitonModel(self)
+        self.empty_row_model = EmptyObjectParameterDefinitionModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
     def reset_model(self):
@@ -3780,7 +3789,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
     def __init__(self, tree_view_form=None):
         """Init class."""
         super().__init__(tree_view_form)
-        self.empty_row_model = EmptyRelationshipParameterDefinitonModel(self)
+        self.empty_row_model = EmptyRelationshipParameterDefinitionModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
     def reset_model(self):
