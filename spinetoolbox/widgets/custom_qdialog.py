@@ -37,9 +37,8 @@ class ManageItemsDialog(QDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
-        force_default (bool): if True, defaults are non-editable
     """
-    def __init__(self, parent, force_default=False):
+    def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
         self.table_view = CopyPasteTableView(self)
@@ -90,7 +89,7 @@ class ManageItemsDialog(QDialog):
 
 
 class AddItemsDialog(ManageItemsDialog):
-    def __init__(self, parent, force_default=False):
+    def __init__(self, parent):
         super().__init__(parent)
 
     def connect_signals(self):
@@ -442,8 +441,9 @@ class AddRelationshipsDialog(AddItemsDialog):
         layout.addStretch()
         self.layout().insertWidget(0, widget)
         self.remove_row_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
-        self.relationship_class_list = \
-            [x for x in self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)]
+        self.relationship_class_list = self._parent.db_map.wide_relationship_class_list(
+            object_class_id=object_class_id
+        )
         self.relationship_class = None
         self.relationship_class_id = relationship_class_id
         self.object_id = object_id
@@ -458,23 +458,21 @@ class AddRelationshipsDialog(AddItemsDialog):
 
     def init_relationship_class(self, force_default):
         """Populate combobox and initialize relationship class if any."""
-        relationship_class_name_list = [x.name for x in self.relationship_class_list]
+        relationship_class_dict = {x.id: x for x in self.relationship_class_list}
+        self.relationship_class = relationship_class_dict.get(self.relationship_class_id, None)
         if not force_default:
+            relationship_class_name_list = [x.name for x in relationship_class_dict.values()]
             self.combo_box.addItems(relationship_class_name_list)
-            self.combo_box.setCurrentIndex(-1)
-        self.relationship_class = self._parent.db_map.\
-            single_wide_relationship_class(id=self.relationship_class_id).one_or_none()
-        if not self.relationship_class:
-            # Default not found
-            return
-        try:
-            if not force_default:
+            if self.relationship_class:
                 combo_index = relationship_class_name_list.index(self.relationship_class.name)
                 self.combo_box.setCurrentIndex(combo_index)
-                return
+            else:
+                self.combo_box.setCurrentIndex(-1)
+        elif self.relationship_class:
             self.combo_box.addItem(self.relationship_class.name)
-        except ValueError:
-            pass
+        else:
+            self._parent.msg_error.emit(
+                f"Forced default relationship class id {self.relationship_class_id} not found!")
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -525,6 +523,11 @@ class AddRelationshipsDialog(AddItemsDialog):
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
+        object_dicts = [
+            {
+                x.name: x.id for x in self._parent.db_map.object_list(class_id=int(id))
+            } for id in self.relationship_class.object_class_id_list.split(",")
+        ]
         wide_kwargs_list = list()
         name_column = self.model.horizontal_header_labels().index("relationship name")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -533,17 +536,17 @@ class AddRelationshipsDialog(AddItemsDialog):
             if not relationship_name:
                 self._parent.msg_error.emit("Relationship name missing at row {}".format(i + 1))
                 return
-            object_id_list = list()
+            object_name_list = list()
             for column in range(name_column):  # Leave 'name' column outside
                 object_name = row_data[column]
                 if not object_name:
                     self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
                     return
-                object_ = self._parent.db_map.single_object(name=object_name).one_or_none()
-                if not object_:
-                    self._parent.msg_error.emit("Couldn't find object '{}' at row {}".format(object_name, i + 1))
-                    return
-                object_id_list.append(object_.id)
+                object_name_list.append(object_name)
+            object_id_list = [
+                object_dicts[k][x]
+                for k, x in enumerate(object_name_list)
+            ]
             wide_kwargs = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
@@ -564,7 +567,7 @@ class AddRelationshipsDialog(AddItemsDialog):
 
 
 class EditItemsDialog(ManageItemsDialog):
-    def __init__(self, parent, force_default=False):
+    def __init__(self, parent):
         super().__init__(parent)
 
     @Slot(name="_handle_model_reset")
