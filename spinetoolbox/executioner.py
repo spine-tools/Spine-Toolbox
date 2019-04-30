@@ -253,17 +253,17 @@ class DirectedGraphHandler:
                 logging.debug("This graph is not a DAG")
                 # TODO: Do something here
             else:
-                logging.debug("Executing dag ({0}/{1}) n nodes:{2} n edges:{3}"
-                              .format(t, n, len(dag.nodes()), len(dag.edges())))
+                # logging.debug("Executing dag ({0}/{1}) n nodes:{2} n edges:{3}"
+                #               .format(t, n, len(dag.nodes()), len(dag.edges())))
                 # Intersection of source items and nodes in current graph
                 sources_in_dag = sources & dag.nodes()
-                logging.debug("Sources in current dag:{0}".format(sources_in_dag))
+                # logging.debug("Sources in current dag:{0}".format(sources_in_dag))
                 if len(sources_in_dag) == 0:
                     # Should not happen if nx.is_directed_acyclic_graph() works
                     logging.error("No sources for this graph found. Execution failed.")
                 else:
                     source = sources_in_dag.pop()
-                    logging.debug("Using {0} as source".format(source))
+                    # logging.debug("Using {0} as source".format(source))
                     edges_to_execute = list(nx.bfs_edges(dag, source))
                     # successor_iter = list(nx.bfs_successors(dag, source))  # TODO: Test bfs_successors(G, source)
                     exec_order = list()
@@ -375,7 +375,7 @@ class ExecutionInstance(QObject):
         self.project_item_execution_finished_signal.connect(self.item_execution_finished)
         item_ind = self._toolbox.project_item_model.find_item(self.running_item)
         item = self._toolbox.project_item_model.project_item(item_ind)
-        item.execute_me()
+        item.execute()
 
     @Slot(int, name="item_execution_finished")
     def item_execution_finished(self, abort):

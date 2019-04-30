@@ -221,7 +221,7 @@ class View(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
-    def execute_me(self):
+    def execute(self):
         """Executes this View."""
         self._toolbox.msg.emit("Executing View <b>{0}</b>".format(self.name))
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success

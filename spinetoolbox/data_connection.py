@@ -468,7 +468,7 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_dc_name.setText(self.name)
 
-    def execute_me(self):
+    def execute(self):
         """Executes this Data Connection."""
         self._toolbox.msg.emit("Executing Data Connection <b>{0}</b>".format(self.name))
         inst = self._toolbox.project().execution_instance
