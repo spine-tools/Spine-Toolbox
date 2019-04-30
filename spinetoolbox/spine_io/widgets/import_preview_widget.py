@@ -8,9 +8,6 @@ from spine_io.widgets.mapping_widget import MappingWidget, DataMappingListModel
 from spinedb_api import ObjectClassMapping, Mapping
 
 
-import sys
-sys.path.append("c:/data/GIT/spine-data/spinedatabase_api/")
-
 class ImportPreviewWidget(QWidget):
     rejected = Signal()
     mappedDataReady = Signal(dict, list)
