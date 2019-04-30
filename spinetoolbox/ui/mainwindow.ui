@@ -1049,7 +1049,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1090,7 +1090,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1131,7 +1131,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1844,7 +1844,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1888,7 +1888,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -1897,47 +1897,6 @@
                  </property>
                  <property name="text">
                   <string>Results...</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer_7">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item>
-                <widget class="QPushButton" name="pushButton_tool_execute">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>75</width>
-                   <height>23</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>23</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute tool&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="text">
-                  <string>Execute</string>
                  </property>
                 </widget>
                </item>
@@ -2128,7 +2087,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -2896,7 +2855,6 @@
   <tabstop>toolButton_tool_template</tabstop>
   <tabstop>pushButton_tool_stop</tabstop>
   <tabstop>pushButton_tool_results</tabstop>
-  <tabstop>pushButton_tool_execute</tabstop>
   <tabstop>treeView_view</tabstop>
   <tabstop>pushButton_open_network_map</tabstop>
   <tabstop>tableView_connections</tabstop>

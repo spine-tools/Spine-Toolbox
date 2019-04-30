@@ -90,7 +90,6 @@ class Tool(ProjectItem):
         s[self._toolbox.ui.toolButton_tool_open_dir.clicked] = self.open_directory
         s[self._toolbox.ui.pushButton_tool_stop.clicked] = self.stop_process
         s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
-        s[self._toolbox.ui.pushButton_tool_execute.clicked] = self.execute
         s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
         s[self._toolbox.ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
         return s
@@ -351,7 +350,6 @@ class Tool(ProjectItem):
             if not self.copy_optional_input_files(optional_file_paths):
                 self._toolbox.msg_warning.emit("Copying optional input files failed")
         self._toolbox.ui.pushButton_tool_stop.setEnabled(True)
-        self._toolbox.ui.pushButton_tool_execute.setEnabled(False)
         self._graphics_item.start_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execution_finished)
@@ -690,7 +688,6 @@ class Tool(ProjectItem):
     def execution_finished(self, return_code):
         """Tool execution finished."""
         self._toolbox.ui.pushButton_tool_stop.setEnabled(False)
-        self._toolbox.ui.pushButton_tool_execute.setEnabled(True)
         self._graphics_item.stop_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execution_finished)
@@ -975,8 +972,7 @@ class Tool(ProjectItem):
         #         self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
         #     if not self.copy_optional_input_files(optional_file_paths):
         #         self._toolbox.msg_warning.emit("Copying optional input files failed")
-        self._toolbox.ui.pushButton_tool_stop.setEnabled(True)
-        self._toolbox.ui.pushButton_tool_execute.setEnabled(False)  # TODO: Should be done when copying files as well
+        self._toolbox.ui.pushButton_tool_stop.setEnabled(True)  # TODO: Should be done when copying files as well
         self._graphics_item.start_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execute_me_finished)
@@ -1008,7 +1004,6 @@ class Tool(ProjectItem):
     def execute_me_finished(self, return_code):
         """Tool template execution finished."""
         self._toolbox.ui.pushButton_tool_stop.setEnabled(False)
-        self._toolbox.ui.pushButton_tool_execute.setEnabled(True)
         self._graphics_item.stop_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execute_me_finished)
