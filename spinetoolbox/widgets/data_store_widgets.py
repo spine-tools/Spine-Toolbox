@@ -1631,6 +1631,8 @@ class TreeViewForm(DataStoreForm):
             self.object_tree_model.remove_items("object", object_ids)
             self.object_tree_model.remove_items("relationship_class", relationship_class_ids)
             self.object_tree_model.remove_items("relationship", relationship_ids)
+            self.relationship_tree_model.remove_items("object_class", object_class_ids)
+            self.relationship_tree_model.remove_items("object", object_ids)
             self.relationship_tree_model.remove_items("relationship_class", relationship_class_ids)
             self.relationship_tree_model.remove_items("relationship", relationship_ids)
             # Parameter models

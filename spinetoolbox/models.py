@@ -1538,6 +1538,16 @@ class RelationshipTreeModel(QStandardItemModel):
             visited_index = self.indexFromItem(visited_item)
             if visited_type == removed_type and visited_id in removed_ids:
                 self.removeRows(visited_index.row(), 1, visited_index.parent())
+            # When removing an object class, also remove 'child' relationship classes
+            if removed_type == 'object_class' and visited_type == 'relationship_class':
+                object_class_id_list = visited['object_class_id_list']
+                if any([id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids]):
+                    self.removeRows(visited_index.row(), 1, visited_index.parent())
+            # When removing an object, also remove 'child' relationships
+            if removed_type == 'object' and visited_type == 'relationship':
+                object_id_list = visited['object_id_list']
+                if any([id in [int(x) for x in object_id_list.split(',')] for id in removed_ids]):
+                    self.removeRows(visited_index.row(), 1, visited_index.parent())
 
 
 class ObjectTreeModel(QStandardItemModel):
