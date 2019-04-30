@@ -19,8 +19,8 @@
         "input/changes.inc"
     ],
     "outputfiles": [
-        "magic.lst",
-        "output/*.*"
+        "output/*.*",
+        "magic.lst"
     ],
     "cmdline_args": "--INVEST=yes"
 }

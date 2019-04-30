@@ -821,3 +821,8 @@ class DataStore(ProjectItem):
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_ds_name.setText(self.name)
+
+    def execute_me(self):
+        """Executes this Data Store."""
+        self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success

@@ -29,7 +29,7 @@ from tool import Tool
 from view import View
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
-from executioner import DirectedGraphHandler
+from executioner import DirectedGraphHandler, ExecutionInstance
 
 
 class SpineToolboxProject(MetaObject):
@@ -42,9 +42,6 @@ class SpineToolboxProject(MetaObject):
         work_dir (str): Project work directory
         ext (str): Project save file extension(.proj)
     """
-    dag_finished_signal = Signal(name="dag_finished_signal")
-    item_finished_signal = Signal(name="item_finished_signal")
-
     def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
@@ -52,9 +49,9 @@ class SpineToolboxProject(MetaObject):
         self._qsettings = self._toolbox.qsettings()
         self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
-        self.running_dag = list()  # Ordered list of items to execute. First item at index [0]
-        self.running_item = None  # Current executed item
-        self.dag_index = 1
+        self.execution_instance = None
+        self.graph_index = 1
+        self.n_graphs = 0
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
@@ -493,9 +490,11 @@ class SpineToolboxProject(MetaObject):
         ind = self._toolbox.project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
-    def start_execution(self):
-        """Pop the next graph for execution, connect signals,
-        and start executing the first project item in the current dag."""
+    def execute_project(self):
+        """Determines the number of directed acyclic graphs to execute in the project.
+        Determines the execution order of project items in each graph. Creates an
+        instance for executing the first graph and starts executing it.
+        """
         if len(self.dag_handler.dags()) == 0:
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
@@ -506,54 +505,48 @@ class SpineToolboxProject(MetaObject):
                                            "please modify connections in Design View and try again.")
             return
         self.ordered_dags = self.dag_handler.execution_order(sources)
-        n_graphs = len(self.ordered_dags.keys())
-        self._toolbox.msg.emit("Executing <b>{0}</b> DAGs".format(n_graphs))
+        self.n_graphs = len(self.ordered_dags.keys())
         # Get first graph, connect signals and start executing it
-        self.dag_index = 1
-        self.dag_finished_signal.connect(self.dag_execution_finished)
-        self.running_dag = self.ordered_dags.pop(self.dag_index)  # Pops first dag
-        self.execute_dag()
-
-    def execute_dag(self):
-        """Starts executing next or selected DAG."""
-        try:
-            self.running_item = self.running_dag.pop(0)
-        except IndexError:
-            # TODO: This is not called if graph is not DAG
-            self._toolbox.msg_warning.emit("This is not a Directed Acyclic Graph. Please modify connections.")
-            self.dag_finished_signal.emit()
+        self.graph_index = 1
+        execution_list = self.ordered_dags.pop(self.graph_index)  # Pop first set of items to execute
+        if len(execution_list) == 0:
+            self._toolbox.msg_error.emit("First graph is not a Directed Acyclic Graph. Please modify connections.")
+            # TODO: Needs work
             return
-        self.item_finished_signal.connect(self.item_execution_finished)
-        self.execute_item()
+        self.execution_instance = ExecutionInstance(self._toolbox,
+                                                    self.dag_handler.dags()[self.graph_index-1],
+                                                    execution_list)
+        # NOTE: len(self.execution_list) may not be the same as number of nodes in the
+        # graph if execution_order() fails for some reason
+        self._toolbox.msg_success.emit("Executing project <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("Starting directed graph <b>{0}</b>/<b>{1}</b> execution. Contains {2} project items."
+                               .format(self.graph_index, self.n_graphs, len(execution_list)))
+        self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
+        self.execution_instance.start_execution()
 
-    @Slot(name="dag_execution_finished")
-    def dag_execution_finished(self):
-        """Pop the next dag and start executing it or finish if no more dags left."""
-        self.dag_finished_signal.disconnect()
-        self.dag_index += 1
-        self.running_dag = self.ordered_dags.pop(self.dag_index, None)
-        if not self.running_dag:
-            self._toolbox.msg_success.emit("Executing project complete")
+    @Slot(name="graph_execution_finished")
+    def graph_execution_finished(self):
+        """Releases resources from previous execution and prepares the next
+        graph for execution, if there are still graphs left. Otherwise,
+        finishes the run.
+        """
+        self.execution_instance.graph_execution_finished_signal.disconnect()
+        self.execution_instance.deleteLater()
+        self.execution_instance = None
+        self.graph_index += 1
+        if self.n_graphs > 1:
+            self._toolbox.msg_success.emit("Directed graph execution complete")
+        # Pop next graph
+        execution_list = self.ordered_dags.pop(self.graph_index, None)  # Pop next graph
+        if not execution_list:
+            # No more graphs to execute
+            self._toolbox.msg_success.emit("Project execution complete")
             return
-        self.dag_finished_signal.connect(self.dag_execution_finished)
-        self.execute_dag()
-
-    def execute_item(self):
-        """Start executing current item."""
-        self.item_finished_signal.connect(self.item_execution_finished)
-        self._toolbox.msg.emit("Executing project item <b>{0}</b>".format(self.running_item))
-        self.item_finished_signal.emit()  # TODO: Do this in project item execute method after execution
-
-    @Slot(name="item_execution_finished")
-    def item_execution_finished(self):
-        """Pop next project item to execute or finish current dag if no items left."""
-        self.item_finished_signal.disconnect()
-        try:
-            self.running_item = self.running_dag.pop(0)
-        except IndexError:
-            # Execute next DAG
-            self._toolbox.msg_success.emit("No more items to execute in this graph")
-            self.dag_finished_signal.emit()
-            return
-        self.item_finished_signal.connect(self.item_execution_finished)
-        self.execute_item()
+        # Execute next graph
+        self.execution_instance = ExecutionInstance(self._toolbox,
+                                                    self.dag_handler.dags()[self.graph_index-1],
+                                                    execution_list)
+        self._toolbox.msg.emit("Starting directed graph <b>{0}</b>/<b>{1}</b> execution. Contains {2} project items."
+                               .format(self.graph_index, self.n_graphs, len(execution_list)))
+        self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
+        self.execution_instance.start_execution()

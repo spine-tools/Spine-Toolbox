@@ -575,15 +575,6 @@ class ToolboxUI(QMainWindow):
         # Set QDockWidget title to selected item's type
         self.ui.dockWidget_item.setWindowTitle(item.item_type + " Properties")
 
-    @Slot(name="execute_project")
-    def execute_project(self):
-        """Start executing all DAGs in project."""
-        if not self._project:
-            self.msg.emit("Please create a new project or open an existing one first")
-            return
-        self._project.start_execution()
-        return
-
     @Slot(name="open_tool_template")
     def open_tool_template(self):
         """Open a file dialog so the user can select an existing tool template .json file.

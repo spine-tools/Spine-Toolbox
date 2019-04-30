@@ -17,14 +17,21 @@ Contains classes for handling project item execution.
 """
 
 import logging
+import os
 import copy
 from itertools import chain
+from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
 
 
 class DirectedGraphHandler:
+    """Class for manipulating graphs according to user's actions.
+
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
+    """
     def __init__(self, toolbox):
-        """Constructor."""
+        """Class constructor."""
         self._toolbox = toolbox
         self.running_dag = None
         self.running_item = None
@@ -118,6 +125,7 @@ class DirectedGraphHandler:
             self.add_dag(g)
             return
         # If src node still has a path (ignoring edge directions) to dst node -> return, we're fine
+        # TODO: This still does not work correctly
         if self.nodes_connected(src_node, dst_node) or \
                 nx.has_path(dag, src_node, dst_node) or \
                 nx.has_path(dag, dst_node, src_node):
@@ -156,7 +164,6 @@ class DirectedGraphHandler:
             node_name (str): Project item name
         """
         # This is called every time a previous project is closed and another is opened.
-        # TODO: Make a new method that clears the dag list contents (may need changes in ToolboxUI.remove_item())
         g = self.dag_with_node(node_name)
         edges_to_remove = list()
         for edge in g.edges():
@@ -300,8 +307,9 @@ class DirectedGraphHandler:
 
         Args:
             node (str): Project item name
-            allow_self_loop (bool): If default (False), Self-loops are considered as an in-neighbor or an out-neighbor so the method
-            returns False. If True, single node with a self-loop is considered isolated.
+            allow_self_loop (bool): If default (False), Self-loops are considered as an
+                in-neighbor or an out-neighbor so the method returns False. If True,
+                single node with a self-loop is considered isolated.
 
         Returns:
             bool: True if project item has no in-neighbors nor out-neighbors, False if it does.
@@ -334,3 +342,91 @@ class DirectedGraphHandler:
         g = self.dag_with_node(a)
         values = chain(g.predecessors(b), g.successors(b))
         return a in values
+
+
+class ExecutionInstance(QObject):
+    """Class for the graph that is being executed. Contains references to
+    files and resources advertised by project items so that project items downstream can find them.
+
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
+    """
+    graph_execution_finished_signal = Signal(name="graph_execution_finished_signal")
+    project_item_execution_finished_signal = Signal(int, name="project_item_execution_finished_signal")
+
+    def __init__(self, toolbox, dag, execution_list):
+        """Class constructor."""
+        QObject.__init__(self)
+        self._toolbox = toolbox
+        self.dag = dag  # networkx.DiGraph() instance that is being executed
+        self.execution_list = execution_list  # Ordered list of nodes to execute. First node at index 0
+        self.running_item = None
+        self.dc_refs = list()  # Data Connection reference list
+        self.dc_files = list()  # Data Connection file list
+        self.tool_output_files = list()  # Paths to result files from ToolInstance
+
+    def start_execution(self):
+        """Pops the next item from the execution list and starts executing it."""
+        self.running_item = self.execution_list.pop(0)
+        self.execute_project_item()
+
+    def execute_project_item(self):
+        """Starts executing project item."""
+        self.project_item_execution_finished_signal.connect(self.item_execution_finished)
+        item_ind = self._toolbox.project_item_model.find_item(self.running_item)
+        item = self._toolbox.project_item_model.project_item(item_ind)
+        item.execute_me()
+
+    @Slot(int, name="item_execution_finished")
+    def item_execution_finished(self, abort):
+        """Pop next project item to execute or finish current graph if there are no items left.
+
+        Args:
+            abort (int): 0=Continue to next project item. 1=Abort execution (when e.g. Tool crashes or something)
+        """
+        self.project_item_execution_finished_signal.disconnect()
+        if abort == 1:
+            self._toolbox.msg.emit("Execution aborted due to an error")
+            self.graph_execution_finished_signal.emit()
+            return
+        try:
+            self.running_item = self.execution_list.pop(0)
+        except IndexError:
+            self.graph_execution_finished_signal.emit()
+            return
+        self.execute_project_item()
+
+    def append_dc_refs(self, refs):
+        """Adds given file paths (Data Connection file references) to a list."""
+        self.dc_refs += refs
+
+    def append_dc_files(self, files):
+        """Adds given project data file paths to a list."""
+        self.dc_files += files
+
+    def append_tool_output_file(self, filepath):
+        """Adds given file path to a list containing paths to Tool output files."""
+        self.tool_output_files.append(filepath)
+
+    def find_file(self, filename):
+        """Returns the first occurrence to full path to given file name or None if file was not found.
+
+        Args:
+            filename (str): Searched file name (no path)
+        """
+        for dc_ref in self.dc_refs:
+            _, file_candidate = os.path.split(dc_ref)
+            if file_candidate == filename:
+                # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
+                return dc_ref
+        for dc_file in self.dc_files:
+            _, file_candidate = os.path.split(dc_file)
+            if file_candidate == filename:
+                # logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
+                return dc_file
+        for tool_file in self.tool_output_files:
+            _, file_candidate = os.path.split(tool_file)
+            if file_candidate == filename:
+                # logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
+                return tool_file
+        return None

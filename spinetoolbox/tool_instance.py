@@ -44,7 +44,7 @@ class ToolInstance(QObject):
     def __init__(self, tool_template, toolbox, tool_output_dir, project, execute_in_work):
         """class constructor."""
 
-        super().__init__()
+        super().__init__()  # TODO: Should this be QObject.__init__(self) like in MetaObject class?
         self.tool_template = tool_template
         self._toolbox = toolbox
         self._project = project
@@ -424,7 +424,8 @@ class ToolInstance(QObject):
                 for fname_path in glob.glob(os.path.join(self.basedir, pattern)):  # fname_path is a full path
                     fname = os.path.split(fname_path)[1]  # File name (no path)
                     dst = os.path.join(target, fname)
-                    shutil.copy(fname_path, dst)
+                    shutil.copy(fname_path, dst)  # TODO: Try-catch
+                    self._toolbox.project().execution_instance.append_tool_output_file(dst)
                     saved_files.append(os.path.join(dst_subdir, fname))
             else:
                 output_file = os.path.join(self.basedir, pattern)
@@ -435,7 +436,8 @@ class ToolInstance(QObject):
                 # logging.debug("Saving file {0}".format(fname_pattern))
                 dst = os.path.join(target, fname_pattern)
                 # logging.debug("Copying to {0}".format(dst))
-                shutil.copy(output_file, dst)
+                shutil.copy(output_file, dst)  # TODO: Try-catch
+                self._toolbox.project().execution_instance.append_tool_output_file(dst)
                 saved_files.append(pattern)
         return saved_files, failed_files
 

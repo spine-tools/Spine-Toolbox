@@ -81,7 +81,11 @@ class ItemToolBar(QToolBar):
     @Slot(bool, name="execute_project_clicked")
     def execute_project_clicked(self, checked=False):
         """Slot for handling the Execute project tool button clicked signal."""
-        self._toolbox.execute_project()
+        if not self._toolbox.project():
+            self._toolbox.msg.emit("Please create a new project or open an existing one first")
+            return
+        self._toolbox.project().execute_project()
+        return
 
 
 class DraggableWidget(QLabel):

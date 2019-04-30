@@ -467,3 +467,14 @@ class DataConnection(ProjectItem):
     def update_name_label(self):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_dc_name.setText(self.name)
+
+    def execute_me(self):
+        """Executes this Data Connection."""
+        self._toolbox.msg.emit("Executing Data Connection <b>{0}</b>".format(self.name))
+        inst = self._toolbox.project().execution_instance
+        # Add data file references and data files into execution instance
+        refs = self.file_references()
+        inst.append_dc_refs(refs)
+        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        inst.append_dc_files(f_list)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
