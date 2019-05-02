@@ -1,14 +1,17 @@
 # -*- coding: utf-8 -*-
 
-from PySide2.QtWidgets import QWidget, QVBoxLayout, QDialogButtonBox, QGridLayout, QComboBox, QPushButton, QTableView, QHBoxLayout, QSpinBox, QGroupBox, QLabel, QListView, QCheckBox, QSplitter
+from PySide2.QtWidgets import QWidget, QVBoxLayout, QDialogButtonBox, QGridLayout, QComboBox, QPushButton, QTableView, QHBoxLayout, QSpinBox, QGroupBox, QLabel, QListView, QCheckBox, QSplitter, QAbstractItemView
 from PySide2.QtCore import Qt, QAbstractTableModel, Signal, QAbstractListModel,QModelIndex
 
 from widgets.custom_menus import FilterMenu
+from widgets.custom_delegates import ComboBoxDelegate
 
 from spinedb_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
 
+MAPPING_CHOICES = ("Constant", "Column", "Row", "Header", "None")
 
 class MappingTableModel(QAbstractTableModel):
+    
     def __init__(self, model, parent=None):
         super(MappingTableModel, self).__init__(parent)
         self._display_names = []
@@ -17,7 +20,7 @@ class MappingTableModel(QAbstractTableModel):
             self._model = None
         else:
             self.set_mapping(model)
-        
+
     def map_type(self):
         if self._model is None:
             return None
@@ -138,14 +141,11 @@ class MappingTableModel(QAbstractTableModel):
             mapping_type = 'Constant'
         elif type(mapping) == Mapping:
             if mapping.map_type == 'column':
-                mapping_type = 'Row values'
+                mapping_type = 'Column'
             elif mapping.map_type == 'column_name':
-                mapping_type = 'Header value'
+                mapping_type = 'Header'
             elif mapping.map_type == 'row':
-                if mapping.value_reference == -1:
-                    mapping_type = 'Pivoted Headers'
-                else:
-                    mapping_type = 'Column values'
+                mapping_type = 'Row'
         return mapping_type
     
     def get_map_value_display(self, mapping, name):
@@ -160,11 +160,11 @@ class MappingTableModel(QAbstractTableModel):
                 if mapping.value_reference == -1:
                     mapping_value = 'Headers'
                 else:
-                    mapping_value = 'Row: ' +  str(mapping.value_reference)
+                    mapping_value = str(mapping.value_reference)
             elif mapping.map_type == 'column':
-                mapping_value = 'Column: ' +  str(mapping.value_reference)
+                mapping_value = str(mapping.value_reference)
             else:
-                mapping_value = 'Header: ' +  str(mapping.value_reference)
+                mapping_value = str(mapping.value_reference)
         return mapping_value
     
     def get_map_append_display(self, mapping, name):
@@ -255,15 +255,15 @@ class MappingTableModel(QAbstractTableModel):
     def set_type(self, name, value):
         if value == 'None' or value == '' or value == None:
             value = None
-        elif value == 'String':
+        elif value == 'Constant':
             value = ''
-        elif value == 'Row values':
+        elif value == 'Column':
             value = Mapping(map_type='column')
-        elif value == 'Single column header':
+        elif value == 'Header':
             value = Mapping(map_type='column_name')
         elif value == 'Pivoted Headers':
             value = Mapping(map_type='row', value_reference=-1)
-        elif value == 'Column values':
+        elif value == 'Row':
             value = Mapping(map_type='row')
         else:
             return False
@@ -287,14 +287,20 @@ class MappingTableModel(QAbstractTableModel):
                 else:
                     mapping = value
             else:
-                if value.isdigit():
-                    value = int(value)
-                    if mapping.map_type == 'row':
-                        value = max(-1, value)
-                    else:
-                        value = max(0, value)
-                elif value == '':
+                if mapping.map_type == 'row' and value.lower() == 'header':
+                    value = -1
+                if value == '':
                     value = None
+                try:
+                    if value is not None:
+                        value = int(value)
+                        if mapping.map_type == 'row':
+                            value = max(-1, value)
+                        else:
+                            value = max(0, value)
+                except ValueError:
+                    return False
+                
                 mapping.value_reference = value
         return self.set_mapping_from_name(name, mapping)
     
@@ -392,7 +398,9 @@ class MappingWidget(QWidget):
         self._ui_table = QTableView()
         self._ui_options = MappingOptionWidget()
         self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-
+        
+        self._ui_table.setItemDelegateForColumn(1, ComboBoxDelegate(self, MAPPING_CHOICES))
+        
         # layout
         self.setLayout(QVBoxLayout())
         splitter = QSplitter()
@@ -468,7 +476,7 @@ class MappingWidget(QWidget):
         """
         deletes selected mapping
         """
-        if self._model:
+        if self._model != None:
             # get selected mapping in list
             indexes = self._ui_list.selectedIndexes()
             if indexes:
@@ -529,13 +537,12 @@ class DataMappingListModel(QAbstractListModel):
             return self._names[index.row()]
     
     def add_mapping(self):
-        if self._qmappings:
-            self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(),self.rowCount())
-            m = ObjectClassMapping()
-            self._qmappings.append(MappingTableModel(m))
-            self._names.append("Mapping " + str(self._counter))
-            self._counter += 1
-            self.endInsertRows()
+        self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(),self.rowCount())
+        m = ObjectClassMapping()
+        self._qmappings.append(MappingTableModel(m))
+        self._names.append("Mapping " + str(self._counter))
+        self._counter += 1
+        self.endInsertRows()
     
     def remove_mapping(self, row):
         if self._qmappings and row < len(self._qmappings):

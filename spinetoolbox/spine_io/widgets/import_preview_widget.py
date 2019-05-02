@@ -410,10 +410,10 @@ class MappingTableMenu(QMenu):
         mapping_names = [self._model.data(self._model.createIndex(i,0), Qt.DisplayRole) for i in range(self._model.rowCount())]
         for i, n in enumerate(mapping_names):
             m = self.addMenu(n)
-            col_map = m.addAction(f'Map to row values for column: {col}')
-            col_header_map = m.addAction(f'Map to header value for column: {col}')
-            row_map = m.addAction(f'Map to column values for row: {row}')
-            header_map = m.addAction(f'Map to column headers')
+            col_map = m.addAction(f'Map to column')
+            col_header_map = m.addAction(f'Map to header')
+            row_map = m.addAction(f'Map to row')
+            header_map = m.addAction(f'Map to all headers')
 
             col_map.triggered.connect(create_callback(name=n, map_type='column', value=col))
             col_header_map.triggered.connect(create_callback(name=n, map_type='column_name', value=col))
