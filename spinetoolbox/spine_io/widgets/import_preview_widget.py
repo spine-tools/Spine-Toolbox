@@ -211,7 +211,7 @@ class ImportPreviewWidget(QWidget):
     def update_preview_data(self, data, header):
         if data:
             if not header:
-                header = list(range(1,len(data[0])+1))
+                header = list(range(len(data[0])))
             self.table.set_data(data, header)
         else:
             self.table.set_data([], [])
