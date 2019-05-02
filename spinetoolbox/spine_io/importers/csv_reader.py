@@ -18,7 +18,7 @@ class CSVConnector(FileImportTemplate):
         
         self._filename = None
         self._option_widget = CSVOptionWidget()
-        self._option_widget.optionsChanged.connect(self.request_data)
+        self._option_widget.optionsChanged.connect(lambda : self.request_data(None, 100))
 
     def set_table(self, table):
         pass
