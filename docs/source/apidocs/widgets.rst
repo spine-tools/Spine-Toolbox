@@ -76,10 +76,18 @@ widgets.custom\_qdialog module
     :undoc-members:
     :show-inheritance:
 
-widgets.custom\_qgraphicsview module
-------------------------------------
+widgets.custom\_qgraphicsscene module
+-------------------------------------
 
-.. automodule:: widgets.custom_qgraphicsview
+.. automodule:: widgets.custom_qgraphicsscene
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.custom\_qgraphicsviews module
+-------------------------------------
+
+.. automodule:: widgets.custom_qgraphicsviews
     :members:
     :undoc-members:
     :show-inheritance:
@@ -124,10 +132,10 @@ widgets.custom\_qtreeview module
     :undoc-members:
     :show-inheritance:
 
-widgets.custom\_qwidget module
-------------------------------
+widgets.custom\_qwidgets module
+-------------------------------
 
-.. automodule:: widgets.custom_qwidget
+.. automodule:: widgets.custom_qwidgets
     :members:
     :undoc-members:
     :show-inheritance:
@@ -152,6 +160,14 @@ widgets.project\_form\_widget module
 ------------------------------------
 
 .. automodule:: widgets.project_form_widget
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+widgets.python\_repl\_widget module
+-----------------------------------
+
+.. automodule:: widgets.python_repl_widget
     :members:
     :undoc-members:
     :show-inheritance:

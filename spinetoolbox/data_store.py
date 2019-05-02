@@ -23,17 +23,17 @@ import logging
 import fnmatch
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication, QCheckBox
 from project_item import ProjectItem
 from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
-from graphics_items import DataStoreImage
+from graphics_items import DataStoreIcon
 from helpers import create_dir, busy_effect
 from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError
 import qsubprocess
-from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError, create_new_spine_database
+import spinedb_api
 
 
 class DataStore(ProjectItem):
@@ -72,7 +72,7 @@ class DataStore(ProjectItem):
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                          " Check permissions.".format(self.data_dir))
-        self._graphics_item = DataStoreImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = DataStoreIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._reference = reference
         self.load_reference_into_selections()
         self._sigs = self.make_signal_handler_dict()
@@ -82,9 +82,9 @@ class DataStore(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.toolButton_ds_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.call_open_tree_view
-        s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.call_open_graph_view
-        s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.call_open_tabular_view
+        s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.open_tree_view
+        s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
+        s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
         s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
         s[self._toolbox.ui.toolButton_new_spine.clicked] = self.create_new_spine_database
@@ -530,14 +530,33 @@ class DataStore(ProjectItem):
         }
         return reference
 
-    @Slot(bool, name="call_open_tree_view")
-    def call_open_tree_view(self, checked=False):
-        """Call method to open the treeview."""
-        # NOTE: This is just so we can use @busy_effect with the open_tree_view method
-        self.open_tree_view()
+    def get_db_map(self, db_url, username, upgrade=False):
+        """Return a DiffDatabaseMapping instance to work with.
+        """
+        try:
+            return spinedb_api.DiffDatabaseMapping(db_url, username, upgrade=upgrade)
+        except spinedb_api.SpineDBVersionError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Incompatible database version")
+            msg.setText("The database at <b>{}</b> is from an older version of Spine "\
+                        "and needs to be upgraded in order to be used with the current version.".format(db_url))
+            msg.setInformativeText("Do you want to upgrade it now?" \
+                                   "<p><b>WARNING</b>: After the upgrade, "\
+                                   "the database may no longer be used "\
+                                   "with previous versions of Spine.")
+            msg.addButton(QMessageBox.Cancel)
+            msg.addButton("Upgrade", QMessageBox.YesRole)
+            ret = msg.exec_()  # Show message box
+            if ret == QMessageBox.Cancel:
+                return None
+            return self.get_db_map(db_url, username, upgrade=True)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            return None
 
-    @busy_effect
-    def open_tree_view(self):
+    @Slot(bool, name="open_tree_view")
+    def open_tree_view(self, checked=False):
         """Open reference in tree view form."""
         reference = self.make_reference()
         if not reference:
@@ -558,16 +577,15 @@ class DataStore(ProjectItem):
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
-        try:
-            db_map = DiffDatabaseMapping(db_url, username)
-        except SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
+        db_map = self.get_db_map(db_url, username)
+        if not db_map:
             return
-        try:
-            self.tree_view_form = TreeViewForm(self, db_map, database)
-        except:
-            db_map.close()
-            raise
+        self.do_open_tree_view(db_map, database)
+
+    @busy_effect
+    def do_open_tree_view(self, db_map, database):
+        """Open reference in tree view form."""
+        self.tree_view_form = TreeViewForm(self, db_map, database)
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -575,14 +593,8 @@ class DataStore(ProjectItem):
     def tree_view_form_destroyed(self):
         self.tree_view_form = None
 
-    @Slot(bool, name="call_open_graph_view")
-    def call_open_graph_view(self, checked=False):
-        """Call method to open the treeview."""
-        # NOTE: This is just so we can use @busy_effect with the open_graph_view method
-        self.open_graph_view()
-
-    @busy_effect
-    def open_graph_view(self):
+    @Slot(bool, name="open_graph_view")
+    def open_graph_view(self, checked=False):
         """Open reference in graph view form."""
         reference = self.make_reference()
         if not reference:
@@ -603,16 +615,15 @@ class DataStore(ProjectItem):
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
-        try:
-            db_map = DiffDatabaseMapping(db_url, username)
-        except SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
+        db_map = self.get_db_map(db_url, username)
+        if not db_map:
             return
-        try:
-            self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
-        except:
-            db_map.close()
-            raise
+        self.do_open_graph_view(db_map, database)
+
+    @busy_effect
+    def do_open_graph_view(self, db_map, database):
+        """Open reference in graph view form."""
+        self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
@@ -620,14 +631,8 @@ class DataStore(ProjectItem):
     def graph_view_form_destroyed(self):
         self.graph_view_form = None
 
-    @Slot(bool, name="call_open_tabular_view")
-    def call_open_tabular_view(self, checked=False):
-        """Call method to open the tabular view."""
-        # NOTE: This is just so we can use @busy_effect with the open_tabular_view method
-        self.open_tabular_view()
-
-    @busy_effect
-    def open_tabular_view(self):
+    @Slot(bool, name="open_tabular_view")
+    def open_tabular_view(self, checked=False):
         """Open reference in Data Store tabular view."""
         if self.tabular_view_form:
             if self.tabular_view_form.windowState() & Qt.WindowMinimized:
@@ -647,16 +652,15 @@ class DataStore(ProjectItem):
         db_url = reference['url']
         database = reference['database']
         username = reference['username']
-        try:
-            db_map = DiffDatabaseMapping(db_url, username)
-        except SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
+        db_map = self.get_db_map(db_url, username)
+        if not db_map:
             return
-        try:
-            self.tabular_view_form = TabularViewForm(self, db_map, database)
-        except:
-            db_map.close()
-            raise
+        self.do_open_tabular_view(db_map, database)
+
+    @busy_effect
+    def do_open_tabular_view(self, db_map, database):
+        """Open reference in tabular view form."""
+        self.tabular_view_form = TabularViewForm(self, db_map, database)
         self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
         self.tabular_view_form.show()
 
@@ -687,6 +691,9 @@ class DataStore(ProjectItem):
                                            "connections and try again. Detected at {0}.".format(self.name))
             return None
         reference = self.current_reference()
+        if not reference:
+            # Data Store has no reference
+            return None
         db_url = reference['url']
         if not db_url.lower().startswith('sqlite'):
             return None
@@ -776,13 +783,18 @@ class DataStore(ProjectItem):
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine SQLite database file."""
-        answer = QFileDialog.getSaveFileName(self._toolbox,
-                                             "Create new Spine SQLite database",
-                                             self.data_dir,
-                                             "SQlite database (*.sqlite *.db)")
-        file_path = answer[0]
-        if not file_path:
+        dialog = QFileDialog(self._toolbox,
+                             "Create new Spine SQLite database",
+                             self.data_dir,
+                             "SQlite database (*.sqlite *.db)")
+        dialog.setAcceptMode(QFileDialog.AcceptSave)
+        dialog.setOption(QFileDialog.DontUseNativeDialog, True)  # Only way to add the checkbox
+        check_box = QCheckBox("Include specific data structure for Spine Model.", dialog)
+        check_box.setChecked(True)
+        dialog.layout().addWidget(check_box)
+        if not dialog.exec_():
             return
+        file_path = dialog.selectedFiles()[0]
         extension = os.path.splitext(file_path)[1]
         if not extension:
             file_path += ".sqlite"
@@ -792,7 +804,8 @@ class DataStore(ProjectItem):
         except OSError:
             pass
         url = "sqlite:///" + file_path
-        create_new_spine_database(url)
+        for_spine_model = check_box.isChecked()
+        spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
         database = os.path.basename(file_path)
         username = getpass.getuser()
         # Update UI

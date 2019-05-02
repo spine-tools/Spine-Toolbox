@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Spine Toolbox grid view
+Contains TabularViewForm class and some related constants.
 
 :author: P. Vennström (VTT)
 :date:   1.11.2018
@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushBu
 from PySide2.QtCore import Qt, QPoint, QSettings
 from PySide2.QtGui import QIcon, QPixmap, QGuiApplication
 from sqlalchemy.sql import literal_column
-from spinedatabase_api import SpineDBAPIError
+from spinedb_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
 from widgets.custom_menus import FilterMenu, PivotTableModelMenu
 from helpers import fix_name_ambiguity, tuple_itemgetter
@@ -36,6 +36,7 @@ from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
 
+# TODO: How about moving these constants to config.py?
 ParameterValue = namedtuple('ParameterValue',['id','has_value','has_json'])
 
 # constant strings
@@ -51,6 +52,7 @@ JSON_TIME_NAME = "json time"
 PARAMETER_NAME = "db parameter"
 
 
+# TODO: Move to helpers.py?
 def unpack_json(data):
     expanded_data = []
     for d in data:
@@ -77,16 +79,6 @@ class TabularViewForm(QMainWindow):
         self.ui.setupUi(self)
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         self.setStyleSheet(MAINWINDOW_SS)
-        # Add icons to menu items
-        close_icon = QIcon(QPixmap(":/icons/close.png"))
-        refresh_icon = QIcon(QPixmap(":/icons/refresh.png"))
-        commit_icon = QIcon(QPixmap(":/icons/ok.png"))
-        rollback_icon = QIcon(QPixmap(":/icons/nok.png"))
-        self.ui.actionClose.setIcon(close_icon)
-        self.ui.actionRefresh.setIcon(refresh_icon)
-        self.ui.actionCommit.setIcon(commit_icon)
-        self.ui.actionRollback.setIcon(rollback_icon)
-        
         # settings
         self.qsettings = QSettings("SpineProject", "Spine Toolbox")
         self.settings_key = 'tabularViewWidget'
@@ -151,7 +143,7 @@ class TabularViewForm(QMainWindow):
 
         # Set window title
         self.setWindowTitle("Data store tabular view    -- {} --".format(self.database))
-        
+
         # restore previous ui state
         self.restore_ui()
 
@@ -416,10 +408,10 @@ class TabularViewForm(QMainWindow):
             elif k not in [INDEX_NAME, JSON_TIME_NAME]:
                 new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
         if new_objects:
-            new_objects = self.db_map.add_objects(*new_objects)
+            new_objects, error_log = self.db_map.add_objects(*new_objects)
             db_edited = True
         if new_parameters:
-            new_parameters = self.db_map.add_parameters(*new_parameters)
+            new_parameters, error_log = self.db_map.add_parameters(*new_parameters)
             db_edited = True
         return db_edited
 
@@ -778,12 +770,12 @@ class TabularViewForm(QMainWindow):
 
     def show_commit_session_prompt(self):
         """Shows the commit session message box."""
-        config = self._data_store._toolbox._config
-        commit_at_exit = config.get("settings", "commit_at_exit")
-        if commit_at_exit == "0":
+        qsettings = self._data_store._toolbox.qsettings()
+        commit_at_exit = int(qsettings.value("appSettings/commitAtExit", defaultValue="1"))
+        if commit_at_exit == 0:
             # Don't commit session and don't show message box
             return
-        elif commit_at_exit == "1":  # Default
+        elif commit_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)
@@ -799,19 +791,19 @@ class TabularViewForm(QMainWindow):
             if answer == QMessageBox.Yes:
                 self.show_commit_session_dialog()
                 if chk == 2:
-                    # Save preference into config file
-                    config.set("settings", "commit_at_exit", "2")
+                    # Save preference
+                    qsettings.setValue("appSettings/commitAtExit", "2")
             else:
                 if chk == 2:
-                    # Save preference into config file
-                    config.set("settings", "commit_at_exit", "0")
-        elif commit_at_exit == "2":
+                    # Save preference
+                    qsettings.setValue("appSettings/commitAtExit", "0")
+        elif commit_at_exit == 2:
             # Commit session and don't show message box
             self.show_commit_session_dialog()
         else:
-            config.set("settings", "commit_at_exit", "1")
+            qsettings.setValue("appSettings/commitAtExit", "1")
         return
-    
+
     def restore_ui(self):
         """Restore UI state from previous session."""
         window_size = self.qsettings.value("{0}/windowSize".format(self.settings_key))
@@ -835,7 +827,7 @@ class TabularViewForm(QMainWindow):
         for state, splitter in zip(splitter_states, splitters):
             if state:
                 splitter.restoreState(state)
-    
+
     def save_ui(self):
         """Saves UI state"""
         # save qsettings
@@ -863,8 +855,6 @@ class TabularViewForm(QMainWindow):
             self.show_commit_session_prompt()
         # save ui state
         self.save_ui()
-        # close db
-        self.db_map.close()
         if event:
             event.accept()
 

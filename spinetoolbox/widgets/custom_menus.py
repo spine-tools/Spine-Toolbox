@@ -17,12 +17,12 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction
+from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction, QWidget
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint
+from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer, QTimeLine
 from helpers import fix_name_ambiguity, tuple_itemgetter
-from widgets.custom_qwidget import FilterWidget
 from operator import itemgetter
+from widgets.custom_qwidgets import FilterWidget
 
 
 class CustomContextMenu(QMenu):
@@ -99,7 +99,7 @@ class ProjectItemContextMenu(CustomContextMenu):
         elif d.item_type == "Tool":
             self.add_action("Execute")
             self.add_action("Results...")
-            if d.get_icon().wheel.isVisible():
+            if d.get_icon().timer.state() == QTimeLine.Running:
                 self.add_action("Stop")
             else:
                 self.add_action("Stop", enabled=False)
@@ -136,6 +136,7 @@ class LinkContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         self.add_action("Remove connection")
+        self.add_action("Take connection")
         if parallel_link:
             self.add_action("Send to bottom")
         self.exec_(position)
@@ -272,16 +273,13 @@ class ObjectTreeContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         plus_object_icon = self._parent.ui.actionAdd_objects.icon()
         plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
-        plus_object_parameter_icon = self._parent.ui.actionAdd_object_parameter_values.icon()
-        plus_relationship_parameter_icon = self._parent.ui.actionAdd_relationship_parameter_values.icon()
         edit_object_icon = self._parent.ui.actionEdit_objects.icon()
         edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        minus_object_icon = self._parent.ui.actionRemove_object_tree_items.icon()
+        remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         fully_expand_icon = self._parent.fully_expand_icon
         fully_collapse_icon = self._parent.fully_collapse_icon
         find_next_icon = self._parent.find_next_icon
-        item = index.model().itemFromIndex(index)
-        item_type = item.data(Qt.UserRole)
+        item_type = index.data(Qt.UserRole)
         self.add_action("Copy text", copy_icon)
         self.addSeparator()
         if index.model().hasChildren(index):
@@ -295,25 +293,55 @@ class ObjectTreeContextMenu(CustomContextMenu):
         elif item_type == 'object_class':
             self.add_action("Add relationship classes", plus_relationship_icon)
             self.add_action("Add objects", plus_object_icon)
-            self.add_action("Add parameter definitions", plus_object_parameter_icon)
             self.addSeparator()
             self.add_action("Edit object classes", edit_object_icon)
         elif item_type == 'object':
-            self.add_action("Add parameter values", plus_object_parameter_icon)
             self.addSeparator()
             self.add_action("Edit objects", edit_object_icon)
         elif item_type == 'relationship_class':
             self.add_action("Add relationships", plus_relationship_icon)
-            self.add_action("Add parameter definitions", plus_relationship_parameter_icon)
             self.addSeparator()
             self.add_action("Edit relationship classes", edit_relationship_icon)
         elif item_type == 'relationship':
-            self.add_action("Add parameter values", plus_relationship_parameter_icon)
             self.addSeparator()
             self.add_action("Edit relationships", edit_relationship_icon)
         if item_type != 'root':
             self.addSeparator()
-            self.add_action("Remove selected", minus_object_icon)
+            self.add_action("Remove selection", remove_icon)
+        self.exec_(position)
+
+
+class RelationshipTreeContextMenu(CustomContextMenu):
+    """Context menu class for relationship tree items in tree view form.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
+        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
+        remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
+        item_type = index.data(Qt.UserRole)
+        self.add_action("Copy text", copy_icon)
+        self.addSeparator()
+        if item_type == 'root':
+            self.add_action("Add relationship classes", plus_relationship_icon)
+        elif item_type == 'relationship_class':
+            self.add_action("Add relationships", plus_relationship_icon)
+            self.addSeparator()
+            self.add_action("Edit relationship classes", edit_relationship_icon)
+        elif item_type == 'relationship':
+            self.add_action("Edit relationships", edit_relationship_icon)
+        if item_type != 'root':
+            self.addSeparator()
+            self.add_action("Remove selection", remove_icon)
         self.exec_(position)
 
 
@@ -325,17 +353,39 @@ class ParameterContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
-    def __init__(self, parent, position, index, remove_icon):
+    def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
         if not index.isValid():
             return
         copy_icon = self._parent.ui.actionCopy.icon()
         paste_icon = self._parent.ui.actionPaste.icon()
+        remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()
-        self.add_action("Remove selected", remove_icon)
+        self.add_action("Remove selection", remove_icon)
+        self.exec_(position)
+
+
+class ParameterValueListContextMenu(CustomContextMenu):
+    """Context menu class for parameter enum view in tree view form.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        remove_icon = QIcon(":/icons/minus.png")
+        self.add_action("Copy", copy_icon)
+        self.addSeparator()
+        self.add_action("Remove selection", remove_icon)
         self.exec_(position)
 
 

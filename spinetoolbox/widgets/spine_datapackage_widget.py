@@ -17,22 +17,19 @@ in Data Connection item.
 :date:   7.7.2018
 """
 
-import getpass
 import os
-from config import STATUSBAR_SS
-from ui.spine_datapackage_form import Ui_MainWindow
-from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
-from PySide2.QtWidgets import QMainWindow, QHeaderView, QMessageBox, QPushButton, QErrorMessage, QAction, \
+from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, \
     QToolButton, QFileDialog, QProgressBar
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel, QModelIndex, QSize, QThreadPool
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon
-from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
-from ui.spine_datapackage_form import Ui_MainWindow
-from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
 from datapackage import Package
 from datapackage.exceptions import DataPackageException
 from datapackage_import_export import DatapackageToSpineConverter
+from ui.spine_datapackage_form import Ui_MainWindow
+from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
+from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
 from helpers import busy_effect
+from config import STATUSBAR_SS
 
 
 class SpineDatapackageWidget(QMainWindow):
@@ -40,9 +37,7 @@ class SpineDatapackageWidget(QMainWindow):
     to a Spine database in SQLite.
 
     Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
         data_connection (DataConnection): Data Connection associated to this widget
-        datapackage (CustomPackage): Datapackage to load and use
     """
     msg = Signal(str, name="msg")
     msg_proc = Signal(str, name="msg_proc")
@@ -61,7 +56,6 @@ class SpineDatapackageWidget(QMainWindow):
         self.resources_model = DatapackageResourcesModel(self)
         self.fields_model = DatapackageFieldsModel(self)
         self.foreign_keys_model = DatapackageForeignKeysModel(self)
-        self.foreign_keys_model.set_default_row(length=1)
         self.resource_data_model = MinimalTableModel(self)
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
@@ -309,6 +303,7 @@ class SpineDatapackageWidget(QMainWindow):
     @Slot(bool, name="show_export_to_spine_dialog")
     def show_export_to_spine_dialog(self, checked=False):
         """Show dialog to allow user to select a file to export."""
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getSaveFileName(self,
                                              "Export to file",
                                              self._data_connection._project.project_dir,
@@ -561,6 +556,8 @@ class CustomPackage(Package):
         self.commit()
 
     def rename_field(self, resource, old, new):
+        """Rename a field.
+        """
         resource_index = self.resource_names.index(resource)
         resource_dict = self.descriptor['resources'][resource_index]
         resource_schema = self.get_resource(resource).schema
@@ -570,7 +567,7 @@ class CustomPackage(Package):
         foreign_keys = resource_schema.foreign_keys
         for i, field in enumerate(primary_key):
             if field == old:
-                resource_dict['schema']['primaryKey'][primary_key_index] = new
+                resource_dict['schema']['primaryKey'][i] = new
         for i, foreign_key in enumerate(foreign_keys):
             for j, field in enumerate(foreign_key["fields"]):
                 if field == old:

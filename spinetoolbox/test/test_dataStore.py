@@ -22,15 +22,21 @@ import os
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication
-from PySide2.QtCore import Qt
-from data_store import DataStore
-from graphics_items import DataStoreImage
+from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
-from PySide2.QtWidgets import QMessageBox
-from spinedatabase_api import create_new_spine_database
+from spinedb_api import create_new_spine_database
 
 
+class MockQWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+    # noinspection PyMethodMayBeStatic
+    def test_push_vars(self):
+        return True
+
+
+# noinspection PyUnusedLocal
 class TestDataStore(unittest.TestCase):
 
     @classmethod
@@ -46,39 +52,49 @@ class TestDataStore(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of ToolboxUI class.
+        Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
+        is not called in tearDown().
         """
-        # # Set logging level to Error to silence "Logging level: All messages" print
-        logging.disable(level=logging.ERROR)  # Disable logging
-        self.toolbox = ToolboxUI()
-        self.toolbox.create_project("UnitTest Project", "")
-        logging.disable(level=logging.NOTSET)  # Enable logging
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+                mock.patch("ui_main.PythonReplWidget") as mock_python_repl:
+            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
+            mock_julia_repl.return_value = QWidget()
+            mock_python_repl.return_value = MockQWidget()
+            self.toolbox = ToolboxUI()
+            self.toolbox.create_project("UnitTest Project", "")
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        shutil.rmtree(self.toolbox.project().project_dir)
         try:
-            os.remove(self.toolbox.project().path)
+            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
         except OSError:
             pass
+        try:
+            os.remove(self.toolbox.project().path)  # Remove project file
+        except OSError:
+            pass
+        self.toolbox.deleteLater()
         self.toolbox = None
 
     def test_create_new_spine_database(self):
         """Test that a new Spine database is created when clicking on Spine-icon tool button.
         """
-        with mock.patch("data_store.QFileDialog") as mock_file_dialog:
-            data_store = DataStore(self.toolbox, "DS", "", dict(), 0, 0)
+        self.toolbox.project().add_data_store("DS", "", reference=None)  # Create Data Store to project
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        with mock.patch("data_store.QFileDialog.selectedFiles") as mock_sf, \
+                mock.patch("data_store.QFileDialog.exec_") as mock_exec:
             file_path = os.path.join(data_store.data_dir, "mock_db.sqlite")
-            mock_file_dialog.getSaveFileName.return_value = [file_path]
-            data_store.activate()
-            self.toolbox.ui.toolButton_new_spine.click()
-            self.assertTrue(os.path.isfile(file_path), "mock_db.sqlite file not found.")
-            sqlite_file = self.toolbox.ui.lineEdit_SQLite_file.text()
-            self.assertEqual(sqlite_file, file_path)
-            database = self.toolbox.ui.lineEdit_database.text()
-            basename = os.path.basename(file_path)
-            self.assertEqual(database, basename)
+            mock_sf.return_value = [file_path]
+            data_store.create_new_spine_database()
+        self.assertTrue(os.path.isfile(file_path), "mock_db.sqlite file not found.")
+        sqlite_file = self.toolbox.ui.lineEdit_SQLite_file.text()
+        self.assertEqual(sqlite_file, file_path)
+        database = self.toolbox.ui.lineEdit_database.text()
+        basename = os.path.basename(file_path)
+        self.assertEqual(database, basename)
 
     def test_load_reference(self):
         """Test that reference is loaded into selections on Data Store creation,
@@ -87,11 +103,15 @@ class TestDataStore(unittest.TestCase):
         # FIXME: For now it only tests sqlite references
         file_path = os.path.join(self.toolbox.project().project_dir, "mock_db.sqlite")
         if not os.path.exists(file_path):
-            with open(file_path, 'w'): pass
+            with open(file_path, 'w'):
+                pass
         url = "sqlite:///" + file_path
         create_new_spine_database(url)
         reference = dict(database="foo", username="bar", url=url)
-        data_store = DataStore(self.toolbox, "DS", "", reference, 0, 0)
+        # data_store = DataStore(self.toolbox, "DS", "", reference, 0, 0)
+        self.toolbox.project().add_data_store("DS", "", reference=reference)  # Create Data Store to project
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
         dialect = self.toolbox.ui.comboBox_dialect.currentText()
         database = self.toolbox.ui.lineEdit_database.text()
@@ -104,7 +124,10 @@ class TestDataStore(unittest.TestCase):
         """Test that selections are saved and restored when deactivating a Data Store and activating it again.
         """
         # FIXME: For now it only tests the mysql dialect
-        data_store = DataStore(self.toolbox, "DS", "", dict(), 0, 0)
+        # data_store = DataStore(self.toolbox, "DS", "", dict(), 0, 0)
+        self.toolbox.project().add_data_store("DS", "", reference=None)  # Create Data Store to project
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
         self.toolbox.ui.comboBox_dialect.setCurrentText('mysql')
         self.toolbox.ui.lineEdit_host.setText('localhost')
@@ -130,13 +153,18 @@ class TestDataStore(unittest.TestCase):
         # First create a DS with an sqlite db reference
         file_path = os.path.join(self.toolbox.project().project_dir, "mock_db.sqlite")
         if not os.path.exists(file_path):
-            with open(file_path, 'w'): pass
+            with open(file_path, 'w'):
+                pass
         url = "sqlite:///" + file_path
         create_new_spine_database(url)
         reference = dict(database="foo", username="bar", url=url)
-        data_store = DataStore(self.toolbox, "DS", "", reference, 0, 0)
+        # data_store = DataStore(self.toolbox, "DS", "", reference, 0, 0)
+        self.toolbox.project().add_data_store("DS", "", reference=reference)  # Create Data Store to project
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
         self.toolbox.ui.toolButton_copy_db_url.click()
+        # noinspection PyArgumentList
         clipboard_text = QApplication.clipboard().text()
         self.assertEqual(clipboard_text, url)
 

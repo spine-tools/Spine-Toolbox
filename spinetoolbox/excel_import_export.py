@@ -19,11 +19,12 @@ Functions to import and export from excel to spine database.
 # TODO: PEP8: Do not use bare except. Too broad exception clause
 
 from collections import namedtuple
-from itertools import groupby
+from itertools import groupby, islice
 import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
-from spinedatabase_api import SpineDBAPIError, import_data
+
+from spinedb_api import SpineDBAPIError, import_data
 import logging
 from operator import itemgetter
 
@@ -39,7 +40,7 @@ def import_xlsx_to_db(db, filepath):
     when trying to write to database.
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database to write to
+        db (spinedb_api.DatabaseMapping): database mapping for database to write to
         filepath (str): str with filepath to excel file to read from
 
     Returns:
@@ -48,18 +49,18 @@ def import_xlsx_to_db(db, filepath):
     """
 
     obj_data, rel_data, error_log = read_spine_xlsx(filepath)
-    
+
     object_classes = []
     objects = []
     object_parameters = []
     object_values = []
     for sheet in obj_data:
         object_classes.append(sheet.class_name)
-        objects.extend([(o, sheet.class_name) for o in sheet.objects])
-        object_parameters.extend([(o, sheet.class_name) for o in sheet.parameters])
+        objects.extend([(sheet.class_name, o) for o in sheet.objects])
+        object_parameters.extend([(sheet.class_name, o) for o in sheet.parameters])
         d_getter = itemgetter(*[1,2,0,3])
-        object_values.extend([d_getter(d) for d in sheet.parameter_values])
-    
+        object_values.extend([(sheet.class_name,) + d_getter(d) for d in sheet.parameter_values])
+
     rel_classes = []
     rels = []
     rel_parameters = []
@@ -70,7 +71,7 @@ def import_xlsx_to_db(db, filepath):
         d_getter = itemgetter(*[num_oc+1, 0, num_oc+2])
         rel_classes.append((sheet.class_name, sheet.object_classes))
         rels.extend([(sheet.class_name, o) for o in sheet.objects])
-        rel_parameters.extend([(o, sheet.class_name) for o in sheet.parameters])
+        rel_parameters.extend([(sheet.class_name, o) for o in sheet.parameters])
         rel_values.extend([(sheet.class_name, rel_getter(d)) + d_getter(d) for d in sheet.parameter_values])
 
     num_imported, errors = import_data(db, object_classes, rel_classes, object_parameters, rel_parameters, objects, rels, object_values, rel_values)
@@ -82,7 +83,7 @@ def get_objects_and_parameters(db):
     """Exports all object data from spine database into unstacked list of lists
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List) First list contains parameter data, second one json data
@@ -96,23 +97,14 @@ def get_objects_and_parameters(db):
     obj_class = db.object_class_list().all()
 
     # get all parameter values
-    pval = db.session.query(
-                            db.ObjectClass.name,
-                            db.Object.name,
-                            db.Parameter.name,
-                            db.ParameterValue.value,
-                            db.ParameterValue.json).\
-        filter(db.ParameterValue.object_id == db.Object.id,
-               db.ObjectClass.id == db.Object.class_id,
-               db.ParameterValue.parameter_id == db.Parameter.id).\
-        all()
+    pval = db.object_parameter_value_list().all()
 
     # get all parameter definitions
-    par = db.session.query(db.ObjectClass.name, db.Parameter.name).\
-        filter(db.ObjectClass.id == db.Parameter.object_class_id).all()
+    par = db.object_parameter_list().all()
 
     # make all in same format
-    par = [(p[0], None, p[1], None, None) for p in par]
+    par = [(p.object_class_name, None, p.parameter_name, None, None) for p in par]
+    pval = [(p.object_class_name, p.object_name, p.parameter_name, p.value, p.json) for p in pval]
     obj = [(p.class_name, p.name, None, None, None) for p in obj]
     obj_class = [(p.name, None, None, None, None) for p in obj_class]
 
@@ -128,7 +120,7 @@ def get_relationships_and_parameters(db):
     """Exports all relationship data from spine database into unstacked list of lists
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List) First list contains parameter data, second one json data
@@ -189,9 +181,9 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
             value_name_col = value_name_col[0]
         value_name_getter = itemgetter(value_name_col)
         value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
-        
-    
-    
+
+
+
     key_names = [headers[n] for n in key_cols]
     #value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
     headers = key_names + value_names
@@ -200,7 +192,7 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
     keyfunc = lambda x: [x[k] for k in key_cols]
     data = [x for x in data if None not in keyfunc(x)]
     data = sorted(data, key=keyfunc)
-    
+
     # unstack data
     data_list_out = []
     for k, k_data in groupby(data, key=keyfunc):
@@ -280,7 +272,7 @@ def get_unstacked_relationships(db):
     """Gets all data for relationships in a unstacked list of list
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List): Two list of data for relationship, one with parameter values
@@ -329,7 +321,7 @@ def get_unstacked_objects(db):
     """Gets all data for objects in a unstacked list of list
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database
+        db (spinedb_api.DatabaseMapping): database mapping for database
 
     Returns:
         (List, List): Two list of data for objects, one with parameter values
@@ -428,7 +420,7 @@ def write_json_array_to_xlsx(wb, data, sheet_type):
             sheet_title = "json_"
         else:
             raise ValueError("sheet_type must be a str with value 'relationship' or 'object'")
-            
+
         ws = wb.create_sheet()
         # sheet name can only be 31 chars log
         title = sheet_title + d[0]
@@ -505,7 +497,7 @@ def export_spine_database_to_xlsx(db, filepath):
     """Writes all data in a spine database into an excel file.
 
     Args:
-        db (spinedatabase_api.DatabaseMapping): database mapping for database.
+        db (spinedb_api.DatabaseMapping): database mapping for database.
         filepath (str): str with filepath to save excel file to.
     """
     obj_data, obj_json_data = get_unstacked_objects(db)
@@ -525,8 +517,9 @@ def read_spine_xlsx(filepath):
     Args:
         filepath (str): str with filepath to excel file to read from.
     """
-    wb = load_workbook(filepath)
+    wb = load_workbook(filepath, read_only=True)
     sheets = wb.sheetnames
+    ErrorLogMsg = namedtuple('ErrorLogMsg',('msg','db_type','imported_from','other'))
 
     obj_data = []
     rel_data = []
@@ -554,8 +547,7 @@ def read_spine_xlsx(filepath):
                 else:
                     obj_data.append(data)
             except Exception as e:
-                error_log.append(["sheet", ws.title,
-                                  "Error reading sheet {}: {}".format(ws.title, e)])
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e),"sheet", filepath,''))
         elif sheet_data == "json array":
             # read sheet with data type: 'json array'
             try:
@@ -565,8 +557,7 @@ def read_spine_xlsx(filepath):
                 else:
                     obj_json_data.append(data)
             except Exception as e:
-                error_log.append(["sheet", ws.title,
-                                  "Error reading sheet {}: {}".format(ws.title, e)])
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e),"sheet", filepath,''))
     wb.close()
 
     # merge sheets that have the same class.
@@ -677,7 +668,7 @@ def validate_sheet(ws):
             return False
         if sheet_data.lower() == 'parameter':
             rel_row = read_2d(ws, 4, 4, 1, rel_dimension)[0]
-        else: 
+        else:
             rel_row = read_2d(ws, 4, 4 + rel_dimension - 1, 1, 1)
             rel_row = [r[0] for r in rel_row]
         if None in rel_row:
@@ -722,53 +713,47 @@ def read_json_sheet(ws, sheet_type):
 
     # search row for until first empty cell
     read_cols = []
+    add_if_not_break = 1
     for c, cell in enumerate(ws[4]):
         if c > 0:
             if cell.value is None:
+                add_if_not_break = 0
                 break
-            else:
-                read_cols.append(c+1)
+    read_cols = range(1, c + add_if_not_break)
 
-    Data = namedtuple("Data", ["parameter_type"] + path + ["parameter", "value"])
-
-    unique_parameters = []
     json_data = []
     # red columnwise from second column.
-    for c in read_cols:
-        obj_path = []
-        parameter = []
-        json_vals = []
-        for r, cell in enumerate(ws[get_column_letter(c)]):
-            if r > 2 and r < 3+dim:
-                # get object path
-                obj_path.append(cell.value)
-                if cell.value is None:
-                    # invalid column, skip
-                    break
-            elif r == 3+dim:
-                # get parameter name
-                parameter = [cell.value]
-                if cell.value is None:
-                    # invalid column, skip
-                    break
-            elif r > 3+dim:
-                # get values until first empty cell
-                if cell.value is None:
-                    break
-                else:
-                    json_vals.append(cell.value)
+    rows = ws.iter_rows()
+    obj_path = []
+    parameters = []
+    for r, row in enumerate(rows):
+        if r > 2 and r < 3+dim:
+            # get object path
+            obj_path.append([cell.value for i, cell in enumerate(row) if i in read_cols])
+        elif r == 3+dim:
+            # get parameter name
+            parameters = [cell.value for i, cell in enumerate(row) if i in read_cols]
+            break
 
-        if json_vals and parameter and None not in obj_path:
+    data = [[cell.value for i, cell in enumerate(row) if i in read_cols] for row in rows]
+
+    # pivot data
+    obj_path = [[obj_path[r][c] for r in range(len(obj_path))] for c in range(len(obj_path[0]))]
+    data = [[data[r][c] for r in range(len(data))] for c in range(len(data[0]))]
+
+
+    Data = namedtuple("Data", ["parameter_type"] + path + ["parameter", "value"])
+    if data:
+        for objects, parameter, data_list in zip(obj_path, parameters, data):
             # save values if there is json data, a parameter name
             # and the obj_path doesn't contain None.
-            unique_parameters.append(parameter[0])
-            packed_json = json.dumps(json_vals)
-            json_data.append(Data._make(["json"] + obj_path+parameter+[packed_json]))
+            packed_json = json.dumps(data_list)
+            json_data.append(Data._make(["json"] + objects + [parameter, packed_json]))
 
     return SheetData(sheet_name=ws.title,
                      class_name=class_name,
                      object_classes=object_classes,
-                     parameters=list(set(unique_parameters)),
+                     parameters=list(set(parameters)),
                      parameter_values=json_data,
                      objects=[],
                      class_type=sheet_type)
@@ -799,14 +784,20 @@ def read_parameter_sheet(ws):
     # read all columns to the right of the number of cells in dim. Read until
     # encounters a empty cell.
     parameters = []
+    read_cols = []
     for c, cell in enumerate(ws[4]):
         if cell.value is None:
             break
         elif c >= dim:
             parameters.append(cell.value)
+    read_cols = range(0, c + 1)
 
     # get data
-    data = read_2d(ws, 5, len(ws['A']), 1, dim + len(parameters))
+    rows = islice(ws.iter_rows(), 4, None)
+    try:
+        data = [[cell.value for i, cell in enumerate(row) if i in read_cols] for row in rows]
+    except StopIteration:
+        data = []
 
     keyfunc = lambda x: [x[i] for i, _ in enumerate(object_classes)]
 

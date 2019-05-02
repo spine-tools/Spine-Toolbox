@@ -12,92 +12,73 @@
 """
 Classes for custom QDialogs to add and edit database items.
 
-TODO: AddItemsDialog has a syntax error, so it does not even work.
-NOTE: Where is this syntax error? We better fix it, since AddItemsDialog is inherited by all other AddStuffDialogs
 :author: M. Marin (KTH)
 :date:   13.5.2018
 """
 
 import logging
 from copy import deepcopy
-from PySide2.QtWidgets import QDialog, QFormLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
-    QDialogButtonBox, QComboBox, QHeaderView, QStatusBar, QAction, QApplication, QToolButton
-from PySide2.QtCore import Signal, Slot, Qt, QSize
+from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
+    QDialogButtonBox, QHeaderView, QAction, QApplication, QToolButton, QWidget, QLabel, \
+    QComboBox, QSpinBox, QStyle
+from PySide2.QtCore import Signal, Slot, Qt, QSize, QTimer
 from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
-from spinedatabase_api import SpineDBAPIError, SpineIntegrityError
-from config import STATUSBAR_SS
-from models import EmptyRowModel, MinimalTableModel
+from spinedb_api import SpineDBAPIError
+from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
-    LineEditDelegate
-import ui.add_object_classes
-import ui.add_objects
-import ui.add_relationship_classes
-import ui.add_relationships
-import ui.edit_data_items
-from helpers import busy_effect, object_pixmap
+    AddParameterEnumsDelegate, LineEditDelegate, IconColorDialogDelegate
+from widgets.custom_qtableview import CopyPasteTableView
+from helpers import busy_effect, format_string_list
 
 
-class AddItemsDialog(QDialog):
-    """A dialog to query user's preferences for new object classes.
+class ManageItemsDialog(QDialog):
+    """A dialog with a CopyPasteTableView and a QDialogButtonBox, to be extended into
+    dialogs to query user's preferences for adding/editing/managing data items
 
     Attributes:
         parent (TreeViewForm): data store widget
-        force_default (bool): if True, defaults are non-editable
     """
-    def __init__(self, parent, force_default=False):
+    def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
-        self.ui = None
-        self.model = EmptyRowModel(self)
-        self.model.force_default = force_default
+        self.table_view = CopyPasteTableView(self)
+        self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.button_box = QDialogButtonBox(self)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.table_view)
+        layout.addWidget(self.button_box)
         self.remove_row_icon = None  # Set in subclasses to a custom one
         self.setAttribute(Qt.WA_DeleteOnClose)
 
-    def setup_ui(self, ui_dialog):
-        self.ui = ui_dialog
-        self.ui.setupUi(self)
-        self.ui.tableView.setModel(self.model)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.tableView.itemDelegate().data_committed.connect(self._handle_data_committed)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
         self.model.dataChanged.connect(self._handle_model_data_changed)
-        self.model.modelAboutToBeReset.connect(self._handle_model_about_to_be_reset)
-        self.model.rowsInserted.connect(self._handle_model_rows_inserted)
+        self.model.modelReset.connect(self._handle_model_reset)
 
-    @Slot(name="_handle_model_about_to_be_reset")
-    def _handle_model_about_to_be_reset(self):
-        column_count = self.model.columnCount()
-        self.model.insert_horizontal_header_labels(column_count, [""])
-        self.ui.tableView.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
+    def resize_window_to_columns(self):
+        margins = self.layout().contentsMargins()
+        self.resize(
+            margins.left() + margins.right()
+            + self.table_view.frameWidth() * 2
+            + self.table_view.verticalHeader().width()
+            + self.table_view.horizontalHeader().length(),
+            # + self.table_view.style().pixelMetric(QStyle.PM_ScrollBarExtent),
+            400
+        )
 
-    @Slot("QModelIndex", "int", "int", name="_handle_model_rows_inserted")
-    def _handle_model_rows_inserted(self, parent, first, last):
-        column = self.model.columnCount() - 1
-        for row in range(first, last + 1):
-            index = self.model.index(row, column, parent)
-            self.create_remove_row_button(index)
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    def _handle_model_data_changed(self, top_left, bottom_right, roles):
+        """Reimplement in subclasses to handle changes in model data."""
+        pass
 
-    def create_remove_row_button(self, index):
-        """Create button to remove row."""
-        action = QAction()
-        action.setIcon(self.remove_row_icon)
-        button = QToolButton()
-        button.setDefaultAction(action)
-        button.setIconSize(QSize(20, 20))
-        self.ui.tableView.setIndexWidget(index, button)
-        action.triggered.connect(lambda: self.remove_clicked_row(button))
-
-    def remove_clicked_row(self, button):
-        column = self.model.columnCount() - 1
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, column)
-            if button == self.ui.tableView.indexWidget(index):
-                self.model.removeRows(row, 1)
-                break
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        """Reimplement in subclasses to handle model resetting."""
+        pass
 
     @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
     def _handle_data_committed(self, index, data):
@@ -106,10 +87,52 @@ class AddItemsDialog(QDialog):
             return
         self.model.setData(index, data, Qt.EditRole)
 
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
-    def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        """Reimplement this method in subclasses to handle changes in model data."""
-        pass
+
+class AddItemsDialog(ManageItemsDialog):
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.model.rowsInserted.connect(self._handle_model_rows_inserted)
+
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        """Add an extra column to hold the remove row button."""
+        self.model.insert_horizontal_header_labels(self.model.columnCount(), [""])
+        self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
+        # TODO: Try to make the stretch work with the resizing
+        # self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
+        self.table_view.resizeColumnsToContents()
+        self.table_view.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
+        self.resize_window_to_columns()
+
+    @Slot("QModelIndex", "int", "int", name="_handle_model_rows_inserted")
+    def _handle_model_rows_inserted(self, parent, first, last):
+        """Add remove row buttons."""
+        column = self.model.columnCount() - 1
+        for row in range(first, last + 1):
+            index = self.model.index(row, column, parent)
+            button = self.create_remove_row_button(index)
+            self.table_view.setIndexWidget(index, button)
+
+    def create_remove_row_button(self, index):
+        """Create button to remove row."""
+        action = QAction("remove")
+        action.setIcon(self.remove_row_icon)
+        button = QToolButton()
+        button.setDefaultAction(action)
+        button.setIconSize(QSize(20, 20))
+        action.triggered.connect(lambda: self.remove_clicked_row(button))
+        return button
+
+    def remove_clicked_row(self, button):
+        column = self.model.columnCount() - 1
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, column)
+            if button == self.table_view.indexWidget(index):
+                self.model.removeRows(row, 1)
+                break
 
 
 class AddObjectClassesDialog(AddItemsDialog):
@@ -120,25 +143,39 @@ class AddObjectClassesDialog(AddItemsDialog):
     """
     def __init__(self, parent):
         super().__init__(parent)
+        self.setWindowTitle("Add object classes")
+        self.model = EmptyRowModel(self)
+        self.table_view.setModel(self.model)
+        self.combo_box = QComboBox(self)
+        self.layout().insertWidget(0, self.combo_box)
         self.object_class_list = self._parent.db_map.object_class_list()
-        self.remove_row_icon = QIcon(":/icons/minus_object_icon.png")
-        self.setup_ui(ui.add_object_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(LineEditDelegate(parent))
+        self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.setItemDelegateForColumn(2, IconColorDialogDelegate(parent))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class name', 'description'])
+        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon'])
         self.model.clear()
-        # Add items to combobox
         insert_at_position_list = ['Insert new classes at the top']
         insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
-        self.ui.comboBox.addItems(insert_at_position_list)
-        self.ui.tableView.resizeColumnsToContents()
+        self.combo_box.addItems(insert_at_position_list)
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.itemDelegateForColumn(2).data_committed.connect(self._handle_data_committed)
+
+    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
+    def _handle_data_committed(self, index, data):
+        """Update model data."""
+        if data is None:
+            return
+        self.model.setData(index, data, Qt.EditRole)
 
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
         kwargs_list = list()
-        index = self.ui.comboBox.currentIndex()
+        index = self.combo_box.currentIndex()
         if index == 0:
             try:
                 display_order = self.object_class_list.first().display_order - 1
@@ -148,13 +185,14 @@ class AddObjectClassesDialog(AddItemsDialog):
             display_order = self.object_class_list.all()[index - 1].display_order + 1
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)[:-1]
-            name, description = row_data
+            name, description, display_icon = row_data
             if not name:
                 self._parent.msg_error.emit("Object class name missing at row {0}".format(i + 1))
                 return
             kwargs = {
                 'name': name,
                 'description': description,
+                'display_icon': display_icon,
                 'display_order': display_order
             }
             kwargs_list.append(kwargs)
@@ -162,11 +200,11 @@ class AddObjectClassesDialog(AddItemsDialog):
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            object_classes = self._parent.db_map.add_object_classes(*kwargs_list)
+            object_classes, error_log = self._parent.db_map.add_object_classes(*kwargs_list)
             self._parent.add_object_classes(object_classes)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
@@ -180,17 +218,19 @@ class AddObjectsDialog(AddItemsDialog):
         force_default (bool): if True, defaults are non-editable
     """
     def __init__(self, parent, class_id=None, force_default=False):
-        super().__init__(parent, force_default=force_default)
-        self.remove_row_icon = QIcon(":/icons/minus_object_icon.png")
-        self.setup_ui(ui.add_objects.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddObjectsDelegate(parent))
+        super().__init__(parent)
+        self.setWindowTitle("Add objects")
+        self.model = EmptyRowModel(self)
+        self.model.force_default = force_default
+        self.table_view.setModel(self.model)
+        self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
+        self.table_view.setItemDelegate(AddObjectsDelegate(parent))
         self.connect_signals()
         default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
         self.model.set_default_row(**{'object class name': self.default_class_name})
         self.model.clear()
-        self.ui.tableView.resizeColumnsToContents()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
@@ -210,7 +250,7 @@ class AddObjectsDialog(AddItemsDialog):
                 object_class_name = index.data(Qt.DisplayRole)
                 if not object_class_name:
                     return
-                icon = QIcon(object_pixmap(object_class_name))
+                icon = self.parent().icon_mngr.object_icon(object_class_name)
                 self.model.setData(index, icon, Qt.DecorationRole)
 
     @busy_effect
@@ -240,11 +280,11 @@ class AddObjectsDialog(AddItemsDialog):
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            objects = self._parent.db_map.add_objects(*kwargs_list)
+            objects, error_log = self._parent.db_map.add_objects(*kwargs_list)
             self._parent.add_objects(objects)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
@@ -257,58 +297,65 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         object_class_one_id (int): default object class id to put in dimension '1'
     """
     def __init__(self, parent, object_class_one_id=None, force_default=False):
-        super().__init__(parent, force_default=force_default)
-        self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
-        self.setup_ui(ui.add_relationship_classes.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipClassesDelegate(parent))
-        self.connect_signals()
-        self.number_of_dimensions = 2
+        super().__init__(parent)
+        self.setWindowTitle("Add relationship classes")
+        self.model = EmptyRowModel(self)
+        self.model.force_default = force_default
+        self.table_view.setModel(self.model)
+        widget = QWidget(self)
+        layout = QHBoxLayout(widget)
+        layout.addWidget(QLabel("Number of dimensions"))
+        self.spin_box = QSpinBox(self)
+        self.spin_box.setMinimum(1)
+        layout.addWidget(self.spin_box)
+        layout.addStretch()
+        self.layout().insertWidget(0, widget)
+        self.remove_row_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
+        self.table_view.setItemDelegate(AddRelationshipClassesDelegate(parent))
+        self.number_of_dimensions = 1
         self.object_class_one_name = None
         if object_class_one_id:
             object_class_one = self._parent.db_map.single_object_class(id=object_class_one_id).one_or_none()
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
+        self.connect_signals()
         self.model.set_horizontal_header_labels(
-            ['object class 1 name', 'object class 2 name', 'relationship class name'])
+            ['object class 1 name', 'relationship class name'])
         self.model.set_default_row(**{'object class 1 name': self.object_class_one_name})
         self.model.clear()
-        self.ui.tableView.resizeColumnsToContents()
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.spinBox.valueChanged.connect(self.insert_or_remove_column)
+        self.spin_box.valueChanged.connect(self._handle_spin_box_value_changed)
         super().connect_signals()
 
-    @Slot("int", name="insert_or_remove_column")
-    def insert_or_remove_column(self, i):
-        self.ui.spinBox.setEnabled(False)
+    @Slot("int", name="_handle_spin_box_value_changed")
+    def _handle_spin_box_value_changed(self, i):
+        self.spin_box.setEnabled(False)
         if i > self.number_of_dimensions:
             self.insert_column()
         elif i < self.number_of_dimensions:
             self.remove_column()
-        self.ui.spinBox.setEnabled(True)
+        self.spin_box.setEnabled(True)
+        self.resize_window_to_columns()
 
     def insert_column(self):
         column = self.number_of_dimensions
         self.number_of_dimensions += 1
         column_name = "object class {} name".format(self.number_of_dimensions)
-        self.model.insert_horizontal_header_labels(column, [column_name])
         self.model.insertColumns(column, 1)
-        self.ui.tableView.resizeColumnToContents(column)
+        self.model.insert_horizontal_header_labels(column, [column_name])
+        self.table_view.resizeColumnToContents(column)
 
     def remove_column(self):
         self.number_of_dimensions -= 1
         column = self.number_of_dimensions
-        column_size = self.ui.tableView.horizontalHeader().sectionSize(column)
+        column_size = self.table_view.horizontalHeader().sectionSize(column)
         self.model.header.pop(column)
-        try:
-            self.model.default_row.pop(column)
-        except IndexError:
-            pass
         self.model.removeColumns(column, 1)
-        # Add removed column size to description column size
-        column_size += self.ui.tableView.horizontalHeader().sectionSize(column)
-        self.ui.tableView.horizontalHeader().resizeSection(column, column_size)
+        # Add removed column size to relationship class name column size
+        column_size += self.table_view.horizontalHeader().sectionSize(column)
+        self.table_view.horizontalHeader().resizeSection(column, column_size)
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
@@ -353,9 +400,6 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                         "Couldn't find object class '{}' at row {}".format(object_class_name, i + 1))
                     return
                 object_class_id_list.append(object_class.id)
-            if len(object_class_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
             wide_kwargs = {
                 'name': relationship_class_name,
                 'object_class_id_list': object_class_id_list
@@ -365,11 +409,11 @@ class AddRelationshipClassesDialog(AddItemsDialog):
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            wide_relationship_classes = self._parent.db_map.add_wide_relationship_classes(*wide_kwargs_list)
+            wide_relationship_classes, error_log = self._parent.db_map.add_wide_relationship_classes(*wide_kwargs_list)
             self._parent.add_relationship_classes(wide_relationship_classes)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
@@ -384,10 +428,22 @@ class AddRelationshipsDialog(AddItemsDialog):
         object_class_id (int): default object class id
     """
     def __init__(self, parent, relationship_class_id=None, object_id=None, object_class_id=None, force_default=False):
-        super().__init__(parent, force_default=force_default)
-        self.remove_row_icon = QIcon(":/icons/minus_relationship_icon.png")
-        self.relationship_class_list = \
-            [x for x in self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)]
+        super().__init__(parent)
+        self.setWindowTitle("Add relationships")
+        self.model = EmptyRowModel(self)
+        self.model.force_default = force_default
+        self.table_view.setModel(self.model)
+        widget = QWidget(self)
+        layout = QHBoxLayout(widget)
+        layout.addWidget(QLabel("Relationship class"))
+        self.combo_box = QComboBox(self)
+        layout.addWidget(self.combo_box)
+        layout.addStretch()
+        self.layout().insertWidget(0, widget)
+        self.remove_row_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
+        self.relationship_class_list = self._parent.db_map.wide_relationship_class_list(
+            object_class_id=object_class_id
+        )
         self.relationship_class = None
         self.relationship_class_id = relationship_class_id
         self.object_id = object_id
@@ -395,41 +451,32 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.default_object_column = None
         self.default_object_name = None
         self.set_default_object_name()
-        self.setup_ui(ui.add_relationships.Ui_Dialog())
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
+        self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
         self.init_relationship_class(force_default)
-        # Add status bar to form
-        self.statusbar = QStatusBar(self)
-        self.statusbar.setFixedHeight(20)
-        self.statusbar.setSizeGripEnabled(False)
-        self.statusbar.setStyleSheet(STATUSBAR_SS)
-        self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         self.connect_signals()
         self.reset_model()
 
     def init_relationship_class(self, force_default):
         """Populate combobox and initialize relationship class if any."""
-        relationship_class_name_list = [x.name for x in self.relationship_class_list]
+        relationship_class_dict = {x.id: x for x in self.relationship_class_list}
+        self.relationship_class = relationship_class_dict.get(self.relationship_class_id, None)
         if not force_default:
-            self.ui.comboBox_relationship_class.addItems(relationship_class_name_list)
-            self.ui.comboBox_relationship_class.setCurrentIndex(-1)
-        self.relationship_class = self._parent.db_map.\
-            single_wide_relationship_class(id=self.relationship_class_id).one_or_none()
-        if not self.relationship_class:
-            # Default not found
-            return
-        try:
-            if not force_default:
+            relationship_class_name_list = [x.name for x in relationship_class_dict.values()]
+            self.combo_box.addItems(relationship_class_name_list)
+            if self.relationship_class:
                 combo_index = relationship_class_name_list.index(self.relationship_class.name)
-                self.ui.comboBox_relationship_class.setCurrentIndex(combo_index)
-                return
-            self.ui.comboBox_relationship_class.addItem(self.relationship_class.name)
-        except ValueError:
-            pass
+                self.combo_box.setCurrentIndex(combo_index)
+            else:
+                self.combo_box.setCurrentIndex(-1)
+        elif self.relationship_class:
+            self.combo_box.addItem(self.relationship_class.name)
+        else:
+            self._parent.msg_error.emit(
+                f"Forced default relationship class id {self.relationship_class_id} not found!")
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.ui.comboBox_relationship_class.currentIndexChanged.connect(self.call_reset_model)
+        self.combo_box.currentIndexChanged.connect(self.call_reset_model)
         super().connect_signals()
 
     @Slot("int", name='call_reset_model')
@@ -453,7 +500,6 @@ class AddRelationshipsDialog(AddItemsDialog):
             defaults = {header[self.default_object_column]: self.default_object_name}
             self.model.set_default_row(**defaults)
         self.model.clear()
-        self.ui.tableView.resizeColumnsToContents()
 
     def set_default_object_name(self):
         if not self.object_id:
@@ -477,6 +523,11 @@ class AddRelationshipsDialog(AddItemsDialog):
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
+        object_dicts = [
+            {
+                x.name: x.id for x in self._parent.db_map.object_list(class_id=int(id))
+            } for id in self.relationship_class.object_class_id_list.split(",")
+        ]
         wide_kwargs_list = list()
         name_column = self.model.horizontal_header_labels().index("relationship name")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -485,20 +536,17 @@ class AddRelationshipsDialog(AddItemsDialog):
             if not relationship_name:
                 self._parent.msg_error.emit("Relationship name missing at row {}".format(i + 1))
                 return
-            object_id_list = list()
+            object_name_list = list()
             for column in range(name_column):  # Leave 'name' column outside
                 object_name = row_data[column]
                 if not object_name:
                     self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
                     return
-                object_ = self._parent.db_map.single_object(name=object_name).one_or_none()
-                if not object_:
-                    self._parent.msg_error.emit("Couldn't find object '{}' at row {}".format(object_name, i + 1))
-                    return
-                object_id_list.append(object_.id)
-            if len(object_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
+                object_name_list.append(object_name)
+            object_id_list = [
+                object_dicts[k][x]
+                for k, x in enumerate(object_name_list)
+            ]
             wide_kwargs = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
@@ -509,34 +557,26 @@ class AddRelationshipsDialog(AddItemsDialog):
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            wide_relationships = self._parent.db_map.add_wide_relationships(*wide_kwargs_list)
+            wide_relationships, error_log = self._parent.db_map.add_wide_relationships(*wide_kwargs_list)
             self._parent.add_relationships(wide_relationships)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
-        except SpineIntegrityError as e:
-            self._parent.msg_error.emit(e.msg)
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
 
-class EditItemsDialog(QDialog):
-    """A dialog to query user's preferences for updating items.
-
-    Attributes:
-        parent (TreeViewForm): data store widget
-        kwargs_list (list): orignal key word arguments
-    """
-    def __init__(self, parent, kwargs_list):
+class EditItemsDialog(ManageItemsDialog):
+    def __init__(self, parent):
         super().__init__(parent)
-        self._parent = parent
-        self.ui = None
-        self.model = MinimalTableModel(self)
-        self.setAttribute(Qt.WA_DeleteOnClose)
 
-    def setup_ui(self):
-        self.ui = ui.edit_data_items.Ui_Dialog()
-        self.ui.setupUi(self)
-        self.ui.tableView.setModel(self.model)
-        self.ui.tableView.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        """Resize columns and form."""
+        # TODO: Try to make the stretch work with the resizing
+        # self.table_view.horizontalHeader().setStretchLastSection(True)
+        self.table_view.resizeColumnsToContents()
+        self.resize_window_to_columns()
 
 
 class EditObjectClassesDialog(EditItemsDialog):
@@ -547,10 +587,14 @@ class EditObjectClassesDialog(EditItemsDialog):
         kwargs_list (list): list of dictionaries corresponding to object classes to edit/update
     """
     def __init__(self, parent, kwargs_list):
-        super().__init__(parent, kwargs_list)
-        self.setup_ui()
+        super().__init__(parent)
         self.setWindowTitle("Edit object classes")
-        self.model.set_horizontal_header_labels(['object class name', 'description'])
+        self.model = MinimalTableModel(self)
+        self.model.set_horizontal_header_labels(['object class name', 'description', 'display_icon'])
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.setItemDelegateForColumn(2, IconColorDialogDelegate(parent))
+        self.connect_signals()
         self.orig_data = list()
         self.id_list = list()
         model_data = list()
@@ -567,11 +611,18 @@ class EditObjectClassesDialog(EditItemsDialog):
                 description = kwargs["description"]
             except KeyError:
                 description = None
-            row_data = [name, description]
+            try:
+                display_icon = kwargs["display_icon"]
+            except KeyError:
+                display_icon = None
+            row_data = [name, description, display_icon]
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.ui.tableView.resizeColumnsToContents()
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.itemDelegateForColumn(2).data_committed.connect(self._handle_data_committed)
 
     @busy_effect
     def accept(self):
@@ -579,25 +630,28 @@ class EditObjectClassesDialog(EditItemsDialog):
         kwargs_list = list()
         for i in range(self.model.rowCount()):
             id = self.id_list[i]
-            name, description = self.model.row_data(i)
+            name, description, display_icon = self.model.row_data(i)
             if not name:
                 self._parent.msg_error.emit("Object class name missing at row {}".format(i + 1))
                 return
-            orig_name, orig_description = self.orig_data[i]
-            if name == orig_name and description == orig_description:
+            orig_name, orig_description, orig_display_icon = self.orig_data[i]
+            if name == orig_name and description == orig_description and display_icon == orig_display_icon:
                 continue
             kwargs = {
                 'id': id,
                 'name': name,
-                'description': description
+                'description': description,
+                'display_icon': int(display_icon)
             }
             kwargs_list.append(kwargs)
         if not kwargs_list:
             self._parent.msg_error.emit("Nothing to update")
             return
         try:
-            object_classes = self._parent.db_map.update_object_classes(*kwargs_list)
+            object_classes, error_log = self._parent.db_map.update_object_classes(*kwargs_list)
             self._parent.update_object_classes(object_classes)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -611,9 +665,12 @@ class EditObjectsDialog(EditItemsDialog):
         kwargs_list (list): list of dictionaries corresponding to objects to edit/update
     """
     def __init__(self, parent, kwargs_list):
-        super().__init__(parent, kwargs_list)
-        self.setup_ui()
+        super().__init__(parent)
         self.setWindowTitle("Edit objects")
+        self.model = MinimalTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.connect_signals()
         self.model.set_horizontal_header_labels(['object name', 'description'])
         self.orig_data = list()
         self.id_list = list()
@@ -635,7 +692,7 @@ class EditObjectsDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
 
     @busy_effect
     def accept(self):
@@ -660,8 +717,10 @@ class EditObjectsDialog(EditItemsDialog):
             self._parent.msg_error.emit("Nothing to update")
             return
         try:
-            objects = self._parent.db_map.update_objects(*kwargs_list)
+            objects, error_log = self._parent.db_map.update_objects(*kwargs_list)
             self._parent.update_objects(objects)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -675,9 +734,12 @@ class EditRelationshipClassesDialog(EditItemsDialog):
         kwargs_list (list): list of dictionaries corresponding to relationship classes to edit/update
     """
     def __init__(self, parent, kwargs_list):
-        super().__init__(parent, kwargs_list)
-        self.setup_ui()
+        super().__init__(parent)
         self.setWindowTitle("Edit relationship classes")
+        self.model = MinimalTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.connect_signals()
         self.model.set_horizontal_header_labels(['relationship class name'])
         self.orig_data = list()
         self.id_list = list()
@@ -695,7 +757,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.ui.tableView.resizeColumnsToContents()
+        self.table_view.resizeColumnsToContents()
 
     @busy_effect
     def accept(self):
@@ -719,8 +781,10 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             self._parent.msg_error.emit("Nothing to update")
             return
         try:
-            wide_relationship_classes = self._parent.db_map.update_wide_relationship_classes(*kwargs_list)
+            wide_relationship_classes, error_log = self._parent.db_map.update_wide_relationship_classes(*kwargs_list)
             self._parent.update_relationship_classes(wide_relationship_classes)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
@@ -732,13 +796,16 @@ class EditRelationshipsDialog(EditItemsDialog):
     Attributes:
         parent (TreeViewForm): data store widget
         kwargs_list (list): list of dictionaries corresponding to relationships to edit/update
-        relationship_class (KeyedTuple): the relationship class item (all edited relationships must be of this class)
+        relationship_class (dict): the relationship class item (all edited relationships must be of this class)
     """
     def __init__(self, parent, kwargs_list, relationship_class):
-        super().__init__(parent, kwargs_list)
-        self.setup_ui()
+        super().__init__(parent)
         self.setWindowTitle("Edit relationships")
-        object_class_name_list = relationship_class.object_class_name_list.split(",")
+        self.model = MinimalTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
+        self.connect_signals()
+        object_class_name_list = relationship_class['object_class_name_list'].split(",")
         self.model.set_horizontal_header_labels([*[x + ' name' for x in object_class_name_list], 'relationship name'])
         self.orig_data = list()
         self.orig_object_id_lists = list()
@@ -760,16 +827,7 @@ class EditRelationshipsDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.ui.tableView.setItemDelegate(AddRelationshipsDelegate(parent))
-        self.ui.tableView.itemDelegate().data_committed.connect(self._handle_data_committed)
-        self.ui.tableView.resizeColumnsToContents()
-
-    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
-    def _handle_data_committed(self, index, data):
-        """Update 'object x' field with data from combobox editor."""
-        if data is None:
-            return
-        self.model.setData(index, data, Qt.EditRole)
+        self.table_view.resizeColumnsToContents()
 
     @busy_effect
     def accept(self):
@@ -797,9 +855,6 @@ class EditRelationshipsDialog(EditItemsDialog):
                     self._parent.msg_error.emit("Couldn't find object '{}' at row {}".format(object_name, i + 1))
                     return
                 object_id_list.append(object_.id)
-            if len(object_id_list) < 2:
-                self._parent.msg_error.emit("Not enough dimensions at row {} (at least two are needed)".format(i + 1))
-                return
             if orig_relationship_name == relationship_name and orig_object_id_list == object_id_list:
                 continue
             kwargs = {
@@ -812,15 +867,122 @@ class EditRelationshipsDialog(EditItemsDialog):
             self._parent.msg_error.emit("Nothing to update")
             return
         try:
-            wide_relationships = self._parent.db_map.update_wide_relationships(*kwargs_list)
+            wide_relationships, error_log = self._parent.db_map.update_wide_relationships(*kwargs_list)
             self._parent.update_relationships(wide_relationships)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            super().accept()
+        except SpineDBAPIError as e:
+            self._parent.msg_error.emit(e.msg)
+
+
+class ManageParameterTagsDialog(AddItemsDialog):
+    """A dialog to query user's preferences for managing parameter tags.
+
+    Attributes:
+        parent (TreeViewForm): data store widget
+    """
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setWindowTitle("Manage parameter tags")
+        self.model = HybridTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.connect_signals()
+        self.remove_row_icon = QIcon(":/icons/minus.svg")
+        self.orig_data = list()
+        self.removed_id_list = list()
+        self.id_list = list()
+        model_data = list()
+        for parameter_tag in self._parent.db_map.parameter_tag_list():
+            try:
+                self.id_list.append(parameter_tag.id)
+            except KeyError:
+                continue
+            tag = parameter_tag.tag
+            description = parameter_tag.description
+            row_data = [tag, description]
+            self.orig_data.append(row_data.copy())
+            model_data.append(row_data)
+        self.model.set_horizontal_header_labels(['parameter tag', 'description'])
+        self.model.reset_model(model_data)
+
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        """Call parent method, and then create remove row buttons for initial rows."""
+        super()._handle_model_reset()
+        column = self.model.columnCount() - 1
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, column)
+            button = self.create_remove_row_button(index)
+            self.table_view.setIndexWidget(index, button)
+
+    def remove_clicked_row(self, button):
+        column = self.model.columnCount() - 1
+        for row in range(self.model.rowCount()):
+            index = self.model.index(row, column)
+            if button == self.table_view.indexWidget(index):
+                self.model.removeRows(row, 1)
+                try:
+                    self.removed_id_list.append(self.id_list.pop(row))
+                except IndexError:
+                    pass
+                break
+
+    @busy_effect
+    def accept(self):
+        """Collect info from dialog and try to update items."""
+        # update
+        items_to_update = list()
+        for i in range(self.model.existing_item_model.rowCount()):
+            id = self.id_list[i]
+            tag, description = self.model.existing_item_model.row_data(i)
+            if not tag:
+                self._parent.msg_error.emit("Tag missing at row {}".format(i + 1))
+                return
+            orig_tag, orig_description = self.orig_data[i]
+            if tag == orig_tag and description == orig_description:
+                continue
+            kwargs = {
+                'id': id,
+                'tag': tag,
+                'description': description
+            }
+            items_to_update.append(kwargs)
+        # insert
+        items_to_add = list()
+        for i in range(self.model.new_item_model.rowCount() - 1):  # last row will always be empty
+            tag, description = self.model.new_item_model.row_data(i)
+            if not tag:
+                self._parent.msg_error.emit("Tag missing at row {0}".format(i + 1))
+                return
+            kwargs = {
+                'tag': tag,
+                'description': description
+            }
+            items_to_add.append(kwargs)
+        error_log = list()
+        try:
+            if items_to_update:
+                parameter_tags, upd_error_log = self._parent.db_map.update_parameter_tags(*items_to_update)
+                error_log += upd_error_log
+                self._parent.update_parameter_tags(parameter_tags)
+            if self.removed_id_list:
+                self._parent.db_map.remove_items(parameter_tag_ids=self.removed_id_list)
+                self._parent.remove_parameter_tags(self.removed_id_list)
+            if items_to_add:
+                parameter_tags, add_error_log = self._parent.db_map.add_parameter_tags(*items_to_add)
+                error_log += add_error_log
+                self._parent.add_parameter_tags(parameter_tags)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)
 
 
 class CommitDialog(QDialog):
-    """A dialog to query user's preferences for new parameter values.
+    """A dialog to query user's preferences for new commit.
 
     Attributes:
         parent (TreeViewForm): data store widget
@@ -835,13 +997,13 @@ class CommitDialog(QDialog):
         form.setContentsMargins(0, 0, 0, 0)
         inner_layout = QVBoxLayout()
         inner_layout.setContentsMargins(4, 4, 4, 4)
-        self.actionAccept = QAction(self)
-        self.actionAccept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
-        self.actionAccept.triggered.connect(self.accept)
-        self.actionAccept.setEnabled(False)
+        self.action_accept = QAction(self)
+        self.action_accept.setShortcut(QApplication.translate("Dialog", "Ctrl+Return", None, -1))
+        self.action_accept.triggered.connect(self.accept)
+        self.action_accept.setEnabled(False)
         self.commit_msg_edit = QPlainTextEdit(self)
         self.commit_msg_edit.setPlaceholderText('Commit message \t(press Ctrl+Enter to commit)')
-        self.commit_msg_edit.addAction(self.actionAccept)
+        self.commit_msg_edit.addAction(self.action_accept)
         button_box = QDialogButtonBox()
         button_box.addButton(QDialogButtonBox.Cancel)
         self.commit_button = button_box.addButton('Commit', QDialogButtonBox.AcceptRole)
@@ -862,4 +1024,4 @@ class CommitDialog(QDialog):
         self.commit_msg = self.commit_msg_edit.toPlainText()
         cond = self.commit_msg.strip() != ""
         self.commit_button.setEnabled(cond)
-        self.actionAccept.setEnabled(cond)
+        self.action_accept.setEnabled(cond)

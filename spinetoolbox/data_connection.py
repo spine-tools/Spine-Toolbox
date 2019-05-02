@@ -27,7 +27,7 @@ from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import create_dir
 from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
-from graphics_items import DataConnectionImage
+from graphics_items import DataConnectionIcon
 from helpers import busy_effect
 
 
@@ -67,7 +67,7 @@ class DataConnection(ProjectItem):
         # Populate data (files) model
         data_files = self.data_files()
         self.populate_data_list(data_files)
-        self._graphics_item = DataConnectionImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = DataConnectionIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
         # self.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)  # TODO: OBSOLETE?
         self._sigs = self.make_signal_handler_dict()
@@ -86,7 +86,7 @@ class DataConnection(ProjectItem):
         s[self.data_dir_watcher.directoryChanged] = self.refresh
         s[self._toolbox.ui.treeView_dc_references.files_dropped] = self.add_files_to_references
         s[self._toolbox.ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
-        s[self._graphics_item.master().scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
+        s[self._graphics_item.scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
         return s
 
     def activate(self):

@@ -1,51 +1,72 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Mon Nov 12 13:40:52 2018
+######################################################################################################################
+# Copyright (C) 2017 - 2018 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
 
-@author: pvper
+"""
+Unit tests for Excel import and export.
+
+:author: P. Vennström (VTT)
+:date:   12.11.2018
 """
 
 import os
-import uuid
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock
 from collections import namedtuple
-from sqlalchemy.orm import Session
+from spinedb_api import DiffDatabaseMapping, create_new_spine_database
+from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, validate_sheet, SheetData, \
+    read_parameter_sheet, read_json_sheet, merge_spine_xlsx_data, read_spine_xlsx, export_spine_database_to_xlsx, \
+    import_xlsx_to_db
 
-from spinedatabase_api import DatabaseMapping, DiffDatabaseMapping, create_new_spine_database
-from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, validate_sheet, SheetData, read_parameter_sheet, read_json_sheet, merge_spine_xlsx_data, read_spine_xlsx, export_spine_database_to_xlsx, get_unstacked_objects, import_xlsx_to_db
+UUID_STR = 'f7f92ced-faff-4315-900e-704d2a786a65'
+TEMP_EXCEL_FILENAME = UUID_STR + '-excel.xlsx'
+TEMP_SQLITE_FILENAME = UUID_STR + '-first.sqlite'
+TEMP_SQLITE_TEST_FILENAME = UUID_STR + '-second.sqlite'
 
 
 class TestExcelIntegration(unittest.TestCase):
 
+    def delete_temp_files(self):
+        # remove temp files
+        try:
+            os.remove(TEMP_EXCEL_FILENAME)
+        except OSError:
+            pass
+        try:
+            os.remove(TEMP_SQLITE_FILENAME)
+        except OSError:
+            pass
+        try:
+            os.remove(TEMP_SQLITE_TEST_FILENAME)
+        except OSError:
+            pass
+
     def setUp(self):
         """Overridden method. Runs before each test.
         """
-        # temp file for excel export
-        self.temp_excel_filename = str(uuid.uuid4()) + '.xlsx'
+        self.delete_temp_files()
 
         # create a in memory database with objects, relationship, parameters and values
-        input_db = create_new_spine_database('sqlite://')
+        create_new_spine_database('sqlite:///' + TEMP_SQLITE_FILENAME)
         db_map = DiffDatabaseMapping(
-            "", username='IntegrationTest', create_all=False)
-        db_map.engine = input_db
-        db_map.engine.connect()
-        db_map.session = Session(db_map.engine, autoflush=False)
-        db_map.create_mapping()
-        db_map.create_diff_tables_and_mapping()
-        db_map.init_next_id()
+            'sqlite:///' + TEMP_SQLITE_FILENAME,
+            username='IntegrationTest',
+            upgrade=True)
 
         # create empty database for loading excel into
-        input_db_test = create_new_spine_database('sqlite://')
+        create_new_spine_database('sqlite:///' + TEMP_SQLITE_TEST_FILENAME)
         db_map_test = DiffDatabaseMapping(
-            "", username='IntegrationTest', create_all=False)
-        db_map_test.engine = input_db_test
-        db_map_test.engine.connect()
-        db_map_test.session = Session(db_map_test.engine, autoflush=False)
-        db_map_test.create_mapping()
-        db_map_test.create_diff_tables_and_mapping()
-        db_map_test.init_next_id()
+            'sqlite:///' + TEMP_SQLITE_TEST_FILENAME,
+            username='IntegrationTest',
+            upgrade=True)
 
         # delete all object_classes to empty database
         oc = set(oc. id for oc in db_map_test.object_class_list().all())
@@ -128,11 +149,7 @@ class TestExcelIntegration(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        # delete temp excel file if it exists
-        try:
-            os.remove(self.temp_excel_filename)
-        except OSError:
-            pass
+        self.delete_temp_files()
 
     def compare_dbs(self, db1, db2):
         # compare imported database with exported database
@@ -181,10 +198,10 @@ class TestExcelIntegration(unittest.TestCase):
             par_org.values()), msg='Difference in parameters')
         # parameters values
         parv = db1.parameter_value_list().all()
-        parv = set((par[p.parameter_id][0], p.value, p.json, ol_id[p.object_id] if p.object_id else None,
+        parv = set((par[p.parameter_definition_id][0], p.value, p.json, ol_id[p.object_id] if p.object_id else None,
                     rel[p.relationship_id][1] if p.relationship_id else None) for p in parv)
         parv_org = db2.parameter_value_list().all()
-        parv_org = set((par_org[p.parameter_id][0], p.value, p.json, ol_id_org[p.object_id] if p.object_id else None,
+        parv_org = set((par_org[p.parameter_definition_id][0], p.value, p.json, ol_id_org[p.object_id] if p.object_id else None,
                         rel_org[p.relationship_id][1] if p.relationship_id else None) for p in parv_org)
         self.assertEqual(set(par.values()), set(
             par_org.values()), msg='Difference in parameter values')
@@ -192,10 +209,10 @@ class TestExcelIntegration(unittest.TestCase):
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""
         # export to excel
-        export_spine_database_to_xlsx(self.db_map, self.temp_excel_filename)
+        export_spine_database_to_xlsx(self.db_map, TEMP_EXCEL_FILENAME)
 
         # import into empty database
-        import_xlsx_to_db(self.empty_db_map, self.temp_excel_filename)
+        import_xlsx_to_db(self.empty_db_map, TEMP_EXCEL_FILENAME)
         self.empty_db_map.commit_session('Excel import')
 
         # compare dbs
@@ -204,10 +221,10 @@ class TestExcelIntegration(unittest.TestCase):
     def test_import_to_existing_data(self):
         """Integration test importing data to a database with existing items"""
         # export to excel
-        export_spine_database_to_xlsx(self.db_map, self.temp_excel_filename)
+        export_spine_database_to_xlsx(self.db_map, TEMP_EXCEL_FILENAME)
 
         # import into empty database
-        import_xlsx_to_db(self.empty_db_map, self.temp_excel_filename)
+        import_xlsx_to_db(self.empty_db_map, TEMP_EXCEL_FILENAME)
         self.empty_db_map.commit_session('Excel import')
 
         # delete 1 object class
@@ -215,7 +232,7 @@ class TestExcelIntegration(unittest.TestCase):
         self.db_map.commit_session("Delete class")
 
         # reimport data
-        import_xlsx_to_db(self.db_map, self.temp_excel_filename)
+        import_xlsx_to_db(self.db_map, TEMP_EXCEL_FILENAME)
         self.db_map.commit_session("reimport data")
 
         # compare dbs
@@ -227,6 +244,8 @@ class TestExcelImport(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test.
         """
+        Cell = namedtuple('cell',['value'])
+
         # mock data for relationship sheets
         ws_mock = {}
         ws_mock['A2'] = MagicMock(value='relationship')
@@ -241,6 +260,13 @@ class TestExcelImport(unittest.TestCase):
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
+        mock_row_generator_data1 = [[],
+                                   [],
+                                   [],
+                                   [Cell('object_class_name1'), Cell('object_class_name2'),Cell('parameter1'), Cell('parameter2'), Cell(None)],
+                                   [Cell('a_obj1'), Cell('b_obj1'), Cell(1), Cell('a'), Cell(None)],
+                                   [Cell('a_obj2'), Cell('b_obj2'), Cell(2), Cell('b'), Cell(None)]]
+        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data1)
         self.ws_rel = ws
         self.data_parameter = ['parameter1', 'parameter2']
         self.data_class_rel = [['object_class_name1', 'object_class_name2']]
@@ -261,6 +287,13 @@ class TestExcelImport(unittest.TestCase):
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
+        mock_row_generator_data2 = [[],
+                                   [],
+                                   [],
+                                   [Cell('object_class_name'),Cell('parameter1'), Cell('parameter2')],
+                                   [Cell('obj1'), Cell(1), Cell('a')],
+                                   [Cell('obj2'), Cell(2), Cell('b')]]
+        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data2)
         self.ws_obj = ws
         self.data_parameter = ['parameter1', 'parameter2']
         self.data_class_obj = [['object_class_name']]
@@ -286,6 +319,15 @@ class TestExcelImport(unittest.TestCase):
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
+        mock_row_generator_data3 = [[],
+                                   [],
+                                   [],
+                                   [Cell('object_class_name'),Cell('obj1'),Cell('obj2')],
+                                   [Cell('json parameter'),Cell('parameter1'), Cell('parameter2')],
+                                   [Cell(None), Cell(1), Cell(4)],
+                                   [Cell(None), Cell(2), Cell(5)],
+                                   [Cell(None), Cell(3), Cell(6)]]
+        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data3)
         self.ws_obj_json = ws
 
         # mock data for json sheets relationship
@@ -308,6 +350,16 @@ class TestExcelImport(unittest.TestCase):
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
+        mock_row_generator_data4 = [[],
+                                   [],
+                                   [],
+                                   [Cell('object_class_name1'),Cell('a_obj1'),Cell('a_obj2'),Cell(None)],
+                                   [Cell('object_class_name2'),Cell('b_obj1'),Cell('b_obj2'),Cell(None)],
+                                   [Cell('json parameter'),Cell('parameter1'), Cell('parameter2'),Cell(None)],
+                                   [Cell(None), Cell(1), Cell(4),Cell(None)],
+                                   [Cell(None), Cell(2), Cell(5),Cell(None)],
+                                   [Cell(None), Cell(3), Cell(6),Cell(None)]]
+        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data4)
         self.ws_rel_json = ws
 
     def tearDown(self):
@@ -502,6 +554,11 @@ class TestExcelImport(unittest.TestCase):
         # make last row in data invalid
         self.data_rel[1][0] = None
         self.class_obj_rel.pop(1)
+        Cell = namedtuple('cell',['value'])
+        data = list(ws.iter_rows())
+        data.pop(-1)
+        data.append([Cell(None), Cell('b_obj2'), Cell(2), Cell('b'), Cell(None)])
+        ws.iter_rows.side_effect = lambda : iter(data)
 
         parameter_values = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
                             self.RelData('value', 'a_obj1', 'b_obj1', 'parameter2', 'a')]
@@ -518,6 +575,11 @@ class TestExcelImport(unittest.TestCase):
         """Test reading a sheet with None values in parameter value cells"""
         ws = self.ws_obj
         self.data_obj[1][1] = None
+        Cell = namedtuple('cell',['value'])
+        data = list(ws.iter_rows())
+        data[5][1] = Cell(None)
+        ws.iter_rows.side_effect = lambda : iter(data)
+
         parameter_values = [self.ObjData('value', 'obj1', 'parameter1', 1),
                             self.ObjData('value', 'obj1', 'parameter2', 'a'),
                             self.ObjData('value', 'obj2', 'parameter2', 'b')]

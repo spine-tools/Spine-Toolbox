@@ -22,7 +22,7 @@
     <x>0</x>
     <y>0</y>
     <width>700</width>
-    <height>520</height>
+    <height>550</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -34,13 +34,13 @@
   <property name="minimumSize">
    <size>
     <width>700</width>
-    <height>520</height>
+    <height>550</height>
    </size>
   </property>
   <property name="maximumSize">
    <size>
     <width>700</width>
-    <height>520</height>
+    <height>550</height>
    </size>
   </property>
   <property name="mouseTracking">
@@ -93,6 +93,12 @@
      </property>
      <item>
       <widget class="QScrollArea" name="scrollArea">
+       <property name="focusPolicy">
+        <enum>Qt::NoFocus</enum>
+       </property>
+       <property name="frameShape">
+        <enum>QFrame::NoFrame</enum>
+       </property>
        <property name="widgetResizable">
         <bool>true</bool>
        </property>
@@ -101,11 +107,29 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>323</width>
-          <height>449</height>
+          <width>338</width>
+          <height>482</height>
          </rect>
         </property>
-        <layout class="QVBoxLayout" name="verticalLayout_5">
+        <property name="autoFillBackground">
+         <bool>true</bool>
+        </property>
+        <layout class="QVBoxLayout" name="verticalLayout_5" stretch="0,0,0,0">
+         <property name="spacing">
+          <number>6</number>
+         </property>
+         <property name="leftMargin">
+          <number>0</number>
+         </property>
+         <property name="topMargin">
+          <number>0</number>
+         </property>
+         <property name="rightMargin">
+          <number>0</number>
+         </property>
+         <property name="bottomMargin">
+          <number>0</number>
+         </property>
          <item>
           <widget class="QGroupBox" name="groupBox_general">
            <property name="sizePolicy">
@@ -123,7 +147,7 @@
            <property name="maximumSize">
             <size>
              <width>16777215</width>
-             <height>200</height>
+             <height>16777215</height>
             </size>
            </property>
            <property name="autoFillBackground">
@@ -135,10 +159,7 @@
            <property name="flat">
             <bool>false</bool>
            </property>
-           <layout class="QVBoxLayout" name="verticalLayout_6">
-            <property name="spacing">
-             <number>6</number>
-            </property>
+           <layout class="QVBoxLayout" name="verticalLayout">
             <item>
              <widget class="QCheckBox" name="checkBox_open_previous_project">
               <property name="sizePolicy">
@@ -230,23 +251,88 @@
               <property name="focusPolicy">
                <enum>Qt::NoFocus</enum>
               </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Directory where Spine Toolbox projects are stored. Non-editable at the moment.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
               <property name="readOnly">
                <bool>true</bool>
               </property>
              </widget>
             </item>
             <item>
-             <spacer name="verticalSpacer">
-              <property name="orientation">
-               <enum>Qt::Vertical</enum>
+             <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls whether smooth or discete zoom is used in Design and Graph Views.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
-              <property name="sizeHint" stdset="0">
-               <size>
-                <width>20</width>
-                <height>40</height>
-               </size>
+              <property name="text">
+               <string>Smooth zoom</string>
               </property>
-             </spacer>
+             </widget>
+            </item>
+            <item>
+             <widget class="QLabel" name="label_7">
+              <property name="font">
+               <font>
+                <pointsize>7</pointsize>
+               </font>
+              </property>
+              <property name="text">
+               <string>Design View background</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout_4">
+              <item>
+               <widget class="QRadioButton" name="radioButton_bg_grid">
+                <property name="text">
+                 <string>Grid</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_4">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QRadioButton" name="radioButton_bg_solid">
+                <property name="text">
+                 <string>Solid</string>
+                </property>
+                <property name="checked">
+                 <bool>true</bool>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <widget class="QToolButton" name="toolButton_bg_color">
+                <property name="maximumSize">
+                 <size>
+                  <width>22</width>
+                  <height>22</height>
+                 </size>
+                </property>
+                <property name="toolTip">
+                 <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick solid background color&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                </property>
+                <property name="iconSize">
+                 <size>
+                  <width>16</width>
+                  <height>16</height>
+                 </size>
+                </property>
+               </widget>
+              </item>
+             </layout>
             </item>
            </layout>
           </widget>
@@ -257,11 +343,8 @@
             <string>GAMS</string>
            </property>
            <layout class="QGridLayout" name="gridLayout">
-            <property name="horizontalSpacing">
+            <property name="spacing">
              <number>6</number>
-            </property>
-            <property name="verticalSpacing">
-             <number>0</number>
             </property>
             <item row="1" column="0">
              <widget class="QLabel" name="label_4">
@@ -271,7 +354,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Path to GAMS executable</string>
+               <string>GAMS program</string>
               </property>
              </widget>
             </item>
@@ -290,10 +373,10 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to directory where GAMS and GAMSIDE executables are found&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path to GAMS executable. Leave blank to use GAMS defined in your system path&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Using GAMS executable in system path</string>
+               <string>Using GAMS in system path</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
@@ -307,6 +390,9 @@
                 <width>22</width>
                 <height>22</height>
                </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS by browsing and selecting a GAMS executable (gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="iconSize">
                <size>
@@ -325,16 +411,37 @@
             <string>JULIA</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
-            <property name="horizontalSpacing">
+            <property name="spacing">
              <number>6</number>
             </property>
-            <property name="verticalSpacing">
-             <number>0</number>
-            </property>
-            <item row="1" column="0">
-             <widget class="QCheckBox" name="checkBox_use_repl">
+            <item row="2" column="0">
+             <widget class="QLabel" name="label_5">
+              <property name="font">
+               <font>
+                <pointsize>7</pointsize>
+               </font>
+              </property>
               <property name="text">
-               <string>Run Julia Scripts in REPL</string>
+               <string>Julia interpreter</string>
+              </property>
+             </widget>
+            </item>
+            <item row="3" column="1">
+             <widget class="QToolButton" name="toolButton_browse_julia">
+              <property name="maximumSize">
+               <size>
+                <width>22</width>
+                <height>22</height>
+               </size>
+              </property>
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia interpreter by using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+              </property>
+              <property name="iconSize">
+               <size>
+                <width>20</width>
+                <height>20</height>
+               </size>
               </property>
              </widget>
             </item>
@@ -353,41 +460,23 @@
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Path where julia executable is found&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia interpreter. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Using Julia executable in system path</string>
+               <string>Using Julia interpreter in system path</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
               </property>
              </widget>
             </item>
-            <item row="2" column="0">
-             <widget class="QLabel" name="label_5">
-              <property name="font">
-               <font>
-                <pointsize>7</pointsize>
-               </font>
+            <item row="4" column="0">
+             <widget class="QCheckBox" name="checkBox_use_embedded_julia">
+              <property name="toolTip">
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). If unchecked, Julia Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `julia script.jl` in terminal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>Path to Julia executable</string>
-              </property>
-             </widget>
-            </item>
-            <item row="3" column="1">
-             <widget class="QToolButton" name="toolButton_browse_julia">
-              <property name="maximumSize">
-               <size>
-                <width>22</width>
-                <height>22</height>
-               </size>
-              </property>
-              <property name="iconSize">
-               <size>
-                <width>20</width>
-                <height>20</height>
-               </size>
+               <string>Use embedded Julia Console</string>
               </property>
              </widget>
             </item>
@@ -395,55 +484,124 @@
           </widget>
          </item>
          <item>
-          <widget class="QGroupBox" name="groupBox_data_store">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
+          <spacer name="verticalSpacer">
+           <property name="orientation">
+            <enum>Qt::Vertical</enum>
            </property>
-           <property name="maximumSize">
+           <property name="sizeHint" stdset="0">
             <size>
-             <width>16777215</width>
-             <height>80</height>
+             <width>20</width>
+             <height>40</height>
             </size>
            </property>
-           <property name="title">
-            <string>Data store views</string>
-           </property>
-           <layout class="QVBoxLayout" name="verticalLayout_4">
-            <property name="spacing">
-             <number>6</number>
-            </property>
-            <item>
-             <widget class="QCheckBox" name="checkBox_commit_at_exit">
-              <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Does not commit session and does not show message box&lt;/p&gt;&lt;p&gt;Partially checked: Shows message box (default)&lt;/p&gt;&lt;p&gt;Checked: Commits session and does not show message box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-              </property>
-              <property name="text">
-               <string>Commit session at exit</string>
-              </property>
-              <property name="tristate">
-               <bool>true</bool>
-              </property>
-             </widget>
-            </item>
-            <item>
-             <widget class="QCheckBox" name="checkBox_use_smooth_zoom">
-              <property name="text">
-               <string>Use smooth zoom in graph view</string>
-              </property>
-             </widget>
-            </item>
-           </layout>
-          </widget>
+          </spacer>
          </item>
         </layout>
        </widget>
       </widget>
      </item>
      <item>
-      <layout class="QVBoxLayout" name="verticalLayout_3">
+      <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,1">
+       <item>
+        <widget class="QGroupBox" name="groupBox_python">
+         <property name="title">
+          <string>Python</string>
+         </property>
+         <layout class="QGridLayout" name="gridLayout_3">
+          <item row="2" column="0">
+           <widget class="QCheckBox" name="checkBox_use_embedded_python">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Python Tools and scripts will be executed in the embedded Python Console (Shell). If unchecked, Python Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `python script.py` in terminal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Use embedded Python Console</string>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="0">
+           <widget class="QLineEdit" name="lineEdit_python_path">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Python interpreter. Leave blank to use Python defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="placeholderText">
+             <string>Using Python interpreter in system path</string>
+            </property>
+            <property name="clearButtonEnabled">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+          <item row="1" column="1">
+           <widget class="QToolButton" name="toolButton_browse_python">
+            <property name="maximumSize">
+             <size>
+              <width>22</width>
+              <height>22</height>
+             </size>
+            </property>
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter by using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="iconSize">
+             <size>
+              <width>20</width>
+              <height>20</height>
+             </size>
+            </property>
+           </widget>
+          </item>
+          <item row="0" column="0">
+           <widget class="QLabel" name="label_8">
+            <property name="font">
+             <font>
+              <pointsize>7</pointsize>
+             </font>
+            </property>
+            <property name="text">
+             <string>Python interpreter</string>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
+       <item>
+        <widget class="QGroupBox" name="groupBox_data_store">
+         <property name="sizePolicy">
+          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
+           <horstretch>0</horstretch>
+           <verstretch>0</verstretch>
+          </sizepolicy>
+         </property>
+         <property name="maximumSize">
+          <size>
+           <width>16777215</width>
+           <height>16777215</height>
+          </size>
+         </property>
+         <property name="title">
+          <string>Data store views</string>
+         </property>
+         <layout class="QVBoxLayout" name="verticalLayout_4">
+          <property name="spacing">
+           <number>6</number>
+          </property>
+          <item>
+           <widget class="QCheckBox" name="checkBox_commit_at_exit">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Unchecked: Does not commit session and does not show message box&lt;/p&gt;&lt;p&gt;Partially checked: Shows message box (default)&lt;/p&gt;&lt;p&gt;Checked: Commits session and does not show message box&lt;/p&gt;&lt;p&gt;&lt;br/&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Commit session when view is closed</string>
+            </property>
+            <property name="tristate">
+             <bool>true</bool>
+            </property>
+           </widget>
+          </item>
+         </layout>
+        </widget>
+       </item>
        <item>
         <widget class="QGroupBox" name="groupBox_project">
          <property name="sizePolicy">
@@ -529,7 +687,7 @@
              <enum>Qt::StrongFocus</enum>
             </property>
             <property name="toolTip">
-             <string>Project Description</string>
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Project description&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="styleSheet">
              <string notr="true">:focus {border: 1px solid black;}</string>
@@ -584,7 +742,7 @@ p, li { white-space: pre-wrap; }
                </size>
               </property>
               <property name="toolTip">
-               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave this empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Work directory location. Leave empty to use default (\work).&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
                <string>Using default directory</string>
@@ -631,10 +789,10 @@ p, li { white-space: pre-wrap; }
       <number>0</number>
      </property>
      <property name="topMargin">
-      <number>6</number>
+      <number>9</number>
      </property>
      <property name="bottomMargin">
-      <number>6</number>
+      <number>18</number>
      </property>
      <item>
       <spacer name="horizontalSpacer_2">
@@ -721,41 +879,6 @@ p, li { white-space: pre-wrap; }
      </item>
     </layout>
    </item>
-   <item>
-    <layout class="QHBoxLayout" name="horizontalLayout_statusbar_placeholder">
-     <property name="spacing">
-      <number>0</number>
-     </property>
-     <property name="leftMargin">
-      <number>0</number>
-     </property>
-     <property name="topMargin">
-      <number>0</number>
-     </property>
-     <property name="rightMargin">
-      <number>0</number>
-     </property>
-     <property name="bottomMargin">
-      <number>0</number>
-     </property>
-     <item>
-      <widget class="QWidget" name="widget_invisible_dummy" native="true">
-       <property name="minimumSize">
-        <size>
-         <width>0</width>
-         <height>20</height>
-        </size>
-       </property>
-       <property name="maximumSize">
-        <size>
-         <width>0</width>
-         <height>20</height>
-        </size>
-       </property>
-      </widget>
-     </item>
-    </layout>
-   </item>
   </layout>
   <zorder></zorder>
  </widget>
@@ -765,11 +888,18 @@ p, li { white-space: pre-wrap; }
   <tabstop>checkBox_save_at_exit</tabstop>
   <tabstop>checkBox_datetime</tabstop>
   <tabstop>checkBox_delete_data</tabstop>
+  <tabstop>checkBox_use_smooth_zoom</tabstop>
+  <tabstop>radioButton_bg_grid</tabstop>
+  <tabstop>radioButton_bg_solid</tabstop>
+  <tabstop>toolButton_bg_color</tabstop>
   <tabstop>lineEdit_gams_path</tabstop>
   <tabstop>toolButton_browse_gams</tabstop>
-  <tabstop>checkBox_use_repl</tabstop>
   <tabstop>lineEdit_julia_path</tabstop>
   <tabstop>toolButton_browse_julia</tabstop>
+  <tabstop>checkBox_use_embedded_julia</tabstop>
+  <tabstop>lineEdit_python_path</tabstop>
+  <tabstop>toolButton_browse_python</tabstop>
+  <tabstop>checkBox_use_embedded_python</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
   <tabstop>textEdit_project_description</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>

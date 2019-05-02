@@ -29,13 +29,11 @@ class NewProjectForm(QWidget):
 
     Attributes:
         toolbox (ToolboxUI): Parent widget.
-        configs (ConfigurationParser): Configurations object
     """
-    def __init__(self, toolbox, configs):
+    def __init__(self, toolbox):
         """Initialize class."""
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent
         self._toolbox = toolbox
-        self._configs = configs
         # Set up the user interface from Designer.
         self.ui = ui.project_form.Ui_Form()
         self.ui.setupUi(self)
@@ -89,7 +87,7 @@ class NewProjectForm(QWidget):
             return
         # Check if project with same name already exists
         short_name = self.name.lower().replace(' ', '_')
-        project_folder = os.path.join(project_dir(self._configs), short_name)
+        project_folder = os.path.join(project_dir(self._toolbox.qsettings()), short_name)
         if os.path.isdir(project_folder):
             self.statusbar.showMessage("Project already exists", 5000)
             return

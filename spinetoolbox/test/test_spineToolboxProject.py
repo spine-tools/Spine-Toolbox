@@ -20,14 +20,29 @@ import unittest
 from unittest import mock
 import logging
 import sys
+from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
 
 
+class MockQWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+    # noinspection PyMethodMayBeStatic
+    def test_push_vars(self):
+        return True
+
+
+# noinspection PyUnusedLocal
 class TestSpineToolboxProject(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
         """Runs once before any tests in this class."""
+        try:
+            cls.app = QApplication().processEvents()
+        except RuntimeError:
+            pass
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
@@ -37,18 +52,19 @@ class TestSpineToolboxProject(unittest.TestCase):
         We want the ToolboxUI to start with the default settings and without a project so
         we need to mock CONFIGURATION_FILE to prevent loading user's own configs from settings.conf.
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+                mock.patch("ui_main.PythonReplWidget") as mock_python_repl, \
                 mock.patch("project.create_dir") as mock_create_dir, \
-                mock.patch("ui_main.CONFIGURATION_FILE") as mock_confs, \
-                mock.patch("os.path.split") as mock_split, \
-                mock.patch("configuration.create_dir") as mock_create_dir2:
-            # logging.disable(level=logging.ERROR)  # Disable logging
+                mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project:
+            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
+            mock_julia_repl.return_value = QWidget()
+            mock_python_repl.return_value = MockQWidget()
             self.toolbox = ToolboxUI()
             self.toolbox.create_project("UnitTest Project", "")
-            # logging.disable(level=logging.NOTSET)  # Enable logging
 
     def tearDown(self):
         """Runs after each test. Use this to free resources after a test if needed."""
+        self.toolbox.deleteLater()
         self.toolbox = None
 
     def test_add_data_store(self):
@@ -127,8 +143,11 @@ class TestSpineToolboxProject(unittest.TestCase):
         # Connection model should now have four rows and four columns
         self.assertEqual(self.toolbox.connection_model.rowCount(), 4)
         self.assertEqual(self.toolbox.connection_model.columnCount(), 4)
-        # Check that the names match in connection model
+        # Check that added names are found in connection model header in the correct order
         self.assertEqual(self.toolbox.connection_model.find_index_in_header(ds_name), 0)
+        self.assertEqual(self.toolbox.connection_model.find_index_in_header(dc_name), 1)
+        self.assertEqual(self.toolbox.connection_model.find_index_in_header(tool_name), 2)
+        self.assertEqual(self.toolbox.connection_model.find_index_in_header(view_name), 3)
 
         # # Add Data Connection item
         # dc_name = "DC"

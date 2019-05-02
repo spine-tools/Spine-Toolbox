@@ -22,11 +22,9 @@ import logging
 import os
 import sys
 from PySide2.QtWidgets import QApplication, QToolButton
-from PySide2.QtCore import Qt
 from widgets.data_store_widgets import TreeViewForm
-from spinedatabase_api import DiffDatabaseMapping, create_new_spine_database
-from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
-    AddRelationshipClassesDialog, AddRelationshipsDialog
+from spinedb_api import DiffDatabaseMapping, create_new_spine_database
+from widgets.custom_qdialog import AddObjectClassesDialog
 
 
 class TestAddItemsDialog(unittest.TestCase):
@@ -43,27 +41,19 @@ class TestAddItemsDialog(unittest.TestCase):
                             datefmt='%Y-%m-%d %H:%M:%S')
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of TreeViewForm class.
-        """
-        # # Set logging level to Error to silence "Logging level: All messages" print
-        with mock.patch("data_store.DataStore") as mock_data_store:
-            logging.disable(level=logging.ERROR)  # Disable logging
-            try:
-                os.remove('mock_db.sqlite')
-            except OSError:
-                pass
-            db_url = "sqlite:///mock_db.sqlite"
-            create_new_spine_database(db_url)
-            db_map = DiffDatabaseMapping(db_url, "UnitTest")
-            db_map.reset_mapping()
-            self.tree_view_form = TreeViewForm(mock_data_store, db_map, "mock_db")
-            logging.disable(level=logging.NOTSET)  # Enable logging
+        """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
+        with mock.patch("data_store.DataStore") as mock_data_store, \
+                mock.patch("spinedb_api.DiffDatabaseMapping") as mock_db_map:
+            mock_data_store._toolbox.qsettings.return_value.value.return_value = False
+            self.tree_view_form = TreeViewForm(mock_data_store, mock_db_map, "mock_db")
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
         self.tree_view_form.close()
+        self.tree_view_form.deleteLater()
+        self.tree_view_form = None
         try:
             os.remove('mock_db.sqlite')
         except OSError:
@@ -76,7 +66,7 @@ class TestAddItemsDialog(unittest.TestCase):
         self.assertEqual(dialog.model.rowCount(), 1)
         self.assertEqual(dialog.model.columnCount(), 3)
         button_index = dialog.model.index(0, 2)
-        button = dialog.ui.tableView.indexWidget(button_index)
+        button = dialog.table_view.indexWidget(button_index)
         self.assertTrue(isinstance(button, QToolButton))
 
     @unittest.skipIf(sys.platform.startswith("win"), "QApplication.clipboard() tests do not work on Windows")
@@ -87,7 +77,7 @@ class TestAddItemsDialog(unittest.TestCase):
         self.assertEqual(dialog.model.rowCount(), 1)
         self.assertEqual(dialog.model.columnCount(), 3)
         model = dialog.model
-        view = dialog.ui.tableView
+        view = dialog.table_view
         header_index = model.horizontal_header_labels().index
         clipboard_text = "fish\ndog\ncat\nmouse\noctopus\nchicken\n"
         QApplication.clipboard().setText(clipboard_text)

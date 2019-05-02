@@ -16,11 +16,12 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 :date:   18.5.2018
 """
 
+import time
+import logging
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
-from widgets.custom_delegates import CheckBoxDelegate
-from widgets.custom_qwidget import AutoFilterWidget
+from widgets.custom_qwidgets import AutoFilterWidget
 from models import TableModel
 
 
@@ -68,7 +69,7 @@ class CopyPasteTableView(QTableView):
             for j in range(first.left(), first.right()+1):
                 if h_header.isSectionHidden(j):
                     continue
-                data = self.model().index(i, j).data(Qt.DisplayRole)
+                data = self.model().index(i, j).data(Qt.EditRole)
                 str_data = str(data) if data is not None else ""
                 row.append(str_data)
             rows.append("\t".join(row))
@@ -155,6 +156,11 @@ class CopyPasteTableView(QTableView):
         row_count = self.model().rowCount()
         if last_row >= row_count:
             self.model().insertRows(row_count, last_row - row_count + 1)
+        # Insert extra columns if needed:
+        last_column = max(columns)
+        column_count = self.model().columnCount()
+        if last_column >= column_count:
+            self.model().insertColumns(column_count, last_column - column_count + 1)
         model_index = self.model().index
         for i, row in enumerate(rows):
             try:
@@ -191,8 +197,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.filter_text = None
         self.filter_column = None
         self.auto_filter_widget = AutoFilterWidget(self)
-        self.auto_filter_widget.button.clicked.connect(self.update_auto_filter)
-        self.verticalHeader().sectionResized.connect(self._handle_vertical_section_resized)
+        self.auto_filter_widget.data_committed.connect(self.update_auto_filter)
 
     def setModel(self, model):
         """Disconnect sectionPressed signal, only connect it to show_filter_menu slot.
@@ -205,33 +210,24 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
     def toggle_auto_filter(self, logical_index):
         """Called when user clicks on a horizontal section header.
         Show/hide the auto filter widget."""
+        tic = time.clock()
         self.filter_column = logical_index
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
         pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
         pos_y = header_pos.y() + self.horizontalHeader().height()
+        width = self.horizontalHeader().sectionSize(logical_index)
         values = self.model().auto_filter_values(logical_index)
         self.auto_filter_widget.set_values(values)
-        width = self.horizontalHeader().sectionSize(logical_index)
         self.auto_filter_widget.move(pos_x, pos_y)
-        self.auto_filter_widget.show()
+        self.auto_filter_widget.show(min_width=width)
+        toc = time.clock()
+        # logging.debug("Filter populated in {} seconds".format(toc - tic))
 
-    def _handle_vertical_section_resized(self, logical_index, old_size, new_size):
-        """Pass vertical section size on to the filter widget."""
-        if logical_index == 0:
-            self.auto_filter_widget.set_section_height(new_size)
-
-    @Slot("bool", name="update_auto_filter")
-    def update_auto_filter(self, checked=False):
+    @Slot(name="update_auto_filter")
+    def update_auto_filter(self):
         """Called when the user clicks the Ok button in the auto filter widget.
         Set 'filtered out values' in auto filter model."""
-        data = self.auto_filter_widget.model._main_data
-        values = dict()
-        for checked, value, object_class_id_set in data[1:]:
-            if checked:
-                continue
-            for object_class_id in object_class_id_set:
-                values.setdefault(object_class_id, set()).add(value)
-        self.model().set_filtered_out_values(self.filter_column, values)
+        self.model().set_filtered_out_values(self.filter_column, self.auto_filter_widget.checked_values)
 
 
 class FrozenTableView(QTableView):

@@ -20,9 +20,18 @@ import unittest
 from unittest import mock
 import logging
 import sys
-from PySide2.QtWidgets import QApplication
+from PySide2.QtWidgets import QApplication, QWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from ui_main import ToolboxUI
+
+
+class MockQWidget(QWidget):
+    def __init__(self):
+        super().__init__()
+
+    # noinspection PyMethodMayBeStatic
+    def test_push_vars(self):
+        return True
 
 
 class TestToolTemplateWidget(unittest.TestCase):
@@ -39,26 +48,29 @@ class TestToolTemplateWidget(unittest.TestCase):
                             datefmt='%Y-%m-%d %H:%M:%S')
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of TreeViewForm class.
-        """
-
-        # # Set logging level to Error to silence "Logging level: All messages" print
-        logging.disable(level=logging.ERROR)  # Disable logging
-        toolbox = ToolboxUI()
-        self.tool_template_widget = ToolTemplateWidget(toolbox)
-        logging.disable(level=logging.NOTSET)  # Enable logging
+        """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+                mock.patch("ui_main.PythonReplWidget") as mock_python_repl:
+            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
+            mock_julia_repl.return_value = QWidget()
+            mock_python_repl.return_value = MockQWidget()
+            self.toolbox = ToolboxUI()
+            self.tool_template_widget = ToolTemplateWidget(self.toolbox)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
+        self.tool_template_widget.deleteLater()
         self.tool_template_widget = None
+        self.toolbox.deleteLater()
+        self.toolbox = None
 
     def test_create_minimal_tool_template(self):
         """Test that a minimal tool template can be created by specifying name, type and main program file."""
         with mock.patch("widgets.tool_template_widget.QFileDialog") as mock_file_dialog, \
-            mock.patch("widgets.tool_template_widget.ToolTemplateWidget.call_add_tool_template") as mock_add, \
-            mock.patch("widgets.tool_template_widget.ToolTemplateWidget.close") as mock_close:
+                mock.patch("widgets.tool_template_widget.ToolTemplateWidget.call_add_tool_template") as mock_add, \
+                mock.patch("widgets.tool_template_widget.ToolTemplateWidget.close") as mock_close:
             self.tool_template_widget.ui.comboBox_tooltype.setCurrentIndex(1)
             self.tool_template_widget.ui.lineEdit_name.setText("test_tool")
             self.tool_template_widget.ui.lineEdit_main_program.setText(__file__)

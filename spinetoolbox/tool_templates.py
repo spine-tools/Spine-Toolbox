@@ -258,6 +258,66 @@ class JuliaTool(ToolTemplate):
         else:
             return None
 
+class PythonTool(ToolTemplate):
+    """Class for Python tool templates.
+
+    Attributes:
+        name (str): Python Tool name
+        description (str): Python Tool description
+        path (str): Path to model main file
+        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+        First file in the list is the main Python program.
+        inputfiles (list): List of required data files
+        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+        outputfiles (list, optional): List of output files (wildcards may be used)
+        cmdline_args (str, optional): Python tool command line arguments (read from tool definition file)
+    """
+    def __init__(self, toolbox, name, tooltype, path, includes,
+                 description=None, inputfiles=None, inputfiles_opt=None,
+                 outputfiles=None, cmdline_args=None, execute_in_work=True):
+        """Class constructor."""
+        super().__init__(toolbox, name, tooltype, path, includes,
+                         description, inputfiles, inputfiles_opt, outputfiles,
+                         cmdline_args, execute_in_work)
+        main_file = includes[0]
+        self.main_dir, self.main_prgm = os.path.split(main_file)
+        self.python_options = OrderedDict()
+        self.return_codes = {
+            0: "Normal return"  # Not official
+        }
+
+    def __repr__(self):
+        """Remove this if not necessary."""
+        return "PythonTool('{}')".format(self.name)
+
+    def update_python_options(self, key, value):
+        """Update Python command line options.
+
+        Args:
+            key: Option name
+            value: Option value
+        """
+        pass
+
+    @staticmethod
+    def load(toolbox, path, data):
+        """Create a PythonTool according to a tool definition.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            path (str): Base path to tool files
+            data (dict): Dictionary of tool definitions
+
+        Returns:
+            PythonTool instance or None if there was a problem in the tool definition file.
+        """
+        kwargs = PythonTool.check_definition(toolbox, data)
+        if kwargs is not None:
+            # Return an executable model instance
+            return PythonTool(toolbox=toolbox, path=path, **kwargs)
+        else:
+            return None
+
 
 class ExecutableTool(ToolTemplate):
     """Class for Executable tool templates.

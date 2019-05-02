@@ -86,7 +86,7 @@
      </widget>
     </item>
     <item>
-     <widget class="CustomQGraphicsView" name="graphicsView">
+     <widget class="DesignQGraphicsView" name="graphicsView">
       <property name="sizePolicy">
        <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
         <horstretch>0</horstretch>
@@ -94,7 +94,7 @@
        </sizepolicy>
       </property>
       <property name="frameShape">
-       <enum>QFrame::Panel</enum>
+       <enum>QFrame::NoFrame</enum>
       </property>
       <property name="frameShadow">
        <enum>QFrame::Raised</enum>
@@ -109,7 +109,10 @@
        <set>QPainter::Antialiasing|QPainter::TextAntialiasing</set>
       </property>
       <property name="dragMode">
-       <enum>QGraphicsView::NoDrag</enum>
+       <enum>QGraphicsView::ScrollHandDrag</enum>
+      </property>
+      <property name="resizeAnchor">
+       <enum>QGraphicsView::AnchorUnderMouse</enum>
       </property>
       <property name="viewportUpdateMode">
        <enum>QGraphicsView::FullViewportUpdate</enum>
@@ -149,8 +152,8 @@
      <string>Help</string>
     </property>
     <addaction name="actionUser_Guide"/>
-    <addaction name="actionAbout_Qt"/>
     <addaction name="separator"/>
+    <addaction name="actionAbout_Qt"/>
     <addaction name="actionAbout"/>
    </widget>
    <widget class="QMenu" name="menuEdit">
@@ -162,6 +165,7 @@
     <addaction name="actionAdd_Tool"/>
     <addaction name="actionAdd_View"/>
     <addaction name="separator"/>
+    <addaction name="actionRemove_all"/>
    </widget>
    <widget class="QMenu" name="menuView">
     <property name="title">
@@ -174,7 +178,7 @@
     </widget>
     <widget class="QMenu" name="menuDock_Widgets">
      <property name="title">
-      <string>Dock Widgets</string>
+      <string>Dock widgets</string>
      </property>
      <addaction name="actionRestore_Dock_Widgets"/>
      <addaction name="separator"/>
@@ -319,7 +323,7 @@
    <property name="minimumSize">
     <size>
      <width>356</width>
-     <height>175</height>
+     <height>182</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -435,7 +439,7 @@
               <x>0</x>
               <y>0</y>
               <width>366</width>
-              <height>345</height>
+              <height>347</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_15">
@@ -484,7 +488,7 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/copy.png</normaloff>:/icons/copy.png</iconset>
+                   <normaloff>:/icons/menu_icons/copy.svg</normaloff>:/icons/menu_icons/copy.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -512,7 +516,7 @@
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine (sqlite) database.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="icon">
-                  <iconset resource="resources/resources_icons.qrc">
+                  <iconset>
                    <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>
                  </property>
                  <property name="iconSize">
@@ -654,6 +658,10 @@
                      <width>24</width>
                      <height>24</height>
                     </size>
+                   </property>
+                   <property name="icon">
+                    <iconset resource="resources/resources_icons.qrc">
+                     <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
                    </property>
                   </widget>
                  </item>
@@ -1171,16 +1179,10 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>18</width>
-                   <height>18</height>
-                  </size>
-                 </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
@@ -1188,6 +1190,10 @@
                  </property>
                  <property name="text">
                   <string/>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -1361,13 +1367,7 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
-                 </property>
-                 <property name="iconSize">
-                  <size>
-                   <width>22</width>
-                   <height>22</height>
-                  </size>
+                   <normaloff>:/icons/plus.svg</normaloff>:/icons/plus.svg</iconset>
                  </property>
                  <property name="popupMode">
                   <enum>QToolButton::InstantPopup</enum>
@@ -1409,13 +1409,7 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
-                 </property>
-                 <property name="iconSize">
-                  <size>
-                   <width>22</width>
-                   <height>22</height>
-                  </size>
+                   <normaloff>:/icons/minus.svg</normaloff>:/icons/minus.svg</iconset>
                  </property>
                  <property name="popupMode">
                   <enum>QToolButton::InstantPopup</enum>
@@ -1444,7 +1438,7 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
+                   <normaloff>:/icons/file-download.svg</normaloff>:/icons/file-download.svg</iconset>
                  </property>
                  <property name="iconSize">
                   <size>
@@ -1590,20 +1584,18 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>18</width>
-                   <height>18</height>
-                  </size>
-                 </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Connection's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -1758,13 +1750,7 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/tool_options.png</normaloff>:/icons/tool_options.png</iconset>
-                 </property>
-                 <property name="iconSize">
-                  <size>
-                   <width>22</width>
-                   <height>22</height>
-                  </size>
+                   <normaloff>:/icons/wrench.svg</normaloff>:/icons/wrench.svg</iconset>
                  </property>
                  <property name="popupMode">
                   <enum>QToolButton::InstantPopup</enum>
@@ -1976,8 +1962,8 @@
                 <widget class="QToolButton" name="toolButton_tool_open_dir">
                  <property name="minimumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="maximumSize">
@@ -1988,6 +1974,10 @@
                  </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Tool's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -2168,20 +2158,18 @@
                </item>
                <item>
                 <widget class="QToolButton" name="toolButton_view_open_dir">
-                 <property name="minimumSize">
-                  <size>
-                   <width>18</width>
-                   <height>18</height>
-                  </size>
-                 </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this View's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -2259,9 +2247,6 @@
      <property name="bottomMargin">
       <number>0</number>
      </property>
-     <item>
-      <widget class="QWidget" name="widget_2" native="true"/>
-     </item>
     </layout>
    </widget>
   </widget>
@@ -2269,7 +2254,7 @@
    <property name="minimumSize">
     <size>
      <width>135</width>
-     <height>281</height>
+     <height>320</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -2346,7 +2331,7 @@
            <property name="childrenCollapsible">
             <bool>false</bool>
            </property>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <layout class="QVBoxLayout" name="verticalLayout_5">
              <property name="spacing">
               <number>0</number>
@@ -2381,6 +2366,9 @@
                <property name="editTriggers">
                 <set>QAbstractItemView::NoEditTriggers</set>
                </property>
+               <property name="selectionMode">
+                <enum>QAbstractItemView::ExtendedSelection</enum>
+               </property>
                <property name="animated">
                 <bool>true</bool>
                </property>
@@ -2388,7 +2376,7 @@
              </item>
             </layout>
            </widget>
-           <widget class="QWidget" name="">
+           <widget class="QWidget" name="layoutWidget">
             <layout class="QVBoxLayout" name="verticalLayout_2">
              <property name="spacing">
               <number>0</number>
@@ -2450,7 +2438,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/add_tool.png</normaloff>:/icons/add_tool.png</iconset>
+               <normaloff>:/icons/wrench_plus.svg</normaloff>:/icons/wrench_plus.svg</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -2488,7 +2476,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/remove_tool.png</normaloff>:/icons/remove_tool.png</iconset>
+               <normaloff>:/icons/wrench_minus.svg</normaloff>:/icons/wrench_minus.svg</iconset>
              </property>
              <property name="iconSize">
               <size>
@@ -2567,7 +2555,44 @@
     </layout>
    </widget>
   </widget>
+  <widget class="QDockWidget" name="dockWidget_python_repl">
+   <property name="floating">
+    <bool>false</bool>
+   </property>
+   <property name="features">
+    <set>QDockWidget::AllDockWidgetFeatures</set>
+   </property>
+   <property name="windowTitle">
+    <string>Python Console</string>
+   </property>
+   <attribute name="dockWidgetArea">
+    <number>8</number>
+   </attribute>
+   <widget class="QWidget" name="dockWidgetContents_python_repl">
+    <layout class="QVBoxLayout" name="verticalLayout_20">
+     <property name="spacing">
+      <number>0</number>
+     </property>
+     <property name="leftMargin">
+      <number>0</number>
+     </property>
+     <property name="topMargin">
+      <number>0</number>
+     </property>
+     <property name="rightMargin">
+      <number>0</number>
+     </property>
+     <property name="bottomMargin">
+      <number>0</number>
+     </property>
+    </layout>
+   </widget>
+  </widget>
   <action name="actionQuit">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/window-close.svg</normaloff>:/icons/menu_icons/window-close.svg</iconset>
+   </property>
    <property name="text">
     <string>Quit</string>
    </property>
@@ -2586,6 +2611,10 @@
    </property>
   </action>
   <action name="actionAbout">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/info-circle.svg</normaloff>:/icons/menu_icons/info-circle.svg</iconset>
+   </property>
    <property name="text">
     <string>About...</string>
    </property>
@@ -2596,7 +2625,7 @@
   <action name="actionAdd_Data_Connection">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/dc_icon.png</normaloff>:/icons/dc_icon.png</iconset>
+     <normaloff>:/icons/project_item_icons/file-alt.svg</normaloff>:/icons/project_item_icons/file-alt.svg</iconset>
    </property>
    <property name="text">
     <string>Add Data Connection</string>
@@ -2605,7 +2634,7 @@
   <action name="actionAdd_Data_Store">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/ds_icon.png</normaloff>:/icons/ds_icon.png</iconset>
+     <normaloff>:/icons/project_item_icons/database.svg</normaloff>:/icons/project_item_icons/database.svg</iconset>
    </property>
    <property name="text">
     <string>Add Data Store</string>
@@ -2614,7 +2643,7 @@
   <action name="actionAdd_Tool">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/tool_icon.png</normaloff>:/icons/tool_icon.png</iconset>
+     <normaloff>:/icons/project_item_icons/hammer.svg</normaloff>:/icons/project_item_icons/hammer.svg</iconset>
    </property>
    <property name="text">
     <string>Add Tool</string>
@@ -2623,23 +2652,31 @@
   <action name="actionAdd_View">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/view_icon.png</normaloff>:/icons/view_icon.png</iconset>
+     <normaloff>:/icons/project_item_icons/binoculars.svg</normaloff>:/icons/project_item_icons/binoculars.svg</iconset>
    </property>
    <property name="text">
     <string>Add View</string>
    </property>
   </action>
   <action name="actionSave">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/save_solid.svg</normaloff>:/icons/menu_icons/save_solid.svg</iconset>
+   </property>
    <property name="text">
-    <string>Save</string>
+    <string>Save project</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+S</string>
    </property>
   </action>
   <action name="actionSave_As">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/save_regular.svg</normaloff>:/icons/menu_icons/save_regular.svg</iconset>
+   </property>
    <property name="text">
-    <string>Save As...</string>
+    <string>Save project as...</string>
    </property>
    <property name="toolTip">
     <string>Duplicate project under a new name</string>
@@ -2649,22 +2686,34 @@
    </property>
   </action>
   <action name="actionOpen">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+   </property>
    <property name="text">
-    <string>Open...</string>
+    <string>Open project...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+O</string>
    </property>
   </action>
   <action name="actionNew">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/file.svg</normaloff>:/icons/menu_icons/file.svg</iconset>
+   </property>
    <property name="text">
-    <string>New...</string>
+    <string>New project...</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+N</string>
    </property>
   </action>
   <action name="actionSettings">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/cog.svg</normaloff>:/icons/menu_icons/cog.svg</iconset>
+   </property>
    <property name="text">
     <string>Settings...</string>
    </property>
@@ -2724,8 +2773,12 @@
    </property>
   </action>
   <action name="actionUser_Guide">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/question-circle.svg</normaloff>:/icons/menu_icons/question-circle.svg</iconset>
+   </property>
    <property name="text">
-    <string>User Guide</string>
+    <string>User guide</string>
    </property>
    <property name="shortcut">
     <string>F2</string>
@@ -2740,6 +2793,10 @@
    </property>
   </action>
   <action name="actionAbout_Qt">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/qt_extended_48x48.png</normaloff>:/icons/qt_extended_48x48.png</iconset>
+   </property>
    <property name="text">
     <string>About Qt...</string>
    </property>
@@ -2748,11 +2805,27 @@
    </property>
   </action>
   <action name="actionPackages">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/hands-helping.svg</normaloff>:/icons/menu_icons/hands-helping.svg</iconset>
+   </property>
    <property name="text">
     <string>Tool configuration assistant...</string>
    </property>
    <property name="shortcut">
     <string>F3</string>
+   </property>
+  </action>
+  <action name="actionRemove_all">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/trash-alt.svg</normaloff>:/icons/menu_icons/trash-alt.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Remove all</string>
+   </property>
+   <property name="toolTip">
+    <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all items project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
  </widget>
@@ -2778,9 +2851,9 @@
    <header>widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
-   <class>CustomQGraphicsView</class>
+   <class>DesignQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>widgets/custom_qgraphicsview.h</header>
+   <header>widgets/custom_qgraphicsviews.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
@@ -2814,6 +2887,7 @@
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
+  <include location="resources/resources_logos.qrc"/>
  </resources>
  <connections/>
 </ui>

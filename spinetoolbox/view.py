@@ -21,9 +21,9 @@ import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
 from project_item import ProjectItem
-from spinedatabase_api import DiffDatabaseMapping, SpineDBAPIError
+from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
 from widgets.data_store_widgets import GraphViewForm
-from graphics_items import ViewImage
+from graphics_items import ViewIcon
 from helpers import busy_effect, create_dir
 
 
@@ -56,7 +56,7 @@ class View(ProjectItem):
         except OSError:
             self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
                                          " Check permissions.".format(self.data_dir))
-        self._graphics_item = ViewImage(self._toolbox, x - 35, y - 35, 70, 70, self.name)
+        self._graphics_item = ViewIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         # Note: view_refresh_signal is not shared with other project items so there is no need to disconnect it
         self.view_refresh_signal.connect(self.refresh)
         self._sigs = self.make_signal_handler_dict()

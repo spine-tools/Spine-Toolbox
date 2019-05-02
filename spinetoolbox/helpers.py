@@ -23,13 +23,15 @@ import os
 import time
 import shutil
 import glob
-import spinedatabase_api
-from PySide2.QtCore import Qt, Slot
+import json
+import spinedb_api
+from PySide2.QtCore import Qt, Slot, QFile, QTextStream, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
-from PySide2.QtWidgets import QApplication, QMessageBox
-from PySide2.QtGui import QCursor, QPainter, QPixmap, QImageReader
-from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINE_DBAPI_VERSION
+from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene
+from PySide2.QtGui import QCursor, QImageReader, QPixmap, QPainter, QColor, QIcon, QIconEngine, QFont, \
+    QStandardItemModel, QStandardItem
+from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
 def set_taskbar_icon():
@@ -72,22 +74,22 @@ def pyside2_version_check():
     return True
 
 
-def spinedatabase_api_version_check():
-    """Check if spinedatabase_api is the correct version and explain how to upgrade if it is not."""
+def spinedb_api_version_check():
+    """Check if spinedb_api is the correct version and explain how to upgrade if it is not."""
     try:
-        current_version = spinedatabase_api.__version__
+        current_version = spinedb_api.__version__
         current_split = [int(x) for x in current_version.split(".")]
-        required_split = [int(x) for x in REQUIRED_SPINE_DBAPI_VERSION.split(".")]
+        required_split = [int(x) for x in REQUIRED_SPINEDB_API_VERSION.split(".")]
         if current_split >= required_split:
             return True
     except AttributeError:
         current_version = "not reported"
-    script = "upgrade_spinedatabase_api.bat" if sys.platform == "win32" else "upgrade_spinedatabase_api.sh"
+    script = "upgrade_spinedb_api.bat" if sys.platform == "win32" else "upgrade_spinedb_api.sh"
     print(
         """ERROR:
-        Spine Toolbox failed to start because spinedatabase_api is outdated.
+        Spine Toolbox failed to start because spinedb_api is outdated.
         (Required version is {0}, whereas current is {1})
-        Please upgrade spinedatabase_api to v{0} and start Spine Toolbox again.
+        Please upgrade spinedb_api to v{0} and start Spine Toolbox again.
 
         To upgrade, run script '{2}' in the '/bin' folder.
 
@@ -95,7 +97,7 @@ def spinedatabase_api_version_check():
 
             pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
-        """.format(REQUIRED_SPINE_DBAPI_VERSION, current_version, script))
+        """.format(REQUIRED_SPINEDB_API_VERSION, current_version, script))
     return False
 
 
@@ -119,25 +121,28 @@ def busy_effect(func):
     return new_function
 
 
-def project_dir(configs=None):
+def project_dir(qsettings):
     """Returns current project directory.
 
     Args:
-        configs (ConfigurationParser): Configuration parser object. Default value is for unit tests.
+        qsettings (QSettings): Settings object
     """
-    if not configs:
-        return DEFAULT_PROJECT_DIR
-    proj_dir = configs.get('settings', 'project_directory')
+    # NOTE: This is not actually used. The key is not saved to qsettings anywhere. This is a placeholder for code
+    # if we want to be able to change the projects directory at some point.
+    proj_dir = qsettings.value("appSettings/projectsDir", defaultValue="")
     if not proj_dir:
         return DEFAULT_PROJECT_DIR
     else:
         return proj_dir
 
 
-def get_datetime(configs):
-    """Returns date and time string for appending into Event Log messages."""
-    show_date = configs.getboolean("settings", "datetime")
-    if show_date:
+def get_datetime(show):
+    """Returns date and time string for appending into Event Log messages.
+
+    Args:
+        show (boolean): True returns date and time string. False returns empty string.
+    """
+    if show:
         t = datetime.datetime.now()
         return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
     else:
@@ -317,51 +322,6 @@ def rename_dir(widget, old_dir, new_dir):
     return True
 
 
-def object_pixmap(object_class_name):
-    """An object pixmap defined for `object_class_name` if any, or a generic one if none."""
-    pixmap = QPixmap(":/object_class_icons/{0}.png".format(object_class_name))
-    if pixmap.isNull():
-        pixmap = QPixmap(":/icons/object_icon.png")
-    return pixmap
-
-
-def relationship_pixmap(object_class_name_list):
-    """A pixmap rendered by painting several object pixmaps together."""
-    extent = 64
-    x_step = extent - 8
-    y_offset = extent - 16 + 2
-    pixmap_list = list()
-    for object_class_name in object_class_name_list:
-        pixmap = object_pixmap(object_class_name)
-        pixmap_list.append(pixmap.scaled(extent, extent))
-    pixmap_matrix = [pixmap_list[i:i + 2] for i in range(0, len(pixmap_list), 2)] # Two pixmaps per row...
-    combo_width = extent + (len(pixmap_list) - 1) * x_step / 2
-    combo_height = extent + y_offset
-    combo_extent = max(combo_width, combo_height)
-    x_padding = (combo_extent - combo_width) / 2 if combo_extent > combo_width else 0
-    y_padding = (combo_extent - combo_height) / 2 if combo_extent > combo_height else 0
-    # Add extra vertical padding in case the list contains only one element, so this one's centered
-    if len(object_class_name_list) == 1:
-        y_padding += y_offset / 2
-    relationship_pixmap = QPixmap(combo_extent, combo_extent)
-    relationship_pixmap.fill(Qt.transparent)
-    painter = QPainter(relationship_pixmap)
-    painter.setRenderHint(QPainter.Antialiasing, True)
-    x_offset = 0
-    for pixmap_row in pixmap_matrix:
-        for j, pixmap in enumerate(pixmap_row):
-            if j % 2 == 1:
-                x = x_offset + x_step / 2 + x_padding
-                y = y_offset + y_padding
-            else:
-                x = x_offset + x_padding
-                y = y_padding
-            painter.drawPixmap(x, y, pixmap)
-        x_offset += x_step
-    painter.end()
-    return relationship_pixmap
-
-
 def fix_name_ambiguity(name_list, offset=0):
     """Modify repeated entries in name list by appending an increasing integer."""
     ref_name_list = name_list.copy()
@@ -383,3 +343,173 @@ def tuple_itemgetter(itemgetter_func, num_indexes):
         return g
     else:
         return itemgetter_func
+
+
+def format_string_list(str_list):
+    """
+    Return an unordered html list with all elements in str_list.
+    Intended to print error logs as returned by spinedb_api.
+
+    Args:
+        str_list (list(str))
+    """
+    return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
+
+
+def strip_json_data(data, maxlen):
+    """Return a json equivalent to data, stripped to maxlen characters.
+    """
+    if not data:
+        return data
+    try:
+        stripped_data = json.dumps(json.loads(data))
+    except json.JSONDecodeError:
+        stripped_data = data
+    if len(stripped_data) > 2 * maxlen:
+        stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
+    return stripped_data
+
+
+class IconManager:
+    """A class to manage object class icons for data store forms."""
+    def __init__(self):
+        """Init instance."""
+        super().__init__()
+        self.obj_cls_icon_cache = {}  # A mapping from object class name to display icon
+        self.icon_pixmap_cache = {}  # A mapping from display_icon to associated pixmap
+        self.searchterms = {}
+        self.model = QStandardItemModel()
+        self.model.data = self._model_data
+        qfile = QFile(":/fonts/fontawesome5-codepoints.json")
+        qfile.open(QIODevice.ReadOnly | QIODevice.Text)
+        data = str(qfile.readAll().data(), "utf-8")
+        qfile.close()
+        self.codepoints = json.loads(data)
+        self.icon_count = len(self.codepoints)
+
+    @busy_effect
+    def init_model(self):
+        """Init model that can be used to display all icons in a list."""
+        if self.searchterms:
+            return
+        qfile = QFile(":/fonts/fontawesome5-searchterms.json")
+        qfile.open(QIODevice.ReadOnly | QIODevice.Text)
+        data = str(qfile.readAll().data(), "utf-8")
+        qfile.close()
+        self.searchterms = json.loads(data)
+        items = []
+        for codepoint, searchterms in self.searchterms.items():
+            item = QStandardItem()
+            display_icon = int(codepoint, 16)
+            item.setData(display_icon, Qt.UserRole)
+            item.setData(searchterms, Qt.UserRole + 1)
+            items.append(item)
+        self.model.invisibleRootItem().appendRows(items)
+
+    def _model_data(self, index, role):
+        """Create pixmaps as they're requested, to reduce loading time."""
+        if role == Qt.DisplayRole:
+            return None
+        if role != Qt.DecorationRole:
+            return QStandardItemModel.data(self.model, index, role)
+        display_icon = index.data(Qt.UserRole)
+        pixmap = self.create_object_pixmap(display_icon)
+        return QIcon(pixmap)
+
+    def icon_color_code(self, display_icon):
+        """Take a display icon integer and return an equivalent tuple of icon and color code."""
+        if type(display_icon) is not int or display_icon < 0:
+            return int("f1b2", 16), 0
+        icon_code = display_icon & 65535
+        try:
+            color_code = display_icon >> 16
+        except OverflowError:
+            color_code = 0
+        return icon_code, color_code
+
+    def display_icon(self, icon_code, color_code):
+        """Take tuple of icon and color codes, and return equivalent integer."""
+        return icon_code + (color_code << 16)
+
+    def setup_object_pixmaps(self, object_classes):
+        for object_class in object_classes:
+            self.create_object_pixmap(object_class.display_icon)
+            self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
+
+    def create_object_pixmap(self, display_icon):
+        """Create a pixmap corresponding to object icon, store it and return it."""
+        if display_icon not in self.icon_pixmap_cache:
+            icon_code, color_code = self.icon_color_code(display_icon)
+            engine = CharIconEngine(chr(icon_code), color_code)
+            self.icon_pixmap_cache[display_icon] = engine.pixmap(QSize(512, 512))
+        return self.icon_pixmap_cache[display_icon]
+
+    def object_pixmap(self, object_class_name):
+        """A pixmap for the given object class.
+        """
+        if object_class_name in self.obj_cls_icon_cache:
+            display_icon = self.obj_cls_icon_cache[object_class_name]
+            if display_icon in self.icon_pixmap_cache:
+                return self.icon_pixmap_cache[display_icon]
+        engine = CharIconEngine("\uf1b2", 0)
+        return engine.pixmap(QSize(512, 512))
+
+    def object_icon(self, object_class_name):
+        """An object icon from the stored pixmaps if any."""
+        return QIcon(self.object_pixmap(object_class_name))
+
+    def relationship_pixmap(self, str_object_class_name_list):
+        """A pixmap rendered by painting several object pixmaps together."""
+        if not str_object_class_name_list:
+            engine = CharIconEngine("\uf1b3", 0)
+            return engine.pixmap(QSize(512, 512))
+        object_class_name_list = str_object_class_name_list.split(",")
+        scene = QGraphicsScene()
+        x = 0
+        for j, object_class_name in enumerate(object_class_name_list):
+            pixmap = self.object_pixmap(object_class_name)
+            pixmap_item = scene.addPixmap(pixmap)
+            if j % 2 == 0:
+                y = 0
+            else:
+                y = - 0.875 * 0.75 * pixmap_item.boundingRect().height()
+                pixmap_item.setZValue(-1)
+            pixmap_item.setPos(x, y)
+            x += 0.875 * 0.5 * pixmap_item.boundingRect().width()
+        pixmap = QPixmap(scene.itemsBoundingRect().toRect().size())
+        pixmap.fill(Qt.transparent)
+        painter = QPainter(pixmap)
+        painter.setRenderHint(QPainter.Antialiasing, True)
+        scene.render(painter)
+        painter.end()
+        return pixmap
+
+    def relationship_icon(self, str_object_class_name_list):
+        """A relationship icon corresponding to the list of object names."""
+        return QIcon(self.relationship_pixmap(str_object_class_name_list))
+
+
+class CharIconEngine(QIconEngine):
+
+    """Specialization of QIconEngine used to draw font-based icons."""
+
+    def __init__(self, char, color):
+        super().__init__()
+        self.char = char
+        self.color = color
+        self.font = QFont('Font Awesome 5 Free Solid')
+
+    def paint(self, painter, rect, mode=None, state=None):
+        painter.save()
+        size = 0.875 * round(rect.height())
+        self.font.setPixelSize(size)
+        painter.setFont(self.font)
+        painter.setPen(QColor(self.color))
+        painter.drawText(rect, Qt.AlignCenter | Qt.AlignVCenter, self.char)
+        painter.restore()
+
+    def pixmap(self, size, mode=None, state=None):
+        pm = QPixmap(size)
+        pm.fill(Qt.transparent)
+        self.paint(QPainter(pm), QRect(QPoint(0, 0), size), mode, state)
+        return pm
