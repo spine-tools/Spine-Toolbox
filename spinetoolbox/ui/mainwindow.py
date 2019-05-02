@@ -1371,8 +1371,8 @@ class Ui_MainWindow(object):
         self.actionRemove_all.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1))
 
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc
 import resources_logos_rc
