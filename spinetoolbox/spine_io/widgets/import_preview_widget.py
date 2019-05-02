@@ -97,7 +97,6 @@ class ImportPreviewWidget(QWidget):
         self.connector.mappedDataReady.connect(
             lambda data, errors: self.mappedDataReady.emit(data, errors)
         )
-        self.connector.mappedDataReady.connect(self.close_connection)
         self.connector.error.connect(self.handle_connector_error)
         # when data is ready set loading status to False.
         self.connector.connectionReady.connect(lambda: self.set_loading_status(False))
