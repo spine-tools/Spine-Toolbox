@@ -285,7 +285,8 @@ class MappingPreviewModel(TableModel):
             self._mapping.dataChanged.disconnect(self.update_colors)
             self._data_changed_signal = None
         self._mapping = mapping
-        self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
+        if self._mapping:
+            self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
         self.update_colors()
     
     def update_colors(self):
@@ -300,7 +301,8 @@ class MappingPreviewModel(TableModel):
                 # parameter colors
                 if mapping.is_pivoted():
                     # parameter values color
-                    if index.row() > mapping.last_pivot_row() and index.column() not in self.mapping_column_ref_int_list():
+                    last_row = mapping.last_pivot_row()
+                    if last_row is not None and index.row() > last_row and index.column() not in self.mapping_column_ref_int_list():
                         return QColor(1,133,113)
                 elif self.index_in_mapping(mapping.parameters.value, index):
                     return QColor(1,133,113)
@@ -346,7 +348,8 @@ class MappingPreviewModel(TableModel):
             if index.column() == ref:
                 if self._mapping._model.is_pivoted():
                     # only rows below pivoted rows
-                    if index.row() > self._mapping._model.last_pivot_row():
+                    last_row = self._mapping._model.last_pivot_row()
+                    if last_row is not None and index.row() > last_row:
                         return True
                 else:
                     return True

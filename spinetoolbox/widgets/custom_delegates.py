@@ -17,12 +17,46 @@ Custom item delegates.
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QAbstractItemDelegate, QItemDelegate, QStyleOptionButton, QStyle, \
-    QApplication, QStyleOptionViewItem, QWidget
+    QApplication, QStyleOptionViewItem, QWidget, QComboBox, QStyleOptionComboBox
 from widgets.custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, \
     MultiSearchBarEditor, CheckListEditor, JSONEditor
 from models import MinimalTableModel
 import logging
 
+class ComboBoxDelegate(QItemDelegate):
+    def __init__(self, parent, choices):
+        super().__init__(parent)
+        self.items = choices
+
+    def createEditor(self, parent, option, index):
+        self.editor = QComboBox(parent)
+        self.editor.addItems(self.items)
+        #self.editor.currentIndexChanged.connect(self.currentItemChanged)
+        return self.editor
+
+    def paint(self, painter, option, index):
+        value = index.data(Qt.DisplayRole)
+        style = QApplication.style()
+        opt = QStyleOptionComboBox()
+        opt.text = str(value)
+        opt.rect = option.rect
+        style.drawComplexControl(QStyle.CC_ComboBox, opt, painter)
+        QItemDelegate.paint(self, painter, option, index)
+
+    def setEditorData(self, editor, index):
+        value = index.data(Qt.DisplayRole)
+        num = self.items.index(value)
+        editor.setCurrentIndex(num)
+    
+    def setModelData(self, editor, model, index):
+        value = editor.currentText()
+        model.setData(index, value, Qt.EditRole)
+    
+    def updateEditorGeometry(self, editor, option, index):
+        editor.setGeometry(option.rect)
+    
+    def currentItemChanged(self): 
+        self.commitData.emit(self.sender())
 
 class LineEditDelegate(QItemDelegate):
     """A delegate that places a fully functioning QLineEdit.

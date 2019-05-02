@@ -15,7 +15,7 @@ class ImportDialog(QDialog):
         # state
         self._mapped_data = None
         self._mapping_errors = []
-        self.connector_list = [CSVConnector, ODBCConnector, ExcelConnector]
+        self.connector_list = [CSVConnector, ExcelConnector]
         self.connector_list = {c.DISPLAY_NAME: c for c in self.connector_list}
         self._selected_connector = None
         self.active_connector = None
