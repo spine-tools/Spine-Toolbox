@@ -787,6 +787,7 @@ class DataStore(ProjectItem):
                              "Create new Spine SQLite database",
                              self.data_dir,
                              "SQlite database (*.sqlite *.db)")
+        dialog.selectFile("spine_db.sqlite")
         dialog.setAcceptMode(QFileDialog.AcceptSave)
         dialog.setOption(QFileDialog.DontUseNativeDialog, True)  # Only way to add the checkbox
         check_box = QCheckBox("Include specific data structure for Spine Model.", dialog)

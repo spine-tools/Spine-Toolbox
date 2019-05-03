@@ -113,7 +113,7 @@ def busy_effect(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            logging.exception("Error {}".format(e.args[0]))
+            # logging.exception("Error {}".format(e.args[0]))
             raise e
         finally:
             # noinspection PyArgumentList
