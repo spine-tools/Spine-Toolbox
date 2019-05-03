@@ -858,14 +858,14 @@ class Tool(ProjectItem):
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(1)  # abort
                 return
-        # TODO: Check if there are any optional input files to copy
-        # if self.opt_input_file_model.rowCount() > 0:
-        #     self._toolbox.msg.emit("*** Searching for optional input files ***")
-        #     optional_file_paths = self.find_optional_input_files()
-        #     for k, v in optional_file_paths.items():
-        #         self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
-        #     if not self.copy_optional_input_files(optional_file_paths):
-        #         self._toolbox.msg_warning.emit("Copying optional input files failed")
+        # Check if there are any optional input files to copy
+        if self.opt_input_file_model.rowCount() > 0:
+            self._toolbox.msg.emit("*** Searching for optional input files ***")
+            optional_file_paths = self.find_optional_input_files()
+            for k, v in optional_file_paths.items():
+                self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
+            if not self.copy_optional_input_files(optional_file_paths):
+                self._toolbox.msg_warning.emit("Copying optional input files failed")
         self._toolbox.ui.pushButton_tool_stop.setEnabled(True)  # TODO: Should be done when copying files as well
         self._graphics_item.start_animation()
         self.update_instance()  # Make command and stuff

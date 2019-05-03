@@ -125,10 +125,7 @@ class DirectedGraphHandler:
             self.add_dag(g)
             return
         # If src node still has a path (ignoring edge directions) to dst node -> return, we're fine
-        # TODO: This still does not work correctly
-        if self.nodes_connected(src_node, dst_node) or \
-                nx.has_path(dag, src_node, dst_node) or \
-                nx.has_path(dag, dst_node, src_node):
+        if self.nodes_connected(dag, src_node, dst_node):
             return
         # Now for the fun part
         src_descendants = nx.descendants(dag_copy, src_node)  # From copy since edge has been removed from dag already
@@ -253,6 +250,10 @@ class DirectedGraphHandler:
                 logging.debug("This graph is not a DAG")
                 # TODO: Do something here
             else:
+
+                # TODO: Try fixing this by adding a source node for all 'sources' (the argument)
+                # TODO: Then use this dummy source as the source for the bfs-algorithm
+
                 # logging.debug("Executing dag ({0}/{1}) n nodes:{2} n edges:{3}"
                 #               .format(t, n, len(dag.nodes()), len(dag.edges())))
                 # Intersection of source items and nodes in current graph
@@ -328,20 +329,44 @@ class DirectedGraphHandler:
             return True
         return False
 
-    def nodes_connected(self, a, b):
-        """Checks if node a is connected to node b.
-        Edge directions are ignored.
+    def nodes_connected(self, dag, a, b):
+        """Checks if node a is connected to node b. Edge directions are ignored.
+        If any of source node a's ancestors or descendants have a path to destination
+        node b, returns True. Also returns True if destination node b has a path to
+        any of source node a's ancestors or descendants.
 
         Args:
+            dag (DiGraph): Graph that contains nodes a and b
             a (str): Node name
             b (str): Another node name
 
         Returns:
-            bool: True if there if a is the neighbor of b, False otherwise
+            bool: True if a and b are connected, False otherwise
         """
-        g = self.dag_with_node(a)
-        values = chain(g.predecessors(b), g.successors(b))
-        return a in values
+        src_anc = nx.ancestors(dag, a)
+        src_des = nx.descendants(dag, a)
+        # logging.debug("src {0} ancestors:{1}. descendants:{2}".format(a, src_anc, src_des))
+        # Check ancestors
+        for anc in src_anc:
+            # Check if any src ancestor has a path to dst node
+            if nx.has_path(dag, anc, b):
+                # logging.debug("Found path from anc {0} to dst {1}".format(anc, b))
+                return True
+            # Check if dst node has a path to any src ancestor
+            if nx.has_path(dag, b, anc):
+                # logging.debug("Found path from dst {0} to anc {1}".format(b, anc))
+                return True
+        # Check descendants
+        for des in src_des:
+            # Check if any src descendant has a path to dst node
+            if nx.has_path(dag, des, b):
+                # logging.debug("Found path from des {0} to dst {1}".format(des, b))
+                return True
+            # Check if dst node has a path to any src descendant
+            if nx.has_path(dag, b, des):
+                # logging.debug("Found path from dst {0} to des {1}".format(b, des))
+                return True
+        return False
 
 
 class ExecutionInstance(QObject):
@@ -412,21 +437,21 @@ class ExecutionInstance(QObject):
         """Returns the first occurrence to full path to given file name or None if file was not found.
 
         Args:
-            filename (str): Searched file name (no path)
+            filename (str): Searched file name (no path) TODO: Change to pattern
         """
         for dc_ref in self.dc_refs:
             _, file_candidate = os.path.split(dc_ref)
             if file_candidate == filename:
-                # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
+                logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
                 return dc_ref
         for dc_file in self.dc_files:
             _, file_candidate = os.path.split(dc_file)
             if file_candidate == filename:
-                # logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
+                logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
                 return dc_file
         for tool_file in self.tool_output_files:
             _, file_candidate = os.path.split(tool_file)
             if file_candidate == filename:
-                # logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
+                logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
                 return tool_file
         return None
