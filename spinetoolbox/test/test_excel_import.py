@@ -123,21 +123,21 @@ class TestExcelIntegration(unittest.TestCase):
 
         # add parameter values
         db_map.add_parameter_value(
-            **{'parameter_id': p1.id, 'object_id': oc1_obj1.id, 'value': 0})
+            **{'parameter_id': p1.id, 'object_id': oc1_obj1.id, 'value': '0'})
         db_map.add_parameter_value(
-            **{'parameter_id': p2.id, 'object_id': oc1_obj2.id, 'value': 3.5})
+            **{'parameter_id': p2.id, 'object_id': oc1_obj2.id, 'value': '3.5'})
         db_map.add_parameter_value(
-            **{'parameter_id': p3.id, 'object_id': oc2_obj1.id, 'json': '[1, 2, 3, 4]'})
+            **{'parameter_id': p3.id, 'object_id': oc2_obj1.id, 'value': '[1, 2, 3, 4]'})
         db_map.add_parameter_value(
-            **{'parameter_id': p4.id, 'object_id': oc2_obj2.id, 'json': '[5, 6, 7]'})
+            **{'parameter_id': p4.id, 'object_id': oc2_obj2.id, 'value': '[5, 6, 7]'})
         db_map.add_parameter_value(
-            **{'parameter_id': rel_p1.id, 'relationship_id': rel1.id, 'value': 0})
+            **{'parameter_id': rel_p1.id, 'relationship_id': rel1.id, 'value': '0'})
         db_map.add_parameter_value(
-            **{'parameter_id': rel_p2.id, 'relationship_id': rel2.id, 'value': 4})
+            **{'parameter_id': rel_p2.id, 'relationship_id': rel2.id, 'value': '4'})
         db_map.add_parameter_value(
-            **{'parameter_id': rel_p3.id, 'relationship_id': rel1.id, 'json': '[5, 6, 7]'})
+            **{'parameter_id': rel_p3.id, 'relationship_id': rel1.id, 'value': '[5, 6, 7]'})
         db_map.add_parameter_value(
-            **{'parameter_id': rel_p4.id, 'relationship_id': rel2.id, 'json': '[1, 2, 3, 4]'})
+            **{'parameter_id': rel_p4.id, 'relationship_id': rel2.id, 'value': '[1, 2, 3, 4]'})
 
         # commit
         db_map.commit_session('test')
@@ -198,10 +198,10 @@ class TestExcelIntegration(unittest.TestCase):
             par_org.values()), msg='Difference in parameters')
         # parameters values
         parv = db1.parameter_value_list().all()
-        parv = set((par[p.parameter_definition_id][0], p.value, p.json, ol_id[p.object_id] if p.object_id else None,
+        parv = set((par[p.parameter_definition_id][0], p.value, ol_id[p.object_id] if p.object_id else None,
                     rel[p.relationship_id][1] if p.relationship_id else None) for p in parv)
         parv_org = db2.parameter_value_list().all()
-        parv_org = set((par_org[p.parameter_definition_id][0], p.value, p.json, ol_id_org[p.object_id] if p.object_id else None,
+        parv_org = set((par_org[p.parameter_definition_id][0], p.value, ol_id_org[p.object_id] if p.object_id else None,
                         rel_org[p.relationship_id][1] if p.relationship_id else None) for p in parv_org)
         self.assertEqual(set(par.values()), set(
             par_org.values()), msg='Difference in parameter values')

@@ -73,6 +73,10 @@ def import_xlsx_to_db(db, filepath):
         rels.extend([(sheet.class_name, o) for o in sheet.objects])
         rel_parameters.extend([(sheet.class_name, o) for o in sheet.parameters])
         rel_values.extend([(sheet.class_name, rel_getter(d)) + d_getter(d) for d in sheet.parameter_values])
+    
+    
+    object_values = [o[:-2] + (o[-1],) for o in object_values]
+    rel_values = [rel[:-2] + (rel[-1],) for rel in rel_values]
 
     num_imported, errors = import_data(db, object_classes, rel_classes, object_parameters, rel_parameters, objects, rels, object_values, rel_values)
     error_log.extend(errors)
@@ -103,15 +107,16 @@ def get_objects_and_parameters(db):
     par = db.object_parameter_list().all()
 
     # make all in same format
-    par = [(p.object_class_name, None, p.parameter_name, None, None) for p in par]
-    pval = [(p.object_class_name, p.object_name, p.parameter_name, p.value, p.json) for p in pval]
-    obj = [(p.class_name, p.name, None, None, None) for p in obj]
-    obj_class = [(p.name, None, None, None, None) for p in obj_class]
+    par = [(p.object_class_name, None, p.parameter_name, None) for p in par]
+    pval = [(p.object_class_name, p.object_name, p.parameter_name, json.loads(p.value)) for p in pval]
+    obj = [(p.class_name, p.name, None, None) for p in obj]
+    obj_class = [(p.name, None, None, None) for p in obj_class]
 
     object_and_par = pval + par + obj + obj_class
 
-    object_par = [v[:-1] for v in object_and_par]
-    object_json = [v[:-2] + (v[4],) for v in object_and_par if v[4] is not None]
+    object_par = [v for v in object_and_par if not isinstance(v[3],list) and v[3] != None]
+    object_json = [v for v in object_and_par if isinstance(v[3],list)]
+    object_par.extend([v[:-1] + (None,) for v in object_json])
 
     return object_par, object_json
 
@@ -136,23 +141,24 @@ def get_relationships_and_parameters(db):
     out_data = [[r.relationship_class_name,
                  r.object_name_list,
                  r.parameter_name,
-                 r.value, r.json] for r in rel_par_value]
+                 json.loads(r.value)] for r in rel_par_value]
 
     rel_with_par = set(r.object_name_list for r in rel_par_value)
-    rel_without_par = [[rel_class_id_2_name[r.class_id], r.object_name_list, None, None, None]
+    rel_without_par = [[rel_class_id_2_name[r.class_id], r.object_name_list, None, None]
                        for r in rel if r.object_name_list not in rel_with_par]
 
-    rel_class_par = [[r.relationship_class_name, None, r.parameter_name, None, None]
+    rel_class_par = [[r.relationship_class_name, None, r.parameter_name, None]
                      for r in rel_par]
 
     rel_class_with_par = [r.relationship_class_name for r in rel_par]
-    rel_class_without_par = [[r.name, None, None, None, None]
+    rel_class_without_par = [[r.name, None, None, None]
                              for r in rel_class if r.name not in rel_class_with_par]
 
     rel_data = out_data + rel_without_par + rel_class_par + rel_class_without_par
 
-    rel_par = [v[:-1] for v in rel_data]
-    rel_json = [v[:-2] + [v[4]] for v in rel_data if v[4] is not None]
+    rel_par = [v for v in rel_data if not isinstance(v[3],list) and v[3] != None]
+    rel_json = [v for v in rel_data if isinstance(v[3],list)]
+    rel_par.extend([v[:-1] + [None] for v in rel_par])
 
     return rel_par, rel_json, rel_class
 
@@ -291,12 +297,8 @@ def get_unstacked_relationships(db):
         for row in v:
             rel_list = row[1].split(',')
             parameter = row[2]
-            try:
-                val = json.loads(row[3].replace("\n", ""))
-                json_vals.append([rel_list+[parameter], val])
-            except json.JSONDecodeError:
-                logging.error("error parsing json value for parameter: {} for relationship {}"
-                              .format(parameter, row[1]))
+            val = row[3]
+            json_vals.append([rel_list+[parameter], val])
         if json_vals:
             object_classes = class_2_obj_list[k]
             parsed_json.append([k, object_classes, json_vals])
@@ -338,11 +340,8 @@ def get_unstacked_objects(db):
         for row in v:
             obj = row[1]
             parameter = row[2]
-            try:
-                val = json.loads(row[3].replace("\n", ""))
-                json_vals.append([[obj, parameter], val])
-            except json.JSONDecodeError:
-                logging.error("error parsing json value for parameter: {} for object {}".format(parameter, obj))
+            val = row[3]
+            json_vals.append([[obj, parameter], val])
         if json_vals:
             parsed_json.append([k, [k], json_vals])
 
@@ -747,7 +746,7 @@ def read_json_sheet(ws, sheet_type):
         for objects, parameter, data_list in zip(obj_path, parameters, data):
             # save values if there is json data, a parameter name
             # and the obj_path doesn't contain None.
-            packed_json = json.dumps(data_list)
+            packed_json = json.dumps([d for d in data_list if d is not None])
             json_data.append(Data._make(["json"] + objects + [parameter, packed_json]))
 
     return SheetData(sheet_name=ws.title,
