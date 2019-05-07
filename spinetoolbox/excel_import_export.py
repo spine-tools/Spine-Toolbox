@@ -113,10 +113,20 @@ def get_objects_and_parameters(db):
     obj_class = [(p.name, None, None, None) for p in obj_class]
 
     object_and_par = pval + par + obj + obj_class
+    
+    object_par = []
+    object_json = []
+    for d in object_and_par:
+        if isinstance(d[3],list):
+            object_json.append(d)
+            object_par.append(d[:-1] + (None,))
+        else:
+            if isinstance(d[3], dict):
+                d = d[:-1] + (json.dumps(d[3]),)
+            elif isinstance(d[3], str):
+                d = d[:-1] + ('"' + d[3] + '"',)
+            object_par.append(d)
 
-    object_par = [v for v in object_and_par if not isinstance(v[3],list) and v[3] != None]
-    object_json = [v for v in object_and_par if isinstance(v[3],list)]
-    object_par.extend([v[:-1] + (None,) for v in object_json])
 
     return object_par, object_json
 
@@ -156,9 +166,18 @@ def get_relationships_and_parameters(db):
 
     rel_data = out_data + rel_without_par + rel_class_par + rel_class_without_par
 
-    rel_par = [v for v in rel_data if not isinstance(v[3],list) and v[3] != None]
-    rel_json = [v for v in rel_data if isinstance(v[3],list)]
-    rel_par.extend([v[:-1] + [None] for v in rel_par])
+    rel_par = []
+    rel_json = []
+    for d in rel_data:
+        if isinstance(d[3],list):
+            rel_json.append(d)
+            rel_par.append(d[:-1] + [None])
+        else:
+            if isinstance(d[3], dict):
+                d[3] = json.dumps(d[3])
+            elif isinstance(d[3], str):
+                d = d[:-1] + ['"' + d[3] + '"',]
+            rel_par.append(d)
 
     return rel_par, rel_json, rel_class
 
