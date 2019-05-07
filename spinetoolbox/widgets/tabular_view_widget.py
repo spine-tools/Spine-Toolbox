@@ -37,7 +37,7 @@ from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
 
 # TODO: How about moving these constants to config.py?
-ParameterValue = namedtuple('ParameterValue',['id','has_value','has_json'])
+ParameterValue = namedtuple('ParameterValue',['id','has_value'])
 
 # constant strings
 RELATIONSHIP_CLASS = "relationship"
@@ -47,7 +47,6 @@ DATA_JSON = "json"
 DATA_VALUE = "value"
 DATA_SET = "set"
 
-INDEX_NAME = "db index"
 JSON_TIME_NAME = "json time"
 PARAMETER_NAME = "db parameter"
 
@@ -107,7 +106,7 @@ class TabularViewForm(QMainWindow):
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
 
         # availible settings for values
-        self.ui.comboBox_value_type.addItems([DATA_VALUE, DATA_JSON, DATA_SET])
+        self.ui.comboBox_value_type.addItems([DATA_VALUE, DATA_SET])
 
         # set allowed drop for pivot index lists
         self.ui.list_index.allowedDragLists = [self.ui.list_column,self.ui.list_frozen]
@@ -180,22 +179,22 @@ class TabularViewForm(QMainWindow):
             query = self.db_map.relationship_parameter_value_list()
             query = query.filter(literal_column("relationship_class_name") == self.current_class_name)
             data = query.all()
-            parameter_values = {(r.object_id_list, r.parameter_id, r.index): ParameterValue(r.id, r.value != None, r.json != None) for r in data}
-            data = [d.object_name_list.split(',') + [d.parameter_name, d.index, getattr(d, self.current_value_type)]
-                    for d in data if getattr(d, self.current_value_type) != None]
+            parameter_values = {(r.object_id_list, r.parameter_id): r.id for r in data}
+            data = [d.object_name_list.split(',') + [d.parameter_name, d.value]
+                    for d in data if d.value != None]
             index_names = self.current_object_class_list()
             index_types = [str for _ in index_names]
         else:
             query = self.db_map.object_parameter_value_list()
             query = query.filter(literal_column("object_class_name") == self.current_class_name)
             data = query.all()
-            parameter_values = {(r.object_id, r.parameter_id, r.index): ParameterValue(r.id, r.value != None, r.json != None) for r in data}
-            data = [[d.object_name, d.parameter_name, d.index, getattr(d, self.current_value_type)]
-                    for d in data if getattr(d, self.current_value_type) != None]
+            parameter_values = {(r.object_id, r.parameter_id): r.id for r in data}
+            data = [[d.object_name, d.parameter_name, d.value]
+                    for d in data if d.value != None]
             index_names = [self.current_class_name]
             index_types = [str]
-        index_names.extend([PARAMETER_NAME, INDEX_NAME])
-        index_types.extend([str, int])
+        index_names.extend([PARAMETER_NAME])
+        index_types.extend([str])
         if self.current_value_type == DATA_JSON:
             data = unpack_json(data)
             index_names = index_names + [JSON_TIME_NAME]
@@ -259,9 +258,9 @@ class TabularViewForm(QMainWindow):
             return True
         if self.model.model._deleted_data:
             return True
-        if any(len(v) > 0 for k, v in self.model.model._added_index_entries.items() if k not in [INDEX_NAME, JSON_TIME_NAME]):
+        if any(len(v) > 0 for k, v in self.model.model._added_index_entries.items() if k not in [JSON_TIME_NAME]):
             return True
-        if any(len(v) > 0 for k, v in self.model.model._deleted_index_entries.items() if k not in [INDEX_NAME, JSON_TIME_NAME]):
+        if any(len(v) > 0 for k, v in self.model.model._deleted_index_entries.items() if k not in [JSON_TIME_NAME]):
             return True
         if any(len(v) > 0 for k, v in self.model.model._added_tuple_index_entries.items()):
             return True
@@ -340,13 +339,12 @@ class TabularViewForm(QMainWindow):
             index = k[index_ind]
             key = (obj_id, par_id, index)
             if key in self.parameter_values:
-                if ((self.current_value_type == DATA_JSON and not self.parameter_values[key].has_value)
-                    or (self.current_value_type == DATA_VALUE and not self.parameter_values[key].has_json)):
+                if self.current_value_type == DATA_VALUE:
                     # only delete values where only one field is populated
-                    delete_ids.add(self.parameter_values[key].id)
+                    delete_ids.add(self.parameter_values[key])
                 else:
                     # remove value from parameter_value field but not entire row
-                    update_data.append({"id": self.parameter_values[key].id, self.current_value_type: None})
+                    update_data.append({"id": self.parameter_values[key], self.current_value_type: None})
         if delete_ids:
             self.db_map.remove_items(parameter_value_ids = delete_ids)
         if update_data:
@@ -372,7 +370,7 @@ class TabularViewForm(QMainWindow):
         for k, on in delete_indexes.items():
             if k == PARAMETER_NAME:
                 parameter_names += on
-            elif k not in [INDEX_NAME, JSON_TIME_NAME]:
+            elif k not in [JSON_TIME_NAME]:
                 object_names += on
         #find ids
         delete_obj_ids = set()
@@ -405,7 +403,7 @@ class TabularViewForm(QMainWindow):
                     new_parameters += [{"name": n, "object_class_id": class_id} for n in on]
                 else:
                     new_parameters += [{"name": n, "relationship_class_id": self.relationship_classes[self.current_class_name].id} for n in on]
-            elif k not in [INDEX_NAME, JSON_TIME_NAME]:
+            elif k not in [JSON_TIME_NAME]:
                 new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
         if new_objects:
             new_objects, error_log = self.db_map.add_objects(*new_objects)
@@ -522,11 +520,9 @@ class TabularViewForm(QMainWindow):
             obj_ind = [0]
             id_field = "object_id"
         par_ind = len(obj_ind)
-        index_ind = par_ind + 1
         for k in data.keys():
             obj_id = tuple(self.objects[k[i]].id for i in obj_ind)
             par_id = self.parameters[k[par_ind]].id
-            index = k[index_ind]
             db_id = None
             if self.current_class_type == RELATIONSHIP_CLASS:
                 if obj_id in self.relationships:
@@ -535,9 +531,9 @@ class TabularViewForm(QMainWindow):
             else:
                 obj_id = obj_id[0]
                 db_id = obj_id
-            key = (obj_id, par_id, index)
+            key = (obj_id, par_id)
             if key in self.parameter_values:
-                value_id = self.parameter_values[key].id
+                value_id = self.parameter_values[key]
                 update_data.append({"id": value_id, self.current_value_type: data_value[k]})
             elif db_id:
                 new_data.append({id_field: db_id, "parameter_id": par_id,
@@ -604,10 +600,10 @@ class TabularViewForm(QMainWindow):
             frozen_value = self.class_pivot_preferences[selection_key].frozen_value
         else:
             # use default pivot
-            rows = [n for n in index_names if n not in [PARAMETER_NAME, INDEX_NAME]]
+            rows = [n for n in index_names if n not in [PARAMETER_NAME]]
             columns = [PARAMETER_NAME] if PARAMETER_NAME in index_names else []
-            frozen = [INDEX_NAME] if INDEX_NAME in index_names else []
-            frozen_value = (1,) if frozen else ()
+            frozen = []
+            frozen_value = ()
         return rows, columns, frozen, frozen_value
 
     def get_valid_entries_dicts(self):
@@ -732,8 +728,6 @@ class TabularViewForm(QMainWindow):
 
         if frozen and parent == self.ui.list_frozen or event.source() == self.ui.list_frozen:
             frozen_values = self.find_frozen_values(frozen)
-            if len(frozen) == 1 and frozen[0] == INDEX_NAME and not frozen_values:
-                frozen_values = [(1,)]
             self.ui.table_frozen.set_data(frozen, frozen_values)
             for i in range(self.ui.table_frozen.model.columnCount()):
                 self.ui.table_frozen.resizeColumnToContents(i)
@@ -752,10 +746,6 @@ class TabularViewForm(QMainWindow):
         frozen_values = set(getter(key) for key in self.model.model._data)
         # add indexes without values
         for k, v in self.model.model.tuple_index_entries.items():
-            if INDEX_NAME in frozen and INDEX_NAME not in k:
-                # add default value for index named INDEX_NAME = 1
-                k = k + (INDEX_NAME,)
-                v = [line + (1,) for line in v]
             if set(k).issuperset(frozen):
                 position = [i for i, name in enumerate(k) if name in frozen]
                 position_to_frozen = [frozen.index(name) for name in k if name in frozen]
