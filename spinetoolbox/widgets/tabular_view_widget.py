@@ -613,12 +613,12 @@ class TabularViewForm(QMainWindow):
     def get_valid_entries_dicts(self):
         tuple_entries = {}
         used_index_entries = {}
-        valid_index_values = {INDEX_NAME: range(1,9999999), JSON_TIME_NAME: range(1,9999999)}
-        used_index_entries[(PARAMETER_NAME,)] = set(p.name for p in self.parameters.values())
+        valid_index_values = {JSON_TIME_NAME: range(1,9999999)}
+        #used_index_entries[(PARAMETER_NAME,)] = set(p.name for p in self.parameters.values())
         index_entries = {}
         if self.current_class_type == RELATIONSHIP_CLASS:
             object_class_names = tuple(self.relationship_classes[self.current_class_name].object_class_name_list.split(','))
-            used_index_entries[object_class_names] = set(o.name for o in self.objects.values())
+            #used_index_entries[object_class_names] = set(o.name for o in self.objects.values())
             index_entries[PARAMETER_NAME] = set(p.name for p in self.parameters.values() if p.relationship_class_id == self.relationship_classes[self.current_class_name].id)
             tuple_entries[(PARAMETER_NAME,)] = set((i,) for i in index_entries[PARAMETER_NAME])
             for oc in object_class_names:
@@ -627,7 +627,7 @@ class TabularViewForm(QMainWindow):
             fix_name_ambiguity(unique_class_names)
             tuple_entries[tuple(unique_class_names)] = set(tuple(r.object_name_list.split(',')) for r in self.relationships.values())
         else:
-            used_index_entries[(self.current_class_name,)] = set(o.name for o in self.objects.values())
+            #used_index_entries[(self.current_class_name,)] = set(o.name for o in self.objects.values())
             index_entries[self.current_class_name] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[self.current_class_name].id)
             index_entries[PARAMETER_NAME] = set(p.name for p in self.parameters.values() if p.object_class_id == self.object_classes[self.current_class_name].id)
             tuple_entries[(PARAMETER_NAME,)] = set((i,) for i in index_entries[PARAMETER_NAME])
