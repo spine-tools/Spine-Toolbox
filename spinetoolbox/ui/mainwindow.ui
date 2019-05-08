@@ -516,8 +516,8 @@
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine (sqlite) database.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="icon">
-                  <iconset>
-                   <normaloff>:/icons/Spine_db_icon.png</normaloff>:/icons/Spine_db_icon.png</iconset>
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/symbols/Spine_symbol.png</normaloff>:/symbols/Spine_symbol.png</iconset>
                  </property>
                  <property name="iconSize">
                   <size>
@@ -2440,12 +2440,6 @@
               <iconset resource="resources/resources_icons.qrc">
                <normaloff>:/icons/wrench_plus.svg</normaloff>:/icons/wrench_plus.svg</iconset>
              </property>
-             <property name="iconSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
-             </property>
              <property name="popupMode">
               <enum>QToolButton::InstantPopup</enum>
              </property>
@@ -2477,12 +2471,6 @@
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
                <normaloff>:/icons/wrench_minus.svg</normaloff>:/icons/wrench_minus.svg</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
              </property>
             </widget>
            </item>

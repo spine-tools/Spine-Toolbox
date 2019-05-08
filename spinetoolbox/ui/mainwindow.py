@@ -221,7 +221,7 @@ class Ui_MainWindow(object):
         self.toolButton_new_spine.setMinimumSize(QtCore.QSize(24, 24))
         self.toolButton_new_spine.setMaximumSize(QtCore.QSize(24, 24))
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/icons/Spine_db_icon.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap(":/symbols/Spine_symbol.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_new_spine.setIcon(icon1)
         self.toolButton_new_spine.setIconSize(QtCore.QSize(16, 16))
         self.toolButton_new_spine.setPopupMode(QtWidgets.QToolButton.InstantPopup)
@@ -1039,7 +1039,6 @@ class Ui_MainWindow(object):
         icon9 = QtGui.QIcon()
         icon9.addPixmap(QtGui.QPixmap(":/icons/wrench_plus.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_add_tool_template.setIcon(icon9)
-        self.toolButton_add_tool_template.setIconSize(QtCore.QSize(22, 22))
         self.toolButton_add_tool_template.setPopupMode(QtWidgets.QToolButton.InstantPopup)
         self.toolButton_add_tool_template.setObjectName("toolButton_add_tool_template")
         self.horizontalLayout.addWidget(self.toolButton_add_tool_template)
@@ -1054,7 +1053,6 @@ class Ui_MainWindow(object):
         icon10 = QtGui.QIcon()
         icon10.addPixmap(QtGui.QPixmap(":/icons/wrench_minus.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.toolButton_remove_tool_template.setIcon(icon10)
-        self.toolButton_remove_tool_template.setIconSize(QtCore.QSize(22, 22))
         self.toolButton_remove_tool_template.setObjectName("toolButton_remove_tool_template")
         self.horizontalLayout.addWidget(self.toolButton_remove_tool_template)
         spacerItem11 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -1370,9 +1368,9 @@ class Ui_MainWindow(object):
         self.actionRemove_all.setText(QtWidgets.QApplication.translate("MainWindow", "Remove all", None, -1))
         self.actionRemove_all.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1))
 
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsviews import DesignQGraphicsView
 from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc
 import resources_logos_rc
