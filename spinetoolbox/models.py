@@ -1041,7 +1041,7 @@ class MinimalTableModel(QAbstractTableModel):
         bottom = max(ind.row() for ind in indexes)
         left = min(ind.column() for ind in indexes)
         right = max(ind.column() for ind in indexes)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
+        self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):

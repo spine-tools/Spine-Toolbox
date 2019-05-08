@@ -369,13 +369,21 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         for row in range(top, bottom + 1):
             for column in range(left, right + 1):
                 if header[column] == 'relationship class name':
-                    continue
+                    break
                 index = self.model.index(row, column)
                 object_class_name = index.data(Qt.DisplayRole)
                 if not object_class_name:
                     continue
-                icon = QIcon(object_pixmap(object_class_name))
+                icon = self._parent.icon_mngr.object_icon(object_class_name)
                 self.model.setData(index, icon, Qt.DecorationRole)
+            else:
+                col_data = lambda j: self.model.index(row, j).data()
+                obj_cls_names = [col_data(j) for j in range(self.number_of_dimensions) if col_data(j)]
+                if len(obj_cls_names) == 1:
+                    relationship_class_name = obj_cls_names[0] + "__"
+                else:
+                    relationship_class_name = "__".join(obj_cls_names)
+                self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
 
     @busy_effect
     def accept(self):
@@ -519,6 +527,27 @@ class AddRelationshipsDialog(AddItemsDialog):
             self.default_object_column = [int(x) for x in object_class_id_list.split(',')].index(self.object_class_id)
         except ValueError:
             pass
+
+    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
+    def _handle_model_data_changed(self, top_left, bottom_right, roles):
+        if Qt.EditRole not in roles:
+            return
+        header = self.model.horizontal_header_labels()
+        top = top_left.row()
+        left = top_left.column()
+        bottom = bottom_right.row()
+        right = bottom_right.column()
+        number_of_dimensions = self.model.columnCount() - 2
+        for row in range(top, bottom + 1):
+            if header.index('relationship name') not in range(left, right + 1):
+                col_data = lambda j: self.model.index(row, j).data()
+                obj_names = [col_data(j) for j in range(number_of_dimensions) if col_data(j)]
+                if len(obj_names) == 1:
+                    relationship_name = obj_names[0] + "__"
+                else:
+                    relationship_name = "__".join(obj_names)
+                self.model.setData(self.model.index(row, number_of_dimensions), relationship_name)
+
 
     @busy_effect
     def accept(self):
