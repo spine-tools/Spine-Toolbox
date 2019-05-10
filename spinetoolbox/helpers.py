@@ -112,9 +112,6 @@ def busy_effect(func):
         QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
         try:
             return func(*args, **kwargs)
-        except Exception as e:
-            # logging.exception("Error %s", e.args[0])
-            raise e
         finally:
             # noinspection PyArgumentList
             QApplication.restoreOverrideCursor()

@@ -17,7 +17,6 @@ Unit tests for TreeViewForm and GraphViewForm classes.
 """
 
 import unittest
-import os
 import logging
 import sys
 from unittest import mock
@@ -28,12 +27,14 @@ from collections import namedtuple
 from widgets.custom_editors import SearchBarEditor, MultiSearchBarEditor, CustomLineEditor
 
 
-
 class qry(list):
     def count(self, x=None):
         if x is not None:
             return super().count(x)
         return len(self)
+
+    def all(self):
+        return self
 
 
 class TestTreeViewForm(unittest.TestCase):
@@ -48,7 +49,7 @@ class TestTreeViewForm(unittest.TestCase):
         logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
                             format='%(asctime)s %(levelname)s: %(message)s',
                             datefmt='%Y-%m-%d %H:%M:%S')
-        cls.ObjectClass = namedtuple("ObjectClass", ["id", "name", "description", "display_order"])
+        cls.ObjectClass = namedtuple("ObjectClass", ["id", "name", "description", "display_order", "display_icon"])
         cls.Object = namedtuple("Object", ["id", "class_id", "name", "description"])
         cls.RelationshipClass = namedtuple(
             "RelationshipClass", ["id", "name", "object_class_id_list", "object_class_name_list"])
@@ -111,9 +112,9 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that object classes are added to the object tree model in the right positions.
         """
         object_classes = qry([
-            self.ObjectClass(1, "fish", "A fish.", 1),
-            self.ObjectClass(2, "dog", "A dog.", 3),
-            self.ObjectClass(3, "cat", "A cat.", 2)
+            self.ObjectClass(1, "fish", "A fish.", 1, None),
+            self.ObjectClass(2, "dog", "A dog.", 3, None),
+            self.ObjectClass(3, "cat", "A cat.", 2, None)
         ])
         self.tree_view_form.add_object_classes(object_classes)
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -533,7 +534,6 @@ class TestTreeViewForm(unittest.TestCase):
         self.tree_view_form.object_parameter_value_model.reset_model()
         fish_class, dog_class = self.add_mock_object_classes()
         nemo_object, pluto_object, scooby_object = self.add_mock_objects(fish_class.id, dog_class.id)
-        water_id, breed_id = self.add_mock_object_parameter_definitions(fish_class.id, dog_class.id)
         # Add first object parameter value (for scooby), to test autofilling of object class from *object*
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
@@ -554,7 +554,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(obj_name_index.data(), 'scooby')
         obj_id_index = model.index(0, header_index("object_id"))
         self.assertEqual(obj_id_index.data(), scooby_object.id)
-        # Check objet class
+        # Check object class
         obj_cls_name_index = model.index(0, header_index("object_class_name"))
         self.assertEqual(obj_cls_name_index.data(), 'dog')
         obj_cls_id_index = model.index(0, header_index("object_class_id"))
@@ -1090,8 +1090,8 @@ class TestTreeViewForm(unittest.TestCase):
             pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
             water_parameter, breed_parameter, \
             relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
-        upd_fish_class = self.ObjectClass(fish_class.id, "octopus", "A fish.", 1)
-        upd_dog_class = self.ObjectClass(dog_class.id, "god", "A fish.", 3)
+        upd_fish_class = self.ObjectClass(fish_class.id, "octopus", "A fish.", 1, None)
+        upd_dog_class = self.ObjectClass(dog_class.id, "god", "A fish.", 3, None)
         self.tree_view_form.db_map.object_class_list.return_value = [upd_fish_class, upd_dog_class]
         self.tree_view_form.update_object_classes(qry([upd_fish_class, upd_dog_class]))
         # Check object tree
@@ -1361,11 +1361,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_remove_object_classes(self):
         """Test that object classes are removed from all model/views."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Fetch pluto, so we can test that 'child' relationship classes are correctly removed
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(1)
@@ -1411,11 +1407,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_remove_objects(self):
         """Test that objects are removed from all model/views."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Fetch pluto's fish__dog and dog__fish relationship class items,
         # so we can test that 'child' relationships are correctly removed
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -1459,11 +1451,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_remove_relationship_classes(self):
         """Test that relationship classes are removed from all model/views."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Fetch object classes and objects, so we can test that relationship classes are removed from all objects
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1523,11 +1511,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_remove_relationships(self):
         """Test that relationships are removed from all model/views."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Fetch nemo's and pluto's dog_fish relationship class,
         # to test that both intances of the relationship are removed.
         root_item = self.tree_view_form.object_tree_model.root_item
@@ -1570,11 +1554,6 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_update_object_parameter_definitions(self):
         """Test that object parameter definitions are updated using the table delegate."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
         # Update parameter name
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
@@ -1602,11 +1581,6 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_update_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are updated using the table delegate."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
         # Update parameter name
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
@@ -1636,11 +1610,6 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_update_object_parameter_values(self):
         """Test that object parameter values are updated using the table delegate."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
         # Update parameter value
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
@@ -1663,11 +1632,6 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_update_relationship_parameter_values(self):
         """Test that relationship parameter values are updated using the table delegate."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
         # Update parameter value
         model = self.tree_view_form.relationship_parameter_value_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_value
@@ -1690,11 +1654,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_remove_object_parameter_definitions(self):
         """Test that object parameter definitions are removed."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Select parameter definition and call removal method
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
@@ -1719,11 +1679,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_remove_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are removed."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Select parameter definition and call removal method
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
@@ -1746,11 +1702,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_remove_object_parameter_values(self):
         """Test that object parameter values are removed."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Select two parameter values and call removal method
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
@@ -1771,11 +1723,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def test_remove_relationship_parameter_values(self):
         """Test that relationship parameter values are removed."""
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Select two parameter values and call removal method
         model = self.tree_view_form.relationship_parameter_value_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_value
@@ -1798,11 +1746,7 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that parameter value and definition tables are filtered
         when selecting object classes in the object tree.
         """
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
         fish_index = self.tree_view_form.object_tree_model.indexFromItem(fish_item)
@@ -1843,11 +1787,7 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that parameter value and definition tables are filtered
         when selecting objects in the object tree.
         """
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Fetch object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         dog_item = root_item.child(1)
@@ -1890,11 +1830,7 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that parameter value and definition tables are filtered
         when selecting relationship classes in the object tree.
         """
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Fetch object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1938,11 +1874,7 @@ class TestTreeViewForm(unittest.TestCase):
         """Test that parameter value and definition tables are filtered
         when selecting relationships in the object tree.
         """
-        fish_class, dog_class, nemo_object, pluto_object, scooby_object, \
-            fish_dog_class, dog_fish_class, \
-            pluto_nemo_rel, nemo_pluto_rel, nemo_scooby_rel, \
-            water_parameter, breed_parameter, \
-            relative_speed_parameter, combined_mojo_parameter = self.add_mock_dataset()
+        self.add_mock_dataset()
         # Fetch object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1986,8 +1918,8 @@ class TestTreeViewForm(unittest.TestCase):
 
     def add_mock_object_classes(self):
         """Add fish and dog object classes."""
-        fish_class = self.ObjectClass(1, "fish", "A fish.", 1)
-        dog_class = self.ObjectClass(2, "dog", "A dog.", 3)
+        fish_class = self.ObjectClass(1, "fish", "A fish.", 1, None)
+        dog_class = self.ObjectClass(2, "dog", "A dog.", 3, None)
         self.tree_view_form.db_map.object_class_list.return_value = qry([fish_class, dog_class])
         return fish_class, dog_class
 

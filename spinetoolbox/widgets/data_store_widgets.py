@@ -835,7 +835,7 @@ class TreeViewForm(DataStoreForm):
 
     def __init__(self, data_store, db_map, database):
         """Initialize class."""
-        tic = time.clock()
+        tic = time.process_time()
         super().__init__(data_store, db_map, database, tree_view_form_ui())
         self.takeCentralWidget()
         self.relationship_tree_model = RelationshipTreeModel(self)
@@ -865,7 +865,7 @@ class TreeViewForm(DataStoreForm):
         self.connect_signals()
         self.restore_ui()
         self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
-        toc = time.clock()
+        toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
     def add_toggle_view_actions(self):
