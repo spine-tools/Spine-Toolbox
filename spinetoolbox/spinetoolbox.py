@@ -44,7 +44,7 @@ def main(argv):
         return 0
     # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
     app = QApplication(argv)
-    id_ = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+    QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     window = ToolboxUI()
     window.show()
     # Enter main event loop and wait until exit() is called

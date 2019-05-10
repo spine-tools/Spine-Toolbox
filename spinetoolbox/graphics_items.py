@@ -16,14 +16,13 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:   4.4.2018
 """
 
-import logging
 import os
 from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, \
     QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
     QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle, \
     QGraphicsColorizeEffect, QGraphicsDropShadowEffect
-from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, \
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, \
     QFont, QTextCursor, QTransform
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from math import atan2, degrees, sin, cos, pi
@@ -273,7 +272,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         if event.key() == Qt.Key_Delete and self.isSelected():
             ind = self._toolbox.project_item_model.find_item(self.name())
             delete_int = int(self._toolbox.qsettings().value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = False if delete_int == 0 else True
+            delete_bool = delete_int != 0
             self._toolbox.remove_item(ind, delete_item=delete_bool)
             event.accept()
         elif event.key() == Qt.Key_R and self.isSelected():
@@ -869,7 +868,6 @@ class ObjectItem(QGraphicsPixmapItem):
     def itemChange(self, change, value):
         """Add label item to same scene if added as top level item."""
         if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
-            scene = value
             value.addItem(self.label_item)
             self.place_label_item()
         return super().itemChange(change, value)
@@ -1229,7 +1227,6 @@ class ArcItem(QGraphicsLineItem):
     def itemChange(self, change, value):
         """Add label and pixmap item to same scene if added as top level item."""
         if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
-            scene = value
             value.addItem(self.label_item)
             value.addItem(self.token_item)
             self.label_item.hide()
@@ -1304,14 +1301,12 @@ class ArcItem(QGraphicsLineItem):
 
     def hoverEnterEvent(self, event):
         """Set viewport's cursor to arrow, to signify that this item is not draggable."""
-        pass
         # viewport = self._graph_view_form.ui.graphicsView.viewport()
         # self.viewport_cursor = viewport.cursor()
         # viewport.setCursor(Qt.ArrowCursor)
 
     def hoverLeaveEvent(self, event):
         """Restore viewport's cursor."""
-        pass
         # viewport = self._graph_view_form.ui.graphicsView.viewport()
         # viewport.setCursor(self.viewport_cursor)
 
@@ -1378,9 +1373,13 @@ class ArcLabelItem(QGraphicsRectItem):
         object_items (list): ObjectItem instances
         arc_items (list): ArcItem instances
     """
-    def __init__(self, color, object_items=[], arc_items=[]):
+    def __init__(self, color, object_items=None, arc_items=None):
         """A QGraphicsRectItem with a relationship to use as arc label"""
         super().__init__()
+        if object_items is None:
+            object_items = list()
+        if arc_items is None:
+            arc_items = list()
         for item in object_items:
             item._label_position = 'beside_icon'
             item.label_item.setTextWidth(-1)

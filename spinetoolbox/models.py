@@ -20,7 +20,7 @@ Note: These are Spine Toolbox internal data models.
 import logging
 import os
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
+from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
     QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
 from PySide2.QtWidgets import QMessageBox
@@ -162,7 +162,7 @@ class ProjectItemModel(QAbstractItemModel):
         try:
             row = category_names.index(category_name)
         except ValueError:
-            logging.error("Category name {0} not found in {1}".format(category_name, category_names))
+            logging.error("Category name %s not found in %s", category_name, category_names)
             return None
         return self.index(row, 0, QModelIndex())
 
@@ -181,7 +181,7 @@ class ProjectItemModel(QAbstractItemModel):
             start_index = self.index(0, 0, category_index)
             matching_index = self.match(start_index, Qt.DisplayRole, name,
                                         1, Qt.MatchFixedString | Qt.MatchRecursive)
-            if len(matching_index) == 0:
+            if not matching_index:
                 pass  # no match in this category
             elif len(matching_index) == 1:
                 # logging.debug("Found item:{0}".format(matching_index[0].internalPointer().name))
@@ -268,7 +268,7 @@ class ProjectItemModel(QAbstractItemModel):
             old_data_dir = item.data_dir  # Full path
         except AttributeError:
             logging.error("Item does not have a data_dir. "
-                          "Make sure that class {0} creates one.".format(item.item_type))
+                          "Make sure that class %s creates one.", item.item_type)
             return False
         # Get project path from the old data dir path
         project_path = os.path.split(old_data_dir)[0]
@@ -325,7 +325,7 @@ class ProjectItemModel(QAbstractItemModel):
         else:
             category_item = self.find_category(category_name)
             if not category_item:
-                logging.error("Category item '{0}' not found".format(category_name))
+                logging.error("Category item '%s' not found", category_name)
                 return list()
             return category_item.internalPointer().children()
 
@@ -350,7 +350,6 @@ class ProjectItemModel(QAbstractItemModel):
         n_data_stores = self.rowCount(self.find_category("Data Stores"))
         n_data_connections = self.rowCount(self.find_category("Data Connections"))
         n_tools = self.rowCount(self.find_category("Tools"))
-        n_views = self.rowCount(self.find_category("Views"))
         if category == "Data Stores":
             # Return number of data stores
             return n_data_stores - 1
@@ -364,7 +363,7 @@ class ProjectItemModel(QAbstractItemModel):
             # Return total number of items - 1
             return self.n_items() - 1
         else:
-            logging.error("Unknown category:{0}".format(category))
+            logging.error("Unknown category: %s", category)
             return 0
 
     def short_name_reserved(self, short_name):
@@ -563,7 +562,7 @@ class ConnectionModel(QAbstractTableModel):
         """
         if not role == Qt.EditRole:
             return super().setHeaderData(section, orientation, value, role)
-        if orientation == Qt.Horizontal or orientation == Qt.Vertical:
+        if orientation in [Qt.Horizontal, Qt.Vertical]:
             try:
                 self.header[section] = value
                 self.headerDataChanged.emit(orientation, section, section)
@@ -643,8 +642,7 @@ class ConnectionModel(QAbstractTableModel):
         if self.columnCount() == 0:
             new_row.append(None)
         else:
-            # noinspection PyUnusedLocal
-            [new_row.append(None) for i in range(self.columnCount())]
+            new_row += self.columnCount() * [None]
         # Notice if insert index > rowCount(), new object is inserted to end
         self.connections.insert(row, new_row)
         self.endInsertRows()
@@ -698,9 +696,7 @@ class ConnectionModel(QAbstractTableModel):
             return False
         # beginRemoveRows(const QModelIndex & parent, int first, int last)
         self.beginRemoveRows(parent, row, row)
-        # noinspection PyUnusedLocal
-        removed_row = self.connections.pop(row)
-        # logging.debug("{0} removed from row:{1}".format(removed_link, row))
+        self.connections.pop(row)
         self.endRemoveRows()
         return True
 
@@ -770,7 +766,7 @@ class ConnectionModel(QAbstractTableModel):
         try:
             item_index = self.header.index(name)
         except ValueError:
-            logging.error("{0} not found in connection table header list".format(name))
+            logging.error("%s not found in connection table header list", name)
             return False
         # logging.debug("Removing {3}. rows:{0} columns:{1} data:\n{2}"
         #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
@@ -1144,8 +1140,10 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def reset_model(self, main_data=[], aux_data=None):
+    def reset_model(self, main_data=None, aux_data=None):
         """Reset model."""
+        if main_data is None:
+            main_data = list()
         self.beginResetModel()
         self._main_data = main_data
         self.endResetModel()
@@ -1189,9 +1187,11 @@ class EmptyRowModel(MinimalTableModel):
         self.insertRows(self.rowCount(), 1, QModelIndex())
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
-    def _handle_data_changed(self, top_left, bottom_right, roles=[]):
+    def _handle_data_changed(self, top_left, bottom_right, roles=None):
         """Insert a new last empty row in case the previous one has been filled
         with any data other than the defaults."""
+        if roles is None:
+            roles = list()
         if roles and Qt.EditRole not in roles:
             return
         last_row = self.rowCount() - 1
@@ -1718,7 +1718,6 @@ class ObjectTreeModel(QStandardItemModel):
             relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_['class_id'])
             relationship_class_item_list = list()
             for relationship_class in relationship_class_list:
-                object_class_id_list = [int(x) for x in relationship_class.object_class_id_list.split(",")]
                 relationship_class_item = QStandardItem(relationship_class.name)
                 relationship_class_item.setData('relationship_class', Qt.UserRole)
                 relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
@@ -2225,7 +2224,6 @@ class SubParameterDefinitionModel(SubParameterModel):
         if not items_to_update:
             return []
         try:
-            error_log = []
             tag_dict = dict()
             for item in items_to_update:
                 parameter_tag_id_list = item.pop("parameter_tag_id_list", None)
@@ -3294,7 +3292,6 @@ class RelationshipParameterModel(MinimalTableModel):
         column = index.column()
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
-        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -3318,7 +3315,6 @@ class RelationshipParameterModel(MinimalTableModel):
         column = index.column()
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
-        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -3329,15 +3325,15 @@ class RelationshipParameterModel(MinimalTableModel):
                     continue
             if row < model.rowCount():
                 if role == Qt.DecorationRole and column == self.relationship_class_name_column:
-                     object_class_name_list = model.index(row, self.object_class_name_list_column).\
+                    object_class_name_list = model.index(row, self.object_class_name_list_column).\
                         data(Qt.DisplayRole)
-                     return self._tree_view_form.icon_mngr.relationship_icon(object_class_name_list)
+                    return self._tree_view_form.icon_mngr.relationship_icon(object_class_name_list)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
         if role == Qt.DecorationRole and column == self.relationship_class_name_column:
-             object_class_name_list = self.empty_row_model.index(row, self.object_class_name_list_column).\
+            object_class_name_list = self.empty_row_model.index(row, self.object_class_name_list_column).\
                 data(Qt.DisplayRole)
-             return self._tree_view_form.icon_mngr.relationship_icon(object_class_name_list)
+            return self._tree_view_form.icon_mngr.relationship_icon(object_class_name_list)
         return self.empty_row_model.index(row, column).data(role)
 
     def rowCount(self, parent=QModelIndex()):
@@ -3348,7 +3344,6 @@ class RelationshipParameterModel(MinimalTableModel):
         count = 0
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
-        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -3373,7 +3368,6 @@ class RelationshipParameterModel(MinimalTableModel):
         model_data = {}
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
-        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for k, index in enumerate(indexes):
             if not index.isValid():
                 continue
@@ -3429,7 +3423,6 @@ class RelationshipParameterModel(MinimalTableModel):
         """Find the right sub-model (or the empty model) and call insertRows on it."""
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
-        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -3450,7 +3443,6 @@ class RelationshipParameterModel(MinimalTableModel):
         self.beginRemoveRows(parent, row, row + count - 1)
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
-        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         model_row_sets = {}
         for i in range(row, row + count):
             for relationship_class_id, model in self.sub_models.items():
@@ -3508,7 +3500,6 @@ class RelationshipParameterModel(MinimalTableModel):
         values = dict()
         selected_object_class_ids = self._tree_view_form.selected_object_class_ids
         selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
-        tag_selected_relationship_class_ids = set(self._tree_view_form.selected_rel_parameter_definition_ids.keys())
         for relationship_class_id, model in self.sub_models.items():
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -3924,8 +3915,10 @@ class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
         self.filtered_out = dict()
         self.invalidateFilter()
 
-    def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=[]):
+    def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=None):
         """Accept or reject row."""
+        if ignored_columns is None:
+            ignored_columns = []
         for column, values in self.filtered_out.items():
             if column in ignored_columns:
                 continue
@@ -4008,8 +4001,10 @@ class RelationshipParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
         self.filtered_out = dict()
         self.invalidateFilter()
 
-    def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=[]):
+    def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=None):
         """Accept or reject row."""
+        if ignored_columns is None:
+            ignoredColumns = list()
         for column, values in self.filtered_out.items():
             if column in ignored_columns:
                 continue
@@ -4068,7 +4063,7 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
         return True
 
 
-class TreeNode(object):
+class TreeNode:
     """A helper class to use as the internalPointer of indexes in ParameterValueListModel.
 
     Attributes
@@ -4202,7 +4197,7 @@ class ParameterValueListModel(QAbstractItemModel):
         Items in the new row will be children of the item represented by the parent model index.
         """
         row = self.rowCount(parent)
-        self.beginInsertRows(parent, row, row + count -1 )
+        self.beginInsertRows(parent, row, row + count -1)
         if not parent.isValid():
             self._root_nodes.append(TreeNode(None, row, text=self.empty_list))
         else:
@@ -4211,9 +4206,11 @@ class ParameterValueListModel(QAbstractItemModel):
         self.endInsertRows()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
-    def _handle_data_changed(self, top_left, bottom_right, roles=[]):
+    def _handle_data_changed(self, top_left, bottom_right, roles=None):
         """Called when data in the model changes.
         """
+        if roles is None:
+            roles = list()
         if Qt.EditRole not in roles:
             return
         parent = self.parent(top_left)
@@ -4382,7 +4379,7 @@ class DatapackageResourcesModel(MinimalTableModel):
         self.clear()
         self.set_horizontal_header_labels(["name", "source"])
         data = list()
-        for row, resource in enumerate(resources):
+        for resource in resources:
             name = resource.name
             source = os.path.basename(resource.source)
             data.append([name, source])
@@ -4411,7 +4408,7 @@ class DatapackageFieldsModel(MinimalTableModel):
         for field in schema.fields:
             name = field.name
             type_ = field.type
-            primary_key = True if name in schema.primary_key else False
+            primary_key = name in schema.primary_key
             data.append([name, type_, primary_key])
         super().reset_model(data)
 
@@ -4440,16 +4437,19 @@ class DatapackageForeignKeysModel(EmptyRowModel):
 
 
 class TableModel(QAbstractItemModel):
-    def __init__(self, headers = [], data = []):
-        # def __init__(self, tasks=[[]]):
+    def __init__(self, headers=None, data=None):
         super(TableModel, self).__init__()
+        if headers is None:
+            headers = list()
+        if data is None:
+            data = list()
         self._data = data
         self._headers = headers
 
-    def parent(self, child = QModelIndex()):
+    def parent(self, child=None):
         return QModelIndex()
 
-    def index(self, row, column, parent = QModelIndex()):
+    def index(self, row, column, parent=QModelIndex()):
         return self.createIndex(row, column, parent)
 
     def set_data(self, data, headers):

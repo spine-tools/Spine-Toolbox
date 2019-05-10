@@ -173,10 +173,10 @@ class GAMSTool(ToolTemplate):
         # Supported GAMS logoption values
         # 3 writes LOG output to standard output
         # 4 writes LOG output to a file and standard output  [Not supported in GAMS v24.0]
-        if key == 'logoption' or key == 'cerr':
+        if key in ['logoption', 'cerr']:
             self.gams_options[key] = "{0}={1}".format(key, value)
         else:
-            logging.error("Updating GAMS options failed. Unknown key: {}".format(key))
+            logging.error("Updating GAMS options failed. Unknown key: %s", key)
 
     @staticmethod
     def load(toolbox, path, data):
@@ -237,7 +237,6 @@ class JuliaTool(ToolTemplate):
             key: Option name
             value: Option value
         """
-        pass
 
     @staticmethod
     def load(toolbox, path, data):
@@ -297,7 +296,6 @@ class PythonTool(ToolTemplate):
             key: Option name
             value: Option value
         """
-        pass
 
     @staticmethod
     def load(toolbox, path, data):

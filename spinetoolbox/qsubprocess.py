@@ -103,7 +103,6 @@ class QSubProcess(QObject):
     @Slot(name="process_started")
     def process_started(self):
         """Run when subprocess has started."""
-        pass
         # self._toolbox.msg.emit("\tSubprocess started...")
 
     @Slot("QProcess::ProcessState", name="on_state_changed")
@@ -125,7 +124,7 @@ class QSubProcess(QObject):
             pass
         else:
             self._toolbox.msg_error.emit("Process is in an unspecified state")
-            logging.error("QProcess unspecified state: {0}".format(new_state))
+            logging.error("QProcess unspecified state: %s", new_state)
 
     @Slot("QProcess::ProcessError", name="'on_process_error")
     def on_process_error(self, process_error):
@@ -164,7 +163,7 @@ class QSubProcess(QObject):
             self._process.close()
         except Exception as ex:
             self._toolbox.msg_error.emit("[{0}] exception when terminating process".format(ex))
-            logging.exception("Exception in closing QProcess: {}".format(ex))
+            logging.exception("Exception in closing QProcess: %s", ex)
 
     @Slot(int, name="process_finished")
     def process_finished(self, exit_code):

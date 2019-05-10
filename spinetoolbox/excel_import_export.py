@@ -24,7 +24,7 @@ import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 
-from spinedb_api import SpineDBAPIError, import_data
+from spinedb_api import import_data
 import logging
 from operator import itemgetter
 
@@ -191,18 +191,18 @@ def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
         headers (List[str]): List of header names for data
         key_cols (List[Int]): List of index for column that are keys, columns to not unstack
         value_name_col (Int): index to column containing name of data to unstack
-        value_col (Int): index to column containg value to value_name_col
+        value_col (Int): index to column containing value to value_name_col
 
     Returns:
         (List[List]): List of list with headers in headers list
         (List): List of header names for each item in inner list
     """
     # find header names
-    if (isinstance(value_name_col, list) or isinstance(value_name_col, list)) and len(value_name_col) > 1:
+    if isinstance(value_name_col, list) and len(value_name_col) > 1:
         value_name_getter = itemgetter(*value_name_col)
         value_names = sorted(set(value_name_getter(x) for x in data if not any(i is None for i in value_name_getter(x))))
     else:
-        if isinstance(value_name_col, list) or isinstance(value_name_col, list):
+        if isinstance(value_name_col, list):
             value_name_col = value_name_col[0]
         value_name_getter = itemgetter(value_name_col)
         value_names = sorted(set(x[value_name_col] for x in data if x[value_name_col] is not None))
@@ -328,10 +328,10 @@ def get_unstacked_relationships(db):
     for k, v in groupby(data, key=keyfunc):
         values = list(v)
         rel, par_names = unstack_list_of_tuples(values, ["relationship_class", "relationship", "parameter", "value"], [0, 1], 2, 3)
-        if len(rel) > 0:
+        if rel:
             parameters = par_names[2:]
         else:
-            parameters = list(set([p[2] for p in values]))
+            parameters = list({[p[2] for p in values]})
         rel = [r[1].split(',') + list(r[2:]) for r in rel]
         object_classes = class_2_obj_list[k]
         stacked_rels.append([k, rel, object_classes, parameters])
@@ -369,10 +369,10 @@ def get_unstacked_objects(db):
     for k, v in groupby(data, key=keyfunc):
         values = list(v)
         obj, par_names = unstack_list_of_tuples(values, ["object_class", "object", "parameter", "value"], [0, 1], 2, 3)
-        if len(obj) > 0:
+        if obj:
             parameters = par_names[2:]
         else:
-            parameters = list(set([p[2] for p in values if p[2] is not None]))
+            parameters = list({[p[2] for p in values if p[2] is not None]})
         obj = [[o[1]] + list(o[2:]) for o in obj]
         object_classes = [k]
         stacked_obj.append([k, obj, object_classes, parameters])
@@ -565,7 +565,7 @@ def read_spine_xlsx(filepath):
                 else:
                     obj_data.append(data)
             except Exception as e:
-                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e),"sheet", filepath,''))
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e), "sheet", filepath, ''))
         elif sheet_data == "json array":
             # read sheet with data type: 'json array'
             try:
@@ -575,7 +575,7 @@ def read_spine_xlsx(filepath):
                 else:
                     obj_json_data.append(data)
             except Exception as e:
-                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e),"sheet", filepath,''))
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e), "sheet", filepath, ''))
     wb.close()
 
     # merge sheets that have the same class.
@@ -603,10 +603,9 @@ def merge_spine_xlsx_data(data):
     data = sorted(data, key=lambda x: x.class_name)
     for class_name, values in groupby(data, key=lambda x: x.class_name):
         values = list(values)
-        if len(values) < 2:
-            if len(values) > 0:
-                # only one sheet
-                new_data.append(values[0])
+        if len(values) == 1:
+            # only one sheet
+            new_data.append(values[0])
             continue
         else:
             # if more than one SheetData with same class_name
@@ -730,7 +729,6 @@ def read_json_sheet(ws, sheet_type):
         object_classes.append(ws["A" + str(i)].value)
 
     # search row for until first empty cell
-    read_cols = []
     add_if_not_break = 1
     for c, cell in enumerate(ws[4]):
         if c > 0:
@@ -745,7 +743,7 @@ def read_json_sheet(ws, sheet_type):
     obj_path = []
     parameters = []
     for r, row in enumerate(rows):
-        if r > 2 and r < 3+dim:
+        if 2 < r < 3+dim:
             # get object path
             obj_path.append([cell.value for i, cell in enumerate(row) if i in read_cols])
         elif r == 3+dim:
@@ -765,7 +763,7 @@ def read_json_sheet(ws, sheet_type):
         for objects, parameter, data_list in zip(obj_path, parameters, data):
             # save values if there is json data, a parameter name
             # and the obj_path doesn't contain None.
-            packed_json = json.dumps([d for d in data_list if d is not None])
+            packed_json = json.dumps(data_list)
             json_data.append(Data._make(["json"] + objects + [parameter, packed_json]))
 
     return SheetData(sheet_name=ws.title,
@@ -823,7 +821,7 @@ def read_parameter_sheet(ws):
     data = [d for d in data if not None in keyfunc(d)]
 
     data_parameter = []
-    if len(parameters) > 0:
+    if parameters:
         # add that parameter type type should be "value"
         data = [["value"] + d for d in data]
         keyfunc = lambda x: [x[i+1] for i, _ in enumerate(object_classes)]

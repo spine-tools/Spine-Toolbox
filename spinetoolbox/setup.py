@@ -63,7 +63,6 @@ def main(argv):
         base = "Console"  # set this to "Win32GUI" to not show console
         # Set Windows .msi installer default install path to C:\SpineToolbox-version
         systemdrive = os.environ['SYSTEMDRIVE']
-        default_install_dir = os.path.join(systemdrive, os.path.sep, "SpineToolbox-" + SPINE_TOOLBOX_VERSION)
         # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
         msvcr120_dll = os.path.join(systemdrive, os.path.sep, "Windows", "System32", "msvcr120.dll")
         if not os.path.isfile(msvcr120_dll):

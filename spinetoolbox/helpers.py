@@ -25,7 +25,7 @@ import shutil
 import glob
 import json
 import spinedb_api
-from PySide2.QtCore import Qt, Slot, QFile, QTextStream, QIODevice, QSize, QRect, QPoint
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene
@@ -47,7 +47,7 @@ def supported_img_formats():
     """Function to check if reading .ico files is supported."""
     img_formats = QImageReader().supportedImageFormats()
     img_formats_str = '\n'.join(str(x) for x in img_formats)
-    logging.debug("Supported Image formats:\n{0}".format(img_formats_str))
+    logging.debug("Supported Image formats:\n%s", img_formats_str)
 
 
 def pyside2_version_check():
@@ -113,7 +113,7 @@ def busy_effect(func):
         try:
             return func(*args, **kwargs)
         except Exception as e:
-            # logging.exception("Error {}".format(e.args[0]))
+            # logging.exception("Error %s", e.args[0])
             raise e
         finally:
             # noinspection PyArgumentList
@@ -164,18 +164,13 @@ def create_dir(base_path, folder='', verbosity=False):
         OSError if operation failed.
     """
     directory = os.path.join(base_path, folder)
-    if os.path.exists(directory):
-        if verbosity:
-            logging.debug("Directory found: {0}".format(directory))
-        return True
+    if os.path.exists(directory) and verbosity:
+        logging.debug("Directory found: %s", directory)
     else:
-        try:
-            os.makedirs(directory, exist_ok=True)
-        except OSError:
-            raise
+        os.makedirs(directory, exist_ok=True)
         if verbosity:
-            logging.debug("Directory created: {0}".format(directory))
-        return True
+            logging.debug("Directory created: %s", directory)
+    return True
 
 
 def create_output_dir_timestamp():
@@ -238,14 +233,11 @@ def erase_dir(path, verbosity=False):
     """
     if not os.path.exists(path):
         if verbosity:
-            logging.debug("Path does not exist: {}".format(path))
+            logging.debug("Path does not exist: %s", path)
         return False
     if verbosity:
-        logging.debug("Deleting directory {0}".format(path))
-    try:
-        shutil.rmtree(path)
-    except OSError:
-        raise
+        logging.debug("Deleting directory %s", path)
+    shutil.rmtree(path)
     return True
 
 
@@ -337,12 +329,7 @@ def fix_name_ambiguity(name_list, offset=0):
 
 def tuple_itemgetter(itemgetter_func, num_indexes):
     """Change output of itemgetter to always be a tuple even for one index"""
-    if num_indexes == 1:
-        def g(item):
-            return (itemgetter_func(item),)
-        return g
-    else:
-        return itemgetter_func
+    return (lambda item: (itemgetter_func(item),)) if num_indexes == 1 else itemgetter_func
 
 
 def format_string_list(str_list):
@@ -418,7 +405,7 @@ class IconManager:
 
     def icon_color_code(self, display_icon):
         """Take a display icon integer and return an equivalent tuple of icon and color code."""
-        if type(display_icon) is not int or display_icon < 0:
+        if not isinstance(display_icon, int) or display_icon < 0:
             return int("f1b2", 16), 0
         icon_code = display_icon & 65535
         try:

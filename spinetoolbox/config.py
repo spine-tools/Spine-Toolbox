@@ -46,13 +46,13 @@ else:
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
     DOC_INDEX_PATH = os.path.abspath(os.path.join(
-            APPLICATION_PATH, os.path.pardir, "docs", "build", "html", "index.html"))
+        APPLICATION_PATH, os.path.pardir, "docs", "build", "html", "index.html"))
 
 # Tool output directory name
 TOOL_OUTPUT_DIR = "output"
 
 # GAMS
-if not sys.platform == "win32":
+if sys.platform != "win32":
     GAMS_EXECUTABLE = "gams"
     GAMSIDE_EXECUTABLE = "gamside"
 else:
@@ -60,13 +60,13 @@ else:
     GAMSIDE_EXECUTABLE = "gamside.exe"
 
 # Julia
-if not sys.platform == "win32":
+if sys.platform != "win32":
     JULIA_EXECUTABLE = "julia"
 else:
     JULIA_EXECUTABLE = "julia.exe"
 
 # Python
-if not sys.platform == "win32":
+if sys.platform != "win32":
     PYTHON_EXECUTABLE = "python3"
 else:
     PYTHON_EXECUTABLE = "python.exe"

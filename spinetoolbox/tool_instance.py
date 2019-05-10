@@ -353,20 +353,19 @@ class ToolInstance(QObject):
             self._toolbox.msg_warning.emit("\tNo output files defined for this Tool template. {0}".format(tip_anchor))
         else:
             saved_files, failed_files = self.copy_output(result_path)
-            if len(saved_files) == 0:
+            if not saved_files:
                 # If no files were saved
                 self._toolbox.msg_error.emit("\tNo files saved")
-            if len(saved_files) > 0:
+            else:
                 # If there are saved files
                 self._toolbox.msg.emit("\tThe following output files were saved to results directory")
-                for i in range(len(saved_files)):
-                    # fname = os.path.split(saved_files[i])[1]
-                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(saved_files[i]))
-            if len(failed_files) > 0:
+                for saved_file in saved_files:
+                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(saved_file))
+            if failed_files:
                 # If saving some or all files failed
                 self._toolbox.msg_warning.emit("\tThe following output files were not found")
-                for i in range(len(failed_files)):
-                    failed_fname = os.path.split(failed_files[i])[1]
+                for failed_file in failed_files:
+                    failed_fname = os.path.split(failed_file)[1]
                     self._toolbox.msg_warning.emit("\t\t<b>{0}</b>".format(failed_fname))
         self.instance_finished_signal.emit(ret)
 
@@ -452,7 +451,7 @@ class ToolInstance(QObject):
         """
         # TODO: Remove duplicate directory names from the list of created directories.
         for path in self.tool_template.outputfiles:
-            dirname, file_pattern = os.path.split(path)
+            dirname = os.path.split(path)[0]
             if dirname == '':
                 continue
             dst_dir = os.path.join(self.basedir, dirname)

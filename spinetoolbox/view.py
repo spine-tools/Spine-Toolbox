@@ -79,7 +79,7 @@ class View(ProjectItem):
         """Save selections and disconnect signals."""
         self.save_selections()
         if not super().disconnect_signals():
-            logging.error("Item {0} deactivation failed".format(self.name))
+            logging.error("Item %s deactivation failed", self.name)
             return False
         return True
 

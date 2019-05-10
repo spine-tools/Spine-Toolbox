@@ -104,7 +104,7 @@ class Tool(ProjectItem):
         """Save selections and disconnect signals."""
         self.save_selections()
         if not super().disconnect_signals():
-            logging.error("Item {0} deactivation failed".format(self.name))
+            logging.error("Item %s deactivation failed.", self.name)
             return False
         return True
 
@@ -127,7 +127,7 @@ class Tool(ProjectItem):
             self._tool_template_name = ""
         else:
             self._tool_template_name = self.tool_template().name
-        self.execute_in_work = True if self._toolbox.ui.radioButton_execute_in_work.isChecked() else False
+        self.execute_in_work = self._toolbox.ui.radioButton_execute_in_work.isChecked()
 
     @Slot(bool, name="update_execution_mode")
     def update_execution_mode(self, checked):
@@ -768,7 +768,7 @@ class Tool(ProjectItem):
                 self.instance.ipython_command_list.append(run_script_cmd)
         elif self.tool_template().tooltype == "executable":
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
-            if not sys.platform == "win32":
+            if sys.platform != "win32":
                 self.instance.program = "sh"
                 self.instance.args.append(batch_path)
             else:

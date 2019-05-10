@@ -22,7 +22,6 @@ from datapackage import Package
 from spinedb_api import SpineDBAPIError, DiffDatabaseMapping, \
     create_new_spine_database
 from helpers import busy_effect
-import logging
 
 
 class Signaler(QObject):
@@ -268,8 +267,6 @@ class DatapackageToSpineConverter(QRunnable):
 @busy_effect
 def datapackage_to_spine(db_map, datapackage_file_path):
     """Convert datapackage from `datapackage_file_path` into Spine `db_map`."""
-    insert_log = []
-    error_log = []
     datapackage = Package(datapackage_file_path)
     object_class_names = [x.name for x in db_map.object_class_list()]
     parameter_names = [x.name for x in db_map.parameter_list()]

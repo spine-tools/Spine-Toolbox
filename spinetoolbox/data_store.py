@@ -101,7 +101,7 @@ class DataStore(ProjectItem):
         """Save selections and disconnect signals."""
         self.save_selections()
         if not super().disconnect_signals():
-            logging.error("Item {0} deactivation failed".format(self.name))
+            logging.error("Item %s deactivation failed", self.name)
             return False
         return True
 
@@ -153,6 +153,7 @@ class DataStore(ProjectItem):
         return self._project
 
     def set_icon(self, icon):
+        """Set the icon."""
         self._graphics_item = icon
 
     def get_icon(self):
@@ -255,7 +256,7 @@ class DataStore(ProjectItem):
             return
         if self.selected_dialect == 'mssql':
             if not self.selected_dsn:
-                return None
+                return
             dsn = self.selected_dsn
             username = self.selected_username
             password = self.selected_password
@@ -269,19 +270,19 @@ class DataStore(ProjectItem):
         elif self.selected_dialect == 'sqlite':
             sqlite_file = self.selected_sqlite_file
             if not sqlite_file:
-                return None
+                return
             if not os.path.isfile(sqlite_file):
-                return None
+                return
             url = 'sqlite:///{0}'.format(sqlite_file)
             database = os.path.basename(self.selected_sqlite_file)
             username = getpass.getuser()
         else:
             host = self.selected_host
             if not host:
-                return None
+                return
             database = self.selected_db
             if not database:
-                return None
+                return
             port = self.selected_port
             username = self.selected_username
             password = self.selected_password
@@ -393,7 +394,7 @@ class DataStore(ProjectItem):
             msg.setInformativeText("Do you want to install it using pip or conda?")
             pip_button = msg.addButton("pip", QMessageBox.YesRole)
             conda_button = msg.addButton("conda", QMessageBox.NoRole)
-            cancel_button = msg.addButton("Cancel", QMessageBox.RejectRole)
+            msg.addButton("Cancel", QMessageBox.RejectRole)
             msg.exec_()  # Show message box
             if msg.clickedButton() == pip_button:
                 if not self.install_dbapi_pip(dbapi):
@@ -442,10 +443,10 @@ class DataStore(ProjectItem):
             return False
         try:
             self._toolbox.msg.emit("Installing module <b>{0}</b> using Conda".format(dbapi))
-            conda.cli.main('conda', 'install',  '-y', dbapi)
+            conda.cli.main('conda', 'install', '-y', dbapi)
             self._toolbox.msg_success.emit("Module <b>{0}</b> successfully installed".format(dbapi))
             return True
-        except Exception as e:
+        except Exception:
             self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
             return False
 
@@ -591,6 +592,7 @@ class DataStore(ProjectItem):
 
     @Slot(name="tree_view_form_destroyed")
     def tree_view_form_destroyed(self):
+        """Notify that tree view form has been destroyed."""
         self.tree_view_form = None
 
     @Slot(bool, name="open_graph_view")
@@ -605,7 +607,7 @@ class DataStore(ProjectItem):
                 if self.graph_view_form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
                     self.graph_view_form.setWindowState(self.graph_view_form.windowState()
-                                                       & ~Qt.WindowMinimized | Qt.WindowActive)
+                                                        & ~Qt.WindowMinimized | Qt.WindowActive)
                     self.graph_view_form.activateWindow()
                 else:
                     self.graph_view_form.raise_()
@@ -629,6 +631,7 @@ class DataStore(ProjectItem):
 
     @Slot(name="graph_view_form_destroyed")
     def graph_view_form_destroyed(self):
+        """Notify that graph view form has been destroyed."""
         self.graph_view_form = None
 
     @Slot(bool, name="open_tabular_view")
@@ -638,7 +641,7 @@ class DataStore(ProjectItem):
             if self.tabular_view_form.windowState() & Qt.WindowMinimized:
                 # Remove minimized status and restore window with the previous state (maximized/normal state)
                 self.tabular_view_form.setWindowState(self.tabular_view_form.windowState()
-                                                    & ~Qt.WindowMinimized | Qt.WindowActive)
+                                                      & ~Qt.WindowMinimized | Qt.WindowActive)
                 self.tabular_view_form.activateWindow()
             else:
                 self.tabular_view_form.raise_()

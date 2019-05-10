@@ -78,14 +78,6 @@ class SpineToolboxProject(MetaObject):
         # Update file name and path
         self.change_filename(self.short_name + ".proj")
 
-    def set_description(self, desc):
-        """Change project description. Calls superclass method.
-
-        Args:
-            desc (str): Project description
-        """
-        super().set_description(desc)
-
     def change_filename(self, new_filename):
         """Change the save filename associated with this project.
 
@@ -179,7 +171,6 @@ class SpineToolboxProject(MetaObject):
         project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
         project_dict["scene_h"] = self._toolbox.ui.graphicsView.scene().sceneRect().height()
         item_dict = dict()  # Dictionary for storing project items
-        n = 0
         # Traverse all items in project model by category
         category_names = [category_item.name for category_item in self._toolbox.project_item_model.root().children()]
         for category in category_names:
@@ -209,7 +200,7 @@ class SpineToolboxProject(MetaObject):
                 elif item.item_type == "View":
                     pass
                 else:
-                    logging.error("Unrecognized item type: {0}".format(item.item_type))
+                    logging.error("Unrecognized item type: %s", item.item_type)
         # Save project to file
         saved_dict['project'] = project_dict
         saved_dict['objects'] = item_dict
@@ -236,7 +227,6 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Project has no items")
         # Recreate Data Stores
         for name in data_stores.keys():
-            short_name = data_stores[name]['short name']
             desc = data_stores[name]['description']
             try:
                 ref = data_stores[name]["reference"]
@@ -258,7 +248,6 @@ class SpineToolboxProject(MetaObject):
             self.add_data_store(name, desc, ref, x, y, verbosity=False)
         # Recreate Data Connections
         for name in data_connections.keys():
-            short_name = data_connections[name]['short name']
             desc = data_connections[name]['description']
             try:
                 refs = data_connections[name]["references"]
@@ -274,7 +263,6 @@ class SpineToolboxProject(MetaObject):
             self.add_data_connection(name, desc, refs, x, y, verbosity=False)
         # Recreate Tools
         for name in tools.keys():
-            short_name = tools[name]['short name']
             desc = tools[name]['description']
             tool_name = tools[name]['tool']
             # Find tool template from model
@@ -297,7 +285,6 @@ class SpineToolboxProject(MetaObject):
             self.add_tool(name, desc, tool_template, execute_in_work, x, y, verbosity=False)
         # Recreate Views
         for name in views.keys():
-            short_name = views[name]['short name']
             desc = views[name]['description']
             try:
                 x = views[name]["x"]
