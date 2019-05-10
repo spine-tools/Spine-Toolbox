@@ -910,7 +910,7 @@ class MinimalTableModel(QAbstractTableModel):
         if not labels:
             return
         self.header = labels
-        self.aux_header = [{} for i in range(len(labels))]
+        self.aux_header = len(labels) * [{}]
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
 
     def insert_horizontal_header_labels(self, section, labels):
@@ -1553,7 +1553,7 @@ class RelationshipTreeModel(QStandardItemModel):
 class ObjectTreeModel(QStandardItemModel):
     """A class to display Spine data structure in a treeview
     with object classes at the outer level.
-    ."""
+    """
 
     def __init__(self, tree_view_form):
         """Initialize class"""

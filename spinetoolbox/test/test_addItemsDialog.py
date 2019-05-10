@@ -23,7 +23,6 @@ import os
 import sys
 from PySide2.QtWidgets import QApplication, QToolButton
 from widgets.data_store_widgets import TreeViewForm
-from spinedb_api import DiffDatabaseMapping, create_new_spine_database
 from widgets.custom_qdialog import AddObjectClassesDialog
 
 
@@ -64,8 +63,8 @@ class TestAddItemsDialog(unittest.TestCase):
         """
         dialog = AddObjectClassesDialog(self.tree_view_form)
         self.assertEqual(dialog.model.rowCount(), 1)
-        self.assertEqual(dialog.model.columnCount(), 3)
-        button_index = dialog.model.index(0, 2)
+        self.assertEqual(dialog.model.columnCount(), 4)
+        button_index = dialog.model.index(0, 3)
         button = dialog.table_view.indexWidget(button_index)
         self.assertTrue(isinstance(button, QToolButton))
 
