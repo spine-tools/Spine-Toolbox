@@ -966,7 +966,7 @@ class MinimalTableModel(QAbstractTableModel):
         try:
             return self._main_data[index.row()][index.column()]
         except IndexError:
-            logging.error(index)
+            logging.error("Cannot access model data at index %s", index)
             return None
 
     def row_data(self, row, role=Qt.DisplayRole):
