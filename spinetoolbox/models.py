@@ -2529,6 +2529,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
             rows = list(relationships_to_add.keys())
             relationships, error_log = self._parent.db_map.add_wide_relationships(*items)
             self._parent._tree_view_form.object_tree_model.add_relationships(relationships)
+            self._parent._tree_view_form.relationship_tree_model.add_relationships(relationships)
             self.error_log.extend(error_log)
             return dict(zip(rows, [x.id for x in relationships]))
         except SpineDBAPIError as e:
