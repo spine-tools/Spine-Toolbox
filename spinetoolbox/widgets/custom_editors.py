@@ -415,6 +415,7 @@ class CheckListEditor(QTableView):
             else:
                 qitem.setCheckState(Qt.Unchecked)
             qitem.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsUserCheckable)
+            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)
             self.model.appendRow(qitem)
         self.selectionModel().select(self.model.index(0, 0), QItemSelectionModel.Select)
 

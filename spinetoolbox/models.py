@@ -910,7 +910,8 @@ class MinimalTableModel(QAbstractTableModel):
         if not labels:
             return
         self.header = labels
-        self.aux_header = len(labels) * [{}]
+        # self.aux_header = len(labels) * [{}]  # Doesn't work, dicts need to be independent
+        self.aux_header = [{} for _ in range(len(labels))]
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
 
     def insert_horizontal_header_labels(self, section, labels):
@@ -933,6 +934,8 @@ class MinimalTableModel(QAbstractTableModel):
         """Sets the data for the given role and section in the header
         with the specified orientation to the value supplied.
         """
+        if orientation != Qt.Horizontal:
+            return False
         if role != Qt.EditRole:
             try:
                 self.aux_header[section][role] = value
@@ -940,14 +943,12 @@ class MinimalTableModel(QAbstractTableModel):
                 return True
             except IndexError:
                 return False
-        if orientation == Qt.Horizontal:
-            try:
-                self.header[section] = value
-                self.headerDataChanged.emit(orientation, section, section)
-                return True
-            except IndexError:
-                return False
-        return False
+        try:
+            self.header[section] = value
+            self.headerDataChanged.emit(orientation, section, section)
+            return True
+        except IndexError:
+            return False
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index.
@@ -1140,7 +1141,7 @@ class MinimalTableModel(QAbstractTableModel):
         self.endRemoveColumns()
         return True
 
-    def reset_model(self, main_data=None, aux_data=None):
+    def reset_model(self, main_data=None):
         """Reset model."""
         if main_data is None:
             main_data = list()
@@ -2528,6 +2529,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
             rows = list(relationships_to_add.keys())
             relationships, error_log = self._parent.db_map.add_wide_relationships(*items)
             self._parent._tree_view_form.object_tree_model.add_relationships(relationships)
+            self._parent._tree_view_form.relationship_tree_model.add_relationships(relationships)
             self.error_log.extend(error_log)
             return dict(zip(rows, [x.id for x in relationships]))
         except SpineDBAPIError as e:

@@ -19,9 +19,9 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 import time
 import logging
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
-from widgets.custom_qwidgets import AutoFilterWidget
+from widgets.custom_menus import AutoFilterMenu
 from models import TableModel
 
 
@@ -192,12 +192,19 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent=parent)
-        self.filter_action_list = list()
-        self.action_all = None
-        self.filter_text = None
-        self.filter_column = None
-        self.auto_filter_widget = AutoFilterWidget(self)
-        self.auto_filter_widget.data_committed.connect(self.update_auto_filter)
+        self.auto_filter_column = None
+        self.auto_filter_menu = AutoFilterMenu(self)
+        self.auto_filter_menu.asc_sort_triggered.connect(self.sort_model_ascending)
+        self.auto_filter_menu.desc_sort_triggered.connect(self.sort_model_descending)
+        self.auto_filter_menu.filter_triggered.connect(self.update_auto_filter)
+
+    def keyPressEvent(self, event):
+        if event.modifiers() == Qt.AltModifier and event.key() == Qt.Key_Down:
+            column = self.currentIndex().column()
+            self.toggle_auto_filter(column)
+            event.accept
+        else:
+            super().keyPressEvent(event)
 
     def setModel(self, model):
         """Disconnect sectionPressed signal, only connect it to show_filter_menu slot.
@@ -210,24 +217,33 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
     def toggle_auto_filter(self, logical_index):
         """Called when user clicks on a horizontal section header.
         Show/hide the auto filter widget."""
-        tic = time.clock()
-        self.filter_column = logical_index
+        tic = time.process_time()
+        self.auto_filter_column = logical_index
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
-        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.auto_filter_column)
         pos_y = header_pos.y() + self.horizontalHeader().height()
         width = self.horizontalHeader().sectionSize(logical_index)
         values = self.model().auto_filter_values(logical_index)
-        self.auto_filter_widget.set_values(values)
-        self.auto_filter_widget.move(pos_x, pos_y)
-        self.auto_filter_widget.show(min_width=width)
-        toc = time.clock()
+        self.auto_filter_menu.set_values(values)
+        self.auto_filter_menu.popup(QPoint(pos_x, pos_y), width)
+        toc = time.process_time()
         # logging.debug("Filter populated in {} seconds".format(toc - tic))
 
     @Slot(name="update_auto_filter")
     def update_auto_filter(self):
-        """Called when the user clicks the Ok button in the auto filter widget.
+        """Called when the user selects Ok in the auto filter menu.
         Set 'filtered out values' in auto filter model."""
-        self.model().set_filtered_out_values(self.filter_column, self.auto_filter_widget.checked_values)
+        self.model().set_filtered_out_values(self.auto_filter_column, self.auto_filter_menu.unchecked_values)
+
+    @Slot(name="sort_model_ascending")
+    def sort_model_ascending(self):
+        """Called when the user selects sort ascending in the auto filter widget."""
+        self.model().sort(self.auto_filter_column, Qt.AscendingOrder)
+
+    @Slot(name="sort_model_descending")
+    def sort_model_descending(self):
+        """Called when the user selects sort descending in the auto filter widget."""
+        self.model().sort(self.auto_filter_column, Qt.DescendingOrder)
 
 
 class FrozenTableView(QTableView):
