@@ -19,7 +19,7 @@ Functions to import and export from excel to spine database.
 # TODO: PEP8: Do not use bare except. Too broad exception clause
 
 from collections import namedtuple
-from itertools import groupby, islice
+from itertools import groupby, islice, takewhile
 import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
@@ -763,7 +763,7 @@ def read_json_sheet(ws, sheet_type):
         for objects, parameter, data_list in zip(obj_path, parameters, data):
             # save values if there is json data, a parameter name
             # and the obj_path doesn't contain None.
-            packed_json = json.dumps(data_list)
+            packed_json = json.dumps(list(takewhile(lambda x: x is not None, data_list)))
             json_data.append(Data._make(["json"] + objects + [parameter, packed_json]))
 
     return SheetData(sheet_name=ws.title,

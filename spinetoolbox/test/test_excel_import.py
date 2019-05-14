@@ -203,8 +203,7 @@ class TestExcelIntegration(unittest.TestCase):
         parv_org = db2.parameter_value_list().all()
         parv_org = set((par_org[p.parameter_definition_id][0], p.value, ol_id_org[p.object_id] if p.object_id else None,
                         rel_org[p.relationship_id][1] if p.relationship_id else None) for p in parv_org)
-        self.assertEqual(set(par.values()), set(
-            par_org.values()), msg='Difference in parameter values')
+        self.assertEqual(parv, parv_org, msg='Difference in parameter values')
 
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""
