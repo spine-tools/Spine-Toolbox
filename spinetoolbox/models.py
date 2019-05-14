@@ -4004,7 +4004,7 @@ class RelationshipParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
     def auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=None):
         """Accept or reject row."""
         if ignored_columns is None:
-            ignoredColumns = list()
+            ignored_columns = list()
         for column, values in self.filtered_out.items():
             if column in ignored_columns:
                 continue
