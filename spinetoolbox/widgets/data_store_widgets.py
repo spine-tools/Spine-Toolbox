@@ -2421,8 +2421,10 @@ class GraphViewForm(DataStoreForm):
                 sets.append(s2)
         return sets
 
-    def vertex_coordinates(self, matrix, heavy_positions={}, iterations=10, weight_exp=-2, initial_diameter=1000):
+    def vertex_coordinates(self, matrix, heavy_positions=None, iterations=10, weight_exp=-2, initial_diameter=1000):
         """Return x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
+        if heavy_positions is None:
+            heavy_positions = dict()
         N = len(matrix)
         if N == 1:
             return [0], [0]
@@ -2489,7 +2491,6 @@ class GraphViewForm(DataStoreForm):
             j = self.dst_ind_list[k]
             object_id_list = self.arc_object_id_lists[k]
             relationship_class_id = self.arc_relationship_class_ids[k]
-            object_class_names = self.arc_object_class_name_lists[k]
             label_object_names = self.arc_label_object_name_lists[k]
             label_object_class_names = self.arc_label_object_class_name_lists[k]
             label_parts = self.relationship_graph(
@@ -2727,8 +2728,10 @@ class GraphViewForm(DataStoreForm):
     def relationship_graph(
             self, object_name_list, object_class_name_list,
             extent, spread, label_font, label_color,
-            object_class_id_list=[], relationship_class_id=None):
+            object_class_id_list=None, relationship_class_id=None):
         """Lists of object and arc items that form a relationship."""
+        if object_class_id_list is None:
+            object_class_id_list = list()
         object_items = list()
         arc_items = list()
         src_ind_list = list(range(len(object_name_list)))
@@ -2767,11 +2770,6 @@ class GraphViewForm(DataStoreForm):
         super().add_object_classes(object_classes)
         for object_class in object_classes:
             self.object_class_list_model.add_object_class(object_class)
-
-    def show_add_relationship_classes_form(self):
-        """Show dialog to let user select preferences for new relationship class."""
-        dialog = AddRelationshipClassesDialog(self)
-        dialog.show()
 
     def add_relationship_classes(self, wide_relationship_classes):
         """Insert new relationship classes."""

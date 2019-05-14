@@ -23,7 +23,7 @@ import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, \
-    QStyle, QFileIconProvider, QMessageBox
+    QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
@@ -245,7 +245,7 @@ class ToolTemplateWidget(QWidget):
             QMessageBox.information(self, "Creating file failed", msg)
             return
         try:
-            with open(file_path, "w") as fp:
+            with open(file_path, "w"):
                 self.statusbar.showMessage("New main program file {0} now available".format(file_path), 8000)
         except OSError:
             msg = "Please check directory permissions."
@@ -273,7 +273,7 @@ class ToolTemplateWidget(QWidget):
         except OSError:
             pass
         try:
-            with open(file_path, "w") as fp:
+            with open(file_path, "w"):
                 logging.debug("Created file:{0}".format(file_path))
         except OSError:
             msg = "Please check directory permissions."

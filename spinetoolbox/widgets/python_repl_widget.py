@@ -16,7 +16,6 @@ Class for a custom RichJupyterWidget to use as Python REPL.
 :date:   14.3.2019
 """
 
-import logging
 import subprocess
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QAction, QMessageBox
@@ -101,7 +100,6 @@ class PythonReplWidget(RichJupyterWidget):
             # The version str might be in stderr instead of stdout (happens at least with Python 2.7.14)
             python_version_str = q_process.error_output
         p_v_list = python_version_str.split()
-        python_str = p_v_list[0]  # This is just 'Python'
         ver = p_v_list[1]  # version e.g. 3.7.1
         kernel_name = "python-" + ver[:3]
         kernel_display_name = "Python-" + ver

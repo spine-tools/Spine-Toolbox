@@ -16,7 +16,6 @@ Widget for controlling user settings.
 :date:   17.1.2018
 """
 
-import logging
 import os
 from PySide2.QtWidgets import QWidget, QStyle, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt

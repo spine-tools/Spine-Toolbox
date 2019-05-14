@@ -40,19 +40,19 @@ class ItemToolBar(QToolBar):
         # DS
         data_store_pixmap = QIcon(":/icons/project_item_icons/database.svg").pixmap(24, 24)
         data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
-        data_store_action = self.addWidget(data_store_widget)
+        self.addWidget(data_store_widget)
         # DC
         data_connection_pixmap = QIcon(":/icons/project_item_icons/file-alt.svg").pixmap(24, 24)
         data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
-        data_connection_action = self.addWidget(data_connection_widget)
+        self.addWidget(data_connection_widget)
         # Tool
         tool_pixmap = QIcon(":/icons/project_item_icons/hammer.svg").pixmap(24, 24)
         tool_widget = DraggableWidget(self, tool_pixmap, "Tool")
-        tool_action = self.addWidget(tool_widget)
+        self.addWidget(tool_widget)
         # View
         view_pixmap = QIcon(":/icons/project_item_icons/binoculars.svg").pixmap(24, 24)
         view_widget = DraggableWidget(self, view_pixmap, "View")
-        view_action = self.addWidget(view_widget)
+        self.addWidget(view_widget)
         # set remove all action
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
         # remove_all = QAction(remove_all_icon, "Remove All", parent)
@@ -111,7 +111,7 @@ class DraggableWidget(QLabel):
         drag.setMimeData(mimeData)
         drag.setPixmap(self.pixmap())
         drag.setHotSpot(self.pixmap().rect().center())
-        dropAction = drag.exec_()
+        drag.exec_()
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""

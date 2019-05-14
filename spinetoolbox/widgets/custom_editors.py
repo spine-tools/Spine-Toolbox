@@ -18,12 +18,11 @@ Custom editors for model/view programming.
 """
 
 import json
-import logging
-from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
+from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, \
     QTimer, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
 from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
     QVBoxLayout, QTextEdit, QColorDialog, QDialog, QDialogButtonBox, QListView, QStyle, QLabel
-from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor, QIcon, QBrush
+from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 

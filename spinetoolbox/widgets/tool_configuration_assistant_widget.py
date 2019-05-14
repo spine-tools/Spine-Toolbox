@@ -16,16 +16,16 @@ Widget for assisting the user in configuring tools, such as SpineModel.
 :date:   9.1.2019
 """
 
-from PySide2.QtWidgets import QWidget, QStatusBar, QApplication
+from PySide2.QtWidgets import QWidget, QApplication
 from PySide2.QtGui import QCursor, QTextCursor
 from PySide2.QtCore import Slot, Qt
 import ui.tool_configuration_assistant
-from config import STATUSBAR_SS, TEXTBROWSER_SS
+from config import TEXTBROWSER_SS
 from tool_configuration_assistants import SpineModelConfigurationAssistant
 
 
 class ToolConfigurationAssistantWidget(QWidget):
-    """ A widget to assis the user in configuring external tools such as SpineModel.
+    """ A widget to assist the user in configuring external tools such as SpineModel.
 
     Attributes:
         toolbox (ToolboxUI): Parent widget.
@@ -133,7 +133,7 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.add_spine_model_error_msg("Installation failed. "
                                            "Make sure that Julia is correctly installed and try again.")
             return
-        self.add_spine_model_success_msg("PyCall succesfully installed.")
+        self.add_spine_model_success_msg("PyCall successfully installed.")
         self.end_spine_model_operation()
         self.check_spine_model_configuration()
 
@@ -146,7 +146,7 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.end_spine_model_operation()
             self.add_spine_model_error_msg("Installation failed.")
             return
-        self.add_spine_model_success_msg("spinedb_api succesfully installed.")
+        self.add_spine_model_success_msg("spinedb_api successfully installed.")
         self.end_spine_model_operation()
         self.check_spine_model_configuration()
 
@@ -232,7 +232,6 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.add_spine_model_error_msg("Check failed.")
             self.end_spine_model_operation()
             return
-        py_call_python_program = self.spine_model_config_asst.py_call_python_program
         if ret != 0:
             self.add_spine_model_error_msg("spinedb_api is not installed in PyCall's python.")
             anchor1 = "<a style='color:#99CCFF;' href='Install spinedb_api in PyCall python'>here</a>"
