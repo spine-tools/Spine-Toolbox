@@ -17,6 +17,7 @@ Unit tests for Excel import and export.
 """
 
 import os
+import tempfile
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock
@@ -27,9 +28,9 @@ from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, va
     import_xlsx_to_db
 
 UUID_STR = 'f7f92ced-faff-4315-900e-704d2a786a65'
-TEMP_EXCEL_FILENAME = UUID_STR + '-excel.xlsx'
-TEMP_SQLITE_FILENAME = UUID_STR + '-first.sqlite'
-TEMP_SQLITE_TEST_FILENAME = UUID_STR + '-second.sqlite'
+TEMP_EXCEL_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-excel.xlsx')
+TEMP_SQLITE_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-first.sqlite')
+TEMP_SQLITE_TEST_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-second.sqlite')
 
 
 class TestExcelIntegration(unittest.TestCase):
@@ -50,10 +51,7 @@ class TestExcelIntegration(unittest.TestCase):
             pass
 
     def setUp(self):
-        """Overridden method. Runs before each test.
-        """
-        self.delete_temp_files()
-
+        """Overridden method. Runs before each test."""
         # create a in memory database with objects, relationship, parameters and values
         create_new_spine_database('sqlite:///' + TEMP_SQLITE_FILENAME)
         db_map = DiffDatabaseMapping(
