@@ -56,21 +56,23 @@ class CopyPasteTableView(QTableView):
         selection = self.selectionModel().selection()
         if not selection:
             return False
-        # Take only the first selection in case of multiple selection.
-        first = selection.first()
-        rows = list()
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
-        for i in range(first.top(), first.bottom()+1):
-            if v_header.isSectionHidden(i):
-                continue
-            row = list()
-            for j in range(first.left(), first.right()+1):
-                if h_header.isSectionHidden(j):
+        row_dict = {}
+        for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
+            for i in range(rng.top(), rng.bottom() + 1):
+                if v_header.isSectionHidden(i):
                     continue
-                data = self.model().index(i, j).data(Qt.EditRole)
-                str_data = str(data) if data is not None else ""
-                row.append(str_data)
+                row = row_dict.setdefault(i, [])
+                for j in range(rng.left(), rng.right() + 1):
+                    if h_header.isSectionHidden(j):
+                        continue
+                    data = self.model().index(i, j).data(Qt.EditRole)
+                    str_data = str(data) if data is not None else ""
+                    row.append(str_data)
+        rows = list()
+        for key in sorted(row_dict):
+            row = row_dict[key]
             rows.append("\t".join(row))
         content = "\n".join(rows)
         QApplication.clipboard().setText(content)
@@ -103,9 +105,9 @@ class CopyPasteTableView(QTableView):
         indexes = list()
         values = list()
         is_row_hidden = self.verticalHeader().isSectionHidden
-        rows = [x for x in range(first.top(), first.bottom() + 1) if not is_row_hidden(x)]
+        rows = [x for r in selection for x in range(r.top(), r.bottom() + 1) if not is_row_hidden(x)]
         is_column_hidden = self.horizontalHeader().isSectionHidden
-        columns = [x for x in range(first.left(), first.right() + 1) if not is_column_hidden(x)]
+        columns = [x for r in selection for x in range(r.left(), r.right() + 1) if not is_column_hidden(x)]
         model_index = self.model().index
         for row in rows:
             for column in columns:
@@ -142,14 +144,16 @@ class CopyPasteTableView(QTableView):
             rows_append(row)
             row += 1
         column = current.column()
+        visual_column = self.horizontalHeader().visualIndex(column)
         columns = []
         columns_append = columns.append
-        is_column_hidden = self.horizontalHeader().isSectionHidden
+        h = self.horizontalHeader()
+        is_visual_column_hidden = lambda x: h.isSectionHidden(h.logicalIndex(x))
         for x in range(len(data[0])):
-            while is_column_hidden(column):
-                column += 1
-            columns_append(column)
-            column += 1
+            while is_visual_column_hidden(visual_column):
+                visual_column += 1
+            columns_append(h.logicalIndex(visual_column))
+            visual_column += 1
         # Insert extra rows if needed:
         last_row = max(rows)
         row_count = self.model().rowCount()
@@ -196,7 +200,6 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.auto_filter_menu.asc_sort_triggered.connect(self.sort_model_ascending)
         self.auto_filter_menu.desc_sort_triggered.connect(self.sort_model_descending)
         self.auto_filter_menu.filter_triggered.connect(self.update_auto_filter)
-        self.horizontalHeader().setSectionsMovable(True)
 
     def keyPressEvent(self, event):
         if event.modifiers() == Qt.AltModifier and event.key() == Qt.Key_Down:

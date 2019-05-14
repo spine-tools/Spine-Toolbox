@@ -329,6 +329,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
+        self.ui.tableView_object_parameter_value.horizontalHeader().setSectionsMovable(True)
 
     def init_relationship_parameter_value_view(self):
         """Init relationship parameter value view."""
@@ -345,6 +346,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionsMovable(True)
 
     def init_object_parameter_definition_view(self):
         """Init object parameter definition view."""
@@ -358,6 +360,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
+        self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionsMovable(True)
 
     def init_relationship_parameter_definition_view(self):
         """Init relationship parameter definition view."""
@@ -375,6 +378,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().setResizeContentsPrecision(
             self.visible_rows)
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().setSectionsMovable(True)
 
     def init_parameter_value_list_view(self):
         self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
