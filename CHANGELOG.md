@@ -15,6 +15,9 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Support for Python Tool templates
 - Python Tool execution using the command line approach.
 - Python Tool execution using the embedded Python Console (checkbox in Settings)
+- The Data Store treeview now also has a relationship tree.
+- Support for reordering columns in the treeview.
+- Selecting 'edit object classes' in the treeview now also allows the icon to be selected.
 
 ### Changed
 - Selecting the Julia environment in Settings now requires picking the Julia interpreter **file** 
