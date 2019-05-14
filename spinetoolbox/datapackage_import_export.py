@@ -82,7 +82,7 @@ class DatapackageToSpineConverter(QRunnable):
         step = 0
         self.signaler.progressed.emit(step, "")
         object_class_names = [x.name for x in self.db_map.object_class_list()]
-        parameter_names = [x.name for x in self.db_map.parameter_list()]
+        parameter_names = [x.name for x in self.db_map.parameter_definition_list()]
         object_class_name_lists = [
             x.object_class_name_list.split(",") for x in self.db_map.wide_relationship_class_list()]
         object_classes = list()
@@ -138,10 +138,10 @@ class DatapackageToSpineConverter(QRunnable):
             ) for p in pre_parameters
         ]
         self.signaler.progressed.emit(step, "Adding parameters...")
-        self.db_map.add_parameters(*parameters)
+        self.db_map.add_parameter_definitions(*parameters)
         step += self.parameter_count
         relationship_class_name_id = {x.name: x.id for x in self.db_map.wide_relationship_class_list()}
-        parameter_name_id = {x.name: x.id for x in self.db_map.parameter_list()}
+        parameter_name_id = {x.name: x.id for x in self.db_map.parameter_definition_list()}
         object_names = [x.name for x in self.db_map.object_list()]
         # Create list of object and preliminary parameter value dicts.
         objects = list()
@@ -269,7 +269,7 @@ def datapackage_to_spine(db_map, datapackage_file_path):
     """Convert datapackage from `datapackage_file_path` into Spine `db_map`."""
     datapackage = Package(datapackage_file_path)
     object_class_names = [x.name for x in db_map.object_class_list()]
-    parameter_names = [x.name for x in db_map.parameter_list()]
+    parameter_names = [x.name for x in db_map.parameter_definition_list()]
     object_class_name_lists = [x.object_class_name_list.split(",") for x in db_map.wide_relationship_class_list()]
     object_classes = list()
     pre_relationship_classes = list()
@@ -319,9 +319,9 @@ def datapackage_to_spine(db_map, datapackage_file_path):
             name=p['name']
         ) for p in pre_parameters
     ]
-    db_map.add_parameters(*parameters)
+    db_map.add_parameter_definitions(*parameters)
     relationship_class_name_id = {x.name: x.id for x in db_map.wide_relationship_class_list()}
-    parameter_name_id = {x.name: x.id for x in db_map.parameter_list()}
+    parameter_name_id = {x.name: x.id for x in db_map.parameter_definition_list()}
     object_names = [x.name for x in db_map.object_list()]
     # Create list of object and preliminary parameter value dicts.
     objects = list()

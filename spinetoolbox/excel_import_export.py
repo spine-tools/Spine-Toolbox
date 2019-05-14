@@ -25,7 +25,6 @@ from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 
 from spinedb_api import import_data
-import logging
 from operator import itemgetter
 
 

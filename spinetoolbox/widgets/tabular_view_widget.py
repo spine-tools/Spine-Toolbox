@@ -162,7 +162,7 @@ class TabularViewForm(QMainWindow):
     def load_class_data(self):
         self.object_classes = {oc.name: oc for oc in self.db_map.object_class_list().all()}
         self.relationship_classes = {rc.name: rc for rc in self.db_map.wide_relationship_class_list().all()}
-        self.parameters = {p.name: p for p in self.db_map.parameter_list().all()}
+        self.parameters = {p.name: p for p in self.db_map.parameter_definition_list().all()}
 
     def load_objects(self):
         self.objects = {o.name: o for o in self.db_map.object_list().all()}
@@ -406,10 +406,10 @@ class TabularViewForm(QMainWindow):
             elif k not in [JSON_TIME_NAME]:
                 new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
         if new_objects:
-            new_objects, error_log = self.db_map.add_objects(*new_objects)
+            self.db_map.add_objects(*new_objects)
             db_edited = True
         if new_parameters:
-            new_parameters, error_log = self.db_map.add_parameters(*new_parameters)
+            self.db_map.add_parameter_definitions(*new_parameters)
             db_edited = True
         return db_edited
 
@@ -474,7 +474,7 @@ class TabularViewForm(QMainWindow):
             add_indexes = self.model.model._added_index_entries
             obj_edited = self.add_index_values_to_db(add_indexes)
             if obj_edited:
-                self.parameters = {p.name: p for p in self.db_map.parameter_list().all()}
+                self.parameters = {p.name: p for p in self.db_map.parameter_definition_list().all()}
                 self.load_objects()
 
             if self.current_value_type == DATA_VALUE:
