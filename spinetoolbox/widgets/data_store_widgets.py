@@ -404,6 +404,7 @@ class DataStoreForm(QMainWindow):
         table_view.setItemDelegate(delegate)
 
     def all_selected_object_class_ids(self):
+        """Return object class ids selected in object tree *and* parameter tag toolbar."""
         tree_object_class_ids = self.selected_object_class_ids
         tag_object_class_ids = set(self.selected_obj_parameter_definition_ids.keys())
         if not tag_object_class_ids:
@@ -418,6 +419,7 @@ class DataStoreForm(QMainWindow):
                 return {None}
 
     def all_selected_relationship_class_ids(self):
+        """Return relationship class ids selected in relationship tree *and* parameter tag toolbar."""
         tree_relationship_class_ids = self.selected_relationship_class_ids
         tag_relationship_class_ids = set(self.selected_rel_parameter_definition_ids.keys())
         if not tag_relationship_class_ids:
@@ -432,6 +434,7 @@ class DataStoreForm(QMainWindow):
                 return {None}
 
     def do_update_filter(self):
+        """Apply filter on visible views."""
         if self.ui.dockWidget_object_parameter_value.isVisible():
             self.object_parameter_value_model.update_filter()
         if self.ui.dockWidget_object_parameter_definition.isVisible():
@@ -774,11 +777,21 @@ class DataStoreForm(QMainWindow):
 
     def restore_ui(self):
         """Restore UI state from previous session."""
-        window_size = self.qsettings().value("{0}/windowSize".format(self.settings_key))
-        window_pos = self.qsettings().value("{0}/windowPosition".format(self.settings_key))
-        window_state = self.qsettings().value("{0}/windowState".format(self.settings_key))
-        window_maximized = self.qsettings().value("{0}/windowMaximized".format(self.settings_key), defaultValue='false')
-        n_screens = self.qsettings().value("{0}/n_screens".format(self.settings_key), defaultValue=1)
+        self.qsettings().beginGroup(self.settings_group)
+        window_size = self.qsettings().value("windowSize")
+        window_pos = self.qsettings().value("windowPosition")
+        window_state = self.qsettings().value("windowState")
+        window_maximized = self.qsettings().value("windowMaximized", defaultValue='false')
+        n_screens = self.qsettings().value("n_screens", defaultValue=1)
+        h_state = self.qsettings().value("objParDefHeaderState")
+        self.ui.tableView_object_parameter_definition.horizontalHeader().restoreState(h_state)
+        h_state = self.qsettings().value("objParValHeaderState")
+        self.ui.tableView_object_parameter_value.horizontalHeader().restoreState(h_state)
+        h_state = self.qsettings().value("relParDefHeaderState")
+        self.ui.tableView_relationship_parameter_definition.horizontalHeader().restoreState(h_state)
+        h_state = self.qsettings().value("relParValHeaderState")
+        self.ui.tableView_relationship_parameter_value.horizontalHeader().restoreState(h_state)
+        self.qsettings().endGroup()
         if window_size:
             self.resize(window_size)
         if window_pos:
@@ -799,13 +812,23 @@ class DataStoreForm(QMainWindow):
             event (QEvent): Closing event if 'X' is clicked.
         """
         # save qsettings
-        self.qsettings().setValue("{0}/windowSize".format(self.settings_key), self.size())
-        self.qsettings().setValue("{0}/windowPosition".format(self.settings_key), self.pos())
-        self.qsettings().setValue("{0}/windowState".format(self.settings_key), self.saveState(version=1))
+        self.qsettings().beginGroup(self.settings_group)
+        self.qsettings().setValue("windowSize", self.size())
+        self.qsettings().setValue("windowPosition", self.pos())
+        self.qsettings().setValue("windowState", self.saveState(version=1))
+        h = self.ui.tableView_object_parameter_definition.horizontalHeader()
+        self.qsettings().setValue("objParDefHeaderState", h.saveState())
+        h = self.ui.tableView_object_parameter_value.horizontalHeader()
+        self.qsettings().setValue("objParValHeaderState", h.saveState())
+        h = self.ui.tableView_relationship_parameter_definition.horizontalHeader()
+        self.qsettings().setValue("relParDefHeaderState", h.saveState())
+        h = self.ui.tableView_relationship_parameter_value.horizontalHeader()
+        self.qsettings().setValue("relParValHeaderState", h.saveState())
         if self.windowState() == Qt.WindowMaximized:
-            self.qsettings().setValue("{0}/windowMaximized".format(self.settings_key), True)
+            self.qsettings().setValue("windowMaximized", True)
         else:
-            self.qsettings().setValue("{0}/windowMaximized".format(self.settings_key), False)
+            self.qsettings().setValue("windowMaximized", False)
+        self.qsettings().endGroup()
         if self.db_map.has_pending_changes():
             self.show_commit_session_prompt()
         if event:
@@ -854,7 +877,7 @@ class TreeViewForm(DataStoreForm):
         self.fully_expand_icon = QIcon(":/icons/menu_icons/angle-double-right.svg")
         self.fully_collapse_icon = QIcon(":/icons/menu_icons/angle-double-left.svg")
         self.find_next_icon = QIcon(":/icons/menu_icons/ellipsis-h.png")
-        self.settings_key = 'treeViewWidget'
+        self.settings_group = 'treeViewWidget'
         self.do_clear_selections = True
         self.restore_dock_widgets()
         # init models and views
@@ -2044,7 +2067,7 @@ class GraphViewForm(DataStoreForm):
         self.add_toggle_view_actions()
         self.setup_zoom_action()
         self.connect_signals()
-        self.settings_key = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
+        self.settings_group = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
         self.init_commit_rollback_actions()
         title = database + " (read only) " if read_only else database

@@ -197,6 +197,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.auto_filter_menu.asc_sort_triggered.connect(self.sort_model_ascending)
         self.auto_filter_menu.desc_sort_triggered.connect(self.sort_model_descending)
         self.auto_filter_menu.filter_triggered.connect(self.update_auto_filter)
+        self.horizontalHeader().setSectionsMovable(True)
 
     def keyPressEvent(self, event):
         if event.modifiers() == Qt.AltModifier and event.key() == Qt.Key_Down:
