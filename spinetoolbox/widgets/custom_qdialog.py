@@ -190,7 +190,7 @@ class AddObjectClassesDialog(AddItemsDialog):
             kwargs = {
                 'name': name,
                 'description': description,
-                'display_icon': display_icon,
+                'display_icon': display_icon if display_icon else self.parent().icon_mngr.default_display_icon(),
                 'display_order': display_order
             }
             kwargs_list.append(kwargs)
@@ -668,7 +668,7 @@ class EditObjectClassesDialog(EditItemsDialog):
                 'id': id,
                 'name': name,
                 'description': description,
-                'display_icon': int(display_icon)
+                'display_icon': int(display_icon) if display_icon else self.parent().icon_mngr.default_display_icon()
             }
             kwargs_list.append(kwargs)
         if not kwargs_list:

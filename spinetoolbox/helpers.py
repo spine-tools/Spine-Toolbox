@@ -415,6 +415,9 @@ class IconManager:
         """Take tuple of icon and color codes, and return equivalent integer."""
         return icon_code + (color_code << 16)
 
+    def default_display_icon(self):
+        return self.display_icon(*self.icon_color_code(None))
+
     def setup_object_pixmaps(self, object_classes):
         for object_class in object_classes:
             self.create_object_pixmap(object_class.display_icon)
@@ -474,9 +477,7 @@ class IconManager:
 
 
 class CharIconEngine(QIconEngine):
-
     """Specialization of QIconEngine used to draw font-based icons."""
-
     def __init__(self, char, color):
         super().__init__()
         self.char = char
