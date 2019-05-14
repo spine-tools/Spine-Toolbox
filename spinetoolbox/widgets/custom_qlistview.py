@@ -17,7 +17,7 @@ Classes for custom QListView.
 """
 
 from PySide2.QtWidgets import QListView, QApplication, QListWidget, QAbstractItemView
-from PySide2.QtGui import QIcon, QPixmap, QDrag, QDropEvent
+from PySide2.QtGui import QDrag, QDropEvent
 from PySide2.QtCore import Qt, QMimeData, Signal
 
 
@@ -63,7 +63,7 @@ class DragListView(QListView):
         drag.setPixmap(self.pixmap)
         drag.setMimeData(self.mime_data)
         drag.setHotSpot(self.pixmap.rect().center())
-        dropAction = drag.exec_()
+        drag.exec_()
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None

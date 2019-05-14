@@ -16,11 +16,11 @@ Custom QWidgets for Filtering and Zooming.
 :date:   4.12.2018
 """
 
-from PySide2.QtWidgets import QWidget, QApplication, QVBoxLayout, QHBoxLayout, \
-    QMenu, QPushButton, QAction, QStyle, QToolBar, QStyleOptionMenuItem, \
-    QListView, QLineEdit, QDialogButtonBox, QToolButton, QWidgetAction
-from PySide2.QtCore import Qt, QTimer, Signal, Slot
-from PySide2.QtGui import QPixmap, QPainter, QStandardItem, QStandardItemModel
+from PySide2.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, \
+    QMenu, QAction, QStyle, QToolBar, QStyleOptionMenuItem, \
+    QListView, QLineEdit, QDialogButtonBox
+from PySide2.QtCore import QTimer, Signal
+from PySide2.QtGui import QPainter
 from tabularview_models import FilterCheckboxListModel
 
 

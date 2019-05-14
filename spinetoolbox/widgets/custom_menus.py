@@ -17,10 +17,10 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction, QWidget, QLineEdit, \
-    QTableView, QStyle
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget, QLineEdit, \
+    QTableView
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer, QTimeLine, QSortFilterProxyModel, \
+from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, \
     QItemSelectionModel
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
@@ -875,7 +875,7 @@ class AutoFilterMenu(QMenu):
         true_count = 0
         row_count = self.proxy_model.rowCount()
         for row in range(1, row_count):
-            if self.proxy_model.index(row, 0).data() == True:
+            if self.proxy_model.index(row, 0).data():
                 true_count += 1
         if true_count == row_count - 1:
             self.proxy_model.setData(all_index, True)

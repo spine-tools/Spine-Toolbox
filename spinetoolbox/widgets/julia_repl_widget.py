@@ -16,7 +16,6 @@ Class for a custom RichJupyterWidget to use as julia REPL.
 :date:   22.5.2018
 """
 
-import os
 import logging
 import qsubprocess
 from PySide2.QtWidgets import QMessageBox, QAction, QApplication

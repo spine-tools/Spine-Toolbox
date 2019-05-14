@@ -19,13 +19,12 @@ Functions to import and export from excel to spine database.
 # TODO: PEP8: Do not use bare except. Too broad exception clause
 
 from collections import namedtuple
-from itertools import groupby, islice
+from itertools import groupby, islice, takewhile
 import json
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 
 from spinedb_api import import_data
-import logging
 from operator import itemgetter
 
 
@@ -94,7 +93,7 @@ def get_objects_and_parameters(db):
     """
 
     # get all objects
-    obj = db.object_list().add_column(db.ObjectClass.name.label('class_name')).\
+    obj = db.object_list().add_columns(db.ObjectClass.name.label('class_name')).\
         filter(db.ObjectClass.id == db.Object.class_id).all()
 
     # get all object classes
@@ -104,7 +103,7 @@ def get_objects_and_parameters(db):
     pval = db.object_parameter_value_list().all()
 
     # get all parameter definitions
-    par = db.object_parameter_list().all()
+    par = db.object_parameter_definition_list().all()
 
     # make all in same format
     par = [(p.object_class_name, None, p.parameter_name, None) for p in par]
@@ -143,7 +142,7 @@ def get_relationships_and_parameters(db):
 
     rel_class = db.wide_relationship_class_list().all()
     rel = db.wide_relationship_list().all()
-    rel_par = db.relationship_parameter_list().all()
+    rel_par = db.relationship_parameter_definition_list().all()
     rel_par_value = db.relationship_parameter_value_list().all()
 
     rel_class_id_2_name = {rc.id: rc.name for rc in rel_class}
@@ -331,7 +330,7 @@ def get_unstacked_relationships(db):
         if rel:
             parameters = par_names[2:]
         else:
-            parameters = list({[p[2] for p in values]})
+            parameters = list(set([p[2] for p in values]))
         rel = [r[1].split(',') + list(r[2:]) for r in rel]
         object_classes = class_2_obj_list[k]
         stacked_rels.append([k, rel, object_classes, parameters])
@@ -372,7 +371,7 @@ def get_unstacked_objects(db):
         if obj:
             parameters = par_names[2:]
         else:
-            parameters = list({[p[2] for p in values if p[2] is not None]})
+            parameters = list(set([p[2] for p in values if p[2] is not None]))
         obj = [[o[1]] + list(o[2:]) for o in obj]
         object_classes = [k]
         stacked_obj.append([k, obj, object_classes, parameters])
@@ -535,7 +534,15 @@ def read_spine_xlsx(filepath):
     Args:
         filepath (str): str with filepath to excel file to read from.
     """
-    wb = load_workbook(filepath, read_only=True)
+
+    #
+
+    # read_only=true doesn't seem to close the file properly, possible solution if
+    # speed is needed is to do following:
+    # with open(xlsx_filename, "rb") as f:
+    #   in_mem_file = io.BytesIO(f.read())
+    #       wb = load_workbook(in_mem_file, read_only=True)
+    wb = load_workbook(filepath, read_only=False)
     sheets = wb.sheetnames
     ErrorLogMsg = namedtuple('ErrorLogMsg',('msg','db_type','imported_from','other'))
 
@@ -763,7 +770,7 @@ def read_json_sheet(ws, sheet_type):
         for objects, parameter, data_list in zip(obj_path, parameters, data):
             # save values if there is json data, a parameter name
             # and the obj_path doesn't contain None.
-            packed_json = json.dumps(data_list)
+            packed_json = json.dumps(list(takewhile(lambda x: x is not None, data_list)))
             json_data.append(Data._make(["json"] + objects + [parameter, packed_json]))
 
     return SheetData(sheet_name=ws.title,

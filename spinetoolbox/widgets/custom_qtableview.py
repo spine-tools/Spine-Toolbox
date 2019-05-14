@@ -17,10 +17,9 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 """
 
 import time
-import logging
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
-from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
+from PySide2.QtGui import QKeySequence
 from widgets.custom_menus import AutoFilterMenu
 from models import TableModel
 
@@ -121,7 +120,7 @@ class CopyPasteTableView(QTableView):
         return True
 
     def paste_normal(self):
-        """Paste clipboard data, overwritting cells if needed"""
+        """Paste clipboard data, overwriting cells if needed"""
         text = self.clipboard_text.strip()
         if not text:
             return False
@@ -203,7 +202,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         if event.modifiers() == Qt.AltModifier and event.key() == Qt.Key_Down:
             column = self.currentIndex().column()
             self.toggle_auto_filter(column)
-            event.accept
+            event.accept()
         else:
             super().keyPressEvent(event)
 
@@ -218,7 +217,6 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
     def toggle_auto_filter(self, logical_index):
         """Called when user clicks on a horizontal section header.
         Show/hide the auto filter widget."""
-        tic = time.process_time()
         self.auto_filter_column = logical_index
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
         pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.auto_filter_column)
@@ -227,8 +225,6 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         values = self.model().auto_filter_values(logical_index)
         self.auto_filter_menu.set_values(values)
         self.auto_filter_menu.popup(QPoint(pos_x, pos_y), width)
-        toc = time.process_time()
-        # logging.debug("Filter populated in {} seconds".format(toc - tic))
 
     @Slot(name="update_auto_filter")
     def update_auto_filter(self):

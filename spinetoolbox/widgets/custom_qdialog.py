@@ -16,17 +16,15 @@ Classes for custom QDialogs to add and edit database items.
 :date:   13.5.2018
 """
 
-import logging
-from copy import deepcopy
-from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit, QLineEdit, \
+from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit, \
     QDialogButtonBox, QHeaderView, QAction, QApplication, QToolButton, QWidget, QLabel, \
-    QComboBox, QSpinBox, QStyle
-from PySide2.QtCore import Signal, Slot, Qt, QSize, QTimer
-from PySide2.QtGui import QFont, QFontMetrics, QIcon, QPixmap
+    QComboBox, QSpinBox
+from PySide2.QtCore import Slot, Qt, QSize
+from PySide2.QtGui import QIcon
 from spinedb_api import SpineDBAPIError
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
-    AddParameterEnumsDelegate, LineEditDelegate, IconColorDialogDelegate
+    LineEditDelegate, IconColorDialogDelegate
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect, format_string_list
 

@@ -120,7 +120,7 @@ class SpineDatapackageWidget(QMainWindow):
         file_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
         if os.path.exists(file_path):
             self.datapackage = CustomPackage(file_path)
-            msg = "Datapackage succesfully loaded from {}".format(file_path)
+            msg = "Datapackage successfully loaded from {}".format(file_path)
             self.msg.emit(msg)
             return True
         return self.infer_datapackage()
@@ -131,7 +131,7 @@ class SpineDatapackageWidget(QMainWindow):
         if ".csv" in [os.path.splitext(f)[1] for f in data_files]:
             self.datapackage = CustomPackage(base_path=self._data_connection.data_dir)
             self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
-            msg = "Datapackage succesfully inferred from {}".format(self._data_connection.data_dir)
+            msg = "Datapackage successfully inferred from {}".format(self._data_connection.data_dir)
             self.msg.emit(msg)
             return True
         self.msg_error.emit("Unable to infer a datapackage from <b>{0}</b>. "
@@ -466,13 +466,14 @@ class SpineDatapackageWidget(QMainWindow):
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
     @Slot("QModelIndex", "QModelIndex", "QVector<int>", name="_handle_foreign_keys_data_changed")
-    def _handle_foreign_keys_data_changed(self, top_left, bottom_right, roles=list()):
+    def _handle_foreign_keys_data_changed(self, top_left, bottom_right, roles=None):
         """Called when foreign keys data is updated in model.
         Update descriptor accordingly."""
+        if roles is None:
+            roles = list()
         if roles and Qt.EditRole not in roles:
             return
         resource = self.selected_resource_name
-        foreign_keys = self.datapackage.get_resource(resource).schema.foreign_keys
         anything_updated = False
         rows = range(top_left.row(), bottom_right.row() + 1)
         error_log = ""
@@ -637,7 +638,7 @@ class CustomPackage(Package):
             }
         }
         i = self.resource_names.index(resource_name)
-        foreign_keys = self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
+        self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
         if foreign_key in self.descriptor['resources'][i]['schema']['foreignKeys']:
             raise DataPackageException("Foreign key already in '{}' schema".format(resource_name))
         self.descriptor['resources'][i]['schema']['foreignKeys'].insert(row, foreign_key)
@@ -669,7 +670,7 @@ class CustomPackage(Package):
             }
         }
         try:
-            foreign_keys = self.descriptor['resources'][i]['schema']['foreignKeys']
+            self.descriptor['resources'][i]['schema']['foreignKeys']
         except KeyError:
             return
         try:

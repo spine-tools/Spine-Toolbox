@@ -2586,7 +2586,7 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
                 if parameter_tag_id_list is None:
                     continue
                 name_tag_dict[item["name"]] = parameter_tag_id_list
-            parameters, error_log = self._parent.db_map.add_parameters(*items)
+            parameters, error_log = self._parent.db_map.add_parameter_definitions(*items)
             self.added_rows = list(items_to_add.keys())
             self.error_log.extend(error_log)
             id_column = self._parent.horizontal_header_labels().index('id')

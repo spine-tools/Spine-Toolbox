@@ -17,6 +17,7 @@ Unit tests for Excel import and export.
 """
 
 import os
+import tempfile
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock
@@ -27,9 +28,9 @@ from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, va
     import_xlsx_to_db
 
 UUID_STR = 'f7f92ced-faff-4315-900e-704d2a786a65'
-TEMP_EXCEL_FILENAME = UUID_STR + '-excel.xlsx'
-TEMP_SQLITE_FILENAME = UUID_STR + '-first.sqlite'
-TEMP_SQLITE_TEST_FILENAME = UUID_STR + '-second.sqlite'
+TEMP_EXCEL_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-excel.xlsx')
+TEMP_SQLITE_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-first.sqlite')
+TEMP_SQLITE_TEST_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-second.sqlite')
 
 
 class TestExcelIntegration(unittest.TestCase):
@@ -50,10 +51,7 @@ class TestExcelIntegration(unittest.TestCase):
             pass
 
     def setUp(self):
-        """Overridden method. Runs before each test.
-        """
-        self.delete_temp_files()
-
+        """Overridden method. Runs before each test."""
         # create a in memory database with objects, relationship, parameters and values
         create_new_spine_database('sqlite:///' + TEMP_SQLITE_FILENAME)
         db_map = DiffDatabaseMapping(
@@ -82,10 +80,13 @@ class TestExcelIntegration(unittest.TestCase):
         # create object classes
         oc_1 = db_map.add_object_class(**{'name': 'object_class_1'})
         oc_2 = db_map.add_object_class(**{'name': 'object_class_2'})
+        oc_3 = db_map.add_object_class(**{'name': 'object_class_3'})
 
         # create relationship classes
         relc1 = db_map.add_wide_relationship_class(
             **{'name': 'relationship_class', 'object_class_id_list': [oc_1.id, oc_2.id]})
+        relc2 = db_map.add_wide_relationship_class(
+            **{'name': 'relationship_class2', 'object_class_id_list': [oc_1.id, oc_2.id]})
 
         # create objects
         oc1_obj1 = db_map.add_object(
@@ -102,24 +103,25 @@ class TestExcelIntegration(unittest.TestCase):
             **{'name': 'rel1', 'class_id': relc1.id, 'object_id_list': [oc1_obj1.id, oc2_obj1.id]})
         rel2 = db_map.add_wide_relationship(
             **{'name': 'rel2', 'class_id': relc1.id, 'object_id_list': [oc1_obj2.id, oc2_obj2.id]})
+        
 
         # create parameters
-        p1 = db_map.add_parameter(
-            **{'name': 'parameter1', 'object_class_id': oc_1.id})
-        p2 = db_map.add_parameter(
-            **{'name': 'parameter2', 'object_class_id': oc_1.id})
-        p3 = db_map.add_parameter(
-            **{'name': 'parameter3', 'object_class_id': oc_2.id})
-        p4 = db_map.add_parameter(
-            **{'name': 'parameter4', 'object_class_id': oc_2.id})
-        rel_p1 = db_map.add_parameter(
-            **{'name': 'rel_parameter1', 'relationship_class_id': relc1.id})
-        rel_p2 = db_map.add_parameter(
-            **{'name': 'rel_parameter2', 'relationship_class_id': relc1.id})
-        rel_p3 = db_map.add_parameter(
-            **{'name': 'rel_parameter3', 'relationship_class_id': relc1.id})
-        rel_p4 = db_map.add_parameter(
-            **{'name': 'rel_parameter4', 'relationship_class_id': relc1.id})
+        p1 = db_map.add_parameter_definitions(
+            *[{'name': 'parameter1', 'object_class_id': oc_1.id}])[0].first()
+        p2 = db_map.add_parameter_definitions(
+            *[{'name': 'parameter2', 'object_class_id': oc_1.id}])[0].first()
+        p3 = db_map.add_parameter_definitions(
+            *[{'name': 'parameter3', 'object_class_id': oc_2.id}])[0].first()
+        p4 = db_map.add_parameter_definitions(
+            *[{'name': 'parameter4', 'object_class_id': oc_2.id}])[0].first()
+        rel_p1 = db_map.add_parameter_definitions(
+            *[{'name': 'rel_parameter1', 'relationship_class_id': relc1.id}])[0].first()
+        rel_p2 = db_map.add_parameter_definitions(
+            *[{'name': 'rel_parameter2', 'relationship_class_id': relc1.id}])[0].first()
+        rel_p3 = db_map.add_parameter_definitions(
+            *[{'name': 'rel_parameter3', 'relationship_class_id': relc1.id}])[0].first()
+        rel_p4 = db_map.add_parameter_definitions(
+            *[{'name': 'rel_parameter4', 'relationship_class_id': relc1.id}])[0].first()
 
         # add parameter values
         db_map.add_parameter_value(
@@ -188,10 +190,10 @@ class TestExcelIntegration(unittest.TestCase):
         self.assertEqual(set(rc.values()), set(rc_org.values()),
                          msg='Difference in relationships')
         # parameters
-        par = db1.parameter_list().all()
+        par = db1.parameter_definition_list().all()
         par = {p.id: (p.name, oc[p.object_class_id]
                       if p.object_class_id else rc[p.relationship_class_id][0]) for p in par}
-        par_org = db2.parameter_list().all()
+        par_org = db2.parameter_definition_list().all()
         par_org = {p.id: (p.name, oc_org[p.object_class_id]
                           if p.object_class_id else rc_org[p.relationship_class_id][0]) for p in par_org}
         self.assertEqual(set(par.values()), set(
@@ -203,8 +205,7 @@ class TestExcelIntegration(unittest.TestCase):
         parv_org = db2.parameter_value_list().all()
         parv_org = set((par_org[p.parameter_definition_id][0], p.value, ol_id_org[p.object_id] if p.object_id else None,
                         rel_org[p.relationship_id][1] if p.relationship_id else None) for p in parv_org)
-        self.assertEqual(set(par.values()), set(
-            par_org.values()), msg='Difference in parameter values')
+        self.assertEqual(parv, parv_org, msg='Difference in parameter values')
 
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""

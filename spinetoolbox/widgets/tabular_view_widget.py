@@ -19,20 +19,16 @@ Contains TabularViewForm class and some related constants.
 import json
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import QApplication, QMenu, QMainWindow, QDialog, QPushButton, QMessageBox, QCheckBox
-from PySide2.QtCore import Qt, QPoint, QSettings
-from PySide2.QtGui import QIcon, QPixmap, QGuiApplication
+from PySide2.QtWidgets import QMainWindow, QDialog, QPushButton, QMessageBox, QCheckBox
+from PySide2.QtCore import Qt, QSettings
+from PySide2.QtGui import QIcon, QGuiApplication
 from sqlalchemy.sql import literal_column
 from spinedb_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
 from widgets.custom_menus import FilterMenu, PivotTableModelMenu
 from helpers import fix_name_ambiguity, tuple_itemgetter
 # TODO: connect to all add, delete relationship/object classes widgets to this.
-from widgets.custom_qdialog import AddObjectClassesDialog, AddObjectsDialog, \
-    AddRelationshipClassesDialog, AddRelationshipsDialog, \
-    EditObjectClassesDialog, EditObjectsDialog, \
-    EditRelationshipClassesDialog, EditRelationshipsDialog, \
-    CommitDialog
+from widgets.custom_qdialog import CommitDialog
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
 
@@ -105,7 +101,7 @@ class TabularViewForm(QMainWindow):
         self.class_pivot_preferences = {}
         self.PivotPreferences = namedtuple("PivotPreferences", ["index", "columns", "frozen", "frozen_value"])
 
-        # availible settings for values
+        # available settings for values
         self.ui.comboBox_value_type.addItems([DATA_VALUE, DATA_SET])
 
         # set allowed drop for pivot index lists
@@ -162,7 +158,7 @@ class TabularViewForm(QMainWindow):
     def load_class_data(self):
         self.object_classes = {oc.name: oc for oc in self.db_map.object_class_list().all()}
         self.relationship_classes = {rc.name: rc for rc in self.db_map.wide_relationship_class_list().all()}
-        self.parameters = {p.name: p for p in self.db_map.parameter_list().all()}
+        self.parameters = {p.name: p for p in self.db_map.parameter_definition_list().all()}
 
     def load_objects(self):
         self.objects = {o.name: o for o in self.db_map.object_list().all()}
@@ -181,16 +177,16 @@ class TabularViewForm(QMainWindow):
             data = query.all()
             parameter_values = {(r.object_id_list, r.parameter_id): r.id for r in data}
             data = [d.object_name_list.split(',') + [d.parameter_name, d.value]
-                    for d in data if d.value != None]
+                    for d in data if d.value is not None]
             index_names = self.current_object_class_list()
-            index_types = [str for _ in index_names]
+            index_types = [str] * len(index_names)
         else:
             query = self.db_map.object_parameter_value_list()
             query = query.filter(literal_column("object_class_name") == self.current_class_name)
             data = query.all()
             parameter_values = {(r.object_id, r.parameter_id): r.id for r in data}
             data = [[d.object_name, d.parameter_name, d.value]
-                    for d in data if d.value != None]
+                    for d in data if d.value is not None]
             index_names = [self.current_class_name]
             index_types = [str]
         index_names.extend([PARAMETER_NAME])
@@ -239,7 +235,7 @@ class TabularViewForm(QMainWindow):
         try:
             self.db_map.commit_session(commit_msg)
             #self.set_commit_rollback_actions_enabled(False)
-        except SpineDBAPIError as e:
+        except SpineDBAPIError:
             #self.msg_error.emit(e.msg)
             return
 
@@ -247,7 +243,7 @@ class TabularViewForm(QMainWindow):
         try:
             self.db_map.rollback_session()
             #self.set_commit_rollback_actions_enabled(False)
-        except SpineDBAPIError as e:
+        except SpineDBAPIError:
             #self.msg_error.emit(e.msg)
             return
         self.select_data()
@@ -357,7 +353,7 @@ class TabularViewForm(QMainWindow):
                 obj_ids = tuple(self.objects[n].id for n in del_rel)
                 if obj_ids in self.relationships:
                     delete_ids.add(self.relationships[obj_ids].id)
-                    self.relationships.pop(obj_ids, None)
+                    self.relationships.pop(obj_ids)
         if delete_ids:
             self.db_map.remove_items(relationship_ids = delete_ids)
 
@@ -406,10 +402,10 @@ class TabularViewForm(QMainWindow):
             elif k not in [JSON_TIME_NAME]:
                 new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
         if new_objects:
-            new_objects, error_log = self.db_map.add_objects(*new_objects)
+            self.db_map.add_objects(*new_objects)
             db_edited = True
         if new_parameters:
-            new_parameters, error_log = self.db_map.add_parameters(*new_parameters)
+            self.db_map.add_parameter_definitions(*new_parameters)
             db_edited = True
         return db_edited
 
@@ -418,7 +414,7 @@ class TabularViewForm(QMainWindow):
         if self.current_class_type == RELATIONSHIP_CLASS:
             # find all objects and insert new into db for each class in relationship
             rel_getter = operator.itemgetter(*range(len(self.current_object_class_list())))
-            add_relationships = set(rel_getter(index) for index, value in self.model.model._edit_data.items() if value == None)
+            add_relationships = set(rel_getter(index) for index, value in self.model.model._edit_data.items() if value is None)
             delete_relationships = set(rel_getter(index) for index, value in self.model.model._deleted_data.items())
             self.current_object_class_list()
             add_objects = []
@@ -450,7 +446,7 @@ class TabularViewForm(QMainWindow):
         elif self.current_class_type == OBJECT_CLASS:
             # find removed and new objects, only keep indexes in data
             delete_objects = set(index[0] for index in self.model.model._deleted_data.keys())
-            add_objects = set(index[0] for index, value in self.model.model._edit_data.items() if value == None)
+            add_objects = set(index[0] for index, value in self.model.model._edit_data.items() if value is None)
             if delete_objects:
                 delete_ids = set(self.objects[name].id for name in delete_objects)
                 self.db_map.remove_items(object_ids=delete_ids)
@@ -467,14 +463,13 @@ class TabularViewForm(QMainWindow):
         if self.current_value_type == DATA_SET:
             db_edited = self.save_model_set()
             delete_indexes = self.model.model._deleted_index_entries
-            obj_edited = self.delete_index_values_from_db(delete_indexes)
-            db_edited = db_edited or obj_edited
+            self.delete_index_values_from_db(delete_indexes)
         elif self.current_value_type in [DATA_JSON, DATA_VALUE]:
             # save new objects and parameters
             add_indexes = self.model.model._added_index_entries
             obj_edited = self.add_index_values_to_db(add_indexes)
             if obj_edited:
-                self.parameters = {p.name: p for p in self.db_map.parameter_list().all()}
+                self.parameters = {p.name: p for p in self.db_map.parameter_definition_list().all()}
                 self.load_objects()
 
             if self.current_value_type == DATA_VALUE:
@@ -500,7 +495,7 @@ class TabularViewForm(QMainWindow):
             self.save_parameter_values(data, data_value)
             # delete objects and parameters
             delete_indexes = self.model.model._deleted_index_entries
-            db_edited = self.delete_index_values_from_db(delete_indexes)
+            self.delete_index_values_from_db(delete_indexes)
 
         # update model
         self.model.model.clear_track_data()
@@ -711,7 +706,7 @@ class TabularViewForm(QMainWindow):
 
     def change_pivot(self, parent, event):
         # TODO: when getting items from the list that was source of drop
-        # the droped item is not removed, ugly solution is to filter the other list
+        # the dropped item is not removed, ugly solution is to filter the other list
         index = [self.ui.list_index.item(x).text() for x in range(self.ui.list_index.count())]
         columns = [self.ui.list_column.item(x).text() for x in range(self.ui.list_column.count())]
         frozen = [self.ui.list_frozen.item(x).text() for x in range(self.ui.list_frozen.count())]
@@ -847,11 +842,3 @@ class TabularViewForm(QMainWindow):
         self.save_ui()
         if event:
             event.accept()
-
-
-if __name__ == '__main__':
-    import sys
-    app = QApplication(sys.argv)
-    w = TabularViewForm()
-    w.show()
-    sys.exit(app.exec_())

@@ -17,7 +17,7 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 """
 
 import logging
-from PySide2.QtWidgets import QGraphicsView, QGraphicsRectItem
+from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine, QMarginsF
 from graphics_items import LinkDrawer, Link
