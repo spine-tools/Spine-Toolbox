@@ -80,10 +80,13 @@ class TestExcelIntegration(unittest.TestCase):
         # create object classes
         oc_1 = db_map.add_object_class(**{'name': 'object_class_1'})
         oc_2 = db_map.add_object_class(**{'name': 'object_class_2'})
+        oc_3 = db_map.add_object_class(**{'name': 'object_class_3'})
 
         # create relationship classes
         relc1 = db_map.add_wide_relationship_class(
             **{'name': 'relationship_class', 'object_class_id_list': [oc_1.id, oc_2.id]})
+        relc2 = db_map.add_wide_relationship_class(
+            **{'name': 'relationship_class2', 'object_class_id_list': [oc_1.id, oc_2.id]})
 
         # create objects
         oc1_obj1 = db_map.add_object(
@@ -100,6 +103,7 @@ class TestExcelIntegration(unittest.TestCase):
             **{'name': 'rel1', 'class_id': relc1.id, 'object_id_list': [oc1_obj1.id, oc2_obj1.id]})
         rel2 = db_map.add_wide_relationship(
             **{'name': 'rel2', 'class_id': relc1.id, 'object_id_list': [oc1_obj2.id, oc2_obj2.id]})
+        
 
         # create parameters
         p1 = db_map.add_parameter_definitions(

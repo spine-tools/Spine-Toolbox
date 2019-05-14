@@ -330,7 +330,7 @@ def get_unstacked_relationships(db):
         if rel:
             parameters = par_names[2:]
         else:
-            parameters = list({[p[2] for p in values]})
+            parameters = list(set([p[2] for p in values]))
         rel = [r[1].split(',') + list(r[2:]) for r in rel]
         object_classes = class_2_obj_list[k]
         stacked_rels.append([k, rel, object_classes, parameters])
@@ -371,7 +371,7 @@ def get_unstacked_objects(db):
         if obj:
             parameters = par_names[2:]
         else:
-            parameters = list({[p[2] for p in values if p[2] is not None]})
+            parameters = list(set([p[2] for p in values if p[2] is not None]))
         obj = [[o[1]] + list(o[2:]) for o in obj]
         object_classes = [k]
         stacked_obj.append([k, obj, object_classes, parameters])
