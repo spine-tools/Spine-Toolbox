@@ -535,7 +535,15 @@ def read_spine_xlsx(filepath):
     Args:
         filepath (str): str with filepath to excel file to read from.
     """
-    wb = load_workbook(filepath, read_only=True)
+
+    #
+
+    # read_only=true doesn't seem to close the file properly, possible solution if
+    # speed is needed is to do following:
+    # with open(xlsx_filename, "rb") as f:
+    #   in_mem_file = io.BytesIO(f.read())
+    #       wb = load_workbook(in_mem_file, read_only=True)
+    wb = load_workbook(filepath, read_only=False)
     sheets = wb.sheetnames
     ErrorLogMsg = namedtuple('ErrorLogMsg',('msg','db_type','imported_from','other'))
 
