@@ -104,22 +104,22 @@ class TestExcelIntegration(unittest.TestCase):
             **{'name': 'rel2', 'class_id': relc1.id, 'object_id_list': [oc1_obj2.id, oc2_obj2.id]})
 
         # create parameters
-        p1 = db_map.add_parameter(
-            **{'name': 'parameter1', 'object_class_id': oc_1.id})
-        p2 = db_map.add_parameter(
-            **{'name': 'parameter2', 'object_class_id': oc_1.id})
-        p3 = db_map.add_parameter(
-            **{'name': 'parameter3', 'object_class_id': oc_2.id})
-        p4 = db_map.add_parameter(
-            **{'name': 'parameter4', 'object_class_id': oc_2.id})
-        rel_p1 = db_map.add_parameter(
-            **{'name': 'rel_parameter1', 'relationship_class_id': relc1.id})
-        rel_p2 = db_map.add_parameter(
-            **{'name': 'rel_parameter2', 'relationship_class_id': relc1.id})
-        rel_p3 = db_map.add_parameter(
-            **{'name': 'rel_parameter3', 'relationship_class_id': relc1.id})
-        rel_p4 = db_map.add_parameter(
-            **{'name': 'rel_parameter4', 'relationship_class_id': relc1.id})
+        p1 = db_map.add_parameter_definitions(
+            *[{'name': 'parameter1', 'object_class_id': oc_1.id}])[0].first()
+        p2 = db_map.add_parameter_definitions(
+            *[{'name': 'parameter2', 'object_class_id': oc_1.id}])[0].first()
+        p3 = db_map.add_parameter_definitions(
+            *[{'name': 'parameter3', 'object_class_id': oc_2.id}])[0].first()
+        p4 = db_map.add_parameter_definitions(
+            *[{'name': 'parameter4', 'object_class_id': oc_2.id}])[0].first()
+        rel_p1 = db_map.add_parameter_definitions(
+            *[{'name': 'rel_parameter1', 'relationship_class_id': relc1.id}])[0].first()
+        rel_p2 = db_map.add_parameter_definitions(
+            *[{'name': 'rel_parameter2', 'relationship_class_id': relc1.id}])[0].first()
+        rel_p3 = db_map.add_parameter_definitions(
+            *[{'name': 'rel_parameter3', 'relationship_class_id': relc1.id}])[0].first()
+        rel_p4 = db_map.add_parameter_definitions(
+            *[{'name': 'rel_parameter4', 'relationship_class_id': relc1.id}])[0].first()
 
         # add parameter values
         db_map.add_parameter_value(
@@ -188,10 +188,10 @@ class TestExcelIntegration(unittest.TestCase):
         self.assertEqual(set(rc.values()), set(rc_org.values()),
                          msg='Difference in relationships')
         # parameters
-        par = db1.parameter_list().all()
+        par = db1.parameter_definition_list().all()
         par = {p.id: (p.name, oc[p.object_class_id]
                       if p.object_class_id else rc[p.relationship_class_id][0]) for p in par}
-        par_org = db2.parameter_list().all()
+        par_org = db2.parameter_definition_list().all()
         par_org = {p.id: (p.name, oc_org[p.object_class_id]
                           if p.object_class_id else rc_org[p.relationship_class_id][0]) for p in par_org}
         self.assertEqual(set(par.values()), set(

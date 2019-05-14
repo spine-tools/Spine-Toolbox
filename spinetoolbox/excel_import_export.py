@@ -94,7 +94,7 @@ def get_objects_and_parameters(db):
     """
 
     # get all objects
-    obj = db.object_list().add_column(db.ObjectClass.name.label('class_name')).\
+    obj = db.object_list().add_columns(db.ObjectClass.name.label('class_name')).\
         filter(db.ObjectClass.id == db.Object.class_id).all()
 
     # get all object classes
@@ -104,7 +104,7 @@ def get_objects_and_parameters(db):
     pval = db.object_parameter_value_list().all()
 
     # get all parameter definitions
-    par = db.object_parameter_list().all()
+    par = db.object_parameter_definition_list().all()
 
     # make all in same format
     par = [(p.object_class_name, None, p.parameter_name, None) for p in par]
@@ -143,7 +143,7 @@ def get_relationships_and_parameters(db):
 
     rel_class = db.wide_relationship_class_list().all()
     rel = db.wide_relationship_list().all()
-    rel_par = db.relationship_parameter_list().all()
+    rel_par = db.relationship_parameter_definition_list().all()
     rel_par_value = db.relationship_parameter_value_list().all()
 
     rel_class_id_2_name = {rc.id: rc.name for rc in rel_class}
