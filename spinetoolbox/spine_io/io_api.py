@@ -76,7 +76,7 @@ class DataSourceImportTemplate(QObject):
         """
         raise NotImplementedError
 
-    def request_mapped_data(self, table_mapping_dict, max_rows=-1):
+    def request_mapped_data(self, table_mappings, max_rows=-1):
         """
         Return mapped data from data source. If table_mapping_dict contains
         mappings to multiple tables then all tables should be merged.
@@ -87,7 +87,7 @@ class DataSourceImportTemplate(QObject):
         If error emit error signal with an error message.
 
         Args:
-            tabe_mapping_dict (dict(str: spinedatabase_api.DataMapping)):
+            table_mappings (dict(str: spinedatabase_api.DataMapping)):
                 A dict with table names as key and and DataMapping as values.
             max_rows (int): maximum number of rows that should be read
                 from data source. If -1 read all rows in data source.

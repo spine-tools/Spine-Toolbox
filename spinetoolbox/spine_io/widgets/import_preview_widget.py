@@ -263,7 +263,6 @@ class TableModel(QAbstractItemModel):
             headers = []
         if data is None:
             data = []
-        # def __init__(self, tasks=[[]]):
         super(TableModel, self).__init__()
         self._data = data
         self._headers = headers

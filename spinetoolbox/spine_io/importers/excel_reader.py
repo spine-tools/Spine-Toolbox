@@ -20,8 +20,6 @@ from openpyxl import load_workbook
 from spinedb_api import (
     RelationshipClassMapping,
     ObjectClassMapping,
-    Mapping,
-    ParameterMapping,
 )
 
 from spine_io.io_api import FileImportTemplate, IOWorker
@@ -55,13 +53,13 @@ class ExcelConnector(FileImportTemplate):
             self.sheet_options.update({self.current_sheet: options})
         self.request_data(self.current_sheet, 100)
 
-    def set_table(self, sheet):
+    def set_table(self, table):
         if self.current_sheet:
             options = self._option_widget.get_options_dict()
             self.sheet_options.update({self.current_sheet: options})
-        self.current_sheet = sheet
-        if sheet in self.sheet_options:
-            self._option_widget.update_values(**self.sheet_options[sheet])
+        self.current_sheet = table
+        if table in self.sheet_options:
+            self._option_widget.update_values(**self.sheet_options[table])
         else:
             self._option_widget.update_values()
 
@@ -111,7 +109,7 @@ class ExcelConnector(FileImportTemplate):
 
     def handle_tables_ready(self, table_options):
         self.sheet_options.update(
-            {k: t["options"] for k, t in table_options.items() if t["options"] != None}
+            {k: t["options"] for k, t in table_options.items() if t["options"] is not None}
         )
         tables = {k: t["mapping"] for k, t in table_options.items()}
         self.tablesReady.emit(tables)
@@ -123,15 +121,15 @@ class ExcelConnector(FileImportTemplate):
         self.fetchingData.emit()
         self.startTableGet.emit()
 
-    def request_mapped_data(self, tables_mappings, max_rows=-1):
+    def request_mapped_data(self, table_mappings, max_rows=-1):
         options = {}
-        for t in tables_mappings:
+        for t in table_mappings:
             if t in self.sheet_options:
                 options[t] = self.sheet_options[t]
             else:
                 options[t] = {}
         self.fetchingData.emit()
-        self.startMappedDataGet.emit(tables_mappings, options, max_rows)
+        self.startMappedDataGet.emit(table_mappings, options, max_rows)
 
     def request_data(self, table, max_rows=-1):
         options = {
@@ -182,7 +180,8 @@ class ExcelWorker(IOWorker):
                 self._wb = load_workbook(in_mem_file, read_only=True)
                 self.connectionReady.emit()
             except Exception as e:
-                self.error.emit("Could not connect to excel file!")
+                self.error.emit("Could not connect to excel file: {e}")
+                raise e
 
     def tables(self):
         if not self._wb:
@@ -196,7 +195,8 @@ class ExcelWorker(IOWorker):
                 # sheets = self._wb.sheetnames
                 self.tablesReady.emit(sheets)
             except Exception as e:
-                self.error.emit("could not get sheets from excel file")
+                self.error.emit(f"could not get sheets from excel file, {e}")
+                raise e
 
     def create_mapping_from_sheet(self, ws):
         """
@@ -346,15 +346,15 @@ class ExcelWorker(IOWorker):
 
     def get_data_iterator(self, table, options, max_rows=-1):
         """
-        Return data read from data source table in table. If max_rows is 
+        Return data read from data source table in table. If max_rows is
         specified only that number of rows.
         """
         if not self._wb:
-            return [], [], 0
+            return iter([]), [], 0
 
         if not table in self._wb:
             # table not found
-            return [], [], 0
+            return iter([]), [], 0
         ws = self._wb[table]
 
         # get options
@@ -374,18 +374,17 @@ class ExcelWorker(IOWorker):
             first_row = next(islice(ws.iter_rows(), skip_rows, max_rows))
             if stop_at_empty_col:
                 # find first empty col in top row and use that as a stop
+                num_cols = 0
                 for i, c in enumerate(islice(first_row, skip_columns, None)):
+                    num_cols = i
                     if c.value is None:
                         read_to_col = i + skip_columns
                         break
-
-                num_cols = i
             else:
                 num_cols = len(first_row)
         except StopIteration:
-            num_cols = 0
             # no data
-            pass
+            num_cols = 0
 
         header = []
         rows = ws.iter_rows()
@@ -398,7 +397,7 @@ class ExcelWorker(IOWorker):
                 ]
             except StopIteration:
                 # no data
-                return [], [], 0
+                return iter([]), [], 0
 
         # iterator for selected columns and and skipped rows
         data_iterator = (
