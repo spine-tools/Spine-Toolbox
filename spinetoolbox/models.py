@@ -3039,6 +3039,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
         """Reset model data. Each sub-model is filled with parameter value data
         for a different object class."""
         self.beginResetModel()
+        self.sub_models = []
         header = self.db_map.object_parameter_value_fields()
         data = self.db_map.object_parameter_value_list()
         self.fixed_columns = [header.index(x) for x in ('object_class_name', 'object_name', 'parameter_name')]
@@ -3167,6 +3168,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         """Reset model data. Each sub-model is filled with parameter definition data
         for a different object class."""
         self.beginResetModel()
+        self.sub_models = []
         header = self.db_map.object_parameter_fields()
         data = self.db_map.object_parameter_list()
         self.fixed_columns = [header.index('object_class_name')]
@@ -3638,6 +3640,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         """Reset model data. Each sub-model is filled with parameter value data
         for a different relationship class."""
         self.beginResetModel()
+        self.sub_models = []
         self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
         header = self.db_map.relationship_parameter_value_fields()
         data = self.db_map.relationship_parameter_value_list()
@@ -3782,6 +3785,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         """Reset model data. Each sub-model is filled with parameter definition data
         for a different relationship class."""
         self.beginResetModel()
+        self.sub_models = []
         self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
         header = self.db_map.relationship_parameter_fields()
         data = self.db_map.relationship_parameter_list()
