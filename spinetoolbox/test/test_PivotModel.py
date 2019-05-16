@@ -17,7 +17,6 @@ Unit tests for PivotModel class.
 """
 
 import unittest
-from unittest import mock
 from tabularview_models import PivotModel
 
 
