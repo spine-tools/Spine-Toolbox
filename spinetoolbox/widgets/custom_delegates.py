@@ -170,6 +170,7 @@ class ParameterDelegate(QItemDelegate):
         super().__init__(parent)
         self._parent = parent
         self.db_map = parent.db_map
+        self.json_editor_tab_index = 0
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -188,55 +189,12 @@ class ParameterDelegate(QItemDelegate):
             editor.set_base_size(size)
             editor.update_geometry()
 
-
-class ParameterValueDelegate(ParameterDelegate):
-    """A custom delegate for the parameter value models and views in TreeViewForm.
-
-    Attributes:
-        parent (QMainWindow): tree or graph view form
-    """
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.json_editor_index = 0
-        self.json_popup = None
-        self.last_index = None
-        self.view = None
-
     @Slot("int", name="_handle_json_editor_current_changed")
     def _handle_json_editor_current_changed(self, index):
-        self.json_editor_index = index
-
-    def editorEvent(self, event, model, option, index):
-        """Show json popup on hover.
-        """
-        return super().editorEvent(event, model, option, index)
-        # TODO: Make the popup work
-        if event.type() != QEvent.MouseMove:
-            return super().editorEvent(event, model, option, index)
-        if self.last_index == index:
-            return super().editorEvent(event, model, option, index)
-        self.last_index = index
-        self.destroy_json_popup()
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] != 'value':
-            return super().editorEvent(event, model, option, index)
-        if not index.data(Qt.EditRole):
-            return super().editorEvent(event, model, option, index)
-        self.json_popup = JSONEditor(self._parent, self.view, popup=True)
-        self.json_popup.currentChanged.connect(self._handle_json_editor_current_changed)
-        self.json_popup.set_data(index.data(Qt.EditRole), self.json_editor_index)
-        self.json_popup.data_committed.connect(self.destroy_json_popup)
-        self.updateEditorGeometry(self.json_popup, option, index)
-        self.json_popup.show()
-        return True
-
-    def destroy_json_popup(self):
-        if self.json_popup:
-            self.json_popup.deleteLater()
-            self.json_popup = None
+        self.json_editor_tab_index = index
 
 
-class ObjectParameterValueDelegate(ParameterValueDelegate):
+class ObjectParameterValueDelegate(ParameterDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.
 
     Attributes:
@@ -244,7 +202,6 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
     """
     def __init__(self, parent):
         super().__init__(parent)
-        self.view = parent.ui.tableView_object_parameter_value
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -265,7 +222,6 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
             name_list = [x.parameter_name for x in self.db_map.object_parameter_list(object_class_id=object_class_id)]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'value':
-            self.destroy_json_popup()
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
             if parameter:
@@ -279,7 +235,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegate):
             else:
                 editor = JSONEditor(self._parent, parent)
                 editor.currentChanged.connect(self._handle_json_editor_current_changed)
-                editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
+                editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
         else:
             editor = CustomLineEditor(parent)
         model = index.model()
@@ -303,6 +259,10 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in self.db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'default_value':
+            editor = JSONEditor(self._parent, parent)
+            editor.currentChanged.connect(self._handle_json_editor_current_changed)
+            editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
         elif header[index.column()] == 'parameter_tag_list':
             editor = CheckListEditor(self._parent, parent)
             all_parameter_tag_list = [x.tag for x in self.db_map.parameter_tag_list()]
@@ -323,7 +283,7 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         return editor
 
 
-class RelationshipParameterValueDelegate(ParameterValueDelegate):
+class RelationshipParameterValueDelegate(ParameterDelegate):
     """A delegate for the relationship parameter value model and view in TreeViewForm.
 
     Attributes:
@@ -331,7 +291,6 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
     """
     def __init__(self, parent):
         super().__init__(parent)
-        self.view = parent.ui.tableView_relationship_parameter_value
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -363,7 +322,6 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             name_list = [x.parameter_name for x in parameter_list]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'value':
-            self.destroy_json_popup()
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
             if parameter:
@@ -377,7 +335,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegate):
             else:
                 editor = JSONEditor(self._parent, parent)
                 editor.currentChanged.connect(self._handle_json_editor_current_changed)
-                editor.set_data(index.data(Qt.EditRole), self.json_editor_index)
+                editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
@@ -402,6 +360,10 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in self.db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'default_value':
+            editor = JSONEditor(self._parent, parent)
+            editor.currentChanged.connect(self._handle_json_editor_current_changed)
+            editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
         elif header[index.column()] == 'parameter_tag_list':
             editor = CheckListEditor(self._parent, parent)
             all_parameter_tag_list = [x.tag for x in self.db_map.parameter_tag_list()]
