@@ -540,19 +540,17 @@ class ConnectionModel(QAbstractTableModel):
     def columnCount(self, *args, **kwargs):
         """Number of columns in the model. This should be the same as the number of items in the project."""
         try:
-            n = len(self.connections[0])
+            return len(self.connections[0])
         except IndexError:
             return 0
-        return n
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         """Returns header data according to given role."""
         if role == Qt.DisplayRole:
             try:
-                h = self.header[section]
+                return self.header[section]
             except IndexError:
                 return None
-            return h
         else:
             return None
 
@@ -560,7 +558,7 @@ class ConnectionModel(QAbstractTableModel):
         """Sets the data for the given role and section in the header
         with the specified orientation to the value supplied.
         """
-        if not role == Qt.EditRole:
+        if role != Qt.EditRole:
             return super().setHeaderData(section, orientation, value, role)
         if orientation in [Qt.Horizontal, Qt.Vertical]:
             try:
@@ -590,12 +588,8 @@ class ConnectionModel(QAbstractTableModel):
             else:
                 return "True"  # If a link is present return "True"
         elif role == Qt.ToolTipRole:
-            row_header = self.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
-            column_header = self.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
-            if row_header == column_header:
-                return row_header + " (Feedback)"
-            else:
-                return row_header + "->" + column_header + " - " + str(index.row()) + ":" + str(index.column())
+            header = self.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
+            return header + " (Feedback)"
         elif role == Qt.UserRole:
             return self.connections[index.row()][index.column()]
         else:
@@ -611,7 +605,7 @@ class ConnectionModel(QAbstractTableModel):
         """
         if not index.isValid():
             return False
-        if not role == Qt.EditRole:
+        if role != Qt.EditRole:
             return False
         self.connections[index.row()][index.column()] = value  # Should be a Link or None
         # noinspection PyUnresolvedReferences
@@ -668,15 +662,24 @@ class ConnectionModel(QAbstractTableModel):
             return False
         # beginInsertColumns(const QModelIndex & parent, int first, int last)
         self.beginInsertColumns(parent, column, column)
-        if self.rowCount() == 1:
-            # This is the feedback cell of a single item (cell already written in insertRows())
-            pass
-        else:
-            for j in range(self.rowCount()):
-                # Notice if insert index > rowCount(), new object is inserted to end
-                self.connections[j].insert(column, None)
+        for j in range(self.rowCount()):
+            # Notice if insert index > rowCount(), new object is inserted to end
+            self.connections[j].insert(column, None)
         self.endInsertColumns()
         return True
+
+    def _rowRemovalPossible(self, row, count):
+        """
+        Check if rows can be removed
+
+        Args:
+            row (int): Row number where to start removing rows
+            count (int): Number of removed rows
+
+        Returns:
+            True if rows can be removed, False otherwise
+        """
+        return 0 <= row < self.rowCount() and count == 1
 
     def removeRows(self, row, count, parent=QModelIndex()):
         """Removes count rows starting with the given row under parent.
@@ -689,16 +692,28 @@ class ConnectionModel(QAbstractTableModel):
         Returns:
             True if rows were removed successfully, False otherwise
         """
-        if row < 0 or row > self.rowCount():
-            return False
-        if not count == 1:
-            logging.error("Remove 1 row at a time")
+        if not self._rowRemovalPossible(row, count):
+            if count != 1:
+                logging.error("Remove 1 row at a time")
             return False
         # beginRemoveRows(const QModelIndex & parent, int first, int last)
         self.beginRemoveRows(parent, row, row)
         self.connections.pop(row)
         self.endRemoveRows()
         return True
+
+    def _columnRemovalPossible(self, column, count):
+        """
+        Check if columns can be removed
+
+        Args:
+            column (int): Column number where to start removing rows
+            count (int): Number of removed columns
+
+        Returns:
+            True if columns can be removed, False otherwise
+        """
+        return 0 <= column < self.columnCount() and count == 1
 
     def removeColumns(self, column, count, parent=QModelIndex()):
         """Removes count columns starting with the given column under parent.
@@ -711,23 +726,18 @@ class ConnectionModel(QAbstractTableModel):
         Returns:
             True if columns were removed successfully, False otherwise
         """
-        if column < 0 or column > self.columnCount():
+        if not self._columnRemovalPossible(column, count):
+            if count != 1:
+                logging.error("Remove 1 column at a time")
             return False
-        if not count == 1:
-            logging.error("Remove 1 column at a time")
-            return False
-        # beginRemoveColumns(const QModelIndex & parent, int first, int last)
         self.beginRemoveColumns(parent, column, column)
         # for loop all rows and remove the column from each
         removed_column = list()  # for testing and debugging
-        removing_last_column = False
-        if self.columnCount() == 1:
-            removing_last_column = True
+        removing_last_column = self.columnCount() == 1
         for r in self.connections:
             removed_column.append(r.pop(column))
         if removing_last_column:
             self.connections = []
-        # logging.debug("{0} removed from column:{1}".format(removed_column, column))
         self.endRemoveColumns()
         return True
 
@@ -741,17 +751,15 @@ class ConnectionModel(QAbstractTableModel):
         Returns:
             True if successful, False otherwise
         """
-        # item_name = item.name
-        # logging.debug("Appending item {0} on row and column: {1}".format(name, index))
-        # logging.debug("Appending {3}. rows:{0} columns:{1} data:\n{2}"
-        #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
-        self.header.insert(index, name)
         if not self.insertRows(index, 1, parent=QModelIndex()):
             return False
-        if not self.insertColumns(index, 1, parent=QModelIndex()):
-            return False
-        # logging.debug("After append. rows:{0} columns:{1} data:\n{2}"
-        #               .format(self.rowCount(), self.columnCount(), self.connections))
+        if self.rowCount() > 1:
+            # The first call to insertRows() also creates the first column
+            if not self.insertColumns(index, 1, parent=QModelIndex()):
+                # Roll back row insertion.
+                self.removeRows(index, 1)
+                return False
+        self.header.insert(index, name)
         return True
 
     def remove_item(self, name):
@@ -768,15 +776,12 @@ class ConnectionModel(QAbstractTableModel):
         except ValueError:
             logging.error("%s not found in connection table header list", name)
             return False
-        # logging.debug("Removing {3}. rows:{0} columns:{1} data:\n{2}"
-        #               .format(self.rowCount(), self.columnCount(), self.connections, item_name))
-        if not self.removeRows(item_index, 1, parent=QModelIndex()):
+        if not self._rowRemovalPossible(item_index, 1) or not self._columnRemovalPossible(item_index, 1):
             return False
-        if not self.removeColumns(item_index, 1, parent=QModelIndex()):
-            return False
+        self.removeRows(item_index, 1, parent=QModelIndex())
+        if self.rowCount() > 0:
+            self.removeColumns(item_index, 1, parent=QModelIndex())
         self.header.remove(name)
-        # logging.debug("After remove. rows:{0} columns:{1} data:\n{2}"
-        #               .format(self.rowCount(), self.columnCount(), self.connections))
         return True
 
     def output_items(self, name):
@@ -784,9 +789,8 @@ class ConnectionModel(QAbstractTableModel):
         item_row = self.header.index(name)  # Row or column of item in the model
         output_items = list()
         for column in range(self.columnCount()):
-            a = self.connections[item_row][column]
-            # logging.debug("row:{0} column:{1} is {2}".format(item_row, column, a))
-            if a:
+            is_output = self.connections[item_row][column]
+            if is_output:
                 # append the name of output item to list
                 output_items.append(self.header[column])
         return output_items
@@ -796,9 +800,8 @@ class ConnectionModel(QAbstractTableModel):
         item_column = self.header.index(name)  # Row or column of item in the model
         input_items = list()
         for row in range(self.rowCount()):
-            a = self.connections[row][item_column]
-            # logging.debug("row:{0} column:{1} is {2}".format(row, item_column, a))
-            if a:
+            is_input = self.connections[row][item_column]
+            if is_input:
                 # append the name of input item to list
                 input_items.append(self.header[row])
         return input_items
