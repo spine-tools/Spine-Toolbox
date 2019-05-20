@@ -88,7 +88,7 @@ class CSVConnector(FileImportTemplate):
         # create new thread and worker
         self._thread = QThread()
         self._worker = CSVWorker(self._filename)
-        self._worker.moveToThread(self.thread)
+        self._worker.moveToThread(self._thread)
         # connect worker signals
         self._worker.dataReady.connect(
             lambda data, header: self.dataReady.emit(data, header)
