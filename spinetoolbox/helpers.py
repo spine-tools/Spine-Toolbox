@@ -341,12 +341,12 @@ def format_string_list(str_list):
 
 
 def strip_json_data(data, maxlen):
-    """Return a json equivalent to data, stripped to maxlen characters.
+    """Return a json equivalent to `data`, stripped to `maxlen` characters.
     """
     if not data:
         return data
     try:
-        stripped_data = json.dumps(json.loads(data))
+        stripped_data = json.dumps(json.loads(data), ensure_ascii=False)
     except json.JSONDecodeError:
         stripped_data = data
     if len(stripped_data) > 2 * maxlen:
