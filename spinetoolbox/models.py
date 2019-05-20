@@ -669,16 +669,6 @@ class ConnectionModel(QAbstractTableModel):
         return True
 
     def _rowRemovalPossible(self, row, count):
-        """
-        Check if rows can be removed
-
-        Args:
-            row (int): Row number where to start removing rows
-            count (int): Number of removed rows
-
-        Returns:
-            True if rows can be removed, False otherwise
-        """
         return 0 <= row < self.rowCount() and count == 1
 
     def removeRows(self, row, count, parent=QModelIndex()):
@@ -703,16 +693,6 @@ class ConnectionModel(QAbstractTableModel):
         return True
 
     def _columnRemovalPossible(self, column, count):
-        """
-        Check if columns can be removed
-
-        Args:
-            column (int): Column number where to start removing rows
-            count (int): Number of removed columns
-
-        Returns:
-            True if columns can be removed, False otherwise
-        """
         return 0 <= column < self.columnCount() and count == 1
 
     def removeColumns(self, column, count, parent=QModelIndex()):
@@ -742,7 +722,7 @@ class ConnectionModel(QAbstractTableModel):
         return True
 
     def append_item(self, name, index):
-        """Embiggen connections table by a new item.
+        """Embiggens connections table by a new item.
 
         Args:
             name (str): New item name
@@ -763,7 +743,7 @@ class ConnectionModel(QAbstractTableModel):
         return True
 
     def remove_item(self, name):
-        """Remove project item from connections table.
+        """Removes project item from connections table.
 
         Args:
             name (str): Name of removed item
