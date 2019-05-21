@@ -208,7 +208,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         return connector
 
     def hoverEnterEvent(self, event):
-        """Set a darker shade to icon when mouse enters icon boundaries.
+        """Sets a drop shadow effect to icon when mouse enters its boundaries.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
@@ -218,7 +218,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         event.accept()
 
     def hoverLeaveEvent(self, event):
-        """Restore original brush when mouse leaves icon boundaries.
+        """Disables the drop shadow when mouse leaves icon boundaries.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
@@ -299,6 +299,16 @@ class ProjectItemIcon(QGraphicsRectItem):
             super().keyPressEvent(event)
 
     def itemChange(self, change, value):
+        """
+        Destroys the drop shadow effect when the items is removed from a scene.
+
+        Args:
+            change (GraphicsItemChange): a flag signalling the type of the change
+            value: a value related to the change
+
+        Returns:
+             Whatever super() does with the value parameter
+        """
         if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
