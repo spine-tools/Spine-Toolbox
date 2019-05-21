@@ -209,10 +209,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        shadow_effect = QGraphicsDropShadowEffect()
-        shadow_effect.setOffset(1)
-        self.setGraphicsEffect(shadow_effect)
-        event.accept()
+        super().hoverEnterEvent(event)
 
     def hoverLeaveEvent(self, event):
         """Restore original brush when mouse leaves icon boundaries.
@@ -220,8 +217,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self.setGraphicsEffect(None)
-        event.accept()
+        super().hoverLeaveEvent(event)
 
     def mousePressEvent(self, event):
         """Update UI to show details of this item. Prevents dragging
