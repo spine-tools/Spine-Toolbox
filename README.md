@@ -158,11 +158,13 @@ See detailed instructions for contribution in Spine Toolbox User Guide.
 
 Below are the bare minimum things you need to know.
 
+### Setting up development environment
+
+1. Install the optional requirements.
+2. Run `pre-hook install` in project's root directory. This sets up some git hooks.
+
 ### Coding Style
-- Follow the style you see used in the repository
-- Max line length 120 characters
 - Google style docstrings
-- [PEP-8](https://www.python.org/dev/peps/pep-0008/)
 
 ### Reporting bugs
 If you think you have found a bug, please check the following before creating a new 
