@@ -31,6 +31,7 @@ class CustomQGraphicsView(QGraphicsView):
     Attributes:
         parent (QWidget): Parent widget
     """
+
     def __init__(self, parent):
         """Init CustomQGraphicsView."""
         super().__init__(parent=parent)  # Pass parent to QGraphicsView constructor
@@ -190,6 +191,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
     Attributes:
         parent (QWidget): Graph View Form's (QMainWindow) central widget (self.centralwidget)
     """
+
     def __init__(self, parent):
         """Initialize DesignQGraphicsView."""
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
@@ -221,8 +223,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 self.link_drawer.drawing = False
                 if e.button() != Qt.LeftButton:
                     return
-                self._toolbox.msg_warning.emit("Unable to make connection. Try landing "
-                                               "the connection onto a connector button.")
+                self._toolbox.msg_warning.emit(
+                    "Unable to make connection. Try landing " "the connection onto a connector button."
+                )
 
     def mouseReleaseEvent(self, event):
         """Mouse release event.
@@ -379,7 +382,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
     @Slot("QModelIndex", "int", "int", name='connection_rows_removed')
     def connection_rows_removed(self, index, first, last):
         """Update view when connection model changes."""
-        for i in range(first, last+1):
+        for i in range(first, last + 1):
             for j in range(self._connection_model.columnCount()):
                 link = self._connection_model.link(i, j)
                 if link:
@@ -388,7 +391,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
     @Slot("QModelIndex", "int", "int", name='connection_columns_removed')
     def connection_columns_removed(self, index, first, last):
         """Update view when connection model changes."""
-        for j in range(first, last+1):
+        for j in range(first, last + 1):
             for i in range(self._connection_model.rowCount()):
                 link = self._connection_model.link(i, j)
                 if link:
@@ -437,33 +440,47 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_item_type = self._project_item_model.project_item(src_index).item_type
             dst_item_type = self._project_item_model.project_item(dst_index).item_type
             if src_item_type == "Data Connection" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> will look for input "
-                                       "files from <b>{1}</b>'s references and data directory."
-                                       .format(self.dst_item_name, self.src_item_name))
+                self._toolbox.msg.emit(
+                    "Link established. Tool <b>{0}</b> will look for input "
+                    "files from <b>{1}</b>'s references and data directory.".format(
+                        self.dst_item_name, self.src_item_name
+                    )
+                )
             elif src_item_type == "Data Store" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> will look for input "
-                                       "files from <b>{1}</b>'s data directory."
-                                       .format(self.dst_item_name, self.src_item_name))
+                self._toolbox.msg.emit(
+                    "Link established. Tool <b>{0}</b> will look for input "
+                    "files from <b>{1}</b>'s data directory.".format(self.dst_item_name, self.src_item_name)
+                )
             elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> output files will be "
-                                       "passed as reference to <b>{1}</b>'s data directory."
-                                       .format(self.src_item_name, self.dst_item_name))
-            elif src_item_type in ["Data Connection", "Data Store"] \
-                    and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("Link established. Input files for a tool's execution "
-                                       "will be looked up in <b>{0}</b> if not found in <b>{1}</b>."
-                                       .format(self.src_item_name, self.dst_item_name))
+                self._toolbox.msg.emit(
+                    "Link established. Tool <b>{0}</b> output files will be "
+                    "passed as reference to <b>{1}</b>'s data directory.".format(self.src_item_name, self.dst_item_name)
+                )
+            elif src_item_type in ["Data Connection", "Data Store"] and dst_item_type in [
+                "Data Connection",
+                "Data Store",
+            ]:
+                self._toolbox.msg.emit(
+                    "Link established. Input files for a tool's execution "
+                    "will be looked up in <b>{0}</b> if not found in <b>{1}</b>.".format(
+                        self.src_item_name, self.dst_item_name
+                    )
+                )
             elif src_item_type == "Data Store" and dst_item_type == "View":
-                self._toolbox.msg_warning.emit("Link established. You can visualize Data Store "
-                                               "<b>{0}</b> in View <b>{1}</b>."
-                                               .format(self.src_item_name, self.dst_item_name))
+                self._toolbox.msg_warning.emit(
+                    "Link established. You can visualize Data Store "
+                    "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
+                )
             elif src_item_type == "Tool" and dst_item_type == "Tool":
-                self._toolbox.msg_warning.emit("Link established. Interaction between two "
-                                               "Tool items has not been implemented yet.")
+                self._toolbox.msg_warning.emit(
+                    "Link established. Interaction between two " "Tool items has not been implemented yet."
+                )
             else:
-                self._toolbox.msg_warning.emit("Link established. Interaction between a "
-                                               "<b>{0}</b> and a <b>{1}</b> has not been "
-                                               "implemented yet.".format(src_item_type, dst_item_type))
+                self._toolbox.msg_warning.emit(
+                    "Link established. Interaction between a "
+                    "<b>{0}</b> and a <b>{1}</b> has not been "
+                    "implemented yet.".format(src_item_type, dst_item_type)
+                )
 
 
 class GraphQGraphicsView(CustomQGraphicsView):

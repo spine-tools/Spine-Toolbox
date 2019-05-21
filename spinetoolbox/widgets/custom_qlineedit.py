@@ -34,6 +34,7 @@ class CustomQLineEdit(QLineEdit):
     Attributes:
         parent (QMainWindow): Parent for line edit widget (DataStoreWidget)
     """
+
     file_dropped = Signal("QString", name="file_dropped")
 
     def __init__(self, parent):

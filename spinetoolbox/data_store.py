@@ -47,6 +47,7 @@ class DataStore(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
     def __init__(self, toolbox, name, description, reference, x, y):
         """Class constructor."""
         super().__init__(name, description)
@@ -70,8 +71,9 @@ class DataStore(ProjectItem):
         try:
             create_dir(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                         " Check permissions.".format(self.data_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+            )
         self._graphics_item = DataStoreIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._reference = reference
         self.load_reference_into_selections()
@@ -202,8 +204,10 @@ class DataStore(ProjectItem):
         try:
             dialect_dbapi = db_url.split('://')[0]
         except IndexError:
-            self._toolbox.msg_error.emit("Error in <b>{0}</b> database reference. Unable to parse stored "
-                                         "reference. Please select a new one.".format(self.name))
+            self._toolbox.msg_error.emit(
+                "Error in <b>{0}</b> database reference. Unable to parse stored "
+                "reference. Please select a new one.".format(self.name)
+            )
             return
         try:
             dialect, dbapi = dialect_dbapi.split('+')
@@ -211,29 +215,36 @@ class DataStore(ProjectItem):
             dialect = dialect_dbapi
             dbapi = None
         if dialect not in SQL_DIALECT_API:
-            self._toolbox.msg_error.emit("Error in <b>{0}</b> database reference. Stored reference "
-                                         "dialect <b>{1}</b> is not supported.".format(self.name, dialect))
+            self._toolbox.msg_error.emit(
+                "Error in <b>{0}</b> database reference. Stored reference "
+                "dialect <b>{1}</b> is not supported.".format(self.name, dialect)
+            )
             return
         self.selected_dialect = dialect
         if dbapi and SQL_DIALECT_API[dialect] != dbapi:
             recommended_dbapi = SQL_DIALECT_API[dialect]
-            self._toolbox.msg_warning.emit("Warning regarding <b>{0}</b> database reference. Stored reference "
-                                           "is using dialect <b>{1}</b> with driver <b>{2}</b>, whereas "
-                                           "<b>{3}</b> is recommended"
-                                           .format(self.name, dialect, dbapi, recommended_dbapi))
+            self._toolbox.msg_warning.emit(
+                "Warning regarding <b>{0}</b> database reference. Stored reference "
+                "is using dialect <b>{1}</b> with driver <b>{2}</b>, whereas "
+                "<b>{3}</b> is recommended".format(self.name, dialect, dbapi, recommended_dbapi)
+            )
         if dialect == "sqlite":
             try:
                 file_path = os.path.abspath(db_url.split(':///')[1])
                 # file_path = os.path.abspath(file_path)
             except IndexError:
                 file_path = ""
-                self._toolbox.msg_error.emit("Error in <b>{0}</b> database reference. Unable to determine "
-                                             "path to SQLite file from stored reference. Please select "
-                                             "a new one.".format(self.name))
+                self._toolbox.msg_error.emit(
+                    "Error in <b>{0}</b> database reference. Unable to determine "
+                    "path to SQLite file from stored reference. Please select "
+                    "a new one.".format(self.name)
+                )
             if not os.path.isfile(file_path):
                 file_path = ""
-                self._toolbox.msg_warning.emit("Error in <b>{0}</b> database reference. Invalid path to "
-                                               "SQLite file. Maybe it was deleted?".format(self.name))
+                self._toolbox.msg_warning.emit(
+                    "Error in <b>{0}</b> database reference. Invalid path to "
+                    "SQLite file. Maybe it was deleted?".format(self.name)
+                )
             self.selected_sqlite_file = os.path.abspath(file_path)
             self.selected_db = database
             self.selected_username = username
@@ -297,11 +308,7 @@ class DataStore(ProjectItem):
                 url += ":" + port
             url += "/" + database
         # Set reference attribute
-        self._reference = {
-            'database': database,
-            'username': username,
-            'url': url
-        }
+        self._reference = {'database': database, 'username': username, 'url': url}
 
     def enable_no_dialect(self):
         """Adjust widget enabled status to default when no dialect is selected."""
@@ -366,6 +373,7 @@ class DataStore(ProjectItem):
                 self.enable_sqlite()
             elif dialect == 'mssql':
                 import pyodbc
+
                 dsns = pyodbc.dataSources()
                 # Collect dsns which use the msodbcsql driver
                 mssql_dsns = list()
@@ -389,8 +397,9 @@ class DataStore(ProjectItem):
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Dialect not supported")
-            msg.setText("There is no DBAPI installed for dialect '{0}'. "
-                        "The default one is '{1}'.".format(dialect, dbapi))
+            msg.setText(
+                "There is no DBAPI installed for dialect '{0}'. " "The default one is '{1}'.".format(dialect, dbapi)
+            )
             msg.setInformativeText("Do you want to install it using pip or conda?")
             pip_button = msg.addButton("pip", QMessageBox.YesRole)
             conda_button = msg.addButton("conda", QMessageBox.NoRole)
@@ -518,17 +527,14 @@ class DataStore(ProjectItem):
             try:
                 engine.execute('pragma quick_check;')
             except DatabaseError as e:
-                self._toolbox.msg_error.emit("File {0} has integrity issues "
-                                             "(not an SQLite database?): {1}".format(database, e.orig.args))
+                self._toolbox.msg_error.emit(
+                    "File {0} has integrity issues " "(not an SQLite database?): {1}".format(database, e.orig.args)
+                )
                 return None
         # Get system's username if none given
         if not username:
             username = getpass.getuser()
-        reference = {
-            'database': database,
-            'username': username,
-            'url': url
-        }
+        reference = {'database': database, 'username': username, 'url': url}
         return reference
 
     def get_db_map(self, db_url, username, upgrade=False):
@@ -540,12 +546,16 @@ class DataStore(ProjectItem):
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
-            msg.setText("The database at <b>{}</b> is from an older version of Spine "\
-                        "and needs to be upgraded in order to be used with the current version.".format(db_url))
-            msg.setInformativeText("Do you want to upgrade it now?" \
-                                   "<p><b>WARNING</b>: After the upgrade, "\
-                                   "the database may no longer be used "\
-                                   "with previous versions of Spine.")
+            msg.setText(
+                "The database at <b>{}</b> is from an older version of Spine "
+                "and needs to be upgraded in order to be used with the current version.".format(db_url)
+            )
+            msg.setInformativeText(
+                "Do you want to upgrade it now?"
+                "<p><b>WARNING</b>: After the upgrade, "
+                "the database may no longer be used "
+                "with previous versions of Spine."
+            )
             msg.addButton(QMessageBox.Cancel)
             msg.addButton("Upgrade", QMessageBox.YesRole)
             ret = msg.exec_()  # Show message box
@@ -567,8 +577,9 @@ class DataStore(ProjectItem):
             if self.tree_view_form.db_map.db_url == reference['url']:
                 if self.tree_view_form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.tree_view_form.setWindowState(self.tree_view_form.windowState()
-                                                       & ~Qt.WindowMinimized | Qt.WindowActive)
+                    self.tree_view_form.setWindowState(
+                        self.tree_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+                    )
                     self.tree_view_form.activateWindow()
                 else:
                     self.tree_view_form.raise_()
@@ -606,8 +617,9 @@ class DataStore(ProjectItem):
             if self.graph_view_form.db_map.db_url == reference['url']:
                 if self.graph_view_form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
-                    self.graph_view_form.setWindowState(self.graph_view_form.windowState()
-                                                        & ~Qt.WindowMinimized | Qt.WindowActive)
+                    self.graph_view_form.setWindowState(
+                        self.graph_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+                    )
                     self.graph_view_form.activateWindow()
                 else:
                     self.graph_view_form.raise_()
@@ -640,8 +652,9 @@ class DataStore(ProjectItem):
         if self.tabular_view_form:
             if self.tabular_view_form.windowState() & Qt.WindowMinimized:
                 # Remove minimized status and restore window with the previous state (maximized/normal state)
-                self.tabular_view_form.setWindowState(self.tabular_view_form.windowState()
-                                                      & ~Qt.WindowMinimized | Qt.WindowActive)
+                self.tabular_view_form.setWindowState(
+                    self.tabular_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+                )
                 self.tabular_view_form.activateWindow()
             else:
                 self.tabular_view_form.raise_()
@@ -690,8 +703,10 @@ class DataStore(ProjectItem):
         """Search for filename in data and return the path if found."""
         # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
         if self in visited_items:
-            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
-                                           "connections and try again. Detected at {0}.".format(self.name))
+            self._toolbox.msg_warning.emit(
+                "There seems to be an infinite loop in your project. Please fix the "
+                "connections and try again. Detected at {0}.".format(self.name)
+            )
             return None
         reference = self.current_reference()
         if not reference:
@@ -734,8 +749,10 @@ class DataStore(ProjectItem):
         """
         paths = list()
         if self in visited_items:
-            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
-                                           "connections and try again. Detected at {0}.".format(self.name))
+            self._toolbox.msg_warning.emit(
+                "There seems to be an infinite loop in your project. Please fix the "
+                "connections and try again. Detected at {0}.".format(self.name)
+            )
             return paths
         # Check the current reference. If it is an sqlite file, this is a possible match
         # If dialect is not sqlite, the reference is ignored
@@ -786,10 +803,9 @@ class DataStore(ProjectItem):
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine SQLite database file."""
-        dialog = QFileDialog(self._toolbox,
-                             "Create new Spine SQLite database",
-                             self.data_dir,
-                             "SQlite database (*.sqlite *.db)")
+        dialog = QFileDialog(
+            self._toolbox, "Create new Spine SQLite database", self.data_dir, "SQlite database (*.sqlite *.db)"
+        )
         dialog.selectFile("spine_db.sqlite")
         dialog.setAcceptMode(QFileDialog.AcceptSave)
         dialog.setOption(QFileDialog.DontUseNativeDialog, True)  # Only way to add the checkbox

@@ -80,7 +80,7 @@ class DragListView(QListView):
 class TestListView(QListWidget):
     afterDrop = Signal(object, QDropEvent)
     allowedDragLists = []
-    
+
     def __init__(self, parent=None):
         super(TestListView, self).__init__(parent)
         self.setDragDropMode(QAbstractItemView.DragDrop)

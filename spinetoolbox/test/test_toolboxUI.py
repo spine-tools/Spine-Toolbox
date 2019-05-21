@@ -37,7 +37,6 @@ class MockQWidget(QWidget):
 
 # noinspection PyUnusedLocal
 class TestToolboxUI(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
@@ -45,16 +44,20 @@ class TestToolboxUI(unittest.TestCase):
             cls.app = QApplication().processEvents()
         except RuntimeError:
             pass
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
-                            format='%(asctime)s %(levelname)s: %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
+        logging.basicConfig(
+            stream=sys.stderr,
+            level=logging.DEBUG,
+            format='%(asctime)s %(levelname)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes an instance of ToolboxUI class."""
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
-                mock.patch("ui_main.PythonReplWidget") as mock_python_repl, \
-                mock.patch("ui_main.ToolboxUI.init_project") as mock_init_project, \
-                mock.patch("ui_main.ToolboxUI.restore_ui") as mock_restore_ui:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("ui_main.ToolboxUI.init_project") as mock_init_project, mock.patch(
+            "ui_main.ToolboxUI.restore_ui"
+        ) as mock_restore_ui:
             # Replace Julia and Python REPLs with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()  # Hack, because QWidget does not have test_push_vars()
@@ -82,8 +85,9 @@ class TestToolboxUI(unittest.TestCase):
         not actually created. Looks like CONFIGURATION_FILE needs to be mocked as well because it only stays
         mocked for the duration of with statement.
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("project.create_dir") as mock_create_dir:
+        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "project.create_dir"
+        ) as mock_create_dir:
             self.toolbox.create_project("Unit Test Project", "Project for unit tests.")
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
         self.toolbox.init_project_item_model()
@@ -118,16 +122,18 @@ class TestToolboxUI(unittest.TestCase):
         # Test that QLisView signals are connected only once.
         n_dbl_clicked_recv = self.toolbox.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))
         self.assertEqual(n_dbl_clicked_recv, 1)
-        n_context_menu_recv = self.toolbox.ui.listView_tool_templates.\
-            receivers(SIGNAL("customContextMenuRequested(QPoint)"))
+        n_context_menu_recv = self.toolbox.ui.listView_tool_templates.receivers(
+            SIGNAL("customContextMenuRequested(QPoint)")
+        )
         self.assertEqual(n_context_menu_recv, 1)
         # Initialize ToolTemplateModel again and see that the signals are connected only once
         self.toolbox.init_tool_template_model(list())
         # Test that QLisView signals are connected only once.
         n_dbl_clicked_recv = self.toolbox.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))
         self.assertEqual(n_dbl_clicked_recv, 1)
-        n_context_menu_recv = self.toolbox.ui.listView_tool_templates.\
-            receivers(SIGNAL("customContextMenuRequested(QPoint)"))
+        n_context_menu_recv = self.toolbox.ui.listView_tool_templates.receivers(
+            SIGNAL("customContextMenuRequested(QPoint)")
+        )
         self.assertEqual(n_context_menu_recv, 1)
         # Check that there's still no items in the model
         self.assertEqual(self.toolbox.tool_template_model.rowCount(), 0)
@@ -145,8 +151,9 @@ class TestToolboxUI(unittest.TestCase):
         """Test that create_project method makes a SpineToolboxProject instance.
         Skips creating a .proj file and creating directories.
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("project.create_dir") as mock_create_dir:
+        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "project.create_dir"
+        ) as mock_create_dir:
             self.toolbox.create_project("Unit Test Project", "Project for unit tests.")
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
 

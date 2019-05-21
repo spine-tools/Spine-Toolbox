@@ -21,14 +21,30 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QTimeLine
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QInputDialog, QDockWidget, QAction, QWidgetAction
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QApplication,
+    QFileDialog,
+    QMessageBox,
+    QCheckBox,
+    QInputDialog,
+    QDockWidget,
+    QAction,
+    QWidgetAction,
+)
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
-from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
-    LinkContextMenu, AddToolTemplatePopupMenu, DcRefContextMenu, DcDataContextMenu, \
-    ToolPropertiesContextMenu, ViewPropertiesContextMenu
+from widgets.custom_menus import (
+    ProjectItemContextMenu,
+    ToolTemplateContextMenu,
+    LinkContextMenu,
+    AddToolTemplatePopupMenu,
+    DcRefContextMenu,
+    DcDataContextMenu,
+    ToolPropertiesContextMenu,
+    ViewPropertiesContextMenu,
+)
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
@@ -43,8 +59,15 @@ from widgets.julia_repl_widget import JuliaREPLWidget
 from widgets.python_repl_widget import PythonReplWidget
 import widgets.toolbars
 from project import SpineToolboxProject
-from config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, \
-    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, TREEVIEW_HEADER_SS
+from config import (
+    SPINE_TOOLBOX_VERSION,
+    STATUSBAR_SS,
+    TEXTBROWSER_SS,
+    MAINWINDOW_SS,
+    DOC_INDEX_PATH,
+    SQL_DIALECT_API,
+    TREEVIEW_HEADER_SS,
+)
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
@@ -248,8 +271,9 @@ class ToolboxUI(QMainWindow):
         connections = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getOpenFileName(self, 'Open project',
-                                                 project_dir(self._qsettings), 'Projects (*.proj)')
+            answer = QFileDialog.getOpenFileName(
+                self, 'Open project', project_dir(self._qsettings), 'Projects (*.proj)'
+            )
             load_path = answer[0]
             if load_path == '':  # Cancel button clicked
                 return False
@@ -332,8 +356,9 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("No project open")
         msg = "This creates a copy of the current project. <br/><br/>New name:"
         # noinspection PyCallByClass
-        answer = QInputDialog.getText(self, "New project name", msg, text=self._project.name,
-                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self, "New project name", msg, text=self._project.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+        )
         if not answer[1]:  # answer[str, bool]
             return
         else:
@@ -572,9 +597,12 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("No project open")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, 'Select Tool template file',
-                                             os.path.join(project_dir(self._qsettings), os.path.pardir),
-                                             'JSON (*.json)')
+        answer = QFileDialog.getOpenFileName(
+            self,
+            'Select Tool template file',
+            os.path.join(project_dir(self._qsettings), os.path.pardir),
+            'JSON (*.json)',
+        )
         if answer[0] == '':  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
@@ -715,12 +743,15 @@ class ToolboxUI(QMainWindow):
             # logging.debug("tools list after removal:{}".format(tools))
             project_dict['tool_templates'] = tools
         except KeyError:
-            self.msg_error.emit("This is odd. tool_templates list not found in project file <b>{0}</b>"
-                                .format(project_file))
+            self.msg_error.emit(
+                "This is odd. tool_templates list not found in project file <b>{0}</b>".format(project_file)
+            )
             return
         except ValueError:
-            self.msg_error.emit("This is odd. Tool template definition file path <b>{0}</b> not found "
-                                "in project file <b>{1}</b>".format(tool_def_path, project_file))
+            self.msg_error.emit(
+                "This is odd. Tool template definition file path <b>{0}</b> not found "
+                "in project file <b>{1}</b>".format(tool_def_path, project_file)
+            )
             return
         # Save dictionaries back to JSON file
         dicts['project'] = project_dict
@@ -771,12 +802,16 @@ class ToolboxUI(QMainWindow):
         name = project_item.name
         if check_dialog:
             if not delete_item:
-                msg = "Are you sure? If Yes, item data directory will still be available in " \
-                      "the project directory after this operation.\n\n" \
-                      "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                msg = (
+                    "Are you sure? If Yes, item data directory will still be available in "
+                    "the project directory after this operation.\n\n"
+                    "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                )
             else:
-                msg = "Are you sure? If Yes, item data directory will be deleted from your project.\n\n" \
-                      "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                msg = (
+                    "Are you sure? If Yes, item data directory will be deleted from your project.\n\n"
+                    "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                )
             # noinspection PyCallByClass, PyTypeChecker
             answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
@@ -851,8 +886,7 @@ class ToolboxUI(QMainWindow):
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
             logging.error("Failed to open editor for %s", file_path)
-            self.msg_error.emit("Tool template definition file <b>{0}</b> not found."
-                                .format(file_path))
+            self.msg_error.emit("Tool template definition file <b>{0}</b> not found.".format(file_path))
             return
         tool_template_url = "file:///" + file_path
         # Open Tool template definition file in editor
@@ -860,10 +894,11 @@ class ToolboxUI(QMainWindow):
         res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
         if not res:
             logging.error("Failed to open editor for %s", tool_template_url)
-            self.msg_error.emit("Unable to open Tool template definition file {0}. Make sure that <b>.json</b> "
-                                "files are associated with a text editor. For example on Windows "
-                                "10, go to Control Panel -> Default Programs to do this."
-                                .format(file_path))
+            self.msg_error.emit(
+                "Unable to open Tool template definition file {0}. Make sure that <b>.json</b> "
+                "files are associated with a text editor. For example on Windows "
+                "10, go to Control Panel -> Default Programs to do this.".format(file_path)
+            )
         return
 
     @busy_effect
@@ -881,13 +916,14 @@ class ToolboxUI(QMainWindow):
         # Check if file exists first. openUrl may return True even if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
-            self.msg_error.emit("Tool main program file <b>{0}</b> not found."
-                                .format(file_path))
+            self.msg_error.emit("Tool main program file <b>{0}</b> not found.".format(file_path))
             return
         ext = os.path.splitext(os.path.split(file_path)[1])[1]
         if ext in [".bat", ".exe"]:
-            self.msg_warning.emit("Sorry, opening files with extension <b>{0}</b> not supported. "
-                                  "Please open the file manually.".format(ext))
+            self.msg_warning.emit(
+                "Sorry, opening files with extension <b>{0}</b> not supported. "
+                "Please open the file manually.".format(ext)
+            )
             return
         main_program_url = "file:///" + file_path
         # Open Tool template main program file in editor
@@ -895,11 +931,12 @@ class ToolboxUI(QMainWindow):
         res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
         if not res:
             filename, file_extension = os.path.splitext(file_path)
-            self.msg_error.emit("Unable to open Tool template main program file {0}. "
-                                "Make sure that <b>{1}</b> "
-                                "files are associated with an editor. E.g. on Windows "
-                                "10, go to Control Panel -> Default Programs to do this."
-                                .format(filename, file_extension))
+            self.msg_error.emit(
+                "Unable to open Tool template main program file {0}. "
+                "Make sure that <b>{1}</b> "
+                "files are associated with an editor. E.g. on Windows "
+                "10, go to Control Panel -> Default Programs to do this.".format(filename, file_extension)
+            )
         return
 
     @Slot("QModelIndex", name="connection_data_changed")
@@ -1206,8 +1243,9 @@ class ToolboxUI(QMainWindow):
             d.open_tool_main_program_file()
         elif option == "Rename":
             # noinspection PyCallByClass
-            answer = QInputDialog.getText(self, "Rename Item", "New name:", text=d.name,
-                                          flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+            answer = QInputDialog.getText(
+                self, "Rename Item", "New name:", text=d.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+            )
             # answer[str, bool]
             if not answer[1]:
                 pass
@@ -1295,7 +1333,7 @@ class ToolboxUI(QMainWindow):
             return
         dc = self.project_item_model.project_item(cur_index)
         if not dc:
-            self.msg_error.emit("FIXME: Data Connection {0} not found in project items". format(cur_index))
+            self.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(cur_index))
             return
         if option == "Open containing directory...":
             ref_path = self.ui.treeView_dc_references.model().itemFromIndex(ind).data(Qt.DisplayRole)
@@ -1331,7 +1369,7 @@ class ToolboxUI(QMainWindow):
             return
         dc = self.project_item_model.project_item(cur_index)
         if not dc:
-            self.msg_error.emit("FIXME: Data Connection {0} not found in project items". format(cur_index))
+            self.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(cur_index))
             return
         if option == "New file...":
             dc.make_new_file()

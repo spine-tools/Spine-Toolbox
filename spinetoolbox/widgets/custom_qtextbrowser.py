@@ -25,6 +25,7 @@ class CustomQTextBrowser(QTextBrowser):
     Attributes:
         parent (QWidget): Parent widget
     """
+
     def __init__(self, parent):
         super().__init__(parent=parent)
         # self._parent = parent  # Is this needed?

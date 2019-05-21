@@ -20,6 +20,7 @@ import unittest
 from models import MinimalTableModel
 from PySide2.QtCore import Qt
 
+
 class TestMinimalTableModel(unittest.TestCase):
     def test_clear(self):
         """Test the clear() method of MinimalTableModel."""
@@ -180,6 +181,7 @@ class TestMinimalTableModel(unittest.TestCase):
         self.assertFalse(model.insertRows(1, 1))
         self.assertTrue(model.insertRows(0, 2))
         self.assertEqual(model.rowCount(), 2)
+
         def check_data(expecteds):
             for row, expected in enumerate(expecteds):
                 index = model.index(row, 0)
@@ -187,6 +189,7 @@ class TestMinimalTableModel(unittest.TestCase):
                     self.assertEqual(model.data(index), expected)
                 else:
                     self.assertIsNone(model.data(index))
+
         index = model.index(0, 0)
         model.setData(index, 'a')
         index = model.index(1, 0)
@@ -209,6 +212,7 @@ class TestMinimalTableModel(unittest.TestCase):
         model.setData(index, 'a')
         self.assertTrue(model.insertColumns(0, 1))
         self.assertEqual(model.columnCount(), 2)
+
         def check_data(expecteds):
             for column, expected in enumerate(expecteds):
                 index = model.index(0, column)
@@ -216,6 +220,7 @@ class TestMinimalTableModel(unittest.TestCase):
                     self.assertEqual(model.data(index), expected)
                 else:
                     self.assertIsNone(model.data(index))
+
         check_data([None, 'a'])
         index = model.index(0, 0)
         model.setData(index, 'b')
@@ -240,10 +245,12 @@ class TestMinimalTableModel(unittest.TestCase):
             model.setData(index, value)
         self.assertTrue(model.removeRows(1, 2))
         self.assertEqual(model.rowCount(), 3)
+
         def check_data(expecteds):
             for row, expected in enumerate(expecteds):
                 index = model.index(row, 0)
                 self.assertEqual(model.data(index), expected)
+
         check_data(['a', 'd', 'e'])
         self.assertTrue(model.removeRows(2, 1))
         self.assertEqual(model.rowCount(), 2)
@@ -267,10 +274,12 @@ class TestMinimalTableModel(unittest.TestCase):
             model.setData(index, value)
         self.assertTrue(model.removeColumns(4, 1))
         self.assertEqual(model.columnCount(), 4)
+
         def check_data(expecteds):
             for column, expected in enumerate(expecteds):
                 index = model.index(0, column)
                 self.assertEqual(model.data(index), expected)
+
         check_data(['a', 'b', 'c', 'd'])
         self.assertTrue(model.removeColumns(0, 1))
         self.assertEqual(model.columnCount(), 3)

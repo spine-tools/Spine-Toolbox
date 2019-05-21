@@ -31,6 +31,7 @@ class ProjectItem(MetaObject):
         is_root (bool): True if new item should be a root item
         is_category (bool): True if new item should be a category item
     """
+
     def __init__(self, name, description, is_root=False, is_category=False):
         """Class constructor."""
         super().__init__(name, description)

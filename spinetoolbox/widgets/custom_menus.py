@@ -17,11 +17,9 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget, QLineEdit, \
-    QTableView
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget, QLineEdit, QTableView
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, \
-    QItemSelectionModel
+from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, QItemSelectionModel
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
 from widgets.custom_qwidgets import FilterWidget
@@ -34,6 +32,7 @@ class CustomContextMenu(QMenu):
     Attributes:
         parent (QWidget): Parent for menu widget (ToolboxUI)
     """
+
     def __init__(self, parent):
         """Constructor."""
         super().__init__(parent=parent)
@@ -73,6 +72,7 @@ class ProjectItemContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -133,6 +133,7 @@ class LinkContextMenu(CustomContextMenu):
         index (QModelIndex): Index of item that requested the context-menu
         parallel_link (Link(QGraphicsPathItem)): Link that is parallel to the one that requested the menu
     """
+
     def __init__(self, parent, position, index, parallel_link=None):
         """Class constructor."""
         super().__init__(parent)
@@ -177,6 +178,7 @@ class DcRefContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -203,6 +205,7 @@ class DcDataContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -230,6 +233,7 @@ class ToolPropertiesContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -250,6 +254,7 @@ class ViewPropertiesContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -268,6 +273,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -322,6 +328,7 @@ class RelationshipTreeContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -356,6 +363,7 @@ class ParameterContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -379,6 +387,7 @@ class ParameterValueListContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -399,6 +408,7 @@ class GraphViewContextMenu(CustomContextMenu):
         parent (QWidget): Parent for menu widget (GraphViewForm)
         position (QPoint): Position on screen
     """
+
     def __init__(self, parent, position):
         """Class constructor."""
         super().__init__(parent)
@@ -418,6 +428,7 @@ class ObjectItemContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
     """
+
     def __init__(self, parent, position, graphics_item):
         """Class constructor."""
         super().__init__(parent)
@@ -462,7 +473,7 @@ class ObjectItemContextMenu(CustomContextMenu):
                     'object_class_id_list': object_class_id_list,
                     'object_class_name_list': object_class_name_list,
                     'object_name_list': fixed_object_class_name_list,
-                    'dimension': i
+                    'dimension': i,
                 }
         self.exec_(position)
 
@@ -473,6 +484,7 @@ class CustomPopupMenu(QMenu):
     Attributes:
         parent (QWidget): Parent widget of this pop-up menu
     """
+
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent=parent)
@@ -497,6 +509,7 @@ class AddToolTemplatePopupMenu(CustomPopupMenu):
     Attributes:
         parent (QWidget): parent widget (ToolboxUI)
     """
+
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
@@ -513,6 +526,7 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
         parent (QWidget): Parent widget of this menu (ToolboxUI)
         tool (Tool): Tool item that is associated with the pressed button
     """
+
     def __init__(self, parent, tool):
         super().__init__(parent)
         enabled = True if tool.tool_template() else False
@@ -531,6 +545,7 @@ class AddIncludesPopupMenu(CustomPopupMenu):
     Attributes:
         parent (QWidget): Parent widget (ToolTemplateWidget)
     """
+
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
@@ -547,6 +562,7 @@ class CreateMainProgramPopupMenu(CustomPopupMenu):
     Attributes:
         parent (QWidget): Parent widget (ToolTemplateWidget)
     """
+
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
@@ -558,6 +574,7 @@ class CreateMainProgramPopupMenu(CustomPopupMenu):
 
 class FilterMenu(QMenu):
     """Filter menu to use together with FilterWidget in TabularViewForm."""
+
     filterChanged = Signal(object, set, bool)
 
     def __init__(self, parent=None):
@@ -666,8 +683,10 @@ class PivotTableModelMenu(QMenu):
         selected = set()
         for i in indexes:
             if self._model.index_in_column_headers(i) or self._model.index_in_row_headers(i):
-                if (i.row() - self._model._num_headers_row in self._model.model._invalid_row
-                    or i.column() - self._model._num_headers_column in self._model.model._invalid_column):
+                if (
+                    i.row() - self._model._num_headers_row in self._model.model._invalid_row
+                    or i.column() - self._model._num_headers_column in self._model.model._invalid_column
+                ):
                     continue
                 key = self._model.get_key(i)
                 key = getter(key)
@@ -725,8 +744,9 @@ class PivotTableModelMenu(QMenu):
 
         if len(indexes) > 1:
             # more than one index selected
-            if (any(self._model.index_in_column_headers(i) for i in indexes) or
-                any(self._model.index_in_row_headers(i) for i in indexes)):
+            if any(self._model.index_in_column_headers(i) for i in indexes) or any(
+                self._model.index_in_row_headers(i) for i in indexes
+            ):
                 self.delete_index_action.setText(self._DELETE_INDEX)
                 self.delete_index_action.setEnabled(True)
                 if self.class_type == self._RELATIONSHIP_CLASS:
@@ -752,8 +772,8 @@ class PivotTableModelMenu(QMenu):
                     self.delete_relationship_action.setText("Delete relationship: {}".format(", ".join(relationship)))
                     self.delete_relationship_action.setEnabled(True)
 
-        pPos=self.parent().mapToGlobal(QPoint(5, 20))
-        mPos=pPos+QPos
+        pPos = self.parent().mapToGlobal(QPoint(5, 20))
+        mPos = pPos + QPos
         self.move(mPos)
         self.show()
 
@@ -764,6 +784,7 @@ class AutoFilterMenu(QMenu):
     Attributes:
         parent (QTableView): the parent widget.
     """
+
     asc_sort_triggered = Signal(name="asc_sort_triggered")
     desc_sort_triggered = Signal(name="desc_sort_triggered")
     filter_triggered = Signal(name="filter_triggered")
@@ -917,6 +938,6 @@ class AutoFilterMenu(QMenu):
         self.view.horizontalHeader().setMinimumSectionSize(width)
         parent_section_height = self.parent().verticalHeader().defaultSectionSize()
         self.view.verticalHeader().setDefaultSectionSize(parent_section_height)
-        #if self.view.verticalScrollBar().isVisible():
+        # if self.view.verticalScrollBar().isVisible():
         #    width += qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
         self.setFixedWidth(width)

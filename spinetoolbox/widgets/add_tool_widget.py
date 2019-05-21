@@ -30,6 +30,7 @@ class AddToolWidget(QWidget):
         x (int): X coordinate of new item
         y (int): Y coordinate of new item
     """
+
     def __init__(self, toolbox, x, y):
         """Initialize class."""
         super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
@@ -128,8 +129,9 @@ class AddToolWidget(QWidget):
             selected_tool_template = None
         else:
             selected_tool_template = self._toolbox.tool_template_model.tool_template(selected_row)
-        self._project.add_tool(self.name, self.description, selected_tool_template, True,
-                               self._x, self._y, set_selected=True)
+        self._project.add_tool(
+            self.name, self.description, selected_tool_template, True, self._x, self._y, set_selected=True
+        )
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

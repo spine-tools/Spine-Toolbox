@@ -30,6 +30,7 @@ class ToolConfigurationAssistantWidget(QWidget):
     Attributes:
         toolbox (ToolboxUI): Parent widget.
     """
+
     def __init__(self, toolbox):
         """ Initialize class. """
         super().__init__(parent=toolbox, f=Qt.Window)
@@ -104,8 +105,10 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.q_process = self.spine_model_config_asst.install_spinedb_api()
             self.q_process.subprocess_finished_signal.connect(self._handle_spinedb_api_installation_finished)
         elif link == "Use same python as SpineToolbox":
-            self.add_spine_model_msg("Reconfiguring PyCall to use the same python as Spine Toolbox. "
-                                     "This operation can take a few moments...")
+            self.add_spine_model_msg(
+                "Reconfiguring PyCall to use the same python as Spine Toolbox. "
+                "This operation can take a few moments..."
+            )
             self.q_process = self.spine_model_config_asst.reconfigure_py_call()
             self.q_process.subprocess_finished_signal.connect(self._handle_py_call_reconfiguration_finished)
 
@@ -116,8 +119,9 @@ class ToolConfigurationAssistantWidget(QWidget):
         """
         if ret != 0:
             self.end_spine_model_operation()
-            self.add_spine_model_error_msg("Installation failed. "
-                                           "Make sure that Julia is correctly installed and try again.")
+            self.add_spine_model_error_msg(
+                "Installation failed. " "Make sure that Julia is correctly installed and try again."
+            )
             return
         self.add_spine_model_success_msg("SpineModel successfully installed.")
         self.end_spine_model_operation()
@@ -130,8 +134,9 @@ class ToolConfigurationAssistantWidget(QWidget):
         """
         if ret != 0:
             self.end_spine_model_operation()
-            self.add_spine_model_error_msg("Installation failed. "
-                                           "Make sure that Julia is correctly installed and try again.")
+            self.add_spine_model_error_msg(
+                "Installation failed. " "Make sure that Julia is correctly installed and try again."
+            )
             return
         self.add_spine_model_success_msg("PyCall successfully installed.")
         self.end_spine_model_operation()
@@ -169,13 +174,16 @@ class ToolConfigurationAssistantWidget(QWidget):
         self.add_spine_model_msg("<b>Checking SpineModel configuration.</b> This operation can take a few moments...")
         julia_version = self.spine_model_config_asst.julia_version()
         if julia_version is None:
-            self.add_spine_model_error_msg("Unable to determine Julia version. "
-                                           "Make sure that Julia is correctly installed and try again")
+            self.add_spine_model_error_msg(
+                "Unable to determine Julia version. " "Make sure that Julia is correctly installed and try again"
+            )
             self.end_spine_model_operation()
             return
         if julia_version > "0.6.4" or julia_version < "0.6.0":
-            self.add_spine_model_error_msg("Julia version is {}. SpineModel.jl requires "
-                                           "Julia version 0.6.x to be installed.".format(julia_version))
+            self.add_spine_model_error_msg(
+                "Julia version is {}. SpineModel.jl requires "
+                "Julia version 0.6.x to be installed.".format(julia_version)
+            )
             self.end_spine_model_operation()
             return
         self.q_process = self.spine_model_config_asst.spine_model_installed_check()
@@ -217,8 +225,9 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.end_spine_model_operation()
             return
         py_call_python_program = self.q_process.output
-        self.add_spine_model_msg("PyCall is configured to use the python program at "
-                                 "<b>{0}</b>".format(py_call_python_program))
+        self.add_spine_model_msg(
+            "PyCall is configured to use the python program at " "<b>{0}</b>".format(py_call_python_program)
+        )
         self.spine_model_config_asst.py_call_python_program = py_call_python_program
         self.q_process = self.spine_model_config_asst.spinedb_api_installed_check()
         self.q_process.subprocess_finished_signal.connect(self._handle_spinedb_api_installed_check_finished)
@@ -236,11 +245,13 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.add_spine_model_error_msg("spinedb_api is not installed in PyCall's python.")
             anchor1 = "<a style='color:#99CCFF;' href='Install spinedb_api in PyCall python'>here</a>"
             anchor2 = "<a style='color:#99CCFF;' href='Use same python as SpineToolbox'>here</a>"
-            self.add_spine_model_msg("You have two options:"
-                                     "<ul><li>To install spinedb_api in PyCall's python, "
-                                     "please click {0}.</li>"
-                                     "<li>To reconfigure PyCall to use the same python as SpineToolbox, "
-                                     "please click {1}.</li></ul>".format(anchor1, anchor2))
+            self.add_spine_model_msg(
+                "You have two options:"
+                "<ul><li>To install spinedb_api in PyCall's python, "
+                "please click {0}.</li>"
+                "<li>To reconfigure PyCall to use the same python as SpineToolbox, "
+                "please click {1}.</li></ul>".format(anchor1, anchor2)
+            )
             self.end_spine_model_operation()
             return
         self.add_spine_model_msg("spinedb_api is correctly installed in PyCall's python.")

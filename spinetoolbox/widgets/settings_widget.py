@@ -30,6 +30,7 @@ class SettingsWidget(QWidget):
     Attributes:
         toolbox (ToolboxUI): Parent widget.
     """
+
     def __init__(self, toolbox):
         """Initialize class."""
         # FIXME: setting the parent to toolbox causes the checkboxes in the
@@ -77,8 +78,9 @@ class SettingsWidget(QWidget):
     def browse_gams_path(self, checked=False):
         """Open file browser where user can select a GAMS program."""
         # noinspection PyCallByClass, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, "Select GAMS Program (e.g. gams.exe on Windows)",
-                                             os.path.abspath('C:\\'))
+        answer = QFileDialog.getOpenFileName(
+            self, "Select GAMS Program (e.g. gams.exe on Windows)", os.path.abspath('C:\\')
+        )
         if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
             return
         # Check that it's not a directory
@@ -107,8 +109,9 @@ class SettingsWidget(QWidget):
     def browse_julia_path(self, checked=False):
         """Open file browser where user can select a Julia interpreter (i.e. julia.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, "Select Julia Interpreter (e.g. julia.exe on Windows)",
-                                             os.path.abspath('C:\\'))
+        answer = QFileDialog.getOpenFileName(
+            self, "Select Julia Interpreter (e.g. julia.exe on Windows)", os.path.abspath('C:\\')
+        )
         if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
             return
         # Check that it's not a directory
@@ -137,8 +140,9 @@ class SettingsWidget(QWidget):
     def browse_python_path(self, checked=False):
         """Open file browser where user can select a python interpreter (i.e. python.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, "Select Python Interpreter (e.g. python.exe on Windows)",
-                                             os.path.abspath('C:\\'))
+        answer = QFileDialog.getOpenFileName(
+            self, "Select Python Interpreter (e.g. python.exe on Windows)", os.path.abspath('C:\\')
+        )
         if answer[0] == "":  # Canceled
             return
         # Check that it's not a directory
@@ -343,8 +347,9 @@ class SettingsWidget(QWidget):
         # Check if work directory was changed
         if not self.orig_work_dir == work_dir:
             if not self._project.change_work_dir(work_dir):
-                self._toolbox.msg_error.emit("Could not change project work directory. Creating new dir:{0} failed."
-                                             .format(work_dir))
+                self._toolbox.msg_error.emit(
+                    "Could not change project work directory. Creating new dir:{0} failed.".format(work_dir)
+                )
             else:
                 save = True
         if not self._project.description == self.ui.textEdit_project_description.toPlainText():

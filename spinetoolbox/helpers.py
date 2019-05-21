@@ -29,8 +29,18 @@ from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene
-from PySide2.QtGui import QCursor, QImageReader, QPixmap, QPainter, QColor, QIcon, QIconEngine, QFont, \
-    QStandardItemModel, QStandardItem
+from PySide2.QtGui import (
+    QCursor,
+    QImageReader,
+    QPixmap,
+    QPainter,
+    QColor,
+    QIcon,
+    QIconEngine,
+    QFont,
+    QStandardItemModel,
+    QStandardItem,
+)
 from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
@@ -38,6 +48,7 @@ def set_taskbar_icon():
     """Set application icon to Windows taskbar."""
     if os.name == "nt":
         import ctypes
+
         myappid = "{6E794A8A-E508-47C4-9319-1113852224D3}"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
@@ -69,7 +80,10 @@ def pyside2_version_check():
 
                 pip install "pyside2<5.12"
 
-            """.format(qt_version))
+            """.format(
+                qt_version
+            )
+        )
         return False
     return True
 
@@ -97,7 +111,10 @@ def spinedb_api_version_check():
 
             pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
-        """.format(REQUIRED_SPINEDB_API_VERSION, current_version, script))
+        """.format(
+            REQUIRED_SPINEDB_API_VERSION, current_version, script
+        )
+    )
     return False
 
 
@@ -107,6 +124,7 @@ def busy_effect(func):
     Args:
         func: Decorated function.
     """
+
     def new_function(*args, **kwargs):
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
@@ -115,6 +133,7 @@ def busy_effect(func):
         finally:
             # noinspection PyArgumentList
             QApplication.restoreOverrideCursor()
+
     return new_function
 
 
@@ -257,18 +276,22 @@ def copy_dir(widget, src_dir, dst_dir):
         return False
     except PermissionError as e:
         logging.exception(e)
-        msg = "Access to directory <br/><b>{0}</b><br/>denied." \
-              "<br/><br/>Possible reasons:" \
-              "<br/>1. Windows Explorer is open in the directory" \
-              "<br/>2. Permission error" \
-              "<br/><br/>Check these and try again.".format(dst_dir)
+        msg = (
+            "Access to directory <br/><b>{0}</b><br/>denied."
+            "<br/><br/>Possible reasons:"
+            "<br/>1. Windows Explorer is open in the directory"
+            "<br/>2. Permission error"
+            "<br/><br/>Check these and try again.".format(dst_dir)
+        )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, title_msg, msg)
         return False
     except OSError:
-        msg = "Copying directory failed. OSError in" \
-              "<br/><b>{0}</b><br/>Possibly because Windows " \
-              "Explorer is open in the directory".format(dst_dir)
+        msg = (
+            "Copying directory failed. OSError in"
+            "<br/><b>{0}</b><br/>Possibly because Windows "
+            "Explorer is open in the directory".format(dst_dir)
+        )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, title_msg, msg)
         return False
@@ -293,18 +316,22 @@ def rename_dir(widget, old_dir, new_dir):
         return False
     except PermissionError as e:
         logging.exception(e)
-        msg = "Access to directory <br/><b>{0}</b><br/>denied." \
-              "<br/><br/>Possible reasons:" \
-              "<br/>1. Windows Explorer is open in the directory" \
-              "<br/>2. Permission error" \
-              "<br/><br/>Check these and try again.".format(old_dir)
+        msg = (
+            "Access to directory <br/><b>{0}</b><br/>denied."
+            "<br/><br/>Possible reasons:"
+            "<br/>1. Windows Explorer is open in the directory"
+            "<br/>2. Permission error"
+            "<br/><br/>Check these and try again.".format(old_dir)
+        )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, "Renaming directory failed", msg)
         return False
     except OSError:
-        msg = "Renaming input directory failed. OSError in" \
-              "<br/><b>{0}</b><br/>Possibly because Windows " \
-              "Explorer is open in the directory".format(old_dir)
+        msg = (
+            "Renaming input directory failed. OSError in"
+            "<br/><b>{0}</b><br/>Possibly because Windows "
+            "Explorer is open in the directory".format(old_dir)
+        )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, "Renaming directory failed", msg)
         return False
@@ -356,6 +383,7 @@ def strip_json_data(data, maxlen):
 
 class IconManager:
     """A class to manage object class icons for data store forms."""
+
     def __init__(self):
         """Init instance."""
         super().__init__()
@@ -459,7 +487,7 @@ class IconManager:
             if j % 2 == 0:
                 y = 0
             else:
-                y = - 0.875 * 0.75 * pixmap_item.boundingRect().height()
+                y = -0.875 * 0.75 * pixmap_item.boundingRect().height()
                 pixmap_item.setZValue(-1)
             pixmap_item.setPos(x, y)
             x += 0.875 * 0.5 * pixmap_item.boundingRect().width()
@@ -478,6 +506,7 @@ class IconManager:
 
 class CharIconEngine(QIconEngine):
     """Specialization of QIconEngine used to draw font-based icons."""
+
     def __init__(self, char, color):
         super().__init__()
         self.char = char

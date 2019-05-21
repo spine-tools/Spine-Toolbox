@@ -92,8 +92,9 @@ class PythonReplWidget(RichJupyterWidget):
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
-            self._toolbox.msg_error.emit("Couldn't determine Python version. Please check "
-                                         "the <b>Python interpreter</b> option in Settings.")
+            self._toolbox.msg_error.emit(
+                "Couldn't determine Python version. Please check " "the <b>Python interpreter</b> option in Settings."
+            )
             return None
         python_version_str = q_process.output
         if python_version_str == "":
@@ -140,8 +141,7 @@ class PythonReplWidget(RichJupyterWidget):
             Boolean value depending on whether or not the user chooses to proceed.
         """
         if not self.is_package_installed("ipython"):
-            message = "Python Console requires package <b>IPython</b>." \
-                      "<p>Do you want to install the package now?</p>"
+            message = "Python Console requires package <b>IPython</b>." "<p>Do you want to install the package now?</p>"
             # noinspection PyTypeChecker, PyCallByClass
             answer = QMessageBox.question(self, "IPython missing", message, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
@@ -151,8 +151,9 @@ class PythonReplWidget(RichJupyterWidget):
             self.start_package_install_process("ipython")
             return True
         if not self.is_package_installed("ipykernel"):
-            message = "Python Console requires package <b>ipykernel</b>." \
-                      "<p>Do you want to install the package now?</p>"
+            message = (
+                "Python Console requires package <b>ipykernel</b>." "<p>Do you want to install the package now?</p>"
+            )
             # noinspection PyTypeChecker, PyCallByClass
             answer = QMessageBox.question(self, "ipykernel missing", message, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
@@ -164,8 +165,10 @@ class PythonReplWidget(RichJupyterWidget):
         # Install kernelspecs for self.kernel_name if not already present
         kernel_specs = find_kernel_specs()
         if self.kernel_name not in kernel_specs.keys():
-            message = "IPython kernel specifications for the selected environment are missing. " \
-                      "<p>Do you want to install kernel <b>{0}</b> specifications now?</p>".format(self.kernel_name)
+            message = (
+                "IPython kernel specifications for the selected environment are missing. "
+                "<p>Do you want to install kernel <b>{0}</b> specifications now?</p>".format(self.kernel_name)
+            )
             # noinspection PyTypeChecker, PyCallByClass
             answer = QMessageBox.question(self, "Kernel specs missing", message, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
@@ -175,8 +178,9 @@ class PythonReplWidget(RichJupyterWidget):
             self.start_kernelspec_install_process()
         else:  # Everything ready, start Python Console
             kernel_dir = kernel_specs[self.kernel_name]
-            kernel_spec_anchor = "<a style='color:#99CCFF;' title='{0}' href='#'>{1}</a>"\
-                .format(kernel_dir, self.kernel_name)
+            kernel_spec_anchor = "<a style='color:#99CCFF;' title='{0}' href='#'>{1}</a>".format(
+                kernel_dir, self.kernel_name
+            )
             self._toolbox.msg.emit("\tStarting IPython kernel {0}".format(kernel_spec_anchor))
             self.start_python_kernel()
         return True
@@ -283,8 +287,9 @@ class PythonReplWidget(RichJupyterWidget):
             self._kernel_starting = False
             return self.check_and_install_requirements()
         except NoSuchKernel:  # kernelspecs for the selected kernel_name not available
-            self._toolbox.msg_error.emit("\tCouldn't find the specified IPython kernel specs [{0}]"
-                                         .format(self.kernel_name))
+            self._toolbox.msg_error.emit(
+                "\tCouldn't find the specified IPython kernel specs [{0}]".format(self.kernel_name)
+            )
             self._kernel_starting = False
             return self.check_and_install_requirements()
 
@@ -387,8 +392,9 @@ class PythonReplWidget(RichJupyterWidget):
                             self.execute(cmd)
                 else:
                     # This should probably happen when _kernel_state is 'starting' but it doesn't seem to show up
-                    self._toolbox.msg_error.emit("Unhandled execution_state '{0}' after "
-                                                 "execute_request".format(self._kernel_state))
+                    self._toolbox.msg_error.emit(
+                        "Unhandled execution_state '{0}' after " "execute_request".format(self._kernel_state)
+                    )
 
     def terminate_process(self):
         """Send interrupt signal to kernel."""

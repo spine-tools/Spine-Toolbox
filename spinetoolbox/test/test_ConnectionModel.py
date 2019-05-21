@@ -22,7 +22,6 @@ from models import ConnectionModel
 
 
 class TestConnectionModel(unittest.TestCase):
-
     def test_flags(self):
         model = ConnectionModel()
         flags = model.flags(QModelIndex)
