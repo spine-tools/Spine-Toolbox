@@ -125,6 +125,10 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.name_font_size = 10  # point size
         # Make item name graphics item.
         self.name_item = QGraphicsSimpleTextItem(name)
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setOffset(1)
+        shadow_effect.setEnabled(False)
+        self.setGraphicsEffect(shadow_effect)
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
@@ -209,7 +213,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        super().hoverEnterEvent(event)
+        self.prepareGeometryChange()
+        self.graphicsEffect().setEnabled(True)
+        event.accept()
 
     def hoverLeaveEvent(self, event):
         """Restore original brush when mouse leaves icon boundaries.
@@ -217,7 +223,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        super().hoverLeaveEvent(event)
+        self.prepareGeometryChange()
+        self.graphicsEffect().setEnabled(False)
+        event.accept()
 
     def mousePressEvent(self, event):
         """Update UI to show details of this item. Prevents dragging
@@ -289,6 +297,12 @@ class ProjectItemIcon(QGraphicsRectItem):
             event.accept()
         else:
             super().keyPressEvent(event)
+
+    def itemChange(self, change, value):
+        if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
+            self.prepareGeometryChange()
+            self.setGraphicsEffect(None)
+        return super().itemChange(change, value)
 
     def show_item_info(self):
         """Update GUI to show the details of the selected item."""
