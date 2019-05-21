@@ -125,6 +125,10 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.name_font_size = 10  # point size
         # Make item name graphics item.
         self.name_item = QGraphicsSimpleTextItem(name)
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setOffset(1)
+        shadow_effect.setEnabled(False)
+        self.setGraphicsEffect(shadow_effect)
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
@@ -204,23 +208,23 @@ class ProjectItemIcon(QGraphicsRectItem):
         return connector
 
     def hoverEnterEvent(self, event):
-        """Set a darker shade to icon when mouse enters icon boundaries.
+        """Sets a drop shadow effect to icon when mouse enters its boundaries.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        shadow_effect = QGraphicsDropShadowEffect()
-        shadow_effect.setOffset(1)
-        self.setGraphicsEffect(shadow_effect)
+        self.prepareGeometryChange()
+        self.graphicsEffect().setEnabled(True)
         event.accept()
 
     def hoverLeaveEvent(self, event):
-        """Restore original brush when mouse leaves icon boundaries.
+        """Disables the drop shadow when mouse leaves icon boundaries.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self.setGraphicsEffect(None)
+        self.prepareGeometryChange()
+        self.graphicsEffect().setEnabled(False)
         event.accept()
 
     def mousePressEvent(self, event):
@@ -293,6 +297,22 @@ class ProjectItemIcon(QGraphicsRectItem):
             event.accept()
         else:
             super().keyPressEvent(event)
+
+    def itemChange(self, change, value):
+        """
+        Destroys the drop shadow effect when the items is removed from a scene.
+
+        Args:
+            change (GraphicsItemChange): a flag signalling the type of the change
+            value: a value related to the change
+
+        Returns:
+             Whatever super() does with the value parameter
+        """
+        if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
+            self.prepareGeometryChange()
+            self.setGraphicsEffect(None)
+        return super().itemChange(change, value)
 
     def show_item_info(self):
         """Update GUI to show the details of the selected item."""
