@@ -88,8 +88,10 @@ class ImportDialog(QDialog):
             logging.error("Unable to import Data: %s", err.msg)  # TODO: Use signals for errors
         else:
             if import_errors:
-                msg = "Something went wrong in importing data " \
-                      "into the current session. Here is the error log:\n\n{0}".format([e.msg for e in import_errors])
+                msg = (
+                    "Something went wrong in importing data "
+                    "into the current session. Here is the error log:\n\n{0}".format([e.msg for e in import_errors])
+                )
                 # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
                 logging.error(msg)  # TODO: Use signals for errors
                 return False
@@ -125,13 +127,14 @@ class ImportDialog(QDialog):
 
 if __name__ == '__main__':
     import sys
+
     app = QApplication(sys.argv)
     m = QMainWindow()
     m.setAttribute(Qt.WA_DeleteOnClose, True)
     w = ImportDialog()
     m.show()
     w.exec()
-    #m.setCentralWidget(w)
-    #m.setLayout(QVBoxLayout())
+    # m.setCentralWidget(w)
+    # m.setLayout(QVBoxLayout())
 
     sys.exit(app.exec_())
