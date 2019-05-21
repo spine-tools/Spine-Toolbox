@@ -677,7 +677,6 @@ class Tool(ProjectItem):
         """Add required source files (includes) into a model.
         If items is None or an empty list, model is cleared."""
         self.source_file_model.clear()
-        # self.source_file_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -689,7 +688,6 @@ class Tool(ProjectItem):
         """Add required Tool input files into a model.
         If items is None or an empty list, model is cleared."""
         self.input_file_model.clear()
-        # self.input_file_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -701,7 +699,6 @@ class Tool(ProjectItem):
         """Add optional Tool template files into a model.
         If items is None or an empty list, model is cleared."""
         self.opt_input_file_model.clear()
-        # self.opt_input_file_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -713,7 +710,6 @@ class Tool(ProjectItem):
         """Add Tool output files into a model.
          If items is None or an empty list, model is cleared."""
         self.output_file_model.clear()
-        # self.output_file_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)

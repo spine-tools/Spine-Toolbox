@@ -19,7 +19,6 @@ Contains classes for handling project item execution.
 import logging
 import os
 import copy
-from itertools import chain
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
 
@@ -375,6 +374,8 @@ class ExecutionInstance(QObject):
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
+        dag (DiGraph): Graph that is executed
+        execution_list (list): Ordered list of nodes to execute
     """
     graph_execution_finished_signal = Signal(name="graph_execution_finished_signal")
     project_item_execution_finished_signal = Signal(int, name="project_item_execution_finished_signal")

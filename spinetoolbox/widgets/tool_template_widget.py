@@ -149,7 +149,7 @@ class ToolTemplateWidget(QWidget):
         If items is None or empty list, model is cleared.
         """
         self.sourcefiles_model.clear()
-        self.sourcefiles_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
+        self.sourcefiles_model.setHorizontalHeaderItem(0, QStandardItem("Additional source files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -256,24 +256,25 @@ class ToolTemplateWidget(QWidget):
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
 
-
     @Slot(name="new_main_program_file")
     def new_main_program_file(self):
-        """Create a new blank main program file. Let user decide the file name and location.
+        """Creates a new blank main program file. Let's user decide the file name and path.
         Alternative version using only one getSaveFileName dialog.
         """
+        # noinspection PyCallByClass
         answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
-        # Remove file if exists. getSaveFileName has asked confirmation for us.
+        # Remove file if it exists. getSaveFileName has asked confirmation for us.
         try:
             os.remove(file_path)
         except OSError:
             pass
         try:
             with open(file_path, "w") as fp:
-                logging.debug("Created file:{0}".format(file_path))
+                # logging.debug("Created file:{0}".format(file_path))
+                pass
         except OSError:
             msg = "Please check directory permissions."
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
@@ -414,8 +415,8 @@ class ToolTemplateWidget(QWidget):
               "<b> are not</b> supported.<br/><br/>" \
               "Examples:<br/>" \
               "<b>data.csv</b> -> File is copied to the same work directory as the main program.<br/>" \
-              "<b>input/data.csv</b> -> Creates subdirectory input\ to the work directory and " \
-              "copies the file there.<br/>" \
+              "<b>input/data.csv</b> -> Creates subdirectory /input to work directory and " \
+              "copies file data.csv there.<br/>" \
               "<b>output/</b> -> Creates an empty directory into the work directory.<br/><br/>"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add input item", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
@@ -494,8 +495,8 @@ class ToolTemplateWidget(QWidget):
               "Examples:<br/>" \
               "<b>results.csv</b> -> File is copied from work directory into results.<br/> " \
               "<b>*.csv</b> -> All CSV files will copied into results.<br/> " \
-              "<b>output\*.gdx</b> -> All GDX files from the work output\ directory will be copied into <br/>" \
-              "output\ subdirectory in the results directory.<br/><br/>"
+              "<b>output/*.gdx</b> -> All GDX files from work subdirectory /output will be copied into <br/>" \
+              "results /output subdirectory.<br/><br/>"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add output item", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         file_name = answer[0]
