@@ -20,8 +20,15 @@ Note: These are Spine Toolbox internal data models.
 import logging
 import os
 import json
-from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractListModel, QAbstractTableModel, \
-    QSortFilterProxyModel, QAbstractItemModel
+from PySide2.QtCore import (
+    Qt,
+    Slot,
+    QModelIndex,
+    QAbstractListModel,
+    QAbstractTableModel,
+    QSortFilterProxyModel,
+    QAbstractItemModel,
+)
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
@@ -36,6 +43,7 @@ class ProjectItemModel(QAbstractItemModel):
         toolbox (ToolboxUI): QMainWindow instance
         root (ProjectItem): Root item for the project item tree
     """
+
     def __init__(self, toolbox, root):
         """Class constructor."""
         super().__init__()
@@ -179,8 +187,7 @@ class ProjectItemModel(QAbstractItemModel):
             # logging.debug("Looking for {0} in category {1}".format(name, category.name))
             category_index = self.find_category(category.name)
             start_index = self.index(0, 0, category_index)
-            matching_index = self.match(start_index, Qt.DisplayRole, name,
-                                        1, Qt.MatchFixedString | Qt.MatchRecursive)
+            matching_index = self.match(start_index, Qt.DisplayRole, name, 1, Qt.MatchFixedString | Qt.MatchRecursive)
             if not matching_index:
                 pass  # no match in this category
             elif len(matching_index) == 1:
@@ -267,8 +274,7 @@ class ProjectItemModel(QAbstractItemModel):
         try:
             old_data_dir = item.data_dir  # Full path
         except AttributeError:
-            logging.error("Item does not have a data_dir. "
-                          "Make sure that class %s creates one.", item.item_type)
+            logging.error("Item does not have a data_dir. " "Make sure that class %s creates one.", item.item_type)
             return False
         # Get project path from the old data dir path
         project_path = os.path.split(old_data_dir)[0]
@@ -384,6 +390,7 @@ class ProjectItemModel(QAbstractItemModel):
 
 class ToolTemplateModel(QAbstractListModel):
     """Class to store tools that are available in a project e.g. GAMS or Julia models."""
+
     def __init__(self, toolbox=None):
         super().__init__()
         self._tools = list()
@@ -814,7 +821,7 @@ class ConnectionModel(QAbstractTableModel):
         self.connections = connection_table
         self.endResetModel()
         top_left = self.index(0, 0)
-        bottom_right = self.index(self.rowCount()-1, self.columnCount()-1)
+        bottom_right = self.index(self.rowCount() - 1, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right)
 
     def find_index_in_header(self, name):
@@ -837,6 +844,7 @@ class MinimalTableModel(QAbstractTableModel):
     Attributes:
         parent (QMainWindow): the parent widget, usually an instance of TreeViewForm
     """
+
     def __init__(self, parent=None):
         """Initialize class"""
         super().__init__(parent)
@@ -1135,6 +1143,7 @@ class MinimalTableModel(QAbstractTableModel):
 
 class EmptyRowModel(MinimalTableModel):
     """A table model with a last empty row."""
+
     def __init__(self, parent=None):
         """Init class."""
         super().__init__(parent)
@@ -1250,6 +1259,7 @@ class EmptyRowModel(MinimalTableModel):
 
 class ObjectClassListModel(QStandardItemModel):
     """A class to list object classes in the GraphViewForm."""
+
     def __init__(self, graph_view_form):
         """Initialize class"""
         super().__init__(graph_view_form)
@@ -1296,6 +1306,7 @@ class ObjectClassListModel(QStandardItemModel):
 
 class RelationshipClassListModel(QStandardItemModel):
     """A class to list relationship classes in the GraphViewForm."""
+
     def __init__(self, graph_view_form):
         """Initialize class"""
         super().__init__(graph_view_form)
@@ -1340,6 +1351,7 @@ class RelationshipTreeModel(QStandardItemModel):
     """A class to display Spine data structure in a treeview
     with relationship classes at the outer level.
     """
+
     def __init__(self, tree_view_form):
         """Initialize class"""
         super().__init__(tree_view_form)
@@ -1480,6 +1492,32 @@ class RelationshipTreeModel(QStandardItemModel):
             # Already fetched, add new items manually
             self.add_relationships_to_class(relationship_list, relationship_class_item)
 
+    def update_objects(self, updated_items):
+        """Update object in the model.
+        This of course means updating the object name in relationship items.
+        """
+        updated_items_dict = {x.id: x for x in updated_items}
+        for i in range(self.root_item.rowCount()):
+            relationship_class_item = self.root_item.child(i)
+            for j in range(relationship_class_item.rowCount()):
+                visited_item = relationship_class_item.child(j)
+                relationship = visited_item.data(Qt.UserRole + 1)
+                object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
+                object_name_list = relationship['object_name_list'].split(",")
+                found = False
+                for i, id in enumerate(object_id_list):
+                    try:
+                        updated_item = updated_items_dict[id]
+                        object_name_list[i] = updated_item.name
+                        found = True
+                    except KeyError:
+                        continue
+                if found:
+                    str_object_name_list = ",".join(object_name_list)
+                    relationship['object_name_list'] = str_object_name_list
+                    visited_item.setText(str_object_name_list)
+                    visited_item.setData(relationship, Qt.UserRole + 1)
+
     def update_relationship_classes(self, updated_items):
         """Update relationship classes in the model."""
         updated_items_dict = {x.id: x for x in updated_items}
@@ -1548,11 +1586,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.is_flat = False
-        self._fetched = {
-            "object_class": set(),
-            "object": set(),
-            "relationship_class": set()
-        }
+        self._fetched = {"object_class": set(), "object": set(), "relationship_class": set()}
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
@@ -1715,9 +1749,8 @@ class ObjectTreeModel(QStandardItemModel):
             relationship_class = parent.data(Qt.UserRole + 1)
             object_ = parent.parent().data(Qt.UserRole + 1)
             relationship_list = self.db_map.wide_relationship_list(
-                class_id=relationship_class['id'],
-                object_id=object_['id']
-                )
+                class_id=relationship_class['id'], object_id=object_['id']
+            )
             relationship_item_list = list()
             for relationship in relationship_list:
                 relationship_item = QStandardItem(relationship.object_name_list)
@@ -1731,11 +1764,7 @@ class ObjectTreeModel(QStandardItemModel):
     def build_tree(self, database, flat=False):
         """Build the first level of the tree"""
         self.clear()
-        self._fetched = {
-            "object_class": set(),
-            "object": set(),
-            "relationship_class": set()
-        }
+        self._fetched = {"object_class": set(), "object": set(), "relationship_class": set()}
         self.root_item = QStandardItem(database)
         self.root_item.setData('root', Qt.UserRole)
         icon = QIcon(":/symbols/Spine_symbol.png")
@@ -1829,10 +1858,9 @@ class ObjectTreeModel(QStandardItemModel):
         """Add relationship class items to model."""
         relationship_class_dict = {}
         for relationship_class in relationship_classes:
-            relationship_class_dict.setdefault(
-                relationship_class.object_class_id_list,
-                list()
-            ).append(relationship_class)
+            relationship_class_dict.setdefault(relationship_class.object_class_id_list, list()).append(
+                relationship_class
+            )
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
@@ -2013,8 +2041,11 @@ class ObjectTreeModel(QStandardItemModel):
             return None
         object_name_list = index.data(Qt.DisplayRole)
         class_id = index.data(Qt.UserRole + 1)["class_id"]
-        items = [item for item in self.findItems(object_name_list, Qt.MatchExactly | Qt.MatchRecursive, column=0)
-                 if item.data(Qt.UserRole + 1)["class_id"] == class_id]
+        items = [
+            item
+            for item in self.findItems(object_name_list, Qt.MatchExactly | Qt.MatchRecursive, column=0)
+            if item.data(Qt.UserRole + 1)["class_id"] == class_id
+        ]
         position = None
         for i, item in enumerate(items):
             if index == self.indexFromItem(item):
@@ -2032,6 +2063,7 @@ class SubParameterModel(MinimalTableModel):
     Allows specifying set of columns that are non-editable (e.g., object_class_name)
     TODO: how column insertion/removal impacts fixed_columns?
     """
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2089,6 +2121,7 @@ class SubParameterValueModel(SubParameterModel):
     """A parameter model which corresponds to a slice of an entire parameter value table.
     The idea is to combine several of these into one big model.
     """
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2135,7 +2168,7 @@ class SubParameterValueModel(SubParameterModel):
         if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'value':
             return strip_json_data(super().data(index, Qt.DisplayRole), 512)
         if role == Qt.DisplayRole and self._parent.header[index.column()] == 'value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 32)
+            return strip_json_data(super().data(index, Qt.DisplayRole), 16)
         return super().data(index, role)
 
 
@@ -2143,6 +2176,7 @@ class SubParameterDefinitionModel(SubParameterModel):
     """A parameter model which corresponds to a slice of an entire parameter definition table.
     The idea is to combine several of these into one big model.
     """
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2228,7 +2262,7 @@ class SubParameterDefinitionModel(SubParameterModel):
         if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'default_value':
             return strip_json_data(super().data(index, Qt.DisplayRole), 512)
         if role == Qt.DisplayRole and self._parent.header[index.column()] == 'default_value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 32)
+            return strip_json_data(super().data(index, Qt.DisplayRole), 16)
         return super().data(index, role)
 
 
@@ -2236,6 +2270,7 @@ class EmptyParameterModel(EmptyRowModel):
     """An empty parameter model.
     It implements `bath_set_data` for all 'EmptyParameter' models.
     """
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2262,6 +2297,7 @@ class EmptyParameterValueModel(EmptyParameterModel):
     Implements `add_items_to_db` for both EmptyObjectParameterValueModel
     and EmptyRelationshipParameterValueModel.
     """
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2289,6 +2325,7 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
     """An empty object parameter value model.
     Implements `items_to_add`.
     """
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2314,7 +2351,8 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
         parameter_dict = {}
         for x in self._parent.db_map.object_parameter_list():
             parameter_dict.setdefault(x.parameter_name, {}).update(
-                {x.object_class_id: {'id': x.id, 'object_class_id': x.object_class_id}})
+                {x.object_class_id: {'id': x.id, 'object_class_id': x.object_class_id}}
+            )
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
@@ -2361,10 +2399,7 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
                     indexes.append(self.index(row, object_class_name_column))
             if object_ is None or parameter is None:
                 continue
-            item = {
-                "object_id": object_['id'],
-                "parameter_id": parameter['id']
-            }
+            item = {"object_id": object_['id'], "parameter_id": parameter['id']}
             for column in range(parameter_name_column + 1, self.columnCount()):
                 item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
             items_to_add[row] = item
@@ -2375,6 +2410,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
     """An empty relationship parameter value model.
     Reimplements alsmot all methods from the super class EmptyParameterModel.
     """
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2425,15 +2461,17 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
             x.name: {
                 "id": x.id,
                 "object_class_id_list": x.object_class_id_list,
-                "object_class_name_list": x.object_class_name_list
-            } for x in self._parent.db_map.wide_relationship_class_list()}
+                "object_class_name_list": x.object_class_name_list,
+            }
+            for x in self._parent.db_map.wide_relationship_class_list()
+        }
         relationship_class_name_dict = {x.id: x.name for x in self._parent.db_map.wide_relationship_class_list()}
         parameter_dict = {}
         for x in self._parent.db_map.relationship_parameter_list():
             parameter_dict.setdefault(x.parameter_name, {}).update(
-                {x.relationship_class_id: {'id': x.id, 'relationship_class_id': x.relationship_class_id}})
-        relationship_dict = {
-            (x.class_id, x.object_id_list): x.id for x in self._parent.db_map.wide_relationship_list()}
+                {x.relationship_class_id: {'id': x.id, 'relationship_class_id': x.relationship_class_id}}
+            )
+        relationship_dict = {(x.class_id, x.object_id_list): x.id for x in self._parent.db_map.wide_relationship_list()}
         object_dict = {x.name: x.id for x in self._parent.db_map.object_list()}
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
@@ -2495,7 +2533,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                 relationship = {
                     "name": relationship_name,
                     "object_id_list": object_id_list,
-                    "class_id": relationship_class_id
+                    "class_id": relationship_class_id,
                 }
                 relationships_to_add[row] = relationship
         new_relationships = self.add_relationships(relationships_to_add)
@@ -2538,10 +2576,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                 self._main_data[row][relationship_id_column] = relationship_id
             except KeyError:
                 continue
-            item = {
-                "relationship_id": relationship_id,
-                "parameter_id": parameter_id
-            }
+            item = {"relationship_id": relationship_id, "parameter_id": parameter_id}
             for column in range(parameter_name_column + 1, self.columnCount()):
                 item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
             items_to_add[row] = item
@@ -2550,6 +2585,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
 
 class EmptyParameterDefinitionModel(EmptyParameterModel):
     """An empty parameter definition model."""
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2586,6 +2622,7 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
 
 class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty object parameter definition model."""
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2634,10 +2671,7 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
                     self.error_log.append("Invalid value list '{}'".format(value_list_name))
             if not parameter_name or object_class_id is None:
                 continue
-            item = {
-                "object_class_id": object_class_id,
-                "name": parameter_name
-            }
+            item = {"object_class_id": object_class_id, "name": parameter_name}
             for column in range(parameter_name_column + 1, self.columnCount()):
                 item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
             items_to_add[row] = item
@@ -2646,6 +2680,7 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
 
 class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty relationship parameter definition model."""
+
     def __init__(self, parent):
         """Initialize class."""
         super().__init__(parent)
@@ -2671,8 +2706,10 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
             x.name: {
                 'id': x.id,
                 'object_class_id_list': x.object_class_id_list,
-                'object_class_name_list': x.object_class_name_list
-            } for x in self._parent.db_map.wide_relationship_class_list()}
+                'object_class_name_list': x.object_class_name_list,
+            }
+            for x in self._parent.db_map.wide_relationship_class_list()
+        }
         parameter_tag_dict = {x.tag: x.id for x in self._parent.db_map.parameter_tag_list()}
         parameter_value_list_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_value_list_list()}
         unique_rows = {ind.row() for ind in indexes}
@@ -2710,10 +2747,7 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
                     self.error_log.append("Invalid value list '{}'".format(value_list_name))
             if not parameter_name or relationship_class_id is None:
                 continue
-            item = {
-                "relationship_class_id": relationship_class_id,
-                "name": parameter_name
-            }
+            item = {"relationship_class_id": relationship_class_id, "name": parameter_name}
             for column in range(parameter_name_column + 1, self.columnCount()):
                 item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
             items_to_add[row] = item
@@ -2724,6 +2758,7 @@ class ObjectParameterModel(MinimalTableModel):
     """A model that concatenates several 'sub' object parameter models,
     one per object class.
     """
+
     def __init__(self, tree_view_form=None):
         """Init class."""
         super().__init__(tree_view_form)
@@ -3012,6 +3047,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
     """A model that concatenates several 'sub' object parameter value models,
     one per object class.
     """
+
     def __init__(self, tree_view_form=None):
         """Init class."""
         super().__init__(tree_view_form)
@@ -3141,6 +3177,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
     """A model that concatenates several object parameter definition models
     (one per object class) vertically.
     """
+
     def __init__(self, tree_view_form=None):
         """Init class."""
         super().__init__(tree_view_form)
@@ -3216,7 +3253,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         self.dataChanged.emit(
             self.index(0, value_list_name_column),
             self.index(self.rowCount() - 1, value_list_name_column),
-            [Qt.DisplayRole]
+            [Qt.DisplayRole],
         )
 
     def rename_parameter_value_lists(self, value_lists):
@@ -3232,7 +3269,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         self.dataChanged.emit(
             self.index(0, value_list_name_column),
             self.index(self.rowCount() - 1, value_list_name_column),
-            [Qt.DisplayRole]
+            [Qt.DisplayRole],
         )
 
 
@@ -3240,6 +3277,7 @@ class RelationshipParameterModel(MinimalTableModel):
     """A model that combines several relationship parameter models
     (one per relationship class), one on top of the other.
     """
+
     def __init__(self, tree_view_form=None):
         """Init class."""
         super().__init__(tree_view_form)
@@ -3255,8 +3293,9 @@ class RelationshipParameterModel(MinimalTableModel):
 
     def add_object_class_id_lists(self, wide_relationship_class_list):
         """Populate a dictionary of object class id lists per relationship class."""
-        self.object_class_id_lists.update({
-            x.id: [int(x) for x in x.object_class_id_list.split(",")] for x in wide_relationship_class_list})
+        self.object_class_id_lists.update(
+            {x.id: [int(x) for x in x.object_class_id_list.split(",")] for x in wide_relationship_class_list}
+        )
 
     def flags(self, index):
         """Return flags for given index.
@@ -3301,14 +3340,14 @@ class RelationshipParameterModel(MinimalTableModel):
                     continue
             if row < model.rowCount():
                 if role == Qt.DecorationRole and column == self.relationship_class_name_column:
-                    object_class_name_list = model.index(row, self.object_class_name_list_column).\
-                        data(Qt.DisplayRole)
+                    object_class_name_list = model.index(row, self.object_class_name_list_column).data(Qt.DisplayRole)
                     return self._tree_view_form.icon_mngr.relationship_icon(object_class_name_list)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
         if role == Qt.DecorationRole and column == self.relationship_class_name_column:
-            object_class_name_list = self.empty_row_model.index(row, self.object_class_name_list_column).\
-                data(Qt.DisplayRole)
+            object_class_name_list = self.empty_row_model.index(row, self.object_class_name_list_column).data(
+                Qt.DisplayRole
+            )
             return self._tree_view_form.icon_mngr.relationship_icon(object_class_name_list)
         return self.empty_row_model.index(row, column).data(role)
 
@@ -3529,8 +3568,9 @@ class RelationshipParameterModel(MinimalTableModel):
                 object_class_name_list = row_data[object_class_name_list_column].split(',')
                 object_class_name_dict = {i: name for i, name in enumerate(object_class_name_list)}
                 object_class_name_dict.update(new_object_class_name_dict)
-                new_object_class_name_list = ",".\
-                    join([object_class_name_dict[i] for i in range(len(object_class_name_dict))])
+                new_object_class_name_list = ",".join(
+                    [object_class_name_dict[i] for i in range(len(object_class_name_dict))]
+                )
                 row_data[object_class_name_list_column] = new_object_class_name_list
 
     def rename_relationship_classes(self, relationship_classes):
@@ -3613,6 +3653,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
     """A model that combines several relationship parameter value models
     (one per relationship class), one on top of the other.
     """
+
     def __init__(self, tree_view_form=None):
         """Init class."""
         super().__init__(tree_view_form)
@@ -3628,7 +3669,8 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         header = self.db_map.relationship_parameter_value_fields()
         data = self.db_map.relationship_parameter_value_list()
         self.fixed_columns = [
-            header.index(x) for x in ('relationship_class_name', 'object_name_list', 'parameter_name')]
+            header.index(x) for x in ('relationship_class_name', 'object_name_list', 'parameter_name')
+        ]
         self.relationship_class_name_column = header.index('relationship_class_name')
         self.object_class_name_list_column = header.index('object_class_name_list')
         parameter_definition_id_column = header.index('parameter_id')
@@ -3642,7 +3684,8 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
             source_model = SubParameterValueModel(self)
             source_model.reset_model([list(x) for x in data])
             model = RelationshipParameterValueFilterProxyModel(
-                self, parameter_definition_id_column, object_id_list_column)
+                self, parameter_definition_id_column, object_id_list_column
+            )
             model.setSourceModel(source_model)
             self.sub_models.append((relationship_class_id, model))
         self.empty_row_model.set_horizontal_header_labels(header)
@@ -3681,7 +3724,8 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
             source_model = SubParameterValueModel(self)
             source_model.reset_model(data)
             model = RelationshipParameterValueFilterProxyModel(
-                self, parameter_definition_id_column, object_id_list_column)
+                self, parameter_definition_id_column, object_id_list_column
+            )
             model.setSourceModel(source_model)
             self.sub_models.append((relationship_class_id, model))
         for row in reversed(rows):
@@ -3758,6 +3802,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
     """A model that combines several relationship parameter definition models
     (one per relationship class), one on top of the other.
     """
+
     def __init__(self, tree_view_form=None):
         """Init class."""
         super().__init__(tree_view_form)
@@ -3834,7 +3879,10 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
                     row_data[value_list_id_column] = None
                     row_data[value_list_name_column] = None
         self.dataChanged.emit(
-            self.index(0, value_list_name_column), self.index(self.rowCount() - 1, value_list_name_column), [Qt.DisplayRole])
+            self.index(0, value_list_name_column),
+            self.index(self.rowCount() - 1, value_list_name_column),
+            [Qt.DisplayRole],
+        )
 
     def rename_parameter_value_lists(self, value_lists):
         """Rename parameter value_lists in model."""
@@ -3847,11 +3895,15 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
                 if value_list_id in parameter_value_list_dict:
                     row_data[value_list_name_column] = parameter_value_list_dict[value_list_id]
         self.dataChanged.emit(
-            self.index(0, value_list_name_column), self.index(self.rowCount() - 1, value_list_name_column), [Qt.DisplayRole])
+            self.index(0, value_list_name_column),
+            self.index(self.rowCount() - 1, value_list_name_column),
+            [Qt.DisplayRole],
+        )
 
 
 class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
     """A filter proxy model for object parameter models."""
+
     def __init__(self, parent, parameter_definition_id_column):
         """Init class."""
         super().__init__(parent)
@@ -3913,6 +3965,7 @@ class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
 
 class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyModel):
     """A filter proxy model for object parameter value models."""
+
     def __init__(self, parent, parameter_definition_id_column, object_id_column):
         """Init class."""
         super().__init__(parent, parameter_definition_id_column)
@@ -3938,6 +3991,7 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
 
 class RelationshipParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
     """A filter proxy model for relationship parameter definition models."""
+
     def __init__(self, parent, parameter_definition_id_column):
         """Init class."""
         super().__init__(parent)
@@ -3999,6 +4053,7 @@ class RelationshipParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
 
 class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinitionFilterProxyModel):
     """A filter proxy model for relationship parameter value models."""
+
     def __init__(self, parent, parameter_definition_id_column, object_id_list_column):
         """Init class."""
         super().__init__(parent, parameter_definition_id_column)
@@ -4008,8 +4063,11 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
 
     def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):
         """Update filter."""
-        if parameter_definition_ids == self.parameter_definition_ids \
-                and object_ids == self.object_ids and object_id_lists == self.object_id_lists:
+        if (
+            parameter_definition_ids == self.parameter_definition_ids
+            and object_ids == self.object_ids
+            and object_id_lists == self.object_id_lists
+        ):
             return
         self.parameter_definition_ids = parameter_definition_ids
         self.object_ids = object_ids
@@ -4037,6 +4095,7 @@ class TreeNode:
         text (str, NoneType): the text to show
         id (int, NoneType): the id from the db table
     """
+
     def __init__(self, parent, row, text=None, id=None):
         self.parent = parent
         self.row = row
@@ -4162,7 +4221,7 @@ class ParameterValueListModel(QAbstractItemModel):
         Items in the new row will be children of the item represented by the parent model index.
         """
         row = self.rowCount(parent)
-        self.beginInsertRows(parent, row, row + count -1)
+        self.beginInsertRows(parent, row, row + count - 1)
         if not parent.isValid():
             self._root_nodes.append(TreeNode(None, row, text=self.empty_list))
         else:
@@ -4214,17 +4273,13 @@ class ParameterValueListModel(QAbstractItemModel):
                 else:
                     # Add
                     value_list = [
-                        self.index(i, 0, index).internalPointer().text
-                        for i in range(self.rowCount(index) - 1)
+                        self.index(i, 0, index).internalPointer().text for i in range(self.rowCount(index) - 1)
                     ]
                     if value_list:
                         to_add.append(dict(parent=index, name=name, value_list=value_list))
         else:
             # The changes correspond to list *values*, so it's enough to check the parent
-            value_list = [
-                self.index(i, 0, parent).internalPointer().text
-                for i in range(self.rowCount(parent) - 1)
-            ]
+            value_list = [self.index(i, 0, parent).internalPointer().text for i in range(self.rowCount(parent) - 1)]
             id = parent.internalPointer().id
             if id:
                 # Update
@@ -4277,6 +4332,7 @@ class JSONArrayModel(EmptyRowModel):
         parent (JSONEditor): the parent widget
         stride (int): The number of elements to fetch
     """
+
     def __init__(self, parent, stride=256):
         """Initialize class"""
         super().__init__(parent)
@@ -4336,6 +4392,7 @@ class DatapackageResourcesModel(MinimalTableModel):
     Attributes:
         parent (SpineDatapackageWidget)
     """
+
     def __init__(self, parent):
         """Initialize class"""
         super().__init__(parent)
@@ -4362,6 +4419,7 @@ class DatapackageFieldsModel(MinimalTableModel):
     Attributes:
         parent (SpineDatapackageWidget)
     """
+
     def __init__(self, parent):
         """Initialize class"""
         super().__init__(parent)
@@ -4384,6 +4442,7 @@ class DatapackageForeignKeysModel(EmptyRowModel):
     Attributes:
         parent (SpineDatapackageWidget)
     """
+
     def __init__(self, parent):
         """Initialize class"""
         super().__init__(parent)
@@ -4456,6 +4515,7 @@ class HybridTableModel(MinimalTableModel):
     """A model that concatenates two models,
     one for existing items and another one for new items.
     """
+
     def __init__(self, parent=None):
         """Init class."""
         super().__init__(parent)

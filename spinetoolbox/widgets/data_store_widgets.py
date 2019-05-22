@@ -611,6 +611,7 @@ class DataStoreForm(QMainWindow):
         if not objects.count():
             return
         self.object_tree_model.update_objects(objects)
+        self.relationship_tree_model.update_objects(objects)
         self.object_parameter_value_model.rename_objects(objects)
         self.relationship_parameter_value_model.rename_objects(objects)
         self.commit_available.emit(True)
