@@ -161,7 +161,7 @@ Below are the bare minimum things you need to know.
 ### Setting up development environment
 
 1. Install the optional requirements.
-2. Run `pre-hook install` in project's root directory. This sets up some git hooks.
+2. Run `pre-commit install` in project's root directory. This sets up some git hooks.
 
 ### Coding Style
 - Google style docstrings
