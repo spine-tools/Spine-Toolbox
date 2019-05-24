@@ -433,8 +433,6 @@ class ExecutionInstance(QObject):
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
-        logging.debug("dc refs:{0}".format(self.dc_refs))
-        logging.debug("dc files:{0}".format(self.dc_files))
         self.running_item = self.execution_list.pop(0)
         self.execute_project_item()
 
@@ -454,7 +452,6 @@ class ExecutionInstance(QObject):
         """
         self.project_item_execution_finished_signal.disconnect()
         if abort == 1:
-            self._toolbox.msg.emit("Execution aborted due to an error")
             self.graph_execution_finished_signal.emit()
             return
         try:
