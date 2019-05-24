@@ -19,8 +19,17 @@ Functions to make and handle QToolBars.
 # TODO: QToolBars should be added to the UI in Qt Designer
 
 from PySide2.QtCore import Qt, QMimeData, Signal, Slot
-from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QButtonGroup, \
-    QPushButton, QWidget, QSizePolicy, QToolButton
+from PySide2.QtWidgets import (
+    QToolBar,
+    QLabel,
+    QAction,
+    QApplication,
+    QButtonGroup,
+    QPushButton,
+    QWidget,
+    QSizePolicy,
+    QToolButton,
+)
 from PySide2.QtGui import QIcon, QDrag
 from config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 
@@ -31,6 +40,7 @@ class ItemToolBar(QToolBar):
     Attributes:
         parent (ToolboxUI): QMainWindow instance
     """
+
     def __init__(self, parent):
         """Init class."""
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
@@ -81,14 +91,19 @@ class DraggableWidget(QLabel):
         pixmap (QPixMap): Picture for the label
         text (str): Item type
     """
+
     def __init__(self, parent, pixmap, text):
         super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
         self.text = text
         self.setPixmap(pixmap)
         self.drag_start_pos = None
-        self.setToolTip("""
+        self.setToolTip(
+            """
             <p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>
-        """.format(self.text))
+        """.format(
+                self.text
+            )
+        )
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -151,8 +166,9 @@ class ParameterTagToolBar(QToolBar):
             self.action_dict[tag.id] = action
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=tag.id)
-        self.tag_button_group.buttonToggled["int", "bool"].\
-            connect(lambda id, checked: self.tag_button_toggled.emit(id, checked))
+        self.tag_button_group.buttonToggled["int", "bool"].connect(
+            lambda id, checked: self.tag_button_toggled.emit(id, checked)
+        )
         empty = QWidget()
         empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.empty_action = self.addWidget(empty)

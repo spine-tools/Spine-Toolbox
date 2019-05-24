@@ -16,11 +16,17 @@ Custom item delegates.
 :date:   1.9.2018
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
-from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, \
-    QApplication, QStyledItemDelegate
+from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyledItemDelegate
 from PySide2.QtGui import QIcon
-from widgets.custom_editors import CustomComboEditor, CustomLineEditor, SearchBarEditor, \
-    MultiSearchBarEditor, CheckListEditor, JSONEditor, IconColorEditor
+from widgets.custom_editors import (
+    CustomComboEditor,
+    CustomLineEditor,
+    SearchBarEditor,
+    MultiSearchBarEditor,
+    CheckListEditor,
+    JSONEditor,
+    IconColorEditor,
+)
 
 
 class IconColorDialogDelegate(QStyledItemDelegate):
@@ -29,6 +35,7 @@ class IconColorDialogDelegate(QStyledItemDelegate):
     Attributes:
         parent (DataStoreForm): tree view form.
     """
+
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
@@ -61,6 +68,7 @@ class LineEditDelegate(QItemDelegate):
     Attributes:
         parent (QMainWindow): either data store or spine datapackage widget
     """
+
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
@@ -150,11 +158,14 @@ class CheckBoxDelegate(QItemDelegate):
         checkbox_style_option = QStyleOptionButton()
         checkbox_rect = QApplication.style().subElementRect(QStyle.SE_CheckBoxIndicator, checkbox_style_option, None)
         if self._centered:
-            checkbox_anchor = QPoint(option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
-                                     option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2)
+            checkbox_anchor = QPoint(
+                option.rect.x() + option.rect.width() / 2 - checkbox_rect.width() / 2,
+                option.rect.y() + option.rect.height() / 2 - checkbox_rect.height() / 2,
+            )
         else:
-            checkbox_anchor = QPoint(option.rect.x() + checkbox_rect.width() / 2,
-                                     option.rect.y() + checkbox_rect.height() / 2)
+            checkbox_anchor = QPoint(
+                option.rect.x() + checkbox_rect.width() / 2, option.rect.y() + checkbox_rect.height() / 2
+            )
         return QRect(checkbox_anchor, checkbox_rect.size())
 
 
@@ -164,6 +175,7 @@ class ParameterDelegate(QItemDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
@@ -200,6 +212,7 @@ class ObjectParameterValueDelegate(ParameterDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -225,8 +238,9 @@ class ObjectParameterValueDelegate(ParameterDelegate):
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
             if parameter:
-                value_list = self.db_map.wide_parameter_value_list_list(id_list=[parameter.parameter_value_list_id]).\
-                    one_or_none()
+                value_list = self.db_map.wide_parameter_value_list_list(
+                    id_list=[parameter.parameter_value_list_id]
+                ).one_or_none()
             else:
                 value_list = None
             if value_list:
@@ -249,6 +263,7 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -289,6 +304,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -325,8 +341,9 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
             if parameter:
-                value_list = self.db_map.wide_parameter_value_list_list(id_list=[parameter.parameter_value_list_id]).\
-                    one_or_none()
+                value_list = self.db_map.wide_parameter_value_list_list(
+                    id_list=[parameter.parameter_value_list_id]
+                ).one_or_none()
             else:
                 value_list = None
             if value_list:
@@ -350,6 +367,7 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -390,6 +408,7 @@ class AddItemsDelegate(QItemDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
@@ -412,6 +431,7 @@ class AddObjectsDelegate(AddItemsDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -442,6 +462,7 @@ class AddRelationshipClassesDelegate(AddItemsDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -485,6 +506,7 @@ class AddRelationshipsDelegate(AddItemsDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -533,6 +555,7 @@ class AddParameterEnumsDelegate(LineEditDelegate):
     Attributes:
         parent (QMainWindow): tree or graph view form
     """
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -543,6 +566,7 @@ class ForeignKeysDelegate(QItemDelegate):
     Attributes:
         parent (SpineDatapackageWidget): spine datapackage widget
     """
+
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def close_field_name_list_editor(self, editor, index, model):
@@ -561,16 +585,14 @@ class ForeignKeysDelegate(QItemDelegate):
         if header[index.column()] == 'fields':
             editor = CheckListEditor(self._parent, parent)
             model = index.model()
-            editor.data_committed.connect(
-                lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
+            editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
             return editor
         elif header[index.column()] == 'reference resource':
             return CustomComboEditor(parent)
         elif header[index.column()] == 'reference fields':
             editor = CheckListEditor(self._parent, parent)
             model = index.model()
-            editor.data_committed.connect(
-                lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
+            editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
             return editor
         else:
             return None

@@ -42,6 +42,7 @@ class DataConnection(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
     def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""
         super().__init__(name, description)
@@ -59,8 +60,9 @@ class DataConnection(ProjectItem):
             create_dir(self.data_dir)
             self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                         " Check permissions.".format(self.data_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+            )
         # Populate references model
         self.references = references
         self.populate_reference_list(self.references)
@@ -251,8 +253,9 @@ class DataConnection(ProjectItem):
         if self.spine_datapackage_form:
             if self.spine_datapackage_form.windowState() & Qt.WindowMinimized:
                 # Remove minimized status and restore window with the previous state (maximized/normal state)
-                self.spine_datapackage_form.setWindowState(self.spine_datapackage_form.windowState()
-                                                           & ~Qt.WindowMinimized | Qt.WindowActive)
+                self.spine_datapackage_form.setWindowState(
+                    self.spine_datapackage_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+                )
                 self.spine_datapackage_form.activateWindow()
             else:
                 self.spine_datapackage_form.raise_()
@@ -270,8 +273,9 @@ class DataConnection(ProjectItem):
         """Create a new blank file to this Data Connections data directory."""
         msg = "File name"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self._toolbox, "Create new file", msg,
-                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self._toolbox, "Create new file", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+        )
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
@@ -291,8 +295,9 @@ class DataConnection(ProjectItem):
             return
         try:
             with open(file_path, "w"):
-                self._toolbox.msg.emit("File <b>{0}</b> created to Data Connection <b>{1}</b>"
-                                       .format(file_name, self.name))
+                self._toolbox.msg.emit(
+                    "File <b>{0}</b> created to Data Connection <b>{1}</b>".format(file_name, self.name)
+                )
         except OSError:
             msg = "Please check directory permissions."
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
@@ -310,12 +315,15 @@ class DataConnection(ProjectItem):
             file_at_index = self.data_model.itemFromIndex(index).data(Qt.DisplayRole)
             file_list.append(file_at_index)
         files = "\n".join(file_list)
-        msg = "The following files will be removed permanently from the project\n\n" \
-              "{0}\n\n" \
-              "Are you sure?".format(files)
+        msg = (
+            "The following files will be removed permanently from the project\n\n"
+            "{0}\n\n"
+            "Are you sure?".format(files)
+        )
         # noinspection PyCallByClass, PyTypeChecker
-        answer = QMessageBox.question(self._toolbox, "Remove {0} file(s)?".format(len(file_list)),
-                                      msg, QMessageBox.Yes, QMessageBox.No)
+        answer = QMessageBox.question(
+            self._toolbox, "Remove {0} file(s)?".format(len(file_list)), msg, QMessageBox.Yes, QMessageBox.No
+        )
         if not answer == QMessageBox.Yes:
             return
         for filename in file_list:
@@ -355,8 +363,10 @@ class DataConnection(ProjectItem):
         """
         # logging.debug("Looking for file {0} in DC {1}.".format(fname, self.name))
         if self in visited_items:
-            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
-                                           "connections and try again. Detected at {0}.".format(self.name))
+            self._toolbox.msg_warning.emit(
+                "There seems to be an infinite loop in your project. Please fix the "
+                "connections and try again. Detected at {0}.".format(self.name)
+            )
             return None
         if fname in self.data_files():
             # logging.debug("{0} found in DC {1}".format(fname, self.name))
@@ -367,8 +377,9 @@ class DataConnection(ProjectItem):
             fn = os.path.split(path)[1]
             if fn == fname:
                 # logging.debug("{0} found in DC {1}".format(fname, self.name))
-                self._toolbox.msg.emit("\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>"
-                                       .format(fname, self.name))
+                self._toolbox.msg.emit(
+                    "\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>".format(fname, self.name)
+                )
                 return path
         visited_items.append(self)
         for input_item in self._toolbox.connection_model.input_items(self.name):
@@ -397,8 +408,10 @@ class DataConnection(ProjectItem):
         """
         paths = list()
         if self in visited_items:
-            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
-                                           "connections and try again. Detected at {0}.".format(self.name))
+            self._toolbox.msg_warning.emit(
+                "There seems to be an infinite loop in your project. Please fix the "
+                "connections and try again. Detected at {0}.".format(self.name)
+            )
             return paths
         # Search files that match the pattern from this Data Connection's data directory
         for data_file in self.data_files():  # data_file is a filename (no path)

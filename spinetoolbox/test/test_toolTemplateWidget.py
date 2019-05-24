@@ -35,7 +35,6 @@ class MockQWidget(QWidget):
 
 
 class TestToolTemplateWidget(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
@@ -43,14 +42,18 @@ class TestToolTemplateWidget(unittest.TestCase):
             cls.app = QApplication().processEvents()
         except RuntimeError:
             pass
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
-                            format='%(asctime)s %(levelname)s: %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
+        logging.basicConfig(
+            stream=sys.stderr,
+            level=logging.DEBUG,
+            format='%(asctime)s %(levelname)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
-                mock.patch("ui_main.PythonReplWidget") as mock_python_repl:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "ui_main.PythonReplWidget"
+        ) as mock_python_repl:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
@@ -68,9 +71,9 @@ class TestToolTemplateWidget(unittest.TestCase):
 
     def test_create_minimal_tool_template(self):
         """Test that a minimal tool template can be created by specifying name, type and main program file."""
-        with mock.patch("widgets.tool_template_widget.QFileDialog") as mock_file_dialog, \
-                mock.patch("widgets.tool_template_widget.ToolTemplateWidget.call_add_tool_template") as mock_add, \
-                mock.patch("widgets.tool_template_widget.ToolTemplateWidget.close") as mock_close:
+        with mock.patch("widgets.tool_template_widget.QFileDialog") as mock_file_dialog, mock.patch(
+            "widgets.tool_template_widget.ToolTemplateWidget.call_add_tool_template"
+        ) as mock_add, mock.patch("widgets.tool_template_widget.ToolTemplateWidget.close") as mock_close:
             self.tool_template_widget.ui.comboBox_tooltype.setCurrentIndex(1)
             self.tool_template_widget.ui.lineEdit_name.setText("test_tool")
             self.tool_template_widget.ui.lineEdit_main_program.setText(__file__)

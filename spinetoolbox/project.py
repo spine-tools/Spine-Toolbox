@@ -40,6 +40,7 @@ class SpineToolboxProject(MetaObject):
         work_dir (str): Project work directory
         ext (str): Project save file extension(.proj)
     """
+
     def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
@@ -57,14 +58,16 @@ class SpineToolboxProject(MetaObject):
         try:
             create_dir(self.project_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating project directory {0} failed."
-                                         " Check permissions.".format(self.project_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating project directory {0} failed." " Check permissions.".format(self.project_dir)
+            )
         # Make work directory
         try:
             create_dir(self.work_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating work directory {0} failed."
-                                         " Check permissions.".format(self.work_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating work directory {0} failed." " Check permissions.".format(self.work_dir)
+            )
 
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
@@ -269,9 +272,11 @@ class SpineToolboxProject(MetaObject):
             tool_template = self._toolbox.tool_template_model.find_tool_template(tool_name)
             # Clarifications for user
             if not tool_name == "" and not tool_template:
-                self._toolbox.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                                             "it was not found. Add it to Tool templates and reopen "
-                                             "project.".format(name, tool_name))
+                self._toolbox.msg_error.emit(
+                    "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
+                    "it was not found. Add it to Tool templates and reopen "
+                    "project.".format(name, tool_name)
+                )
             try:
                 x = tools[name]["x"]
                 y = tools[name]["y"]
@@ -337,8 +342,9 @@ class SpineToolboxProject(MetaObject):
         try:
             _tooltype = definition["tooltype"].lower()
         except KeyError:
-            self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
-                                         "'gams', 'julia' and 'executable'")
+            self._toolbox.msg_error.emit(
+                "No tool type defined in tool definition file. Supported types are " "'gams', 'julia' and 'executable'"
+            )
             return None
         if _tooltype == "julia":
             return JuliaTool.load(self._toolbox, path, definition)

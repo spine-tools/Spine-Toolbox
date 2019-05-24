@@ -16,9 +16,19 @@ Custom QWidgets for Filtering and Zooming.
 :date:   4.12.2018
 """
 
-from PySide2.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, \
-    QMenu, QAction, QStyle, QToolBar, QStyleOptionMenuItem, \
-    QListView, QLineEdit, QDialogButtonBox
+from PySide2.QtWidgets import (
+    QWidget,
+    QVBoxLayout,
+    QHBoxLayout,
+    QMenu,
+    QAction,
+    QStyle,
+    QToolBar,
+    QStyleOptionMenuItem,
+    QListView,
+    QLineEdit,
+    QDialogButtonBox,
+)
 from PySide2.QtCore import QTimer, Signal
 from PySide2.QtGui import QPainter
 from tabularview_models import FilterCheckboxListModel
@@ -26,6 +36,7 @@ from tabularview_models import FilterCheckboxListModel
 
 class FilterWidget(QWidget):
     """Filter widget class."""
+
     okPressed = Signal()
     cancelPressed = Signal()
 
@@ -44,7 +55,7 @@ class FilterWidget(QWidget):
         self._ui_edit = QLineEdit()
         self._ui_edit.setPlaceholderText('Search')
         self._ui_edit.setClearButtonEnabled(True)
-        self._ui_buttons = QDialogButtonBox(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self._ui_buttons = QDialogButtonBox(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         self._ui_vertical_layout.addWidget(self._ui_edit)
         self._ui_vertical_layout.addWidget(self._ui_list)
         self._ui_vertical_layout.addWidget(self._ui_buttons)
@@ -121,6 +132,7 @@ class ZoomWidget(QWidget):
     Attributes
         parent (QWidget): the widget's parent
     """
+
     minus_pressed = Signal(name="minus_pressed")
     plus_pressed = Signal(name="plus_pressed")
     reset_pressed = Signal(name="reset_pressed")

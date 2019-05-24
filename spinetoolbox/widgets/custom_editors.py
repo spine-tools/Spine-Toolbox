@@ -18,10 +18,35 @@ Custom editors for model/view programming.
 """
 
 import json
-from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, \
-    QTimer, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
-from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
-    QVBoxLayout, QTextEdit, QColorDialog, QDialog, QDialogButtonBox, QListView, QStyle, QLabel
+from PySide2.QtCore import (
+    Qt,
+    Slot,
+    Signal,
+    QItemSelectionModel,
+    QSortFilterProxyModel,
+    QTimer,
+    QEvent,
+    QCoreApplication,
+    QModelIndex,
+    QPoint,
+    QSize,
+)
+from PySide2.QtWidgets import (
+    QComboBox,
+    QLineEdit,
+    QTableView,
+    QItemDelegate,
+    QTabWidget,
+    QWidget,
+    QVBoxLayout,
+    QTextEdit,
+    QColorDialog,
+    QDialog,
+    QDialogButtonBox,
+    QListView,
+    QStyle,
+    QLabel,
+)
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
@@ -33,6 +58,7 @@ class CustomLineEditor(QLineEdit):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
+
     data_committed = Signal(name="data_committed")
 
     def __init__(self, parent):
@@ -59,6 +85,7 @@ class CustomComboEditor(QComboBox):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
+
     data_committed = Signal(name="data_committed")
 
     def __init__(self, parent):
@@ -83,6 +110,7 @@ class CustomLineEditDelegate(QItemDelegate):
     Attributes:
         parent (SearchBarEditor): search bar editor
     """
+
     text_edited = Signal("QString", name="text_edited")
 
     def __init__(self, parent):
@@ -261,6 +289,7 @@ class SearchBarDelegate(QItemDelegate):
     Attributes:
         parent (MultiSearchBarEditor): multi search bar editor
     """
+
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
@@ -344,8 +373,9 @@ class MultiSearchBarEditor(QTableView):
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width() / self.model.columnCount())
         self.horizontalHeader().setMaximumHeight(self._base_size.height())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        size = QSize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2).\
-            boundedTo(self._parent.size())
+        size = QSize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2).boundedTo(
+            self._parent.size()
+        )
         self.resize(size)
         self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
@@ -620,6 +650,7 @@ class JSONEditor(QTabWidget):
 
 class IconPainterDelegate(QItemDelegate):
     """A delegate to highlight decorations in a QListWidget."""
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -636,7 +667,7 @@ class IconColorEditor(QDialog):
 
     def __init__(self, parent, icon_mngr):
         """Init class."""
-        super().__init__(parent) # , Qt.Popup)
+        super().__init__(parent)  # , Qt.Popup)
         self.icon_mngr = icon_mngr
         self.setWindowTitle("Select icon and color")
         self.icon_widget = QWidget(self)
@@ -658,7 +689,7 @@ class IconColorEditor(QDialog):
         self.color_dialog.setOption(QColorDialog.NoButtons, True)
         self.color_dialog.setOption(QColorDialog.DontUseNativeDialog, True)
         self.button_box = QDialogButtonBox(self)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         layout = QVBoxLayout(self)
         layout.addWidget(self.icon_widget)
         layout.addWidget(self.color_dialog)

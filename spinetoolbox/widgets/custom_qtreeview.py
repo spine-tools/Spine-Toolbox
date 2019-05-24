@@ -25,6 +25,7 @@ from PySide2.QtGui import QDrag
 class CopyTreeView(QTreeView):
     """Custom QTreeView class with copy support.
     """
+
     def __init__(self, parent):
         """Initialize the view."""
         super().__init__(parent=parent)
@@ -47,6 +48,7 @@ class ObjectTreeView(CopyTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
+
     edit_key_pressed = Signal("QModelIndex", name="edit_key_pressed")
 
     def __init__(self, parent):
@@ -70,6 +72,7 @@ class ReferencesTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
+
     files_dropped = Signal("QVariant", name="files_dropped")
     del_key_pressed = Signal(name="del_key_pressed")
 
@@ -111,6 +114,7 @@ class DataTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
+
     files_dropped = Signal("QVariant", name="files_dropped")
     del_key_pressed = Signal(name="del_key_pressed")
 
@@ -191,6 +195,7 @@ class SourcesTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
+
     files_dropped = Signal("QVariant", name="files_dropped")
     del_key_pressed = Signal(name="del_key_pressed")
 
@@ -232,6 +237,7 @@ class CustomTreeView(QTreeView):
     Attributes:
         parent (QWidget): The parent of this view
     """
+
     del_key_pressed = Signal(name="del_key_pressed")
 
     def __init__(self, parent):

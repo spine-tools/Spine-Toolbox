@@ -45,8 +45,9 @@ else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
-    DOC_INDEX_PATH = os.path.abspath(os.path.join(
-        APPLICATION_PATH, os.path.pardir, "docs", "build", "html", "index.html"))
+    DOC_INDEX_PATH = os.path.abspath(
+        os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build", "html", "index.html")
+    )
 
 # Tool output directory name
 TOOL_OUTPUT_DIR = "output"
@@ -76,8 +77,15 @@ TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
 
 # Required and optional keywords for Tool template definition files
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']
-OPTIONAL_KEYS = ['description', 'short_name', 'inputfiles', 'inputfiles_opt',
-                 'outputfiles', 'cmdline_args', 'execute_in_work']
+OPTIONAL_KEYS = [
+    'description',
+    'short_name',
+    'inputfiles',
+    'inputfiles_opt',
+    'outputfiles',
+    'cmdline_args',
+    'execute_in_work',
+]
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
 
 SQL_DIALECT_API = {
@@ -85,7 +93,7 @@ SQL_DIALECT_API = {
     'sqlite': 'sqlite3',
     'mssql': 'pyodbc',
     'postgresql': 'psycopg2',
-    'oracle': 'cx_oracle'
+    'oracle': 'cx_oracle',
 }
 
 # Julia REPL constants
@@ -93,75 +101,82 @@ JL_REPL_TIME_TO_DEAD = 5.0
 JL_REPL_RESTART_LIMIT = 3
 
 # Stylesheets
-STATUSBAR_SS = "QStatusBar{" \
-                    "background-color: #EBEBE0;" \
-                    "border-width: 1px;" \
-                    "border-color: gray;" \
-                    "border-style: groove;}"
+STATUSBAR_SS = (
+    "QStatusBar{" "background-color: #EBEBE0;" "border-width: 1px;" "border-color: gray;" "border-style: groove;}"
+)
 
-SETTINGS_SS = "#SettingsForm{background-color: ghostwhite;}" \
-                "QLabel{color: black;}" \
-                "QLineEdit{font-size: 11px;}" \
-                "QGroupBox{border: 2px solid gray; " \
-                    "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #80B0FF, stop: 1 #e6efff);" \
-                    "border-radius: 5px;" \
-                    "margin-top: 0.5em;}" \
-                "QGroupBox:title{border-radius: 2px; " \
-                    "background-color: ghostwhite;" \
-                    "subcontrol-origin: margin;" \
-                    "subcontrol-position: top center;" \
-                    "padding-top: 0px;" \
-                    "padding-bottom: 0px;" \
-                    "padding-right: 3px;" \
-                    "padding-left: 3px;}" \
-                "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}" \
-                "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; border-radius: 4px; padding: 3px; outline: none;}" \
-                "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}" \
-                "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}" \
-                "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}" \
-                "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}" \
-                "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
+SETTINGS_SS = (
+    "#SettingsForm{background-color: ghostwhite;}"
+    "QLabel{color: black;}"
+    "QLineEdit{font-size: 11px;}"
+    "QGroupBox{border: 2px solid gray; "
+    "background-color: qlineargradient(x1: 0, y1: 0, x2: 1, y2: 0, stop: 0 #80B0FF, stop: 1 #e6efff);"
+    "border-radius: 5px;"
+    "margin-top: 0.5em;}"
+    "QGroupBox:title{border-radius: 2px; "
+    "background-color: ghostwhite;"
+    "subcontrol-origin: margin;"
+    "subcontrol-position: top center;"
+    "padding-top: 0px;"
+    "padding-bottom: 0px;"
+    "padding-right: 3px;"
+    "padding-left: 3px;}"
+    "QCheckBox{outline-style: dashed; outline-width: 1px; outline-color: white;}"
+    "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; border-radius: 4px; padding: 3px; outline: none;}"
+    "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}"
+    "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}"
+    "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
+    "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}"
+    "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
+)
 
 # NOTE: border-style property needs to be set for QToolBar so the lineargradient works on GNOME desktop environment
 # (known Qt issue)
-ICON_TOOLBAR_SS = "QToolBar{spacing: 6px; " \
-                    "background: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);" \
-                    "padding: 3px;" \
-                    "border-style: solid;}" \
-                  "QToolButton{background-color: white;" \
-                    "border-width: 1px;" \
-                    "border-style: inset;" \
-                    "border-color: darkslategray;" \
-                    "border-radius: 2px;}" \
-                  "QLabel{color:black;" \
-                    "padding: 3px;}"
+ICON_TOOLBAR_SS = (
+    "QToolBar{spacing: 6px; "
+    "background: qlineargradient(x1: 1, y1: 1, x2: 0, y2: 0, stop: 0 #cce0ff, stop: 1 #66a1ff);"
+    "padding: 3px;"
+    "border-style: solid;}"
+    "QToolButton{background-color: white;"
+    "border-width: 1px;"
+    "border-style: inset;"
+    "border-color: darkslategray;"
+    "border-radius: 2px;}"
+    "QLabel{color:black;"
+    "padding: 3px;}"
+)
 
-PARAMETER_TAG_TOOLBAR_SS = ICON_TOOLBAR_SS + \
-                           "QToolButton:open{background-color: lightGray;" \
-                             "border-style: inset;}" \
-                           "QToolButton{border-style: outset;}"
+PARAMETER_TAG_TOOLBAR_SS = (
+    ICON_TOOLBAR_SS + "QToolButton:open{background-color: lightGray;"
+    "border-style: inset;}"
+    "QToolButton{border-style: outset;}"
+)
 
-TEXTBROWSER_SS = "QTextBrowser {background-color: #19232D; border: 1px solid #32414B; color: #F0F0F0; border-radius: 2px;}" \
-                 "QTextBrowser:hover," \
-                 "QTextBrowser:selected," \
-                 "QTextBrowser:pressed {border: 1px solid #668599;}"
+TEXTBROWSER_SS = (
+    "QTextBrowser {background-color: #19232D; border: 1px solid #32414B; color: #F0F0F0; border-radius: 2px;}"
+    "QTextBrowser:hover,"
+    "QTextBrowser:selected,"
+    "QTextBrowser:pressed {border: 1px solid #668599;}"
+)
 
 # ToolboxUI stylesheet. A lot of widgets inherit this sheet.
-MAINWINDOW_SS = "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}" \
-                "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; " \
-                    "border-radius: 4px; padding: 3px; outline: none; min-width: 75px;}" \
-                "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}" \
-                "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}" \
-                "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}" \
-                "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}" \
-                "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}" \
-                "QToolButton:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
-                "QToolButton:pressed{background-color: #f2f2f2;}" \
-                "QToolButton::menu-indicator{width: 0px;}" \
-                "QCheckBox{padding: 2px; spacing: 10px; outline-style: dashed; outline-width: 1px; outline-color: black;}" \
-                "QComboBox:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
-                "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
-                "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}" \
-                "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
+MAINWINDOW_SS = (
+    "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
+    "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; "
+    "border-radius: 4px; padding: 3px; outline: none; min-width: 75px;}"
+    "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}"
+    "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}"
+    "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
+    "QPushButton:hover{border: 1px solid #148CD2; color: #F0F0F0;}"
+    "QPushButton:pressed{background-color: #19232D; border: 1px solid #19232D;}"
+    "QToolButton:focus{border-color: black; border-width: 1px; border-style: ridge;}"
+    "QToolButton:pressed{background-color: #f2f2f2;}"
+    "QToolButton::menu-indicator{width: 0px;}"
+    "QCheckBox{padding: 2px; spacing: 10px; outline-style: dashed; outline-width: 1px; outline-color: black;}"
+    "QComboBox:focus{border-color: black; border-width: 1px; border-style: ridge;}"
+    "QLineEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}"
+    "QTextEdit:focus{border-color: black; border-width: 1px; border-style: ridge;}"
+    "QTreeView:focus{border-color: darkslategray; border-width: 2px; border-style: ridge;}"
+)
 
 TREEVIEW_HEADER_SS = "QHeaderView::section{background-color: #ecd8c6; font-size: 12px;}"

@@ -30,6 +30,7 @@ class CopyPasteTableView(QTableView):
     Attributes:
         parent (QWidget): The parent of this view
     """
+
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent=parent)
@@ -273,7 +274,7 @@ class FrozenTableView(QTableView):
             return self.model.row(index)
 
     def set_data(self, headers, values):
-        self.selectionModel().blockSignals(True) #prevent selectionChanged signal when updating
+        self.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
         self.model.set_data(values, headers)
         self.selectRow(0)
         self.selectionModel().blockSignals(False)
@@ -286,7 +287,7 @@ class SimpleCopyPasteTableView(QTableView):
         parent (QWidget): The parent of this view
     """
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         """Initialize the class."""
         super().__init__(parent)
         # self.editing = False
@@ -310,11 +311,11 @@ class SimpleCopyPasteTableView(QTableView):
             content = ""
             v_header = self.verticalHeader()
             h_header = self.horizontalHeader()
-            for i in range(first.top(), first.bottom()+1):
+            for i in range(first.top(), first.bottom() + 1):
                 if v_header.isSectionHidden(i):
                     continue
                 row = list()
-                for j in range(first.left(), first.right()+1):
+                for j in range(first.left(), first.right() + 1):
                     if h_header.isSectionHidden(j):
                         continue
                     row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))

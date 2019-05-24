@@ -37,6 +37,7 @@ class View(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
     view_refresh_signal = Signal(name="view_refresh_signal")
 
     def __init__(self, toolbox, name, description, x, y):
@@ -54,8 +55,9 @@ class View(ProjectItem):
         try:
             create_dir(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                         " Check permissions.".format(self.data_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+            )
         self._graphics_item = ViewIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         # Note: view_refresh_signal is not shared with other project items so there is no need to disconnect it
         self.view_refresh_signal.connect(self.refresh)
@@ -192,7 +194,7 @@ class View(ProjectItem):
             db_map.close()
             raise
         graph_view_form.show()
-        graph_view_form.destroyed.connect(lambda : self.graph_view_form_refs.pop(db_url))
+        graph_view_form.destroyed.connect(lambda: self.graph_view_form_refs.pop(db_url))
         self.graph_view_form_refs[db_url] = graph_view_form
 
     def populate_reference_list(self, items):

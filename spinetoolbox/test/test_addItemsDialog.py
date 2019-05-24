@@ -27,7 +27,6 @@ from widgets.custom_qdialog import AddObjectClassesDialog
 
 
 class TestAddItemsDialog(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
@@ -35,14 +34,18 @@ class TestAddItemsDialog(unittest.TestCase):
             cls.app = QApplication().processEvents()
         except RuntimeError:
             pass
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
-                            format='%(asctime)s %(levelname)s: %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
+        logging.basicConfig(
+            stream=sys.stderr,
+            level=logging.DEBUG,
+            format='%(asctime)s %(levelname)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("data_store.DataStore") as mock_data_store, \
-                mock.patch("spinedb_api.DiffDatabaseMapping") as mock_db_map:
+        with mock.patch("data_store.DataStore") as mock_data_store, mock.patch(
+            "spinedb_api.DiffDatabaseMapping"
+        ) as mock_db_map:
             mock_data_store._toolbox.qsettings.return_value.value.return_value = False
             self.tree_view_form = TreeViewForm(mock_data_store, mock_db_map, "mock_db")
 

@@ -16,15 +16,32 @@ Classes for custom QDialogs to add and edit database items.
 :date:   13.5.2018
 """
 
-from PySide2.QtWidgets import QDialog, QHBoxLayout, QVBoxLayout, QPlainTextEdit, \
-    QDialogButtonBox, QHeaderView, QAction, QApplication, QToolButton, QWidget, QLabel, \
-    QComboBox, QSpinBox
+from PySide2.QtWidgets import (
+    QDialog,
+    QHBoxLayout,
+    QVBoxLayout,
+    QPlainTextEdit,
+    QDialogButtonBox,
+    QHeaderView,
+    QAction,
+    QApplication,
+    QToolButton,
+    QWidget,
+    QLabel,
+    QComboBox,
+    QSpinBox,
+)
 from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QIcon
 from spinedb_api import SpineDBAPIError
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
-from widgets.custom_delegates import AddObjectsDelegate, AddRelationshipClassesDelegate, AddRelationshipsDelegate, \
-    LineEditDelegate, IconColorDialogDelegate
+from widgets.custom_delegates import (
+    AddObjectsDelegate,
+    AddRelationshipClassesDelegate,
+    AddRelationshipsDelegate,
+    LineEditDelegate,
+    IconColorDialogDelegate,
+)
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect, format_string_list
 
@@ -36,13 +53,14 @@ class ManageItemsDialog(QDialog):
     Attributes:
         parent (TreeViewForm): data store widget
     """
+
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
         self.table_view = CopyPasteTableView(self)
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.button_box = QDialogButtonBox(self)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         layout = QVBoxLayout(self)
         layout.addWidget(self.table_view)
         layout.addWidget(self.button_box)
@@ -60,12 +78,13 @@ class ManageItemsDialog(QDialog):
     def resize_window_to_columns(self):
         margins = self.layout().contentsMargins()
         self.resize(
-            margins.left() + margins.right()
+            margins.left()
+            + margins.right()
             + self.table_view.frameWidth() * 2
             + self.table_view.verticalHeader().width()
             + self.table_view.horizontalHeader().length(),
             # + self.table_view.style().pixelMetric(QStyle.PM_ScrollBarExtent),
-            400
+            400,
         )
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
@@ -139,6 +158,7 @@ class AddObjectClassesDialog(AddItemsDialog):
     Attributes:
         parent (TreeViewForm): data store widget
     """
+
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("Add object classes")
@@ -154,8 +174,7 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon'])
         self.model.clear()
         insert_at_position_list = ['Insert new classes at the top']
-        insert_at_position_list.extend(
-            ["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
+        insert_at_position_list.extend(["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
         self.combo_box.addItems(insert_at_position_list)
 
     def connect_signals(self):
@@ -191,7 +210,7 @@ class AddObjectClassesDialog(AddItemsDialog):
                 'name': name,
                 'description': description,
                 'display_icon': display_icon if display_icon else self.parent().icon_mngr.default_display_icon(),
-                'display_order': display_order
+                'display_order': display_order,
             }
             kwargs_list.append(kwargs)
         if not kwargs_list:
@@ -215,6 +234,7 @@ class AddObjectsDialog(AddItemsDialog):
         class_id (int): default object class id
         force_default (bool): if True, defaults are non-editable
     """
+
     def __init__(self, parent, class_id=None, force_default=False):
         super().__init__(parent)
         self.setWindowTitle("Add objects")
@@ -268,11 +288,7 @@ class AddObjectsDialog(AddItemsDialog):
             if not class_:
                 self._parent.msg_error.emit("Couldn't find object class '{}' at row {}".format(class_name, i + 1))
                 return
-            kwargs = {
-                'class_id': class_.id,
-                'name': name,
-                'description': description
-            }
+            kwargs = {'class_id': class_.id, 'name': name, 'description': description}
             kwargs_list.append(kwargs)
         if not kwargs_list:
             self._parent.msg_error.emit("Nothing to add")
@@ -294,6 +310,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         parent (TreeViewForm): data store widget
         object_class_one_id (int): default object class id to put in dimension '1'
     """
+
     def __init__(self, parent, object_class_one_id=None, force_default=False):
         super().__init__(parent)
         self.setWindowTitle("Add relationship classes")
@@ -317,8 +334,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
         self.connect_signals()
-        self.model.set_horizontal_header_labels(
-            ['object class 1 name', 'relationship class name'])
+        self.model.set_horizontal_header_labels(['object class 1 name', 'relationship class name'])
         self.model.set_default_row(**{'object class 1 name': self.object_class_one_name})
         self.model.clear()
 
@@ -403,13 +419,11 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 object_class = self._parent.db_map.single_object_class(name=object_class_name).one_or_none()
                 if not object_class:
                     self._parent.msg_error.emit(
-                        "Couldn't find object class '{}' at row {}".format(object_class_name, i + 1))
+                        "Couldn't find object class '{}' at row {}".format(object_class_name, i + 1)
+                    )
                     return
                 object_class_id_list.append(object_class.id)
-            wide_kwargs = {
-                'name': relationship_class_name,
-                'object_class_id_list': object_class_id_list
-            }
+            wide_kwargs = {'name': relationship_class_name, 'object_class_id_list': object_class_id_list}
             wide_kwargs_list.append(wide_kwargs)
         if not wide_kwargs_list:
             self._parent.msg_error.emit("Nothing to add")
@@ -433,6 +447,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         object_id (int): default object id
         object_class_id (int): default object class id
     """
+
     def __init__(self, parent, relationship_class_id=None, object_id=None, object_class_id=None, force_default=False):
         super().__init__(parent)
         self.setWindowTitle("Add relationships")
@@ -447,9 +462,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         layout.addStretch()
         self.layout().insertWidget(0, widget)
         self.remove_row_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
-        self.relationship_class_list = self._parent.db_map.wide_relationship_class_list(
-            object_class_id=object_class_id
-        )
+        self.relationship_class_list = self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)
         self.relationship_class = None
         self.relationship_class_id = relationship_class_id
         self.object_id = object_id
@@ -477,8 +490,7 @@ class AddRelationshipsDialog(AddItemsDialog):
         elif self.relationship_class:
             self.combo_box.addItem(self.relationship_class.name)
         else:
-            self._parent.msg_error.emit(
-                f"Forced default relationship class id {self.relationship_class_id} not found!")
+            self._parent.msg_error.emit(f"Forced default relationship class id {self.relationship_class_id} not found!")
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -546,14 +558,12 @@ class AddRelationshipsDialog(AddItemsDialog):
                     relationship_name = "__".join(obj_names)
                 self.model.setData(self.model.index(row, number_of_dimensions), relationship_name)
 
-
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
         object_dicts = [
-            {
-                x.name: x.id for x in self._parent.db_map.object_list(class_id=int(id))
-            } for id in self.relationship_class.object_class_id_list.split(",")
+            {x.name: x.id for x in self._parent.db_map.object_list(class_id=int(id))}
+            for id in self.relationship_class.object_class_id_list.split(",")
         ]
         wide_kwargs_list = list()
         name_column = self.model.horizontal_header_labels().index("relationship name")
@@ -570,14 +580,11 @@ class AddRelationshipsDialog(AddItemsDialog):
                     self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
                     return
                 object_name_list.append(object_name)
-            object_id_list = [
-                object_dicts[k][x]
-                for k, x in enumerate(object_name_list)
-            ]
+            object_id_list = [object_dicts[k][x] for k, x in enumerate(object_name_list)]
             wide_kwargs = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
-                'class_id': self.relationship_class.id
+                'class_id': self.relationship_class.id,
             }
             wide_kwargs_list.append(wide_kwargs)
         if not wide_kwargs_list:
@@ -613,6 +620,7 @@ class EditObjectClassesDialog(EditItemsDialog):
         parent (TreeViewForm): data store widget
         kwargs_list (list): list of dictionaries corresponding to object classes to edit/update
     """
+
     def __init__(self, parent, kwargs_list):
         super().__init__(parent)
         self.setWindowTitle("Edit object classes")
@@ -668,7 +676,7 @@ class EditObjectClassesDialog(EditItemsDialog):
                 'id': id,
                 'name': name,
                 'description': description,
-                'display_icon': int(display_icon) if display_icon else self.parent().icon_mngr.default_display_icon()
+                'display_icon': int(display_icon) if display_icon else self.parent().icon_mngr.default_display_icon(),
             }
             kwargs_list.append(kwargs)
         if not kwargs_list:
@@ -691,6 +699,7 @@ class EditObjectsDialog(EditItemsDialog):
         parent (TreeViewForm): data store widget
         kwargs_list (list): list of dictionaries corresponding to objects to edit/update
     """
+
     def __init__(self, parent, kwargs_list):
         super().__init__(parent)
         self.setWindowTitle("Edit objects")
@@ -734,11 +743,7 @@ class EditObjectsDialog(EditItemsDialog):
             orig_name, orig_description = self.orig_data[i]
             if name == orig_name and description == orig_description:
                 continue
-            kwargs = {
-                'id': id,
-                'name': name,
-                'description': description
-            }
+            kwargs = {'id': id, 'name': name, 'description': description}
             kwargs_list.append(kwargs)
         if not kwargs_list:
             self._parent.msg_error.emit("Nothing to update")
@@ -760,6 +765,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
         parent (TreeViewForm): data store widget
         kwargs_list (list): list of dictionaries corresponding to relationship classes to edit/update
     """
+
     def __init__(self, parent, kwargs_list):
         super().__init__(parent)
         self.setWindowTitle("Edit relationship classes")
@@ -799,10 +805,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             orig_name = self.orig_data[i][0]
             if name == orig_name:
                 continue
-            kwargs = {
-                'id': id,
-                'name': name
-            }
+            kwargs = {'id': id, 'name': name}
             kwargs_list.append(kwargs)
         if not kwargs_list:
             self._parent.msg_error.emit("Nothing to update")
@@ -825,6 +828,7 @@ class EditRelationshipsDialog(EditItemsDialog):
         kwargs_list (list): list of dictionaries corresponding to relationships to edit/update
         relationship_class (dict): the relationship class item (all edited relationships must be of this class)
     """
+
     def __init__(self, parent, kwargs_list, relationship_class):
         super().__init__(parent)
         self.setWindowTitle("Edit relationships")
@@ -884,11 +888,7 @@ class EditRelationshipsDialog(EditItemsDialog):
                 object_id_list.append(object_.id)
             if orig_relationship_name == relationship_name and orig_object_id_list == object_id_list:
                 continue
-            kwargs = {
-                'id': id,
-                'name': relationship_name,
-                'object_id_list': object_id_list
-            }
+            kwargs = {'id': id, 'name': relationship_name, 'object_id_list': object_id_list}
             kwargs_list.append(kwargs)
         if not kwargs_list:
             self._parent.msg_error.emit("Nothing to update")
@@ -909,6 +909,7 @@ class ManageParameterTagsDialog(AddItemsDialog):
     Attributes:
         parent (TreeViewForm): data store widget
     """
+
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("Manage parameter tags")
@@ -970,11 +971,7 @@ class ManageParameterTagsDialog(AddItemsDialog):
             orig_tag, orig_description = self.orig_data[i]
             if tag == orig_tag and description == orig_description:
                 continue
-            kwargs = {
-                'id': id,
-                'tag': tag,
-                'description': description
-            }
+            kwargs = {'id': id, 'tag': tag, 'description': description}
             items_to_update.append(kwargs)
         # insert
         items_to_add = list()
@@ -983,10 +980,7 @@ class ManageParameterTagsDialog(AddItemsDialog):
             if not tag:
                 self._parent.msg_error.emit("Tag missing at row {0}".format(i + 1))
                 return
-            kwargs = {
-                'tag': tag,
-                'description': description
-            }
+            kwargs = {'tag': tag, 'description': description}
             items_to_add.append(kwargs)
         error_log = list()
         try:
@@ -1015,6 +1009,7 @@ class CommitDialog(QDialog):
         parent (TreeViewForm): data store widget
         database (str): database name
     """
+
     def __init__(self, parent, database):
         """Initialize class"""
         super().__init__(parent)

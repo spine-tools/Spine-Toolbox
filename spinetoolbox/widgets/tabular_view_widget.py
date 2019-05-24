@@ -27,13 +27,14 @@ from spinedb_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
 from widgets.custom_menus import FilterMenu, PivotTableModelMenu
 from helpers import fix_name_ambiguity, tuple_itemgetter
+
 # TODO: connect to all add, delete relationship/object classes widgets to this.
 from widgets.custom_qdialog import CommitDialog
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
 
 # TODO: How about moving these constants to config.py?
-ParameterValue = namedtuple('ParameterValue',['id','has_value'])
+ParameterValue = namedtuple('ParameterValue', ['id', 'has_value'])
 
 # constant strings
 RELATIONSHIP_CLASS = "relationship"
@@ -53,7 +54,7 @@ def unpack_json(data):
     for d in data:
         json_array = json.loads(d[-1])
         json_index = list(range(1, len(json_array) + 1))
-        new_data = [a + [b, c] for a, b, c in zip([d[:-1]]*len(json_array), json_index, json_array)]
+        new_data = [a + [b, c] for a, b, c in zip([d[:-1]] * len(json_array), json_index, json_array)]
         expanded_data = expanded_data + new_data
     return expanded_data
 
@@ -66,6 +67,7 @@ class TabularViewForm(QMainWindow):
         db_map (DatabaseMapping): The object relational database mapping
         database (str): The database name
     """
+
     def __init__(self, data_store, db_map, database):
         super().__init__(flags=Qt.Window)
         # TODO: change the list_select_class to something nicer
@@ -105,9 +107,9 @@ class TabularViewForm(QMainWindow):
         self.ui.comboBox_value_type.addItems([DATA_VALUE, DATA_SET])
 
         # set allowed drop for pivot index lists
-        self.ui.list_index.allowedDragLists = [self.ui.list_column,self.ui.list_frozen]
-        self.ui.list_column.allowedDragLists = [self.ui.list_index,self.ui.list_frozen]
-        self.ui.list_frozen.allowedDragLists = [self.ui.list_index,self.ui.list_column]
+        self.ui.list_index.allowedDragLists = [self.ui.list_column, self.ui.list_frozen]
+        self.ui.list_column.allowedDragLists = [self.ui.list_index, self.ui.list_frozen]
+        self.ui.list_frozen.allowedDragLists = [self.ui.list_index, self.ui.list_column]
 
         # pivot model and filterproxy
         self.proxy_model = PivotTableSortFilterProxy()
@@ -166,9 +168,13 @@ class TabularViewForm(QMainWindow):
     def load_relationships(self):
         if self.current_class_type == RELATIONSHIP_CLASS:
             class_id = self.relationship_classes[self.current_class_name].id
-            self.relationships = {tuple(int(i) for i in r.object_id_list.split(",")): r
-                                  for r in self.db_map.wide_relationship_list(class_id = class_id).all()}
-            self.relationship_tuple_key = tuple(self.relationship_classes[self.current_class_name].object_class_name_list.split(','))
+            self.relationships = {
+                tuple(int(i) for i in r.object_id_list.split(",")): r
+                for r in self.db_map.wide_relationship_list(class_id=class_id).all()
+            }
+            self.relationship_tuple_key = tuple(
+                self.relationship_classes[self.current_class_name].object_class_name_list.split(',')
+            )
 
     def load_parameter_values(self):
         if self.current_class_type == RELATIONSHIP_CLASS:
@@ -176,8 +182,7 @@ class TabularViewForm(QMainWindow):
             query = query.filter(literal_column("relationship_class_name") == self.current_class_name)
             data = query.all()
             parameter_values = {(r.object_id_list, r.parameter_id): r.id for r in data}
-            data = [d.object_name_list.split(',') + [d.parameter_name, d.value]
-                    for d in data if d.value is not None]
+            data = [d.object_name_list.split(',') + [d.parameter_name, d.value] for d in data if d.value is not None]
             index_names = self.current_object_class_list()
             index_types = [str] * len(index_names)
         else:
@@ -185,8 +190,7 @@ class TabularViewForm(QMainWindow):
             query = query.filter(literal_column("object_class_name") == self.current_class_name)
             data = query.all()
             parameter_values = {(r.object_id, r.parameter_id): r.id for r in data}
-            data = [[d.object_name, d.parameter_name, d.value]
-                    for d in data if d.value is not None]
+            data = [[d.object_name, d.parameter_name, d.value] for d in data if d.value is not None]
             index_names = [self.current_class_name]
             index_types = [str]
         index_names.extend([PARAMETER_NAME])
@@ -206,8 +210,11 @@ class TabularViewForm(QMainWindow):
             index_names = self.current_object_class_list()
             index_types = [str for _ in index_names]
         else:
-            data = [[o.name, 'x'] for o in self.objects.values()
-                    if o.class_id == self.object_classes[self.current_class_name].id]
+            data = [
+                [o.name, 'x']
+                for o in self.objects.values()
+                if o.class_id == self.object_classes[self.current_class_name].id
+            ]
             index_names = [self.current_class_name]
             index_types = [str]
         return data, index_names, index_types
@@ -222,7 +229,7 @@ class TabularViewForm(QMainWindow):
     def show_commit_session_dialog(self):
         """Query user for a commit message and commit changes to source database."""
         if not self.db_map.has_pending_changes() and not self.model_has_changes():
-            #self.msg.emit("Nothing to commit yet.")
+            # self.msg.emit("Nothing to commit yet.")
             return
         dialog = CommitDialog(self, self.database)
         answer = dialog.exec_()
@@ -234,17 +241,17 @@ class TabularViewForm(QMainWindow):
         self.save_model()
         try:
             self.db_map.commit_session(commit_msg)
-            #self.set_commit_rollback_actions_enabled(False)
+            # self.set_commit_rollback_actions_enabled(False)
         except SpineDBAPIError:
-            #self.msg_error.emit(e.msg)
+            # self.msg_error.emit(e.msg)
             return
 
     def rollback_session(self):
         try:
             self.db_map.rollback_session()
-            #self.set_commit_rollback_actions_enabled(False)
+            # self.set_commit_rollback_actions_enabled(False)
         except SpineDBAPIError:
-            #self.msg_error.emit(e.msg)
+            # self.msg_error.emit(e.msg)
             return
         self.select_data()
 
@@ -268,7 +275,14 @@ class TabularViewForm(QMainWindow):
         item = self.ui.table_frozen.get_selected_row()
         self.model.set_frozen_value(item)
         # update pivot history
-        self.class_pivot_preferences[(self.current_class_name, self.current_class_type, self.current_value_type)] = self.PivotPreferences(self.model.model.pivot_rows, self.model.model.pivot_columns, self.model.model.pivot_frozen, self.model.model.frozen_value)
+        self.class_pivot_preferences[
+            (self.current_class_name, self.current_class_type, self.current_value_type)
+        ] = self.PivotPreferences(
+            self.model.model.pivot_rows,
+            self.model.model.pivot_columns,
+            self.model.model.pivot_frozen,
+            self.model.model.frozen_value,
+        )
 
     def get_selected_class(self):
         if self.ui.list_select_class.currentItem():
@@ -287,10 +301,10 @@ class TabularViewForm(QMainWindow):
         edited_keys = set(k[:-1] for k in self.model.model._edit_data.keys())
         edited_keys.update(set(k[:-1] for k in self.model.model._deleted_data.keys()))
         # find data for edited keys.
-        edited_data = {k:[] for k in edited_keys}
+        edited_data = {k: [] for k in edited_keys}
         for k in self.model.model._data:
             if k[:-1] in edited_data:
-                edited_data[k[:-1]].append([k[-1] ,self.model.model._data[k]])
+                edited_data[k[:-1]].append([k[-1], self.model.model._data[k]])
         # pack into json
         keyfunc = operator.itemgetter(0)
         packed_data = {}
@@ -305,7 +319,7 @@ class TabularViewForm(QMainWindow):
             # create list of values from index 1 to end index.
             # if value for index doesn't exist replace with zero.
             v_ind = 0
-            for i in range(1,v[-1][0]+1):
+            for i in range(1, v[-1][0] + 1):
                 if v[v_ind][0] == i:
                     json_values.append(v[v_ind][1])
                     v_ind = v_ind + 1
@@ -330,7 +344,7 @@ class TabularViewForm(QMainWindow):
             if self.current_class_type == OBJECT_CLASS:
                 obj_id = obj_id[0]
             else:
-                obj_id = ",".join(map(str,obj_id))
+                obj_id = ",".join(map(str, obj_id))
             par_id = self.parameters[k[par_ind]].id
             index = k[index_ind]
             key = (obj_id, par_id, index)
@@ -342,7 +356,7 @@ class TabularViewForm(QMainWindow):
                     # remove value from parameter_value field but not entire row
                     update_data.append({"id": self.parameter_values[key], self.current_value_type: None})
         if delete_ids:
-            self.db_map.remove_items(parameter_value_ids = delete_ids)
+            self.db_map.remove_items(parameter_value_ids=delete_ids)
         if update_data:
             self.db_map.update_parameter_values(*update_data)
 
@@ -355,20 +369,20 @@ class TabularViewForm(QMainWindow):
                     delete_ids.add(self.relationships[obj_ids].id)
                     self.relationships.pop(obj_ids)
         if delete_ids:
-            self.db_map.remove_items(relationship_ids = delete_ids)
+            self.db_map.remove_items(relationship_ids=delete_ids)
 
     def delete_index_values_from_db(self, delete_indexes):
         if not delete_indexes:
             return
         object_names = []
         parameter_names = []
-        #TODO: identify parameter and index and json time dimensions some other way.
+        # TODO: identify parameter and index and json time dimensions some other way.
         for k, on in delete_indexes.items():
             if k == PARAMETER_NAME:
                 parameter_names += on
             elif k not in [JSON_TIME_NAME]:
                 object_names += on
-        #find ids
+        # find ids
         delete_obj_ids = set()
         for on in object_names:
             if on in self.objects:
@@ -384,21 +398,23 @@ class TabularViewForm(QMainWindow):
         if delete_par_ids:
             self.db_map.remove_items(parameter_ids=delete_par_ids)
 
-
     def add_index_values_to_db(self, add_indexes):
         db_edited = False
         if not any(v for v in add_indexes.values()):
             return db_edited
         new_objects = []
         new_parameters = []
-        #TODO: identify parameter and index and json time dimensions some other way.
+        # TODO: identify parameter and index and json time dimensions some other way.
         for k, on in add_indexes.items():
             if k == PARAMETER_NAME:
                 if self.current_class_type == OBJECT_CLASS:
                     class_id = self.object_classes[self.current_class_name].id
                     new_parameters += [{"name": n, "object_class_id": class_id} for n in on]
                 else:
-                    new_parameters += [{"name": n, "relationship_class_id": self.relationship_classes[self.current_class_name].id} for n in on]
+                    new_parameters += [
+                        {"name": n, "relationship_class_id": self.relationship_classes[self.current_class_name].id}
+                        for n in on
+                    ]
             elif k not in [JSON_TIME_NAME]:
                 new_objects += [{"name": n, "class_id": self.object_classes[k].id} for n in on]
         if new_objects:
@@ -414,12 +430,14 @@ class TabularViewForm(QMainWindow):
         if self.current_class_type == RELATIONSHIP_CLASS:
             # find all objects and insert new into db for each class in relationship
             rel_getter = operator.itemgetter(*range(len(self.current_object_class_list())))
-            add_relationships = set(rel_getter(index) for index, value in self.model.model._edit_data.items() if value is None)
+            add_relationships = set(
+                rel_getter(index) for index, value in self.model.model._edit_data.items() if value is None
+            )
             delete_relationships = set(rel_getter(index) for index, value in self.model.model._deleted_data.items())
             self.current_object_class_list()
             add_objects = []
             for i, name in enumerate(self.current_object_class_list()):
-                #only keep objects that has a relationship
+                # only keep objects that has a relationship
                 new = self.model.model._added_index_entries[name]
                 new_data_set = set(r[i] for r in add_relationships)
                 new = [n for n in new if n in new_data_set]
@@ -435,11 +453,11 @@ class TabularViewForm(QMainWindow):
                 if delete_ids:
                     self.db_map.remove_items(relationship_ids=delete_ids)
             if add_relationships:
-                ids = [(tuple(self.objects[i].id for i in rel),'_'.join(rel))
-                       for rel in delete_relationships]
+                ids = [(tuple(self.objects[i].id for i in rel), '_'.join(rel)) for rel in delete_relationships]
                 c_id = self.relationship_classes[self.current_class_name].id
-                insert_rels = [{'object_id_list': r[0], 'name': r[1], 'class_id': c_id}
-                               for r in ids if r not in self.relationships]
+                insert_rels = [
+                    {'object_id_list': r[0], 'name': r[1], 'class_id': c_id} for r in ids if r not in self.relationships
+                ]
                 if insert_rels:
                     self.db_map.add_wide_relationships(*insert_rels)
                     db_edited = True
@@ -478,7 +496,7 @@ class TabularViewForm(QMainWindow):
                 data_value = self.model.model._data
             elif self.current_value_type == DATA_JSON:
                 data_value, delete_values = self.pack_dict_json()
-                delete_values = {k:None for k in delete_values}
+                delete_values = {k: None for k in delete_values}
                 data = data_value
             # delete values
             self.delete_parameter_values(delete_values)
@@ -522,7 +540,7 @@ class TabularViewForm(QMainWindow):
             if self.current_class_type == RELATIONSHIP_CLASS:
                 if obj_id in self.relationships:
                     db_id = self.relationships[obj_id].id
-                obj_id = ",".join(map(str,obj_id))
+                obj_id = ",".join(map(str, obj_id))
             else:
                 obj_id = obj_id[0]
                 db_id = obj_id
@@ -531,8 +549,7 @@ class TabularViewForm(QMainWindow):
                 value_id = self.parameter_values[key]
                 update_data.append({"id": value_id, self.current_value_type: data_value[k]})
             elif db_id:
-                new_data.append({id_field: db_id, "parameter_id": par_id,
-                                 self.current_value_type: data_value[k]})
+                new_data.append({id_field: db_id, "parameter_id": par_id, self.current_value_type: data_value[k]})
         if new_data:
             self.db_map.add_parameter_values(*new_data)
         if update_data:
@@ -548,7 +565,13 @@ class TabularViewForm(QMainWindow):
                 if all(n in self.objects for n in rel):
                     obj_ids = tuple(self.objects[n].id for n in rel)
                     if obj_ids not in self.relationships:
-                        new_rels.append({'object_id_list': obj_ids, 'class_id': self.relationship_classes[self.current_class_name].id, 'name': '_'.join(rel)})
+                        new_rels.append(
+                            {
+                                'object_id_list': obj_ids,
+                                'class_id': self.relationship_classes[self.current_class_name].id,
+                                'name': '_'.join(rel),
+                            }
+                        )
         # save relationships
         if new_rels:
             self.db_map.add_wide_relationships(*new_rels)
@@ -571,12 +594,12 @@ class TabularViewForm(QMainWindow):
         if frozen_value in frozen_values:
             # update selected row
             ind = frozen_values.index(frozen_value)
-            self.ui.table_frozen.selectionModel().blockSignals(True) #prevent selectionChanged signal when updating
+            self.ui.table_frozen.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
             self.ui.table_frozen.selectRow(ind)
             self.ui.table_frozen.selectionModel().blockSignals(False)
         else:
             # frozen value not found, remove selection
-            self.ui.table_frozen.selectionModel().blockSignals(True) #prevent selectionChanged signal when updating
+            self.ui.table_frozen.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
             self.ui.table_frozen.clearSelection()
             self.ui.table_frozen.selectionModel().blockSignals(False)
 
@@ -604,29 +627,45 @@ class TabularViewForm(QMainWindow):
     def get_valid_entries_dicts(self):
         tuple_entries = {}
         used_index_entries = {}
-        valid_index_values = {JSON_TIME_NAME: range(1,9999999)}
-        #used_index_entries[(PARAMETER_NAME,)] = set(p.name for p in self.parameters.values())
+        valid_index_values = {JSON_TIME_NAME: range(1, 9999999)}
+        # used_index_entries[(PARAMETER_NAME,)] = set(p.name for p in self.parameters.values())
         index_entries = {}
         if self.current_class_type == RELATIONSHIP_CLASS:
-            object_class_names = tuple(self.relationship_classes[self.current_class_name].object_class_name_list.split(','))
-            #used_index_entries[object_class_names] = set(o.name for o in self.objects.values())
-            index_entries[PARAMETER_NAME] = set(p.name for p in self.parameters.values() if p.relationship_class_id == self.relationship_classes[self.current_class_name].id)
+            object_class_names = tuple(
+                self.relationship_classes[self.current_class_name].object_class_name_list.split(',')
+            )
+            # used_index_entries[object_class_names] = set(o.name for o in self.objects.values())
+            index_entries[PARAMETER_NAME] = set(
+                p.name
+                for p in self.parameters.values()
+                if p.relationship_class_id == self.relationship_classes[self.current_class_name].id
+            )
             tuple_entries[(PARAMETER_NAME,)] = set((i,) for i in index_entries[PARAMETER_NAME])
             for oc in object_class_names:
-                index_entries[oc] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[oc].id)
+                index_entries[oc] = set(
+                    o.name for o in self.objects.values() if o.class_id == self.object_classes[oc].id
+                )
             unique_class_names = list(object_class_names)
             fix_name_ambiguity(unique_class_names)
-            tuple_entries[tuple(unique_class_names)] = set(tuple(r.object_name_list.split(',')) for r in self.relationships.values())
+            tuple_entries[tuple(unique_class_names)] = set(
+                tuple(r.object_name_list.split(',')) for r in self.relationships.values()
+            )
         else:
-            #used_index_entries[(self.current_class_name,)] = set(o.name for o in self.objects.values())
-            index_entries[self.current_class_name] = set(o.name for o in self.objects.values() if o.class_id == self.object_classes[self.current_class_name].id)
-            index_entries[PARAMETER_NAME] = set(p.name for p in self.parameters.values() if p.object_class_id == self.object_classes[self.current_class_name].id)
+            # used_index_entries[(self.current_class_name,)] = set(o.name for o in self.objects.values())
+            index_entries[self.current_class_name] = set(
+                o.name for o in self.objects.values() if o.class_id == self.object_classes[self.current_class_name].id
+            )
+            index_entries[PARAMETER_NAME] = set(
+                p.name
+                for p in self.parameters.values()
+                if p.object_class_id == self.object_classes[self.current_class_name].id
+            )
             tuple_entries[(PARAMETER_NAME,)] = set((i,) for i in index_entries[PARAMETER_NAME])
             tuple_entries[(self.current_class_name,)] = set((i,) for i in index_entries[self.current_class_name])
 
         return index_entries, tuple_entries, valid_index_values, used_index_entries
 
-    def select_data(self, text = ""):
+    def select_data(self, text=""):
         class_type, class_name = self.get_selected_class()
         self.current_class_type = class_type
         self.current_class_name = class_name
@@ -648,13 +687,25 @@ class TabularViewForm(QMainWindow):
         fix_name_ambiguity(unique_names)
         self.original_index_names = {u: r for u, r in zip(unique_names, real_names)}
         if self.current_class_type == RELATIONSHIP_CLASS:
-            self.relationship_tuple_key = tuple(unique_names[:len(self.current_object_class_list())])
+            self.relationship_tuple_key = tuple(unique_names[: len(self.current_object_class_list())])
         # get pivot preference for current selection
         selection_key = (self.current_class_name, self.current_class_type, self.current_value_type)
         rows, columns, frozen, frozen_value = self.get_pivot_preferences(selection_key, unique_names)
         # update model and views
-        self.model.set_data(data, unique_names, index_types, rows, columns,
-                            frozen, frozen_value, index_entries, valid_index_values, tuple_entries, used_index_entries, real_names)
+        self.model.set_data(
+            data,
+            unique_names,
+            index_types,
+            rows,
+            columns,
+            frozen,
+            frozen_value,
+            index_entries,
+            valid_index_values,
+            tuple_entries,
+            used_index_entries,
+            real_names,
+        )
         self.proxy_model.clear_filter()
         self.update_filters_to_new_model()
         self.update_pivot_lists_to_new_model()
@@ -731,7 +782,9 @@ class TabularViewForm(QMainWindow):
         frozen_value = self.ui.table_frozen.get_selected_row()
         self.model.set_pivot(index, columns, frozen, frozen_value)
         # save current pivot
-        self.class_pivot_preferences[(self.current_class_name, self.current_class_type, self.current_value_type)] = self.PivotPreferences(index, columns, frozen, frozen_value)
+        self.class_pivot_preferences[
+            (self.current_class_name, self.current_class_type, self.current_value_type)
+        ] = self.PivotPreferences(index, columns, frozen, frozen_value)
 
     def find_frozen_values(self, frozen):
         if not frozen:
@@ -805,7 +858,7 @@ class TabularViewForm(QMainWindow):
         if len(QGuiApplication.screens()) < int(n_screens):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
-        #restore splitters
+        # restore splitters
         splitters = [self.ui.splitter_3, self.ui.splitter_2, self.ui.splitter]
         splitter_keys = ["/splitterSelectTable", "/splitterTableFilter", "/splitterPivotFrozen"]
         splitter_states = [self.qsettings.value(s) for s in (self.settings_key + p for p in splitter_keys)]
@@ -818,16 +871,12 @@ class TabularViewForm(QMainWindow):
         # save qsettings
         self.qsettings.setValue("{}/windowSize".format(self.settings_key), self.size())
         self.qsettings.setValue("{}/windowPosition".format(self.settings_key), self.pos())
-        self.qsettings.setValue("{}/windowMaximized".format(self.settings_key), self.windowState() == Qt.WindowMaximized)
         self.qsettings.setValue(
-            "{}/splitterSelectTable".format(self.settings_key),
-            self.ui.splitter_3.saveState())
-        self.qsettings.setValue(
-            "{}/splitterTableFilter".format(self.settings_key),
-            self.ui.splitter_2.saveState())
-        self.qsettings.setValue(
-            "{}/splitterPivotFrozen".format(self.settings_key),
-            self.ui.splitter.saveState())
+            "{}/windowMaximized".format(self.settings_key), self.windowState() == Qt.WindowMaximized
+        )
+        self.qsettings.setValue("{}/splitterSelectTable".format(self.settings_key), self.ui.splitter_3.saveState())
+        self.qsettings.setValue("{}/splitterTableFilter".format(self.settings_key), self.ui.splitter_2.saveState())
+        self.qsettings.setValue("{}/splitterPivotFrozen".format(self.settings_key), self.ui.splitter.saveState())
 
     def closeEvent(self, event=None):
         """Handle close window.

@@ -22,13 +22,11 @@ import logging
 import os
 import json
 from PySide2.QtGui import QStandardItemModel, QStandardItem
-from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, \
-    QFileIconProvider, QMessageBox
+from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices
 from ui.tool_template_form import Ui_Form
-from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, \
-    TOOL_TYPES, REQUIRED_KEYS, INVALID_FILENAME_CHARS
+from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, INVALID_FILENAME_CHARS
 from helpers import busy_effect
 from widgets.custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
@@ -40,6 +38,7 @@ class ToolTemplateWidget(QWidget):
         toolbox (ToolboxUI): QMainWindow instance
         tool_template (ToolTemplate): If given, the form is pre-filled with this template
     """
+
     def __init__(self, toolbox, tool_template=None):
         """ Initialize class."""
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
@@ -218,8 +217,9 @@ class ToolTemplateWidget(QWidget):
         """Create a new blank main program file. Let user decide the file name and location."""
         msg = "Main program file name?"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, "New main program", msg,
-                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self, "New main program", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+        )
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
@@ -256,7 +256,6 @@ class ToolTemplateWidget(QWidget):
         # Update UI
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
-
 
     @Slot(name="new_main_program_file")
     def new_main_program_file(self):
@@ -348,9 +347,9 @@ class ToolTemplateWidget(QWidget):
             common_prefix = os.path.commonprefix([os.path.abspath(self.program_path), os.path.abspath(path)])
             # logging.debug("common_prefix:{0}".format(common_prefix))
             if common_prefix != self.program_path:
-                self.statusbar.showMessage("Source file {0}'s location is invalid "
-                                           "(should be in main directory)"
-                                           .format(file_pattern), 5000)
+                self.statusbar.showMessage(
+                    "Source file {0}'s location is invalid " "(should be in main directory)".format(file_pattern), 5000
+                )
                 return False
             path_to_add = os.path.relpath(path, self.program_path)
         if self.sourcefiles_model.findItems(path_to_add):
@@ -375,8 +374,10 @@ class ToolTemplateWidget(QWidget):
             includes_file = self.sourcefiles_model.itemFromIndex(index).text()
             fname, ext = os.path.splitext(includes_file)
             if ext in [".bat", ".exe"]:
-                self._toolbox.msg_warning.emit("Sorry, opening files with extension <b>{0}</b> not implemented. "
-                                               "Please open the file manually.".format(ext))
+                self._toolbox.msg_warning.emit(
+                    "Sorry, opening files with extension <b>{0}</b> not implemented. "
+                    "Please open the file manually.".format(ext)
+                )
                 return
             url = "file:///" + os.path.join(self.program_path, includes_file)
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
@@ -411,13 +412,15 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="add_inputfiles")
     def add_inputfiles(self, checked=False):
         """Let user select input files for this tool template."""
-        msg = "Add an input file or a directory required by your program. Wildcards " \
-              "<b> are not</b> supported.<br/><br/>" \
-              "Examples:<br/>" \
-              "<b>data.csv</b> -> File is copied to the same work directory as the main program.<br/>" \
-              "<b>input/data.csv</b> -> Creates subdirectory input\ to the work directory and " \
-              "copies the file there.<br/>" \
-              "<b>output/</b> -> Creates an empty directory into the work directory.<br/><br/>"
+        msg = (
+            "Add an input file or a directory required by your program. Wildcards "
+            "<b> are not</b> supported.<br/><br/>"
+            "Examples:<br/>"
+            "<b>data.csv</b> -> File is copied to the same work directory as the main program.<br/>"
+            "<b>input/data.csv</b> -> Creates subdirectory input\ to the work directory and "
+            "copies the file there.<br/>"
+            "<b>output/</b> -> Creates an empty directory into the work directory.<br/><br/>"
+        )
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add input item", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         file_name = answer[0]
@@ -450,16 +453,19 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="add_inputfiles_opt")
     def add_inputfiles_opt(self, checked=False):
         """Let user select optional input files for this tool template."""
-        msg = "Add optional input files that may be utilized by your program. <br/>" \
-              "Wildcards are supported.<br/><br/>" \
-              "Examples:<br/>" \
-              "<b>data.csv</b> -> If found, file is copied to the same work directory as the main program.<br/>" \
-              "<b>*.csv</b> -> All found CSV files are copied to the same work directory as the main program.<br/>" \
-              "<b>input/data_?.dat</b> -> All found files matching the pattern 'data_?.dat' will be copied to <br/>" \
-              "input/ subdirectory under the same work directory as the main program.<br/><br/>"
+        msg = (
+            "Add optional input files that may be utilized by your program. <br/>"
+            "Wildcards are supported.<br/><br/>"
+            "Examples:<br/>"
+            "<b>data.csv</b> -> If found, file is copied to the same work directory as the main program.<br/>"
+            "<b>*.csv</b> -> All found CSV files are copied to the same work directory as the main program.<br/>"
+            "<b>input/data_?.dat</b> -> All found files matching the pattern 'data_?.dat' will be copied to <br/>"
+            "input/ subdirectory under the same work directory as the main program.<br/><br/>"
+        )
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self, "Add optional input item", msg,
-                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self, "Add optional input item", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+        )
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
@@ -490,13 +496,15 @@ class ToolTemplateWidget(QWidget):
     @Slot(bool, name="add_outputfiles")
     def add_outputfiles(self, checked=False):
         """Let user select output files for this tool template."""
-        msg = "Add output files that will be archived into the Tool results directory after the <br/>" \
-              "Tool template has finished execution. Wildcards are supported.<br/><br/>" \
-              "Examples:<br/>" \
-              "<b>results.csv</b> -> File is copied from work directory into results.<br/> " \
-              "<b>*.csv</b> -> All CSV files will copied into results.<br/> " \
-              "<b>output\*.gdx</b> -> All GDX files from the work output\ directory will be copied into <br/>" \
-              "output\ subdirectory in the results directory.<br/><br/>"
+        msg = (
+            "Add output files that will be archived into the Tool results directory after the <br/>"
+            "Tool template has finished execution. Wildcards are supported.<br/><br/>"
+            "Examples:<br/>"
+            "<b>results.csv</b> -> File is copied from work directory into results.<br/> "
+            "<b>*.csv</b> -> All CSV files will copied into results.<br/> "
+            "<b>output\*.gdx</b> -> All GDX files from the work output\ directory will be copied into <br/>"
+            "output\ subdirectory in the results directory.<br/><br/>"
+        )
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QInputDialog.getText(self, "Add output item", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
         file_name = answer[0]

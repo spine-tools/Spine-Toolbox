@@ -26,6 +26,7 @@ class MetaObject(QObject):
         name (str): Object name
         description (str): Object description
     """
+
     def __init__(self, name, description):
         """Class constructor."""
         QObject.__init__(self)
