@@ -490,6 +490,42 @@ class SpineToolboxProject(MetaObject):
         ind = self._toolbox.project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
+    def execute_selected(self):
+        """Starts executing selected directed acyclic graph. Selected graph is
+        determined by the selected project item. Aborts, if multiple project items are
+        selected."""
+        if len(self.dag_handler.dags()) == 0:
+            self._toolbox.msg.emit_warning("Project has no items to execute")
+            return
+        # Get selected item
+        selected_indexes = self._toolbox.ui.treeView_project.selectedIndexes()
+        if len(selected_indexes) == 0:
+            self._toolbox.msg_warning.emit("Please select a project item and try again")
+            return
+        elif len(selected_indexes) == 1:
+            pass
+            # selected_item = self._toolbox.project_item_model.project_item(selected_indexes[0])
+        else:
+            # More than one item selected. Make sure they part of the same graph or abort
+            selected_item = self._toolbox.project_item_model.project_item(selected_indexes.pop())
+            selected_item_graph = self.dag_handler.dag_with_node(selected_item.name)
+            for ind in selected_indexes:
+                # Check that other selected nodes are in the same graph
+                i = self._toolbox.project_item_model.project_item(ind)
+                if not self.dag_handler.dag_with_node(i.name) == selected_item_graph:
+                    self._toolbox.msg_error.emit("Please select items from only one graph to execute it")
+                    return
+        selected_item = self._toolbox.project_item_model.project_item(selected_indexes[0])
+        self._toolbox.msg.emit("Executing DAG with item {0}".format(selected_item.name))
+        # Find graph that contains selected project item
+        exec_order_list = self.dag_handler.calc_exec_order(selected_item.name)
+        if not exec_order_list:
+            self._toolbox.msg_error.emit("Selected graph is not a directed acyclic graph. "
+                                         "Please modify the graph in Design View and try again.")
+            return
+        self._toolbox.msg.emit("Execution order: {0}".format(exec_order_list))
+        return
+
     def execute_project(self):
         """Determines the number of directed acyclic graphs to execute in the project.
         Determines the execution order of project items in each graph. Creates an

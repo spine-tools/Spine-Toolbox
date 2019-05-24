@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -438,7 +438,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
+              <width>324</width>
               <height>361</height>
              </rect>
             </property>
@@ -1281,8 +1281,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>361</height>
+              <width>345</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1696,8 +1696,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>361</height>
+              <width>345</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -2036,8 +2036,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>361</height>
+              <width>345</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">

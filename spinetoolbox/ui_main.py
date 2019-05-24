@@ -1206,8 +1206,6 @@ class ToolboxUI(QMainWindow):
             d.open_graph_view()  # Open graph view of Data Store
         elif option == "Open tabular view...":
             d.open_tabular_view()  # Open tabular view of Data Store
-        elif option == "Execute":
-            d.execute()
         elif option == "Results...":
             d.open_results()
         elif option == "Stop":

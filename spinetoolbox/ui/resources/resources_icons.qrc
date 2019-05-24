@@ -4,7 +4,8 @@
     <file>app.ico</file>
   </qresource>
   <qresource prefix="icons">
-    <file>project_item_icons/play-circle.svg</file>
+    <file>project_item_icons/play-circle-regular.svg</file>
+    <file>project_item_icons/play-circle-solid.svg</file>
     <file>menu_icons/trash-alt.svg</file>
     <file>menu_icons/info-circle.svg</file>
     <file>menu_icons/save_regular.svg</file>

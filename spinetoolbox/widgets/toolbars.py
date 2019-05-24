@@ -61,13 +61,20 @@ class ItemToolBar(QToolBar):
         self.addWidget(remove_all)
         # Execute label and button
         self.addSeparator()
-        ex_label = QLabel("Execute")
+        ex_label = QLabel("Execute Project")
         self.addWidget(ex_label)
-        execute_project_icon = QIcon(":/icons/project_item_icons/play-circle.svg").pixmap(24, 24)
+        execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(24, 24)
         execute_project = QToolButton(parent)
         execute_project.setIcon(execute_project_icon)
         execute_project.clicked.connect(self.execute_project_clicked)
         self.addWidget(execute_project)
+        ex_selected_label = QLabel("Execute Selected")
+        self.addWidget(ex_selected_label)
+        execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(24, 24)
+        execute_selected = QToolButton(parent)
+        execute_selected.setIcon(execute_selected_icon)
+        execute_selected.clicked.connect(self.execute_selected_clicked)
+        self.addWidget(execute_selected)
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
@@ -85,6 +92,15 @@ class ItemToolBar(QToolBar):
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().execute_project()
+        return
+
+    @Slot(bool, name="execute_selected_clicked")
+    def execute_selected_clicked(self, checked=False):
+        """Slot for handling the Execute selected tool button clicked signal."""
+        if not self._toolbox.project():
+            self._toolbox.msg.emit("Please create a new project or open an existing one first")
+            return
+        self._toolbox.project().execute_selected()
         return
 
 

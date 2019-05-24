@@ -302,6 +302,46 @@ class DirectedGraphHandler:
     #         stack += succs
     #         print('%s -> %s' % (node, succs))
 
+    def calc_exec_order(self, node_name):
+        """Returns an ordered list of node names of the graph that contains given node.
+
+        Args:
+            node_name (str): Node whose graph is processed
+
+        Returns:
+            list: bfs-ordered list of node names
+        """
+        g = self.dag_with_node(node_name)
+        if not nx.is_directed_acyclic_graph(g):
+            return None
+        # Get source nodes by calculating in-degrees. If in-degree == 0 -> source node
+        sources = list()
+        for node in g.nodes():
+            in_deg = g.in_degree(node)
+            if in_deg == 0:
+                logging.debug("node:{0} is a source node".format(node))
+                sources.append(node)
+        if len(sources) == 0:
+            # Should not happen if nx.is_directed_acyclic_graph() works
+            logging.error("This graph has no source nodes. Execution failed.")
+            return None
+        # Get execution order
+        src = sources.pop()
+        edges_to_execute = list(nx.bfs_edges(g, src))
+        exec_order = list()
+        exec_order.append(src)
+        # Add other source nodes to exec_order
+        # TODO: This does not work if other sources have children
+        exec_order += sources
+        for src, dst in edges_to_execute:
+            # src, dst = edge
+            # logging.debug("src:{0} dst:{1}".format(src, dst))
+            if src not in exec_order:
+                exec_order.append(src)
+            if dst not in exec_order:
+                exec_order.append(dst)
+        return exec_order
+
     def node_is_isolated(self, node, allow_self_loop=False):
         """Checks if the project item with the given name has any connections.
 
@@ -393,6 +433,8 @@ class ExecutionInstance(QObject):
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
+        logging.debug("dc refs:{0}".format(self.dc_refs))
+        logging.debug("dc files:{0}".format(self.dc_files))
         self.running_item = self.execution_list.pop(0)
         self.execute_project_item()
 

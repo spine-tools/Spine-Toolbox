@@ -97,7 +97,6 @@ class ProjectItemContextMenu(CustomContextMenu):
             self.addSeparator()
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
-            self.add_action("Execute")
             self.add_action("Results...")
             if d.get_icon().timer.state() == QTimeLine.Running:
                 self.add_action("Stop")

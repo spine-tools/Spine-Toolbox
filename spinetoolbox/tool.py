@@ -341,38 +341,38 @@ class Tool(ProjectItem):
                 file_paths[file_path] = found_files
         return file_paths
 
-    def find_file(self, fname):
-        """Find required input file for this Tool Instance. Search file from Data
-        Connection or Data Store items that are input items for this Tool. These in turn
-        will search on their own input items and stop when an infinite recursion is detected.
-
-        Args:
-            fname (str): File name (no path)
-
-        Returns:
-            Path to file or None if it was not found.
-        """
-        path = None
-        # Find file from immediate parent items
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            # self._toolbox.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
-            # Find item from project model
-            found_item_index = self._toolbox.project_item_model.find_item(input_item)
-            found_item = self._toolbox.project_item_model.project_item(found_item_index)
-            if not found_item:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                return path
-            item_data = found_item
-            # Find file from parent Data Stores and Data Connections
-            if item_data.item_type in ["Data Store", "Data Connection"]:
-                visited_items = list()
-                path = item_data.find_file(fname, visited_items)
-                if path is not None:
-                    break
-            elif item_data.item_type == "Tool":
-                # TODO: Find file from output files of parent Tools
-                pass
-        return path
+    # def find_file(self, fname):
+    #     """Find required input file for this Tool Instance. Search file from Data
+    #     Connection or Data Store items that are input items for this Tool. These in turn
+    #     will search on their own input items and stop when an infinite recursion is detected.
+    #
+    #     Args:
+    #         fname (str): File name (no path)
+    #
+    #     Returns:
+    #         Path to file or None if it was not found.
+    #     """
+    #     path = None
+    #     # Find file from immediate parent items
+    #     for input_item in self._toolbox.connection_model.input_items(self.name):
+    #         # self._toolbox.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
+    #         # Find item from project model
+    #         found_item_index = self._toolbox.project_item_model.find_item(input_item)
+    #         found_item = self._toolbox.project_item_model.project_item(found_item_index)
+    #         if not found_item:
+    #             self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+    #             return path
+    #         item_data = found_item
+    #         # Find file from parent Data Stores and Data Connections
+    #         if item_data.item_type in ["Data Store", "Data Connection"]:
+    #             visited_items = list()
+    #             path = item_data.find_file(fname, visited_items)
+    #             if path is not None:
+    #                 break
+    #         elif item_data.item_type == "Tool":
+    #             # TODO: Find file from output files of parent Tools
+    #             pass
+    #     return path
 
     def find_files(self, pattern):
         """Finds optional input files that match the given search word. Searches files from Data
@@ -786,7 +786,6 @@ class Tool(ProjectItem):
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool template to execute".format(self.name))
             self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # continue
             return
-
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("----------------------------")
         self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
