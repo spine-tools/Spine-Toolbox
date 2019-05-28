@@ -711,9 +711,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(d.edges()), 2)  # a->b, b->c
         self.assertTrue(d.has_edge("a", "b"))
         self.assertTrue(d.has_edge("b", "c"))
-        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
-        # [1] is the key that contains the first ordered dag in the project
-        exec_order = self.dag_handler.execution_order(sources)[1]
+        exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(len(exec_order), 3)
         self.assertEqual(exec_order[0], "a")
         self.assertEqual(exec_order[1], "b")
@@ -734,8 +732,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(d.edges()), 2)  # a->b, b->c
         self.assertTrue(d.has_edge("a", "c"))
         self.assertTrue(d.has_edge("b", "c"))
-        sources = ["a", "b"]  # Must be asked from connection_model before calling execution_order()
-        exec_order = self.dag_handler.execution_order(sources)[1]
+        exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(len(exec_order), 3)
         self.assertTrue(exec_order[0] == "a" or exec_order[0] == "b")
         self.assertTrue(exec_order[1] == "a" or exec_order[1] == "b")
@@ -756,8 +753,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 4)
         self.assertEqual(len(d.edges()), 3)
-        sources = ["a", "c"]  # Must be asked from connection_model before calling execution_order()
-        exec_order = self.dag_handler.execution_order(sources)[1]
+        exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(4, len(exec_order))
         self.assertTrue(exec_order[0] == "a" or exec_order[0] == "c")
         self.assertTrue(exec_order[1] == "b" or exec_order[1] == "c" or exec_order[1] == "a")
@@ -778,8 +774,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 4)
         self.assertEqual(len(d.edges()), 4)
-        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
-        exec_order = self.dag_handler.execution_order(sources)[1]
+        exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(4, len(exec_order))
         self.assertTrue(exec_order[0] == "a")
         self.assertTrue(exec_order[1] == "b" or exec_order[1] == "c")
@@ -799,8 +794,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 1)
         self.assertEqual(len(d.edges()), 0)
-        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
-        exec_order = self.dag_handler.execution_order(sources)[1]
+        exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(1, len(exec_order))
         self.assertTrue(exec_order[0] == "a")
 
@@ -817,8 +811,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 2)
         self.assertEqual(len(d.edges()), 2)
-        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
-        exec_order = self.dag_handler.execution_order(sources)[1]
+        exec_order = self.dag_handler.calc_exec_order(d)
         # Execution order for this graph should be empty since it's not a DAG
         self.assertEqual(0, len(exec_order))
 
@@ -835,8 +828,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         d = self.dag_handler.dags()[0]
         self.assertEqual(len(d.nodes()), 3)
         self.assertEqual(len(d.edges()), 3)
-        sources = ["a"]  # Must be asked from connection_model before calling execution_order()
-        exec_order = self.dag_handler.execution_order(sources)[1]
+        exec_order = self.dag_handler.calc_exec_order(d)
         # Execution order for this graph should be empty since it's not a DAG
         self.assertEqual(0, len(exec_order))
 

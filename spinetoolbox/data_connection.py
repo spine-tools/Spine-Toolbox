@@ -472,7 +472,7 @@ class DataConnection(ProjectItem):
         """Executes this Data Connection."""
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Data Connection <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("*******************************")
+        self._toolbox.msg.emit("***")
         inst = self._toolbox.project().execution_instance
         # Add data file references and data files into execution instance
         refs = self.file_references()

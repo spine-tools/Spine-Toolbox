@@ -788,7 +788,7 @@ class Tool(ProjectItem):
             return
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("*******************************")
+        self._toolbox.msg.emit("***")
         if self.execute_in_work:
             self._toolbox.msg.emit("*** Executing in <b>work</b> directory mode ***")
         else:

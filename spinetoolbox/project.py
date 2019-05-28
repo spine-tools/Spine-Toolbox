@@ -492,8 +492,8 @@ class SpineToolboxProject(MetaObject):
 
     def execute_selected(self):
         """Starts executing selected directed acyclic graph. Selected graph is
-        determined by the selected project item. Aborts, if multiple project items are
-        selected."""
+        determined by the selected project item(s). Aborts, if items from multiple
+        graphs are selected."""
         if len(self.dag_handler.dags()) == 0:
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
@@ -512,22 +512,22 @@ class SpineToolboxProject(MetaObject):
                 # Check that other selected nodes are in the same graph
                 i = self._toolbox.project_item_model.project_item(ind)
                 if not self.dag_handler.dag_with_node(i.name) == selected_item_graph:
-                    self._toolbox.msg_error.emit("Please select items from only one graph to execute it")
+                    self._toolbox.msg_warning.emit("Please select items from only one graph")
                     return
-        # selected_item = self._toolbox.project_item_model.project_item(selected_indexes[0])
         # Calculate bfs-ordered list of project items to execute
-        exec_order_list = self.dag_handler.calc_exec_order(selected_item.name)
+        dag = self.dag_handler.dag_with_node(selected_item.name)
+        # exec_order_list = self.dag_handler.calc_exec_order(selected_item.name)
+        exec_order_list = self.dag_handler.calc_exec_order(dag)
         if not exec_order_list:
-            self._toolbox.msg_error.emit("Selected graph is not a directed acyclic graph. "
+            self._toolbox.msg_warning.emit("Selected graph is not a directed acyclic graph. "
                                          "Please check the connections in Design View and try again.")
             return
         # Make execution instance, connect signals and start execution
-        dag = self.dag_handler.dag_with_node(selected_item.name)
-        self.execution_instance = ExecutionInstance(self._toolbox, dag, exec_order_list)
+        self.execution_instance = ExecutionInstance(self._toolbox, exec_order_list)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
-        self._toolbox.msg.emit("<b>{0}</b>".format(" -> ".join(exec_order_list)))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(exec_order_list)))
         self._toolbox.msg.emit("--------------------------------------------------<br/>")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
@@ -542,30 +542,50 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
         self._toolbox.msg.emit("")
-        sources = self._toolbox.connection_model.source_items()  # Source items for the bfs-algorithm
-        if len(sources) == 0:
-            self._toolbox.msg_warning.emit("There are no valid Directed Acyclic Graphs in the project, "
-                                           "please modify connections in Design View and try again.")
-            return
-        self.ordered_dags = self.dag_handler.execution_order(sources)
-        self.n_graphs = len(self.ordered_dags.keys())
-        # Get first graph, connect signals and start executing it
-        self.graph_index = 1
-        execution_list = self.ordered_dags.pop(self.graph_index)  # Pop first set of items to execute
-        if len(execution_list) == 0:
-            self._toolbox.msg_error.emit("First graph is not a Directed Acyclic Graph. Please modify connections.")
-            # TODO: Needs work
-            return
-        self.execution_instance = ExecutionInstance(self._toolbox,
-                                                    self.dag_handler.dags()[self.graph_index-1],
-                                                    execution_list)
-        # NOTE: len(self.execution_list) may not be the same as number of nodes in the
-        # graph if execution_order() fails for some reason
+        # self.ordered_dags = self.dag_handler.execution_order(sources)
+        self.n_graphs = len(self.dag_handler.dags())
+        i = 0
+        not_dags = list()  # List of graphs that are not DAGs
+        for g in self.dag_handler.dags():
+            bfs_ordered_nodes = self.dag_handler.calc_exec_order(g)
+            if not bfs_ordered_nodes:
+                not_dags.append(g)
+                continue
+            self.ordered_dags[i] = bfs_ordered_nodes
+            i += 1
+        self.failed_graph_index = 0
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
-        self._toolbox.msg.emit("<b>Graph {0}/{1} ({2})</b>"
-                               .format(self.graph_index, self.n_graphs, " -> ".join(execution_list)))
+        # TODO: Execute valid DAGs first and invalid last
+        if len(not_dags) > 0:
+            for not_dag in not_dags:
+                # Some graphs in the project are not DAGs. Report to user that these will not be executed.
+                self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>"
+                                       .format(self.failed_graph_index + 1, self.n_graphs))
+                self._toolbox.msg_warning.emit("Graph containing items: {0} is not a Directed Acyclic Graph. "
+                                               "Please modify connections to execute it.<br/>".format(not_dag.nodes()))
+                self.failed_graph_index += 1
+        if len(self.ordered_dags.keys()) < 1:
+            self._toolbox.msg_error.emit("There are no valid Directed Acyclic "
+                                         "Graphs to execute. Please modify connections.")
+            return
+        self.valid_graph_index = 0
+        # Get first graph, connect signals and start executing it
+        execution_list = self.ordered_dags.pop(self.valid_graph_index)  # Pop first set of items to execute
+        if len(execution_list) == 0:
+            # Remove this
+            self._toolbox.msg_error.emit("FIXME: This should not happen anymore.")
+            return
+        self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
+        # NOTE: len(self.execution_list) may not be the same as number of nodes in the
+        # graph if execution_order() fails for some reason
+        # self._toolbox.msg.emit("")
+        # self._toolbox.msg.emit("---------------------------------------")
+        # self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
+        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>"
+                               .format(self.valid_graph_index+self.failed_graph_index+1, self.n_graphs))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
@@ -579,24 +599,22 @@ class SpineToolboxProject(MetaObject):
         self.execution_instance.graph_execution_finished_signal.disconnect()
         self.execution_instance.deleteLater()
         self.execution_instance = None
-        self.graph_index += 1
+        self.valid_graph_index += 1
         if self.n_graphs > 1:
-            self._toolbox.msg_success.emit("Directed graph execution complete")
+            self._toolbox.msg_success.emit("DAG execution complete")
         # Pop next graph
-        execution_list = self.ordered_dags.pop(self.graph_index, None)  # Pop next graph
+        execution_list = self.ordered_dags.pop(self.valid_graph_index, None)  # Pop next graph
         if not execution_list:
             # No more graphs to execute
-            self._toolbox.msg.emit("")
-            self._toolbox.msg_success.emit("Project execution complete")
+            self._toolbox.msg_success.emit("Execution complete")
             return
         # Execute next graph
-        self.execution_instance = ExecutionInstance(self._toolbox,
-                                                    self.dag_handler.dags()[self.graph_index-1],
-                                                    execution_list)
+        self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
         self._toolbox.msg.emit("")
-        # self._toolbox.msg.emit("Graph <b>{0}</b>/<b>{1}</b> (<b>{2}</b>)"
-        self._toolbox.msg.emit("<b>Graph {0}/{1} ({2})</b>"
-                               .format(self.graph_index, self.n_graphs, " -> ".join(execution_list)))
+        self._toolbox.msg.emit("---------------------------------------")
+        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>"
+                               .format(self.valid_graph_index+self.failed_graph_index+1, self.n_graphs))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
