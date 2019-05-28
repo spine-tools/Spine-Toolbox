@@ -228,72 +228,11 @@ class DirectedGraphHandler:
         logging.error("Graph containing edge {0}->{1} not found. Something is wrong.".format(src_node, dst_node))
         return None
 
-    # def execution_order(self):
-    #     """Builds a list or an iterator of all graphs in the project.
-    #     Returns a dictionary of project item names in the breadth-first
-    #     search order.
-    #
-    #     Returns:
-    #         dict: Key is the index number of the graph starting from 1.
-    #         Value is an ordered list of project item names.
-    #     """
-    #     n = len(self.dags())
-    #     t = 1
-    #     exec_dict = dict()
-    #     for dag in self.dags():
-    #         exec_order = list()
-    #         if not nx.is_directed_acyclic_graph(dag):
-    #             logging.debug("This graph is not a DAG")
-    #         else:
-    #             sources_in_dag = self.source_nodes(dag)
-    #             # Intersection of source items and nodes in current graph
-    #             # sources_in_dag = sources & dag.nodes()
-    #             # logging.debug("Sources in current dag:{0}".format(sources_in_dag))
-    #             if len(sources_in_dag) == 0:
-    #                 # Should not happen if nx.is_directed_acyclic_graph() works
-    #                 logging.error("No sources for this graph found. Execution failed.")
-    #             else:
-    #                 source = sources_in_dag.pop()
-    #                 # logging.debug("Using {0} as source".format(source))
-    #                 edges_to_execute = list(nx.bfs_edges(dag, source))
-    #                 # successor_iter = list(nx.bfs_successors(dag, source))  # TODO: Test bfs_successors(G, source)
-    #                 exec_order = list()
-    #
-    #                 # stack = [source]
-    #                 # while stack:
-    #                 #     node = stack.pop()
-    #                 #     succs = dag.successors(node)
-    #                 #     stack += succs
-    #                 #     logging.debug('%s -> %s' % (node, stack))
-    #                 #     exec_order.append(node)
-    #                 #     for suc in stack:
-    #                 #         logging.debug("Adding node:{0}".format(suc))
-    #                 #         exec_order.append(suc)
-    #
-    #                 exec_order.append(source)
-    #                 # Add other source nodes to exec_order
-    #                 exec_order += sources_in_dag
-    #                 for edge in edges_to_execute:
-    #                     src, dst = edge
-    #                     # logging.debug("src:{0} dst:{1}".format(src, dst))
-    #                     if src not in exec_order:
-    #                         exec_order.append(src)
-    #                     if dst not in exec_order:
-    #                         exec_order.append(dst)
-    #         exec_dict[t] = exec_order
-    #         t += 1
-    #     return exec_dict
-
-    # def get_successors(self, graph, start_node):
-    #     stack = [start_node]
-    #     while stack:
-    #         node = stack.pop()
-    #         succs = g.successors(node)
-    #         stack += succs
-    #         print('%s -> %s' % (node, succs))
-
     def calc_exec_order(self, g):
         """Returns an bfs-ordered list of nodes in the given graph.
+        Adds a dummy source node to the graph if there are more than
+        one nodes that have no inbound connections. The dummy source
+        node is needed for the bfs-algorithm.
 
         Args:
             g (DiGraph): Directed graph to process
@@ -305,27 +244,31 @@ class DirectedGraphHandler:
         exec_order = list()
         if not nx.is_directed_acyclic_graph(g):
             return exec_order
-        sources = self.source_nodes(g)
+        sources = self.source_nodes(g)  # Project items that have no inbound connections
         if len(sources) == 0:
             # Should not happen if nx.is_directed_acyclic_graph() works
             logging.error("This graph has no source nodes. Execution failed.")
             return exec_order
-        # Calculate bfs-order
-        src = sources.pop()
-        edges_to_execute = list(nx.bfs_edges(g, src))
-        exec_order.append(src)
-        # Add other source nodes to exec_order
-        # TODO: This does not work if other sources have children
-        # TODO: Try fixing this by adding a source node for all 'sources' (the argument)
-        # TODO: Then use this dummy source as the source for the bfs-algorithm
-        exec_order += sources
+        if len(sources) > 1:
+            # Make an invisible source node for all nodes that have no inbound connections
+            invisible_src_node = 0  # This is unique name since it's an integer. Item called "0" can still be created
+            g.add_node(invisible_src_node)
+            for src in sources:
+                g.add_edge(invisible_src_node, src)
+            # Calculate bfs-order by using the invisible dummy source node
+            edges_to_execute = list(nx.bfs_edges(g, invisible_src_node))
+            # Now remove the invisible dummy source node
+            for src in sources:
+                g.remove_edge(invisible_src_node, src)
+            g.remove_node(invisible_src_node)
+        else:
+            # The dag contains only one source item, so it can be used as the source node directly
+            # Calculate bfs-order
+            edges_to_execute = list(nx.bfs_edges(g, sources[0]))
+            exec_order.append(sources[0])  # Add source node
+        # Collect the dst nodes from the bfs-edge iterator
         for src, dst in edges_to_execute:
-            # src, dst = edge
-            # logging.debug("src:{0} dst:{1}".format(src, dst))
-            if src not in exec_order:
-                exec_order.append(src)
-            if dst not in exec_order:
-                exec_order.append(dst)
+            exec_order.append(dst)
         return exec_order
 
     def node_is_isolated(self, node, allow_self_loop=False):

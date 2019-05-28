@@ -740,8 +740,6 @@ class TestDirectedGraphHandler(unittest.TestCase):
 
     def test_execution_order3(self):
         """Test that execution order is correct with all kinds of graphs.
-        # TODO: This is a bug in execution_order()
-        # Note: This works if "a" is used as source but fails if "c" is used as source
         Graph Nodes: [a, b, c, d]. Edges: [a->b, b->d, c->d]
         Expected order: a-b-c-d or a-c-b-d or c-a-b-d
         """
@@ -759,7 +757,6 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertTrue(exec_order[1] == "b" or exec_order[1] == "c" or exec_order[1] == "a")
         self.assertTrue(exec_order[2] == "c" or exec_order[2] == "b")
         self.assertTrue(exec_order[3] == "d")
-        self.fail("Fix me")  # Added since this passes if source is "a"
 
     def test_execution_order4(self):
         """Test that execution order is correct with all kinds of graphs.
