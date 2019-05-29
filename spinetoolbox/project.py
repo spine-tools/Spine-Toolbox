@@ -50,8 +50,10 @@ class SpineToolboxProject(MetaObject):
         self.dag_handler = DirectedGraphHandler(self._toolbox)
         self.ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
         self.execution_instance = None
-        self.graph_index = 1
-        self.n_graphs = 0
+        self._graph_index = 0
+        self._n_graphs = 0
+        self._executed_graph_index = 0
+        self._invalid_graphs = list()
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
@@ -519,8 +521,9 @@ class SpineToolboxProject(MetaObject):
         # exec_order_list = self.dag_handler.calc_exec_order(selected_item.name)
         exec_order_list = self.dag_handler.calc_exec_order(dag)
         if not exec_order_list:
+            self._toolbox.msg.emit("")
             self._toolbox.msg_warning.emit("Selected graph is not a directed acyclic graph. "
-                                         "Please check the connections in Design View and try again.")
+                                           "Please edit connections in Design View and try again.")
             return
         # Make execution instance, connect signals and start execution
         self.execution_instance = ExecutionInstance(self._toolbox, exec_order_list)
@@ -541,50 +544,34 @@ class SpineToolboxProject(MetaObject):
         if len(self.dag_handler.dags()) == 0:
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
-        self._toolbox.msg.emit("")
-        # self.ordered_dags = self.dag_handler.execution_order(sources)
-        self.n_graphs = len(self.dag_handler.dags())
-        i = 0
-        not_dags = list()  # List of graphs that are not DAGs
+        self._n_graphs = len(self.dag_handler.dags())
+        i = 0  # Key for self.ordered_dags dictionary TODO: Is a list enough for self.ordered_dags
         for g in self.dag_handler.dags():
             bfs_ordered_nodes = self.dag_handler.calc_exec_order(g)
             if not bfs_ordered_nodes:
-                not_dags.append(g)
+                self._invalid_graphs.append(g)
                 continue
             self.ordered_dags[i] = bfs_ordered_nodes
             i += 1
-        self.failed_graph_index = 0
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("---------------------------------------")
-        self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
-        # TODO: Execute valid DAGs first and invalid last
-        if len(not_dags) > 0:
-            for not_dag in not_dags:
-                # Some graphs in the project are not DAGs. Report to user that these will not be executed.
-                self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>"
-                                       .format(self.failed_graph_index + 1, self.n_graphs))
-                self._toolbox.msg_warning.emit("Graph containing items: {0} is not a Directed Acyclic Graph. "
-                                               "Please modify connections to execute it.<br/>".format(not_dag.nodes()))
-                self.failed_graph_index += 1
         if len(self.ordered_dags.keys()) < 1:
+            # Maybe let self.handle_invalid_graphs() handle this
             self._toolbox.msg_error.emit("There are no valid Directed Acyclic "
                                          "Graphs to execute. Please modify connections.")
+            self._invalid_graphs.clear()
             return
-        self.valid_graph_index = 0
+        self._executed_graph_index = 0
         # Get first graph, connect signals and start executing it
-        execution_list = self.ordered_dags.pop(self.valid_graph_index)  # Pop first set of items to execute
+        execution_list = self.ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
         if len(execution_list) == 0:
-            # Remove this
+            # TODO: Change to check if the n of nodes in execution_list is equal to the n of nodes in the graph
             self._toolbox.msg_error.emit("FIXME: This should not happen anymore.")
             return
         self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
-        # NOTE: len(self.execution_list) may not be the same as number of nodes in the
-        # graph if execution_order() fails for some reason
-        # self._toolbox.msg.emit("")
-        # self._toolbox.msg.emit("---------------------------------------")
-        # self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("---------------------------------------")
+        self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>"
-                               .format(self.valid_graph_index+self.failed_graph_index+1, self.n_graphs))
+                               .format(self._executed_graph_index + 1, self._n_graphs))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
@@ -599,22 +586,41 @@ class SpineToolboxProject(MetaObject):
         self.execution_instance.graph_execution_finished_signal.disconnect()
         self.execution_instance.deleteLater()
         self.execution_instance = None
-        self.valid_graph_index += 1
-        if self.n_graphs > 1:
+        self._executed_graph_index += 1
+        if self._n_graphs > 1:
             self._toolbox.msg_success.emit("DAG execution complete")
         # Pop next graph
-        execution_list = self.ordered_dags.pop(self.valid_graph_index, None)  # Pop next graph
+        execution_list = self.ordered_dags.pop(self._executed_graph_index, None)  # Pop next graph
         if not execution_list:
+            # All valid DAGs have been executed. Check if there are invalid DAGs and report these to user
+            self.handle_invalid_graphs()
             # No more graphs to execute
             self._toolbox.msg_success.emit("Execution complete")
             return
+        # TODO: Check if the n of nodes in execution_list is equal to the n of nodes in the graph
         # Execute next graph
         self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>"
-                               .format(self.valid_graph_index+self.failed_graph_index+1, self.n_graphs))
+                               .format(self._executed_graph_index+1, self._n_graphs))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
+
+    def handle_invalid_graphs(self):
+        """Prints messages to Event Log if there are invalid DAGs (e.g. contain self-loops) in the project."""
+        if len(self._invalid_graphs) > 0:
+            for g in self._invalid_graphs:
+                # Some graphs in the project are not DAGs. Report to user that these will not be executed.
+                self._toolbox.msg.emit("")
+                self._toolbox.msg.emit("---------------------------------------")
+                self._toolbox.msg_warning.emit("<b>Graph {0}/{1} is not a Directed Acyclic Graph</b>"
+                                               .format(self._executed_graph_index+1, self._n_graphs))
+                self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(g.nodes())))
+                self._toolbox.msg.emit("Please edit connections in Design View to execute it.")
+                self._toolbox.msg.emit("---------------------------------------")
+                self._executed_graph_index += 1
+        self._invalid_graphs.clear()
+        return
