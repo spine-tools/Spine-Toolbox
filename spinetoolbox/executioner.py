@@ -266,7 +266,7 @@ class DirectedGraphHandler:
             # Calculate bfs-order
             edges_to_execute = list(nx.bfs_edges(g, sources[0]))
             exec_order.append(sources[0])  # Add source node
-        # Collect the dst nodes from the bfs-edge iterator
+        # Collect dst nodes from bfs-edge iterator
         for src, dst in edges_to_execute:
             exec_order.append(dst)
         return exec_order

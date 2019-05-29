@@ -496,6 +496,8 @@ class SpineToolboxProject(MetaObject):
         """Starts executing selected directed acyclic graph. Selected graph is
         determined by the selected project item(s). Aborts, if items from multiple
         graphs are selected."""
+        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+                self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
         if len(self.dag_handler.dags()) == 0:
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
@@ -518,19 +520,21 @@ class SpineToolboxProject(MetaObject):
                     return
         # Calculate bfs-ordered list of project items to execute
         dag = self.dag_handler.dag_with_node(selected_item.name)
-        # exec_order_list = self.dag_handler.calc_exec_order(selected_item.name)
-        exec_order_list = self.dag_handler.calc_exec_order(dag)
-        if not exec_order_list:
+        ordered_nodes = self.dag_handler.calc_exec_order(dag)
+        if not self.number_of_nodes_to_execute_is_correct(ordered_nodes, dag):
+            # If this happens, there's a bug in calc_exec_order()
+            return
+        if not ordered_nodes:
             self._toolbox.msg.emit("")
             self._toolbox.msg_warning.emit("Selected graph is not a directed acyclic graph. "
                                            "Please edit connections in Design View and try again.")
             return
         # Make execution instance, connect signals and start execution
-        self.execution_instance = ExecutionInstance(self._toolbox, exec_order_list)
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(exec_order_list)))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(ordered_nodes)))
         self._toolbox.msg.emit("--------------------------------------------------<br/>")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
@@ -541,20 +545,24 @@ class SpineToolboxProject(MetaObject):
         Determines the execution order of project items in each graph. Creates an
         instance for executing the first graph and starts executing it.
         """
+        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+                self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
         if len(self.dag_handler.dags()) == 0:
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
         self._n_graphs = len(self.dag_handler.dags())
-        i = 0  # Key for self.ordered_dags dictionary TODO: Is a list enough for self.ordered_dags
+        i = 0  # Key for self.ordered_dags dictionary TODO: Switch self.ordered_dags to a list?
         for g in self.dag_handler.dags():
             bfs_ordered_nodes = self.dag_handler.calc_exec_order(g)
             if not bfs_ordered_nodes:
                 self._invalid_graphs.append(g)
                 continue
+            if not self.number_of_nodes_to_execute_is_correct(bfs_ordered_nodes, g):
+                # If this happens, there's a bug in calc_exec_order()
+                return
             self.ordered_dags[i] = bfs_ordered_nodes
             i += 1
         if len(self.ordered_dags.keys()) < 1:
-            # Maybe let self.handle_invalid_graphs() handle this
             self._toolbox.msg_error.emit("There are no valid Directed Acyclic "
                                          "Graphs to execute. Please modify connections.")
             self._invalid_graphs.clear()
@@ -562,10 +570,6 @@ class SpineToolboxProject(MetaObject):
         self._executed_graph_index = 0
         # Get first graph, connect signals and start executing it
         execution_list = self.ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
-        if len(execution_list) == 0:
-            # TODO: Change to check if the n of nodes in execution_list is equal to the n of nodes in the graph
-            self._toolbox.msg_error.emit("FIXME: This should not happen anymore.")
-            return
         self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
@@ -597,7 +601,6 @@ class SpineToolboxProject(MetaObject):
             # No more graphs to execute
             self._toolbox.msg_success.emit("Execution complete")
             return
-        # TODO: Check if the n of nodes in execution_list is equal to the n of nodes in the graph
         # Execute next graph
         self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
         self._toolbox.msg.emit("")
@@ -624,3 +627,23 @@ class SpineToolboxProject(MetaObject):
                 self._executed_graph_index += 1
         self._invalid_graphs.clear()
         return
+
+    def number_of_nodes_to_execute_is_correct(self, bfs_ordered_nodes, g):
+        """Checks that the number of nodes to execute is
+        the same as the number of nodes in the graph. If the
+        numbers don't match, it's a bug.
+
+        Args:
+            bfs_ordered_nodes (list): Ordered list of node names
+            g (DiGraph): Graph to execute
+
+        Returns:
+            bool: True if the numbers match, False otherwise
+        """
+        if len(bfs_ordered_nodes) == len(g.nodes()):
+            return True
+        else:
+            logging.error("ordered nodes: {0}. Nodes in graph: {1}".format(bfs_ordered_nodes, g.nodes()))
+            self._toolbox.msg_error.emit("Sorry but there's a problem in calculating the execution order. "
+                                         "Please reload the project and try again.")
+            return False

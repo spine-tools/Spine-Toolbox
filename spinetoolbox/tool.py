@@ -780,8 +780,6 @@ class Tool(ProjectItem):
 
     def execute(self):
         """Executes this Tool."""
-        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
-                self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
         if not self.tool_template():
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool template to execute".format(self.name))
             self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # continue
