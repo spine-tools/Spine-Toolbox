@@ -837,15 +837,19 @@ class DataStoreForm(QMainWindow):
         window_state = self.qsettings().value("windowState")
         window_maximized = self.qsettings().value("windowMaximized", defaultValue='false')
         n_screens = self.qsettings().value("n_screens", defaultValue=1)
-        h_state = self.qsettings().value("objParDefHeaderState")
-        self.ui.tableView_object_parameter_definition.horizontalHeader().restoreState(h_state)
-        h_state = self.qsettings().value("objParValHeaderState")
-        self.ui.tableView_object_parameter_value.horizontalHeader().restoreState(h_state)
-        h_state = self.qsettings().value("relParDefHeaderState")
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().restoreState(h_state)
-        h_state = self.qsettings().value("relParValHeaderState")
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().restoreState(h_state)
+        opd_h_state = self.qsettings().value("objParDefHeaderState")
+        opv_h_state = self.qsettings().value("objParValHeaderState")
+        rpd_h_state = self.qsettings().value("relParDefHeaderState")
+        rpv_h_state = self.qsettings().value("relParValHeaderState")
         self.qsettings().endGroup()
+        if opd_h_state:
+            self.ui.tableView_object_parameter_definition.horizontalHeader().restoreState(opd_h_state)
+        if opv_h_state:
+            self.ui.tableView_object_parameter_value.horizontalHeader().restoreState(opv_h_state)
+        if rpd_h_state:
+            self.ui.tableView_relationship_parameter_definition.horizontalHeader().restoreState(rpd_h_state)
+        if rpv_h_state:
+            self.ui.tableView_relationship_parameter_value.horizontalHeader().restoreState(rpv_h_state)
         if window_size:
             self.resize(window_size)
         if window_pos:
