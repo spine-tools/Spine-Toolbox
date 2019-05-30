@@ -194,7 +194,7 @@ class DataStore(ProjectItem):
             return
         try:
             db_url = make_url(self._url)
-        except sqlalchemy.exc.ArgumentError:
+        except (ArgumentError, ValueError):
             self._toolbox.msg_error.emit(
                 "<b>{0}</b> stored url can't be parsed. Please select a new one.".format(self.name)
             )
@@ -458,11 +458,13 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
             return False
 
+    @busy_effect
     def get_db_map(self, url, username, upgrade=False):
         """Return a DiffDatabaseMapping instance to work with.
         """
         try:
-            return spinedb_api.DiffDatabaseMapping(url, username, upgrade=upgrade)
+            db_map = spinedb_api.DiffDatabaseMapping(url, username, upgrade=upgrade)
+            return db_map
         except spinedb_api.SpineDBVersionError:
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
@@ -507,7 +509,15 @@ class DataStore(ProjectItem):
                 return
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
-        db_url = make_url(url)
+        try:
+            db_url = make_url(url)
+        except (ArgumentError, ValueError) as err:
+            self._toolbox.msg_error.emit(
+                "<b>{0}</b> can't be parsed: {1}. Please check "
+                "<a href=https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=engine>this page</a> "
+                "for details on how to setup a SQLAlchemy url.".format(url, err)
+            )
+            return
         database = db_url.database
         username = db_url.username
         db_map = self.get_db_map(url, username)
@@ -547,7 +557,15 @@ class DataStore(ProjectItem):
                 return
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
-        db_url = make_url(url)
+        try:
+            db_url = make_url(url)
+        except (ArgumentError, ValueError) as err:
+            self._toolbox.msg_error.emit(
+                "<b>{0}</b> can't be parsed: {1}. Please check "
+                "<a href=https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=engine>this page</a> "
+                "for details on how to setup a SQLAlchemy url.".format(url, err)
+            )
+            return
         database = db_url.database
         username = db_url.username
         db_map = self.get_db_map(url, username)
@@ -586,7 +604,15 @@ class DataStore(ProjectItem):
         if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
             self._toolbox.msg_warning.emit("Please select dialect first")
             return
-        db_url = make_url(url)
+        try:
+            db_url = make_url(url)
+        except (ArgumentError, ValueError) as err:
+            self._toolbox.msg_error.emit(
+                "<b>{0}</b> can't be parsed: {1}. Please check "
+                "<a href=https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=engine>this page</a> "
+                "for details on how to setup a SQLAlchemy url.".format(url, err)
+            )
+            return
         database = db_url.database
         username = db_url.username
         db_map = self.get_db_map(url, username)
