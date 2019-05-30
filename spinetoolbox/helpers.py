@@ -389,6 +389,7 @@ class IconManager:
         super().__init__()
         self.obj_cls_icon_cache = {}  # A mapping from object class name to display icon
         self.icon_pixmap_cache = {}  # A mapping from display_icon to associated pixmap
+        self.rel_cls_icon_cache = {}  # A mapping from object class name list to associated pixmap
         self.searchterms = {}
         self.model = QStandardItemModel()
         self.model.data = self._model_data
@@ -478,6 +479,8 @@ class IconManager:
         if not str_object_class_name_list:
             engine = CharIconEngine("\uf1b3", 0)
             return engine.pixmap(QSize(512, 512))
+        if str_object_class_name_list in self.rel_cls_icon_cache:
+            return self.rel_cls_icon_cache[str_object_class_name_list]
         object_class_name_list = str_object_class_name_list.split(",")
         scene = QGraphicsScene()
         x = 0
@@ -497,6 +500,7 @@ class IconManager:
         painter.setRenderHint(QPainter.Antialiasing, True)
         scene.render(painter)
         painter.end()
+        self.rel_cls_icon_cache[str_object_class_name_list] = pixmap
         return pixmap
 
     def relationship_icon(self, str_object_class_name_list):
