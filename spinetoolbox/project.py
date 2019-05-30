@@ -191,7 +191,7 @@ class SpineToolboxProject(MetaObject):
                 item_dict[category][name]["y"] = y
                 # Save item type specific things
                 if item.item_type == "Data Store":
-                    item_dict[category][name]["reference"] = item.current_reference()
+                    item_dict[category][name]["url"] = item.current_url()
                 elif item.item_type == "Data Connection":
                     item_dict[category][name]["references"] = item.file_references()
                 elif item.item_type == "Tool":
@@ -232,15 +232,13 @@ class SpineToolboxProject(MetaObject):
         for name in data_stores.keys():
             desc = data_stores[name]['description']
             try:
-                ref = data_stores[name]["reference"]
+                url = data_stores[name]["url"]
             except KeyError:
-                # Keep compatibility with previous version where a list of references was stored
+                # Keep compatibility with previous version
                 try:
-                    ref = data_stores[name]["references"][0]
+                    url = data_stores[name]["reference"]["url"]
                 except KeyError:
-                    ref = None
-                except IndexError:
-                    ref = None
+                    url = None
             try:
                 x = data_stores[name]["x"]
                 y = data_stores[name]["y"]
@@ -248,7 +246,7 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, ref))
-            self.add_data_store(name, desc, ref, x, y, verbosity=False)
+            self.add_data_store(name, desc, url, x, y, verbosity=False)
         # Recreate Data Connections
         for name in data_connections.keys():
             desc = data_connections[name]['description']

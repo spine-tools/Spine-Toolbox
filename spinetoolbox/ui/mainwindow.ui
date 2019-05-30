@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>862</width>
-    <height>708</height>
+    <width>1538</width>
+    <height>927</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -126,7 +126,7 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>862</width>
+     <width>1538</width>
      <height>28</height>
     </rect>
    </property>
@@ -438,8 +438,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>366</width>
-              <height>347</height>
+              <width>379</width>
+              <height>550</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_15">
@@ -1284,7 +1284,7 @@
               <x>0</x>
               <y>0</y>
               <width>379</width>
-              <height>331</height>
+              <height>550</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1685,7 +1685,7 @@
               <x>0</x>
               <y>0</y>
               <width>379</width>
-              <height>331</height>
+              <height>550</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -2064,7 +2064,7 @@
               <x>0</x>
               <y>0</y>
               <width>379</width>
-              <height>331</height>
+              <height>550</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2847,31 +2847,52 @@
  <tabstops>
   <tabstop>tabWidget</tabstop>
   <tabstop>treeView_project</tabstop>
+  <tabstop>listView_tool_templates</tabstop>
+  <tabstop>toolButton_add_tool_template</tabstop>
+  <tabstop>toolButton_remove_tool_template</tabstop>
   <tabstop>graphicsView</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>
+  <tabstop>tabWidget_item_properties</tabstop>
+  <tabstop>scrollArea</tabstop>
+  <tabstop>toolButton_copy_db_url</tabstop>
+  <tabstop>toolButton_new_spine</tabstop>
   <tabstop>comboBox_dialect</tabstop>
-  <tabstop>lineEdit_password</tabstop>
   <tabstop>comboBox_dsn</tabstop>
-  <tabstop>lineEdit_host</tabstop>
-  <tabstop>lineEdit_port</tabstop>
-  <tabstop>lineEdit_username</tabstop>
   <tabstop>lineEdit_SQLite_file</tabstop>
   <tabstop>toolButton_browse</tabstop>
+  <tabstop>lineEdit_host</tabstop>
+  <tabstop>lineEdit_port</tabstop>
   <tabstop>lineEdit_database</tabstop>
+  <tabstop>lineEdit_username</tabstop>
+  <tabstop>lineEdit_password</tabstop>
+  <tabstop>pushButton_ds_tree_view</tabstop>
+  <tabstop>pushButton_ds_graph_view</tabstop>
+  <tabstop>pushButton_ds_tabular_view</tabstop>
+  <tabstop>scrollArea_2</tabstop>
   <tabstop>treeView_dc_references</tabstop>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>
   <tabstop>toolButton_add</tabstop>
   <tabstop>treeView_dc_data</tabstop>
+  <tabstop>pushButton_datapackage</tabstop>
+  <tabstop>scrollArea_3</tabstop>
   <tabstop>comboBox_tool</tabstop>
   <tabstop>toolButton_tool_template</tabstop>
+  <tabstop>treeView_template</tabstop>
   <tabstop>pushButton_tool_stop</tabstop>
   <tabstop>pushButton_tool_results</tabstop>
   <tabstop>pushButton_tool_execute</tabstop>
+  <tabstop>radioButton_execute_in_work</tabstop>
+  <tabstop>radioButton_execute_in_source</tabstop>
+  <tabstop>scrollArea_4</tabstop>
   <tabstop>treeView_view</tabstop>
   <tabstop>pushButton_open_network_map</tabstop>
+  <tabstop>toolButton_view_open_dir</tabstop>
+  <tabstop>toolButton_tool_open_dir</tabstop>
+  <tabstop>toolButton_dc_open_dir</tabstop>
   <tabstop>tableView_connections</tabstop>
+  <tabstop>toolButton_ds_open_dir</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

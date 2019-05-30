@@ -689,13 +689,9 @@ class Tool(ProjectItem):
                     item.add_files_to_references([src_path])  # Give path in a list
                     n_created_refs += 1
                 elif item.item_type == "Data Store":
-                    reference = {
-                        'url': 'sqlite:///{0}'.format(src_path),
-                        'database': output_file,
-                        'username': getpass.getuser(),
-                    }
-                    item.set_reference(reference)
-                    item.load_reference_into_selections()
+                    url = 'sqlite:///{0}'.format(src_path)
+                    item.set_url(url)
+                    item.load_url_into_selections()
                     self._toolbox.msg.emit("\tCreated <b>1</b> reference")
                     break
                 else:
