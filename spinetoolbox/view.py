@@ -131,7 +131,7 @@ class View(ProjectItem):
         input_items = self.find_input_items()
         self._references = list()
         for item in input_items:
-            url = item.current_url()
+            url = item.url()
             if not url:
                 continue
             self._references.append(url)

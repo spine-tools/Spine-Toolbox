@@ -32,7 +32,7 @@ from PySide2.QtWidgets import (
     QAction,
     QWidgetAction,
 )
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QIntValidator
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import (
@@ -155,6 +155,7 @@ class ToolboxUI(QMainWindow):
         self.init_project()
         self.init_shared_widgets()  # Shared among multiple project items
         self.restore_ui()
+        self.ui.lineEdit_port.setValidator(QIntValidator())
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
