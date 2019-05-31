@@ -227,3 +227,7 @@ class View(ProjectItem):
         self._toolbox.msg.emit("Executing View <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+
+    def stop_execution(self):
+        """Stops executing this View."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))

@@ -88,7 +88,6 @@ class Tool(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.toolButton_tool_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_tool_stop.clicked] = self.stop_process
         s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
         s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
         s[self._toolbox.ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
@@ -226,12 +225,6 @@ class Tool(ProjectItem):
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
-
-    @Slot(bool, name="stop_process")
-    def stop_process(self, checked=False):
-        """Terminate Tool template execution."""
-        self.instance.terminate_instance()
-        self._toolbox.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
 
     def set_icon(self, icon):
         """Icon setter method."""
@@ -578,22 +571,21 @@ class Tool(ProjectItem):
             if item.item_type == "Data Connection":
                 self._toolbox.msg.emit("\tCreated <b>{0}</b> reference(s)".format(n_created_refs))
 
-    @Slot(int, name="execution_finished")
-    def execution_finished(self, return_code):
-        """Tool execution finished."""
-        self._toolbox.ui.pushButton_tool_stop.setEnabled(False)
-        self._graphics_item.stop_animation()
-        # Disconnect instance finished signal
-        self.instance.instance_finished_signal.disconnect(self.execution_finished)
-        if return_code == 0:
-            # copy output files to data directories of connected items
-            output_items = self.find_output_items()
-            if output_items:
-                # self._toolbox.msg.emit("Creating references to Tool output files in connected items")
-                self.create_refs_to_output_files(output_items)
-            self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
-        else:
-            self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
+    # @Slot(int, name="execution_finished")
+    # def execution_finished(self, return_code):
+    #     """Tool execution finished."""
+    #     self._graphics_item.stop_animation()
+    #     # Disconnect instance finished signal
+    #     self.instance.instance_finished_signal.disconnect(self.execution_finished)
+    #     if return_code == 0:
+    #         # copy output files to data directories of connected items
+    #         output_items = self.find_output_items()
+    #         if output_items:
+    #             # self._toolbox.msg.emit("Creating references to Tool output files in connected items")
+    #             self.create_refs_to_output_files(output_items)
+    #         self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
+    #     else:
+    #         self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
 
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. This is where Tool
@@ -798,7 +790,7 @@ class Tool(ProjectItem):
             inputs = self._toolbox.connection_model.input_items(self.name)
             if not inputs:
                 self._toolbox.msg_error.emit("This Tool has no input connections. Cannot find required input files.")
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(1)  # abort
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                 return
             n_dirs, n_files = self.count_files_and_dirs()
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
@@ -806,7 +798,7 @@ class Tool(ProjectItem):
                 self._toolbox.msg.emit("*** Searching for required input files ***")
                 file_paths = self.find_input_files()
                 if not file_paths:
-                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(1)  # abort
+                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
@@ -814,7 +806,7 @@ class Tool(ProjectItem):
                                                  self._project, self.execute_in_work)
                 except OSError as e:
                     self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
-                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(1)  # abort
+                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                     return
                 if self.execute_in_work:
                     self._toolbox.msg.emit("*** Copying input files to work directory ***")
@@ -823,7 +815,7 @@ class Tool(ProjectItem):
                 # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_paths):
                     self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
-                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(1)  # abort
+                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                     return
             else:  # just for testing
                 # logging.debug("No input files to copy")
@@ -836,7 +828,7 @@ class Tool(ProjectItem):
                 if not self.create_subdirectories():
                     # Creating directories failed -> abort
                     self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted.")
-                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(1)  # abort
+                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                     return
             else:  # just for testing
                 # logging.debug("No directories to create")
@@ -847,7 +839,7 @@ class Tool(ProjectItem):
                                              self._project, self.execute_in_work)
             except OSError as e:
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(1)  # abort
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                 return
         # Check if there are any optional input files to copy
         if self.opt_input_file_model.rowCount() > 0:
@@ -857,7 +849,6 @@ class Tool(ProjectItem):
                 self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
             if not self.copy_optional_input_files(optional_file_paths):
                 self._toolbox.msg_warning.emit("Copying optional input files failed")
-        self._toolbox.ui.pushButton_tool_stop.setEnabled(True)  # TODO: Should be done when copying files as well
         self._graphics_item.start_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execute_finished)
@@ -888,7 +879,6 @@ class Tool(ProjectItem):
     @Slot(int, name="execute_finished")
     def execute_finished(self, return_code):
         """Tool template execution finished."""
-        self._toolbox.ui.pushButton_tool_stop.setEnabled(False)
         self._graphics_item.stop_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execute_finished)
@@ -896,7 +886,23 @@ class Tool(ProjectItem):
             self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
         else:
             self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # continue to next
+        if not self._toolbox.project().execution_instance:
+            # Happens sometimes when Stop button is pressed
+            return
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)
+
+    def stop_execution(self):
+        """Stops executing this Tool."""
+        self.stop_process()
+
+    @Slot(bool, name="stop_process")
+    def stop_process(self, checked=False):
+        """Terminate Tool template execution."""
+        self._graphics_item.stop_animation()
+        self.instance.instance_finished_signal.disconnect(self.execute_finished)
+        self._toolbox.msg_warning.emit("Stopping Tool <b>{0}</b>".format(self.name))
+        self.instance.terminate_instance()
+        # Note: QSubProcess, PythonReplWidget, and JuliaREPLWidget emit project_item_execution_finished_signal
 
     # @Slot(bool, name="execute")
     # def execute(self, checked=False):

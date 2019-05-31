@@ -395,6 +395,8 @@ class PythonReplWidget(RichJupyterWidget):
     def terminate_process(self):
         """Send interrupt signal to kernel."""
         self.kernel_manager.interrupt_kernel()
+        # TODO: Block execution until kernel has been interrupted and then emit the signal
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
 
     def shutdown_kernel(self, hush=False):
         """Shut down Python kernel."""

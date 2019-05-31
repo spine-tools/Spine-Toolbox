@@ -75,6 +75,12 @@ class ItemToolBar(QToolBar):
         execute_selected.setIcon(execute_selected_icon)
         execute_selected.clicked.connect(self.execute_selected_clicked)
         self.addWidget(execute_selected)
+        self.addSeparator()
+        stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(24, 24)
+        stop = QToolButton(parent)
+        stop.setIcon(stop_icon)
+        stop.clicked.connect(self.stop_clicked)
+        self.addWidget(stop)
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
@@ -102,6 +108,11 @@ class ItemToolBar(QToolBar):
             return
         self._toolbox.project().execute_selected()
         return
+
+    @Slot(bool, name="stop_clicked")
+    def stop_clicked(self, checked=False):
+        """Slot for handling the Stop execution tool button clicked signal."""
+        self._toolbox.project().stop()
 
 
 class DraggableWidget(QLabel):

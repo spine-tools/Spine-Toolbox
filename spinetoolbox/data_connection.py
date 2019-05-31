@@ -480,3 +480,8 @@ class DataConnection(ProjectItem):
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
         inst.append_dc_files(f_list)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+
+    def stop_execution(self):
+        """Stops executing this Data Connection."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)

@@ -367,7 +367,7 @@ class ExecutionInstance(QObject):
         toolbox (ToolboxUI): QMainWindow instance
         execution_list (list): Ordered list of nodes to execute
     """
-    graph_execution_finished_signal = Signal(name="graph_execution_finished_signal")
+    graph_execution_finished_signal = Signal(int, name="graph_execution_finished_signal")
     project_item_execution_finished_signal = Signal(int, name="project_item_execution_finished_signal")
 
     def __init__(self, toolbox, execution_list):
@@ -393,22 +393,39 @@ class ExecutionInstance(QObject):
         item.execute()
 
     @Slot(int, name="item_execution_finished")
-    def item_execution_finished(self, abort):
+    def item_execution_finished(self, item_finish_state):
         """Pop next project item to execute or finish current graph if there are no items left.
 
         Args:
-            abort (int): 0=Continue to next project item. 1=Abort execution (when e.g. Tool crashes or something)
+            item_finish_state (int): 0=Continue to next project item. -2=Stop executing this graph (happens when e.g.
+            Tool does not find req. input files or something)
         """
         self.project_item_execution_finished_signal.disconnect()
-        if abort == 1:
-            self.graph_execution_finished_signal.emit()
+        if item_finish_state == -1:
+            # Item execution failed due to e.g. Tool did not find input files or something
+            self.graph_execution_finished_signal.emit(-1)
+            return
+        elif item_finish_state == -2:
+            # User pressed Stop button
+            self.graph_execution_finished_signal.emit(-2)
             return
         try:
             self.running_item = self.execution_list.pop(0)
         except IndexError:
-            self.graph_execution_finished_signal.emit()
+            self.graph_execution_finished_signal.emit(0)
             return
         self.execute_project_item()
+
+    def stop(self):
+        """Stops running project item and terminates current graph execution."""
+        if not self.running_item:
+            self._toolbox.msg.emit("No running item")
+            self.graph_execution_finished_signal.emit(-2)
+            return
+        item_ind = self._toolbox.project_item_model.find_item(self.running_item)
+        item = self._toolbox.project_item_model.project_item(item_ind)
+        item.stop_execution()
+        return
 
     def append_dc_refs(self, refs):
         """Adds given file paths (Data Connection file references) to a list."""

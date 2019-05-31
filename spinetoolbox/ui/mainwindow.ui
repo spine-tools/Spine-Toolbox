@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -438,7 +438,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>324</width>
+              <width>336</width>
               <height>361</height>
              </rect>
             </property>
@@ -1281,8 +1281,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>345</width>
-              <height>338</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1696,8 +1696,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>345</width>
-              <height>338</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1826,40 +1826,6 @@
                 <number>6</number>
                </property>
                <item>
-                <widget class="QPushButton" name="pushButton_tool_stop">
-                 <property name="enabled">
-                  <bool>true</bool>
-                 </property>
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>75</width>
-                   <height>23</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>75</width>
-                   <height>23</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Stop execution&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="autoFillBackground">
-                  <bool>false</bool>
-                 </property>
-                 <property name="text">
-                  <string>Stop</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <spacer name="horizontalSpacer_6">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
@@ -1893,7 +1859,7 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>Open results directory in file browser</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open results archive in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
                   <string>Results...</string>
@@ -2036,8 +2002,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>345</width>
-              <height>338</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2853,7 +2819,6 @@
   <tabstop>treeView_dc_data</tabstop>
   <tabstop>comboBox_tool</tabstop>
   <tabstop>toolButton_tool_template</tabstop>
-  <tabstop>pushButton_tool_stop</tabstop>
   <tabstop>pushButton_tool_results</tabstop>
   <tabstop>treeView_view</tabstop>
   <tabstop>pushButton_open_network_map</tabstop>

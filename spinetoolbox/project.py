@@ -48,7 +48,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
         self.dag_handler = DirectedGraphHandler(self._toolbox)
-        self.ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
+        self._ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
         self.execution_instance = None
         self._graph_index = 0
         self._n_graphs = 0
@@ -518,6 +518,8 @@ class SpineToolboxProject(MetaObject):
                 if not self.dag_handler.dag_with_node(i.name) == selected_item_graph:
                     self._toolbox.msg_warning.emit("Please select items from only one graph")
                     return
+        self._executed_graph_index = 0  # Needed in execute_selected() just for printing the number
+        self._n_graphs = 1
         # Calculate bfs-ordered list of project items to execute
         dag = self.dag_handler.dag_with_node(selected_item.name)
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
@@ -551,7 +553,7 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
         self._n_graphs = len(self.dag_handler.dags())
-        i = 0  # Key for self.ordered_dags dictionary TODO: Switch self.ordered_dags to a list?
+        i = 0  # Key for self._ordered_dags dictionary TODO: Switch self._ordered_dags to a list?
         for g in self.dag_handler.dags():
             bfs_ordered_nodes = self.dag_handler.calc_exec_order(g)
             if not bfs_ordered_nodes:
@@ -560,16 +562,16 @@ class SpineToolboxProject(MetaObject):
             if not self.number_of_nodes_to_execute_is_correct(bfs_ordered_nodes, g):
                 # If this happens, there's a bug in calc_exec_order()
                 return
-            self.ordered_dags[i] = bfs_ordered_nodes
+            self._ordered_dags[i] = bfs_ordered_nodes
             i += 1
-        if len(self.ordered_dags.keys()) < 1:
+        if len(self._ordered_dags.keys()) < 1:
             self._toolbox.msg_error.emit("There are no valid Directed Acyclic "
                                          "Graphs to execute. Please modify connections.")
             self._invalid_graphs.clear()
             return
         self._executed_graph_index = 0
         # Get first graph, connect signals and start executing it
-        execution_list = self.ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
+        execution_list = self._ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
         self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
@@ -581,20 +583,30 @@ class SpineToolboxProject(MetaObject):
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
 
-    @Slot(name="graph_execution_finished")
-    def graph_execution_finished(self):
+    @Slot(int, name="graph_execution_finished")
+    def graph_execution_finished(self, state):
         """Releases resources from previous execution and prepares the next
-        graph for execution, if there are still graphs left. Otherwise,
+        graph for execution if there are still graphs left. Otherwise,
         finishes the run.
+
+        Args:
+            state (int): 0: Ended normally. -1: User pressed Stop button
         """
         self.execution_instance.graph_execution_finished_signal.disconnect()
         self.execution_instance.deleteLater()
         self.execution_instance = None
+        if state == -1:
+            # Execution failed due to some error in executing the project item. E.g. Tool is missing an input file
+            pass
+        elif state == -2:
+            self._toolbox.msg_error.emit("Execution stopped")
+            self._ordered_dags.clear()
+            self._invalid_graphs.clear()
+            return
+        self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(self._executed_graph_index+1, self._n_graphs))
         self._executed_graph_index += 1
-        if self._n_graphs > 1:
-            self._toolbox.msg_success.emit("DAG execution complete")
         # Pop next graph
-        execution_list = self.ordered_dags.pop(self._executed_graph_index, None)  # Pop next graph
+        execution_list = self._ordered_dags.pop(self._executed_graph_index, None)  # Pop next graph
         if not execution_list:
             # All valid DAGs have been executed. Check if there are invalid DAGs and report these to user
             self.handle_invalid_graphs()
@@ -611,6 +623,15 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
+
+    def stop(self):
+        """Stops execution of the current DAG. Slot for the main window Stop tool button
+        in the toolbar."""
+        if not self.execution_instance:
+            self._toolbox.msg.emit("No execution in progress")
+            return
+        self._toolbox.msg.emit("Stopping...")
+        self.execution_instance.stop()
 
     def handle_invalid_graphs(self):
         """Prints messages to Event Log if there are invalid DAGs (e.g. contain self-loops) in the project."""
@@ -631,7 +652,8 @@ class SpineToolboxProject(MetaObject):
     def number_of_nodes_to_execute_is_correct(self, bfs_ordered_nodes, g):
         """Checks that the number of nodes to execute is
         the same as the number of nodes in the graph. If the
-        numbers don't match, it's a bug.
+        numbers don't match, it's a bug. This method should be
+        removed when the bug is fixed.
 
         Args:
             bfs_ordered_nodes (list): Ordered list of node names

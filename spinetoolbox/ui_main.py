@@ -456,7 +456,6 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Tools (Tool template combobox is initialized in init_tool_template_model)
-        self.ui.pushButton_tool_stop.setEnabled(False)
         self.ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Views
