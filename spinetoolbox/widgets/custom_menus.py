@@ -371,6 +371,7 @@ class ParameterContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         paste_icon = self._parent.ui.actionPaste.icon()
         remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
+        self.add_action("Edit")
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()

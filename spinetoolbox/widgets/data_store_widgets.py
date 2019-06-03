@@ -73,6 +73,7 @@ from widgets.custom_qdialog import (
     CommitDialog,
 )
 from widgets.custom_qwidgets import ZoomWidget
+from widgets.time_series_editor_widget import TimeSeriesEditor
 from widgets.toolbars import ParameterTagToolBar
 from models import (
     ObjectTreeModel,
@@ -1807,7 +1808,9 @@ class TreeViewForm(DataStoreForm):
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
         self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.relationship_parameter_value_context_menu.get_action()
-        if option == "Remove selection":
+        if option == "Edit":
+            self.edit_relationship_parameter_values()
+        elif option == "Remove selection":
             self.remove_relationship_parameter_values()
         elif option == "Copy":
             self.ui.tableView_relationship_parameter_value.copy()
@@ -1897,6 +1900,18 @@ class TreeViewForm(DataStoreForm):
             self.msg.emit("Successfully removed parameter values.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
+
+    def edit_relationship_parameter_values(self):
+        """Opens an editor"""
+        selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
+        while not selection.isEmpty():
+            current = selection.takeFirst()
+            model_indexes = current.indexes()
+            for index in model_indexes:
+                print(index)
+                print(current.model().data(index))
+        self._relationship_parameter_value_editor = TimeSeriesEditor([[1.0, 2.0], [3.0, 4.0]])
+        self._relationship_parameter_value_editor.show()
 
     @busy_effect
     def remove_relationship_parameter_values(self):
