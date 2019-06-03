@@ -94,10 +94,7 @@ class ImportPreviewWidget(QWidget):
         self.connector.connectionReady.connect(self.connection_ready)
         self.connector.dataReady.connect(self.update_preview_data)
         self.connector.tablesReady.connect(self.update_tables)
-        self.connector.mappedDataReady.connect(
-            lambda data, errors: self.mappedDataReady.emit(data, errors)
-        )
-        self.connector.mappedDataReady.connect(self.close_connection)
+        self.connector.mappedDataReady.connect(self.mappedDataReady.emit)
         self.connector.error.connect(self.handle_connector_error)
         # when data is ready set loading status to False.
         self.connector.connectionReady.connect(lambda: self.set_loading_status(False))
@@ -123,15 +120,9 @@ class ImportPreviewWidget(QWidget):
         )
 
         # ok button
-        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(
-            self.ok_pressed
-        )
-        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(
-            self.close_connection
-        )
-        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(
-            lambda: self.rejected.emit()
-        )
+        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.ok_pressed)
+        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.close_connection)
+        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.rejected.emit)
 
     def set_loading_status(self, status):
         """

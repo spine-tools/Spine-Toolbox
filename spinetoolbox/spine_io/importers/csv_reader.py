@@ -3,16 +3,7 @@
 import csv
 from itertools import islice
 
-from PySide2.QtWidgets import (
-    QWidget,
-    QFormLayout,
-    QLabel,
-    QLineEdit,
-    QCheckBox,
-    QSpinBox,
-    QGroupBox,
-    QVBoxLayout,
-)
+from PySide2.QtWidgets import QWidget, QFormLayout, QLabel, QLineEdit, QCheckBox, QSpinBox, QGroupBox, QVBoxLayout
 from PySide2.QtCore import Signal, QThread
 
 from spine_io.io_api import FileImportTemplate, IOWorker
@@ -21,6 +12,7 @@ from spine_io.io_api import FileImportTemplate, IOWorker
 class CSVConnector(FileImportTemplate):
     """Class to read csv/text files in import_widget
     """
+
     DISPLAY_NAME = "Text/CSV file"
     startDataGet = Signal(str, dict, int)
     startMappedDataGet = Signal(dict, dict, int)
@@ -90,17 +82,13 @@ class CSVConnector(FileImportTemplate):
         self._worker = CSVWorker(self._filename)
         self._worker.moveToThread(self._thread)
         # connect worker signals
-        self._worker.dataReady.connect(
-            lambda data, header: self.dataReady.emit(data, header)
-        )
-        self._worker.mappedDataReady.connect(
-            lambda data, error: self.mappedDataReady.emit(data, error)
-        )
-        self._worker.error.connect(lambda error_str: self.error.emit(error_str))
+        self._worker.dataReady.connect(self.dataReady.emit)
+        self._worker.mappedDataReady.connect(self.mappedDataReady.emit)
+        self._worker.error.connect(self.error.emit)
         # connect start working signals
         self.startDataGet.connect(self._worker.read_data)
         self.startMappedDataGet.connect(self._worker.read_mapped_data)
-        self._thread.started.connect(lambda: self.connectionReady.emit())
+        self._thread.started.connect(self.connectionReady.emit)
         self._thread.start()
 
     def option_widget(self):
@@ -123,6 +111,7 @@ class CSVConnector(FileImportTemplate):
 class CSVWorker(IOWorker):
     """Worker to read a csv/text file in another thread
     """
+
     def __init__(self, filename, parent=None):
         super(CSVWorker, self).__init__(parent)
         self._filename = filename

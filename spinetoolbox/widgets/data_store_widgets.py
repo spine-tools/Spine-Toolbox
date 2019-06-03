@@ -1175,33 +1175,11 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="show_import_file_dialog")
     def show_import_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to import."""
-        dialog = ImportDialog()
+        dialog = ImportDialog(parent=self)
         # assume that dialog is modal, if not use accepted, rejected signals
         if dialog.exec() == QDialog.Accepted:
-            data = dialog.mapped_data
-            errors = dialog.mapping_errors
-            self.import_data(data, errors)
+            self.msg.emit("Import was successfull")
             return
-    
-    @busy_effect
-    def import_data(self, data, errors):
-        import_errors = []
-        try:
-            num_imports, import_errors = import_data(self.db_map, **data)
-            self.msg.emit("Data successfully imported.")
-            self.commit_available.emit(True)
-            # logging.debug(insert_log)
-            self.init_models()
-        except SpineIntegrityError as e:
-            self.msg_error.emit(e.msg)
-        except SpineDBAPIError as e:
-            self.msg_error.emit("Unable to import Data: {}".format(e.msg))
-        finally:
-            if not len(import_errors) == 0:
-                msg = "Something went wrong in importing data " \
-                      "into the current session. Here is the error log:\n\n{0}".format([e.msg for e in import_errors])
-                # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-                self.msg_error.emit(msg)
 
     @busy_effect
     def import_file(self, file_path, checked=False):
