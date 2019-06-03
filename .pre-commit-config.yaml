@@ -3,3 +3,5 @@ repos:
     rev: stable
     hooks:
     -   id: black
+        files: ^spinetoolbox/
+        exclude: ^spinetoolbox/ui
