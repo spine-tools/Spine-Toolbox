@@ -384,6 +384,8 @@ def strip_json_data(data, maxlen):
 class IconManager:
     """A class to manage object class icons for data store forms."""
 
+    # TODO: Document methods
+
     def __init__(self):
         """Init instance."""
         super().__init__()
@@ -451,6 +453,10 @@ class IconManager:
         for object_class in object_classes:
             self.create_object_pixmap(object_class.display_icon)
             self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
+        object_class_names = [x.name for x in object_classes]
+        dirty_keys = [k for k in self.rel_cls_icon_cache if any(x in object_class_names for x in k)]
+        for k in dirty_keys:
+            del self.rel_cls_icon_cache[k]
 
     def create_object_pixmap(self, display_icon):
         """Create a pixmap corresponding to object icon, store it and return it."""
@@ -479,9 +485,9 @@ class IconManager:
         if not str_object_class_name_list:
             engine = CharIconEngine("\uf1b3", 0)
             return engine.pixmap(QSize(512, 512))
-        if str_object_class_name_list in self.rel_cls_icon_cache:
-            return self.rel_cls_icon_cache[str_object_class_name_list]
-        object_class_name_list = str_object_class_name_list.split(",")
+        object_class_name_list = tuple(str_object_class_name_list.split(","))
+        if object_class_name_list in self.rel_cls_icon_cache:
+            return self.rel_cls_icon_cache[object_class_name_list]
         scene = QGraphicsScene()
         x = 0
         for j, object_class_name in enumerate(object_class_name_list):
@@ -500,7 +506,7 @@ class IconManager:
         painter.setRenderHint(QPainter.Antialiasing, True)
         scene.render(painter)
         painter.end()
-        self.rel_cls_icon_cache[str_object_class_name_list] = pixmap
+        self.rel_cls_icon_cache[object_class_name_list] = pixmap
         return pixmap
 
     def relationship_icon(self, str_object_class_name_list):
