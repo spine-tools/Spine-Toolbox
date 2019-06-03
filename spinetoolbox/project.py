@@ -191,7 +191,7 @@ class SpineToolboxProject(MetaObject):
                 item_dict[category][name]["y"] = y
                 # Save item type specific things
                 if item.item_type == "Data Store":
-                    item_dict[category][name]["url"] = item.current_url()
+                    item_dict[category][name]["url"] = item.url()
                 elif item.item_type == "Data Connection":
                     item_dict[category][name]["references"] = item.file_references()
                 elif item.item_type == "Tool":
@@ -356,20 +356,20 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, reference, x=0, y=0, set_selected=False, verbosity=True):
+    def add_data_store(self, name, description, url, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Store to project item model.
 
         Args:
             name (str): Name
             description (str): Description of item
-            reference (dict): Information on referenced database
+            url (dict): Url information
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
         category = "Data Stores"
-        data_store = DataStore(self._toolbox, name, description, reference, x, y)
+        data_store = DataStore(self._toolbox, name, description, url, x, y)
         ds_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(data_store, ds_category)
         # Append connection model

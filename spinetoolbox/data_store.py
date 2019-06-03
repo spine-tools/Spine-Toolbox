@@ -29,10 +29,9 @@ from widgets.data_store_widgets import TreeViewForm, GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
 from helpers import create_dir, busy_effect
-from config import SQL_DIALECT_API
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError, ArgumentError
-from sqlalchemy.engine.url import make_url
+from sqlalchemy.engine.url import make_url, URL
 import qsubprocess
 import spinedb_api
 
@@ -44,7 +43,7 @@ class DataStore(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        url (str): SQLAlchemy string url
+        url (str or dict): SQLAlchemy url
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
@@ -55,15 +54,7 @@ class DataStore(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
-        # Instance variables for saving selections in shared widgets
-        self.selected_dialect = ""
-        self.selected_dsn = ""
-        self.selected_sqlite_file = ""
-        self.selected_host = ""
-        self.selected_port = ""
-        self.selected_db = ""
-        self.selected_username = ""
-        self.selected_password = ""
+        self._url = self.parse_url(url)
         self.tree_view_form = None
         self.graph_view_form = None
         self.tabular_view_form = None
@@ -76,9 +67,22 @@ class DataStore(ProjectItem):
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
         self._graphics_item = DataStoreIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        self._url = url
-        self.load_url_into_selections()
         self._sigs = self.make_signal_handler_dict()
+
+    def parse_url(self, url):
+        """Return a complete url dictionary from the given dict or string"""
+        base_url = dict(dialect=None, username=None, password=None, host=None, port=None, database=None)
+        if isinstance(url, dict):
+            base_url.update(url)
+        elif isinstance(url, str):
+            sa_url = make_url(url)
+            base_url["dialect"] = sa_url.get_dialect().name
+            base_url.update(sa_url.translate_connect_args())
+        else:
+            self._toolbox.msg_error.emit(
+                "Unable to parse URL for <b>{0}</b>: unsupported type '{1}'".format(self.name, type(url))
+            )
+        return base_url
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -88,68 +92,78 @@ class DataStore(ProjectItem):
         s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.open_tree_view
         s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
         s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
-        s[self._toolbox.ui.toolButton_browse.clicked] = self.browse_clicked
-        s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.check_dialect
-        s[self._toolbox.ui.toolButton_new_spine.clicked] = self.create_new_spine_database
-        s[self._toolbox.ui.toolButton_copy_db_url.clicked] = self.copy_db_url
-        s[self._toolbox.ui.lineEdit_SQLite_file.file_dropped] = self.set_path_to_sqlite_file
+        s[self._toolbox.ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
+        s[self._toolbox.ui.pushButton_create_new_spine_db.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.toolButton_copy_url.clicked] = self.copy_url
+        s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
+        s[self._toolbox.ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
+        s[self._toolbox.ui.lineEdit_username.textChanged] = self.refresh_username
+        s[self._toolbox.ui.lineEdit_password.textChanged] = self.refresh_password
+        s[self._toolbox.ui.lineEdit_host.textChanged] = self.refresh_host
+        s[self._toolbox.ui.lineEdit_port.textChanged] = self.refresh_port
+        s[self._toolbox.ui.lineEdit_database.textChanged] = self.refresh_database
         return s
 
     def activate(self):
-        """Restore selections and connect signals."""
-        self.restore_selections()  # Do this before connecting signals or funny things happen
+        """Load url into selections and connect signals."""
+        self._toolbox.ui.label_ds_name.setText(self.name)
+        self.load_url_into_selections()  # Do this before connecting signals or funny things happen
         super().connect_signals()
 
     def deactivate(self):
-        """Save selections and disconnect signals."""
-        self.save_selections()
+        """Disconnect signals."""
         if not super().disconnect_signals():
             logging.error("Item %s deactivation failed", self.name)
             return False
         return True
 
-    def restore_selections(self):
-        """Restore selections into shared widgets when this project item is selected."""
-        self._toolbox.ui.label_ds_name.setText(self.name)
-        if self.selected_dialect:
-            self._toolbox.ui.comboBox_dialect.setCurrentText(self.selected_dialect)
-        else:
-            self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
-        # Set widgets enabled/disabled according to selected dialect
-        if self.selected_dialect == "":
-            self.enable_no_dialect()
-        elif self.selected_dialect == "sqlite":
-            self.enable_sqlite()
-        elif self.selected_dialect == "mssql":
-            self.enable_mssql()
-        else:
-            self.enable_common()
-        self._toolbox.ui.comboBox_dsn.setCurrentText(self.selected_dsn)
-        self._toolbox.ui.lineEdit_SQLite_file.setText(self.selected_sqlite_file)
-        self._toolbox.ui.lineEdit_host.setText(self.selected_host)
-        self._toolbox.ui.lineEdit_port.setText(self.selected_port)
-        self._toolbox.ui.lineEdit_database.setText(self.selected_db)
-        self._toolbox.ui.lineEdit_username.setText(self.selected_username)
-        self._toolbox.ui.lineEdit_password.setText(self.selected_password)
-
-    def save_selections(self):
-        """Save selections in shared widgets for this project item into instance variables."""
-        self.selected_dialect = self._toolbox.ui.comboBox_dialect.currentText()
-        self.selected_dsn = self._toolbox.ui.comboBox_dsn.currentText()
-        self.selected_sqlite_file = self._toolbox.ui.lineEdit_SQLite_file.text()
-        self.selected_host = self._toolbox.ui.lineEdit_host.text()
-        self.selected_port = self._toolbox.ui.lineEdit_port.text()
-        self.selected_db = self._toolbox.ui.lineEdit_database.text()
-        self.selected_username = self._toolbox.ui.lineEdit_username.text()
-        self.selected_password = self._toolbox.ui.lineEdit_password.text()
-
     def set_url(self, url):
         """Set url attribute. Used by Tool when passing on results."""
-        self._url = url
+        self._url = self.parse_url(url)
 
     def url(self):
-        """url attribute."""
+        """Return the url attribute, for saving the project."""
         return self._url
+
+    def make_url(self, log_errors=True):
+        """Return a sqlalchemy url from the current url attribute or None if not valid."""
+        if not self._url:
+            log_errors and self._toolbox.msg_error.emit(
+                "No URL specified for <b>{0}</b>. Please specify one and try again".format(self.name)
+            )
+            return None
+        try:
+            url_copy = dict(self._url)
+            dialect = url_copy.pop("dialect")
+            if not dialect:
+                log_errors and self._toolbox.msg_error.emit(
+                    "Unable to generate URL from <b>{0}</b>: invalid dialect {1}. "
+                    "Please select a new dialect and try again.".format(self._url, dialect)
+                )
+                return
+            if dialect == 'sqlite':
+                url = URL('sqlite', **url_copy)
+            else:
+                db_api = spinedb_api.SUPPORTED_DIALECTS[dialect]
+                drivername = f"{dialect}+{db_api}"
+                url = URL(drivername, **url_copy)
+        except (ArgumentError, ValueError) as e:  # TODO: make sure these are the exceptions we wanna handle here
+            log_errors and self._toolbox.msg_error.emit(
+                "Invalid URL <b>{0}</b>: {1}. "
+                "Please make new selections and try again.".format(url, e)
+            )
+            return None
+        if not url.database:
+            log_errors and self._toolbox.msg_error.emit(
+                "Invalid URL <b>{0}</b>: no database specified. "
+                "Please specify a database and try again.".format(url)
+            )
+            return None
+        # Small hack to make sqlite paths relative to this DS directory
+        if dialect == "sqlite" and not os.path.isabs(url.database):
+            url.database = os.path.join(self.data_dir, url.database)
+            self._toolbox.ui.lineEdit_database.setText(url.database)
+        return url
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -166,155 +180,96 @@ class DataStore(ProjectItem):
     @Slot("QString", name="set_path_to_sqlite_file")
     def set_path_to_sqlite_file(self, file_path):
         """Set path to SQLite file."""
-        self._toolbox.ui.lineEdit_SQLite_file.setText(file_path)
+        self._toolbox.ui.lineEdit_database.setText(file_path)
 
-    @Slot(bool, name='browse_clicked')
-    def browse_clicked(self, checked=False):
+    @Slot(bool, name='open_sqlite_file')
+    def open_sqlite_file(self, checked=False):
         """Open file browser where user can select the path to an SQLite
         file that they want to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self._toolbox, 'Select SQlite file', self.data_dir, 'SQLite (*.*)')
+        answer = QFileDialog.getOpenFileName(self._toolbox, 'Select SQlite file', self.data_dir)
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
-        filename = os.path.split(file_path)[1]
         # Update UI
-        self._toolbox.ui.comboBox_dsn.clear()
-        self._toolbox.ui.lineEdit_SQLite_file.setText(file_path)
-        self._toolbox.ui.lineEdit_host.clear()
-        self._toolbox.ui.lineEdit_port.clear()
-        self._toolbox.ui.lineEdit_database.setText(filename)
-        self._toolbox.ui.lineEdit_username.setText(getpass.getuser())
-        self._toolbox.ui.lineEdit_password.clear()
+        self._toolbox.ui.lineEdit_database.setText(file_path)
 
     def load_url_into_selections(self):
-        """Load url attribute into shared widget selections.
-        Used when loading the project, and creating a new Spine db."""
-        if not self._url:  # This probably does not happen anymore
+        """Load url attribute into shared widget selections. 
+        Used when activating the item, and creating a new Spine db."""
+        # TODO: Test what happens when Tool item calls this and this item is selected.
+        self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
+        self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
+        self._toolbox.ui.lineEdit_host.clear()
+        self._toolbox.ui.lineEdit_port.clear()
+        self._toolbox.ui.lineEdit_database.clear()
+        self._toolbox.ui.lineEdit_username.clear()
+        self._toolbox.ui.lineEdit_password.clear()
+        if not self._url:
             return
-        try:
-            db_url = make_url(self._url)
-        except (ArgumentError, ValueError):
-            self._toolbox.msg_error.emit(
-                "<b>{0}</b> stored url can't be parsed. Please select a new one.".format(self.name)
-            )
+        dialect = self._url["dialect"]
+        if not self.check_dialect(dialect):
             return
-        drivername = db_url.drivername
-        try:
-            dialect, dbapi = drivername.split('+')
-        except ValueError:
-            dialect = drivername
-            dbapi = None
-        if dialect not in SQL_DIALECT_API:
-            self._toolbox.msg_error.emit(
-                "Error in <b>{0}</b> stored url. Dialect <b>{1}</b> is not supported.".format(self.name, dialect)
-            )
-            return
-        self.selected_dialect = dialect
-        if dbapi and SQL_DIALECT_API[dialect] != dbapi:
-            recommended_dbapi = SQL_DIALECT_API[dialect]
-            self._toolbox.msg_warning.emit(
-                "Warning: <b>{0}</b> stored database url "
-                "is using dialect <b>{1}</b> with driver <b>{2}</b>, whereas "
-                "<b>{3}</b> is recommended".format(self.name, dialect, dbapi, recommended_dbapi)
-            )
-        if dialect == "sqlite":
-            file_path = db_url.database
-            if not file_path:
-                self._toolbox.msg_error.emit(
-                    "Unable to determine "
-                    "path to SQLite file from <b>{0}</b> stored url. Please select "
-                    "a new one.".format(self.name)
-                )
-            file_path = os.path.abspath(file_path)
-            if not os.path.isfile(file_path):
-                file_path = ""
-                self._toolbox.msg_warning.emit(
-                    "Error in <b>{0}</b> database url. Invalid path to "
-                    "SQLite file. Maybe it was deleted?".format(self.name)
-                )
-            self.selected_sqlite_file = os.path.abspath(file_path)
-        else:
-            self.selected_port = db_url.port
-            self.selected_host = db_url.host
-            self.selected_db = db_url.database
-            self.selected_username = db_url.username
+        self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
+        if self._url["host"]:
+            self._toolbox.ui.lineEdit_host.setText(self._url["host"])
+        if self._url["port"]:
+            self._toolbox.ui.lineEdit_port.setText(str(self._url["port"]))
+        if self._url["database"]:
+            self._toolbox.ui.lineEdit_database.setText(self._url["database"])
+        if self._url["username"]:
+            self._toolbox.ui.lineEdit_username.setText(self._url["username"])
+        if self._url["password"]:
+            self._toolbox.ui.lineEdit_password.setText(self._url["password"])
 
-    def current_url(self, log_errors=False):
-        """Returns the current url according to user's selections.
-        Used when saving the project and by the View item."""
-        # If the item is currently selected, we save selections so we can use `dump_selections_into_url`
-        current = self._toolbox.ui.treeView_project.currentIndex()
-        current_item = self._toolbox.project_item_model.project_item(current)
-        if current_item == self:
-            self.save_selections()
-        self.dump_selections_into_url(log_errors=log_errors)
-        return self._url
+    @Slot("QString", name="refresh_host")
+    def refresh_host(self, host=""):
+        """Refresh host from selections."""
+        if not host:
+            host = None
+        self._url["host"] = host
 
-    def dump_selections_into_url(self, log_errors=False):
-        """Dump selections into url attribute."""
-        if not self.selected_dialect:
-            log_errors and self._toolbox.msg_warning.emit("Please select dialect first")
-            self._url = None
-            return
-        if self.selected_dialect == 'mssql':
-            if not self.selected_dsn:
-                log_errors and self._toolbox.msg_warning.emit("Please select DSN first")
-                self._url = None
-                return
-            dsn = self.selected_dsn
-            username = self.selected_username
-            password = self.selected_password
-            url = 'mssql+pyodbc://'
-            if username:
-                url += username
-            if password:
-                url += ":" + password
-            url += '@' + dsn
-        elif self.selected_dialect == 'sqlite':
-            sqlite_file = self.selected_sqlite_file
-            if not sqlite_file:
-                log_errors and self._toolbox.msg_warning.emit("Path to SQLite file missing")
-                self._url = None
-                return
-            if not os.path.isfile(sqlite_file):
-                log_errors and self._toolbox.msg_warning.emit("Invalid path")
-                self._url = None
-                return
-            url = 'sqlite:///{0}'.format(sqlite_file)
+    @Slot("QString", name="refresh_port")
+    def refresh_port(self, port=""):
+        """Refresh port from selections."""
+        if not port:
+            port = None
+        self._url["port"] = port
+
+    @Slot("QString", name="refresh_database")
+    def refresh_database(self, database=""):
+        """Refresh database from selections."""
+        if not database:
+            database = None
+        self._url["database"] = database
+
+    @Slot("QString", name="refresh_username")
+    def refresh_username(self, username=""):
+        """Refresh username from selections."""
+        if not username:
+            username = None
+        self._url["username"] = username
+
+    @Slot("QString", name="refresh_password")
+    def refresh_password(self, password=""):
+        """Refresh password from selections."""
+        if not password:
+            password = None
+        self._url["password"] = password
+
+    @Slot("QString", name="refresh_dialect")
+    def refresh_dialect(self, dialect=""):
+        if self.check_dialect(dialect):
+            self._url["dialect"] = dialect
         else:
-            host = self.selected_host
-            if not host:
-                log_errors and self._toolbox.msg_warning.emit("Host missing")
-                self._url = None
-                return
-            database = self.selected_db
-            if not database:
-                log_errors and self._toolbox.msg_warning.emit("Database missing")
-                self._url = None
-                return
-            port = self.selected_port
-            username = self.selected_username
-            password = self.selected_password
-            dbapi = SQL_DIALECT_API[self.selected_dialect]
-            url = "+".join([self.selected_dialect, dbapi]) + "://"
-            if username:
-                url += username
-            if password:
-                url += ":" + password
-            url += "@" + host
-            if port:
-                url += ":" + port
-            url += "/" + database
-        # Set url attribute
-        self._url = url
+            self._toolbox.msg_error.emit("Unable to use dialect '{}'.".format(dialect))
+            self._url["dialect"] = None
 
     def enable_no_dialect(self):
         """Adjust widget enabled status to default when no dialect is selected."""
         self._toolbox.ui.comboBox_dialect.setEnabled(True)
         self._toolbox.ui.comboBox_dsn.setEnabled(False)
-        self._toolbox.ui.lineEdit_SQLite_file.setEnabled(False)
-        self._toolbox.ui.toolButton_browse.setEnabled(False)
+        self._toolbox.ui.toolButton_open_sqlite_file.setEnabled(False)
         self._toolbox.ui.lineEdit_host.setEnabled(False)
         self._toolbox.ui.lineEdit_port.setEnabled(False)
         self._toolbox.ui.lineEdit_database.setEnabled(False)
@@ -324,8 +279,7 @@ class DataStore(ProjectItem):
     def enable_mssql(self):
         """Adjust controls to mssql connection specification."""
         self._toolbox.ui.comboBox_dsn.setEnabled(True)
-        self._toolbox.ui.lineEdit_SQLite_file.setEnabled(False)
-        self._toolbox.ui.toolButton_browse.setEnabled(False)
+        self._toolbox.ui.toolButton_open_sqlite_file.setEnabled(False)
         self._toolbox.ui.lineEdit_host.setEnabled(False)
         self._toolbox.ui.lineEdit_port.setEnabled(False)
         self._toolbox.ui.lineEdit_database.setEnabled(False)
@@ -336,11 +290,10 @@ class DataStore(ProjectItem):
         """Adjust controls to sqlite connection specification."""
         self._toolbox.ui.comboBox_dsn.setEnabled(False)
         self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
-        self._toolbox.ui.lineEdit_SQLite_file.setEnabled(True)
-        self._toolbox.ui.toolButton_browse.setEnabled(True)
+        self._toolbox.ui.toolButton_open_sqlite_file.setEnabled(True)
         self._toolbox.ui.lineEdit_host.setEnabled(False)
         self._toolbox.ui.lineEdit_port.setEnabled(False)
-        self._toolbox.ui.lineEdit_database.setEnabled(False)
+        self._toolbox.ui.lineEdit_database.setEnabled(True)
         self._toolbox.ui.lineEdit_username.setEnabled(False)
         self._toolbox.ui.lineEdit_password.setEnabled(False)
 
@@ -348,24 +301,23 @@ class DataStore(ProjectItem):
         """Adjust controls to 'common' connection specification."""
         self._toolbox.ui.comboBox_dsn.setEnabled(False)
         self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
-        self._toolbox.ui.lineEdit_SQLite_file.setEnabled(False)
-        self._toolbox.ui.toolButton_browse.setEnabled(False)
+        self._toolbox.ui.toolButton_open_sqlite_file.setEnabled(False)
         self._toolbox.ui.lineEdit_host.setEnabled(True)
         self._toolbox.ui.lineEdit_port.setEnabled(True)
         self._toolbox.ui.lineEdit_database.setEnabled(True)
         self._toolbox.ui.lineEdit_username.setEnabled(True)
         self._toolbox.ui.lineEdit_password.setEnabled(True)
 
-    @Slot(str, name="check_dialect")
     def check_dialect(self, dialect):
         """Check if selected dialect is supported. Offer to install DBAPI if not.
 
         Returns:
             True if dialect is supported, False if not.
         """
-        if dialect == "":  # TODO: Set text when index is -1 to 'Select dialect...'
-            return
-        dbapi = SQL_DIALECT_API[dialect]
+        if dialect not in spinedb_api.SUPPORTED_DIALECTS:
+            self.enable_no_dialect()
+            return False
+        dbapi = spinedb_api.SUPPORTED_DIALECTS[dialect]
         try:
             if dialect == 'sqlite':
                 create_engine('sqlite://')
@@ -388,11 +340,11 @@ class DataStore(ProjectItem):
                     msg = "Please create a SQL Server ODBC Data Source first."
                     self._toolbox.msg_warning.emit(msg)
             else:
-                create_engine('{}://username:password@host/database'.format("+".join([dialect, dbapi])))
+                create_engine(f"{dialect}+{dbapi}://")
                 self.enable_common()
             return True
         except ModuleNotFoundError:
-            dbapi = SQL_DIALECT_API[dialect]
+            dbapi = spinedb_api.SUPPORTED_DIALECTS[dialect]
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Dialect not supported")
@@ -414,10 +366,8 @@ class DataStore(ProjectItem):
                     return False
             else:
                 self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
-                msg = "Unable to use dialect '{}'.".format(dialect)
-                self._toolbox.msg_error.emit(msg)
                 return False
-            # Check that dialect is not found
+            # Check dialect again to see how it went
             if not self.check_dialect(dialect):
                 self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
                 return False
@@ -459,11 +409,11 @@ class DataStore(ProjectItem):
             return False
 
     @busy_effect
-    def get_db_map(self, url, username, upgrade=False):
+    def get_db_map(self, url, upgrade=False):
         """Return a DiffDatabaseMapping instance to work with.
         """
         try:
-            db_map = spinedb_api.DiffDatabaseMapping(url, username, upgrade=upgrade)
+            db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
             return db_map
         except spinedb_api.SpineDBVersionError:
             msg = QMessageBox()
@@ -484,7 +434,7 @@ class DataStore(ProjectItem):
             ret = msg.exec_()  # Show message box
             if ret == QMessageBox.Cancel:
                 return None
-            return self.get_db_map(url, username, upgrade=True)
+            return self.get_db_map(url, upgrade=True)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return None
@@ -492,7 +442,7 @@ class DataStore(ProjectItem):
     @Slot(bool, name="open_tree_view")
     def open_tree_view(self, checked=False):
         """Open url in tree view form."""
-        url = self.current_url(log_errors=True)
+        url = self.make_url()
         if not url:
             return
         if self.tree_view_form:
@@ -509,21 +459,10 @@ class DataStore(ProjectItem):
                 return
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
-        try:
-            db_url = make_url(url)
-        except (ArgumentError, ValueError) as err:
-            self._toolbox.msg_error.emit(
-                "<b>{0}</b> can't be parsed: {1}. Please check "
-                "<a href=https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=engine>this page</a> "
-                "for details on how to setup a SQLAlchemy url.".format(url, err)
-            )
-            return
-        database = db_url.database
-        username = db_url.username
-        db_map = self.get_db_map(url, username)
+        db_map = self.get_db_map(url)
         if not db_map:
             return
-        self.do_open_tree_view(db_map, database)
+        self.do_open_tree_view(db_map, url.database)
 
     @busy_effect
     def do_open_tree_view(self, db_map, database):
@@ -540,7 +479,7 @@ class DataStore(ProjectItem):
     @Slot(bool, name="open_graph_view")
     def open_graph_view(self, checked=False):
         """Open url in graph view form."""
-        url = self.current_url(log_errors=True)
+        url = self.make_url()
         if not url:
             return
         if self.graph_view_form:
@@ -557,21 +496,10 @@ class DataStore(ProjectItem):
                 return
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
-        try:
-            db_url = make_url(url)
-        except (ArgumentError, ValueError) as err:
-            self._toolbox.msg_error.emit(
-                "<b>{0}</b> can't be parsed: {1}. Please check "
-                "<a href=https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=engine>this page</a> "
-                "for details on how to setup a SQLAlchemy url.".format(url, err)
-            )
-            return
-        database = db_url.database
-        username = db_url.username
-        db_map = self.get_db_map(url, username)
+        db_map = self.get_db_map(url)
         if not db_map:
             return
-        self.do_open_graph_view(db_map, database)
+        self.do_open_graph_view(db_map, url.database)
 
     @busy_effect
     def do_open_graph_view(self, db_map, database):
@@ -588,37 +516,27 @@ class DataStore(ProjectItem):
     @Slot(bool, name="open_tabular_view")
     def open_tabular_view(self, checked=False):
         """Open url in Data Store tabular view."""
-        url = self.current_url(log_errors=True)
+        url = self.make_url()
         if not url:
             return
         if self.tabular_view_form:
-            if self.tabular_view_form.windowState() & Qt.WindowMinimized:
-                # Remove minimized status and restore window with the previous state (maximized/normal state)
-                self.tabular_view_form.setWindowState(
-                    self.tabular_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
-                )
-                self.tabular_view_form.activateWindow()
-            else:
-                self.tabular_view_form.raise_()
-            return
-        if self._toolbox.ui.comboBox_dialect.currentIndex() < 0:
-            self._toolbox.msg_warning.emit("Please select dialect first")
-            return
-        try:
-            db_url = make_url(url)
-        except (ArgumentError, ValueError) as err:
-            self._toolbox.msg_error.emit(
-                "<b>{0}</b> can't be parsed: {1}. Please check "
-                "<a href=https://docs.sqlalchemy.org/en/13/core/engines.html?highlight=engine>this page</a> "
-                "for details on how to setup a SQLAlchemy url.".format(url, err)
-            )
-            return
-        database = db_url.database
-        username = db_url.username
-        db_map = self.get_db_map(url, username)
+            # If the url hasn't changed, just raise the current form
+            if self.tabular_view_form.db_map.db_url == url:
+                if self.tabular_view_form.windowState() & Qt.WindowMinimized:
+                    # Remove minimized status and restore window with the previous state (maximized/normal state)
+                    self.tabular_view_form.setWindowState(
+                        self.tabular_view_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+                    )
+                    self.tabular_view_form.activateWindow()
+                else:
+                    self.tabular_view_form.raise_()
+                return
+            self.tabular_view_form.destroyed.disconnect(self.tabular_view_form_destroyed)
+            self.tabular_view_form.close()
+        db_map = self.get_db_map(url)
         if not db_map:
             return
-        self.do_open_tabular_view(db_map, database)
+        self.do_open_tabular_view(db_map, url.database)
 
     @busy_effect
     def do_open_tabular_view(self, db_map, database):
@@ -655,13 +573,13 @@ class DataStore(ProjectItem):
                 "connections and try again. Detected at {0}.".format(self.name)
             )
             return None
-        url = self.current_url()
+        url = self.make_url()
         if not url:
-            # Data Store has no url
+            # Data Store has no valid url
             return None
-        if not url.lower().startswith('sqlite'):
+        if not url.drivername.lower().startswith('sqlite'):
             return None
-        file_path = os.path.abspath(url.split(':///')[1])
+        file_path = os.path.abspath(url.database)
         if not os.path.exists(file_path):
             return None
         if fname == os.path.basename(file_path):
@@ -702,9 +620,9 @@ class DataStore(ProjectItem):
             return paths
         # Check the current url. If it is an sqlite file, this is a possible match
         # If dialect is not sqlite, the url is ignored
-        url = self.current_url()
-        if url.lower().startswith('sqlite'):
-            file_path = os.path.abspath(url.split(':///')[1])
+        url = self.make_url()
+        if url and url.drivername.lower().startswith('sqlite'):
+            file_path = os.path.abspath(url.database)
             if os.path.exists(file_path):
                 if fnmatch.fnmatch(file_path, pattern):  # fname == os.path.basename(file_path):
                     # self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
@@ -734,53 +652,37 @@ class DataStore(ProjectItem):
                     return paths
         return paths
 
-    @Slot(bool, name="copy_db_url")
-    def copy_db_url(self, checked=False):
+    @Slot(bool, name="copy_url")
+    def copy_url(self, checked=False):
         """Copy db url to clipboard."""
-        url = self.current_url(log_errors=True)
-        if not url:
-            self._toolbox.msg_error.emit("Unable to copy database url to clipboard.")
-            return
-        QApplication.clipboard().setText(url)
+        url = self.make_url()
+        url.password = None
+        QApplication.clipboard().setText(str(url))
         self._toolbox.msg.emit("Database url '{}' successfully copied to clipboard.".format(url))
 
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
-        """Create new (empty) Spine SQLite database file."""
-        dialog = QFileDialog(
-            self._toolbox, "Create new Spine SQLite database", self.data_dir, "SQlite database (*.sqlite *.db)"
-        )
-        dialog.selectFile("spine_db.sqlite")
-        dialog.setAcceptMode(QFileDialog.AcceptSave)
-        dialog.setOption(QFileDialog.DontUseNativeDialog, True)  # Only way to add the checkbox
-        check_box = QCheckBox("Include specific data structure for Spine Model.", dialog)
-        check_box.setChecked(True)
-        dialog.layout().addWidget(check_box)
-        if not dialog.exec_():
+        """Create new (empty) Spine database."""
+        for_spine_model = self._toolbox.ui.checkBox_for_spine_model.isChecked()
+        url = self.make_url()
+        if not url:
             return
-        file_path = dialog.selectedFiles()[0]
-        extension = os.path.splitext(file_path)[1]
-        if not extension:
-            file_path += ".sqlite"
-        # We need to remove the file first so `create_new_spine_database` doesn't complain
         try:
-            os.remove(file_path)
-        except OSError:
-            pass
-        url = "sqlite:///" + file_path
-        for_spine_model = check_box.isChecked()
-        spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
-        database = os.path.basename(file_path)
-        username = getpass.getuser()
-        # Update UI
-        self._toolbox.ui.comboBox_dsn.clear()
-        self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
-        self._toolbox.ui.lineEdit_SQLite_file.setText(os.path.abspath(file_path))
-        self._toolbox.ui.lineEdit_host.clear()
-        self._toolbox.ui.lineEdit_port.clear()
-        self._toolbox.ui.lineEdit_database.setText(database)
-        self._toolbox.ui.lineEdit_username.setText(username)
-        self._toolbox.ui.lineEdit_password.clear()
+            if not spinedb_api.is_empty(url):
+                msg = QMessageBox()
+                msg.setIcon(QMessageBox.Question)
+                msg.setWindowTitle("Database not empty")
+                msg.setText("The database at <b>'{0}'</b> is not empty.".format(url))
+                msg.setInformativeText("Do you want to overwrite it?")
+                overwrite_button = msg.addButton("Overwrite", QMessageBox.AcceptRole)
+                msg.addButton("Cancel", QMessageBox.RejectRole)
+                ret = msg.exec_()  # Show message box
+                if ret != QMessageBox.AcceptRole:
+                    return
+            spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
+            self._toolbox.msg.emit("New Spine db successfully created at '{0}'.".format(url))
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
 
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
