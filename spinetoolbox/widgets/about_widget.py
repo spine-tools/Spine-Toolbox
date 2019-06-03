@@ -30,6 +30,7 @@ class AboutWidget(QWidget):
         toolbox (ToolboxUI): QMainWindow instance
         version (str): Application version number
     """
+
     def __init__(self, toolbox, version):
         """Initializes About widget."""
         super().__init__(parent=toolbox, f=Qt.Popup)  # Setting the parent inherits the stylesheet
@@ -54,8 +55,8 @@ class AboutWidget(QWidget):
         """Calculate the top-left corner position of this widget in relation to main window
         position and size in order to show about window in the middle of the main window."""
         mw_center = self.parent().frameGeometry().center()
-        about_x = mw_center.x() - self.frameGeometry().width()/2
-        about_y = mw_center.y() - self.frameGeometry().height()/2
+        about_x = mw_center.x() - self.frameGeometry().width() / 2
+        about_y = mw_center.y() - self.frameGeometry().height() / 2
         about_topleft = QPoint(about_x, about_y)
         return about_topleft
 

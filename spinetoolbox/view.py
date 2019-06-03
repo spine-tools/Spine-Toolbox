@@ -25,6 +25,7 @@ from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
 from widgets.data_store_widgets import GraphViewForm
 from graphics_items import ViewIcon
 from helpers import busy_effect, create_dir
+from sqlalchemy.engine.url import make_url
 
 
 class View(ProjectItem):
@@ -37,6 +38,7 @@ class View(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
     view_refresh_signal = Signal(name="view_refresh_signal")
 
     def __init__(self, toolbox, name, description, x, y):
@@ -54,8 +56,9 @@ class View(ProjectItem):
         try:
             create_dir(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                         " Check permissions.".format(self.data_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+            )
         self._graphics_item = ViewIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         # Note: view_refresh_signal is not shared with other project items so there is no need to disconnect it
         self.view_refresh_signal.connect(self.refresh)
@@ -79,7 +82,7 @@ class View(ProjectItem):
         """Save selections and disconnect signals."""
         self.save_selections()
         if not super().disconnect_signals():
-            logging.error("Item {0} deactivation failed".format(self.name))
+            logging.error("Item %s deactivation failed", self.name)
             return False
         return True
 
@@ -101,7 +104,7 @@ class View(ProjectItem):
         return self._graphics_item
 
     def references(self):
-        """Returns a list of connection strings that are in this item as references."""
+        """Returns a list of url strings that are in this item as references."""
         return self._references
 
     def find_input_items(self):
@@ -128,10 +131,10 @@ class View(ProjectItem):
         input_items = self.find_input_items()
         self._references = list()
         for item in input_items:
-            reference = item.current_reference()
-            if not reference:
+            url = item.current_url()
+            if not url:
                 continue
-            self._references.append(reference)
+            self._references.append(url)
         # logging.debug("{0}".format(self._references))
         self.populate_reference_list(self._references)
 
@@ -171,18 +174,18 @@ class View(ProjectItem):
         Args:
             index (QModelIndex): Index of the selected reference in View properties
         """
-        reference = self._references[index.row()]
-        db_url = reference['url']
+        url = self._references[index.row()]
         try:
-            graph_view_form = self.graph_view_form_refs[db_url]
+            graph_view_form = self.graph_view_form_refs[url]
             graph_view_form.raise_()
             return
         except KeyError:
             pass
-        database = reference['database']
-        username = reference['username']
+        db_url = make_url(url)
+        database = db_url.database
+        username = db_url.username
         try:
-            db_map = DiffDatabaseMapping(db_url, username)
+            db_map = DiffDatabaseMapping(url, username)
         except SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return
@@ -192,8 +195,8 @@ class View(ProjectItem):
             db_map.close()
             raise
         graph_view_form.show()
-        graph_view_form.destroyed.connect(lambda : self.graph_view_form_refs.pop(db_url))
-        self.graph_view_form_refs[db_url] = graph_view_form
+        graph_view_form.destroyed.connect(lambda: self.graph_view_form_refs.pop(url))
+        self.graph_view_form_refs[url] = graph_view_form
 
     def populate_reference_list(self, items):
         """Add given list of items to the reference model. If None or
@@ -202,9 +205,8 @@ class View(ProjectItem):
         self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
         if items is not None:
             for item in items:
-                qitem = QStandardItem(item['database'])
+                qitem = QStandardItem(item)
                 qitem.setFlags(~Qt.ItemIsEditable)
-                qitem.setData(item['url'], Qt.ToolTipRole)
                 qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
 

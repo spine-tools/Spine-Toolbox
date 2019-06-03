@@ -40,6 +40,7 @@ class SpineToolboxProject(MetaObject):
         work_dir (str): Project work directory
         ext (str): Project save file extension(.proj)
     """
+
     def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
@@ -57,14 +58,16 @@ class SpineToolboxProject(MetaObject):
         try:
             create_dir(self.project_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating project directory {0} failed."
-                                         " Check permissions.".format(self.project_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating project directory {0} failed." " Check permissions.".format(self.project_dir)
+            )
         # Make work directory
         try:
             create_dir(self.work_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating work directory {0} failed."
-                                         " Check permissions.".format(self.work_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating work directory {0} failed." " Check permissions.".format(self.work_dir)
+            )
 
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
@@ -77,14 +80,6 @@ class SpineToolboxProject(MetaObject):
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         # Update file name and path
         self.change_filename(self.short_name + ".proj")
-
-    def set_description(self, desc):
-        """Change project description. Calls superclass method.
-
-        Args:
-            desc (str): Project description
-        """
-        super().set_description(desc)
 
     def change_filename(self, new_filename):
         """Change the save filename associated with this project.
@@ -179,7 +174,6 @@ class SpineToolboxProject(MetaObject):
         project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
         project_dict["scene_h"] = self._toolbox.ui.graphicsView.scene().sceneRect().height()
         item_dict = dict()  # Dictionary for storing project items
-        n = 0
         # Traverse all items in project model by category
         category_names = [category_item.name for category_item in self._toolbox.project_item_model.root().children()]
         for category in category_names:
@@ -197,7 +191,7 @@ class SpineToolboxProject(MetaObject):
                 item_dict[category][name]["y"] = y
                 # Save item type specific things
                 if item.item_type == "Data Store":
-                    item_dict[category][name]["reference"] = item.current_reference()
+                    item_dict[category][name]["url"] = item.current_url()
                 elif item.item_type == "Data Connection":
                     item_dict[category][name]["references"] = item.file_references()
                 elif item.item_type == "Tool":
@@ -209,7 +203,7 @@ class SpineToolboxProject(MetaObject):
                 elif item.item_type == "View":
                     pass
                 else:
-                    logging.error("Unrecognized item type: {0}".format(item.item_type))
+                    logging.error("Unrecognized item type: %s", item.item_type)
         # Save project to file
         saved_dict['project'] = project_dict
         saved_dict['objects'] = item_dict
@@ -236,18 +230,15 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Project has no items")
         # Recreate Data Stores
         for name in data_stores.keys():
-            short_name = data_stores[name]['short name']
             desc = data_stores[name]['description']
             try:
-                ref = data_stores[name]["reference"]
+                url = data_stores[name]["url"]
             except KeyError:
-                # Keep compatibility with previous version where a list of references was stored
+                # Keep compatibility with previous version
                 try:
-                    ref = data_stores[name]["references"][0]
+                    url = data_stores[name]["reference"]["url"]
                 except KeyError:
-                    ref = None
-                except IndexError:
-                    ref = None
+                    url = None
             try:
                 x = data_stores[name]["x"]
                 y = data_stores[name]["y"]
@@ -255,10 +246,9 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, ref))
-            self.add_data_store(name, desc, ref, x, y, verbosity=False)
+            self.add_data_store(name, desc, url, x, y, verbosity=False)
         # Recreate Data Connections
         for name in data_connections.keys():
-            short_name = data_connections[name]['short name']
             desc = data_connections[name]['description']
             try:
                 refs = data_connections[name]["references"]
@@ -274,16 +264,17 @@ class SpineToolboxProject(MetaObject):
             self.add_data_connection(name, desc, refs, x, y, verbosity=False)
         # Recreate Tools
         for name in tools.keys():
-            short_name = tools[name]['short name']
             desc = tools[name]['description']
             tool_name = tools[name]['tool']
             # Find tool template from model
             tool_template = self._toolbox.tool_template_model.find_tool_template(tool_name)
             # Clarifications for user
             if not tool_name == "" and not tool_template:
-                self._toolbox.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                                             "it was not found. Add it to Tool templates and reopen "
-                                             "project.".format(name, tool_name))
+                self._toolbox.msg_error.emit(
+                    "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
+                    "it was not found. Add it to Tool templates and reopen "
+                    "project.".format(name, tool_name)
+                )
             try:
                 x = tools[name]["x"]
                 y = tools[name]["y"]
@@ -297,7 +288,6 @@ class SpineToolboxProject(MetaObject):
             self.add_tool(name, desc, tool_template, execute_in_work, x, y, verbosity=False)
         # Recreate Views
         for name in views.keys():
-            short_name = views[name]['short name']
             desc = views[name]['description']
             try:
                 x = views[name]["x"]
@@ -350,8 +340,9 @@ class SpineToolboxProject(MetaObject):
         try:
             _tooltype = definition["tooltype"].lower()
         except KeyError:
-            self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
-                                         "'gams', 'julia' and 'executable'")
+            self._toolbox.msg_error.emit(
+                "No tool type defined in tool definition file. Supported types are " "'gams', 'julia' and 'executable'"
+            )
             return None
         if _tooltype == "julia":
             return JuliaTool.load(self._toolbox, path, definition)

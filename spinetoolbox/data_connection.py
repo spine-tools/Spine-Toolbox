@@ -42,6 +42,7 @@ class DataConnection(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
     def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""
         super().__init__(name, description)
@@ -59,8 +60,9 @@ class DataConnection(ProjectItem):
             create_dir(self.data_dir)
             self.data_dir_watcher.addPath(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                         " Check permissions.".format(self.data_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+            )
         # Populate references model
         self.references = references
         self.populate_reference_list(self.references)
@@ -98,7 +100,7 @@ class DataConnection(ProjectItem):
         """Save selections and disconnect signals."""
         self.save_selections()
         if not super().disconnect_signals():
-            logging.error("Item {0} deactivation failed".format(self.name))
+            logging.error("Item %s deactivation failed", self.name)
             return False
         return True
 
@@ -111,9 +113,9 @@ class DataConnection(ProjectItem):
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-        pass
 
     def set_icon(self, icon):
+        """Set the icon."""
         self._graphics_item = icon
 
     def get_icon(self):
@@ -145,7 +147,7 @@ class DataConnection(ProjectItem):
     def add_files_to_data_dir(self, file_paths):
         """Add files to data directory"""
         for file_path in file_paths:
-            src_dir, filename = os.path.split(file_path)
+            filename = os.path.split(file_path)[1]
             self._toolbox.msg.emit("Copying file <b>{0}</b> to <b>{1}</b>".format(filename, self.name))
             try:
                 shutil.copy(file_path, self.data_dir)
@@ -188,19 +190,18 @@ class DataConnection(ProjectItem):
         if not indexes:  # Nothing selected
             self._toolbox.msg.emit("Please select references to remove")
             return
-        else:
-            rows = [ind.row() for ind in indexes]
-            rows.sort(reverse=True)
-            for row in rows:
-                self.references.pop(row)
-            self._toolbox.msg.emit("Selected references removed")
+        rows = [ind.row() for ind in indexes]
+        rows.sort(reverse=True)
+        for row in rows:
+            self.references.pop(row)
+        self._toolbox.msg.emit("Selected references removed")
         self.populate_reference_list(self.references)
 
     @Slot(bool, name="copy_to_project")
     def copy_to_project(self, checked=False):
         """Copy selected file references to this Data Connection's data directory."""
         selected_indexes = self._toolbox.ui.treeView_dc_references.selectedIndexes()
-        if len(selected_indexes) == 0:
+        if not selected_indexes:
             self._toolbox.msg_warning.emit("No files to copy")
             return
         for index in selected_indexes:
@@ -208,7 +209,7 @@ class DataConnection(ProjectItem):
             if not os.path.exists(file_path):
                 self._toolbox.msg_error.emit("File <b>{0}</b> does not exist".format(file_path))
                 continue
-            src_dir, filename = os.path.split(file_path)
+            filename = os.path.split(file_path)[1]
             self._toolbox.msg.emit("Copying file <b>{0}</b> to Data Connection <b>{1}</b>".format(filename, self.name))
             try:
                 shutil.copy(file_path, self.data_dir)
@@ -224,13 +225,12 @@ class DataConnection(ProjectItem):
         if not index.isValid():
             logging.error("Index not valid")
             return
-        else:
-            reference = self.file_references()[index.row()]
-            url = "file:///" + reference
-            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-            if not res:
-                self._toolbox.msg_error.emit("Failed to open reference:<b>{0}</b>".format(reference))
+        reference = self.file_references()[index.row()]
+        url = "file:///" + reference
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._toolbox.msg_error.emit("Failed to open reference:<b>{0}</b>".format(reference))
 
     @Slot("QModelIndex", name="open_data_file")
     def open_data_file(self, index):
@@ -240,13 +240,12 @@ class DataConnection(ProjectItem):
         if not index.isValid():
             logging.error("Index not valid")
             return
-        else:
-            data_file = self.data_files()[index.row()]
-            url = "file:///" + os.path.join(self.data_dir, data_file)
-            # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-            if not res:
-                self._toolbox.msg_error.emit("Opening file <b>{0}</b> failed".format(data_file))
+        data_file = self.data_files()[index.row()]
+        url = "file:///" + os.path.join(self.data_dir, data_file)
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._toolbox.msg_error.emit("Opening file <b>{0}</b> failed".format(data_file))
 
     @busy_effect
     def show_spine_datapackage_form(self):
@@ -254,8 +253,9 @@ class DataConnection(ProjectItem):
         if self.spine_datapackage_form:
             if self.spine_datapackage_form.windowState() & Qt.WindowMinimized:
                 # Remove minimized status and restore window with the previous state (maximized/normal state)
-                self.spine_datapackage_form.setWindowState(self.spine_datapackage_form.windowState()
-                                                           & ~Qt.WindowMinimized | Qt.WindowActive)
+                self.spine_datapackage_form.setWindowState(
+                    self.spine_datapackage_form.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+                )
                 self.spine_datapackage_form.activateWindow()
             else:
                 self.spine_datapackage_form.raise_()
@@ -266,14 +266,16 @@ class DataConnection(ProjectItem):
 
     @Slot(name="datapackage_form_destroyed")
     def datapackage_form_destroyed(self):
+        """Notify a connection that datapackage form has been destroyed."""
         self.spine_datapackage_form = None
 
     def make_new_file(self):
         """Create a new blank file to this Data Connections data directory."""
         msg = "File name"
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QInputDialog.getText(self._toolbox, "Create new file", msg,
-                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self._toolbox, "Create new file", msg, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+        )
         file_name = answer[0]
         if not file_name:  # Cancel button clicked
             return
@@ -292,9 +294,10 @@ class DataConnection(ProjectItem):
             QMessageBox.information(self._toolbox, "Creating file failed", msg)
             return
         try:
-            with open(file_path, "w") as fp:
-                self._toolbox.msg.emit("File <b>{0}</b> created to Data Connection <b>{1}</b>"
-                                       .format(file_name, self.name))
+            with open(file_path, "w"):
+                self._toolbox.msg.emit(
+                    "File <b>{0}</b> created to Data Connection <b>{1}</b>".format(file_name, self.name)
+                )
         except OSError:
             msg = "Please check directory permissions."
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
@@ -307,27 +310,29 @@ class DataConnection(ProjectItem):
         if not indexes:  # Nothing selected
             self._toolbox.msg.emit("Please select files to remove")
             return
-        else:
-            file_list = list()
-            for index in indexes:
-                file_at_index = self.data_model.itemFromIndex(index).data(Qt.DisplayRole)
-                file_list.append(file_at_index)
-            files = "\n".join(file_list)
-            msg = "The following files will be removed permanently from the project\n\n" \
-                  "{0}\n\n" \
-                  "Are you sure?".format(files)
-            # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(self._toolbox, "Remove {0} file(s)?".format(len(file_list)),
-                                          msg, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
-                return
-            for filename in file_list:
-                path_to_remove = os.path.join(self.data_dir, filename)
-                try:
-                    os.remove(path_to_remove)
-                    self._toolbox.msg.emit("File <b>{0}</b> removed".format(path_to_remove))
-                except OSError:
-                    self._toolbox.msg_error.emit("Removing file {0} failed.\nCheck permissions.".format(path_to_remove))
+        file_list = list()
+        for index in indexes:
+            file_at_index = self.data_model.itemFromIndex(index).data(Qt.DisplayRole)
+            file_list.append(file_at_index)
+        files = "\n".join(file_list)
+        msg = (
+            "The following files will be removed permanently from the project\n\n"
+            "{0}\n\n"
+            "Are you sure?".format(files)
+        )
+        # noinspection PyCallByClass, PyTypeChecker
+        answer = QMessageBox.question(
+            self._toolbox, "Remove {0} file(s)?".format(len(file_list)), msg, QMessageBox.Yes, QMessageBox.No
+        )
+        if not answer == QMessageBox.Yes:
+            return
+        for filename in file_list:
+            path_to_remove = os.path.join(self.data_dir, filename)
+            try:
+                os.remove(path_to_remove)
+                self._toolbox.msg.emit("File <b>{0}</b> removed".format(path_to_remove))
+            except OSError:
+                self._toolbox.msg_error.emit("Removing file {0} failed.\nCheck permissions.".format(path_to_remove))
         return
 
     def file_references(self):
@@ -358,8 +363,10 @@ class DataConnection(ProjectItem):
         """
         # logging.debug("Looking for file {0} in DC {1}.".format(fname, self.name))
         if self in visited_items:
-            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
-                                           "connections and try again. Detected at {0}.".format(self.name))
+            self._toolbox.msg_warning.emit(
+                "There seems to be an infinite loop in your project. Please fix the "
+                "connections and try again. Detected at {0}.".format(self.name)
+            )
             return None
         if fname in self.data_files():
             # logging.debug("{0} found in DC {1}".format(fname, self.name))
@@ -367,11 +374,12 @@ class DataConnection(ProjectItem):
             path = os.path.join(self.data_dir, fname)
             return path
         for path in self.file_references():  # List of paths including file name
-            p, fn = os.path.split(path)
+            fn = os.path.split(path)[1]
             if fn == fname:
                 # logging.debug("{0} found in DC {1}".format(fname, self.name))
-                self._toolbox.msg.emit("\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>"
-                                       .format(fname, self.name))
+                self._toolbox.msg.emit(
+                    "\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>".format(fname, self.name)
+                )
                 return path
         visited_items.append(self)
         for input_item in self._toolbox.connection_model.input_items(self.name):
@@ -400,22 +408,20 @@ class DataConnection(ProjectItem):
         """
         paths = list()
         if self in visited_items:
-            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
-                                           "connections and try again. Detected at {0}.".format(self.name))
+            self._toolbox.msg_warning.emit(
+                "There seems to be an infinite loop in your project. Please fix the "
+                "connections and try again. Detected at {0}.".format(self.name)
+            )
             return paths
         # Search files that match the pattern from this Data Connection's data directory
         for data_file in self.data_files():  # data_file is a filename (no path)
             if fnmatch.fnmatch(data_file, pattern):
-                # self._toolbox.msg.emit("\t<b>{0}</b> matches pattern <b>{1}</b> in Data Connection <b>{2}</b>"
-                #                        .format(data_file, pattern, self.name))
                 path = os.path.join(self.data_dir, data_file)
                 paths.append(path)
         # Search files that match the pattern from this Data Connection's references
         for ref_file in self.file_references():  # List of paths including file name
-            p, fn = os.path.split(ref_file)
+            fn = os.path.split(ref_file)[1]
             if fnmatch.fnmatch(fn, pattern):
-                # self._toolbox.msg.emit("\tReference <b>{0}</b> matches pattern <b>{1}</b> "
-                #                        "in Data Connection <b>{2}</b>".format(fn, pattern, self.name))
                 paths.append(ref_file)
         visited_items.append(self)
         # Find items that are connected to this Data Connection

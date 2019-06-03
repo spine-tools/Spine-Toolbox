@@ -43,7 +43,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 21))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 28))
         self.menubar.setObjectName("menubar")
         self.menuGraph = QtWidgets.QMenu(self.menubar)
         self.menuGraph.setObjectName("menuGraph")
@@ -309,22 +309,22 @@ class Ui_MainWindow(object):
         self.actiontodos.setObjectName("actiontodos")
         self.actionRefresh = QtWidgets.QAction(MainWindow)
         icon = QtGui.QIcon()
-        icon.addPixmap(QtGui.QPixmap(":/icons/refresh.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon.addPixmap(QtGui.QPixmap(":/icons/menu_icons/sync.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRefresh.setIcon(icon)
         self.actionRefresh.setObjectName("actionRefresh")
         self.actionCommit = QtWidgets.QAction(MainWindow)
         icon1 = QtGui.QIcon()
-        icon1.addPixmap(QtGui.QPixmap(":/icons/ok.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon1.addPixmap(QtGui.QPixmap(":/icons/menu_icons/check.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionCommit.setIcon(icon1)
         self.actionCommit.setObjectName("actionCommit")
         self.actionRollback = QtWidgets.QAction(MainWindow)
         icon2 = QtGui.QIcon()
-        icon2.addPixmap(QtGui.QPixmap(":/icons/nok.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon2.addPixmap(QtGui.QPixmap(":/icons/menu_icons/undo.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionRollback.setIcon(icon2)
         self.actionRollback.setObjectName("actionRollback")
         self.actionClose = QtWidgets.QAction(MainWindow)
         icon3 = QtGui.QIcon()
-        icon3.addPixmap(QtGui.QPixmap(":/icons/close.png"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        icon3.addPixmap(QtGui.QPixmap(":/icons/menu_icons/window-close.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionClose.setIcon(icon3)
         self.actionClose.setObjectName("actionClose")
         self.actionGraph_hide_selected = QtWidgets.QAction(MainWindow)
@@ -393,7 +393,7 @@ class Ui_MainWindow(object):
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from widgets.custom_qgraphicsviews import GraphQGraphicsView
-from widgets.custom_qlistview import DragListView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from widgets.custom_qlistview import DragListView
+from widgets.custom_qgraphicsviews import GraphQGraphicsView
 import resources_icons_rc

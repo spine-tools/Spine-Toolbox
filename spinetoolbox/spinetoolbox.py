@@ -18,11 +18,14 @@ Spine Toolbox application main file.
 
 import sys
 import logging
+from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
+
 try:
     import spinedb_api
 except ModuleNotFoundError:
     import spinedatabase_api
+
     sys.modules['spinedb_api'] = spinedatabase_api  # So `import spinedb_api` does not fail before the check
 from ui_main import ToolboxUI
 from helpers import spinedb_api_version_check, pyside2_version_check
@@ -34,15 +37,19 @@ def main(argv):
     Args:
         argv (list): Command line arguments
     """
-    logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
-                        format='%(asctime)s %(levelname)s: %(message)s',
-                        datefmt='%Y-%m-%d %H:%M:%S')
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=logging.DEBUG,
+        format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
     if not pyside2_version_check():
         return 0
     if not spinedb_api_version_check():
         return 0
     # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
     app = QApplication(argv)
+    QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     window = ToolboxUI()
     window.show()
     # Enter main event loop and wait until exit() is called

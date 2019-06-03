@@ -19,8 +19,17 @@ Functions to make and handle QToolBars.
 # TODO: QToolBars should be added to the UI in Qt Designer
 
 from PySide2.QtCore import Qt, QMimeData, Signal, Slot
-from PySide2.QtWidgets import QToolBar, QLabel, QAction, QApplication, QButtonGroup, \
-    QPushButton, QWidget, QSizePolicy, QToolButton
+from PySide2.QtWidgets import (
+    QToolBar,
+    QLabel,
+    QAction,
+    QApplication,
+    QButtonGroup,
+    QPushButton,
+    QWidget,
+    QSizePolicy,
+    QToolButton,
+)
 from PySide2.QtGui import QIcon, QDrag
 from config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 
@@ -31,6 +40,7 @@ class ItemToolBar(QToolBar):
     Attributes:
         parent (ToolboxUI): QMainWindow instance
     """
+
     def __init__(self, parent):
         """Init class."""
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
@@ -40,19 +50,19 @@ class ItemToolBar(QToolBar):
         # DS
         data_store_pixmap = QIcon(":/icons/project_item_icons/database.svg").pixmap(24, 24)
         data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
-        data_store_action = self.addWidget(data_store_widget)
+        self.addWidget(data_store_widget)
         # DC
         data_connection_pixmap = QIcon(":/icons/project_item_icons/file-alt.svg").pixmap(24, 24)
         data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
-        data_connection_action = self.addWidget(data_connection_widget)
+        self.addWidget(data_connection_widget)
         # Tool
         tool_pixmap = QIcon(":/icons/project_item_icons/hammer.svg").pixmap(24, 24)
         tool_widget = DraggableWidget(self, tool_pixmap, "Tool")
-        tool_action = self.addWidget(tool_widget)
+        self.addWidget(tool_widget)
         # View
         view_pixmap = QIcon(":/icons/project_item_icons/binoculars.svg").pixmap(24, 24)
         view_widget = DraggableWidget(self, view_pixmap, "View")
-        view_action = self.addWidget(view_widget)
+        self.addWidget(view_widget)
         # set remove all action
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
         # remove_all = QAction(remove_all_icon, "Remove All", parent)
@@ -81,14 +91,19 @@ class DraggableWidget(QLabel):
         pixmap (QPixMap): Picture for the label
         text (str): Item type
     """
+
     def __init__(self, parent, pixmap, text):
         super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
         self.text = text
         self.setPixmap(pixmap)
         self.drag_start_pos = None
-        self.setToolTip("""
+        self.setToolTip(
+            """
             <p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>
-        """.format(self.text))
+        """.format(
+                self.text
+            )
+        )
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -111,7 +126,7 @@ class DraggableWidget(QLabel):
         drag.setMimeData(mimeData)
         drag.setPixmap(self.pixmap())
         drag.setHotSpot(self.pixmap().rect().center())
-        dropAction = drag.exec_()
+        drag.exec_()
 
     def mouseReleaseEvent(self, event):
         """Forget drag start position"""
@@ -151,8 +166,9 @@ class ParameterTagToolBar(QToolBar):
             self.action_dict[tag.id] = action
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=tag.id)
-        self.tag_button_group.buttonToggled["int", "bool"].\
-            connect(lambda id, checked: self.tag_button_toggled.emit(id, checked))
+        self.tag_button_group.buttonToggled["int", "bool"].connect(
+            lambda id, checked: self.tag_button_toggled.emit(id, checked)
+        )
         empty = QWidget()
         empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.empty_action = self.addWidget(empty)

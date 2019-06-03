@@ -17,11 +17,10 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 """
 
 import time
-import logging
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel
-from PySide2.QtGui import QKeySequence, QFont, QFontMetrics
-from widgets.custom_qwidgets import AutoFilterWidget
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
+from PySide2.QtGui import QKeySequence
+from widgets.custom_menus import AutoFilterMenu
 from models import TableModel
 
 
@@ -31,6 +30,7 @@ class CopyPasteTableView(QTableView):
     Attributes:
         parent (QWidget): The parent of this view
     """
+
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent=parent)
@@ -57,21 +57,23 @@ class CopyPasteTableView(QTableView):
         selection = self.selectionModel().selection()
         if not selection:
             return False
-        # Take only the first selection in case of multiple selection.
-        first = selection.first()
-        rows = list()
         v_header = self.verticalHeader()
         h_header = self.horizontalHeader()
-        for i in range(first.top(), first.bottom()+1):
-            if v_header.isSectionHidden(i):
-                continue
-            row = list()
-            for j in range(first.left(), first.right()+1):
-                if h_header.isSectionHidden(j):
+        row_dict = {}
+        for rng in sorted(selection, key=lambda x: h_header.visualIndex(x.left())):
+            for i in range(rng.top(), rng.bottom() + 1):
+                if v_header.isSectionHidden(i):
                     continue
-                data = self.model().index(i, j).data(Qt.EditRole)
-                str_data = str(data) if data is not None else ""
-                row.append(str_data)
+                row = row_dict.setdefault(i, [])
+                for j in range(rng.left(), rng.right() + 1):
+                    if h_header.isSectionHidden(j):
+                        continue
+                    data = self.model().index(i, j).data(Qt.EditRole)
+                    str_data = str(data) if data is not None else ""
+                    row.append(str_data)
+        rows = list()
+        for key in sorted(row_dict):
+            row = row_dict[key]
             rows.append("\t".join(row))
         content = "\n".join(rows)
         QApplication.clipboard().setText(content)
@@ -104,9 +106,9 @@ class CopyPasteTableView(QTableView):
         indexes = list()
         values = list()
         is_row_hidden = self.verticalHeader().isSectionHidden
-        rows = [x for x in range(first.top(), first.bottom() + 1) if not is_row_hidden(x)]
+        rows = [x for r in selection for x in range(r.top(), r.bottom() + 1) if not is_row_hidden(x)]
         is_column_hidden = self.horizontalHeader().isSectionHidden
-        columns = [x for x in range(first.left(), first.right() + 1) if not is_column_hidden(x)]
+        columns = [x for r in selection for x in range(r.left(), r.right() + 1) if not is_column_hidden(x)]
         model_index = self.model().index
         for row in rows:
             for column in columns:
@@ -121,7 +123,7 @@ class CopyPasteTableView(QTableView):
         return True
 
     def paste_normal(self):
-        """Paste clipboard data, overwritting cells if needed"""
+        """Paste clipboard data, overwriting cells if needed"""
         text = self.clipboard_text.strip()
         if not text:
             return False
@@ -143,14 +145,16 @@ class CopyPasteTableView(QTableView):
             rows_append(row)
             row += 1
         column = current.column()
+        visual_column = self.horizontalHeader().visualIndex(column)
         columns = []
         columns_append = columns.append
-        is_column_hidden = self.horizontalHeader().isSectionHidden
+        h = self.horizontalHeader()
+        is_visual_column_hidden = lambda x: h.isSectionHidden(h.logicalIndex(x))
         for x in range(len(data[0])):
-            while is_column_hidden(column):
-                column += 1
-            columns_append(column)
-            column += 1
+            while is_visual_column_hidden(visual_column):
+                visual_column += 1
+            columns_append(h.logicalIndex(visual_column))
+            visual_column += 1
         # Insert extra rows if needed:
         last_row = max(rows)
         row_count = self.model().rowCount()
@@ -192,12 +196,19 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
     def __init__(self, parent):
         """Initialize the class."""
         super().__init__(parent=parent)
-        self.filter_action_list = list()
-        self.action_all = None
-        self.filter_text = None
-        self.filter_column = None
-        self.auto_filter_widget = AutoFilterWidget(self)
-        self.auto_filter_widget.data_committed.connect(self.update_auto_filter)
+        self.auto_filter_column = None
+        self.auto_filter_menu = AutoFilterMenu(self)
+        self.auto_filter_menu.asc_sort_triggered.connect(self.sort_model_ascending)
+        self.auto_filter_menu.desc_sort_triggered.connect(self.sort_model_descending)
+        self.auto_filter_menu.filter_triggered.connect(self.update_auto_filter)
+
+    def keyPressEvent(self, event):
+        if event.modifiers() == Qt.AltModifier and event.key() == Qt.Key_Down:
+            column = self.currentIndex().column()
+            self.toggle_auto_filter(column)
+            event.accept()
+        else:
+            super().keyPressEvent(event)
 
     def setModel(self, model):
         """Disconnect sectionPressed signal, only connect it to show_filter_menu slot.
@@ -210,24 +221,30 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
     def toggle_auto_filter(self, logical_index):
         """Called when user clicks on a horizontal section header.
         Show/hide the auto filter widget."""
-        tic = time.clock()
-        self.filter_column = logical_index
+        self.auto_filter_column = logical_index
         header_pos = self.mapToGlobal(self.horizontalHeader().pos())
-        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.filter_column)
+        pos_x = header_pos.x() + self.horizontalHeader().sectionViewportPosition(self.auto_filter_column)
         pos_y = header_pos.y() + self.horizontalHeader().height()
         width = self.horizontalHeader().sectionSize(logical_index)
         values = self.model().auto_filter_values(logical_index)
-        self.auto_filter_widget.set_values(values)
-        self.auto_filter_widget.move(pos_x, pos_y)
-        self.auto_filter_widget.show(min_width=width)
-        toc = time.clock()
-        # logging.debug("Filter populated in {} seconds".format(toc - tic))
+        self.auto_filter_menu.set_values(values)
+        self.auto_filter_menu.popup(QPoint(pos_x, pos_y), width)
 
     @Slot(name="update_auto_filter")
     def update_auto_filter(self):
-        """Called when the user clicks the Ok button in the auto filter widget.
+        """Called when the user selects Ok in the auto filter menu.
         Set 'filtered out values' in auto filter model."""
-        self.model().set_filtered_out_values(self.filter_column, self.auto_filter_widget.checked_values)
+        self.model().set_filtered_out_values(self.auto_filter_column, self.auto_filter_menu.unchecked_values)
+
+    @Slot(name="sort_model_ascending")
+    def sort_model_ascending(self):
+        """Called when the user selects sort ascending in the auto filter widget."""
+        self.model().sort(self.auto_filter_column, Qt.AscendingOrder)
+
+    @Slot(name="sort_model_descending")
+    def sort_model_descending(self):
+        """Called when the user selects sort descending in the auto filter widget."""
+        self.model().sort(self.auto_filter_column, Qt.DescendingOrder)
 
 
 class FrozenTableView(QTableView):
@@ -257,7 +274,7 @@ class FrozenTableView(QTableView):
             return self.model.row(index)
 
     def set_data(self, headers, values):
-        self.selectionModel().blockSignals(True) #prevent selectionChanged signal when updating
+        self.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
         self.model.set_data(values, headers)
         self.selectRow(0)
         self.selectionModel().blockSignals(False)
@@ -270,7 +287,7 @@ class SimpleCopyPasteTableView(QTableView):
         parent (QWidget): The parent of this view
     """
 
-    def __init__(self, parent = None):
+    def __init__(self, parent=None):
         """Initialize the class."""
         super().__init__(parent)
         # self.editing = False
@@ -294,11 +311,11 @@ class SimpleCopyPasteTableView(QTableView):
             content = ""
             v_header = self.verticalHeader()
             h_header = self.horizontalHeader()
-            for i in range(first.top(), first.bottom()+1):
+            for i in range(first.top(), first.bottom() + 1):
                 if v_header.isSectionHidden(i):
                     continue
                 row = list()
-                for j in range(first.left(), first.right()+1):
+                for j in range(first.left(), first.right() + 1):
                     if h_header.isSectionHidden(j):
                         continue
                     row.append(str(self.model().index(i, j).data(Qt.DisplayRole)))

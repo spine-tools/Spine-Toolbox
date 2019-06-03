@@ -16,7 +16,6 @@ Class for a custom RichJupyterWidget to use as julia REPL.
 :date:   22.5.2018
 """
 
-import os
 import logging
 import qsubprocess
 from PySide2.QtWidgets import QMessageBox, QAction, QApplication
@@ -60,6 +59,7 @@ class JuliaREPLWidget(RichJupyterWidget):
     Attributes:
         toolbox (ToolboxUI): QMainWindow instance
     """
+
     execution_finished_signal = Signal(int, name="execution_finished_signal")
 
     def __init__(self, toolbox):
@@ -112,16 +112,17 @@ class JuliaREPLWidget(RichJupyterWidget):
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
-            self._toolbox.msg_error.emit("\tCouldn't determine Julia version. "
-                                         "Make sure that Julia is correctly installed "
-                                         "and try again.")
+            self._toolbox.msg_error.emit(
+                "\tCouldn't determine Julia version. " "Make sure that Julia is correctly installed " "and try again."
+            )
             return None
         julia_version = q_process.output
         self._toolbox.msg.emit("\tJulia version is {0}".format(julia_version))
         kernel_name = "julia-" + ".".join(julia_version.split(".")[0:2])
         if self.kernel_name is not None and self.kernel_name != kernel_name:
-            self._toolbox.msg_warning.emit("\tJulia version has changed in settings. "
-                                           "New kernel specification is {0}".format(kernel_name))
+            self._toolbox.msg_warning.emit(
+                "\tJulia version has changed in settings. " "New kernel specification is {0}".format(kernel_name)
+            )
         return kernel_name
 
     def start_jupyter_kernel(self):
@@ -183,9 +184,11 @@ class JuliaREPLWidget(RichJupyterWidget):
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
         q_process.start_process()
         if not q_process.wait_for_finished(msecs=5000):
-            self._toolbox.msg_error.emit("\tCouldn't start Julia to check IJulia status. "
-                                         "Make sure that Julia is correctly installed "
-                                         "and try again.")
+            self._toolbox.msg_error.emit(
+                "\tCouldn't start Julia to check IJulia status. "
+                "Make sure that Julia is correctly installed "
+                "and try again."
+            )
             return None
         if q_process.output == "True":
             self._toolbox.msg.emit("\tIJulia is installed")
@@ -205,23 +208,25 @@ class JuliaREPLWidget(RichJupyterWidget):
         title = "Julia REPL failed to start"
         if not is_ijulia_installed:
             self.ijulia_fix = "Installing"
-            message = "The Julia REPL failed to start because "\
-                      "the <a href='https://github.com/JuliaLang/IJulia.jl'>IJulia</a> package "\
-                      "is missing."\
-                      "<p>Do you want to install <b>IJulia</b> now?</p>"\
-                      "<p>Note: after installation, "\
-                      "the current operation will resume automatically.".\
-                      format(self.kernel_name)
+            message = (
+                "The Julia REPL failed to start because "
+                "the <a href='https://github.com/JuliaLang/IJulia.jl'>IJulia</a> package "
+                "is missing."
+                "<p>Do you want to install <b>IJulia</b> now?</p>"
+                "<p>Note: after installation, "
+                "the current operation will resume automatically.".format(self.kernel_name)
+            )
         else:
             self.ijulia_fix = "Re-building"
-            message = "The Julia REPL failed to start because of a problem "\
-                      "with the Julia Jupyter kernel specification ({0})."\
-                      "<p>Re-building the <a href='https://github.com/JuliaLang/IJulia.jl'>IJulia</a> "\
-                      "package may help to fix this problem."\
-                      "<p>Do you want to re-build <b>IJulia</b> now?</p>"\
-                      "<p>Note: after re-building, "\
-                      "the current operation will resume automatically.".\
-                      format(self.kernel_name)
+            message = (
+                "The Julia REPL failed to start because of a problem "
+                "with the Julia Jupyter kernel specification ({0})."
+                "<p>Re-building the <a href='https://github.com/JuliaLang/IJulia.jl'>IJulia</a> "
+                "package may help to fix this problem."
+                "<p>Do you want to re-build <b>IJulia</b> now?</p>"
+                "<p>Note: after re-building, "
+                "the current operation will resume automatically.".format(self.kernel_name)
+            )
         answer = QMessageBox.question(self, title, message, QMessageBox.Yes, QMessageBox.No)
         if not answer == QMessageBox.Yes:
             self.starting = False
@@ -265,8 +270,9 @@ class JuliaREPLWidget(RichJupyterWidget):
             if self.kernel_name in julia_kernel_names:
                 self.start_available_jupyter_kernel()
             else:
-                self._toolbox.msg_error.emit("\tCouldn't find a Jupyter kernel "
-                                             "specification for {}".format(self.kernel_name))
+                self._toolbox.msg_error.emit(
+                    "\tCouldn't find a Jupyter kernel " "specification for {}".format(self.kernel_name)
+                )
                 self.handle_repl_failed_to_start()
 
     def setup_client(self):
@@ -285,15 +291,17 @@ class JuliaREPLWidget(RichJupyterWidget):
             return
         restart_count = self.kernel_manager._restarter._restart_count
         restart_limit = self.kernel_manager._restarter.restart_limit
-        self._toolbox.msg_warning.emit("\tFailed to start Julia Jupyter kernel "
-                                       "(attempt {0} of {1})".format(restart_count, restart_limit))
+        self._toolbox.msg_warning.emit(
+            "\tFailed to start Julia Jupyter kernel " "(attempt {0} of {1})".format(restart_count, restart_limit)
+        )
 
     @Slot(name="_handle_kernel_left_dead")
     def _handle_kernel_left_dead(self):
         """Called when the kernel is finally declared dead, i.e., the restart limit has been reached."""
         restart_limit = self.kernel_manager._restarter.restart_limit
-        self._toolbox.msg_error.emit("\tFailed to start Julia Jupyter kernel "
-                                     "(attempt {0} of {0})".format(restart_limit))
+        self._toolbox.msg_error.emit(
+            "\tFailed to start Julia Jupyter kernel " "(attempt {0} of {0})".format(restart_limit)
+        )
         self.kernel_manager = None
         self.kernel_client = None  # TODO: needed?
         self.handle_repl_failed_to_start()
@@ -303,9 +311,11 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Run when IJulia installation/reconfiguration process finishes"""
         if self.ijulia_process.process_failed:
             if self.ijulia_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("Process failed to start. Make sure that "
-                                             "Julia is installed properly in your system "
-                                             "and try again.")
+                self._toolbox.msg_error.emit(
+                    "Process failed to start. Make sure that "
+                    "Julia is installed properly in your system "
+                    "and try again."
+                )
             else:
                 self._toolbox.msg_error.emit("Process failed [exit code:{0}]".format(ret))
             if self.command:
@@ -346,8 +356,9 @@ class JuliaREPLWidget(RichJupyterWidget):
         if self.kernel_execution_state == 'idle':
             if self.starting:
                 self.starting = False
-                self._toolbox.msg_success.emit("\tJulia REPL successfully started using "
-                                               "the {} kernel specification".format(self.kernel_name))
+                self._toolbox.msg_success.emit(
+                    "\tJulia REPL successfully started using " "the {} kernel specification".format(self.kernel_name)
+                )
                 self._control.viewport().setCursor(self.normal_cursor)
             elif self.command and not self.running:
                 self._toolbox.msg_warning.emit("\tExecution in progress. See <b>Julia Console</b> for messages.")
@@ -437,11 +448,11 @@ class JuliaREPLWidget(RichJupyterWidget):
         for line in lines:
             m = self._highlighter._classic_prompt_re.match(line)
             if m:
-                useful_lines.append(line[len(m.group(0)):])
+                useful_lines.append(line[len(m.group(0)) :])
                 continue
             m = self._highlighter._ipy_prompt_re.match(line)
             if m:
-                useful_lines.append(line[len(m.group(0)):])
+                useful_lines.append(line[len(m.group(0)) :])
                 continue
         text = '\n'.join(useful_lines)
         try:

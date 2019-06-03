@@ -21,14 +21,30 @@ import locale
 import logging
 import json
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QTimeLine
-from PySide2.QtWidgets import QMainWindow, QApplication, QFileDialog, QMessageBox, \
-    QCheckBox, QInputDialog, QDockWidget, QStyle, QAction, QWidgetAction
+from PySide2.QtWidgets import (
+    QMainWindow,
+    QApplication,
+    QFileDialog,
+    QMessageBox,
+    QCheckBox,
+    QInputDialog,
+    QDockWidget,
+    QAction,
+    QWidgetAction,
+)
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
-from widgets.custom_menus import ProjectItemContextMenu, ToolTemplateContextMenu, \
-    LinkContextMenu, AddToolTemplatePopupMenu, DcRefContextMenu, DcDataContextMenu, \
-    ToolPropertiesContextMenu, ViewPropertiesContextMenu
+from widgets.custom_menus import (
+    ProjectItemContextMenu,
+    ToolTemplateContextMenu,
+    LinkContextMenu,
+    AddToolTemplatePopupMenu,
+    DcRefContextMenu,
+    DcDataContextMenu,
+    ToolPropertiesContextMenu,
+    ViewPropertiesContextMenu,
+)
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
@@ -43,8 +59,15 @@ from widgets.julia_repl_widget import JuliaREPLWidget
 from widgets.python_repl_widget import PythonReplWidget
 import widgets.toolbars
 from project import SpineToolboxProject
-from config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, \
-    MAINWINDOW_SS, DOC_INDEX_PATH, SQL_DIALECT_API, TREEVIEW_HEADER_SS
+from config import (
+    SPINE_TOOLBOX_VERSION,
+    STATUSBAR_SS,
+    TEXTBROWSER_SS,
+    MAINWINDOW_SS,
+    DOC_INDEX_PATH,
+    SQL_DIALECT_API,
+    TREEVIEW_HEADER_SS,
+)
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
 from project_item import ProjectItem
@@ -199,7 +222,7 @@ class ToolboxUI(QMainWindow):
         when app was closed or starts without a project if app is started for the first time.
         """
         open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="2"))
-        if not open_previous_project == 2:  # 2: Qt.Checked, ie. open_previous_project==True
+        if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
             return
         # Get path to previous project file
         project_file_path = self._qsettings.value("appSettings/previousProject", defaultValue="")
@@ -211,7 +234,7 @@ class ToolboxUI(QMainWindow):
             return
         if not self.open_project(project_file_path):
             self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
-            logging.error("Loading project file '{0}' failed".format(project_file_path))
+            logging.error("Loading project file '%s' failed", project_file_path)
         return
 
     @Slot(name="new_project")
@@ -248,8 +271,9 @@ class ToolboxUI(QMainWindow):
         connections = list()
         if not load_path:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getOpenFileName(self, 'Open project',
-                                                 project_dir(self._qsettings), 'Projects (*.proj)')
+            answer = QFileDialog.getOpenFileName(
+                self, 'Open project', project_dir(self._qsettings), 'Projects (*.proj)'
+            )
             load_path = answer[0]
             if load_path == '':  # Cancel button clicked
                 return False
@@ -288,13 +312,6 @@ class ToolboxUI(QMainWindow):
             connections = project_dict['connections']
         except KeyError:
             self.msg_warning.emit("No connections found in project file")
-        try:
-            x = project_dict['scene_x']
-            y = project_dict['scene_y']
-            w = project_dict['scene_w']
-            h = project_dict['scene_h']
-        except KeyError:
-            pass
         # Create project
         self._project = SpineToolboxProject(self, proj_name, proj_desc, work_dir)
         # Init models and views
@@ -339,8 +356,9 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("No project open")
         msg = "This creates a copy of the current project. <br/><br/>New name:"
         # noinspection PyCallByClass
-        answer = QInputDialog.getText(self, "New project name", msg, text=self._project.name,
-                                      flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+        answer = QInputDialog.getText(
+            self, "New project name", msg, text=self._project.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+        )
         if not answer[1]:  # answer[str, bool]
             return
         else:
@@ -417,7 +435,7 @@ class ToolboxUI(QMainWindow):
             # logging.debug("Connecting doubleClicked signal for QListView")
             self.ui.listView_tool_templates.doubleClicked.connect(self.edit_tool_template)
         elif n_recv_sig1 > 1:  # Check that this never gets over 1
-            logging.error("Number of receivers for QListView doubleClicked signal is now:{0}".format(n_recv_sig1))
+            logging.error("Number of receivers for QListView doubleClicked signal is now: %d", n_recv_sig1)
         else:
             pass  # signal already connected
         n_recv_sig2 = self.ui.listView_tool_templates.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
@@ -425,8 +443,7 @@ class ToolboxUI(QMainWindow):
             # logging.debug("Connecting customContextMenuRequested signal for QListView")
             self.ui.listView_tool_templates.customContextMenuRequested.connect(self.show_tool_template_context_menu)
         elif n_recv_sig2 > 1:  # Check that this never gets over 1
-            logging.error("Number of receivers for QListView customContextMenuRequested signal is now:{0}"
-                          .format(n_recv_sig2))
+            logging.error("Number of receivers for QListView customContextMenuRequested signal is now: %d", n_recv_sig2)
         else:
             pass  # signal already connected
         if n_tools == 0:
@@ -442,22 +459,23 @@ class ToolboxUI(QMainWindow):
 
     def init_shared_widgets(self):
         """Initialize widgets that are shared among all ProjectItems of the same type."""
+        # NOTE: Trying out fontawesome
         # Data Stores
         self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
         self.ui.comboBox_dialect.setCurrentIndex(-1)
-        self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        self.ui.toolButton_ds_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # self.ui.toolButton_ds_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Data Connections
         self.ui.treeView_dc_references.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Tools (Tool template combobox is initialized in init_tool_template_model)
         self.ui.pushButton_tool_stop.setEnabled(False)
         self.ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Views
         self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -579,9 +597,12 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("No project open")
             return
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self, 'Select Tool template file',
-                                             os.path.join(project_dir(self._qsettings), os.path.pardir),
-                                             'JSON (*.json)')
+        answer = QFileDialog.getOpenFileName(
+            self,
+            'Select Tool template file',
+            os.path.join(project_dir(self._qsettings), os.path.pardir),
+            'JSON (*.json)',
+        )
         if answer[0] == '':  # Cancel button clicked
             return
         def_file = os.path.abspath(answer[0])
@@ -722,12 +743,15 @@ class ToolboxUI(QMainWindow):
             # logging.debug("tools list after removal:{}".format(tools))
             project_dict['tool_templates'] = tools
         except KeyError:
-            self.msg_error.emit("This is odd. tool_templates list not found in project file <b>{0}</b>"
-                                .format(project_file))
+            self.msg_error.emit(
+                "This is odd. tool_templates list not found in project file <b>{0}</b>".format(project_file)
+            )
             return
         except ValueError:
-            self.msg_error.emit("This is odd. Tool template definition file path <b>{0}</b> not found "
-                                "in project file <b>{1}</b>".format(tool_def_path, project_file))
+            self.msg_error.emit(
+                "This is odd. Tool template definition file path <b>{0}</b> not found "
+                "in project file <b>{1}</b>".format(tool_def_path, project_file)
+            )
             return
         # Save dictionaries back to JSON file
         dicts['project'] = project_dict
@@ -753,7 +777,7 @@ class ToolboxUI(QMainWindow):
         for name in item_names:
             ind = self.project_item_model.find_item(name)
             delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = False if delete_int == 0 else True
+            delete_bool = delete_int != 0
             self.remove_item(ind, delete_item=delete_bool)
         self.msg.emit("All {0} items removed from project".format(n))
         self.activate_no_selection_tab()
@@ -778,12 +802,16 @@ class ToolboxUI(QMainWindow):
         name = project_item.name
         if check_dialog:
             if not delete_item:
-                msg = "Are you sure? If Yes, item data directory will still be available in " \
-                      "the project directory after this operation.\n\n" \
-                      "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                msg = (
+                    "Are you sure? If Yes, item data directory will still be available in "
+                    "the project directory after this operation.\n\n"
+                    "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                )
             else:
-                msg = "Are you sure? If Yes, item data directory will be deleted from your project.\n\n" \
-                      "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                msg = (
+                    "Are you sure? If Yes, item data directory will be deleted from your project.\n\n"
+                    "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                )
             # noinspection PyCallByClass, PyTypeChecker
             answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
@@ -857,20 +885,20 @@ class ToolboxUI(QMainWindow):
         # Check if file exists first. openUrl may return True if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
-            logging.error("Failed to open editor for {0}".format(file_path))
-            self.msg_error.emit("Tool template definition file <b>{0}</b> not found."
-                                .format(file_path))
+            logging.error("Failed to open editor for %s", file_path)
+            self.msg_error.emit("Tool template definition file <b>{0}</b> not found.".format(file_path))
             return
         tool_template_url = "file:///" + file_path
         # Open Tool template definition file in editor
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(tool_template_url, QUrl.TolerantMode))
         if not res:
-            logging.error("Failed to open editor for {0}".format(tool_template_url))
-            self.msg_error.emit("Unable to open Tool template definition file {0}. Make sure that <b>.json</b> "
-                                "files are associated with a text editor. For example on Windows "
-                                "10, go to Control Panel -> Default Programs to do this."
-                                .format(file_path))
+            logging.error("Failed to open editor for %s", tool_template_url)
+            self.msg_error.emit(
+                "Unable to open Tool template definition file {0}. Make sure that <b>.json</b> "
+                "files are associated with a text editor. For example on Windows "
+                "10, go to Control Panel -> Default Programs to do this.".format(file_path)
+            )
         return
 
     @busy_effect
@@ -888,13 +916,14 @@ class ToolboxUI(QMainWindow):
         # Check if file exists first. openUrl may return True even if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
-            self.msg_error.emit("Tool main program file <b>{0}</b> not found."
-                                .format(file_path))
+            self.msg_error.emit("Tool main program file <b>{0}</b> not found.".format(file_path))
             return
-        fname, ext = os.path.splitext(os.path.split(file_path)[1])
+        ext = os.path.splitext(os.path.split(file_path)[1])[1]
         if ext in [".bat", ".exe"]:
-            self.msg_warning.emit("Sorry, opening files with extension <b>{0}</b> not supported. "
-                                  "Please open the file manually.".format(ext))
+            self.msg_warning.emit(
+                "Sorry, opening files with extension <b>{0}</b> not supported. "
+                "Please open the file manually.".format(ext)
+            )
             return
         main_program_url = "file:///" + file_path
         # Open Tool template main program file in editor
@@ -902,11 +931,12 @@ class ToolboxUI(QMainWindow):
         res = QDesktopServices.openUrl(QUrl(main_program_url, QUrl.TolerantMode))
         if not res:
             filename, file_extension = os.path.splitext(file_path)
-            self.msg_error.emit("Unable to open Tool template main program file {0}. "
-                                "Make sure that <b>{1}</b> "
-                                "files are associated with an editor. E.g. on Windows "
-                                "10, go to Control Panel -> Default Programs to do this."
-                                .format(filename, file_extension))
+            self.msg_error.emit(
+                "Unable to open Tool template main program file {0}. "
+                "Make sure that <b>{1}</b> "
+                "files are associated with an editor. E.g. on Windows "
+                "10, go to Control Panel -> Default Programs to do this.".format(filename, file_extension)
+            )
         return
 
     @Slot("QModelIndex", name="connection_data_changed")
@@ -999,7 +1029,7 @@ class ToolboxUI(QMainWindow):
         """Returns a boolean, which determines whether
         date and time is prepended to every Event Log message."""
         d = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))
-        return False if d == 0 else True
+        return d != 0
 
     @Slot(str, name="add_message")
     def add_message(self, msg):
@@ -1153,10 +1183,9 @@ class ToolboxUI(QMainWindow):
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
         if not res:
-            logging.error("Failed to open editor for {0}".format(index_url))
+            logging.error("Failed to open editor for %s", index_url)
             # filename, file_extension = os.path.splitext(index_path)
             self.msg_error.emit("Unable to open file <b>{0}</b>".format(DOC_INDEX_PATH))
-        return
 
     @Slot("QPoint", name="show_item_context_menu")
     def show_item_context_menu(self, pos):
@@ -1214,8 +1243,9 @@ class ToolboxUI(QMainWindow):
             d.open_tool_main_program_file()
         elif option == "Rename":
             # noinspection PyCallByClass
-            answer = QInputDialog.getText(self, "Rename Item", "New name:", text=d.name,
-                                          flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint)
+            answer = QInputDialog.getText(
+                self, "Rename Item", "New name:", text=d.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
+            )
             # answer[str, bool]
             if not answer[1]:
                 pass
@@ -1224,7 +1254,7 @@ class ToolboxUI(QMainWindow):
                 self.project_item_model.setData(ind, new_name)
         elif option == "Remove item":
             delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = False if delete_int == 0 else True
+            delete_bool = delete_int != 0
             self.remove_item(ind, delete_item=delete_bool, check_dialog=True)
         elif option == "Open project directory...":
             file_url = "file:///" + self._project.project_dir
@@ -1303,11 +1333,11 @@ class ToolboxUI(QMainWindow):
             return
         dc = self.project_item_model.project_item(cur_index)
         if not dc:
-            self.msg_error.emit("FIXME: Data Connection {0} not found in project items". format(cur_index))
+            self.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(cur_index))
             return
         if option == "Open containing directory...":
             ref_path = self.ui.treeView_dc_references.model().itemFromIndex(ind).data(Qt.DisplayRole)
-            ref_dir, ref_fname = os.path.split(ref_path)
+            ref_dir = os.path.split(ref_path)[0]
             file_url = "file:///" + ref_dir
             self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
         elif option == "Edit...":
@@ -1339,7 +1369,7 @@ class ToolboxUI(QMainWindow):
             return
         dc = self.project_item_model.project_item(cur_index)
         if not dc:
-            self.msg_error.emit("FIXME: Data Connection {0} not found in project items". format(cur_index))
+            self.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(cur_index))
             return
         if option == "New file...":
             dc.make_new_file()

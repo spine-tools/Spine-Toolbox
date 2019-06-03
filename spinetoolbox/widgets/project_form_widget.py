@@ -30,6 +30,7 @@ class NewProjectForm(QWidget):
     Attributes:
         toolbox (ToolboxUI): Parent widget.
     """
+
     def __init__(self, toolbox):
         """Initialize class."""
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent

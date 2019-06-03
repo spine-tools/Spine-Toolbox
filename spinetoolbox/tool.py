@@ -44,6 +44,7 @@ class Tool(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
     def __init__(self, toolbox, name, description, tool_template, use_work, x, y):
         """Class constructor."""
         super().__init__(name, description)
@@ -76,8 +77,9 @@ class Tool(ProjectItem):
         try:
             create_dir(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                         " Check permissions.".format(self.data_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+            )
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
@@ -104,7 +106,7 @@ class Tool(ProjectItem):
         """Save selections and disconnect signals."""
         self.save_selections()
         if not super().disconnect_signals():
-            logging.error("Item {0} deactivation failed".format(self.name))
+            logging.error("Item %s deactivation failed.", self.name)
             return False
         return True
 
@@ -127,7 +129,7 @@ class Tool(ProjectItem):
             self._tool_template_name = ""
         else:
             self._tool_template_name = self.tool_template().name
-        self.execute_in_work = True if self._toolbox.ui.radioButton_execute_in_work.isChecked() else False
+        self.execute_in_work = self._toolbox.ui.radioButton_execute_in_work.isChecked()
 
     @Slot(bool, name="update_execution_mode")
     def update_execution_mode(self, checked):
@@ -219,8 +221,9 @@ class Tool(ProjectItem):
     def open_results(self, checked=False):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
-            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no results. "
-                                           "Click Execute to generate them.".format(self.name))
+            self._toolbox.msg_warning.emit(
+                "Tool <b>{0}</b> has no results. " "Click Execute to generate them.".format(self.name)
+            )
             return
         url = "file:///" + self.output_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
@@ -276,7 +279,8 @@ class Tool(ProjectItem):
     def execute(self, checked=False):
         """Execute button clicked."""
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
-                self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
+            self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
         if not self.tool_template():
             self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool template to execute".format(self.name))
             return
@@ -307,8 +311,9 @@ class Tool(ProjectItem):
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
-                    self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
-                                                 self._project, self.execute_in_work)
+                    self.instance = ToolInstance(
+                        self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
+                    )
                 except OSError as e:
                     self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
                     return
@@ -337,8 +342,9 @@ class Tool(ProjectItem):
                 pass
         else:  # Tool template does not have requirements
             try:
-                self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
-                                             self._project, self.execute_in_work)
+                self.instance = ToolInstance(
+                    self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
+                )
             except OSError as e:
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                 return
@@ -396,8 +402,9 @@ class Tool(ProjectItem):
                 try:
                     create_dir(path_to_create)
                 except OSError:
-                    self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                                 " Check permissions.".format(path_to_create))
+                    self._toolbox.msg_error.emit(
+                        "[OSError] Creating directory {0} failed." " Check permissions.".format(path_to_create)
+                    )
                     return False
                 self._toolbox.msg.emit("\tDirectory <b>{0}{1}</b> created".format(os.path.sep, path))
             else:
@@ -541,28 +548,31 @@ class Tool(ProjectItem):
                     try:
                         create_dir(work_subdir_path)
                     except OSError:
-                        self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
-                                                     .format(work_subdir_path))
+                        self._toolbox.msg_error.emit(
+                            "[OSError] Creating directory <b>{0}</b> failed.".format(work_subdir_path)
+                        )
                         return False
-                self._toolbox.msg.emit("\tCopying file <b>{0}</b> into subdirectory <b>{2}{1}</b>"
-                                       .format(fname, dst_subdir, os.path.sep))
+                self._toolbox.msg.emit(
+                    "\tCopying file <b>{0}</b> into subdirectory <b>{2}{1}</b>".format(fname, dst_subdir, os.path.sep)
+                )
             try:
                 shutil.copyfile(src_path, dst_path)
                 n_copied_files += 1
             except OSError as e:
-                self._toolbox.msg_error.emit("Copying file <b>{0}</b> to <b>{1}</b> failed"
-                                             .format(src_path, dst_path))
+                self._toolbox.msg_error.emit("Copying file <b>{0}</b> to <b>{1}</b> failed".format(src_path, dst_path))
                 self._toolbox.msg_error.emit("{0}".format(e))
                 if e.errno == 22:
-                    msg = "The reason might be:\n" \
-                          "[1] The destination file already exists and it cannot be " \
-                          "overwritten because it is locked by Julia or some other application.\n" \
-                          "[2] You don't have the necessary permissions to overwrite the file.\n" \
-                          "To solve the problem, you can try the following:\n[1] Execute the Tool in work " \
-                          "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to " \
-                          "Julia 0.7 or newer.\n" \
-                          "[3] Close any other background application(s) that may have locked the file.\n" \
-                          "And try again.\n"
+                    msg = (
+                        "The reason might be:\n"
+                        "[1] The destination file already exists and it cannot be "
+                        "overwritten because it is locked by Julia or some other application.\n"
+                        "[2] You don't have the necessary permissions to overwrite the file.\n"
+                        "To solve the problem, you can try the following:\n[1] Execute the Tool in work "
+                        "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to "
+                        "Julia 0.7 or newer.\n"
+                        "[3] Close any other background application(s) that may have locked the file.\n"
+                        "And try again.\n"
+                    )
                     self._toolbox.msg_warning.emit(msg)
                 return False
         self._toolbox.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
@@ -604,29 +614,36 @@ class Tool(ProjectItem):
                         try:
                             create_dir(work_subdir_path)
                         except OSError:
-                            self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
-                                                         .format(work_subdir_path))
+                            self._toolbox.msg_error.emit(
+                                "[OSError] Creating directory <b>{0}</b> failed.".format(work_subdir_path)
+                            )
                             continue
-                    self._toolbox.msg.emit("\tCopying optional file <b>{0}</b> into subdirectory <b>{2}{1}</b>"
-                                           .format(dst_fname, dst_subdir, os.path.sep))
+                    self._toolbox.msg.emit(
+                        "\tCopying optional file <b>{0}</b> into subdirectory <b>{2}{1}</b>".format(
+                            dst_fname, dst_subdir, os.path.sep
+                        )
+                    )
                     dst_path = os.path.abspath(os.path.join(work_subdir_path, dst_fname))
                 try:
                     shutil.copyfile(src_path, dst_path)
                     n_copied_files += 1
                 except OSError as e:
-                    self._toolbox.msg_error.emit("Copying optional file <b>{0}</b> to <b>{1}</b> failed"
-                                                 .format(src_path, dst_path))
+                    self._toolbox.msg_error.emit(
+                        "Copying optional file <b>{0}</b> to <b>{1}</b> failed".format(src_path, dst_path)
+                    )
                     self._toolbox.msg_error.emit("{0}".format(e))
                     if e.errno == 22:
-                        msg = "The reason might be:\n" \
-                              "[1] The destination file already exists and it cannot be " \
-                              "overwritten because it is locked by Julia or some other application.\n" \
-                              "[2] You don't have the necessary permissions to overwrite the file.\n" \
-                              "To solve the problem, you can try the following:\n[1] Execute the Tool in work " \
-                              "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to " \
-                              "Julia 0.7 or newer.\n" \
-                              "[3] Close any other background application(s) that may have locked the file.\n" \
-                              "And try again.\n"
+                        msg = (
+                            "The reason might be:\n"
+                            "[1] The destination file already exists and it cannot be "
+                            "overwritten because it is locked by Julia or some other application.\n"
+                            "[2] You don't have the necessary permissions to overwrite the file.\n"
+                            "To solve the problem, you can try the following:\n[1] Execute the Tool in work "
+                            "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to "
+                            "Julia 0.7 or newer.\n"
+                            "[3] Close any other background application(s) that may have locked the file.\n"
+                            "And try again.\n"
+                        )
                         self._toolbox.msg_warning.emit(msg)
         self._toolbox.msg.emit("\tCopied <b>{0}</b> optional input file(s)".format(n_copied_files))
         return True
@@ -659,9 +676,10 @@ class Tool(ProjectItem):
             # NOTE: We need to take the basename here since the tool instance saves
             # the output files *without* the 'subfolder' part in the output folder
             for output_file in [os.path.basename(x) for x in self._tool_template.outputfiles]:
-                self._toolbox.msg.emit("*** Creating reference to Tool <b>{0}</b>'s output file {1} "
-                                       "in {2} <b>{3}</b> ***"
-                                       .format(self.name, output_file, item.item_type, item.name))
+                self._toolbox.msg.emit(
+                    "*** Creating reference to Tool <b>{0}</b>'s output file {1} "
+                    "in {2} <b>{3}</b> ***".format(self.name, output_file, item.item_type, item.name)
+                )
                 # NOTE: output files are saved
                 src_path = os.path.join(self.instance.output_dir, output_file)
                 if not os.path.exists(src_path):
@@ -671,13 +689,9 @@ class Tool(ProjectItem):
                     item.add_files_to_references([src_path])  # Give path in a list
                     n_created_refs += 1
                 elif item.item_type == "Data Store":
-                    reference = {
-                        'url': 'sqlite:///{0}'.format(src_path),
-                        'database': output_file,
-                        'username': getpass.getuser()
-                    }
-                    item.set_reference(reference)
-                    item.load_reference_into_selections()
+                    url = 'sqlite:///{0}'.format(src_path)
+                    item.set_url(url)
+                    item.load_url_into_selections()
                     self._toolbox.msg.emit("\tCreated <b>1</b> reference")
                     break
                 else:
@@ -737,10 +751,12 @@ class Tool(ProjectItem):
                 # TODO: See if this can be simplified
                 mod_work_dir = work_dir.__repr__().strip("'")
                 args = r'["' + r'", "'.join(self.instance.args[1:]) + r'"]'
-                self.instance.julia_repl_command = r'cd("{}");'\
-                    r'empty!(ARGS);'\
-                    r'append!(ARGS, {});'\
+                self.instance.julia_repl_command = (
+                    r'cd("{}");'
+                    r'empty!(ARGS);'
+                    r'append!(ARGS, {});'
                     r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
+                )
         elif self.tool_template().tooltype == "python":
             # Prepare command "python script.py"
             python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
@@ -768,7 +784,7 @@ class Tool(ProjectItem):
                 self.instance.ipython_command_list.append(run_script_cmd)
         elif self.tool_template().tooltype == "executable":
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
-            if not sys.platform == "win32":
+            if sys.platform != "win32":
                 self.instance.program = "sh"
                 self.instance.args.append(batch_path)
             else:

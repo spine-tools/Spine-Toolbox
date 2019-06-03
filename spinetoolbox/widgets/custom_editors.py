@@ -18,14 +18,39 @@ Custom editors for model/view programming.
 """
 
 import json
-import logging
-from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
-    QTimer, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
-from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
-    QVBoxLayout, QTextEdit
-from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem
+from PySide2.QtCore import (
+    Qt,
+    Slot,
+    Signal,
+    QItemSelectionModel,
+    QSortFilterProxyModel,
+    QTimer,
+    QEvent,
+    QCoreApplication,
+    QModelIndex,
+    QPoint,
+    QSize,
+)
+from PySide2.QtWidgets import (
+    QComboBox,
+    QLineEdit,
+    QTableView,
+    QItemDelegate,
+    QTabWidget,
+    QWidget,
+    QVBoxLayout,
+    QTextEdit,
+    QColorDialog,
+    QDialog,
+    QDialogButtonBox,
+    QListView,
+    QStyle,
+    QLabel,
+)
+from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
+
 
 class CustomLineEditor(QLineEdit):
     """A custom QLineEdit to handle data from models.
@@ -33,6 +58,7 @@ class CustomLineEditor(QLineEdit):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
+
     data_committed = Signal(name="data_committed")
 
     def __init__(self, parent):
@@ -59,6 +85,7 @@ class CustomComboEditor(QComboBox):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
+
     data_committed = Signal(name="data_committed")
 
     def __init__(self, parent):
@@ -78,18 +105,18 @@ class CustomComboEditor(QComboBox):
 
 
 class CustomLineEditDelegate(QItemDelegate):
-    """A custom delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
+    """A delegate for placing a CustomLineEditor on the first row of SearchBarEditor.
 
     Attributes:
         parent (SearchBarEditor): search bar editor
     """
+
     text_edited = Signal("QString", name="text_edited")
 
     def __init__(self, parent):
         """Init class."""
         super().__init__(parent)
         self._parent = parent
-        self._editor = None
 
     def setModelData(self, editor, model, index):
         model.setData(index, editor.data())
@@ -97,10 +124,10 @@ class CustomLineEditDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         """Create editor and 'forward' `textEdited` signal.
         """
-        self._editor = CustomLineEditor(parent)
-        self._editor.set_data(index.data())
-        self._editor.textEdited.connect(lambda s: self.text_edited.emit(s))
-        return self._editor
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data())
+        editor.textEdited.connect(lambda s: self.text_edited.emit(s))
+        return editor
 
     def eventFilter(self, editor, event):
         """Handle all sort of special cases.
@@ -120,8 +147,7 @@ class CustomLineEditDelegate(QItemDelegate):
 
 
 class SearchBarEditor(QTableView):
-    """A widget that implements a Google-like search bar.
-    It's just a QTableView with a CustomLineEditDelegate in the first row.
+    """A Google-like search bar, implemented as a QTableView with a CustomLineEditDelegate in the first row.
 
     Attributes:
         parent (QWidget): the parent for this widget
@@ -263,6 +289,7 @@ class SearchBarDelegate(QItemDelegate):
     Attributes:
         parent (MultiSearchBarEditor): multi search bar editor
     """
+
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
@@ -346,8 +373,9 @@ class MultiSearchBarEditor(QTableView):
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width() / self.model.columnCount())
         self.horizontalHeader().setMaximumHeight(self._base_size.height())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        size = QSize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2).\
-            boundedTo(self._parent.size())
+        size = QSize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2).boundedTo(
+            self._parent.size()
+        )
         self.resize(size)
         self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
@@ -366,7 +394,7 @@ class MultiSearchBarEditor(QTableView):
 
 
 class CheckListEditor(QTableView):
-    """A widget that implements a check list."""
+    """A check list editor."""
 
     data_committed = Signal(name="data_committed")
 
@@ -416,6 +444,7 @@ class CheckListEditor(QTableView):
             else:
                 qitem.setCheckState(Qt.Unchecked)
             qitem.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsUserCheckable)
+            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)
             self.model.appendRow(qitem)
         self.selectionModel().select(self.model.index(0, 0), QItemSelectionModel.Select)
 
@@ -447,7 +476,9 @@ class CheckListEditor(QTableView):
 
 
 class JSONEditor(QTabWidget):
-    """A QTabWidget for editing JSON in raw and table format.
+    """A double JSON editor, featuring:
+    - A QTextEdit for editing arbitrary json.
+    - A QTableView for editing json array.
     """
 
     data_committed = Signal(name="data_committed")
@@ -615,3 +646,87 @@ class JSONEditor(QTabWidget):
         elif index == 1:
             return self.model.json_data()
         return None
+
+
+class IconPainterDelegate(QItemDelegate):
+    """A delegate to highlight decorations in a QListWidget."""
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def paint(self, painter, option, index):
+        """Highlight selected items."""
+        if option.state & QStyle.State_Selected:
+            painter.fillRect(option.rect, qApp.palette().highlight())
+        super().paint(painter, option, index)
+
+
+class IconColorEditor(QDialog):
+    """An editor to let the user select an icon and a color for an object class.
+    """
+
+    def __init__(self, parent, icon_mngr):
+        """Init class."""
+        super().__init__(parent)  # , Qt.Popup)
+        self.icon_mngr = icon_mngr
+        self.setWindowTitle("Select icon and color")
+        self.icon_widget = QWidget(self)
+        self.icon_list = QListView(self.icon_widget)
+        self.icon_list.setViewMode(QListView.IconMode)
+        self.icon_list.setIconSize(QSize(32, 32))
+        self.icon_list.setResizeMode(QListView.Adjust)
+        self.icon_list.setItemDelegate(IconPainterDelegate(self))
+        self.icon_list.setMovement(QListView.Static)
+        self.icon_list.setMinimumHeight(400)
+        icon_widget_layout = QVBoxLayout(self.icon_widget)
+        icon_widget_layout.addWidget(QLabel("Font Awesome icons"))
+        self.line_edit = QLineEdit()
+        self.line_edit.setPlaceholderText("Search icons for...")
+        icon_widget_layout.addWidget(self.line_edit)
+        icon_widget_layout.addWidget(self.icon_list)
+        self.color_dialog = QColorDialog(self)
+        self.color_dialog.setWindowFlags(Qt.Widget)
+        self.color_dialog.setOption(QColorDialog.NoButtons, True)
+        self.color_dialog.setOption(QColorDialog.DontUseNativeDialog, True)
+        self.button_box = QDialogButtonBox(self)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        layout = QVBoxLayout(self)
+        layout.addWidget(self.icon_widget)
+        layout.addWidget(self.color_dialog)
+        layout.addWidget(self.button_box)
+        self.proxy_model = QSortFilterProxyModel(self)
+        self.proxy_model.setSourceModel(self.icon_mngr.model)
+        self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
+        self.icon_list.setModel(self.proxy_model)
+        self.setAttribute(Qt.WA_DeleteOnClose)
+        self.connect_signals()
+
+    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
+        """Overridden method to filter icons according to search terms.
+        """
+        text = self.line_edit.text()
+        if not text:
+            return QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
+        searchterms = self.icon_mngr.model.index(source_row, 0, source_parent).data(Qt.UserRole + 1)
+        return any([text in term for term in searchterms])
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.line_edit.textEdited.connect(self.proxy_model.invalidateFilter)
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+
+    def set_data(self, data):
+        icon_code, color_code = self.icon_mngr.icon_color_code(data)
+        self.icon_mngr.init_model()
+        for i in range(self.proxy_model.rowCount()):
+            index = self.proxy_model.index(i, 0)
+            if index.data(Qt.UserRole) == icon_code:
+                self.icon_list.setCurrentIndex(index)
+                break
+        self.color_dialog.setCurrentColor(QColor(color_code))
+
+    def data(self):
+        icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
+        color_code = self.color_dialog.currentColor().rgb()
+        return self.icon_mngr.display_icon(icon_code, color_code)

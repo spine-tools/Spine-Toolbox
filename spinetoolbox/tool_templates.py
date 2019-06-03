@@ -38,9 +38,21 @@ class ToolTemplate(MetaObject):
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
         execute_in_work (bool): Execute in work folder?
     """
-    def __init__(self, toolbox, name, tooltype, path, includes,
-                 description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None, execute_in_work=True):
+
+    def __init__(
+        self,
+        toolbox,
+        name,
+        tooltype,
+        path,
+        includes,
+        description=None,
+        inputfiles=None,
+        inputfiles_opt=None,
+        outputfiles=None,
+        cmdline_args=None,
+        execute_in_work=True,
+    ):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -127,13 +139,35 @@ class GAMSTool(ToolTemplate):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
     """
-    def __init__(self, toolbox, name, tooltype, path, includes,
-                 description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None, execute_in_work=True):
+
+    def __init__(
+        self,
+        toolbox,
+        name,
+        tooltype,
+        path,
+        includes,
+        description=None,
+        inputfiles=None,
+        inputfiles_opt=None,
+        outputfiles=None,
+        cmdline_args=None,
+        execute_in_work=True,
+    ):
         """Class constructor."""
-        super().__init__(toolbox, name, tooltype, path, includes,
-                         description, inputfiles, inputfiles_opt, outputfiles,
-                         cmdline_args, execute_in_work)
+        super().__init__(
+            toolbox,
+            name,
+            tooltype,
+            path,
+            includes,
+            description,
+            inputfiles,
+            inputfiles_opt,
+            outputfiles,
+            cmdline_args,
+            execute_in_work,
+        )
         main_file = includes[0]
         # Add .lst file to list of output files
         self.lst_file = os.path.splitext(main_file)[0] + '.lst'
@@ -156,7 +190,7 @@ class GAMSTool(ToolTemplate):
             9: "GAMS could not be started",
             10: "Out of memory",
             11: "Out of disk",
-            62097: "Simulation interrupted by user"  # Not official
+            62097: "Simulation interrupted by user",  # Not official
         }
 
     def __repr__(self):
@@ -173,10 +207,10 @@ class GAMSTool(ToolTemplate):
         # Supported GAMS logoption values
         # 3 writes LOG output to standard output
         # 4 writes LOG output to a file and standard output  [Not supported in GAMS v24.0]
-        if key == 'logoption' or key == 'cerr':
+        if key in ['logoption', 'cerr']:
             self.gams_options[key] = "{0}={1}".format(key, value)
         else:
-            logging.error("Updating GAMS options failed. Unknown key: {}".format(key))
+            logging.error("Updating GAMS options failed. Unknown key: %s", key)
 
     @staticmethod
     def load(toolbox, path, data):
@@ -212,19 +246,39 @@ class JuliaTool(ToolTemplate):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
     """
-    def __init__(self, toolbox, name, tooltype, path, includes,
-                 description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None, execute_in_work=True):
+
+    def __init__(
+        self,
+        toolbox,
+        name,
+        tooltype,
+        path,
+        includes,
+        description=None,
+        inputfiles=None,
+        inputfiles_opt=None,
+        outputfiles=None,
+        cmdline_args=None,
+        execute_in_work=True,
+    ):
         """Class constructor."""
-        super().__init__(toolbox, name, tooltype, path, includes,
-                         description, inputfiles, inputfiles_opt, outputfiles,
-                         cmdline_args, execute_in_work)
+        super().__init__(
+            toolbox,
+            name,
+            tooltype,
+            path,
+            includes,
+            description,
+            inputfiles,
+            inputfiles_opt,
+            outputfiles,
+            cmdline_args,
+            execute_in_work,
+        )
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.julia_options = OrderedDict()
-        self.return_codes = {
-            0: "Normal return"  # Not official
-        }
+        self.return_codes = {0: "Normal return"}  # Not official
 
     def __repr__(self):
         """Remove this if not necessary."""
@@ -237,7 +291,6 @@ class JuliaTool(ToolTemplate):
             key: Option name
             value: Option value
         """
-        pass
 
     @staticmethod
     def load(toolbox, path, data):
@@ -258,6 +311,7 @@ class JuliaTool(ToolTemplate):
         else:
             return None
 
+
 class PythonTool(ToolTemplate):
     """Class for Python tool templates.
 
@@ -272,19 +326,39 @@ class PythonTool(ToolTemplate):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Python tool command line arguments (read from tool definition file)
     """
-    def __init__(self, toolbox, name, tooltype, path, includes,
-                 description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None, execute_in_work=True):
+
+    def __init__(
+        self,
+        toolbox,
+        name,
+        tooltype,
+        path,
+        includes,
+        description=None,
+        inputfiles=None,
+        inputfiles_opt=None,
+        outputfiles=None,
+        cmdline_args=None,
+        execute_in_work=True,
+    ):
         """Class constructor."""
-        super().__init__(toolbox, name, tooltype, path, includes,
-                         description, inputfiles, inputfiles_opt, outputfiles,
-                         cmdline_args, execute_in_work)
+        super().__init__(
+            toolbox,
+            name,
+            tooltype,
+            path,
+            includes,
+            description,
+            inputfiles,
+            inputfiles_opt,
+            outputfiles,
+            cmdline_args,
+            execute_in_work,
+        )
         main_file = includes[0]
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.python_options = OrderedDict()
-        self.return_codes = {
-            0: "Normal return"  # Not official
-        }
+        self.return_codes = {0: "Normal return"}  # Not official
 
     def __repr__(self):
         """Remove this if not necessary."""
@@ -297,7 +371,6 @@ class PythonTool(ToolTemplate):
             key: Option name
             value: Option value
         """
-        pass
 
     @staticmethod
     def load(toolbox, path, data):
@@ -333,21 +406,40 @@ class ExecutableTool(ToolTemplate):
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
     """
-    def __init__(self, toolbox, name, tooltype, path, includes,
-                 description=None, inputfiles=None, inputfiles_opt=None,
-                 outputfiles=None, cmdline_args=None, execute_in_work=True):
+
+    def __init__(
+        self,
+        toolbox,
+        name,
+        tooltype,
+        path,
+        includes,
+        description=None,
+        inputfiles=None,
+        inputfiles_opt=None,
+        outputfiles=None,
+        cmdline_args=None,
+        execute_in_work=True,
+    ):
         """Class constructor."""
-        super().__init__(toolbox, name, tooltype, path, includes,
-                         description, inputfiles, inputfiles_opt, outputfiles,
-                         cmdline_args, execute_in_work)
+        super().__init__(
+            toolbox,
+            name,
+            tooltype,
+            path,
+            includes,
+            description,
+            inputfiles,
+            inputfiles_opt,
+            outputfiles,
+            cmdline_args,
+            execute_in_work,
+        )
         main_file = includes[0]
         # TODO: This does not do anything because main_file is always just file name
         self.main_dir, self.main_prgm = os.path.split(main_file)
         self.options = OrderedDict()
-        self.return_codes = {
-            0: "Normal exit",
-            1: "Error happened"
-        }
+        self.return_codes = {0: "Normal exit", 1: "Error happened"}
 
     def __repr__(self):
         """Remove this if not necessary."""

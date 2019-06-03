@@ -134,14 +134,26 @@ class Ui_MainWindow(object):
         MainWindow.setStatusBar(self.statusbar)
         self.actionRefresh = QtWidgets.QAction(MainWindow)
         self.actionRefresh.setEnabled(True)
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(":/icons/menu_icons/sync.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionRefresh.setIcon(icon)
         self.actionRefresh.setObjectName("actionRefresh")
         self.actionCommit = QtWidgets.QAction(MainWindow)
         self.actionCommit.setEnabled(True)
+        icon1 = QtGui.QIcon()
+        icon1.addPixmap(QtGui.QPixmap(":/icons/menu_icons/check.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionCommit.setIcon(icon1)
         self.actionCommit.setObjectName("actionCommit")
         self.actionRollback = QtWidgets.QAction(MainWindow)
         self.actionRollback.setEnabled(True)
+        icon2 = QtGui.QIcon()
+        icon2.addPixmap(QtGui.QPixmap(":/icons/menu_icons/undo.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionRollback.setIcon(icon2)
         self.actionRollback.setObjectName("actionRollback")
         self.actionClose = QtWidgets.QAction(MainWindow)
+        icon3 = QtGui.QIcon()
+        icon3.addPixmap(QtGui.QPixmap(":/icons/menu_icons/window-close.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.actionClose.setIcon(icon3)
         self.actionClose.setObjectName("actionClose")
         self.menuSession.addAction(self.actionRefresh)
         self.menuSession.addAction(self.actionCommit)
@@ -167,7 +179,7 @@ class Ui_MainWindow(object):
         self.menuSession.setTitle(QtWidgets.QApplication.translate("MainWindow", "Session", None, -1))
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
         self.actionRefresh.setText(QtWidgets.QApplication.translate("MainWindow", "Refresh", None, -1))
-        self.actionRefresh.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+Return", None, -1))
+        self.actionRefresh.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F5", None, -1))
         self.actionCommit.setText(QtWidgets.QApplication.translate("MainWindow", "Commit", None, -1))
         self.actionCommit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Return", None, -1))
         self.actionRollback.setText(QtWidgets.QApplication.translate("MainWindow", "Rollback", None, -1))
@@ -175,5 +187,6 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
+from widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
 from widgets.custom_qlistview import TestListView
+import resources_icons_rc

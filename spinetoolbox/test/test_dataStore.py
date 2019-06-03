@@ -38,7 +38,6 @@ class MockQWidget(QWidget):
 
 # noinspection PyUnusedLocal
 class TestDataStore(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
@@ -46,17 +45,21 @@ class TestDataStore(unittest.TestCase):
             cls.app = QApplication().processEvents()
         except RuntimeError:
             pass
-        logging.basicConfig(stream=sys.stderr, level=logging.DEBUG,
-                            format='%(asctime)s %(levelname)s: %(message)s',
-                            datefmt='%Y-%m-%d %H:%M:%S')
+        logging.basicConfig(
+            stream=sys.stderr,
+            level=logging.DEBUG,
+            format='%(asctime)s %(levelname)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of ToolboxUI class.
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
-                mock.patch("ui_main.PythonReplWidget") as mock_python_repl:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "ui_main.PythonReplWidget"
+        ) as mock_python_repl:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
@@ -84,8 +87,9 @@ class TestDataStore(unittest.TestCase):
         self.toolbox.project().add_data_store("DS", "", reference=None)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
-        with mock.patch("data_store.QFileDialog.selectedFiles") as mock_sf, \
-                mock.patch("data_store.QFileDialog.exec_") as mock_exec:
+        with mock.patch("data_store.QFileDialog.selectedFiles") as mock_sf, mock.patch(
+            "data_store.QFileDialog.exec_"
+        ) as mock_exec:
             file_path = os.path.join(data_store.data_dir, "mock_db.sqlite")
             mock_sf.return_value = [file_path]
             data_store.create_new_spine_database()

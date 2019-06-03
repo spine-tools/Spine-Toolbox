@@ -39,6 +39,7 @@ class ToolInstance(QObject):
     Class Variables:
         instance_finished_signal (Signal): Signal to emit when a Tool instance has finished processing
     """
+
     instance_finished_signal = Signal(int, name="instance_finished_signal")
 
     def __init__(self, tool_template, toolbox, tool_output_dir, project, execute_in_work):
@@ -55,8 +56,9 @@ class ToolInstance(QObject):
         self.output_dir = None
         if self.execute_in_work:  # Execute in work directory
             wrk_dir = self._project.work_dir
-            self.basedir = tempfile.mkdtemp(suffix='__toolbox',
-                                            prefix=self.tool_template.short_name + '__', dir=wrk_dir)
+            self.basedir = tempfile.mkdtemp(
+                suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir
+            )
         else:  # Execute in source directory
             self.basedir = self.tool_template.path
         self.julia_repl_command = None
@@ -74,20 +76,32 @@ class ToolInstance(QObject):
                 raise OSError("Could not create Tool instance")
         else:
             # Make source directory anchor with path as tooltip
-            src_dir_anchor = "<a style='color:#99CCFF;' title='" + self.basedir + "' href='file:///" + self.basedir \
-                          + "'>source directory</a>"
-            self._toolbox.msg.emit("*** Executing Tool template <b>{0}</b> in {1} ***"
-                                   .format(self.tool_template.name, src_dir_anchor))
+            src_dir_anchor = (
+                "<a style='color:#99CCFF;' title='"
+                + self.basedir
+                + "' href='file:///"
+                + self.basedir
+                + "'>source directory</a>"
+            )
+            self._toolbox.msg.emit(
+                "*** Executing Tool template <b>{0}</b> in {1} ***".format(self.tool_template.name, src_dir_anchor)
+            )
 
     @property
     def _checkout(self):
         """Copies Tool template files to work directory."""
         n_copied_files = 0
         # Make work directory anchor with path as tooltip
-        work_anchor = "<a style='color:#99CCFF;' title='" + self.basedir + "' href='file:///" \
-                      + self.basedir + "'>work directory</a>"
-        self._toolbox.msg.emit("*** Copying Tool template <b>{0}</b> source files to {1} ***"
-                               .format(self.tool_template.name, work_anchor))
+        work_anchor = (
+            "<a style='color:#99CCFF;' title='"
+            + self.basedir
+            + "' href='file:///"
+            + self.basedir
+            + "'>work directory</a>"
+        )
+        self._toolbox.msg.emit(
+            "*** Copying Tool template <b>{0}</b> source files to {1} ***".format(self.tool_template.name, work_anchor)
+        )
         for filepath in self.tool_template.includes:
             dirname, file_pattern = os.path.split(filepath)
             src_dir = os.path.join(self.tool_template.path, dirname)
@@ -108,8 +122,9 @@ class ToolInstance(QObject):
                         n_copied_files += 1
                     except OSError as e:
                         logging.error(e)
-                        self._toolbox.msg_error.emit("\tCopying file <b>{0}</b> to <b>{1}</b> failed"
-                                                     .format(src_file, dst_file))
+                        self._toolbox.msg_error.emit(
+                            "\tCopying file <b>{0}</b> to <b>{1}</b> failed".format(src_file, dst_file)
+                        )
                         return False
         if n_copied_files == 0:
             self._toolbox.msg_warning.emit("Warning: No files copied")
@@ -201,9 +216,10 @@ class ToolInstance(QObject):
         self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
-                                             "Julia is installed properly on your computer."
-                                             .format(self.tool_process.program()))
+                self._toolbox.msg_error.emit(
+                    "\t<b>{0}</b> failed to start. Make sure that "
+                    "Julia is installed properly on your computer.".format(self.tool_process.program())
+                )
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]
@@ -253,9 +269,10 @@ class ToolInstance(QObject):
         self.tool_process.subprocess_finished_signal.disconnect(self.python_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
-                                             "Python is installed properly on your computer."
-                                             .format(self.tool_process.program()))
+                self._toolbox.msg_error.emit(
+                    "\t<b>{0}</b> failed to start. Make sure that "
+                    "Python is installed properly on your computer.".format(self.tool_process.program())
+                )
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]
@@ -278,10 +295,11 @@ class ToolInstance(QObject):
         self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)  # Disconnect after execution
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
             if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start. Make sure that "
-                                             "GAMS is installed properly on your computer "
-                                             "and GAMS directory is given in Settings (F1)."
-                                             .format(self.tool_process.program()))
+                self._toolbox.msg_error.emit(
+                    "\t<b>{0}</b> failed to start. Make sure that "
+                    "GAMS is installed properly on your computer "
+                    "and GAMS directory is given in Settings (F1).".format(self.tool_process.program())
+                )
             else:
                 try:
                     return_msg = self.tool_template.return_codes[ret]
@@ -336,37 +354,45 @@ class ToolInstance(QObject):
         try:
             create_dir(result_path)
         except OSError:
-            self._toolbox.msg_error.emit("\tError creating timestamped output directory. "
-                                         "Tool template output files not copied. Please check directory permissions.")
+            self._toolbox.msg_error.emit(
+                "\tError creating timestamped output directory. "
+                "Tool template output files not copied. Please check directory permissions."
+            )
             self.output_dir = None
             self.instance_finished_signal.emit(ret)
             return
         self.output_dir = result_path
         # Make link to output folder
-        result_anchor = "<a style='color:#BB99FF;' title='" + result_path + "' href='file:///" + result_path \
-                        + "'>results directory</a>"
+        result_anchor = (
+            "<a style='color:#BB99FF;' title='"
+            + result_path
+            + "' href='file:///"
+            + result_path
+            + "'>results directory</a>"
+        )
         self._toolbox.msg.emit("*** Archiving output files to {0} ***".format(result_anchor))
         if not self.outputfiles:
-            tip_anchor = "<a style='color:#99CCFF;' title='When you add output files to the Tool template,\n " \
-                         "they will be archived into results directory. Also, output files are passed to\n " \
-                         "subsequent project items.' href='#'>Tip</a>"
+            tip_anchor = (
+                "<a style='color:#99CCFF;' title='When you add output files to the Tool template,\n "
+                "they will be archived into results directory. Also, output files are passed to\n "
+                "subsequent project items.' href='#'>Tip</a>"
+            )
             self._toolbox.msg_warning.emit("\tNo output files defined for this Tool template. {0}".format(tip_anchor))
         else:
             saved_files, failed_files = self.copy_output(result_path)
-            if len(saved_files) == 0:
+            if not saved_files:
                 # If no files were saved
                 self._toolbox.msg_error.emit("\tNo files saved")
-            if len(saved_files) > 0:
+            else:
                 # If there are saved files
                 self._toolbox.msg.emit("\tThe following output files were saved to results directory")
-                for i in range(len(saved_files)):
-                    # fname = os.path.split(saved_files[i])[1]
-                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(saved_files[i]))
-            if len(failed_files) > 0:
+                for saved_file in saved_files:
+                    self._toolbox.msg.emit("\t\t<b>{0}</b>".format(saved_file))
+            if failed_files:
                 # If saving some or all files failed
                 self._toolbox.msg_warning.emit("\tThe following output files were not found")
-                for i in range(len(failed_files)):
-                    failed_fname = os.path.split(failed_files[i])[1]
+                for failed_file in failed_files:
+                    failed_fname = os.path.split(failed_file)[1]
                     self._toolbox.msg_warning.emit("\t\t<b>{0}</b>".format(failed_fname))
         self.instance_finished_signal.emit(ret)
 
@@ -413,11 +439,13 @@ class ToolInstance(QObject):
                     try:
                         create_dir(result_subdir_path)
                     except OSError:
-                        self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
-                                                     .format(result_subdir_path))
+                        self._toolbox.msg_error.emit(
+                            "[OSError] Creating directory <b>{0}</b> failed.".format(result_subdir_path)
+                        )
                         continue
-                    self._toolbox.msg.emit("\tCreated result subdirectory <b>{0}{1}</b>"
-                                           .format(os.path.sep, dst_subdir))
+                    self._toolbox.msg.emit(
+                        "\tCreated result subdirectory <b>{0}{1}</b>".format(os.path.sep, dst_subdir)
+                    )
                 target = result_subdir_path
             # Check for wildcards in pattern
             if ('*' in pattern) or ('?' in pattern):
@@ -452,7 +480,7 @@ class ToolInstance(QObject):
         """
         # TODO: Remove duplicate directory names from the list of created directories.
         for path in self.tool_template.outputfiles:
-            dirname, file_pattern = os.path.split(path)
+            dirname = os.path.split(path)[0]
             if dirname == '':
                 continue
             dst_dir = os.path.join(self.basedir, dirname)

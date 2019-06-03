@@ -15,6 +15,7 @@
 
 import os
 import sys
+
 app_path = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, "spinetoolbox")
 sys.path.insert(0, os.path.abspath(app_path))
 from config import SPINE_TOOLBOX_VERSION
@@ -47,7 +48,7 @@ extensions = [
     'sphinx.ext.ifconfig',
     'sphinx.ext.viewcode',
     'sphinx.ext.githubpages',
-    'sphinx.ext.napoleon'
+    'sphinx.ext.napoleon',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -118,15 +119,12 @@ latex_elements = {
     # The paper size ('letterpaper' or 'a4paper').
     #
     # 'papersize': 'letterpaper',
-
     # The font size ('10pt', '11pt' or '12pt').
     #
     # 'pointsize': '10pt',
-
     # Additional stuff for the LaTeX preamble.
     #
     # 'preamble': '',
-
     # Latex figure (float) alignment
     #
     # 'figure_align': 'htbp',
@@ -136,8 +134,13 @@ latex_elements = {
 # (source start file, target name, title,
 #  author, documentclass [howto, manual, or own class]).
 latex_documents = [
-    (master_doc, 'SpineToolbox.tex', 'Spine Toolbox Documentation',
-     'Pekka Savolainen, Manuel Marin, Erkka Rinne', 'manual'),
+    (
+        master_doc,
+        'SpineToolbox.tex',
+        'Spine Toolbox Documentation',
+        'Pekka Savolainen, Manuel Marin, Erkka Rinne',
+        'manual',
+    )
 ]
 
 
@@ -145,10 +148,7 @@ latex_documents = [
 
 # One entry per manual page. List of tuples
 # (source start file, name, description, authors, manual section).
-man_pages = [
-    (master_doc, 'spinetoolbox', 'Spine Toolbox Documentation',
-     [author], 1)
-]
+man_pages = [(master_doc, 'spinetoolbox', 'Spine Toolbox Documentation', [author], 1)]
 
 
 # -- Options for Texinfo output ----------------------------------------------
@@ -157,9 +157,15 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-    (master_doc, 'SpineToolbox', 'Spine Toolbox Documentation',
-     author, 'SpineToolbox', 'One line description of project.',
-     'Miscellaneous'),
+    (
+        master_doc,
+        'SpineToolbox',
+        'Spine Toolbox Documentation',
+        author,
+        'SpineToolbox',
+        'One line description of project.',
+        'Miscellaneous',
+    )
 ]
 
 

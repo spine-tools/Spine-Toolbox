@@ -18,8 +18,7 @@ in Data Connection item.
 """
 
 import os
-from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, \
-    QToolButton, QFileDialog, QProgressBar
+from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, QToolButton, QFileDialog, QProgressBar
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel, QModelIndex, QSize, QThreadPool
 from PySide2.QtGui import QGuiApplication, QFontMetrics, QFont, QIcon
 from datapackage import Package
@@ -39,6 +38,7 @@ class SpineDatapackageWidget(QMainWindow):
     Attributes:
         data_connection (DataConnection): Data Connection associated to this widget
     """
+
     msg = Signal(str, name="msg")
     msg_proc = Signal(str, name="msg_proc")
     msg_error = Signal(str, name="msg_error")
@@ -120,7 +120,7 @@ class SpineDatapackageWidget(QMainWindow):
         file_path = os.path.join(self._data_connection.data_dir, "datapackage.json")
         if os.path.exists(file_path):
             self.datapackage = CustomPackage(file_path)
-            msg = "Datapackage succesfully loaded from {}".format(file_path)
+            msg = "Datapackage successfully loaded from {}".format(file_path)
             self.msg.emit(msg)
             return True
         return self.infer_datapackage()
@@ -131,13 +131,15 @@ class SpineDatapackageWidget(QMainWindow):
         if ".csv" in [os.path.splitext(f)[1] for f in data_files]:
             self.datapackage = CustomPackage(base_path=self._data_connection.data_dir)
             self.datapackage.infer(os.path.join(self._data_connection.data_dir, '*.csv'))
-            msg = "Datapackage succesfully inferred from {}".format(self._data_connection.data_dir)
+            msg = "Datapackage successfully inferred from {}".format(self._data_connection.data_dir)
             self.msg.emit(msg)
             return True
-        self.msg_error.emit("Unable to infer a datapackage from <b>{0}</b>. "
-                            "Please add some CSV files to that folder,  "
-                            "and then select the <b>Infer datapackage</b> option "
-                            "from the <b>File</b> menu.".format(self._data_connection.data_dir))
+        self.msg_error.emit(
+            "Unable to infer a datapackage from <b>{0}</b>. "
+            "Please add some CSV files to that folder,  "
+            "and then select the <b>Infer datapackage</b> option "
+            "from the <b>File</b> menu.".format(self._data_connection.data_dir)
+        )
         return False
 
     def update_ui(self):
@@ -285,11 +287,11 @@ class SpineDatapackageWidget(QMainWindow):
     def save_datapackage(self, checked=False):
         """Write datapackage to file 'datapackage.json' in data directory."""
         if os.path.isfile(os.path.join(self._data_connection.data_dir, "datapackage.json")):
-            msg = ('<b>Replacing file "datapackage.json" in "{}"</b>. '
-                   'Are you sure?').format(os.path.basename(self._data_connection.data_dir))
+            msg = ('<b>Replacing file "datapackage.json" in "{}"</b>. ' 'Are you sure?').format(
+                os.path.basename(self._data_connection.data_dir)
+            )
             # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(
-                self, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
+            answer = QMessageBox.question(self, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
             if not answer == QMessageBox.Yes:
                 return False
         if self.datapackage.save(os.path.join(self._data_connection.data_dir, 'datapackage.json')):
@@ -304,10 +306,9 @@ class SpineDatapackageWidget(QMainWindow):
     def show_export_to_spine_dialog(self, checked=False):
         """Show dialog to allow user to select a file to export."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getSaveFileName(self,
-                                             "Export to file",
-                                             self._data_connection._project.project_dir,
-                                             "SQlite database (*.sqlite *.db)")
+        answer = QFileDialog.getSaveFileName(
+            self, "Export to file", self._data_connection._project.project_dir, "SQlite database (*.sqlite *.db)"
+        )
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
@@ -387,11 +388,11 @@ class SpineDatapackageWidget(QMainWindow):
         self.ui.tableView_fields.resizeColumnsToContents()
         self.ui.tableView_foreign_keys.resizeColumnsToContents()
         # Add buttons
-        self._handle_foreign_keys_model_rows_inserted(
-            QModelIndex(), 0, self.foreign_keys_model.rowCount() - 1)
+        self._handle_foreign_keys_model_rows_inserted(QModelIndex(), 0, self.foreign_keys_model.rowCount() - 1)
         # Resize last section that has the button to remove row
         self.ui.tableView_foreign_keys.horizontalHeader().resizeSection(
-            self.foreign_keys_model.columnCount() - 1, self.default_row_height)
+            self.foreign_keys_model.columnCount() - 1, self.default_row_height
+        )
 
     def reset_resource_data_model(self):
         """Reset resource data model with data from newly selected resource."""
@@ -466,13 +467,14 @@ class SpineDatapackageWidget(QMainWindow):
         self.foreign_keys_model.setData(index, value, Qt.EditRole)
 
     @Slot("QModelIndex", "QModelIndex", "QVector<int>", name="_handle_foreign_keys_data_changed")
-    def _handle_foreign_keys_data_changed(self, top_left, bottom_right, roles=list()):
+    def _handle_foreign_keys_data_changed(self, top_left, bottom_right, roles=None):
         """Called when foreign keys data is updated in model.
         Update descriptor accordingly."""
+        if roles is None:
+            roles = list()
         if roles and Qt.EditRole not in roles:
             return
         resource = self.selected_resource_name
-        foreign_keys = self.datapackage.get_resource(resource).schema.foreign_keys
         anything_updated = False
         rows = range(top_left.row(), bottom_right.row() + 1)
         error_log = ""
@@ -547,6 +549,7 @@ class SpineDatapackageWidget(QMainWindow):
 
 class CustomPackage(Package):
     """Custom datapackage class."""
+
     def __init__(self, descriptor=None, base_path=None, strict=False, storage=None):
         super().__init__(descriptor, base_path, strict, storage)
 
@@ -610,34 +613,30 @@ class CustomPackage(Package):
             primary_key.remove(field)
         self.commit()
 
-    def insert_foreign_key(
-            self, row, resource_name, field_names, reference_resource_name, reference_field_names):
+    def insert_foreign_key(self, row, resource_name, field_names, reference_resource_name, reference_field_names):
         """Insert foreign key to a given resource in the package at a given row."""
         if len(field_names) != len(reference_field_names):
-            raise DataPackageException(
-                "Both 'fields' and 'reference fields' should have the same number of elements.")
+            raise DataPackageException("Both 'fields' and 'reference fields' should have the same number of elements.")
         resource = self.get_resource(resource_name)
         if not resource:
-            raise DataPackageException("Resource '{}' not in datapackage". format(resource_name))
+            raise DataPackageException("Resource '{}' not in datapackage".format(resource_name))
         for field_name in field_names:
             if field_name not in resource.schema.field_names:
-                raise DataPackageException("Field '{}' not in '{}' schema". format(field_name, resource_name))
+                raise DataPackageException("Field '{}' not in '{}' schema".format(field_name, resource_name))
         reference_resource = self.get_resource(reference_resource_name)
         if not reference_resource:
-            raise DataPackageException("Resource '{}' not in datapackage". format(reference_resource_name))
+            raise DataPackageException("Resource '{}' not in datapackage".format(reference_resource_name))
         for reference_field_name in reference_field_names:
             if reference_field_name not in reference_resource.schema.field_names:
                 raise DataPackageException(
-                    "Field '{}' not in '{}' schema". format(reference_field_name, reference_resource_name))
+                    "Field '{}' not in '{}' schema".format(reference_field_name, reference_resource_name)
+                )
         foreign_key = {
             "fields": field_names,
-            "reference": {
-                "resource": reference_resource_name,
-                "fields": reference_field_names
-            }
+            "reference": {"resource": reference_resource_name, "fields": reference_field_names},
         }
         i = self.resource_names.index(resource_name)
-        foreign_keys = self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
+        self.descriptor['resources'][i]['schema'].setdefault('foreignKeys', [])
         if foreign_key in self.descriptor['resources'][i]['schema']['foreignKeys']:
             raise DataPackageException("Foreign key already in '{}' schema".format(resource_name))
         self.descriptor['resources'][i]['schema']['foreignKeys'].insert(row, foreign_key)
@@ -661,15 +660,9 @@ class CustomPackage(Package):
             i = self.resource_names.index(resource)
         except ValueError:
             return
-        foreign_key = {
-            "fields": fields,
-            "reference": {
-                "resource": reference_resource,
-                "fields": reference_fields
-            }
-        }
+        foreign_key = {"fields": fields, "reference": {"resource": reference_resource, "fields": reference_fields}}
         try:
-            foreign_keys = self.descriptor['resources'][i]['schema']['foreignKeys']
+            self.descriptor['resources'][i]['schema']['foreignKeys']
         except KeyError:
             return
         try:

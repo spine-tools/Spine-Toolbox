@@ -17,23 +17,32 @@ Unit tests for Excel import and export.
 """
 
 import os
+import tempfile
 import unittest
 from unittest import mock
 from unittest.mock import MagicMock
 from collections import namedtuple
 from spinedb_api import DiffDatabaseMapping, create_new_spine_database
-from excel_import_export import stack_list_of_tuples, unstack_list_of_tuples, validate_sheet, SheetData, \
-    read_parameter_sheet, read_json_sheet, merge_spine_xlsx_data, read_spine_xlsx, export_spine_database_to_xlsx, \
-    import_xlsx_to_db
+from excel_import_export import (
+    stack_list_of_tuples,
+    unstack_list_of_tuples,
+    validate_sheet,
+    SheetData,
+    read_parameter_sheet,
+    read_json_sheet,
+    merge_spine_xlsx_data,
+    read_spine_xlsx,
+    export_spine_database_to_xlsx,
+    import_xlsx_to_db,
+)
 
 UUID_STR = 'f7f92ced-faff-4315-900e-704d2a786a65'
-TEMP_EXCEL_FILENAME = UUID_STR + '-excel.xlsx'
-TEMP_SQLITE_FILENAME = UUID_STR + '-first.sqlite'
-TEMP_SQLITE_TEST_FILENAME = UUID_STR + '-second.sqlite'
+TEMP_EXCEL_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-excel.xlsx')
+TEMP_SQLITE_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-first.sqlite')
+TEMP_SQLITE_TEST_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-second.sqlite')
 
 
 class TestExcelIntegration(unittest.TestCase):
-
     def delete_temp_files(self):
         # remove temp files
         try:
@@ -50,31 +59,24 @@ class TestExcelIntegration(unittest.TestCase):
             pass
 
     def setUp(self):
-        """Overridden method. Runs before each test.
-        """
-        self.delete_temp_files()
-
+        """Overridden method. Runs before each test."""
         # create a in memory database with objects, relationship, parameters and values
         create_new_spine_database('sqlite:///' + TEMP_SQLITE_FILENAME)
-        db_map = DiffDatabaseMapping(
-            'sqlite:///' + TEMP_SQLITE_FILENAME,
-            username='IntegrationTest',
-            upgrade=True)
+        db_map = DiffDatabaseMapping('sqlite:///' + TEMP_SQLITE_FILENAME, username='IntegrationTest', upgrade=True)
 
         # create empty database for loading excel into
         create_new_spine_database('sqlite:///' + TEMP_SQLITE_TEST_FILENAME)
         db_map_test = DiffDatabaseMapping(
-            'sqlite:///' + TEMP_SQLITE_TEST_FILENAME,
-            username='IntegrationTest',
-            upgrade=True)
+            'sqlite:///' + TEMP_SQLITE_TEST_FILENAME, username='IntegrationTest', upgrade=True
+        )
 
         # delete all object_classes to empty database
-        oc = set(oc. id for oc in db_map_test.object_class_list().all())
+        oc = set(oc.id for oc in db_map_test.object_class_list().all())
         if oc:
             db_map_test.remove_items(object_class_ids=oc)
         db_map_test.commit_session('empty database')
 
-        oc = set(oc. id for oc in db_map.object_class_list().all())
+        oc = set(oc.id for oc in db_map.object_class_list().all())
         if oc:
             db_map.remove_items(object_class_ids=oc)
         db_map.commit_session('empty database')
@@ -82,62 +84,57 @@ class TestExcelIntegration(unittest.TestCase):
         # create object classes
         oc_1 = db_map.add_object_class(**{'name': 'object_class_1'})
         oc_2 = db_map.add_object_class(**{'name': 'object_class_2'})
+        oc_3 = db_map.add_object_class(**{'name': 'object_class_3'})
 
         # create relationship classes
         relc1 = db_map.add_wide_relationship_class(
-            **{'name': 'relationship_class', 'object_class_id_list': [oc_1.id, oc_2.id]})
+            **{'name': 'relationship_class', 'object_class_id_list': [oc_1.id, oc_2.id]}
+        )
+        relc2 = db_map.add_wide_relationship_class(
+            **{'name': 'relationship_class2', 'object_class_id_list': [oc_1.id, oc_2.id]}
+        )
 
         # create objects
-        oc1_obj1 = db_map.add_object(
-            **{'name': 'oc1_obj1', 'class_id': oc_1.id})
-        oc1_obj2 = db_map.add_object(
-            **{'name': 'oc1_obj2', 'class_id': oc_1.id})
-        oc2_obj1 = db_map.add_object(
-            **{'name': 'oc2_obj1', 'class_id': oc_2.id})
-        oc2_obj2 = db_map.add_object(
-            **{'name': 'oc2_obj2', 'class_id': oc_2.id})
+        oc1_obj1 = db_map.add_object(**{'name': 'oc1_obj1', 'class_id': oc_1.id})
+        oc1_obj2 = db_map.add_object(**{'name': 'oc1_obj2', 'class_id': oc_1.id})
+        oc2_obj1 = db_map.add_object(**{'name': 'oc2_obj1', 'class_id': oc_2.id})
+        oc2_obj2 = db_map.add_object(**{'name': 'oc2_obj2', 'class_id': oc_2.id})
 
         # add relationships
         rel1 = db_map.add_wide_relationship(
-            **{'name': 'rel1', 'class_id': relc1.id, 'object_id_list': [oc1_obj1.id, oc2_obj1.id]})
+            **{'name': 'rel1', 'class_id': relc1.id, 'object_id_list': [oc1_obj1.id, oc2_obj1.id]}
+        )
         rel2 = db_map.add_wide_relationship(
-            **{'name': 'rel2', 'class_id': relc1.id, 'object_id_list': [oc1_obj2.id, oc2_obj2.id]})
+            **{'name': 'rel2', 'class_id': relc1.id, 'object_id_list': [oc1_obj2.id, oc2_obj2.id]}
+        )
 
         # create parameters
-        p1 = db_map.add_parameter(
-            **{'name': 'parameter1', 'object_class_id': oc_1.id})
-        p2 = db_map.add_parameter(
-            **{'name': 'parameter2', 'object_class_id': oc_1.id})
-        p3 = db_map.add_parameter(
-            **{'name': 'parameter3', 'object_class_id': oc_2.id})
-        p4 = db_map.add_parameter(
-            **{'name': 'parameter4', 'object_class_id': oc_2.id})
-        rel_p1 = db_map.add_parameter(
-            **{'name': 'rel_parameter1', 'relationship_class_id': relc1.id})
-        rel_p2 = db_map.add_parameter(
-            **{'name': 'rel_parameter2', 'relationship_class_id': relc1.id})
-        rel_p3 = db_map.add_parameter(
-            **{'name': 'rel_parameter3', 'relationship_class_id': relc1.id})
-        rel_p4 = db_map.add_parameter(
-            **{'name': 'rel_parameter4', 'relationship_class_id': relc1.id})
+        p1 = db_map.add_parameter_definitions(*[{'name': 'parameter1', 'object_class_id': oc_1.id}])[0].first()
+        p2 = db_map.add_parameter_definitions(*[{'name': 'parameter2', 'object_class_id': oc_1.id}])[0].first()
+        p3 = db_map.add_parameter_definitions(*[{'name': 'parameter3', 'object_class_id': oc_2.id}])[0].first()
+        p4 = db_map.add_parameter_definitions(*[{'name': 'parameter4', 'object_class_id': oc_2.id}])[0].first()
+        rel_p1 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter1', 'relationship_class_id': relc1.id}])[
+            0
+        ].first()
+        rel_p2 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter2', 'relationship_class_id': relc1.id}])[
+            0
+        ].first()
+        rel_p3 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter3', 'relationship_class_id': relc1.id}])[
+            0
+        ].first()
+        rel_p4 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter4', 'relationship_class_id': relc1.id}])[
+            0
+        ].first()
 
         # add parameter values
-        db_map.add_parameter_value(
-            **{'parameter_id': p1.id, 'object_id': oc1_obj1.id, 'value': 0})
-        db_map.add_parameter_value(
-            **{'parameter_id': p2.id, 'object_id': oc1_obj2.id, 'value': 3.5})
-        db_map.add_parameter_value(
-            **{'parameter_id': p3.id, 'object_id': oc2_obj1.id, 'json': '[1, 2, 3, 4]'})
-        db_map.add_parameter_value(
-            **{'parameter_id': p4.id, 'object_id': oc2_obj2.id, 'json': '[5, 6, 7]'})
-        db_map.add_parameter_value(
-            **{'parameter_id': rel_p1.id, 'relationship_id': rel1.id, 'value': 0})
-        db_map.add_parameter_value(
-            **{'parameter_id': rel_p2.id, 'relationship_id': rel2.id, 'value': 4})
-        db_map.add_parameter_value(
-            **{'parameter_id': rel_p3.id, 'relationship_id': rel1.id, 'json': '[5, 6, 7]'})
-        db_map.add_parameter_value(
-            **{'parameter_id': rel_p4.id, 'relationship_id': rel2.id, 'json': '[1, 2, 3, 4]'})
+        db_map.add_parameter_value(**{'parameter_id': p1.id, 'object_id': oc1_obj1.id, 'value': '0'})
+        db_map.add_parameter_value(**{'parameter_id': p2.id, 'object_id': oc1_obj2.id, 'value': '3.5'})
+        db_map.add_parameter_value(**{'parameter_id': p3.id, 'object_id': oc2_obj1.id, 'value': '[1, 2, 3, 4]'})
+        db_map.add_parameter_value(**{'parameter_id': p4.id, 'object_id': oc2_obj2.id, 'value': '[5, 6, 7]'})
+        db_map.add_parameter_value(**{'parameter_id': rel_p1.id, 'relationship_id': rel1.id, 'value': '0'})
+        db_map.add_parameter_value(**{'parameter_id': rel_p2.id, 'relationship_id': rel2.id, 'value': '4'})
+        db_map.add_parameter_value(**{'parameter_id': rel_p3.id, 'relationship_id': rel1.id, 'value': '[5, 6, 7]'})
+        db_map.add_parameter_value(**{'parameter_id': rel_p4.id, 'relationship_id': rel2.id, 'value': '[1, 2, 3, 4]'})
 
         # commit
         db_map.commit_session('test')
@@ -159,8 +156,7 @@ class TestExcelIntegration(unittest.TestCase):
         oc = {c.id: c.name for c in oc}
         oc_org = db2.object_class_list().all()
         oc_org = {c.id: c.name for c in oc_org}
-        self.assertEqual(set(oc.values()), set(oc_org.values()),
-                         msg='Difference in objects classes')
+        self.assertEqual(set(oc.values()), set(oc_org.values()), msg='Difference in objects classes')
         # objects
         ol = db1.object_list().all()
         ol_id = {o.id: o.name for o in ol}
@@ -171,40 +167,52 @@ class TestExcelIntegration(unittest.TestCase):
         self.assertEqual(ol, ol_org, msg='Difference in objects')
         # relationship classes
         rc = db1.relationship_class_list().all()
-        rc = {c.id: (c.name, tuple(oc[o.object_class_id]
-                                   for o in rc if o.name == c.name)) for c in rc}
+        rc = {c.id: (c.name, tuple(oc[o.object_class_id] for o in rc if o.name == c.name)) for c in rc}
         rc_org = db2.relationship_class_list().all()
-        rc_org = {c.id: (c.name, tuple(
-            oc_org[o.object_class_id] for o in rc_org if o.name == c.name)) for c in rc_org}
-        self.assertEqual(set(rc.values()), set(rc_org.values()),
-                         msg='Difference in relationship classes')
+        rc_org = {c.id: (c.name, tuple(oc_org[o.object_class_id] for o in rc_org if o.name == c.name)) for c in rc_org}
+        self.assertEqual(set(rc.values()), set(rc_org.values()), msg='Difference in relationship classes')
         # relationships
         rel = db1.relationship_list().all()
-        rel = {c.id: (rc[c.class_id][0], tuple(ol_id[o.object_id]
-                                               for o in rel if o.id == c.id)) for c in rel}
+        rel = {c.id: (rc[c.class_id][0], tuple(ol_id[o.object_id] for o in rel if o.id == c.id)) for c in rel}
         rel_org = db2.relationship_list().all()
-        rel_org = {c.id: (rc_org[c.class_id][0], tuple(
-            ol_id_org[o.object_id] for o in rel_org if o.id == c.id)) for c in rel_org}
-        self.assertEqual(set(rc.values()), set(rc_org.values()),
-                         msg='Difference in relationships')
+        rel_org = {
+            c.id: (rc_org[c.class_id][0], tuple(ol_id_org[o.object_id] for o in rel_org if o.id == c.id))
+            for c in rel_org
+        }
+        self.assertEqual(set(rc.values()), set(rc_org.values()), msg='Difference in relationships')
         # parameters
-        par = db1.parameter_list().all()
-        par = {p.id: (p.name, oc[p.object_class_id]
-                      if p.object_class_id else rc[p.relationship_class_id][0]) for p in par}
-        par_org = db2.parameter_list().all()
-        par_org = {p.id: (p.name, oc_org[p.object_class_id]
-                          if p.object_class_id else rc_org[p.relationship_class_id][0]) for p in par_org}
-        self.assertEqual(set(par.values()), set(
-            par_org.values()), msg='Difference in parameters')
+        par = db1.parameter_definition_list().all()
+        par = {
+            p.id: (p.name, oc[p.object_class_id] if p.object_class_id else rc[p.relationship_class_id][0]) for p in par
+        }
+        par_org = db2.parameter_definition_list().all()
+        par_org = {
+            p.id: (p.name, oc_org[p.object_class_id] if p.object_class_id else rc_org[p.relationship_class_id][0])
+            for p in par_org
+        }
+        self.assertEqual(set(par.values()), set(par_org.values()), msg='Difference in parameters')
         # parameters values
         parv = db1.parameter_value_list().all()
-        parv = set((par[p.parameter_definition_id][0], p.value, p.json, ol_id[p.object_id] if p.object_id else None,
-                    rel[p.relationship_id][1] if p.relationship_id else None) for p in parv)
+        parv = set(
+            (
+                par[p.parameter_definition_id][0],
+                p.value,
+                ol_id[p.object_id] if p.object_id else None,
+                rel[p.relationship_id][1] if p.relationship_id else None,
+            )
+            for p in parv
+        )
         parv_org = db2.parameter_value_list().all()
-        parv_org = set((par_org[p.parameter_definition_id][0], p.value, p.json, ol_id_org[p.object_id] if p.object_id else None,
-                        rel_org[p.relationship_id][1] if p.relationship_id else None) for p in parv_org)
-        self.assertEqual(set(par.values()), set(
-            par_org.values()), msg='Difference in parameter values')
+        parv_org = set(
+            (
+                par_org[p.parameter_definition_id][0],
+                p.value,
+                ol_id_org[p.object_id] if p.object_id else None,
+                rel_org[p.relationship_id][1] if p.relationship_id else None,
+            )
+            for p in parv_org
+        )
+        self.assertEqual(parv, parv_org, msg='Difference in parameter values')
 
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""
@@ -240,11 +248,10 @@ class TestExcelIntegration(unittest.TestCase):
 
 
 class TestExcelImport(unittest.TestCase):
-
     def setUp(self):
         """Overridden method. Runs before each test.
         """
-        Cell = namedtuple('cell',['value'])
+        Cell = namedtuple('cell', ['value'])
 
         # mock data for relationship sheets
         ws_mock = {}
@@ -252,56 +259,68 @@ class TestExcelImport(unittest.TestCase):
         ws_mock['B2'] = MagicMock(value='parameter')
         ws_mock['C2'] = MagicMock(value='relationship_name')
         ws_mock['D2'] = MagicMock(value=2)
-        ws_mock['A4:B4'] = [
-            [MagicMock(value='object_class_name1'), MagicMock(value='object_class_name2')]]
-        ws_mock[4] = [MagicMock(value='object_class_name1'), MagicMock(value='object_class_name2'),
-                      MagicMock(value='parameter1'), MagicMock(value='parameter2')]
+        ws_mock['A4:B4'] = [[MagicMock(value='object_class_name1'), MagicMock(value='object_class_name2')]]
+        ws_mock[4] = [
+            MagicMock(value='object_class_name1'),
+            MagicMock(value='object_class_name2'),
+            MagicMock(value='parameter1'),
+            MagicMock(value='parameter2'),
+        ]
         ws_mock['A'] = [1, 2, 3, 4, 5, 6]
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
-        mock_row_generator_data1 = [[],
-                                   [],
-                                   [],
-                                   [Cell('object_class_name1'), Cell('object_class_name2'),Cell('parameter1'), Cell('parameter2'), Cell(None)],
-                                   [Cell('a_obj1'), Cell('b_obj1'), Cell(1), Cell('a'), Cell(None)],
-                                   [Cell('a_obj2'), Cell('b_obj2'), Cell(2), Cell('b'), Cell(None)]]
-        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data1)
+        mock_row_generator_data1 = [
+            [],
+            [],
+            [],
+            [
+                Cell('object_class_name1'),
+                Cell('object_class_name2'),
+                Cell('parameter1'),
+                Cell('parameter2'),
+                Cell(None),
+            ],
+            [Cell('a_obj1'), Cell('b_obj1'), Cell(1), Cell('a'), Cell(None)],
+            [Cell('a_obj2'), Cell('b_obj2'), Cell(2), Cell('b'), Cell(None)],
+        ]
+        ws.iter_rows.side_effect = lambda: iter(mock_row_generator_data1)
         self.ws_rel = ws
         self.data_parameter = ['parameter1', 'parameter2']
         self.data_class_rel = [['object_class_name1', 'object_class_name2']]
-        self.data_rel = [['a_obj1', 'b_obj1', 1, 'a'],
-                         ['a_obj2', 'b_obj2', 2, 'b']]
+        self.data_rel = [['a_obj1', 'b_obj1', 1, 'a'], ['a_obj2', 'b_obj2', 2, 'b']]
         self.class_obj_rel = [['a_obj1', 'b_obj1'], ['a_obj2', 'b_obj2']]
-        self.RelData = namedtuple(
-            'Data', ['parameter_type', 'object0', 'object1', 'parameter', 'value'])
+        self.RelData = namedtuple('Data', ['parameter_type', 'object0', 'object1', 'parameter', 'value'])
 
         # mock data for object sheets
         ws_mock = {}
         ws_mock['A2'] = MagicMock(value='object')
         ws_mock['B2'] = MagicMock(value='parameter')
         ws_mock['C2'] = MagicMock(value='object_class_name')
-        ws_mock[4] = [MagicMock(value='object_class_name'), MagicMock(
-            value='parameter1'), MagicMock(value='parameter2')]
+        ws_mock[4] = [
+            MagicMock(value='object_class_name'),
+            MagicMock(value='parameter1'),
+            MagicMock(value='parameter2'),
+        ]
         ws_mock['A'] = [1, 2, 3, 4, 5, 6]
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
-        mock_row_generator_data2 = [[],
-                                   [],
-                                   [],
-                                   [Cell('object_class_name'),Cell('parameter1'), Cell('parameter2')],
-                                   [Cell('obj1'), Cell(1), Cell('a')],
-                                   [Cell('obj2'), Cell(2), Cell('b')]]
-        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data2)
+        mock_row_generator_data2 = [
+            [],
+            [],
+            [],
+            [Cell('object_class_name'), Cell('parameter1'), Cell('parameter2')],
+            [Cell('obj1'), Cell(1), Cell('a')],
+            [Cell('obj2'), Cell(2), Cell('b')],
+        ]
+        ws.iter_rows.side_effect = lambda: iter(mock_row_generator_data2)
         self.ws_obj = ws
         self.data_parameter = ['parameter1', 'parameter2']
         self.data_class_obj = [['object_class_name']]
-        self.data_obj = [['obj1', 1, 'a'],
-                         ['obj2', 2, 'b']]
+        self.data_obj = [['obj1', 1, 'a'], ['obj2', 2, 'b']]
         self.class_obj_obj = ['obj1', 'obj2']
-        self.ObjData = namedtuple(
-            'Data', ['parameter_type', 'object0', 'parameter', 'value'])
+        self.ObjData = namedtuple('Data', ['parameter_type', 'object0', 'parameter', 'value'])
 
         # mock data for json sheet object
 
@@ -310,24 +329,41 @@ class TestExcelImport(unittest.TestCase):
         ws_mock['B2'] = MagicMock(value='json array')
         ws_mock['C2'] = MagicMock(value='object_class_name')
         ws_mock['A4'] = MagicMock(value='object_class_name')
-        ws_mock[4] = [MagicMock(value='object_class_name'), MagicMock(
-            value='obj1'), MagicMock(value='obj2')]
-        ws_mock['B'] = [MagicMock(value=None), MagicMock(value=None), MagicMock(value=None), MagicMock(
-            value='obj1'), MagicMock(value='parameter1'), MagicMock(value=1), MagicMock(value=2), MagicMock(value=3)]
-        ws_mock['C'] = [MagicMock(value=None), MagicMock(value=None), MagicMock(value=None), MagicMock(
-            value='obj2'), MagicMock(value='parameter2'), MagicMock(value=4), MagicMock(value=5), MagicMock(value=6)]
+        ws_mock[4] = [MagicMock(value='object_class_name'), MagicMock(value='obj1'), MagicMock(value='obj2')]
+        ws_mock['B'] = [
+            MagicMock(value=None),
+            MagicMock(value=None),
+            MagicMock(value=None),
+            MagicMock(value='obj1'),
+            MagicMock(value='parameter1'),
+            MagicMock(value=1),
+            MagicMock(value=2),
+            MagicMock(value=3),
+        ]
+        ws_mock['C'] = [
+            MagicMock(value=None),
+            MagicMock(value=None),
+            MagicMock(value=None),
+            MagicMock(value='obj2'),
+            MagicMock(value='parameter2'),
+            MagicMock(value=4),
+            MagicMock(value=5),
+            MagicMock(value=6),
+        ]
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
-        mock_row_generator_data3 = [[],
-                                   [],
-                                   [],
-                                   [Cell('object_class_name'),Cell('obj1'),Cell('obj2')],
-                                   [Cell('json parameter'),Cell('parameter1'), Cell('parameter2')],
-                                   [Cell(None), Cell(1), Cell(4)],
-                                   [Cell(None), Cell(2), Cell(5)],
-                                   [Cell(None), Cell(3), Cell(6)]]
-        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data3)
+        mock_row_generator_data3 = [
+            [],
+            [],
+            [],
+            [Cell('object_class_name'), Cell('obj1'), Cell('obj2')],
+            [Cell('json parameter'), Cell('parameter1'), Cell('parameter2')],
+            [Cell(None), Cell(1), Cell(4)],
+            [Cell(None), Cell(2), Cell(5)],
+            [Cell(None), Cell(3), Cell(6)],
+        ]
+        ws.iter_rows.side_effect = lambda: iter(mock_row_generator_data3)
         self.ws_obj_json = ws
 
         # mock data for json sheets relationship
@@ -338,28 +374,46 @@ class TestExcelImport(unittest.TestCase):
         ws_mock['D2'] = MagicMock(value=2)
         ws_mock['A4'] = MagicMock(value='object_class_name1')
         ws_mock['A5'] = MagicMock(value='object_class_name2')
-        ws_mock['A4:A5'] = [[MagicMock(value='object_class_name1')], [
-            MagicMock(value='object_class_name2')]]
-        ws_mock[4] = [MagicMock(value='object_class_name1'), MagicMock(
-            value='a_obj1'), MagicMock(value='a_obj2')]
-        ws_mock['B'] = [MagicMock(value=None), MagicMock(value=None), MagicMock(value=None), MagicMock(value='a_obj1'), MagicMock(
-            value='b_obj1'), MagicMock(value='parameter1'), MagicMock(value=1), MagicMock(value=2), MagicMock(value=3)]
-        ws_mock['C'] = [MagicMock(value=None), MagicMock(value=None), MagicMock(value=None), MagicMock(value='a_obj2'), MagicMock(
-            value='b_obj2'), MagicMock(value='parameter2'), MagicMock(value=4), MagicMock(value=5), MagicMock(value=6)]
+        ws_mock['A4:A5'] = [[MagicMock(value='object_class_name1')], [MagicMock(value='object_class_name2')]]
+        ws_mock[4] = [MagicMock(value='object_class_name1'), MagicMock(value='a_obj1'), MagicMock(value='a_obj2')]
+        ws_mock['B'] = [
+            MagicMock(value=None),
+            MagicMock(value=None),
+            MagicMock(value=None),
+            MagicMock(value='a_obj1'),
+            MagicMock(value='b_obj1'),
+            MagicMock(value='parameter1'),
+            MagicMock(value=1),
+            MagicMock(value=2),
+            MagicMock(value=3),
+        ]
+        ws_mock['C'] = [
+            MagicMock(value=None),
+            MagicMock(value=None),
+            MagicMock(value=None),
+            MagicMock(value='a_obj2'),
+            MagicMock(value='b_obj2'),
+            MagicMock(value='parameter2'),
+            MagicMock(value=4),
+            MagicMock(value=5),
+            MagicMock(value=6),
+        ]
 
         ws = MagicMock()
         ws.__getitem__.side_effect = ws_mock.__getitem__
         ws.title = 'title'
-        mock_row_generator_data4 = [[],
-                                   [],
-                                   [],
-                                   [Cell('object_class_name1'),Cell('a_obj1'),Cell('a_obj2'),Cell(None)],
-                                   [Cell('object_class_name2'),Cell('b_obj1'),Cell('b_obj2'),Cell(None)],
-                                   [Cell('json parameter'),Cell('parameter1'), Cell('parameter2'),Cell(None)],
-                                   [Cell(None), Cell(1), Cell(4),Cell(None)],
-                                   [Cell(None), Cell(2), Cell(5),Cell(None)],
-                                   [Cell(None), Cell(3), Cell(6),Cell(None)]]
-        ws.iter_rows.side_effect = lambda : iter(mock_row_generator_data4)
+        mock_row_generator_data4 = [
+            [],
+            [],
+            [],
+            [Cell('object_class_name1'), Cell('a_obj1'), Cell('a_obj2'), Cell(None)],
+            [Cell('object_class_name2'), Cell('b_obj1'), Cell('b_obj2'), Cell(None)],
+            [Cell('json parameter'), Cell('parameter1'), Cell('parameter2'), Cell(None)],
+            [Cell(None), Cell(1), Cell(4), Cell(None)],
+            [Cell(None), Cell(2), Cell(5), Cell(None)],
+            [Cell(None), Cell(3), Cell(6), Cell(None)],
+        ]
+        ws.iter_rows.side_effect = lambda: iter(mock_row_generator_data4)
         self.ws_rel_json = ws
 
     def tearDown(self):
@@ -374,8 +428,7 @@ class TestExcelImport(unittest.TestCase):
         self.assertEqual(set(d1.parameters), set(d2.parameters))
         self.assertEqual(set(d1.parameter_values), set(d2.parameter_values))
         if d1.class_type == 'relationship':
-            self.assertEqual(set(tuple(r) for r in d1.objects),
-                             set(tuple(r) for r in d2.objects))
+            self.assertEqual(set(tuple(r) for r in d1.objects), set(tuple(r) for r in d2.objects))
         else:
             self.assertEqual(set(d1.objects), set(d2.objects))
         self.assertEqual(d1.class_type, d2.class_type)
@@ -385,48 +438,77 @@ class TestExcelImport(unittest.TestCase):
     @mock.patch('excel_import_export.read_json_sheet')
     def test_read_spine_xlsx(self, mock_read_json_sheet, mock_read_parameter_sheet, mock_load_workbook):
         # workbook mock
-        wb_dict = {'object': self.ws_obj,
-                   'object_json': self.ws_obj_json,
-                   'relationship': self.ws_rel,
-                   'relationship_json': self.ws_rel_json}
+        wb_dict = {
+            'object': self.ws_obj,
+            'object_json': self.ws_obj_json,
+            'relationship': self.ws_rel,
+            'relationship_json': self.ws_rel_json,
+        }
         wb_mock = MagicMock()
         wb_mock.__getitem__.side_effect = wb_dict.__getitem__
-        wb_mock.sheetnames = ['object', 'object_json',
-                              'relationship', 'relationship_json']
+        wb_mock.sheetnames = ['object', 'object_json', 'relationship', 'relationship_json']
         mock_load_workbook.side_effect = [wb_mock]
 
         # data for object parameter sheet
-        parameter_values = [self.ObjData('value', 'obj1', 'parameter1', 1),
-                            self.ObjData('value', 'obj1', 'parameter2', 'a'),
-                            self.ObjData('value', 'obj2', 'parameter1', 2),
-                            self.ObjData('value', 'obj2', 'parameter2', 'b')]
-        data_obj = SheetData('object', 'object_class_name',
-                             self.data_class_obj[0], self.data_parameter,
-                             parameter_values, self.class_obj_obj, 'object')
+        parameter_values = [
+            self.ObjData('value', 'obj1', 'parameter1', 1),
+            self.ObjData('value', 'obj1', 'parameter2', 'a'),
+            self.ObjData('value', 'obj2', 'parameter1', 2),
+            self.ObjData('value', 'obj2', 'parameter2', 'b'),
+        ]
+        data_obj = SheetData(
+            'object',
+            'object_class_name',
+            self.data_class_obj[0],
+            self.data_parameter,
+            parameter_values,
+            self.class_obj_obj,
+            'object',
+        )
         # data for object json sheet
-        parameter_values = [self.ObjData('json', 'obj1', 'parameter1', '[1, 2, 3]'),
-                            self.ObjData('json', 'obj2', 'parameter2', '[4, 5, 6]')]
-        data_obj_json = SheetData('object_json', 'object_class_name',
-                                  self.data_class_obj[0], list(
-                                      set(self.data_parameter)),
-                                  parameter_values, [], 'object')
+        parameter_values = [
+            self.ObjData('json', 'obj1', 'parameter1', '[1, 2, 3]'),
+            self.ObjData('json', 'obj2', 'parameter2', '[4, 5, 6]'),
+        ]
+        data_obj_json = SheetData(
+            'object_json',
+            'object_class_name',
+            self.data_class_obj[0],
+            list(set(self.data_parameter)),
+            parameter_values,
+            [],
+            'object',
+        )
         # data for relationship parameter sheet
-        parameter_values = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
-                            self.RelData('value', 'a_obj1',
-                                         'b_obj1', 'parameter2', 'a'),
-                            self.RelData('value', 'a_obj2',
-                                         'b_obj2', 'parameter1', 2),
-                            self.RelData('value', 'a_obj2', 'b_obj2', 'parameter2', 'b')]
-        data_rel = SheetData('relationship', 'relationship_name',
-                             self.data_class_rel[0], self.data_parameter,
-                             parameter_values, self.class_obj_rel, 'relationship')
+        parameter_values = [
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter2', 'a'),
+            self.RelData('value', 'a_obj2', 'b_obj2', 'parameter1', 2),
+            self.RelData('value', 'a_obj2', 'b_obj2', 'parameter2', 'b'),
+        ]
+        data_rel = SheetData(
+            'relationship',
+            'relationship_name',
+            self.data_class_rel[0],
+            self.data_parameter,
+            parameter_values,
+            self.class_obj_rel,
+            'relationship',
+        )
         # data for relationship json sheet
-        parameter_values = [self.RelData('json', 'a_obj1', 'b_obj1', 'parameter1', '[1, 2, 3]'),
-                            self.RelData('json', 'a_obj2', 'b_obj2', 'parameter2', '[4, 5, 6]')]
-        data_rel_json = SheetData('relationship_json', 'relationship_name',
-                                  self.data_class_rel[0], list(
-                                      set(self.data_parameter)),
-                                  parameter_values, [], 'relationship')
+        parameter_values = [
+            self.RelData('json', 'a_obj1', 'b_obj1', 'parameter1', '[1, 2, 3]'),
+            self.RelData('json', 'a_obj2', 'b_obj2', 'parameter2', '[4, 5, 6]'),
+        ]
+        data_rel_json = SheetData(
+            'relationship_json',
+            'relationship_name',
+            self.data_class_rel[0],
+            list(set(self.data_parameter)),
+            parameter_values,
+            [],
+            'relationship',
+        )
 
         mock_read_json_sheet.side_effect = [data_obj_json, data_rel_json]
         mock_read_parameter_sheet.side_effect = [data_obj, data_rel]
@@ -440,22 +522,43 @@ class TestExcelImport(unittest.TestCase):
 
     def test_merge_spine_xlsx_data(self):
         """Test merging array of SheetData"""
-        parameter_values1 = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
-                             self.RelData('value', 'a_obj2', 'b_obj2', 'parameter2', 2)]
-        parameter_values2 = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
-                             self.RelData('value', 'a_obj3', 'b_obj3', 'parameter3', 3)]
-        data1 = SheetData('title', 'relationship_name',
-                          self.data_class_rel[0], ['parameter1', 'parameter2'],
-                          parameter_values1, [['a_obj1', 'b_obj1'], ['a_obj2', 'b_obj2']], 'relationship')
-        data2 = SheetData('title', 'relationship_name',
-                          self.data_class_rel[0], ['parameter1', 'parameter3'],
-                          parameter_values2, [['a_obj1', 'b_obj1'], ['a_obj3', 'b_obj3']], 'relationship')
+        parameter_values1 = [
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
+            self.RelData('value', 'a_obj2', 'b_obj2', 'parameter2', 2),
+        ]
+        parameter_values2 = [
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
+            self.RelData('value', 'a_obj3', 'b_obj3', 'parameter3', 3),
+        ]
+        data1 = SheetData(
+            'title',
+            'relationship_name',
+            self.data_class_rel[0],
+            ['parameter1', 'parameter2'],
+            parameter_values1,
+            [['a_obj1', 'b_obj1'], ['a_obj2', 'b_obj2']],
+            'relationship',
+        )
+        data2 = SheetData(
+            'title',
+            'relationship_name',
+            self.data_class_rel[0],
+            ['parameter1', 'parameter3'],
+            parameter_values2,
+            [['a_obj1', 'b_obj1'], ['a_obj3', 'b_obj3']],
+            'relationship',
+        )
 
         parameter_values3 = parameter_values1 + parameter_values2
-        valid_data = SheetData('title', 'relationship_name',
-                               self.data_class_rel[0], [
-                                   'parameter1', 'parameter2', 'parameter3'],
-                               parameter_values3, [['a_obj1', 'b_obj1'], ['a_obj2', 'b_obj2'], ['a_obj3', 'b_obj3']], 'relationship')
+        valid_data = SheetData(
+            'title',
+            'relationship_name',
+            self.data_class_rel[0],
+            ['parameter1', 'parameter2', 'parameter3'],
+            parameter_values3,
+            [['a_obj1', 'b_obj1'], ['a_obj2', 'b_obj2'], ['a_obj3', 'b_obj3']],
+            'relationship',
+        )
 
         test_data, test_log = merge_spine_xlsx_data([data1, data2])
 
@@ -465,17 +568,32 @@ class TestExcelImport(unittest.TestCase):
 
     def test_merge_spine_xlsx_data_diffent_obj_class_names(self):
         """Test merging array of SheetData with different object class names, keep only first SheetData"""
-        parameter_values1 = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
-                             self.RelData('value', 'a_obj2', 'b_obj2', 'parameter2', 2)]
-        parameter_values2 = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
-                             self.RelData('value', 'a_obj3', 'b_obj3', 'parameter3', 2)]
-        data1 = SheetData('title', 'relationship_name',
-                          self.data_class_rel[0], ['parameter1', 'parameter2'],
-                          parameter_values1, [['a_obj1', 'b_obj1'], ['a_obj2', 'b_obj2']], 'relationship')
-        data2 = SheetData('title', 'relationship_name',
-                          ['object_class_name', 'wrong_name'], [
-                              'parameter1', 'parameter3'],
-                          parameter_values2, [['a_obj1', 'b_obj1'], ['a_obj3', 'b_obj3']], 'relationship')
+        parameter_values1 = [
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
+            self.RelData('value', 'a_obj2', 'b_obj2', 'parameter2', 2),
+        ]
+        parameter_values2 = [
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
+            self.RelData('value', 'a_obj3', 'b_obj3', 'parameter3', 2),
+        ]
+        data1 = SheetData(
+            'title',
+            'relationship_name',
+            self.data_class_rel[0],
+            ['parameter1', 'parameter2'],
+            parameter_values1,
+            [['a_obj1', 'b_obj1'], ['a_obj2', 'b_obj2']],
+            'relationship',
+        )
+        data2 = SheetData(
+            'title',
+            'relationship_name',
+            ['object_class_name', 'wrong_name'],
+            ['parameter1', 'parameter3'],
+            parameter_values2,
+            [['a_obj1', 'b_obj1'], ['a_obj3', 'b_obj3']],
+            'relationship',
+        )
 
         test_data, test_log = merge_spine_xlsx_data([data1, data2])
 
@@ -486,12 +604,19 @@ class TestExcelImport(unittest.TestCase):
     def test_read_json_sheet_all_valid_relationship(self):
         """Test reading a sheet with object parameter"""
         ws = self.ws_rel_json
-        parameter_values = [self.RelData('json', 'a_obj1', 'b_obj1', 'parameter1', '[1, 2, 3]'),
-                            self.RelData('json', 'a_obj2', 'b_obj2', 'parameter2', '[4, 5, 6]')]
-        test_data = SheetData('title', 'relationship_name',
-                              self.data_class_rel[0], list(
-                                  set(self.data_parameter)),
-                              parameter_values, [], 'relationship')
+        parameter_values = [
+            self.RelData('json', 'a_obj1', 'b_obj1', 'parameter1', '[1, 2, 3]'),
+            self.RelData('json', 'a_obj2', 'b_obj2', 'parameter2', '[4, 5, 6]'),
+        ]
+        test_data = SheetData(
+            'title',
+            'relationship_name',
+            self.data_class_rel[0],
+            list(set(self.data_parameter)),
+            parameter_values,
+            [],
+            'relationship',
+        )
 
         with mock.patch('excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = self.data_class_rel
@@ -501,12 +626,19 @@ class TestExcelImport(unittest.TestCase):
     def test_read_json_sheet_all_valid_object(self):
         """Test reading a sheet with object parameter"""
         ws = self.ws_obj_json
-        parameter_values = [self.ObjData('json', 'obj1', 'parameter1', '[1, 2, 3]'),
-                            self.ObjData('json', 'obj2', 'parameter2', '[4, 5, 6]')]
-        test_data = SheetData('title', 'object_class_name',
-                              self.data_class_obj[0], list(
-                                  set(self.data_parameter)),
-                              parameter_values, [], 'object')
+        parameter_values = [
+            self.ObjData('json', 'obj1', 'parameter1', '[1, 2, 3]'),
+            self.ObjData('json', 'obj2', 'parameter2', '[4, 5, 6]'),
+        ]
+        test_data = SheetData(
+            'title',
+            'object_class_name',
+            self.data_class_obj[0],
+            list(set(self.data_parameter)),
+            parameter_values,
+            [],
+            'object',
+        )
 
         with mock.patch('excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = self.data_class_obj
@@ -516,13 +648,21 @@ class TestExcelImport(unittest.TestCase):
     def test_read_parameter_sheet_all_valid_object(self):
         """Test reading a sheet with object parameter"""
         ws = self.ws_obj
-        parameter_values = [self.ObjData('value', 'obj1', 'parameter1', 1),
-                            self.ObjData('value', 'obj1', 'parameter2', 'a'),
-                            self.ObjData('value', 'obj2', 'parameter1', 2),
-                            self.ObjData('value', 'obj2', 'parameter2', 'b')]
-        test_data = SheetData('title', 'object_class_name',
-                              self.data_class_obj[0], self.data_parameter,
-                              parameter_values, self.class_obj_obj, 'object')
+        parameter_values = [
+            self.ObjData('value', 'obj1', 'parameter1', 1),
+            self.ObjData('value', 'obj1', 'parameter2', 'a'),
+            self.ObjData('value', 'obj2', 'parameter1', 2),
+            self.ObjData('value', 'obj2', 'parameter2', 'b'),
+        ]
+        test_data = SheetData(
+            'title',
+            'object_class_name',
+            self.data_class_obj[0],
+            self.data_parameter,
+            parameter_values,
+            self.class_obj_obj,
+            'object',
+        )
 
         with mock.patch('excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = [self.data_class_obj, self.data_obj]
@@ -532,15 +672,21 @@ class TestExcelImport(unittest.TestCase):
     def test_read_parameter_sheet_all_valid_relationship(self):
         """Test reading a sheet with object parameter"""
         ws = self.ws_rel
-        parameter_values = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
-                            self.RelData('value', 'a_obj1',
-                                         'b_obj1', 'parameter2', 'a'),
-                            self.RelData('value', 'a_obj2',
-                                         'b_obj2', 'parameter1', 2),
-                            self.RelData('value', 'a_obj2', 'b_obj2', 'parameter2', 'b')]
-        test_data = SheetData('title', 'relationship_name',
-                              self.data_class_rel[0], self.data_parameter,
-                              parameter_values, self.class_obj_rel, 'relationship')
+        parameter_values = [
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter2', 'a'),
+            self.RelData('value', 'a_obj2', 'b_obj2', 'parameter1', 2),
+            self.RelData('value', 'a_obj2', 'b_obj2', 'parameter2', 'b'),
+        ]
+        test_data = SheetData(
+            'title',
+            'relationship_name',
+            self.data_class_rel[0],
+            self.data_parameter,
+            parameter_values,
+            self.class_obj_rel,
+            'relationship',
+        )
 
         with mock.patch('excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = [self.data_class_rel, self.data_rel]
@@ -554,17 +700,25 @@ class TestExcelImport(unittest.TestCase):
         # make last row in data invalid
         self.data_rel[1][0] = None
         self.class_obj_rel.pop(1)
-        Cell = namedtuple('cell',['value'])
+        Cell = namedtuple('cell', ['value'])
         data = list(ws.iter_rows())
         data.pop(-1)
         data.append([Cell(None), Cell('b_obj2'), Cell(2), Cell('b'), Cell(None)])
-        ws.iter_rows.side_effect = lambda : iter(data)
+        ws.iter_rows.side_effect = lambda: iter(data)
 
-        parameter_values = [self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
-                            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter2', 'a')]
-        test_data = SheetData('title', 'relationship_name',
-                              self.data_class_rel[0], self.data_parameter,
-                              parameter_values, self.class_obj_rel, 'relationship')
+        parameter_values = [
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter1', 1),
+            self.RelData('value', 'a_obj1', 'b_obj1', 'parameter2', 'a'),
+        ]
+        test_data = SheetData(
+            'title',
+            'relationship_name',
+            self.data_class_rel[0],
+            self.data_parameter,
+            parameter_values,
+            self.class_obj_rel,
+            'relationship',
+        )
 
         with mock.patch('excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = [self.data_class_rel, self.data_rel]
@@ -575,17 +729,25 @@ class TestExcelImport(unittest.TestCase):
         """Test reading a sheet with None values in parameter value cells"""
         ws = self.ws_obj
         self.data_obj[1][1] = None
-        Cell = namedtuple('cell',['value'])
+        Cell = namedtuple('cell', ['value'])
         data = list(ws.iter_rows())
         data[5][1] = Cell(None)
-        ws.iter_rows.side_effect = lambda : iter(data)
+        ws.iter_rows.side_effect = lambda: iter(data)
 
-        parameter_values = [self.ObjData('value', 'obj1', 'parameter1', 1),
-                            self.ObjData('value', 'obj1', 'parameter2', 'a'),
-                            self.ObjData('value', 'obj2', 'parameter2', 'b')]
-        test_data = SheetData('title', 'object_class_name',
-                              self.data_class_obj[0], self.data_parameter,
-                              parameter_values, self.class_obj_obj, 'object')
+        parameter_values = [
+            self.ObjData('value', 'obj1', 'parameter1', 1),
+            self.ObjData('value', 'obj1', 'parameter2', 'a'),
+            self.ObjData('value', 'obj2', 'parameter2', 'b'),
+        ]
+        test_data = SheetData(
+            'title',
+            'object_class_name',
+            self.data_class_obj[0],
+            self.data_parameter,
+            parameter_values,
+            self.class_obj_obj,
+            'object',
+        )
 
         with mock.patch('excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = [self.data_class_obj, self.data_obj]
@@ -692,7 +854,6 @@ class TestExcelImport(unittest.TestCase):
 
 
 class TestStackUnstack(unittest.TestCase):
-
     def test_stack_list_of_tuples(self):
         """Test transformation of pivoted table into a stacked table"""
 
@@ -701,27 +862,28 @@ class TestStackUnstack(unittest.TestCase):
         headers = ["col1", "col2", "pivot_col1", "pivot_col2"]
         key_cols = [0, 1]
         value_cols = [2, 3]
-        data_in = [["col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"],
-                   ["col1_v2", "col2_v2", "pivot_col1_v2", "pivot_col2_v2"],
-                   ["col1_v3", "col2_v3", "pivot_col1_v3", "pivot_col2_v3"]]
-        data_out = sorted([TestDataTuple("col1_v1", "col2_v1", "pivot_col1", "pivot_col1_v1"),
-                           TestDataTuple("col1_v2", "col2_v2",
-                                         "pivot_col1", "pivot_col1_v2"),
-                           TestDataTuple("col1_v1", "col2_v1",
-                                         "pivot_col2", "pivot_col2_v1"),
-                           TestDataTuple("col1_v2", "col2_v2",
-                                         "pivot_col2", "pivot_col2_v2"),
-                           TestDataTuple("col1_v3", "col2_v3",
-                                         "pivot_col1", "pivot_col1_v3"),
-                           TestDataTuple("col1_v3", "col2_v3", "pivot_col2", "pivot_col2_v3")])
+        data_in = [
+            ["col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"],
+            ["col1_v2", "col2_v2", "pivot_col1_v2", "pivot_col2_v2"],
+            ["col1_v3", "col2_v3", "pivot_col1_v3", "pivot_col2_v3"],
+        ]
+        data_out = sorted(
+            [
+                TestDataTuple("col1_v1", "col2_v1", "pivot_col1", "pivot_col1_v1"),
+                TestDataTuple("col1_v2", "col2_v2", "pivot_col1", "pivot_col1_v2"),
+                TestDataTuple("col1_v1", "col2_v1", "pivot_col2", "pivot_col2_v1"),
+                TestDataTuple("col1_v2", "col2_v2", "pivot_col2", "pivot_col2_v2"),
+                TestDataTuple("col1_v3", "col2_v3", "pivot_col1", "pivot_col1_v3"),
+                TestDataTuple("col1_v3", "col2_v3", "pivot_col2", "pivot_col2_v3"),
+            ]
+        )
 
-        test_data_out = sorted(stack_list_of_tuples(
-            data_in, headers, key_cols, value_cols))
+        test_data_out = sorted(stack_list_of_tuples(data_in, headers, key_cols, value_cols))
 
         for d, t in zip(data_out, test_data_out):
             for f in fieldnames:
                 self.assertEqual(getattr(d, f), getattr(t, f))
-        #self.assertEqual(data_out, test_data_out)
+        # self.assertEqual(data_out, test_data_out)
 
     def test_unstack_list_of_tuples(self):
         """Test transformation of unpivoted table into a pivoted table"""
@@ -731,17 +893,21 @@ class TestStackUnstack(unittest.TestCase):
         key_cols = [0, 1]
         value_name_col = 2
         value_col = 3
-        data_in = [["col1_v1", "col2_v1", "pivot_col1", "pivot_col1_v1"],
-                   ["col1_v2", "col2_v2", "pivot_col1", "pivot_col1_v2"],
-                   ["col1_v1", "col2_v1", "pivot_col2", "pivot_col2_v1"],
-                   ["col1_v2", "col2_v2", "pivot_col2", "pivot_col2_v2"],
-                   ["col1_v3", "col2_v3", "pivot_col2", "pivot_col2_v3"]]
+        data_in = [
+            ["col1_v1", "col2_v1", "pivot_col1", "pivot_col1_v1"],
+            ["col1_v2", "col2_v2", "pivot_col1", "pivot_col1_v2"],
+            ["col1_v1", "col2_v1", "pivot_col2", "pivot_col2_v1"],
+            ["col1_v2", "col2_v2", "pivot_col2", "pivot_col2_v2"],
+            ["col1_v3", "col2_v3", "pivot_col2", "pivot_col2_v3"],
+        ]
 
-        data_out = [["col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"],
-                    ["col1_v2", "col2_v2", "pivot_col1_v2", "pivot_col2_v2"],
-                    ["col1_v3", "col2_v3", None, "pivot_col2_v3"]]
+        data_out = [
+            ["col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"],
+            ["col1_v2", "col2_v2", "pivot_col1_v2", "pivot_col2_v2"],
+            ["col1_v3", "col2_v3", None, "pivot_col2_v3"],
+        ]
 
-        test_data_out, new_headers  = unstack_list_of_tuples(data_in, headers, key_cols, value_name_col, value_col)
+        test_data_out, new_headers = unstack_list_of_tuples(data_in, headers, key_cols, value_name_col, value_col)
 
         self.assertEqual(test_data_out, data_out)
         self.assertEqual(new_headers, fieldnames)
@@ -754,15 +920,19 @@ class TestStackUnstack(unittest.TestCase):
         key_cols = [0, 1]
         value_name_col = 2
         value_col = 3
-        data_in = [["col1_v1", "col2_v1", "pivot col1", "pivot_col1_v1"],
-                   ["col1_v2", "col2_v2", "pivot col1", "pivot_col1_v2"],
-                   ["col1_v1", "col2_v1", "pivot col2", "pivot_col2_v1"],
-                   ["col1_v2", "col2_v2", "pivot col2", "pivot_col2_v2"],
-                   ["col1_v3", "col2_v3", "pivot col2", "pivot_col2_v3"]]
+        data_in = [
+            ["col1_v1", "col2_v1", "pivot col1", "pivot_col1_v1"],
+            ["col1_v2", "col2_v2", "pivot col1", "pivot_col1_v2"],
+            ["col1_v1", "col2_v1", "pivot col2", "pivot_col2_v1"],
+            ["col1_v2", "col2_v2", "pivot col2", "pivot_col2_v2"],
+            ["col1_v3", "col2_v3", "pivot col2", "pivot_col2_v3"],
+        ]
 
-        data_out = [["col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"],
-                    ["col1_v2", "col2_v2", "pivot_col1_v2", "pivot_col2_v2"],
-                    ["col1_v3", "col2_v3", None, "pivot_col2_v3"]]
+        data_out = [
+            ["col1_v1", "col2_v1", "pivot_col1_v1", "pivot_col2_v1"],
+            ["col1_v2", "col2_v2", "pivot_col1_v2", "pivot_col2_v2"],
+            ["col1_v3", "col2_v3", None, "pivot_col2_v3"],
+        ]
 
         test_data_out, new_headers = unstack_list_of_tuples(data_in, headers, key_cols, value_name_col, value_col)
 
@@ -776,21 +946,27 @@ class TestStackUnstack(unittest.TestCase):
         key_cols = [0]
         value_name_col = [1, 2]
         value_col = 3
-        data_in = [["col1_v1", "col2_v1", "pivot_col1", "pivot_col1_v1"],
-                   ["col1_v2", "col2_v2", "pivot_col1", "pivot_col1_v2"],
-                   ["col1_v1", "col2_v1", "pivot_col2", "pivot_col2_v1"],
-                   ["col1_v2", "col2_v2", "pivot_col2", "pivot_col2_v2"],
-                   ["col1_v3", "col2_v3", "pivot_col2", "pivot_col2_v3"]]
+        data_in = [
+            ["col1_v1", "col2_v1", "pivot_col1", "pivot_col1_v1"],
+            ["col1_v2", "col2_v2", "pivot_col1", "pivot_col1_v2"],
+            ["col1_v1", "col2_v1", "pivot_col2", "pivot_col2_v1"],
+            ["col1_v2", "col2_v2", "pivot_col2", "pivot_col2_v2"],
+            ["col1_v3", "col2_v3", "pivot_col2", "pivot_col2_v3"],
+        ]
 
-        headers_out = ["col1",
-                       ("col2_v1", "pivot_col1"),
-                       ("col2_v1", "pivot_col2"),
-                       ("col2_v2", "pivot_col1"),
-                       ("col2_v2", "pivot_col2"),
-                       ("col2_v3", "pivot_col2")]
-        data_out = [["col1_v1", "pivot_col1_v1", "pivot_col2_v1", None, None, None],
-                    ["col1_v2", None, None, "pivot_col1_v2", "pivot_col2_v2", None],
-                    ["col1_v3", None, None, None, None, "pivot_col2_v3"]]
+        headers_out = [
+            "col1",
+            ("col2_v1", "pivot_col1"),
+            ("col2_v1", "pivot_col2"),
+            ("col2_v2", "pivot_col1"),
+            ("col2_v2", "pivot_col2"),
+            ("col2_v3", "pivot_col2"),
+        ]
+        data_out = [
+            ["col1_v1", "pivot_col1_v1", "pivot_col2_v1", None, None, None],
+            ["col1_v2", None, None, "pivot_col1_v2", "pivot_col2_v2", None],
+            ["col1_v3", None, None, None, None, "pivot_col2_v3"],
+        ]
 
         test_data_out, test_header_out = unstack_list_of_tuples(data_in, headers, key_cols, value_name_col, value_col)
 
