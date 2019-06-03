@@ -123,7 +123,7 @@ class MappingTableModel(QAbstractTableModel):
             if self._model.parameters is not None:
                 self._model.parameters.extra_dimensions = None
             else:
-                self._model.parameters = ParameterMapping(field="value")
+                self._model.parameters = ParameterMapping()
         elif new_type == "Time series":
             if self._model.parameters is not None:
                 if self._model.parameters.extra_dimensions is None:
@@ -132,10 +132,9 @@ class MappingTableModel(QAbstractTableModel):
                     self._model.parameters.extra_dimensions = self._model.parameters.extra_dimensions[
                         :1
                     ]
-                    self._model.parameters.field = "json"
             else:
                 self._model.parameters = ParameterMapping(
-                    extra_dimensions=[None], field="json"
+                    extra_dimensions=[None]
                 )
         self.update_display_table()
         self.endResetModel()
