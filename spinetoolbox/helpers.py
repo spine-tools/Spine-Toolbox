@@ -422,7 +422,8 @@ class IconManager:
         self.model.invisibleRootItem().appendRows(items)
 
     def _model_data(self, index, role):
-        """Create pixmaps as they're requested, to reduce loading time."""
+        """Replacement method for model.data().
+        Create pixmaps as they're requested by the data() method, to reduce loading time."""
         if role == Qt.DisplayRole:
             return None
         if role != Qt.DecorationRole:
@@ -450,6 +451,9 @@ class IconManager:
         return self.display_icon(*self.icon_color_code(None))
 
     def setup_object_pixmaps(self, object_classes):
+        """Called after adding or updating object classes. 
+        Create the corresponding object pixmaps and clear obsolete entries 
+        from the relationship class icon cache."""
         for object_class in object_classes:
             self.create_object_pixmap(object_class.display_icon)
             self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
@@ -459,7 +463,7 @@ class IconManager:
             del self.rel_cls_icon_cache[k]
 
     def create_object_pixmap(self, display_icon):
-        """Create a pixmap corresponding to object icon, store it and return it."""
+        """Create a pixmap corresponding to display_icon, cache it, and return it."""
         if display_icon not in self.icon_pixmap_cache:
             icon_code, color_code = self.icon_color_code(display_icon)
             engine = CharIconEngine(chr(icon_code), color_code)
@@ -477,11 +481,12 @@ class IconManager:
         return engine.pixmap(QSize(512, 512))
 
     def object_icon(self, object_class_name):
-        """An object icon from the stored pixmaps if any."""
+        """An icon for the given object class."""
         return QIcon(self.object_pixmap(object_class_name))
 
     def relationship_pixmap(self, str_object_class_name_list):
-        """A pixmap rendered by painting several object pixmaps together."""
+        """A pixmap for the given object class name list,
+        created by rendering several object pixmaps next to each other."""
         if not str_object_class_name_list:
             engine = CharIconEngine("\uf1b3", 0)
             return engine.pixmap(QSize(512, 512))
@@ -510,7 +515,7 @@ class IconManager:
         return pixmap
 
     def relationship_icon(self, str_object_class_name_list):
-        """A relationship icon corresponding to the list of object names."""
+        """An icon for the given object class name list."""
         return QIcon(self.relationship_pixmap(str_object_class_name_list))
 
 
