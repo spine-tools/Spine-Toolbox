@@ -1178,7 +1178,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_item_properties.setCurrentIndex(0)
+        self.tabWidget_item_properties.setCurrentIndex(4)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.treeView_project)
@@ -1243,16 +1243,12 @@ class Ui_MainWindow(object):
         self.label_ds_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
         self.groupBox.setTitle(QtWidgets.QApplication.translate("MainWindow", "Url", None, -1))
         self.label_host.setText(QtWidgets.QApplication.translate("MainWindow", "Host", None, -1))
-        self.lineEdit_host.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Host (required)</p></body></html>", None, -1))
         self.label_port.setText(QtWidgets.QApplication.translate("MainWindow", "Port", None, -1))
-        self.lineEdit_port.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Port (optional)</p></body></html>", None, -1))
         self.label_dsn.setText(QtWidgets.QApplication.translate("MainWindow", "DSN", None, -1))
         self.label_dialect.setText(QtWidgets.QApplication.translate("MainWindow", "Dialect", None, -1))
         self.label_username.setText(QtWidgets.QApplication.translate("MainWindow", "Username", None, -1))
         self.label_database.setText(QtWidgets.QApplication.translate("MainWindow", "Database", None, -1))
         self.label_password.setText(QtWidgets.QApplication.translate("MainWindow", "Password", None, -1))
-        self.lineEdit_username.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Username (optional)</p></body></html>", None, -1))
-        self.lineEdit_password.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Password (optional)</p></body></html>", None, -1))
         self.toolButton_open_sqlite_file.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open SQLite file.</p></body></html>", None, -1))
         self.pushButton_create_new_spine_db.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Create a new Spine database at the selected url.</p></body></html>", None, -1))
         self.pushButton_create_new_spine_db.setText(QtWidgets.QApplication.translate("MainWindow", "Create new Spine db", None, -1))
@@ -1355,9 +1351,9 @@ class Ui_MainWindow(object):
         self.actionRemove_all.setText(QtWidgets.QApplication.translate("MainWindow", "Remove all", None, -1))
         self.actionRemove_all.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1))
 
-from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 import resources_icons_rc
 import resources_logos_rc

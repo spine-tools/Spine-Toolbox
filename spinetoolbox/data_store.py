@@ -97,11 +97,11 @@ class DataStore(ProjectItem):
         s[self._toolbox.ui.toolButton_copy_url.clicked] = self.copy_url
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
         s[self._toolbox.ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
-        s[self._toolbox.ui.lineEdit_username.textEdited] = self.refresh_username
-        s[self._toolbox.ui.lineEdit_password.textEdited] = self.refresh_password
-        s[self._toolbox.ui.lineEdit_host.textEdited] = self.refresh_host
-        s[self._toolbox.ui.lineEdit_port.textEdited] = self.refresh_port
-        s[self._toolbox.ui.lineEdit_database.textEdited] = self.refresh_database
+        s[self._toolbox.ui.lineEdit_username.textChanged] = self.refresh_username
+        s[self._toolbox.ui.lineEdit_password.textChanged] = self.refresh_password
+        s[self._toolbox.ui.lineEdit_host.textChanged] = self.refresh_host
+        s[self._toolbox.ui.lineEdit_port.textChanged] = self.refresh_port
+        s[self._toolbox.ui.lineEdit_database.textChanged] = self.refresh_database
         return s
 
     def activate(self):
@@ -187,7 +187,7 @@ class DataStore(ProjectItem):
         """Open file browser where user can select the path to an SQLite
         file that they want to use."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self._toolbox, 'Select SQlite file', self.data_dir, 'SQLite (*.*)')
+        answer = QFileDialog.getOpenFileName(self._toolbox, 'Select SQlite file', self.data_dir)
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return

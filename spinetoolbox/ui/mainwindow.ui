@@ -355,7 +355,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -530,9 +530,6 @@
                         <pointsize>8</pointsize>
                        </font>
                       </property>
-                      <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Host (required)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                      </property>
                       <property name="placeholderText">
                        <string/>
                       </property>
@@ -586,9 +583,6 @@
                        <font>
                         <pointsize>8</pointsize>
                        </font>
-                      </property>
-                      <property name="toolTip">
-                       <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Port (optional)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                       </property>
                       <property name="inputMethodHints">
                        <set>Qt::ImhNone</set>
@@ -754,9 +748,6 @@
                       <pointsize>8</pointsize>
                      </font>
                     </property>
-                    <property name="toolTip">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Username (optional)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                    </property>
                     <property name="placeholderText">
                      <string/>
                     </property>
@@ -792,9 +783,6 @@
                      <font>
                       <pointsize>8</pointsize>
                      </font>
-                    </property>
-                    <property name="toolTip">
-                     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Password (optional)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                     </property>
                     <property name="echoMode">
                      <enum>QLineEdit::Password</enum>
