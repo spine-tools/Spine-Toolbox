@@ -13,18 +13,10 @@ from PySide2.QtWidgets import (
     QErrorMessage,
     QSplitter,
 )
-from PySide2.QtCore import (
-    Signal,
-    QModelIndex,
-    QAbstractItemModel,
-    Qt,
-    QItemSelectionModel,
-    QPoint,
-)
+from PySide2.QtCore import Signal, QModelIndex, QAbstractItemModel, Qt, QItemSelectionModel, QPoint
 from PySide2.QtGui import QColor
 
 from spine_io.widgets.mapping_widget import MappingWidget, DataMappingListModel
-
 
 
 class ImportPreviewWidget(QWidget):
@@ -52,9 +44,7 @@ class ImportPreviewWidget(QWidget):
         self._ui_mapper = MappingWidget()
         self._ui_preview_menu = MappingTableMenu(self._ui_table)
 
-        self._dialog_buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-        )
+        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 
         # layout
         self.setLayout(QVBoxLayout())
@@ -83,9 +73,7 @@ class ImportPreviewWidget(QWidget):
 
         # connect signals
         self._ui_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self._ui_table.customContextMenuRequested.connect(
-            self._ui_preview_menu.request_menu
-        )
+        self._ui_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
 
         self._ui_list.currentItemChanged.connect(self.select_table)
         self._ui_list.itemChanged.connect(self.check_list_item)
@@ -115,9 +103,7 @@ class ImportPreviewWidget(QWidget):
         self._ui_mapper.mappingDataChanged.connect(self.table.set_mapping)
 
         # preview new preview data
-        self.previewDataUpdated.connect(
-            lambda: self._ui_mapper.set_data_source_column_num(self.table.columnCount())
-        )
+        self.previewDataUpdated.connect(lambda: self._ui_mapper.set_data_source_column_num(self.table.columnCount()))
 
         # ok button
         self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.ok_pressed)
@@ -173,10 +159,7 @@ class ImportPreviewWidget(QWidget):
             self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(False)
 
     def ok_pressed(self):
-        tables_mappings = {
-            t: self.table_mappings[t].get_mappings()
-            for t in self.selected_source_tables
-        }
+        tables_mappings = {t: self.table_mappings[t].get_mappings() for t in self.selected_source_tables}
         self.connector.request_mapped_data(tables_mappings, max_rows=-1)
 
     def update_tables(self, tables):
@@ -227,9 +210,7 @@ class ImportPreviewWidget(QWidget):
         # reselect table if existing
         if selected and selected[0].text() in tables:
             table = selected[0].text()
-            self._ui_list.setCurrentRow(
-                tables.index(table), QItemSelectionModel.SelectCurrent
-            )
+            self._ui_list.setCurrentRow(tables.index(table), QItemSelectionModel.SelectCurrent)
         self.update_ok_state()
 
     def update_preview_data(self, data, header):
@@ -316,9 +297,7 @@ class MappingPreviewModel(TableModel):
             self._data_changed_signal = None
         self._mapping = mapping
         if self._mapping:
-            self._data_changed_signal = self._mapping.dataChanged.connect(
-                self.update_colors
-            )
+            self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
         self.update_colors()
 
     def update_colors(self):
@@ -427,7 +406,7 @@ class MappingTableMenu(QMenu):
         self._model.set_mapping_from_name(name, mapping)
 
     def ignore_columns(self, columns=None):
-        #TODO: implement this, add selected columns to ignored columns in current mapping.
+        # TODO: implement this, add selected columns to ignored columns in current mapping.
         if columns is None:
             columns = []
 
@@ -446,8 +425,7 @@ class MappingTableMenu(QMenu):
             return lambda: self.set_mapping(name=name, map_type=map_type, value=value)
 
         mapping_names = [
-            self._model.data(self._model.createIndex(i, 0), Qt.DisplayRole)
-            for i in range(self._model.rowCount())
+            self._model.data(self._model.createIndex(i, 0), Qt.DisplayRole) for i in range(self._model.rowCount())
         ]
         for n in mapping_names:
             m = self.addMenu(n)
@@ -456,18 +434,10 @@ class MappingTableMenu(QMenu):
             row_map = m.addAction(f"Map to row")
             header_map = m.addAction(f"Map to all headers")
 
-            col_map.triggered.connect(
-                create_callback(name=n, map_type="column", value=col)
-            )
-            col_header_map.triggered.connect(
-                create_callback(name=n, map_type="column_name", value=col)
-            )
-            row_map.triggered.connect(
-                create_callback(name=n, map_type="row", value=row)
-            )
-            header_map.triggered.connect(
-                create_callback(name=n, map_type="row", value=-1)
-            )
+            col_map.triggered.connect(create_callback(name=n, map_type="column", value=col))
+            col_header_map.triggered.connect(create_callback(name=n, map_type="column_name", value=col))
+            row_map.triggered.connect(create_callback(name=n, map_type="row", value=row))
+            header_map.triggered.connect(create_callback(name=n, map_type="row", value=-1))
 
         pPos = self.parent().mapToGlobal(QPoint(5, 20))
         mPos = pPos + QPos

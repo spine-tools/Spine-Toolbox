@@ -16,23 +16,12 @@ from PySide2.QtWidgets import (
     QCheckBox,
     QSplitter,
 )
-from PySide2.QtCore import (
-    Qt,
-    QAbstractTableModel,
-    Signal,
-    QAbstractListModel,
-    QModelIndex,
-)
+from PySide2.QtCore import Qt, QAbstractTableModel, Signal, QAbstractListModel, QModelIndex
 
 from widgets.custom_menus import FilterMenu
 from widgets.custom_delegates import ComboBoxDelegate
 
-from spinedb_api import (
-    RelationshipClassMapping,
-    ObjectClassMapping,
-    Mapping,
-    ParameterMapping,
-)
+from spinedb_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
 
 MAPPING_CHOICES = ("Constant", "Column", "Row", "Header", "None")
 
@@ -45,13 +34,13 @@ class MappingTableModel(QAbstractTableModel):
         self._model = None
         if model is not None:
             self.set_mapping(model)
-    
+
     @property
     def map_type(self):
         if self._model is None:
             return None
         return type(self._model)
-    
+
     @property
     def dimension(self):
         if self._model is None:
@@ -68,7 +57,7 @@ class MappingTableModel(QAbstractTableModel):
         if isinstance(self._model, RelationshipClassMapping):
             return self._model.import_objects
         return True
-    
+
     def set_import_objects(self, flag):
         self._model.import_objects = bool(flag)
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
@@ -151,13 +140,9 @@ class MappingTableModel(QAbstractTableModel):
                 if self._model.parameters.extra_dimensions is None:
                     self._model.parameters.extra_dimensions = [None]
                 else:
-                    self._model.parameters.extra_dimensions = self._model.parameters.extra_dimensions[
-                        :1
-                    ]
+                    self._model.parameters.extra_dimensions = self._model.parameters.extra_dimensions[:1]
             else:
-                self._model.parameters = ParameterMapping(
-                    extra_dimensions=[None]
-                )
+                self._model.parameters = ParameterMapping(extra_dimensions=[None])
         self.update_display_table()
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
@@ -169,17 +154,10 @@ class MappingTableModel(QAbstractTableModel):
         if type(self._model) == RelationshipClassMapping:
             display_name.append("Relationship class names:")
             if self._model.object_classes:
-                display_name.extend(
-                    [
-                        f"Object class {i+1} names:"
-                        for i, oc in enumerate(self._model.object_classes)
-                    ]
-                )
+                display_name.extend([f"Object class {i+1} names:" for i, oc in enumerate(self._model.object_classes)])
                 mappings.extend([oc for oc in self._model.object_classes])
             if self._model.objects:
-                display_name.extend(
-                    [f"Object {i+1} names:" for i, oc in enumerate(self._model.objects)]
-                )
+                display_name.extend([f"Object {i+1} names:" for i, oc in enumerate(self._model.objects)])
                 mappings.extend([o for o in self._model.objects])
         else:
             display_name.append("Object class names:")
@@ -270,13 +248,7 @@ class MappingTableModel(QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                return [
-                    "Mapping",
-                    "Type",
-                    "Reference",
-                    "Prepend string",
-                    "Append string",
-                ][section]
+                return ["Mapping", "Type", "Reference", "Prepend string", "Append string"][section]
 
     def flags(self, index):
         editable = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
@@ -302,11 +274,7 @@ class MappingTableModel(QAbstractTableModel):
                 return editable
             else:
                 return non_editable
-        elif (
-            type(mapping) == Mapping
-            and mapping.map_type == "row"
-            and mapping.value_reference == -1
-        ):
+        elif type(mapping) == Mapping and mapping.map_type == "row" and mapping.value_reference == -1:
             if index.column() == 2:
                 return non_editable
             else:
@@ -473,13 +441,9 @@ class MappingWidget(QWidget):
         self._ui_list = QListView()
         self._ui_table = QTableView()
         self._ui_options = MappingOptionWidget()
-        self._dialog_buttons = QDialogButtonBox(
-            QDialogButtonBox.Ok | QDialogButtonBox.Cancel
-        )
+        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 
-        self._ui_table.setItemDelegateForColumn(
-            1, ComboBoxDelegate(self, MAPPING_CHOICES)
-        )
+        self._ui_table.setItemDelegateForColumn(1, ComboBoxDelegate(self, MAPPING_CHOICES))
 
         # layout
         self.setLayout(QVBoxLayout())
@@ -511,8 +475,8 @@ class MappingWidget(QWidget):
         self._select_handle = None
         self._ui_add_mapping.clicked.connect(self.new_mapping)
         self._ui_remove_mapping.clicked.connect(self.delete_selected_mapping)
-        self.mappingChanged.connect(lambda m: self._ui_table.setModel(m))
-        self.mappingChanged.connect(lambda m: self._ui_options.set_model(m))
+        self.mappingChanged.connect(self._ui_table.setModel)
+        self.mappingChanged.connect(self._ui_options.set_model)
 
     def set_data_source_column_num(self, num):
         self._ui_options.set_num_available_columns(num)
@@ -522,17 +486,13 @@ class MappingWidget(QWidget):
         Sets new model
         """
         if self._select_handle and self._ui_list.selectionModel():
-            self._ui_list.selectionModel().selectionChanged.disconnect(
-                self.select_mapping
-            )
+            self._ui_list.selectionModel().selectionChanged.disconnect(self.select_mapping)
             self._select_handle = None
         if self._model:
             self._model.dataChanged.disconnect(self.data_changed)
         self._model = model
         self._ui_list.setModel(model)
-        self._select_handle = self._ui_list.selectionModel().selectionChanged.connect(
-            self.select_mapping
-        )
+        self._select_handle = self._ui_list.selectionModel().selectionChanged.connect(self.select_mapping)
         self._model.dataChanged.connect(self.data_changed)
         if self._model.rowCount() > 0:
             self._ui_list.setCurrentIndex(self._model.index(0, 0))
@@ -621,9 +581,7 @@ class DataMappingListModel(QAbstractListModel):
             return self._names[index.row()]
 
     def add_mapping(self):
-        self.beginInsertRows(
-            self.index(self.rowCount(), 0), self.rowCount(), self.rowCount()
-        )
+        self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(), self.rowCount())
         m = ObjectClassMapping()
         self._qmappings.append(MappingTableModel(m))
         self._names.append("Mapping " + str(self._counter))
@@ -653,9 +611,7 @@ class MappingOptionWidget(QWidget):
         self._ui_ignore_columns_label = QLabel("Ignore columns:")
         self._ui_dimension_label = QLabel("Dimension:")
         self._ui_import_objects = QCheckBox("Import objects")
-        self._ui_ignore_columns_filtermenu = FilterMenu(
-            self._ui_ignore_columns, show_empty=False
-        )
+        self._ui_ignore_columns_filtermenu = FilterMenu(self._ui_ignore_columns, show_empty=False)
         self._ui_ignore_columns.setMenu(self._ui_ignore_columns_filtermenu)
 
         self._ui_class_type.addItems(["Object", "Relationship"])
@@ -684,9 +640,7 @@ class MappingOptionWidget(QWidget):
         self._ui_class_type.currentTextChanged.connect(self.change_class)
         self._ui_parameter_type.currentTextChanged.connect(self.change_parameter)
         self._ui_import_objects.stateChanged.connect(self.change_import_objects)
-        self._ui_ignore_columns_filtermenu.filterChanged.connect(
-            self.change_skip_columns
-        )
+        self._ui_ignore_columns_filtermenu.filterChanged.connect(self.change_skip_columns)
 
         self._model_reset_signal = None
         self._model_data_signal = None
@@ -694,12 +648,8 @@ class MappingOptionWidget(QWidget):
         self.update_ui()
 
     def set_num_available_columns(self, num):
-        selected = (
-            self._ui_ignore_columns_filtermenu._filter._filter_model.get_selected()
-        )
-        self._ui_ignore_columns_filtermenu._filter._filter_model.set_list(
-            set(range(num))
-        )
+        selected = self._ui_ignore_columns_filtermenu._filter._filter_model.get_selected()
+        self._ui_ignore_columns_filtermenu._filter._filter_model.set_list(set(range(num)))
         self._ui_ignore_columns_filtermenu._filter._filter_model.set_selected(selected)
 
     def change_skip_columns(self, filterw, skip_cols, has_filter):

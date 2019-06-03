@@ -179,9 +179,7 @@ class IOWorker(QObject):
         specified only that number of rows.
         """
         try:
-            data_iter, header, _num_cols = self.get_data_iterator(
-                table, options, max_rows
-            )
+            data_iter, header, _num_cols = self.get_data_iterator(table, options, max_rows)
             data = [d for d in data_iter]
             self.dataReady.emit(data, header)
         except Exception as error:
@@ -213,8 +211,6 @@ class IOWorker(QObject):
                     mapped_data[key].extend(value)
                 errors.extend(error)
             except Exception as error:
-                self.error.emit(
-                    f"Error when reading data source: {table}, message: {error}"
-                )
+                self.error.emit(f"Error when reading data source: {table}, message: {error}")
                 return
         self.mappedDataReady.emit(mapped_data, errors)

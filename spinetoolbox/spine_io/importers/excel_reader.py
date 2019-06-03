@@ -4,23 +4,12 @@ from itertools import islice, takewhile
 import io
 
 
-from PySide2.QtWidgets import (
-    QWidget,
-    QFormLayout,
-    QLabel,
-    QCheckBox,
-    QSpinBox,
-    QGroupBox,
-    QVBoxLayout,
-)
+from PySide2.QtWidgets import QWidget, QFormLayout, QLabel, QCheckBox, QSpinBox, QGroupBox, QVBoxLayout
 from PySide2.QtCore import Signal, QThread
 
 from openpyxl import load_workbook
 
-from spinedb_api import (
-    RelationshipClassMapping,
-    ObjectClassMapping,
-)
+from spinedb_api import RelationshipClassMapping, ObjectClassMapping
 
 from spine_io.io_api import FileImportTemplate, IOWorker
 
@@ -93,12 +82,8 @@ class ExcelConnector(FileImportTemplate):
         # connect worker signals
         self.worker.connectionReady.connect(lambda: self.connectionReady.emit())
         self.worker.tablesReady.connect(self.handle_tables_ready)
-        self.worker.dataReady.connect(
-            lambda data, header: self.dataReady.emit(data, header)
-        )
-        self.worker.mappedDataReady.connect(
-            lambda data, error: self.mappedDataReady.emit(data, error)
-        )
+        self.worker.dataReady.connect(lambda data, header: self.dataReady.emit(data, header))
+        self.worker.mappedDataReady.connect(lambda data, error: self.mappedDataReady.emit(data, error))
         self.worker.error.connect(lambda error_str: self.error.emit(error_str))
         # connect start working signals
         self.startTableGet.connect(self.worker.tables)
@@ -108,9 +93,7 @@ class ExcelConnector(FileImportTemplate):
         self.thread.start()
 
     def handle_tables_ready(self, table_options):
-        self.sheet_options.update(
-            {k: t["options"] for k, t in table_options.items() if t["options"] is not None}
-        )
+        self.sheet_options.update({k: t["options"] for k, t in table_options.items() if t["options"] is not None})
         tables = {k: t["mapping"] for k, t in table_options.items()}
         self.tablesReady.emit(tables)
         # update options if a sheet is selected
@@ -203,13 +186,7 @@ class ExcelWorker(IOWorker):
         Checks if sheet is a valid spine excel template, if so creates a
         mapping object for each sheet.
         """
-        options = {
-            "header": False,
-            "row": 0,
-            "column": 0,
-            "read_until_col": False,
-            "read_until_row": False,
-        }
+        options = {"header": False, "row": 0, "column": 0, "read_until_col": False, "read_until_row": False}
         mapping = ObjectClassMapping()
         sheet_type = ws["A2"].value
         sheet_data = ws["B2"].value
@@ -239,55 +216,30 @@ class ExcelWorker(IOWorker):
             else:
                 obj_classes = islice(ws.iter_rows(), 3, 3 + rel_dimension)
                 obj_classes = [r[0].value for r in obj_classes]
-            if not all(isinstance(r, str) for r in obj_classes) or any(
-                r == None or r.isspace() for r in obj_classes
-            ):
+            if not all(isinstance(r, str) for r in obj_classes) or any(r == None or r.isspace() for r in obj_classes):
                 return None, None
             if sheet_data.lower() == "parameter":
-                options.update(
-                    {
-                        "header": True,
-                        "row": 3,
-                        "read_until_col": True,
-                        "read_until_row": True,
-                    }
-                )
+                options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
                 mapping = RelationshipClassMapping.from_dict(
                     {
                         "map_type": "RelationshipClass",
                         "name": rel_name,
                         "object_classes": obj_classes,
                         "objects": list(range(rel_dimension)),
-                        "parameters": {
-                            "map_type": "parameter",
-                            "name": {"map_type": "row", "value_reference": -1},
-                        },
+                        "parameters": {"map_type": "parameter", "name": {"map_type": "row", "value_reference": -1}},
                     }
                 )
             else:
-                options.update(
-                    {
-                        "header": False,
-                        "row": 3,
-                        "read_until_col": True,
-                        "read_until_row": False,
-                    }
-                )
+                options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
                 mapping = RelationshipClassMapping.from_dict(
                     {
                         "map_type": "RelationshipClass",
                         "name": rel_name,
                         "object_classes": obj_classes,
-                        "objects": [
-                            {"map_type": "row", "value_reference": i}
-                            for i in range(rel_dimension)
-                        ],
+                        "objects": [{"map_type": "row", "value_reference": i} for i in range(rel_dimension)],
                         "parameters": {
                             "map_type": "parameter",
-                            "name": {
-                                "map_type": "row",
-                                "value_reference": rel_dimension,
-                            },
+                            "name": {"map_type": "row", "value_reference": rel_dimension},
                             "extra_dimensions": [0],
                         },
                     }
@@ -300,34 +252,17 @@ class ExcelWorker(IOWorker):
             if not obj_name:
                 return None, None
             if sheet_data.lower() == "parameter":
-                options.update(
-                    {
-                        "header": True,
-                        "row": 3,
-                        "read_until_col": True,
-                        "read_until_row": True,
-                    }
-                )
+                options.update({"header": True, "row": 3, "read_until_col": True, "read_until_row": True})
                 mapping = ObjectClassMapping.from_dict(
                     {
                         "map_type": "ObjectClass",
                         "name": obj_name,
                         "object": 0,
-                        "parameters": {
-                            "map_type": "parameter",
-                            "name": {"map_type": "row", "value_reference": -1},
-                        },
+                        "parameters": {"map_type": "parameter", "name": {"map_type": "row", "value_reference": -1}},
                     }
                 )
             else:
-                options.update(
-                    {
-                        "header": False,
-                        "row": 3,
-                        "read_until_col": True,
-                        "read_until_row": False,
-                    }
-                )
+                options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
                 mapping = ObjectClassMapping.from_dict(
                     {
                         "map_type": "ObjectClass",
@@ -392,18 +327,13 @@ class ExcelWorker(IOWorker):
         # find header if it has one
         if has_header:
             try:
-                header = [
-                    c.value for c in islice(next(rows), skip_columns, read_to_col)
-                ]
+                header = [c.value for c in islice(next(rows), skip_columns, read_to_col)]
             except StopIteration:
                 # no data
                 return iter([]), [], 0
 
         # iterator for selected columns and and skipped rows
-        data_iterator = (
-            list(cell.value for cell in islice(row, skip_columns, read_to_col))
-            for row in rows
-        )
+        data_iterator = (list(cell.value for cell in islice(row, skip_columns, read_to_col)) for row in rows)
         if stop_at_empty_row:
             # add condition to iterator
             condition = lambda row: row[0] is not None
@@ -455,9 +385,7 @@ class ExcelOptionWidget(QWidget):
         self._ui_read_until_col.stateChanged.connect(self._read_until_col_change)
         self._ui_read_until_row.stateChanged.connect(self._read_until_row_change)
 
-    def update_values(
-        self, header=False, row=0, column=0, read_until_row=False, read_until_col=False
-    ):
+    def update_values(self, header=False, row=0, column=0, read_until_row=False, read_until_col=False):
         self.block_signals = True
         self._ui_skip_row.setValue(row)
         self._ui_skip_col.setValue(column)
