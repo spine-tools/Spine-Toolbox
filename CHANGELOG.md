@@ -28,6 +28,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   settings.conf file. This means that these options have been set to factory defaults in Settings. 
 - All application Settings are now saved using Qt's QSettings class. *conf/settings.conf* file is not 
   needed anymore.
+- New Spine databases can be created in any backend supported by spinedb_api. The Data Store item properties 
+  have been changed to allow for this.
 
 ### Deprecated
 
