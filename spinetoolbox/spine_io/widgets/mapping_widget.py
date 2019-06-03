@@ -42,32 +42,56 @@ class MappingTableModel(QAbstractTableModel):
         super(MappingTableModel, self).__init__(parent)
         self._display_names = []
         self._mappings = []
-        if model is None:
-            self._model = None
-        else:
+        self._model = None
+        if model is not None:
             self.set_mapping(model)
-
+    
+    @property
     def map_type(self):
         if self._model is None:
             return None
         return type(self._model)
+    
+    @property
+    def dimension(self):
+        if self._model is None:
+            return 0
+        if isinstance(self._model, ObjectClassMapping):
+            return 1
+        else:
+            return len(self._model.objects)
+
+    @property
+    def import_objects(self):
+        if self._model is None:
+            return False
+        if isinstance(self._model, RelationshipClassMapping):
+            return self._model.import_objects
+        return True
+    
+    def set_import_objects(self, flag):
+        self._model.import_objects = bool(flag)
+        self.dataChanged.emit(QModelIndex, QModelIndex, [])
 
     def set_mapping(self, mapping):
-        if type(mapping) not in (RelationshipClassMapping, ObjectClassMapping):
+        if not isinstance(mapping, (RelationshipClassMapping, ObjectClassMapping)):
             raise TypeError(
                 f"mapping must be of type: RelationshipClassMapping, ObjectClassMapping instead got {type(mapping)}"
             )
+        if type(mapping) == type(self._model):
+            return
         self.beginResetModel()
         self._model = mapping
         if isinstance(self._model, RelationshipClassMapping):
             if self._model.objects is None:
-                self._model.objects = [None, None]
-                self._model.object_classes = [None, None]
+                self._model.objects = [None]
+                self._model.object_classes = [None]
         self.update_display_table()
+        self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
 
-    def update_model_dimension(self, dim):
-        if self._model is None or type(self._model) == ObjectClassMapping:
+    def set_dimension(self, dim):
+        if self._model is None or isinstance(self._model, ObjectClassMapping):
             return
         self.beginResetModel()
         if len(self._model.objects) >= dim:
@@ -77,6 +101,7 @@ class MappingTableModel(QAbstractTableModel):
             self._model.objects = self._model.objects + [None]
             self._model.object_classes = self._model.object_classes + [None]
         self.update_display_table()
+        self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
 
     def change_model_class(self, new_class):
@@ -87,14 +112,14 @@ class MappingTableModel(QAbstractTableModel):
             new_class = ObjectClassMapping
         else:
             new_class = RelationshipClassMapping
-        if self._model is None or type(self._model) == new_class:
+        if self._model is None or isinstance(self._model, new_class):
             return
         self.beginResetModel()
         parameters = self._model.parameters
         if new_class == RelationshipClassMapping:
             # convert object mapping to relationship mapping
-            obj = [self._model.object, None]
-            object_class = [self._model.name, None]
+            obj = [self._model.object]
+            object_class = [self._model.name]
             self._model = RelationshipClassMapping(
                 name=None,
                 object_classes=object_class,
@@ -110,6 +135,7 @@ class MappingTableModel(QAbstractTableModel):
             )
 
         self.update_display_table()
+        self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
 
     def change_parameter_type(self, new_type):
@@ -137,6 +163,7 @@ class MappingTableModel(QAbstractTableModel):
                     extra_dimensions=[None]
                 )
         self.update_display_table()
+        self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
 
     def update_display_table(self):
@@ -752,7 +779,7 @@ class MappingOptionWidget(QWidget):
 
     def change_dimension(self, dim):
         if self._model and not self.block_signals:
-            self._model.update_model_dimension(dim)
+            self._model.set_dimension(dim)
 
     def change_parameter(self, par):
         if self._model and not self.block_signals:
@@ -760,4 +787,4 @@ class MappingOptionWidget(QWidget):
 
     def change_import_objects(self, state):
         if self._model and not self.block_signals:
-            self._model._model.import_objects = state
+            self._model.set_import_objects(state)
