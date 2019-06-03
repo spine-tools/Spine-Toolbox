@@ -33,6 +33,7 @@ from PySide2.QtWidgets import (
     QWidgetAction,
 )
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QIntValidator
+from spinedb_api import SUPPORTED_DIALECTS
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import (
@@ -65,7 +66,6 @@ from config import (
     TEXTBROWSER_SS,
     MAINWINDOW_SS,
     DOC_INDEX_PATH,
-    SQL_DIALECT_API,
     TREEVIEW_HEADER_SS,
 )
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
@@ -462,7 +462,7 @@ class ToolboxUI(QMainWindow):
         """Initialize widgets that are shared among all ProjectItems of the same type."""
         # NOTE: Trying out fontawesome
         # Data Stores
-        self.ui.comboBox_dialect.addItems(list(SQL_DIALECT_API.keys()))
+        self.ui.comboBox_dialect.addItems(list(SUPPORTED_DIALECTS.keys()))
         self.ui.comboBox_dialect.setCurrentIndex(-1)
         # self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         # self.ui.toolButton_ds_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
