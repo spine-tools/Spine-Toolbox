@@ -108,31 +108,27 @@ class MappingTableModel(QAbstractTableModel):
         """
         Change model between Relationship and Object class
         """
+        self.beginResetModel()
         if new_class == "Object":
             new_class = ObjectClassMapping
         else:
             new_class = RelationshipClassMapping
-        if self._model is None or isinstance(self._model, new_class):
-            return
-        self.beginResetModel()
-        parameters = self._model.parameters
-        if new_class == RelationshipClassMapping:
-            # convert object mapping to relationship mapping
-            obj = [self._model.object]
-            object_class = [self._model.name]
-            self._model = RelationshipClassMapping(
-                name=None,
-                object_classes=object_class,
-                objects=obj,
-                parameters=parameters,
-            )
-        else:
-            # convert relationship mapping to object mapping
-            self._model = ObjectClassMapping(
-                name=self._model.object_classes[0],
-                obj=self._model.objects[0],
-                parameters=parameters,
-            )
+        if self._model is None:
+            self._model = new_class()
+        elif not isinstance(self._model, new_class):
+            parameters = self._model.parameters
+            if new_class == RelationshipClassMapping:
+                # convert object mapping to relationship mapping
+                obj = [self._model.object]
+                object_class = [self._model.name]
+                self._model = RelationshipClassMapping(
+                    name=None, object_classes=object_class, objects=obj, parameters=parameters
+                )
+            else:
+                # convert relationship mapping to object mapping
+                self._model = ObjectClassMapping(
+                    name=self._model.object_classes[0], obj=self._model.objects[0], parameters=parameters
+                )
 
         self.update_display_table()
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
@@ -733,7 +729,7 @@ class MappingOptionWidget(QWidget):
 
         self.show()
         self.block_signals = True
-        if self._model.map_type() == RelationshipClassMapping:
+        if self._model.map_type == RelationshipClassMapping:
             self._ui_dimension_label.show()
             self._ui_dimension.show()
             self._ui_class_type.setCurrentIndex(1)
