@@ -125,6 +125,7 @@ class DataStore(ProjectItem):
         """Return the url attribute, for saving the project."""
         return self._url
 
+    @busy_effect
     def make_url(self, log_errors=True):
         """Return a sqlalchemy url from the current url attribute or None if not valid."""
         if not self._url:
@@ -137,8 +138,8 @@ class DataStore(ProjectItem):
             dialect = url_copy.pop("dialect")
             if not dialect:
                 log_errors and self._toolbox.msg_error.emit(
-                    "Unable to generate URL from <b>{0}</b>: invalid dialect {1}. "
-                    "Please select a new dialect and try again.".format(self._url, dialect)
+                    "Unable to generate URL from <b>{0}</b> selections: invalid dialect {1}. "
+                    "<br>Please select a new dialect and try again.".format(self.name, dialect)
                 )
                 return
             if dialect == 'sqlite':
@@ -147,14 +148,20 @@ class DataStore(ProjectItem):
                 db_api = spinedb_api.SUPPORTED_DIALECTS[dialect]
                 drivername = f"{dialect}+{db_api}"
                 url = URL(drivername, **url_copy)
-        except (ArgumentError, ValueError) as e:  # TODO: make sure these are the exceptions we wanna handle here
+        except Exception as e:  # This is in case one of the keys has invalid format
             log_errors and self._toolbox.msg_error.emit(
-                "Invalid URL <b>{0}</b>: {1}. " "Please make new selections and try again.".format(url, e)
+                "Unable to generate URL from <b>{0}</b> selections: {1} "
+                "<br>Please make new selections and try again.".format(self.name, e)
             )
             return None
-        if not url.database:
+        try:
+            engine = create_engine(url)
+            with engine.connect():
+                pass
+        except Exception as e:
             log_errors and self._toolbox.msg_error.emit(
-                "Invalid URL <b>{0}</b>: no database specified. " "Please specify a database and try again.".format(url)
+                "Unable to generate URL from <b>{0}</b> selections: {1} "
+                "<br>Please make new selections and try again.".format(self.name, e)
             )
             return None
         # Small hack to make sqlite paths relative to this DS directory
@@ -283,6 +290,9 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setEnabled(False)
         self._toolbox.ui.lineEdit_username.setEnabled(True)
         self._toolbox.ui.lineEdit_password.setEnabled(True)
+        self._toolbox.ui.lineEdit_host.clear()
+        self._toolbox.ui.lineEdit_port.clear()
+        self._toolbox.ui.lineEdit_database.clear()
 
     def enable_sqlite(self):
         """Adjust controls to sqlite connection specification."""
@@ -294,6 +304,10 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setEnabled(True)
         self._toolbox.ui.lineEdit_username.setEnabled(False)
         self._toolbox.ui.lineEdit_password.setEnabled(False)
+        self._toolbox.ui.lineEdit_host.clear()
+        self._toolbox.ui.lineEdit_port.clear()
+        self._toolbox.ui.lineEdit_username.clear()
+        self._toolbox.ui.lineEdit_password.clear()
 
     def enable_common(self):
         """Adjust controls to 'common' connection specification."""
@@ -666,9 +680,16 @@ class DataStore(ProjectItem):
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine database."""
         for_spine_model = self._toolbox.ui.checkBox_for_spine_model.isChecked()
-        url = self.make_url()
+        url = self.make_url(log_errors=False)
         if not url:
-            return
+            self._toolbox.msg_warning.emit(
+                "Unable to generate URL from <b>{0}</b> selections. Defaults will be used...".format(self.name)
+            )
+            self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
+            self._toolbox.ui.lineEdit_database.setText("spinedb.sqlite")
+            url = self.make_url()
+            if not url:
+                return
         try:
             if not spinedb_api.is_empty(url):
                 msg = QMessageBox()
