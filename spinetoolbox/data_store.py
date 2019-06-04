@@ -164,7 +164,7 @@ class DataStore(ProjectItem):
                 "<br>Please make new selections and try again.".format(self.name, e)
             )
             return None
-        # Small hack to make sqlite paths relative to this DS directory
+        # Small hack to make sqlite file paths relative to this DS directory
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
             self._toolbox.ui.lineEdit_database.setText(url.database)
@@ -703,7 +703,7 @@ class DataStore(ProjectItem):
                 if ret != QMessageBox.AcceptRole:
                     return
             self.do_create_new_spine_database(url, for_spine_model)
-            self._toolbox.msg.emit("New Spine db successfully created at '{0}'.".format(url))
+            self._toolbox.msg_success.emit("New Spine db successfully created at '{0}'.".format(url))
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
 
