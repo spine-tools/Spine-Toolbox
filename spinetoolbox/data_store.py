@@ -149,14 +149,12 @@ class DataStore(ProjectItem):
                 url = URL(drivername, **url_copy)
         except (ArgumentError, ValueError) as e:  # TODO: make sure these are the exceptions we wanna handle here
             log_errors and self._toolbox.msg_error.emit(
-                "Invalid URL <b>{0}</b>: {1}. "
-                "Please make new selections and try again.".format(url, e)
+                "Invalid URL <b>{0}</b>: {1}. " "Please make new selections and try again.".format(url, e)
             )
             return None
         if not url.database:
             log_errors and self._toolbox.msg_error.emit(
-                "Invalid URL <b>{0}</b>: no database specified. "
-                "Please specify a database and try again.".format(url)
+                "Invalid URL <b>{0}</b>: no database specified. " "Please specify a database and try again.".format(url)
             )
             return None
         # Small hack to make sqlite paths relative to this DS directory
@@ -195,7 +193,7 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setText(file_path)
 
     def load_url_into_selections(self):
-        """Load url attribute into shared widget selections. 
+        """Load url attribute into shared widget selections.
         Used when activating the item, and creating a new Spine db."""
         # TODO: Test what happens when Tool item calls this and this item is selected.
         self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
@@ -408,12 +406,11 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
             return False
 
-    @busy_effect
     def get_db_map(self, url, upgrade=False):
         """Return a DiffDatabaseMapping instance to work with.
         """
         try:
-            db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
+            db_map = self.do_get_db_map(url, upgrade)
             return db_map
         except spinedb_api.SpineDBVersionError:
             msg = QMessageBox()
@@ -438,6 +435,11 @@ class DataStore(ProjectItem):
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             return None
+
+    @busy_effect
+    def do_get_db_map(self, url, upgrade):
+        """Separate method so we can use `busy_effect`"""
+        return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
 
     @Slot(bool, name="open_tree_view")
     def open_tree_view(self, checked=False):
@@ -679,10 +681,15 @@ class DataStore(ProjectItem):
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
                     return
-            spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
+            self.do_create_new_spine_database(url, for_spine_model)
             self._toolbox.msg.emit("New Spine db successfully created at '{0}'.".format(url))
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
+
+    @busy_effect
+    def do_create_new_spine_database(self, url, for_spine_model):
+        """Separate method so we can use `busy_effect`"""
+        spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
 
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
