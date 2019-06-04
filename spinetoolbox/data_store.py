@@ -165,6 +165,12 @@ class DataStore(ProjectItem):
             )
             return None
         # Small hack to make sqlite file paths relative to this DS directory
+        if dialect == "sqlite" and not url.database:
+            log_errors and self._toolbox.msg_error.emit(
+                "Unable to generate URL from <b>{0}</b> selections: database missing. "
+                "<br>Please select a database and try again.".format(self.name)
+            )
+            return None
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
             self._toolbox.ui.lineEdit_database.setText(url.database)

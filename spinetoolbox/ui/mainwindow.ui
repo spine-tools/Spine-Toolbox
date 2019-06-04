@@ -898,7 +898,7 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create a new Spine database at the selected url.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create a new Spine database at the selected url or at a default one if the selected is not valid. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
                   <string>Create new Spine db</string>
@@ -1115,7 +1115,6 @@
             </layout>
             <zorder>line_2</zorder>
             <zorder>verticalSpacer</zorder>
-            <zorder></zorder>
             <zorder>groupBox</zorder>
            </widget>
           </widget>
@@ -1196,8 +1195,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>379</width>
-              <height>463</height>
+              <width>117</width>
+              <height>274</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1597,8 +1596,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>379</width>
-              <height>463</height>
+              <width>324</width>
+              <height>261</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1976,8 +1975,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>379</width>
-              <height>463</height>
+              <width>101</width>
+              <height>163</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">

@@ -530,7 +530,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 379, 463))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 117, 274))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.verticalLayout_16 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_2)
         self.verticalLayout_16.setObjectName("verticalLayout_16")
@@ -699,7 +699,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 379, 463))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 324, 261))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.verticalLayout_17 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout_17.setObjectName("verticalLayout_17")
@@ -849,7 +849,7 @@ class Ui_MainWindow(object):
         self.scrollArea_4.setWidgetResizable(True)
         self.scrollArea_4.setObjectName("scrollArea_4")
         self.scrollAreaWidgetContents_4 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 379, 463))
+        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 101, 163))
         self.scrollAreaWidgetContents_4.setObjectName("scrollAreaWidgetContents_4")
         self.verticalLayout_18 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_4)
         self.verticalLayout_18.setObjectName("verticalLayout_18")
@@ -1250,7 +1250,7 @@ class Ui_MainWindow(object):
         self.label_database.setText(QtWidgets.QApplication.translate("MainWindow", "Database", None, -1))
         self.label_password.setText(QtWidgets.QApplication.translate("MainWindow", "Password", None, -1))
         self.toolButton_open_sqlite_file.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open SQLite file.</p></body></html>", None, -1))
-        self.pushButton_create_new_spine_db.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Create a new Spine database at the selected url.</p></body></html>", None, -1))
+        self.pushButton_create_new_spine_db.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Create a new Spine database at the selected url or at a default one if the selected is not valid. </p></body></html>", None, -1))
         self.pushButton_create_new_spine_db.setText(QtWidgets.QApplication.translate("MainWindow", "Create new Spine db", None, -1))
         self.checkBox_for_spine_model.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Add specific data structure for Spine model to the new Spine database.</p></body></html>", None, -1))
         self.checkBox_for_spine_model.setText(QtWidgets.QApplication.translate("MainWindow", "For Spine model", None, -1))
@@ -1351,9 +1351,9 @@ class Ui_MainWindow(object):
         self.actionRemove_all.setText(QtWidgets.QApplication.translate("MainWindow", "Remove all", None, -1))
         self.actionRemove_all.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1))
 
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qgraphicsviews import DesignQGraphicsView
 import resources_icons_rc
 import resources_logos_rc
