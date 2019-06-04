@@ -438,7 +438,7 @@ class DataStore(ProjectItem):
 
     @busy_effect
     def do_get_db_map(self, url, upgrade):
-        """Separate method so we can use `busy_effect`"""
+        """Separate method so 'busy_effect' don't overlay any message box."""
         return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
 
     @Slot(bool, name="open_tree_view")
@@ -688,7 +688,7 @@ class DataStore(ProjectItem):
 
     @busy_effect
     def do_create_new_spine_database(self, url, for_spine_model):
-        """Separate method so we can use `busy_effect`"""
+        """Separate method so 'busy_effect' don't overlay any message box."""
         spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
 
     def update_name_label(self):
