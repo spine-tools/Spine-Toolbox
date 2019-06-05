@@ -3,118 +3,63 @@
 import csv
 from itertools import islice
 
-from PySide2.QtWidgets import QWidget, QFormLayout, QLabel, QLineEdit, QCheckBox, QSpinBox, QGroupBox, QVBoxLayout
-from PySide2.QtCore import Signal, QThread
+from PySide2.QtWidgets import QFileDialog
 
-from spine_io.io_api import FileImportTemplate, IOWorker
+from spine_io.io_api import SourceConnection
 
 
-class CSVConnector(FileImportTemplate):
-    """Class to read csv/text files in import_widget
+def select_csv_file(parent=None):
+    """
+    Launches QFileDialog with .txt filter
+    """
+    return QFileDialog.getOpenFileName(parent, "", "*.*")
+
+
+class CSVConnector(SourceConnection):
+    """
+    Template class to read data from another QThread
     """
 
-    DISPLAY_NAME = "Text/CSV file"
-    startDataGet = Signal(str, dict, int)
-    startMappedDataGet = Signal(dict, dict, int)
+    # name of data source, ex: "Text/CSV"
+    DISPLAY_NAME = "Text/CSV"
+
+    # dict with option specification for source.
+    OPTIONS = {
+        "delimiter": {'type': str, 'label': 'delimiter', 'MaxLength': 1, 'default': ','},
+        "quotechar": {'type': str, 'label': 'quotechar', 'MaxLength': 1, 'default': ''},
+        "has_header": {'type': bool, 'label': 'Has header', 'default': False},
+        "skip": {'type': int, 'label': 'Skip rows', 'Minimum': 0, 'default': 0},
+    }
+
+    # Modal widget that that returns source object and action (OK, CANCEL)
+    SELECT_SOURCE_UI = select_csv_file
 
     def __init__(self):
         super(CSVConnector, self).__init__()
-        self._thread = None
-        self._worker = None
         self._filename = None
-        self._option_widget = CSVOptionWidget()
-        self._option_widget.optionsChanged.connect(lambda: self.request_data(None, 100))
 
-    def set_table(self, table):
-        """Unused since we only have one file
-
+    def connect_to_source(self, source):
+        """saves filepath
+        
         Arguments:
-            table {str} -- unused
+            source {str} -- filepath
         """
-
-    def request_tables(self):
-        """Get tables, for a csv/text file this is just the filename
-        """
-        self.tablesReady.emit([self._filename])
-
-    def request_data(self, table=None, max_rows=-1):
-        """Request data from connector, connect to dataReady to recive data
-
-        Keyword Arguments:
-            table {str} -- unused, used by abstract class (default: {None})
-            max_rows {int} -- how many rows to read (default: {-1})
-        """
-        options = self._option_widget.get_options_dict()
-        self.fetchingData.emit()
-        self.startDataGet.emit(self._filename, options, max_rows)
-
-    def request_mapped_data(self, tables_mappings, max_rows=-1):
-        """Get mapped data from csv file
-
-        Arguments:
-            tables_mappings {dict} -- dict with filename as key and a list of mappings as value
-
-        Keyword Arguments:
-            max_rows {int} -- number of rows to read, if -1 read all rows (default: {-1})
-        """
-        options = {self._filename: self._option_widget.get_options_dict()}
-        self.fetchingData.emit()
-        self.startMappedDataGet.emit(tables_mappings, options, max_rows)
-
-    def connection_ui(self):
-        """
-        launches a file selector ui and returns True if file is selected
-        """
-        filename, action = self.select_file()
-        if not filename or not action:
-            return False
-        self._filename = filename
+        self._filename = source
         return True
 
-    def init_connection(self):
-        """Creates a Worker and a new thread to read csv file.
-        If there is a existing thread close that one.
+    def disconnect(self):
+        """Disconnect from connected source.
         """
-        # close existing thread
-        self.close_connection()
-        # create new thread and worker
-        self._thread = QThread()
-        self._worker = CSVWorker(self._filename)
-        self._worker.moveToThread(self._thread)
-        # connect worker signals
-        self._worker.dataReady.connect(self.dataReady.emit)
-        self._worker.mappedDataReady.connect(self.mappedDataReady.emit)
-        self._worker.error.connect(self.error.emit)
-        # connect start working signals
-        self.startDataGet.connect(self._worker.read_data)
-        self.startMappedDataGet.connect(self._worker.read_mapped_data)
-        self._thread.started.connect(self.connectionReady.emit)
-        self._thread.start()
+        return True
 
-    def option_widget(self):
+    def get_tables(self):
+        """Method that should return a list of table names, list(str)
+        
+        Raises:
+            NotImplementedError: [description]
         """
-        Return a Qwidget with options for reading data from a table in source
-        """
-        return self._option_widget
-
-    def close_connection(self):
-        """Close and delete thread and worker
-        """
-        if self._thread:
-            self._thread.quit()
-            self._thread.wait()
-        if self._worker:
-            self._worker.deleteLater()
-            self._worker = None
-
-
-class CSVWorker(IOWorker):
-    """Worker to read a csv/text file in another thread
-    """
-
-    def __init__(self, filename, parent=None):
-        super(CSVWorker, self).__init__(parent)
-        self._filename = filename
+        tables = [self._filename]
+        return tables
 
     def parse_options(self, options):
         """Parses options dict to dialect and quotechar options for csv.reader
@@ -189,73 +134,3 @@ class CSVWorker(IOWorker):
             header = []
             csv_iter = self.file_iterator(options, max_rows)
         return csv_iter, header, num_cols
-
-
-class CSVOptionWidget(QWidget):
-    optionsChanged = Signal()
-
-    def __init__(self, parent=None):
-        super().__init__(parent)
-
-        # state
-        self.delim = ","
-        self.quote = ""
-        self.first_row_as_header = False
-        self.skip_rows = 0
-
-        # ui
-        self._ui_delim = QLineEdit()
-        self._ui_quote = QLineEdit()
-        self._ui_skip = QSpinBox()
-        self._ui_header = QCheckBox()
-
-        self._ui_quote.setMaxLength(1)
-        self._ui_skip.setMinimum(0)
-        self._ui_delim.setText(self.delim)
-        self._ui_quote.setText(self.quote)
-
-        # layout
-        groupbox = QGroupBox("CSV options")
-        self.setLayout(QVBoxLayout())
-        layout = QFormLayout()
-        layout.addRow(QLabel("Delimeter:"), self._ui_delim)
-        layout.addRow(QLabel("Quote char:"), self._ui_quote)
-        layout.addRow(QLabel("Header in first row:"), self._ui_header)
-        layout.addRow(QLabel("Skip rows:"), self._ui_skip)
-        groupbox.setLayout(layout)
-        self.layout().addWidget(groupbox)
-
-        # connect signals
-        self._ui_delim.textEdited.connect(self._delim_change)
-        self._ui_quote.textEdited.connect(self._quote_change)
-        self._ui_skip.valueChanged.connect(self._skip_change)
-        self._ui_header.stateChanged.connect(self._header_change)
-
-    def get_options_dict(self):
-        """gets selected options from widget
-
-        Returns:
-            dict -- dict with options and values
-        """
-        return {
-            "delim": self.delim,
-            "quotechar": self.quote,
-            "has_header": self.first_row_as_header,
-            "skip": self.skip_rows,
-        }
-
-    def _delim_change(self, new_char):
-        self.delim = new_char
-        self.optionsChanged.emit()
-
-    def _quote_change(self, new_char):
-        self.quote = new_char
-        self.optionsChanged.emit()
-
-    def _header_change(self, new_bool):
-        self.first_row_as_header = new_bool
-        self.optionsChanged.emit()
-
-    def _skip_change(self, new_num):
-        self.skip_rows = new_num
-        self.optionsChanged.emit()

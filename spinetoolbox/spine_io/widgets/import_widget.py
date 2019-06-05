@@ -3,13 +3,14 @@
 import logging
 
 from PySide2.QtWidgets import QWidget, QApplication, QListWidget, QVBoxLayout, QDialogButtonBox, QMainWindow, QDialog
-from PySide2.QtCore import Qt, Signal
+from PySide2.QtCore import Qt
 import spinedb_api
 
 from helpers import busy_effect
 from spine_io.importers.csv_reader import CSVConnector
 from spine_io.importers.excel_reader import ExcelConnector
 from spine_io.widgets.import_preview_widget import ImportPreviewWidget
+from spine_io.connection_manager import ConnectionManager
 
 
 class ImportDialog(QDialog):
@@ -107,9 +108,9 @@ class ImportDialog(QDialog):
     def ok_clicked(self):
         if self._selected_connector:
             # create instance of connector
-            self.active_connector = self._selected_connector()
-            ok = self.active_connector.connection_ui()
-            if ok:
+            self.active_connector = ConnectionManager(self._selected_connector)
+            valid_source = self.active_connector.connection_ui()
+            if valid_source:
                 # Create instance of ImportPreviewWidget and configure
                 import_preview = ImportPreviewWidget(self.active_connector, self)
                 import_preview.set_loading_status(True)
