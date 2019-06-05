@@ -3191,7 +3191,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         for a different object class."""
         self.beginResetModel()
         self.sub_models = []
-        header = self.db_map.object_parameter_fields()
+        header = self.db_map.object_parameter_definition_fields()
         data = self.db_map.object_parameter_definition_list()
         self.fixed_columns = [header.index('object_class_name')]
         self.object_class_name_column = header.index('object_class_name')
@@ -3817,7 +3817,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         self.beginResetModel()
         self.sub_models = []
         self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
-        header = self.db_map.relationship_parameter_fields()
+        header = self.db_map.relationship_parameter_definition_fields()
         data = self.db_map.relationship_parameter_definition_list()
         self.fixed_columns = [header.index(x) for x in ('relationship_class_name', 'object_class_name_list')]
         self.relationship_class_name_column = header.index('relationship_class_name')
