@@ -127,7 +127,7 @@ class ConnectionManager(QObject):
         # create new thread and worker
         self._thread = QThread()
         self._worker = ConnectionWorker(self._source, self._connection)
-        # self._worker.moveToThread(self._thread)
+        self._worker.moveToThread(self._thread)
         # connect worker signals
         self._worker.connectionReady.connect(self.connectionReady.emit)
         self._worker.tablesReady.connect(self._handle_tables_ready)
