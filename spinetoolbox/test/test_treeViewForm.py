@@ -108,7 +108,7 @@ class TestTreeViewForm(unittest.TestCase):
         with mock.patch("data_store.DataStore") as mock_data_store, mock.patch(
             "spinedb_api.DiffDatabaseMapping"
         ) as mock_db_map:
-            mock_db_map.object_parameter_fields.return_value = [
+            mock_db_map.object_parameter_definition_fields.return_value = [
                 'id',
                 'object_class_id',
                 'object_class_name',
@@ -118,7 +118,7 @@ class TestTreeViewForm(unittest.TestCase):
                 'parameter_tag_id_list',
                 'parameter_tag_list',
             ]
-            mock_db_map.relationship_parameter_fields.return_value = [
+            mock_db_map.relationship_parameter_definition_fields.return_value = [
                 'id',
                 'relationship_class_id',
                 'relationship_class_name',
@@ -1702,7 +1702,8 @@ class TestTreeViewForm(unittest.TestCase):
         header_index = model.horizontal_header_labels().index
         parameter_value_index = model.index(0, header_index("value"))
         self.assertEqual(parameter_value_index.data(), '"salt"')
-        self.tree_view_form.db_map.single_parameter.return_value.one_or_none.return_value = None
+        form = self.tree_view_form
+        form.db_map.parameter_definition_list.return_value.filter_by.return_value.one_or_none.return_value = None
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_value_index)
         view.itemDelegate().setEditorData(editor, parameter_value_index)
         self.assertTrue(isinstance(editor, JSONEditor), "Editor is not a 'JSONEditor'")
@@ -1724,9 +1725,11 @@ class TestTreeViewForm(unittest.TestCase):
         header_index = model.horizontal_header_labels().index
         parameter_value_index = model.index(0, header_index("value"))
         self.assertEqual(parameter_value_index.data(), '-1')
-        self.tree_view_form.db_map.single_parameter.return_value.one_or_none.return_value = None
+        form = self.tree_view_form
+        form.db_map.parameter_definition_list.return_value.filter_by.return_value.one_or_none.return_value = None
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_value_index)
         view.itemDelegate().setEditorData(editor, parameter_value_index)
+        print(type(editor))
         self.assertTrue(isinstance(editor, JSONEditor), "Editor is not a 'JSONEditor'")
         self.assertEqual(editor.data(), "-1")
         editor.set_data("123", 0)
@@ -2120,7 +2123,7 @@ class TestTreeViewForm(unittest.TestCase):
             else:
                 return qry()
 
-        self.tree_view_form.db_map.object_parameter_list.side_effect = side_effect
+        self.tree_view_form.db_map.object_parameter_definition_list.side_effect = side_effect
 
     def add_mock_relationship_parameter_definitions(self):
         """Add relative speed and combined mojo relationship parameter definitions."""
@@ -2150,7 +2153,7 @@ class TestTreeViewForm(unittest.TestCase):
             else:
                 return qry()
 
-        self.tree_view_form.db_map.relationship_parameter_list.side_effect = side_effect
+        self.tree_view_form.db_map.relationship_parameter_definition_list.side_effect = side_effect
 
     def add_mock_object_parameter_values(self):
         """Add some object parameter values."""
