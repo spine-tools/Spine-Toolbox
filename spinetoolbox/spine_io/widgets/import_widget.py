@@ -10,6 +10,7 @@ from helpers import busy_effect
 from spine_io.importers.csv_reader import CSVConnector
 from spine_io.importers.excel_reader import ExcelConnector
 from spine_io.widgets.import_preview_widget import ImportPreviewWidget
+from spine_io.widgets.import_errors_widget import ImportErrorWidget
 from spine_io.connection_manager import ConnectionManager
 
 
@@ -30,7 +31,10 @@ class ImportDialog(QDialog):
         self.active_connector = None
 
         # create widgets
+        self._import_preview = None
         self._ui_list = QListWidget()
+        self._error_widget = ImportErrorWidget()
+        self._error_widget.hide()
         self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 
         # layout
@@ -41,6 +45,7 @@ class ImportDialog(QDialog):
 
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self.select_widget)
+        self.layout().addWidget(self._error_widget)
 
         # set list items
         self._ui_list.blockSignals(True)
@@ -53,6 +58,12 @@ class ImportDialog(QDialog):
         self._ui_list.activated.connect(self.ok_clicked)
         self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.ok_clicked)
         self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.reject)
+
+        self._error_widget.rejected.connect(self.reject_import)
+        self._error_widget.rejected.connect(self.reject)
+        self._error_widget.importWithErrors.connect(self.accept)
+        self._error_widget.goBack.connect(self.reject_import)
+        self._error_widget.goBack.connect(self.set_preview_as_main_widget)
 
         # init ok button
         self.set_ok_button_availability()
@@ -82,19 +93,15 @@ class ImportDialog(QDialog):
     def import_data(self, data, errors):
         del errors  # Unused parameter
         try:
-            _, import_errors = spinedb_api.import_data(self._db_map, **data)
+            import_num, import_errors = spinedb_api.import_data(self._db_map, **data)
         except spinedb_api.SpineIntegrityError as err:
             logging.error(err.msg)  # TODO: Use signals for errors
         except spinedb_api.SpineDBAPIError as err:
             logging.error("Unable to import Data: %s", err.msg)  # TODO: Use signals for errors
         else:
             if import_errors:
-                msg = (
-                    "Something went wrong in importing data "
-                    "into the current session. Here is the error log:\n\n{0}".format([e.msg for e in import_errors])
-                )
-                # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-                logging.error(msg)  # TODO: Use signals for errors
+                self._error_widget.set_import_state(import_num, import_errors)
+                self.set_error_widget_as_main_widget()
                 return False
             else:
                 return True
@@ -112,18 +119,32 @@ class ImportDialog(QDialog):
             valid_source = self.active_connector.connection_ui()
             if valid_source:
                 # Create instance of ImportPreviewWidget and configure
-                import_preview = ImportPreviewWidget(self.active_connector, self)
-                import_preview.set_loading_status(True)
-                import_preview.rejected.connect(self.reject)
+                self._import_preview = ImportPreviewWidget(self.active_connector, self)
+                self._import_preview.set_loading_status(True)
+                self._import_preview.rejected.connect(self.reject)
                 # Connect data_ready method to the widget
-                import_preview.mappedDataReady.connect(self.data_ready)
-                self.layout().addWidget(import_preview)
-                self.select_widget.hide()
+                self._import_preview.mappedDataReady.connect(self.data_ready)
+                self.layout().addWidget(self._import_preview)
                 self.active_connector.init_connection()
+                # show preview widget
+                self.set_preview_as_main_widget()
             else:
                 # remove connector object.
                 self.active_connector.deleteLater()
                 self.active_connector = None
+
+    def set_preview_as_main_widget(self):
+        self.select_widget.hide()
+        self._error_widget.hide()
+        self._import_preview.show()
+
+    def reject_import(self):
+        self._db_map.rollback_session()
+
+    def set_error_widget_as_main_widget(self):
+        self.select_widget.hide()
+        self._error_widget.show()
+        self._import_preview.hide()
 
 
 if __name__ == '__main__':
