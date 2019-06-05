@@ -537,7 +537,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(ordered_nodes)))
-        self._toolbox.msg.emit("--------------------------------------------------<br/>")
+        self._toolbox.msg.emit("--------------------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
         return

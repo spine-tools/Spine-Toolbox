@@ -684,7 +684,8 @@ class DataStore(ProjectItem):
         return os.listdir(self.data_dir)
 
     def find_file(self, fname, visited_items):
-        """Search for filename in data and return the path if found."""
+        """TODO: [OBOSOLETE?]
+        Search for filename in data and return the path if found."""
         # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
         if self in visited_items:
             self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
@@ -719,7 +720,8 @@ class DataStore(ProjectItem):
         return None
 
     def find_files(self, pattern, visited_items):
-        """Search for files matching the given pattern (with wildcards) in data directory
+        """TODO: [OBOSOLETE?]
+        Search for files matching the given pattern (with wildcards) in data directory
         and return a list of matching paths.
 
         Args:
@@ -826,6 +828,34 @@ class DataStore(ProjectItem):
         """Executes this Data Store."""
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
+        reference = self.current_reference()
+        if not reference:
+            # Dialect is set but details are missing
+            self._toolbox.msg_warning.emit("No database reference set. Please provide a <i>path</i> to an "
+                                           "SQLite file or <i>host</i>, <i>port</i>, and <i>username</i> "
+                                           "& <i>password</i> for other database dialects.")
+            ref = None
+        else:
+            self._toolbox.msg.emit("Dialect: {0}. Reference: {1}".format(self.selected_dialect, reference))
+            # example reference: {'database': 'tietokanta', 'username': 'ttepsa',
+            #                     'url': 'mysql+pymysql://ttepsa@127.0.0.1:5444/tietokanta'}
+            if self.selected_dialect == 'sqlite':
+                # If dialect is sqlite, append full path of the sqlite file to execution_instance
+                sqlite_file = self.selected_sqlite_file
+                if not sqlite_file or not os.path.isfile(sqlite_file):
+                    self._toolbox.msg_warning.emit("Warning: Data Store <b>{0}</b> Sqlite reference is not valid."
+                                                   .format(self.name))
+                    ref = None
+                else:
+                    ref = sqlite_file
+            else:
+                # If dialect is other than sqlite file, append full url to execution_instance
+                # TODO: What else needs to be done here?
+                ref = reference["url"]
+        inst = self._toolbox.project().execution_instance
+        # Add Data Store reference into execution instance
+        if ref is not None:
+            inst.add_ds_ref(self.selected_dialect, ref)
         self._toolbox.msg.emit("***")
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 

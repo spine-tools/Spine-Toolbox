@@ -378,6 +378,7 @@ class ExecutionInstance(QObject):
         self.running_item = None
         self.dc_refs = list()  # Data Connection reference list
         self.dc_files = list()  # Data Connection file list
+        self.ds_refs = dict()  # DS refs. Key is dialect, value is a list of paths or urls depending on dialect
         self.tool_output_files = list()  # Paths to result files from ToolInstance
 
     def start_execution(self):
@@ -427,16 +428,43 @@ class ExecutionInstance(QObject):
         item.stop_execution()
         return
 
+    def add_ds_ref(self, dialect, ref):
+        """Adds given database reference to a dictionary. Key is the dialect.
+        If dialect is sqlite, value is a list of full paths to sqlite files.
+        For other dialects, key is the dialect and value is a list of URLs to
+        database servers.
+
+        Args:
+            dialect (str): Dialect name (lower case)
+            ref (str): Database reference
+        """
+        try:
+            self.ds_refs[dialect].append(ref)
+        except KeyError:
+            self.ds_refs[dialect] = [ref]
+
     def append_dc_refs(self, refs):
-        """Adds given file paths (Data Connection file references) to a list."""
+        """Adds given file paths (Data Connection file references) to a list.
+
+        Args:
+            refs (list): List of file paths (references)
+        """
         self.dc_refs += refs
 
     def append_dc_files(self, files):
-        """Adds given project data file paths to a list."""
+        """Adds given project data file paths to a list.
+
+        Args:
+            files (list): List of file paths
+        """
         self.dc_files += files
 
     def append_tool_output_file(self, filepath):
-        """Adds given file path to a list containing paths to Tool output files."""
+        """Adds given file path to a list containing paths to Tool output files.
+
+        Args:
+            filepath (str): Path to a tool output file (in tool result directory)
+        """
         self.tool_output_files.append(filepath)
 
     def find_file(self, filename):
@@ -444,20 +472,71 @@ class ExecutionInstance(QObject):
 
         Args:
             filename (str): Searched file name (no path) TODO: Change to pattern
+
+        Returns:
+            str: Full path to file if found, None if not found
         """
+        # Look in Data Stores
+        # SQLITE
+        try:
+            for sqlite_ref in self.ds_refs["sqlite"]:
+                _, file_candidate = os.path.split(sqlite_ref)
+                if file_candidate == filename:
+                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, sqlite_ref))
+                    return sqlite_ref
+        except KeyError:
+            pass
+        # MYSQL
+        try:
+            for mysql_url in self.ds_refs["mysql"]:
+                _, file_candidate = os.path.split(mysql_url)
+                if file_candidate == filename:
+                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, mysql_url))
+                    return mysql_url
+        except KeyError:
+            pass
+        # MSSQL
+        try:
+            for mssql_url in self.ds_refs["mssql"]:
+                _, file_candidate = os.path.split(mssql_url)
+                if file_candidate == filename:
+                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, mssql_url))
+                    return mssql_url
+        except KeyError:
+            pass
+        # POSTGRESQL
+        try:
+            for postgresql_url in self.ds_refs["postgresql"]:
+                _, file_candidate = os.path.split(postgresql_url)
+                if file_candidate == filename:
+                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, postgresql_url))
+                    return postgresql_url
+        except KeyError:
+            pass
+        # ORACLE
+        try:
+            for oracle_url in self.ds_refs["oracle"]:
+                _, file_candidate = os.path.split(oracle_url)
+                if file_candidate == filename:
+                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, oracle_url))
+                    return oracle_url
+        except KeyError:
+            pass
+        # Look in Data Connections
         for dc_ref in self.dc_refs:
             _, file_candidate = os.path.split(dc_ref)
             if file_candidate == filename:
-                logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
+                # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
                 return dc_ref
         for dc_file in self.dc_files:
             _, file_candidate = os.path.split(dc_file)
             if file_candidate == filename:
-                logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
+                # logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
                 return dc_file
+        # Look in Tool output files
         for tool_file in self.tool_output_files:
             _, file_candidate = os.path.split(tool_file)
             if file_candidate == filename:
-                logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
+                # logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
                 return tool_file
         return None
