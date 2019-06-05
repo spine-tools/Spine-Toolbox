@@ -1253,11 +1253,20 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="show_import_file_dialog")
     def show_import_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to import."""
+        if self.db_map.has_pending_changes():
+            commit_warning = QMessageBox()
+            commit_warning.setText("Please commit or rollback before importing data")
+            commit_warning.setStandardButtons(QMessageBox.Ok)
+            commit_warning.exec()
+            return
+
         dialog = ImportDialog(parent=self)
         # assume that dialog is modal, if not use accepted, rejected signals
         if dialog.exec() == QDialog.Accepted:
-            self.msg.emit("Import was successfull")
-            return
+            if self.db_map.has_pending_changes():
+                self.msg.emit("Import was successfull")
+                self.commit_available.emit(True)
+                self.init_models()
 
     @busy_effect
     def import_file(self, file_path, checked=False):
