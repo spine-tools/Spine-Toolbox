@@ -244,7 +244,7 @@ class AddObjectsDialog(AddItemsDialog):
         self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self.table_view.setItemDelegate(AddObjectsDelegate(parent))
         self.connect_signals()
-        default_class = self._parent.db_map.single_object_class(id=class_id).one_or_none()
+        default_class = self._parent.db_map.object_class_list().filter_by(id=class_id).one_or_none()
         self.default_class_name = default_class.name if default_class else None
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description'])
         self.model.set_default_row(**{'object class name': self.default_class_name})
@@ -284,7 +284,7 @@ class AddObjectsDialog(AddItemsDialog):
             if not name:
                 self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
                 return
-            class_ = self._parent.db_map.single_object_class(name=class_name).one_or_none()
+            class_ = self._parent.db_map.object_class_list().filter_by(name=class_name).one_or_none()
             if not class_:
                 self._parent.msg_error.emit("Couldn't find object class '{}' at row {}".format(class_name, i + 1))
                 return
@@ -330,7 +330,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         self.number_of_dimensions = 1
         self.object_class_one_name = None
         if object_class_one_id:
-            object_class_one = self._parent.db_map.single_object_class(id=object_class_one_id).one_or_none()
+            object_class_one = self._parent.db_map.object_class_list().filter_by(id=object_class_one_id).one_or_none()
             if object_class_one:
                 self.object_class_one_name = object_class_one.name
         self.connect_signals()
@@ -416,7 +416,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
                 if not object_class_name:
                     self._parent.msg_error.emit("Object class name missing at row {}".format(i + 1))
                     return
-                object_class = self._parent.db_map.single_object_class(name=object_class_name).one_or_none()
+                object_class = self._parent.db_map.object_class_list().filter_by(name=object_class_name).one_or_none()
                 if not object_class:
                     self._parent.msg_error.emit(
                         "Couldn't find object class '{}' at row {}".format(object_class_name, i + 1)
@@ -463,11 +463,10 @@ class AddRelationshipsDialog(AddItemsDialog):
         self.layout().insertWidget(0, widget)
         self.remove_row_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
         self.relationship_class_list = self._parent.db_map.wide_relationship_class_list(object_class_id=object_class_id)
-        self.relationship_class = None
         self.relationship_class_id = relationship_class_id
         self.object_id = object_id
         self.object_class_id = object_class_id
-        self.default_object_column = None
+        self.relationship_class = None
         self.default_object_name = None
         self.set_default_object_name()
         self.table_view.setItemDelegate(AddRelationshipsDelegate(parent))
@@ -513,30 +512,20 @@ class AddRelationshipsDialog(AddItemsDialog):
         object_class_name_list = self.relationship_class.object_class_name_list.split(',')
         header = [*[x + " name" for x in object_class_name_list], 'relationship name']
         self.model.set_horizontal_header_labels(header)
-        self.reset_default_object_column()
-        if self.default_object_name and self.default_object_column is not None:
-            defaults = {header[self.default_object_column]: self.default_object_name}
+        if self.default_object_name and self.object_class_id:
+            object_class_id_list = [int(x) for x in self.relationship_class.object_class_id_list.split(',')]
+            columns = [j for j, x in enumerate(object_class_id_list) if x == self.object_class_id]
+            defaults = {header[j]: self.default_object_name for j in columns}
             self.model.set_default_row(**defaults)
         self.model.clear()
 
     def set_default_object_name(self):
         if not self.object_id:
             return
-        object_ = self._parent.db_map.single_object(id=self.object_id).one_or_none()
+        object_ = self._parent.db_map.object_list().filter_by(id=self.object_id).one_or_none()
         if not object_:
             return
         self.default_object_name = object_.name
-
-    def reset_default_object_column(self):
-        if not self.default_object_name:
-            return
-        if not self.relationship_class or not self.object_class_id:
-            return
-        try:
-            object_class_id_list = self.relationship_class.object_class_id_list
-            self.default_object_column = [int(x) for x in object_class_id_list.split(',')].index(self.object_class_id)
-        except ValueError:
-            pass
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
@@ -881,7 +870,7 @@ class EditRelationshipsDialog(EditItemsDialog):
                 if not object_name:
                     self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
                     return
-                object_ = self._parent.db_map.single_object(name=object_name).one_or_none()
+                object_ = self._parent.db_map.object_list().filter_by(name=object_name).one_or_none()
                 if not object_:
                     self._parent.msg_error.emit("Couldn't find object '{}' at row {}".format(object_name, i + 1))
                     return

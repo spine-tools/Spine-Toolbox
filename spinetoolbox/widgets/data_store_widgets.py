@@ -1934,7 +1934,7 @@ class TreeViewForm(DataStoreForm):
             bottom = current.bottom()
             row_dict[top] = bottom - top + 1
         model = self.object_parameter_definition_model
-        parameter_ids = set()
+        parameter_definition_ids = set()
         parameter_dict = dict()
         header = model.horizontal_header_labels()
         object_class_id_column = header.index("object_class_id")
@@ -1943,10 +1943,10 @@ class TreeViewForm(DataStoreForm):
             for i in range(row, row + count):
                 object_class_id = model.index(i, object_class_id_column).data(Qt.DisplayRole)
                 id_ = model.index(i, id_column).data(Qt.DisplayRole)
-                parameter_ids.add(id_)
+                parameter_definition_ids.add(id_)
                 parameter_dict.setdefault(object_class_id, set()).add(id_)
         try:
-            self.db_map.remove_items(parameter_ids=parameter_ids)
+            self.db_map.remove_items(parameter_definition_ids=parameter_definition_ids)
             for row in reversed(sorted(row_dict)):
                 count = row_dict[row]
                 self.object_parameter_definition_model.removeRows(row, count)
@@ -1967,7 +1967,7 @@ class TreeViewForm(DataStoreForm):
             bottom = current.bottom()
             row_dict[top] = bottom - top + 1
         model = self.relationship_parameter_definition_model
-        parameter_ids = set()
+        parameter_definition_ids = set()
         parameter_dict = dict()
         header = model.horizontal_header_labels()
         relationship_class_id_column = header.index("relationship_class_id")
@@ -1976,10 +1976,10 @@ class TreeViewForm(DataStoreForm):
             for i in range(row, row + count):
                 relationship_class_id = model.index(i, relationship_class_id_column).data(Qt.DisplayRole)
                 id_ = model.index(i, id_column).data(Qt.DisplayRole)
-                parameter_ids.add(id_)
+                parameter_definition_ids.add(id_)
                 parameter_dict.setdefault(relationship_class_id, set()).add(id_)
         try:
-            self.db_map.remove_items(parameter_ids=parameter_ids)
+            self.db_map.remove_items(parameter_definition_ids=parameter_definition_ids)
             for row in reversed(sorted(row_dict)):
                 count = row_dict[row]
                 self.relationship_parameter_definition_model.removeRows(row, count)
@@ -2824,7 +2824,7 @@ class GraphViewForm(DataStoreForm):
             if not object_name:
                 logging.debug("can't find name {}".format(object_name))
                 return False
-            object_ = self.db_map.single_object(name=object_name).one_or_none()
+            object_ = self.db_map.object_list().filter_by(name=object_name).one_or_none()
             if not object_:
                 logging.debug("can't find object {}".format(object_name))
                 return False

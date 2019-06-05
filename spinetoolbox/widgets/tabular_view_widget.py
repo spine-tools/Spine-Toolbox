@@ -396,7 +396,7 @@ class TabularViewForm(QMainWindow):
         if delete_obj_ids:
             self.db_map.remove_items(object_ids=delete_obj_ids)
         if delete_par_ids:
-            self.db_map.remove_items(parameter_ids=delete_par_ids)
+            self.db_map.remove_items(parameter_definition_ids=delete_par_ids)
 
     def add_index_values_to_db(self, add_indexes):
         db_edited = False
@@ -549,7 +549,9 @@ class TabularViewForm(QMainWindow):
                 value_id = self.parameter_values[key]
                 update_data.append({"id": value_id, self.current_value_type: data_value[k]})
             elif db_id:
-                new_data.append({id_field: db_id, "parameter_id": par_id, self.current_value_type: data_value[k]})
+                new_data.append(
+                    {id_field: db_id, "parameter_definition_id": par_id, self.current_value_type: data_value[k]}
+                )
         if new_data:
             self.db_map.add_parameter_values(*new_data)
         if update_data:

@@ -127,14 +127,20 @@ class TestExcelIntegration(unittest.TestCase):
         ].first()
 
         # add parameter values
-        db_map.add_parameter_value(**{'parameter_id': p1.id, 'object_id': oc1_obj1.id, 'value': '0'})
-        db_map.add_parameter_value(**{'parameter_id': p2.id, 'object_id': oc1_obj2.id, 'value': '3.5'})
-        db_map.add_parameter_value(**{'parameter_id': p3.id, 'object_id': oc2_obj1.id, 'value': '[1, 2, 3, 4]'})
-        db_map.add_parameter_value(**{'parameter_id': p4.id, 'object_id': oc2_obj2.id, 'value': '[5, 6, 7]'})
-        db_map.add_parameter_value(**{'parameter_id': rel_p1.id, 'relationship_id': rel1.id, 'value': '0'})
-        db_map.add_parameter_value(**{'parameter_id': rel_p2.id, 'relationship_id': rel2.id, 'value': '4'})
-        db_map.add_parameter_value(**{'parameter_id': rel_p3.id, 'relationship_id': rel1.id, 'value': '[5, 6, 7]'})
-        db_map.add_parameter_value(**{'parameter_id': rel_p4.id, 'relationship_id': rel2.id, 'value': '[1, 2, 3, 4]'})
+        db_map.add_parameter_value(**{'parameter_definition_id': p1.id, 'object_id': oc1_obj1.id, 'value': '0'})
+        db_map.add_parameter_value(**{'parameter_definition_id': p2.id, 'object_id': oc1_obj2.id, 'value': '3.5'})
+        db_map.add_parameter_value(
+            **{'parameter_definition_id': p3.id, 'object_id': oc2_obj1.id, 'value': '[1, 2, 3, 4]'}
+        )
+        db_map.add_parameter_value(**{'parameter_definition_id': p4.id, 'object_id': oc2_obj2.id, 'value': '[5, 6, 7]'})
+        db_map.add_parameter_value(**{'parameter_definition_id': rel_p1.id, 'relationship_id': rel1.id, 'value': '0'})
+        db_map.add_parameter_value(**{'parameter_definition_id': rel_p2.id, 'relationship_id': rel2.id, 'value': '4'})
+        db_map.add_parameter_value(
+            **{'parameter_definition_id': rel_p3.id, 'relationship_id': rel1.id, 'value': '[5, 6, 7]'}
+        )
+        db_map.add_parameter_value(
+            **{'parameter_definition_id': rel_p4.id, 'relationship_id': rel2.id, 'value': '[1, 2, 3, 4]'}
+        )
 
         # commit
         db_map.commit_session('test')
