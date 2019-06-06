@@ -1,10 +1,11 @@
-from spinedb_api import ObjectClassMapping, Mapping
-
-from PySide2.QtWidgets import QWidget, QListWidget, QVBoxLayout, QDialogButtonBox, QPushButton, QLabel
+from PySide2.QtWidgets import QWidget, QListWidget, QVBoxLayout, QDialogButtonBox, QLabel
 from PySide2.QtCore import Signal
 
 
 class ImportErrorWidget(QWidget):
+    """Widget to display errors while importing and ask user for action
+    """
+
     importWithErrors = Signal()
     goBack = Signal()
     rejected = Signal()
@@ -37,6 +38,12 @@ class ImportErrorWidget(QWidget):
         self._dialog_buttons.button(QDialogButtonBox.Abort).clicked.connect(self.goBack.emit)
 
     def set_import_state(self, num_imported, errors):
+        """Sets state of error widget
+        
+        Arguments:
+            num_imported {int} -- number of successfull imported items
+            errors {list} -- list of errors.
+        """
         self._ui_num_errors.setText(f"Number of errors: {len(errors)}")
         self._ui_num_imports.setText(f"Number of imports: {num_imported}")
         self._ui_error_list.clear()

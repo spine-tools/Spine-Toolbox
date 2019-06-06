@@ -20,6 +20,9 @@ class ConnectionManager(QObject):
     startDataGet = Signal(str, dict, int)
     startMappedDataGet = Signal(dict, dict, int)
 
+    # Signal with error message if connection fails
+    connectionFailed = Signal(str)
+
     # Signal that a connection to the datasource is ready
     connectionReady = Signal()
 
@@ -134,6 +137,7 @@ class ConnectionManager(QObject):
         self._worker.dataReady.connect(self.dataReady.emit)
         self._worker.mappedDataReady.connect(self.mappedDataReady.emit)
         self._worker.error.connect(self.error.emit)
+        self._worker.connectionFailed.connect(self.connectionFailed.emit)
         # connect start working signals
         self.startTableGet.connect(self._worker.tables)
         self.startDataGet.connect(self._worker.data)
@@ -182,6 +186,8 @@ class ConnectionWorker(QObject):
     """Class that wraps SourceConnection class with signals to be able to run in another QThread
     """
 
+    # Signal with error message if connection fails
+    connectionFailed = Signal(str)
     # Signal with error message if something errors
     error = Signal(str)
     # Signal that connection is ready to be read
@@ -206,42 +212,42 @@ class ConnectionWorker(QObject):
             try:
                 self._connection.connect_to_source(self._source)
                 self.connectionReady.emit()
-            except Exception as e:
-                self.error.emit(f"Could not connect to source: {e}")
-                raise e
+            except Exception as error:
+                self.connectionFailed.emit(f"Could not connect to source: {error}")
+                raise error
         else:
-            self.error.emit("Connection has no source")
+            self.connectionFailed.emit("Connection has no source")
 
     def tables(self):
         try:
             tables = self._connection.get_tables()
             self.tablesReady.emit(tables)
-        except Exception as e:
-            self.error.emit(f"Could not get tables from source: {e}")
-            raise e
+        except Exception as error:
+            self.error.emit(f"Could not get tables from source: {error}")
+            raise error
 
     def data(self, table, options, max_rows):
         try:
             data, header = self._connection.get_data(table, options, max_rows)
             self.dataReady.emit(data, header)
-        except Exception as e:
-            self.error.emit(f"Could not get data from source: {e}")
-            raise e
+        except Exception as error:
+            self.error.emit(f"Could not get data from source: {error}")
+            raise error
 
     def mapped_data(self, table_mappings, options, max_rows):
         try:
             data, errors = self._connection.get_mapped_data(table_mappings, options, max_rows)
             self.mappedDataReady.emit(data, errors)
-        except Exception as e:
-            self.error.emit(f"Could not get mapped data from source: {e}")
-            raise e
+        except Exception as error:
+            self.error.emit(f"Could not get mapped data from source: {error}")
+            raise error
 
     def disconnect(self):
         try:
             self._connection.disconnect()
-        except Exception as e:
-            self.error.emit(f"Could not disconnect from source: {e}")
-            raise e
+        except Exception as error:
+            self.error.emit(f"Could not disconnect from source: {error}")
+            raise error
 
 
 class OptionWidget(QWidget):

@@ -101,8 +101,8 @@ class CSVConnector(SourceConnection):
             max_rows = None
         else:
             max_rows += skip
-        with open(self._filename) as f:
-            csv_reader = csv.reader(f, **dialect)
+        with open(self._filename) as text_file:
+            csv_reader = csv.reader(text_file, **dialect)
             csv_reader = islice(csv_reader, skip, max_rows)
             yield from csv_reader
 
