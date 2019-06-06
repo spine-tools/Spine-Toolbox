@@ -45,12 +45,10 @@ class CSVConnector(SourceConnection):
             source {str} -- filepath
         """
         self._filename = source
-        return True
 
     def disconnect(self):
         """Disconnect from connected source.
         """
-        return True
 
     def get_tables(self):
         """Method that should return a list of table names, list(str)

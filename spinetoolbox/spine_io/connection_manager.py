@@ -26,6 +26,9 @@ class ConnectionManager(QObject):
     # Signal that a connection to the datasource is ready
     connectionReady = Signal()
 
+    # Signal that connection is being closed
+    closeConnection = Signal()
+
     # error while reading data or connection to data source
     error = Signal(str)
 
@@ -130,7 +133,7 @@ class ConnectionManager(QObject):
         # create new thread and worker
         self._thread = QThread()
         self._worker = ConnectionWorker(self._source, self._connection)
-        self._worker.moveToThread(self._thread)
+        # self._worker.moveToThread(self._thread)
         # connect worker signals
         self._worker.connectionReady.connect(self.connectionReady.emit)
         self._worker.tablesReady.connect(self._handle_tables_ready)
@@ -142,6 +145,7 @@ class ConnectionManager(QObject):
         self.startTableGet.connect(self._worker.tables)
         self.startDataGet.connect(self._worker.data)
         self.startMappedDataGet.connect(self._worker.mapped_data)
+        self.closeConnection.connect(self._worker.disconnect)
 
         # when thread is started, connect worker to source
         self._thread.started.connect(self._worker.init_connection)
@@ -174,6 +178,7 @@ class ConnectionManager(QObject):
     def close_connection(self):
         """Close and delete thread and worker
         """
+        self.closeConnection.emit()
         if self._thread:
             self._thread.quit()
             self._thread.wait()

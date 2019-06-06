@@ -60,7 +60,6 @@ class ExcelConnector(SourceConnection):
                 with open(self._filename, "rb") as bin_file:
                     in_mem_file = io.BytesIO(bin_file.read())
                 self._wb = load_workbook(in_mem_file, read_only=True)
-                return True
             except Exception as error:
                 raise error
 
@@ -69,7 +68,8 @@ class ExcelConnector(SourceConnection):
         """
         if self._wb:
             self._wb.close()
-        return True
+            self._wb = None
+        self._filename = None
 
     def get_tables(self):
         """Method that should return a list of table names, list(str)
