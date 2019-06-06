@@ -235,9 +235,10 @@ class SpineToolboxProject(MetaObject):
                 url = data_stores[name]["url"]
             except KeyError:
                 # Keep compatibility with previous version
-                try:
-                    url = data_stores[name]["reference"]["url"]
-                except KeyError:
+                reference = data_stores[name]["reference"]
+                if isinstance(reference, dict) and "url" in reference:
+                    url = reference["url"]
+                else:
                     url = None
             try:
                 x = data_stores[name]["x"]
