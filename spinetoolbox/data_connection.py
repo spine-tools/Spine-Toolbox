@@ -388,7 +388,7 @@ class DataConnection(ProjectItem):
         return None
 
     def find_files(self, pattern, visited_items):
-        """Search for files matching the given pattern (with wildcards) in references
+        """[OBSOLETE] Search for files matching the given pattern (with wildcards) in references
         and data and return a list of matching paths.
 
         Args:

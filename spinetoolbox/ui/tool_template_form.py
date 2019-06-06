@@ -422,20 +422,20 @@ class Ui_Form(object):
         self.treeView_sourcefiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Other source files and/or directories (in addition to the main program file) <span style=\" font-weight:600;\">required</span> by the program.</p><p><span style=\" font-weight:600;\">Tip</span>: You can Drag &amp; Drop files and/or directories here from File Explorer.</p></body></html>", None, -1))
         self.toolButton_add_source_files.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add source code <span style=\" font-weight:600;\">files</span> that your program requires in order to run.</p></body></html>", None, -1))
         self.toolButton_add_source_dirs.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add source code <span style=\" font-weight:600;\">directory</span> and all its contents.</p></body></html>", None, -1))
-        self.toolButton_minus_source_files.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected or all if nothing is selected</p></body></html>", None, -1))
+        self.toolButton_minus_source_files.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected item(s)</p></body></html>", None, -1))
         self.treeView_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p><span style=\" font-weight:600;\">Required</span> data files for the program.</p><p><span style=\" font-weight:600;\">Tip</span>: Double-click or press F2 to edit selected item.</p></body></html>", None, -1))
         self.toolButton_plus_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add input filenames and/or directories required by the program. Examples:</p><p>\'data.csv\'</p><p>\'input/data.csv\'</p><p>\'input/\'</p><p>\'output/\'</p><p><br/></p></body></html>", None, -1))
-        self.toolButton_minus_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected names or all if nothing is selected</p></body></html>", None, -1))
+        self.toolButton_minus_inputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected item(s)</p></body></html>", None, -1))
         self.treeView_inputfiles_opt.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p><span style=\" font-weight:600;\">Optional</span> data files for the program.</p><p><span style=\" font-weight:600;\">Tip</span>: Double-click or press F2 to edit selected item.</p></body></html>", None, -1))
         self.toolButton_plus_inputfiles_opt.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add optional input filenames and/or directories.</p></body></html>", None, -1))
-        self.toolButton_minus_inputfiles_opt.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected names or all if nothing is selected</p></body></html>", None, -1))
+        self.toolButton_minus_inputfiles_opt.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected item(s)</p></body></html>", None, -1))
         self.treeView_outputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Output files that may be used by other project items downstream. These files will be archived into a results directory after execution.</p><p><span style=\" font-weight:600;\">Tip</span>: Double-click or press F2 to edit selected item.</p></body></html>", None, -1))
         self.toolButton_plus_outputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Add output filenames produced by your program that are saved to results after execution.</p></body></html>", None, -1))
-        self.toolButton_minus_outputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected names or all if nothing is selected</p></body></html>", None, -1))
+        self.toolButton_minus_outputfiles.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Remove selected item(s)</p></body></html>", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("Form", "Main program directory", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
-from widgets.custom_qtreeview import CustomTreeView, SourcesTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
 import resources_icons_rc

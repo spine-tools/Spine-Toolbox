@@ -720,8 +720,7 @@ class DataStore(ProjectItem):
         return None
 
     def find_files(self, pattern, visited_items):
-        """TODO: [OBOSOLETE?]
-        Search for files matching the given pattern (with wildcards) in data directory
+        """[OBOSOLETE] Search for files matching the given pattern (with wildcards) in data directory
         and return a list of matching paths.
 
         Args:

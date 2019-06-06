@@ -19,6 +19,7 @@ Contains classes for handling project item execution.
 import logging
 import os
 import copy
+import fnmatch
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
 
@@ -482,7 +483,7 @@ class ExecutionInstance(QObject):
             for sqlite_ref in self.ds_refs["sqlite"]:
                 _, file_candidate = os.path.split(sqlite_ref)
                 if file_candidate == filename:
-                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, sqlite_ref))
+                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, sqlite_ref))
                     return sqlite_ref
         except KeyError:
             pass
@@ -491,7 +492,7 @@ class ExecutionInstance(QObject):
             for mysql_url in self.ds_refs["mysql"]:
                 _, file_candidate = os.path.split(mysql_url)
                 if file_candidate == filename:
-                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, mysql_url))
+                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, mysql_url))
                     return mysql_url
         except KeyError:
             pass
@@ -500,7 +501,7 @@ class ExecutionInstance(QObject):
             for mssql_url in self.ds_refs["mssql"]:
                 _, file_candidate = os.path.split(mssql_url)
                 if file_candidate == filename:
-                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, mssql_url))
+                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, mssql_url))
                     return mssql_url
         except KeyError:
             pass
@@ -509,7 +510,7 @@ class ExecutionInstance(QObject):
             for postgresql_url in self.ds_refs["postgresql"]:
                 _, file_candidate = os.path.split(postgresql_url)
                 if file_candidate == filename:
-                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, postgresql_url))
+                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, postgresql_url))
                     return postgresql_url
         except KeyError:
             pass
@@ -540,3 +541,34 @@ class ExecutionInstance(QObject):
                 # logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
                 return tool_file
         return None
+
+    def find_optional_files(self, pattern):
+        """Returns a list of found paths to files that match the given pattern.
+
+        Returns:
+            list: List of (full) paths
+        """
+        # logging.debug("Searching optional input files. Pattern: '{0}'".format(pattern))
+        matches = list()
+        # Find matches when pattern includes wildcards
+        if ('*' in pattern) or ('?' in pattern):
+            # Find matches in Data Store references
+            try:
+                # NOTE: Only sqlite files are checked
+                ds_matches = fnmatch.filter(self.ds_refs["sqlite"], pattern)
+            except KeyError:
+                ds_matches = list()
+            # Find matches in Data Connection references
+            dc_ref_matches = fnmatch.filter(self.dc_refs, pattern)
+            # Find matches in Data Connection data files
+            dc_file_matches = fnmatch.filter(self.dc_files, pattern)
+            # Find matches in Tool output files
+            tool_matches = fnmatch.filter(self.tool_output_files, pattern)
+            matches += ds_matches + dc_ref_matches + dc_file_matches + tool_matches
+        else:
+            # Pattern is an exact filename (no wildcards)
+            match = self.find_file(pattern)
+            if match is not None:
+                matches.append(match)
+        # logging.debug("Matches:{0}".format(matches))
+        return matches

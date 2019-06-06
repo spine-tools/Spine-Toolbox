@@ -312,28 +312,6 @@ class Tool(ProjectItem):
                 pass
         return True
 
-    def find_optional_input_files(self):
-        """Find optional input files from connected items.
-
-        Returns:
-            Dictionary of optional input file paths or None if no files found. Key is the
-            optional input item and value is a list of paths that matches the item.
-        """
-        file_paths = dict()
-        for i in range(self.opt_input_file_model.rowCount()):
-            file_path = self.opt_input_file_model.item(i, 0).data(Qt.DisplayRole)
-            # Just get the filename if there is a path attached to the file
-            path, filename = os.path.split(file_path)
-            if not filename:
-                # It's a directory
-                continue
-            found_files = self.find_files(filename)
-            if not found_files:
-                self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(filename))
-            else:
-                file_paths[file_path] = found_files
-        return file_paths
-
     # def find_file(self, fname):
     #     """Find required input file for this Tool Instance. Search file from Data
     #     Connection or Data Store items that are input items for this Tool. These in turn
@@ -368,7 +346,7 @@ class Tool(ProjectItem):
     #     return path
 
     def find_files(self, pattern):
-        """Finds optional input files that match the given search word. Searches files from Data
+        """[OBSOLETE] Finds optional input files that match the given search word. Searches files from Data
         Connection or Data Store items that are input items for this Tool. These in turn
         will search on their own input items and stop when an infinite recursion is detected.
 
@@ -874,6 +852,29 @@ class Tool(ProjectItem):
                 return None
             else:
                 file_paths[req_file_path] = found_file
+        return file_paths
+
+    def find_optional_input_files(self):
+        """Tries to find optional input files from previous project items in the DAG. Returns found paths.
+
+        Returns:
+            Dictionary of optional input file paths or an empty dictionary if no files found. Key is the
+            optional input item and value is a list of paths that matches the item.
+        """
+        file_paths = dict()
+        for i in range(self.opt_input_file_model.rowCount()):
+            file_path = self.opt_input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Just get the filename if there is a path attached to the file
+            path, pattern = os.path.split(file_path)  # Filename may be a pattern (contains wildcards * or ?)
+            if not pattern:
+                # It's a directory -> skip
+                continue
+            # found_files = self.find_files(filename)  # Obsolete
+            found_files = self._toolbox.project().execution_instance.find_optional_files(pattern)
+            if not found_files:
+                self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(pattern))
+            else:
+                file_paths[file_path] = found_files
         return file_paths
 
     @Slot(int, name="execute_finished")
