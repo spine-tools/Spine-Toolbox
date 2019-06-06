@@ -17,6 +17,7 @@ import spinedb_api
 from helpers import busy_effect
 from spine_io.importers.csv_reader import CSVConnector
 from spine_io.importers.excel_reader import ExcelConnector
+from spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
 from spine_io.widgets.import_preview_widget import ImportPreviewWidget
 from spine_io.widgets.import_errors_widget import ImportErrorWidget
 from spine_io.connection_manager import ConnectionManager
@@ -33,7 +34,7 @@ class ImportDialog(QDialog):
         # state
         self._mapped_data = None
         self._mapping_errors = []
-        self.connector_list = [CSVConnector, ExcelConnector]
+        self.connector_list = [CSVConnector, ExcelConnector, SqlAlchemyConnector]
         self.connector_list = {c.DISPLAY_NAME: c for c in self.connector_list}
         self._selected_connector = None
         self.active_connector = None
