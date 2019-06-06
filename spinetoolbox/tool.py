@@ -447,45 +447,6 @@ class Tool(ProjectItem):
             item_list.append(item_data)
         return item_list
 
-    def create_refs_to_output_files(self, output_items):
-        """Create refs to Tool output files in all child Data Connections and Data Stores.
-        In case of Data Store only one reference is created (to the first file in the list)
-
-        Args:
-            output_items (list): Destination items for output files.
-        """
-        for item in output_items:
-            n_created_refs = 0
-            # NOTE: We need to take the basename here since the tool instance saves
-            # the output files *without* the 'subfolder' part in the output folder
-            for output_file in [os.path.basename(x) for x in self._tool_template.outputfiles]:
-                self._toolbox.msg.emit("*** Creating reference to Tool <b>{0}</b>'s output file {1} "
-                                       "in {2} <b>{3}</b> ***"
-                                       .format(self.name, output_file, item.item_type, item.name))
-                # NOTE: output files are saved
-                src_path = os.path.join(self.instance.output_dir, output_file)
-                if not os.path.exists(src_path):
-                    self._toolbox.msg_error.emit("\t Output file <b>{0}</b> does not exist".format(src_path))
-                    continue
-                if item.item_type == "Data Connection":
-                    item.add_files_to_references([src_path])  # Give path in a list
-                    n_created_refs += 1
-                elif item.item_type == "Data Store":
-                    reference = {
-                        'url': 'sqlite:///{0}'.format(src_path),
-                        'database': output_file,
-                        'username': getpass.getuser()
-                    }
-                    item.set_reference(reference)
-                    item.load_reference_into_selections()
-                    self._toolbox.msg.emit("\tCreated <b>1</b> reference")
-                    break
-                else:
-                    self._toolbox.msg_warning.emit("\t<b>Not implemented</b>")
-                    break
-            if item.item_type == "Data Connection":
-                self._toolbox.msg.emit("\tCreated <b>{0}</b> reference(s)".format(n_created_refs))
-
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. This is where Tool
         type specific initialization happens (whether the tool is GAMS, Python or Julia script)."""

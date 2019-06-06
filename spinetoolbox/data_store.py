@@ -530,8 +530,7 @@ class DataStore(ProjectItem):
         return reference
 
     def get_db_map(self, db_url, username, upgrade=False):
-        """Return a DiffDatabaseMapping instance to work with.
-        """
+        """Returns a DiffDatabaseMapping instance to work with."""
         try:
             return spinedb_api.DiffDatabaseMapping(db_url, username, upgrade=upgrade)
         except spinedb_api.SpineDBVersionError:
@@ -556,7 +555,7 @@ class DataStore(ProjectItem):
 
     @Slot(bool, name="open_tree_view")
     def open_tree_view(self, checked=False):
-        """Open reference in tree view form."""
+        """Opens reference in tree view form."""
         reference = self.make_reference()
         if not reference:
             return
@@ -739,6 +738,33 @@ class DataStore(ProjectItem):
         """Executes this Data Store."""
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
+        inst = self._toolbox.project().execution_instance
+        # Update Data Store based on project items that are already executed
+        # Override reference if there's an sqlite Tool output file in the execution instance
+        # NOTE: Takes the first .sqlite file that is found
+        for output_file_path in inst.tool_output_files:
+            p, fn = os.path.split(output_file_path)
+            if fn.lower().endswith(".sqlite"):
+                self._toolbox.msg_warning.emit("Overriding database reference")
+                self.enable_sqlite()
+                reference = {
+                    "url": "sqlite:///{0}".format(output_file_path),
+                    "database": fn,
+                    "username": getpass.getuser()
+                }
+                self.set_reference(reference)
+                self.load_reference_into_selections()
+                # Update UI
+                self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
+                self._toolbox.ui.comboBox_dsn.clear()
+                self._toolbox.ui.lineEdit_SQLite_file.setText(output_file_path)
+                self._toolbox.ui.lineEdit_host.clear()
+                self._toolbox.ui.lineEdit_port.clear()
+                self._toolbox.ui.lineEdit_database.setText(fn)
+                self._toolbox.ui.lineEdit_username.setText(getpass.getuser())
+                self._toolbox.ui.lineEdit_password.clear()
+                self._toolbox.msg.emit("New URL:<i>{0}<i/>".format(reference["url"]))
+        # Update execution instance for project items downstream
         reference = self.current_reference()
         if not reference:
             # Dialect is set but details are missing
@@ -747,10 +773,7 @@ class DataStore(ProjectItem):
                                            "& <i>password</i> for other database dialects.")
             ref = None
         else:
-            self._toolbox.msg.emit("Dialect: {0}. Reference: {1}".format(self.selected_dialect, reference))
-            # example reference: {'database': 'tietokanta', 'username': 'ttepsa',
-            #                     'url': 'mysql+pymysql://ttepsa@127.0.0.1:5444/tietokanta'}
-            if self.selected_dialect == 'sqlite':
+            if self.selected_dialect == "sqlite":
                 # If dialect is sqlite, append full path of the sqlite file to execution_instance
                 sqlite_file = self.selected_sqlite_file
                 if not sqlite_file or not os.path.isfile(sqlite_file):
@@ -763,7 +786,6 @@ class DataStore(ProjectItem):
                 # If dialect is other than sqlite file, append full url to execution_instance
                 # TODO: What else needs to be done here?
                 ref = reference["url"]
-        inst = self._toolbox.project().execution_instance
         # Add Data Store reference into execution instance
         if ref is not None:
             inst.add_ds_ref(self.selected_dialect, ref)
