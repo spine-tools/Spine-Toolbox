@@ -355,7 +355,7 @@ class RelationshipTreeContextMenu(CustomContextMenu):
 
 
 class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for object (relationship) parameter (value) items in tree views.
+    """Context menu class for object (relationship) parameter items in tree views.
 
     Attributes:
         parent (QWidget): Parent for menu widget (TreeViewForm)
@@ -371,7 +371,31 @@ class ParameterContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         paste_icon = self._parent.ui.actionPaste.icon()
         remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
-        self.add_action("Edit")
+        self.add_action("Copy", copy_icon)
+        self.add_action("Paste", paste_icon)
+        self.addSeparator()
+        self.add_action("Remove selection", remove_icon)
+        self.exec_(position)
+
+
+class ParameterValueContextMenu(CustomContextMenu):
+    """Context menu class for object (relationship) parameter value items in tree views.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        paste_icon = self._parent.ui.actionPaste.icon()
+        remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
+        self.add_action("Open in editor...")
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()

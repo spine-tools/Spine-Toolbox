@@ -19,38 +19,32 @@
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-
-class Ui_dialog(object):
-    def setupUi(self, dialog):
-        dialog.setObjectName("dialog")
-        dialog.resize(563, 418)
-        self.verticalLayoutWidget = QtWidgets.QWidget(dialog)
-        self.verticalLayoutWidget.setGeometry(QtCore.QRect(9, 10, 551, 401))
-        self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
-        self.top_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
-        self.top_layout.setContentsMargins(0, 0, 0, 0)
-        self.top_layout.setObjectName("top_layout")
-        self.edit_area_layout = QtWidgets.QHBoxLayout()
-        self.edit_area_layout.setObjectName("edit_area_layout")
-        self.time_series_table = QtWidgets.QTableView(self.verticalLayoutWidget)
+class Ui_TimeSeriesEditor(object):
+    def setupUi(self, TimeSeriesEditor):
+        TimeSeriesEditor.setObjectName("TimeSeriesEditor")
+        TimeSeriesEditor.setWindowModality(QtCore.Qt.WindowModal)
+        TimeSeriesEditor.resize(563, 418)
+        self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesEditor)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.splitter = QtWidgets.QSplitter(TimeSeriesEditor)
+        self.splitter.setOrientation(QtCore.Qt.Horizontal)
+        self.splitter.setObjectName("splitter")
+        self.time_series_table = QtWidgets.QTableView(self.splitter)
         self.time_series_table.setObjectName("time_series_table")
-        self.edit_area_layout.addWidget(self.time_series_table)
-        self.plot_widget = QtWidgets.QWidget(self.verticalLayoutWidget)
-        self.plot_widget.setObjectName("plot_widget")
-        self.edit_area_layout.addWidget(self.plot_widget)
-        self.top_layout.addLayout(self.edit_area_layout)
+        self.verticalLayout.addWidget(self.splitter)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
-        self.close_button = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.close_button = QtWidgets.QPushButton(TimeSeriesEditor)
         self.close_button.setObjectName("close_button")
         self.horizontalLayout.addWidget(self.close_button)
-        self.top_layout.addLayout(self.horizontalLayout)
+        self.verticalLayout.addLayout(self.horizontalLayout)
 
-        self.retranslateUi(dialog)
-        QtCore.QMetaObject.connectSlotsByName(dialog)
+        self.retranslateUi(TimeSeriesEditor)
+        QtCore.QMetaObject.connectSlotsByName(TimeSeriesEditor)
 
-    def retranslateUi(self, dialog):
-        dialog.setWindowTitle(QtWidgets.QApplication.translate("dialog", "Dialog", None, -1))
-        self.close_button.setText(QtWidgets.QApplication.translate("dialog", "Close", None, -1))
+    def retranslateUi(self, TimeSeriesEditor):
+        TimeSeriesEditor.setWindowTitle(QtWidgets.QApplication.translate("TimeSeriesEditor", "Edit time series", None, -1))
+        self.close_button.setText(QtWidgets.QApplication.translate("TimeSeriesEditor", "Close", None, -1))
+

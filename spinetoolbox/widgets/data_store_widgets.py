@@ -50,6 +50,7 @@ from widgets.custom_menus import (
     ObjectTreeContextMenu,
     RelationshipTreeContextMenu,
     ParameterContextMenu,
+    ParameterValueContextMenu,
     ParameterValueListContextMenu,
     ObjectItemContextMenu,
     GraphViewContextMenu,
@@ -73,8 +74,8 @@ from widgets.custom_qdialog import (
     CommitDialog,
 )
 from widgets.custom_qwidgets import ZoomWidget
-from widgets.time_series_editor_widget import TimeSeriesEditor
 from widgets.toolbars import ParameterTagToolBar
+from widgets.select_value_editor import select_value_editor
 from models import (
     ObjectTreeModel,
     RelationshipTreeModel,
@@ -939,6 +940,7 @@ class TreeViewForm(DataStoreForm):
         self.settings_group = 'treeViewWidget'
         self.do_clear_selections = True
         self.restore_dock_widgets()
+        self._relationship_parameter_value_editor = None
         # init models and views
         self.init_models()
         self.init_views()
@@ -1806,9 +1808,12 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
-        self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
+        if (self.relationship_parameter_value_model.flags(index) & Qt.ItemIsEditable) != 0:
+            self.relationship_parameter_value_context_menu = ParameterValueContextMenu(self, global_pos, index)
+        else:
+            self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
         option = self.relationship_parameter_value_context_menu.get_action()
-        if option == "Edit":
+        if option == "Open in editor...":
             self.edit_relationship_parameter_values()
         elif option == "Remove selection":
             self.remove_relationship_parameter_values()
@@ -1904,13 +1909,9 @@ class TreeViewForm(DataStoreForm):
     def edit_relationship_parameter_values(self):
         """Opens an editor"""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            model_indexes = current.indexes()
-            for index in model_indexes:
-                print(index)
-                print(current.model().data(index))
-        self._relationship_parameter_value_editor = TimeSeriesEditor([[1.0, 2.0], [3.0, 4.0]])
+        current = selection.takeFirst()
+        model_indexes = current.indexes()
+        self._relationship_parameter_value_editor = select_value_editor(current.model(), model_indexes[0], self)
         self._relationship_parameter_value_editor.show()
 
     @busy_effect
@@ -2074,6 +2075,8 @@ class TreeViewForm(DataStoreForm):
         """
         super().closeEvent(event)
         self.close_editors()
+        if self._relationship_parameter_value_editor is not None:
+            self._relationship_parameter_value_editor.close()
 
 
 class GraphViewForm(DataStoreForm):
