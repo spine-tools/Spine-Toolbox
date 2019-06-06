@@ -523,9 +523,6 @@ class SpineToolboxProject(MetaObject):
         # Calculate bfs-ordered list of project items to execute
         dag = self.dag_handler.dag_with_node(selected_item.name)
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
-        # if not self.number_of_nodes_to_execute_is_correct(ordered_nodes, dag):
-        # If this happens, there's a bug in calc_exec_order()
-        #     return
         if not ordered_nodes:
             self._toolbox.msg.emit("")
             self._toolbox.msg_warning.emit("Selected graph is not a directed acyclic graph. "
@@ -559,9 +556,6 @@ class SpineToolboxProject(MetaObject):
             if not bfs_ordered_nodes:
                 self._invalid_graphs.append(g)
                 continue
-            # if not self.number_of_nodes_to_execute_is_correct(bfs_ordered_nodes, g):
-            # If this happens, there's a bug in calc_exec_order()
-            #     return
             self._ordered_dags[i] = bfs_ordered_nodes
             i += 1
         if len(self._ordered_dags.keys()) < 1:
@@ -648,24 +642,3 @@ class SpineToolboxProject(MetaObject):
                 self._executed_graph_index += 1
         self._invalid_graphs.clear()
         return
-
-    # def number_of_nodes_to_execute_is_correct(self, bfs_ordered_nodes, g):
-    #     """Checks that the number of nodes to execute is
-    #     the same as the number of nodes in the graph. If the
-    #     numbers don't match, it's a bug. This method should be
-    #     removed when the bug is fixed.
-    #
-    #     Args:
-    #         bfs_ordered_nodes (list): Ordered list of node names
-    #         g (DiGraph): Graph to execute
-    #
-    #     Returns:
-    #         bool: True if the numbers match, False otherwise
-    #     """
-    #     if len(bfs_ordered_nodes) == len(g.nodes()):
-    #         return True
-    #     else:
-    #         logging.error("ordered nodes: {0}. Nodes in graph: {1}".format(bfs_ordered_nodes, g.nodes()))
-    #         self._toolbox.msg_error.emit("Sorry but there's a problem in calculating the execution order. "
-    #                                      "Please reload the project and try again.")
-    #         return False

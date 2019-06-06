@@ -20,7 +20,6 @@ import sys
 import os
 import getpass
 import logging
-import fnmatch
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication, QCheckBox
@@ -539,11 +538,11 @@ class DataStore(ProjectItem):
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Incompatible database version")
-            msg.setText("The database at <b>{}</b> is from an older version of Spine "\
+            msg.setText("The database at <b>{}</b> is from an older version of Spine "
                         "and needs to be upgraded in order to be used with the current version.".format(db_url))
-            msg.setInformativeText("Do you want to upgrade it now?" \
-                                   "<p><b>WARNING</b>: After the upgrade, "\
-                                   "the database may no longer be used "\
+            msg.setInformativeText("Do you want to upgrade it now?"
+                                   "<p><b>WARNING</b>: After the upgrade, "
+                                   "the database may no longer be used "
                                    "with previous versions of Spine.")
             msg.addButton(QMessageBox.Cancel)
             msg.addButton("Upgrade", QMessageBox.YesRole)
@@ -605,7 +604,7 @@ class DataStore(ProjectItem):
                 if self.graph_view_form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
                     self.graph_view_form.setWindowState(self.graph_view_form.windowState()
-                                                       & ~Qt.WindowMinimized | Qt.WindowActive)
+                                                        & ~Qt.WindowMinimized | Qt.WindowActive)
                     self.graph_view_form.activateWindow()
                 else:
                     self.graph_view_form.raise_()
@@ -638,7 +637,7 @@ class DataStore(ProjectItem):
             if self.tabular_view_form.windowState() & Qt.WindowMinimized:
                 # Remove minimized status and restore window with the previous state (maximized/normal state)
                 self.tabular_view_form.setWindowState(self.tabular_view_form.windowState()
-                                                    & ~Qt.WindowMinimized | Qt.WindowActive)
+                                                      & ~Qt.WindowMinimized | Qt.WindowActive)
                 self.tabular_view_form.activateWindow()
             else:
                 self.tabular_view_form.raise_()
@@ -682,93 +681,6 @@ class DataStore(ProjectItem):
         if not os.path.isdir(self.data_dir):
             return None
         return os.listdir(self.data_dir)
-
-    def find_file(self, fname, visited_items):
-        """TODO: [OBOSOLETE?]
-        Search for filename in data and return the path if found."""
-        # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
-        if self in visited_items:
-            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
-                                           "connections and try again. Detected at {0}.".format(self.name))
-            return None
-        reference = self.current_reference()
-        if not reference:
-            # Data Store has no reference
-            return None
-        db_url = reference['url']
-        if not db_url.lower().startswith('sqlite'):
-            return None
-        file_path = os.path.abspath(db_url.split(':///')[1])
-        if not os.path.exists(file_path):
-            return None
-        if fname == os.path.basename(file_path):
-            # logging.debug("{0} found in DS {1}".format(fname, self.name))
-            self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
-            return file_path
-        visited_items.append(self)
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            # Find item from project model
-            item_index = self._toolbox.project_item_model.find_item(input_item)
-            if not item_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(item_index)
-            if item.item_type in ["Data Store", "Data Connection"]:
-                path = item.find_file(fname, visited_items)
-                if path is not None:
-                    return path
-        return None
-
-    def find_files(self, pattern, visited_items):
-        """[OBOSOLETE] Search for files matching the given pattern (with wildcards) in data directory
-        and return a list of matching paths.
-
-        Args:
-            pattern (str): File name (no path). May contain wildcards.
-            visited_items (list): List of project item names that have been visited
-
-        Returns:
-            List of matching paths. List is empty if no matches found.
-        """
-        paths = list()
-        if self in visited_items:
-            self._toolbox.msg_warning.emit("There seems to be an infinite loop in your project. Please fix the "
-                                           "connections and try again. Detected at {0}.".format(self.name))
-            return paths
-        # Check the current reference. If it is an sqlite file, this is a possible match
-        # If dialect is not sqlite, the reference is ignored
-        reference = self.current_reference()
-        db_url = reference['url']
-        if db_url.lower().startswith('sqlite'):
-            file_path = os.path.abspath(db_url.split(':///')[1])
-            if os.path.exists(file_path):
-                if fnmatch.fnmatch(file_path, pattern):  # fname == os.path.basename(file_path):
-                    # self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
-                    paths.append(file_path)
-        else:  # Not an SQLite reference
-            pass
-        # Search files that match the pattern from this Data Store's data directory
-        for data_file in self.data_files():  # data_file is a filename (no path)
-            if fnmatch.fnmatch(data_file, pattern):
-                # self._toolbox.msg.emit("\t<b>{0}</b> matches pattern <b>{1}</b> in Data Store <b>{2}</b>"
-                #                        .format(data_file, pattern, self.name))
-                path = os.path.join(self.data_dir, data_file)
-                if path not in paths:  # Skip if the sqlite file was already added from the reference
-                    paths.append(path)
-        visited_items.append(self)
-        # Find items that are connected to this Data Connection
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            found_index = self._toolbox.project_item_model.find_item(input_item)
-            if not found_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(found_index)
-            if item.item_type in ["Data Store", "Data Connection"]:
-                matching_paths = item.find_files(pattern, visited_items)
-                if matching_paths is not None:
-                    paths = paths + matching_paths
-                    return paths
-        return paths
 
     @Slot(bool, name="copy_db_url")
     def copy_db_url(self, checked=False):

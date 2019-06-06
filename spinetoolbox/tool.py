@@ -312,69 +312,6 @@ class Tool(ProjectItem):
                 pass
         return True
 
-    # def find_file(self, fname):
-    #     """Find required input file for this Tool Instance. Search file from Data
-    #     Connection or Data Store items that are input items for this Tool. These in turn
-    #     will search on their own input items and stop when an infinite recursion is detected.
-    #
-    #     Args:
-    #         fname (str): File name (no path)
-    #
-    #     Returns:
-    #         Path to file or None if it was not found.
-    #     """
-    #     path = None
-    #     # Find file from immediate parent items
-    #     for input_item in self._toolbox.connection_model.input_items(self.name):
-    #         # self._toolbox.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
-    #         # Find item from project model
-    #         found_item_index = self._toolbox.project_item_model.find_item(input_item)
-    #         found_item = self._toolbox.project_item_model.project_item(found_item_index)
-    #         if not found_item:
-    #             self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-    #             return path
-    #         item_data = found_item
-    #         # Find file from parent Data Stores and Data Connections
-    #         if item_data.item_type in ["Data Store", "Data Connection"]:
-    #             visited_items = list()
-    #             path = item_data.find_file(fname, visited_items)
-    #             if path is not None:
-    #                 break
-    #         elif item_data.item_type == "Tool":
-    #             # TODO: Find file from output files of parent Tools
-    #             pass
-    #     return path
-
-    def find_files(self, pattern):
-        """[OBSOLETE] Finds optional input files that match the given search word. Searches files from Data
-        Connection or Data Store items that are input items for this Tool. These in turn
-        will search on their own input items and stop when an infinite recursion is detected.
-
-        Args:
-            pattern (str): File name (may have wildcards)
-
-        Returns:
-            List of paths to files that match the pattern or an empty list if no matches.
-        """
-        paths = list()
-        # Find file from immediate parent items
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            # self._toolbox.msg.emit("Searching for optional file <b>{0}</b> from item <b>{1}</b>"
-            #                        .format(pattern, input_item))
-            # Find item from project model
-            found_item_index = self._toolbox.project_item_model.find_item(input_item)
-            found_item = self._toolbox.project_item_model.project_item(found_item_index)
-            if not found_item:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                return paths
-            # Find file from parent Data Stores and Data Connections
-            if found_item.item_type in ["Data Store", "Data Connection"]:
-                visited_items = list()
-                matching_paths = found_item.find_files(pattern, visited_items)
-                if matching_paths is not None:
-                    paths = paths + matching_paths
-        return paths
-
     def copy_input_files(self, paths):
         """Copy input files from given paths to work or source directory, depending on
         where the Tool template requires them to be.
@@ -548,22 +485,6 @@ class Tool(ProjectItem):
                     break
             if item.item_type == "Data Connection":
                 self._toolbox.msg.emit("\tCreated <b>{0}</b> reference(s)".format(n_created_refs))
-
-    # @Slot(int, name="execution_finished")
-    # def execution_finished(self, return_code):
-    #     """Tool execution finished."""
-    #     self._graphics_item.stop_animation()
-    #     # Disconnect instance finished signal
-    #     self.instance.instance_finished_signal.disconnect(self.execution_finished)
-    #     if return_code == 0:
-    #         # copy output files to data directories of connected items
-    #         output_items = self.find_output_items()
-    #         if output_items:
-    #             # self._toolbox.msg.emit("Creating references to Tool output files in connected items")
-    #             self.create_refs_to_output_files(output_items)
-    #         self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
-    #     else:
-    #         self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
 
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. This is where Tool
@@ -879,7 +800,12 @@ class Tool(ProjectItem):
 
     @Slot(int, name="execute_finished")
     def execute_finished(self, return_code):
-        """Tool template execution finished."""
+        """Tool template execution finished.
+
+        Args:
+            return_code (int): Process exit code
+        """
+        # TODO: Should we do something like in create_refs_to_output_files() here?
         self._graphics_item.stop_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execute_finished)
