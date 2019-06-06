@@ -387,6 +387,9 @@ class DataConnection(ProjectItem):
         self._toolbox.msg.emit("Executing Data Connection <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
         inst = self._toolbox.project().execution_instance
+        # Add previously executed Tool's output file paths to references
+        self.references += inst.tool_output_files
+        self.populate_reference_list(self.references)
         # Add data file references and data files into execution instance
         refs = self.file_references()
         inst.append_dc_refs(refs)
