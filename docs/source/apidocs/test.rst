@@ -12,10 +12,26 @@ test.mock\_helpers module
     :undoc-members:
     :show-inheritance:
 
+test.test\_ConnectionModel module
+---------------------------------
+
+.. automodule:: test.test_ConnectionModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 test.test\_FilterCheckboxList module
 ------------------------------------
 
 .. automodule:: test.test_FilterCheckboxList
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+test.test\_MinimalTableModel module
+-----------------------------------
+
+.. automodule:: test.test_MinimalTableModel
     :members:
     :undoc-members:
     :show-inheritance:
@@ -32,6 +48,14 @@ test.test\_addItemsDialog module
 --------------------------------
 
 .. automodule:: test.test_addItemsDialog
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+test.test\_custom\_qtextbrowser module
+--------------------------------------
+
+.. automodule:: test.test_custom_qtextbrowser
     :members:
     :undoc-members:
     :show-inheritance:

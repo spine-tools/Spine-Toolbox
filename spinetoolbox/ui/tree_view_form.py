@@ -412,6 +412,6 @@ class Ui_MainWindow(object):
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
+from widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc
