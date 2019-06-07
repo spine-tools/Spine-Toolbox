@@ -646,48 +646,35 @@ class DataStore(ProjectItem):
             if fn.lower().endswith(".sqlite"):
                 self._toolbox.msg_warning.emit("Overriding database reference")
                 self.enable_sqlite()
-                reference = {
-                    "url": "sqlite:///{0}".format(output_file_path),
-                    "database": fn,
-                    "username": getpass.getuser()
-                }
-                self.set_reference(reference)
-                self.load_reference_into_selections()
-                # Update UI
-                self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
-                self._toolbox.ui.comboBox_dsn.clear()
-                self._toolbox.ui.lineEdit_SQLite_file.setText(output_file_path)
-                self._toolbox.ui.lineEdit_host.clear()
-                self._toolbox.ui.lineEdit_port.clear()
-                self._toolbox.ui.lineEdit_database.setText(fn)
-                self._toolbox.ui.lineEdit_username.setText(getpass.getuser())
-                self._toolbox.ui.lineEdit_password.clear()
-                self._toolbox.msg.emit("New URL:<i>{0}<i/>".format(reference["url"]))
+                url = dict(dialect="sqlite", database=output_file_path)
+                self.set_url(url)
+                self.load_url_into_selections()
+                self._toolbox.msg.emit("New URL:<i>{0}<i/>".format(url))
         # Update execution instance for project items downstream
-        reference = self.current_reference()
-        if not reference:
+        url = self.make_url()
+        if not url:
             # Dialect is set but details are missing
-            self._toolbox.msg_warning.emit("No database reference set. Please provide a <i>path</i> to an "
-                                           "SQLite file or <i>host</i>, <i>port</i>, and <i>username</i> "
-                                           "& <i>password</i> for other database dialects.")
+            self._toolbox.msg_warning.emit(
+                "No database url set. Please provide a <i>path</i> to an "
+                "SQLite file or <i>host</i>, <i>port</i>, and <i>username</i> "
+                "& <i>password</i> for other database dialects."
+            )
             ref = None
         else:
-            if self.selected_dialect == "sqlite":
+            if url.drivername.lower().startswith('sqlite'):
                 # If dialect is sqlite, append full path of the sqlite file to execution_instance
-                sqlite_file = self.selected_sqlite_file
+                sqlite_file = url.database
                 if not sqlite_file or not os.path.isfile(sqlite_file):
-                    self._toolbox.msg_warning.emit("Warning: Data Store <b>{0}</b> Sqlite reference is not valid."
-                                                   .format(self.name))
-                    ref = None
+                    self._toolbox.msg_warning.emit(
+                        "Warning: Data Store <b>{0}</b> SQLite url is not valid.".format(self.name)
+                    )
                 else:
-                    ref = sqlite_file
+                    # Add Data Store reference into execution instance
+                    inst.add_ds_ref("sqlite", sqlite_file)
             else:
-                # If dialect is other than sqlite file, append full url to execution_instance
-                # TODO: What else needs to be done here?
-                ref = reference["url"]
-        # Add Data Store reference into execution instance
-        if ref is not None:
-            inst.add_ds_ref(self.selected_dialect, ref)
+                # If dialect is other than sqlite file, just pass for now
+                # TODO: What needs to be done here?
+                pass
         self._toolbox.msg.emit("***")
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
