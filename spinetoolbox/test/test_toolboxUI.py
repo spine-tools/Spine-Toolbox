@@ -30,6 +30,7 @@ from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 
 # noinspection PyUnusedLocal
 class TestToolboxUI(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""

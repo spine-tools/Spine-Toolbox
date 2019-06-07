@@ -16,7 +16,9 @@ Unit tests for the custom QTextBrowser.
 :date:   7.6.2019
 """
 
+import logging
 import unittest
+import sys
 from PySide2.QtWidgets import QApplication
 from widgets.custom_qtextbrowser import CustomQTextBrowser
 
@@ -26,7 +28,17 @@ class TestCustomQTextBrowser(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls._application = QApplication()
+        """Overridden method. Runs once before all tests in this class."""
+        try:
+            cls.app = QApplication().processEvents()
+        except RuntimeError:
+            pass
+        logging.basicConfig(
+            stream=sys.stderr,
+            level=logging.DEBUG,
+            format='%(asctime)s %(levelname)s: %(message)s',
+            datefmt='%Y-%m-%d %H:%M:%S',
+        )
 
     def test_default_max_blocks(self):
         browser = CustomQTextBrowser(None)
