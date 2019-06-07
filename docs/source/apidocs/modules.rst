@@ -9,6 +9,7 @@ spinetoolbox
    data_store
    datapackage_import_export
    excel_import_export
+   executioner
    graphics_items
    helpers
    metaobject

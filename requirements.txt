@@ -8,3 +8,4 @@ numpy >=1.15.1
 matplotlib >=2.2.3
 scipy >=1.1.0
 jupyter-client >= 5.2.4
+networkx > 2.2

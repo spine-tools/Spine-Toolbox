@@ -25,15 +25,7 @@ import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
 from spinedb_api import create_new_spine_database
-
-
-class MockQWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-
-    # noinspection PyMethodMayBeStatic
-    def test_push_vars(self):
-        return True
+from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 
 
 # noinspection PyUnusedLocal
@@ -57,12 +49,13 @@ class TestDataStore(unittest.TestCase):
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
-        ) as mock_python_repl:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+                mock.patch("ui_main.PythonReplWidget") as mock_python_repl, \
+                mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
+            mock_qsettings_value.side_effect = qsettings_value_side_effect
             self.toolbox = ToolboxUI()
             self.toolbox.create_project("UnitTest Project", "")
 

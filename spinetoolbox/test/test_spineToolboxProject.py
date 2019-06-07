@@ -22,15 +22,7 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
-
-
-class MockQWidget(QWidget):
-    def __init__(self):
-        super().__init__()
-
-    # noinspection PyMethodMayBeStatic
-    def test_push_vars(self):
-        return True
+from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 
 
 # noinspection PyUnusedLocal
@@ -54,14 +46,15 @@ class TestSpineToolboxProject(unittest.TestCase):
         We want the ToolboxUI to start with the default settings and without a project so
         we need to mock CONFIGURATION_FILE to prevent loading user's own configs from settings.conf.
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("project.create_dir") as mock_create_dir, mock.patch(
-            "ui_main.ToolboxUI.save_project"
-        ) as mock_save_project:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+                mock.patch("ui_main.PythonReplWidget") as mock_python_repl, \
+                mock.patch("project.create_dir") as mock_create_dir, \
+                mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
+                mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
+            mock_qsettings_value.side_effect = qsettings_value_side_effect
             self.toolbox = ToolboxUI()
             self.toolbox.create_project("UnitTest Project", "")
 
@@ -83,6 +76,19 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
         self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
         self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
+        # Check that dag handler has this and only this node
+        self.check_dag_handler(name)
+
+    def check_dag_handler(self, name):
+        """Check that project dag handler contains only one
+        graph, which has one node and its name matches the
+        given argument."""
+        dag = self.toolbox.project().dag_handler
+        self.assertTrue(len(dag.dags()) == 1)
+        g = dag.dag_with_node(name)
+        self.assertTrue(len(g.nodes()) == 1)
+        for node_name in g.nodes():
+            self.assertTrue(node_name == name)
 
     def test_add_data_connection(self):
         """Test adding a Data Connection to project."""
@@ -97,6 +103,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
         self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
         self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
+        # Check that dag handler has this and only this node
+        self.check_dag_handler(name)
 
     def test_add_tool(self):
         """Test adding a Tool to project."""
@@ -111,6 +119,8 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
         self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
         self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
+        # Check that dag handler has this and only this node
+        self.check_dag_handler(name)
 
     def test_add_view(self):
         """Test adding a View to project."""
@@ -125,9 +135,12 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
         self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
         self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
+        # Check that dag handler has this and only this node
+        self.check_dag_handler(name)
 
     def test_add_four_items(self):
-        """Test that adding multiple item works as expected. Four items are added in order DS->DC->Tool->View."""
+        """Test that adding multiple items works as expected.
+        Four items are added in order DS->DC->Tool->View."""
 
         # Add items
         ds_name = self.add_ds()
@@ -151,49 +164,19 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(self.toolbox.connection_model.find_index_in_header(dc_name), 1)
         self.assertEqual(self.toolbox.connection_model.find_index_in_header(tool_name), 2)
         self.assertEqual(self.toolbox.connection_model.find_index_in_header(view_name), 3)
-
-        # # Add Data Connection item
-        # dc_name = "DC"
-        # with mock.patch("data_connection.create_dir") as mock_create_dir:
-        #     dc_item = DataConnection(self.mw, dc_name, "", references=None, x=0, y=0)
-        # retval = self.mw.add_item_to_model("Data Connections", dc_name, dc_item)
-        # self.assertTrue(retval)
-        # # Check that new item is found from project_item_model
-        # found_item = self.mw.project_item_model.find_item(dc_name, Qt.MatchExactly | Qt.MatchRecursive)
-        # self.assertEqual(found_item.data(Qt.UserRole), dc_item)
-        # # Check that connection model has been updated
-        # self.assertEqual(self.mw.connection_model.rowCount(), 2)
-        # self.assertEqual(self.mw.connection_model.columnCount(), 2)
-        # self.assertEqual(self.mw.connection_model.find_index_in_header(dc_name), 1)
-        #
-        # # Add Tool item
-        # tool_name = "Tool"
-        # with mock.patch("tool.create_dir") as mock_create_dir:
-        #     tool_item = Tool(self.mw, tool_name, "", tool_template=None, x=0, y=0)
-        # retval = self.mw.add_item_to_model("Tools", tool_name, tool_item)
-        # self.assertTrue(retval)
-        # # Check that new item is found from project_item_model
-        # found_item = self.mw.project_item_model.find_item(tool_name, Qt.MatchExactly | Qt.MatchRecursive)
-        # self.assertEqual(found_item.data(Qt.UserRole), tool_item)
-        # # Check that connection model has been updated
-        # self.assertEqual(self.mw.connection_model.rowCount(), 3)
-        # self.assertEqual(self.mw.connection_model.columnCount(), 3)
-        # self.assertEqual(self.mw.connection_model.find_index_in_header(tool_name), 2)
-        #
-        # # Add View item
-        # view_name = "View"
-        # view_item = View(self.mw, view_name, "", 0, 0)
-        # retval = self.mw.add_item_to_model("Views", view_name, view_item)
-        # self.assertTrue(retval)
-        # # Check that new item is found from project_item_model
-        # found_item = self.mw.project_item_model.find_item(view_name, Qt.MatchExactly | Qt.MatchRecursive)
-        # self.assertEqual(found_item.data(Qt.UserRole), view_item)
-        # # Check that connection model has been updated
-        # self.assertEqual(self.mw.connection_model.rowCount(), 4)
-        # self.assertEqual(self.mw.connection_model.columnCount(), 4)
-        # self.assertEqual(self.mw.connection_model.find_index_in_header(view_name), 3)
-        # # There should now be 4 items in the model
-        # self.assertEqual(self.mw.project_item_model.n_items("all"), 4)
+        # DAG handler should now have four graphs, each with one item
+        dag_hndlr = self.toolbox.project().dag_handler
+        n_dags = len(dag_hndlr.dags())
+        self.assertEqual(n_dags, 4)
+        # Check that all previously created items are found in graphs
+        ds_graph = dag_hndlr.dag_with_node(ds_name)  # Returns None if graph is not found
+        self.assertIsNotNone(ds_graph)
+        dc_graph = dag_hndlr.dag_with_node(dc_name)
+        self.assertIsNotNone(dc_graph)
+        tool_graph = dag_hndlr.dag_with_node(tool_name)
+        self.assertIsNotNone(tool_graph)
+        view_graph = dag_hndlr.dag_with_node(view_name)
+        self.assertIsNotNone(view_graph)
 
     # def test_add_item_to_model_in_random_order(self):
     #     """Add items to model in order DC->View->Tool->DS and check that it still works."""

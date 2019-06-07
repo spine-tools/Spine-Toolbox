@@ -396,6 +396,8 @@ class JuliaREPLWidget(RichJupyterWidget):
         """Send interrupt signal to kernel."""
         # logging.debug("interrupt exec")
         self.kernel_manager.interrupt_kernel()
+        # TODO: Block execution until kernel has been interrupted and then emit the signal
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
 
     def shutdown_jupyter_kernel(self):
         """Shut down the jupyter kernel."""

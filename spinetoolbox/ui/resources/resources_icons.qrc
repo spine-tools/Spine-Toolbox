@@ -19,6 +19,19 @@
     <file>folder.svg</file>
     <file>minus.svg</file>
     <file>plus.svg</file>
+    <file>project_item_icons/stop-circle-regular.svg</file>
+    <file>project_item_icons/play-circle-regular.svg</file>
+    <file>project_item_icons/play-circle-solid.svg</file>
+    <file>menu_icons/trash-alt.svg</file>
+    <file>menu_icons/info-circle.svg</file>
+    <file>menu_icons/save_regular.svg</file>
+    <file>menu_icons/save_solid.svg</file>
+    <file>menu_icons/file.svg</file>
+    <file>menu_icons/folder-open.svg</file>
+    <file>menu_icons/hands-helping.svg</file>
+    <file>menu_icons/window-close.svg</file>
+    <file>menu_icons/cog.svg</file>
+    <file>menu_icons/question-circle.svg</file>
     <file>qt_extended_48x48.png</file>
     <file>remove_tool.png</file>
     <file>tool_options.png</file>

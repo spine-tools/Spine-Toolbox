@@ -20,7 +20,6 @@ import sys
 import os
 import getpass
 import logging
-import fnmatch
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication, QCheckBox
@@ -586,94 +585,6 @@ class DataStore(ProjectItem):
             return None
         return os.listdir(self.data_dir)
 
-    def find_file(self, fname, visited_items):
-        """Search for filename in data and return the path if found."""
-        # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
-        if self in visited_items:
-            self._toolbox.msg_warning.emit(
-                "There seems to be an infinite loop in your project. Please fix the "
-                "connections and try again. Detected at {0}.".format(self.name)
-            )
-            return None
-        url = self.make_url()
-        if not url:
-            # Data Store has no valid url
-            return None
-        if not url.drivername.lower().startswith('sqlite'):
-            return None
-        file_path = os.path.abspath(url.database)
-        if not os.path.exists(file_path):
-            return None
-        if fname == os.path.basename(file_path):
-            # logging.debug("{0} found in DS {1}".format(fname, self.name))
-            self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
-            return file_path
-        visited_items.append(self)
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            # Find item from project model
-            item_index = self._toolbox.project_item_model.find_item(input_item)
-            if not item_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(item_index)
-            if item.item_type in ["Data Store", "Data Connection"]:
-                path = item.find_file(fname, visited_items)
-                if path is not None:
-                    return path
-        return None
-
-    def find_files(self, pattern, visited_items):
-        """Search for files matching the given pattern (with wildcards) in data directory
-        and return a list of matching paths.
-
-        Args:
-            pattern (str): File name (no path). May contain wildcards.
-            visited_items (list): List of project item names that have been visited
-
-        Returns:
-            List of matching paths. List is empty if no matches found.
-        """
-        paths = list()
-        if self in visited_items:
-            self._toolbox.msg_warning.emit(
-                "There seems to be an infinite loop in your project. Please fix the "
-                "connections and try again. Detected at {0}.".format(self.name)
-            )
-            return paths
-        # Check the current url. If it is an sqlite file, this is a possible match
-        # If dialect is not sqlite, the url is ignored
-        url = self.make_url()
-        if url and url.drivername.lower().startswith('sqlite'):
-            file_path = os.path.abspath(url.database)
-            if os.path.exists(file_path):
-                if fnmatch.fnmatch(file_path, pattern):  # fname == os.path.basename(file_path):
-                    # self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
-                    paths.append(file_path)
-        else:  # Not an SQLite url
-            pass
-        # Search files that match the pattern from this Data Store's data directory
-        for data_file in self.data_files():  # data_file is a filename (no path)
-            if fnmatch.fnmatch(data_file, pattern):
-                # self._toolbox.msg.emit("\t<b>{0}</b> matches pattern <b>{1}</b> in Data Store <b>{2}</b>"
-                #                        .format(data_file, pattern, self.name))
-                path = os.path.join(self.data_dir, data_file)
-                if path not in paths:  # Skip if the sqlite file was already added from the url
-                    paths.append(path)
-        visited_items.append(self)
-        # Find items that are connected to this Data Connection
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            found_index = self._toolbox.project_item_model.find_item(input_item)
-            if not found_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(found_index)
-            if item.item_type in ["Data Store", "Data Connection"]:
-                matching_paths = item.find_files(pattern, visited_items)
-                if matching_paths is not None:
-                    paths = paths + matching_paths
-                    return paths
-        return paths
-
     @Slot(bool, name="copy_url")
     def copy_url(self, checked=False):
         """Copy db url to clipboard."""
@@ -721,3 +632,66 @@ class DataStore(ProjectItem):
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_ds_name.setText(self.name)
+
+    def execute(self):
+        """Executes this Data Store."""
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
+        inst = self._toolbox.project().execution_instance
+        # Update Data Store based on project items that are already executed
+        # Override reference if there's an sqlite Tool output file in the execution instance
+        # NOTE: Takes the first .sqlite file that is found
+        for output_file_path in inst.tool_output_files:
+            p, fn = os.path.split(output_file_path)
+            if fn.lower().endswith(".sqlite"):
+                self._toolbox.msg_warning.emit("Overriding database reference")
+                self.enable_sqlite()
+                reference = {
+                    "url": "sqlite:///{0}".format(output_file_path),
+                    "database": fn,
+                    "username": getpass.getuser()
+                }
+                self.set_reference(reference)
+                self.load_reference_into_selections()
+                # Update UI
+                self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
+                self._toolbox.ui.comboBox_dsn.clear()
+                self._toolbox.ui.lineEdit_SQLite_file.setText(output_file_path)
+                self._toolbox.ui.lineEdit_host.clear()
+                self._toolbox.ui.lineEdit_port.clear()
+                self._toolbox.ui.lineEdit_database.setText(fn)
+                self._toolbox.ui.lineEdit_username.setText(getpass.getuser())
+                self._toolbox.ui.lineEdit_password.clear()
+                self._toolbox.msg.emit("New URL:<i>{0}<i/>".format(reference["url"]))
+        # Update execution instance for project items downstream
+        reference = self.current_reference()
+        if not reference:
+            # Dialect is set but details are missing
+            self._toolbox.msg_warning.emit("No database reference set. Please provide a <i>path</i> to an "
+                                           "SQLite file or <i>host</i>, <i>port</i>, and <i>username</i> "
+                                           "& <i>password</i> for other database dialects.")
+            ref = None
+        else:
+            if self.selected_dialect == "sqlite":
+                # If dialect is sqlite, append full path of the sqlite file to execution_instance
+                sqlite_file = self.selected_sqlite_file
+                if not sqlite_file or not os.path.isfile(sqlite_file):
+                    self._toolbox.msg_warning.emit("Warning: Data Store <b>{0}</b> Sqlite reference is not valid."
+                                                   .format(self.name))
+                    ref = None
+                else:
+                    ref = sqlite_file
+            else:
+                # If dialect is other than sqlite file, append full url to execution_instance
+                # TODO: What else needs to be done here?
+                ref = reference["url"]
+        # Add Data Store reference into execution instance
+        if ref is not None:
+            inst.add_ds_ref(self.selected_dialect, ref)
+        self._toolbox.msg.emit("***")
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+
+    def stop_execution(self):
+        """Stops executing this Data Store."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
