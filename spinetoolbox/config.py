@@ -21,7 +21,7 @@ import os
 from PySide2.QtGui import QColor
 
 SPINE_TOOLBOX_VERSION = "0.2.3"
-REQUIRED_SPINEDB_API_VERSION = "0.0.24"
+REQUIRED_SPINEDB_API_VERSION = "0.0.27"
 ERROR_COLOR = QColor('red')
 SUCCESS_COLOR = QColor('green')
 NEUTRAL_COLOR = QColor('blue')
@@ -87,14 +87,6 @@ OPTIONAL_KEYS = [
     'execute_in_work',
 ]
 LIST_REQUIRED_KEYS = ['includes', 'inputfiles', 'inputfiles_opt', 'outputfiles']  # These should be lists
-
-SQL_DIALECT_API = {
-    'mysql': 'pymysql',
-    'sqlite': 'sqlite3',
-    'mssql': 'pyodbc',
-    'postgresql': 'psycopg2',
-    'oracle': 'cx_oracle',
-}
 
 # Julia REPL constants
 JL_REPL_TIME_TO_DEAD = 5.0

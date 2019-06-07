@@ -266,15 +266,19 @@ class ObjectParameterValueDelegate(ParameterDelegate):
         elif header[index.column()] == 'parameter_name':
             editor = SearchBarEditor(self._parent, parent)
             object_class_id = index.sibling(index.row(), h('object_class_id')).data(Qt.DisplayRole)
-            name_list = [x.parameter_name for x in self.db_map.object_parameter_list(object_class_id=object_class_id)]
+            name_list = [
+                x.parameter_name for x in self.db_map.object_parameter_definition_list(object_class_id=object_class_id)
+            ]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'value':
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
-            parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
+            parameter = self.db_map.parameter_definition_list().filter_by(id=parameter_id).one_or_none()
             if parameter:
-                value_list = self.db_map.wide_parameter_value_list_list(
-                    id_list=[parameter.parameter_value_list_id]
-                ).one_or_none()
+                value_list = (
+                    self.db_map.wide_parameter_value_list_list()
+                    .filter_by(id=parameter.parameter_value_list_id)
+                    .one_or_none()
+                )
             else:
                 value_list = None
             if value_list:
@@ -368,12 +372,14 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
         elif header[index.column()] == 'parameter_name':
             editor = SearchBarEditor(self._parent, parent)
             relationship_class_id = index.sibling(index.row(), h('relationship_class_id')).data(Qt.DisplayRole)
-            parameter_list = self.db_map.relationship_parameter_list(relationship_class_id=relationship_class_id)
-            name_list = [x.parameter_name for x in parameter_list]
+            parameter_definition_list = self.db_map.relationship_parameter_definition_list(
+                relationship_class_id=relationship_class_id
+            )
+            name_list = [x.parameter_name for x in parameter_definition_list]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'value':
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
-            parameter = self.db_map.single_parameter(id=parameter_id).one_or_none()
+            parameter = self.db_map.parameter_definition_list().filter_by(id=parameter_id).one_or_none()
             if parameter:
                 value_list = self.db_map.wide_parameter_value_list_list(
                     id_list=[parameter.parameter_value_list_id]
@@ -566,7 +572,7 @@ class AddRelationshipsDelegate(AddItemsDelegate):
                 editor.set_data(self.relationship_name(index))
         else:
             object_class_name = header[index.column()].split(' ', 1)[0]
-            object_class = self.db_map.single_object_class(name=object_class_name).one_or_none()
+            object_class = self.db_map.object_class_list().filter_by(name=object_class_name).one_or_none()
             if not object_class:
                 object_name_list = list()
             else:

@@ -21,7 +21,7 @@ import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
 from project_item import ProjectItem
-from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
+from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from widgets.data_store_widgets import GraphViewForm
 from graphics_items import ViewIcon
 from helpers import busy_effect, create_dir
@@ -131,7 +131,7 @@ class View(ProjectItem):
         input_items = self.find_input_items()
         self._references = list()
         for item in input_items:
-            url = item.current_url()
+            url = item.make_url()
             if not url:
                 continue
             self._references.append(url)
@@ -176,24 +176,11 @@ class View(ProjectItem):
         """
         url = self._references[index.row()]
         try:
-            graph_view_form = self.graph_view_form_refs[url]
-            graph_view_form.raise_()
-            return
-        except KeyError:
-            pass
-        db_url = make_url(url)
-        database = db_url.database
-        username = db_url.username
-        try:
-            db_map = DiffDatabaseMapping(url, username)
-        except SpineDBAPIError as e:
+            db_map = DiffDatabaseMapping(url, url.username)
+        except (SpineDBAPIError, SpineDBVersionError) as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        try:
-            graph_view_form = GraphViewForm(self, db_map, database, read_only=True)
-        except:
-            db_map.close()
-            raise
+        graph_view_form = GraphViewForm(self, db_map, url.database, read_only=True)
         graph_view_form.show()
         graph_view_form.destroyed.connect(lambda: self.graph_view_form_refs.pop(url))
         self.graph_view_form_refs[url] = graph_view_form
@@ -205,7 +192,7 @@ class View(ProjectItem):
         self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
         if items is not None:
             for item in items:
-                qitem = QStandardItem(item)
+                qitem = QStandardItem(item.database)
                 qitem.setFlags(~Qt.ItemIsEditable)
                 qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)

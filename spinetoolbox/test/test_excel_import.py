@@ -127,14 +127,20 @@ class TestExcelIntegration(unittest.TestCase):
         ].first()
 
         # add parameter values
-        db_map.add_parameter_value(**{'parameter_id': p1.id, 'object_id': oc1_obj1.id, 'value': '0'})
-        db_map.add_parameter_value(**{'parameter_id': p2.id, 'object_id': oc1_obj2.id, 'value': '3.5'})
-        db_map.add_parameter_value(**{'parameter_id': p3.id, 'object_id': oc2_obj1.id, 'value': '[1, 2, 3, 4]'})
-        db_map.add_parameter_value(**{'parameter_id': p4.id, 'object_id': oc2_obj2.id, 'value': '[5, 6, 7]'})
-        db_map.add_parameter_value(**{'parameter_id': rel_p1.id, 'relationship_id': rel1.id, 'value': '0'})
-        db_map.add_parameter_value(**{'parameter_id': rel_p2.id, 'relationship_id': rel2.id, 'value': '4'})
-        db_map.add_parameter_value(**{'parameter_id': rel_p3.id, 'relationship_id': rel1.id, 'value': '[5, 6, 7]'})
-        db_map.add_parameter_value(**{'parameter_id': rel_p4.id, 'relationship_id': rel2.id, 'value': '[1, 2, 3, 4]'})
+        db_map.add_parameter_value(**{'parameter_definition_id': p1.id, 'object_id': oc1_obj1.id, 'value': '0'})
+        db_map.add_parameter_value(**{'parameter_definition_id': p2.id, 'object_id': oc1_obj2.id, 'value': '3.5'})
+        db_map.add_parameter_value(
+            **{'parameter_definition_id': p3.id, 'object_id': oc2_obj1.id, 'value': '[1, 2, 3, 4]'}
+        )
+        db_map.add_parameter_value(**{'parameter_definition_id': p4.id, 'object_id': oc2_obj2.id, 'value': '[5, 6, 7]'})
+        db_map.add_parameter_value(**{'parameter_definition_id': rel_p1.id, 'relationship_id': rel1.id, 'value': '0'})
+        db_map.add_parameter_value(**{'parameter_definition_id': rel_p2.id, 'relationship_id': rel2.id, 'value': '4'})
+        db_map.add_parameter_value(
+            **{'parameter_definition_id': rel_p3.id, 'relationship_id': rel1.id, 'value': '[5, 6, 7]'}
+        )
+        db_map.add_parameter_value(
+            **{'parameter_definition_id': rel_p4.id, 'relationship_id': rel2.id, 'value': '[1, 2, 3, 4]'}
+        )
 
         # commit
         db_map.commit_session('test')
@@ -166,15 +172,15 @@ class TestExcelIntegration(unittest.TestCase):
         ol_org = {o.name: oc_org[o.class_id] for o in ol_org}
         self.assertEqual(ol, ol_org, msg='Difference in objects')
         # relationship classes
-        rc = db1.relationship_class_list().all()
+        rc = db1.query(db1.relationship_class_sq).all()
         rc = {c.id: (c.name, tuple(oc[o.object_class_id] for o in rc if o.name == c.name)) for c in rc}
-        rc_org = db2.relationship_class_list().all()
+        rc_org = db2.query(db2.relationship_class_sq).all()
         rc_org = {c.id: (c.name, tuple(oc_org[o.object_class_id] for o in rc_org if o.name == c.name)) for c in rc_org}
         self.assertEqual(set(rc.values()), set(rc_org.values()), msg='Difference in relationship classes')
         # relationships
-        rel = db1.relationship_list().all()
+        rel = db1.query(db1.relationship_sq).all()
         rel = {c.id: (rc[c.class_id][0], tuple(ol_id[o.object_id] for o in rel if o.id == c.id)) for c in rel}
-        rel_org = db2.relationship_list().all()
+        rel_org = db2.query(db2.relationship_sq).all()
         rel_org = {
             c.id: (rc_org[c.class_id][0], tuple(ol_id_org[o.object_id] for o in rel_org if o.id == c.id))
             for c in rel_org

@@ -2145,6 +2145,8 @@ class SubParameterValueModel(SubParameterModel):
             if not id_:
                 continue
             field_name = header[index.column()]
+            if field_name == "parameter_id":
+                field_name = "parameter_definition_id"  # FIXME: This should be fixed in spinedb_api
             item = {"id": id_, field_name: data[k]}
             items_to_update.setdefault(id_, dict()).update(item)
         return list(items_to_update.values())
@@ -2349,7 +2351,7 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
         object_class_name_dict = {x.id: x.name for x in object_class_list}
         object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self._parent.db_map.object_list()}
         parameter_dict = {}
-        for x in self._parent.db_map.object_parameter_list():
+        for x in self._parent.db_map.object_parameter_definition_list():
             parameter_dict.setdefault(x.parameter_name, {}).update(
                 {x.object_class_id: {'id': x.id, 'object_class_id': x.object_class_id}}
             )
@@ -2399,7 +2401,7 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
                     indexes.append(self.index(row, object_class_name_column))
             if object_ is None or parameter is None:
                 continue
-            item = {"object_id": object_['id'], "parameter_id": parameter['id']}
+            item = {"object_id": object_['id'], "parameter_definition_id": parameter['id']}
             for column in range(parameter_name_column + 1, self.columnCount()):
                 item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
             items_to_add[row] = item
@@ -2467,7 +2469,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         }
         relationship_class_name_dict = {x.id: x.name for x in self._parent.db_map.wide_relationship_class_list()}
         parameter_dict = {}
-        for x in self._parent.db_map.relationship_parameter_list():
+        for x in self._parent.db_map.relationship_parameter_definition_list():
             parameter_dict.setdefault(x.parameter_name, {}).update(
                 {x.relationship_class_id: {'id': x.id, 'relationship_class_id': x.relationship_class_id}}
             )
@@ -2576,7 +2578,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                 self._main_data[row][relationship_id_column] = relationship_id
             except KeyError:
                 continue
-            item = {"relationship_id": relationship_id, "parameter_id": parameter_id}
+            item = {"relationship_id": relationship_id, "parameter_definition_id": parameter_id}
             for column in range(parameter_name_column + 1, self.columnCount()):
                 item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
             items_to_add[row] = item
@@ -3189,8 +3191,8 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         for a different object class."""
         self.beginResetModel()
         self.sub_models = []
-        header = self.db_map.object_parameter_fields()
-        data = self.db_map.object_parameter_list()
+        header = self.db_map.object_parameter_definition_fields()
+        data = self.db_map.object_parameter_definition_list()
         self.fixed_columns = [header.index('object_class_name')]
         self.object_class_name_column = header.index('object_class_name')
         parameter_definition_id_column = header.index('id')
@@ -3815,8 +3817,8 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         self.beginResetModel()
         self.sub_models = []
         self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
-        header = self.db_map.relationship_parameter_fields()
-        data = self.db_map.relationship_parameter_list()
+        header = self.db_map.relationship_parameter_definition_fields()
+        data = self.db_map.relationship_parameter_definition_list()
         self.fixed_columns = [header.index(x) for x in ('relationship_class_name', 'object_class_name_list')]
         self.relationship_class_name_column = header.index('relationship_class_name')
         self.object_class_name_list_column = header.index('object_class_name_list')
