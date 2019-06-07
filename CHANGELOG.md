@@ -18,6 +18,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - The Data Store treeview now also has a relationship tree.
 - Support for reordering columns in the treeview.
 - Selecting 'edit object classes' in the treeview now also allows the icon to be selected.
+- There is now an upper limit on how much text is logged in Event Log and Process Log. The oldest lines are removed if the limit is exceeded.
 
 ### Changed
 - Selecting the Julia environment in Settings now requires picking the Julia interpreter **file** 
