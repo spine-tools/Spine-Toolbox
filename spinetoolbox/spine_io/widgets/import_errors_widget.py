@@ -47,4 +47,4 @@ class ImportErrorWidget(QWidget):
         self._ui_num_errors.setText(f"Number of errors: {len(errors)}")
         self._ui_num_imports.setText(f"Number of imports: {num_imported}")
         self._ui_error_list.clear()
-        self._ui_error_list.addItems([f"{e.db_type}: {e.msg}" for e in errors])
+        self._ui_error_list.addItems(errors)
