@@ -653,13 +653,12 @@ class DataStore(ProjectItem):
         # Update execution instance for project items downstream
         url = self.make_url()
         if not url:
-            # Dialect is set but details are missing
+            # Invalid url, nothing else to do here
             self._toolbox.msg_warning.emit(
                 "No database url set. Please provide a <i>path</i> to an "
                 "SQLite file or <i>host</i>, <i>port</i>, and <i>username</i> "
                 "& <i>password</i> for other database dialects."
             )
-            ref = None
         else:
             if url.drivername.lower().startswith('sqlite'):
                 # If dialect is sqlite, append full path of the sqlite file to execution_instance
@@ -674,6 +673,8 @@ class DataStore(ProjectItem):
             else:
                 # If dialect is other than sqlite file, just pass for now
                 # TODO: What needs to be done here?
+                # IDEA: just add the entire url dictionary to some attribute in the `ExecutionInstance` object,
+                # then figure everything out in `ExecutionInstance.find_file`
                 pass
         self._toolbox.msg.emit("***")
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
