@@ -109,7 +109,7 @@ class DirectedGraphHandler:
         if src_node == dst_node:  # Removing self-loop
             dag.remove_edge(src_node, dst_node)
             return
-        dag_copy = copy.deepcopy(dag)  # Make a copy before messing with the graph
+        # dag_copy = copy.deepcopy(dag)  # Make a copy before messing with the graph
         dag.remove_edge(src_node, dst_node)
         # Check if src or dst node is isolated (without connections) after removing the edge
         if self.node_is_isolated(src_node):
@@ -127,34 +127,31 @@ class DirectedGraphHandler:
         # If src node still has a path (ignoring edge directions) to dst node -> return, we're fine
         if self.nodes_connected(dag, src_node, dst_node):
             return
-        # Now for the fun part
-        # From copy since edge has been removed from dag already
-        src_descendants = nx.descendants(dag_copy, src_node)  # TODO: Bug here. test_remove_graph_edge12()
-        src_descendant_edges = nx.edges(dag_copy, src_descendants)  # to descendant graph
-        src_ancestors = nx.ancestors(dag, dst_node)  # note: from dag # TODO: Bug here. test_remove_graph_edge12()
-        src_ancestor_edges = nx.edges(dag, src_ancestors)  # to descendant graph (note: from dag)
-        # logging.debug("src descendants:{0}".format(src_descendants))
-        # logging.debug("src ancestors:{0}".format(src_ancestors))
-        # Build new graph from the remaining edges in the original DAG
-        # This is the graph that is now upstream (left-side) from the removed edge
+        # Now for the fun part. We need to break the original DAG into two separate DAGs.
+        # Get src node descendant edges, ancestor edges, and its own edges
+        src_descendants = nx.descendants(dag, src_node)
+        src_descendant_edges = nx.edges(dag, src_descendants)
+        src_ancestors = nx.ancestors(dag, src_node)
+        src_ancestor_edges = nx.edges(dag, src_ancestors)
+        src_edges = nx.edges(dag, src_node)
+        # Get dst node descendant edges, ancestor edges, and its own edges
+        dst_descendants = nx.descendants(dag, dst_node)
+        dst_descendant_edges = nx.edges(dag, dst_descendants)
+        dst_ancestors = nx.ancestors(dag, dst_node)
+        dst_ancestor_edges = nx.edges(dag, dst_ancestors)
+        dst_edges = nx.edges(dag, dst_node)
+        # Make descendant graph. This graph contains src node and all its neighbors.
         descendant_graph = nx.DiGraph()
-        # Populate descendant graph with src descendant and src ancestor edges
         descendant_graph.add_edges_from(src_descendant_edges)
         descendant_graph.add_edges_from(src_ancestor_edges)
-        # Build another graph from the edges in the original graph that are not in descendant graph already
-        # This is the graph that is now downstream (right-side) from the removed edge
+        descendant_graph.add_edges_from(src_edges)
+        # Make ancestor graph. This graph contains the dst node and all its neighbors.
         ancestor_graph = nx.DiGraph()
-        # Remove all edges that are already in descendant graph
-        for edge in descendant_graph.edges():
-            dag.remove_edge(edge[0], edge[1])
-        # Add remaining edges to a new graph
-        # Another option is to leave the original dag in the list but
-        # then we would also need to remove isolated nodes from it (dag) as well
-        ancestor_graph.add_edges_from(dag.edges())
-        # Add new graph
+        ancestor_graph.add_edges_from(dst_descendant_edges)
+        ancestor_graph.add_edges_from(dst_ancestor_edges)
+        ancestor_graph.add_edges_from(dst_edges)
+        # Remove old graph and add new graphs instead
         self.remove_dag(dag)
-        # logging.debug("descendant g nodes:{0}".format(descendant_graph.nodes()))
-        # logging.debug("ancestor g nodes:{0}".format(ancestor_graph.nodes()))
         self.add_dag(descendant_graph)
         self.add_dag(ancestor_graph)
 

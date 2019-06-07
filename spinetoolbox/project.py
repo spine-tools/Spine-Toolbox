@@ -522,6 +522,10 @@ class SpineToolboxProject(MetaObject):
         self._n_graphs = 1
         # Calculate bfs-ordered list of project items to execute
         dag = self.dag_handler.dag_with_node(selected_item.name)
+        if not dag:
+            self._toolbox.msg_error.emit("[BUG] Could not find a graph containing {0}. "
+                                         "<b>Please reopen the project.</b>".format(selected_item.name))
+            return
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
             self._toolbox.msg.emit("")

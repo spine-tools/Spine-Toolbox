@@ -457,25 +457,22 @@ class DesignQGraphicsView(CustomQGraphicsView):
                                        "files from <b>{1}</b>'s references and data directory."
                                        .format(self.dst_item_name, self.src_item_name))
             elif src_item_type == "Data Store" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> will look for input "
-                                       "files from <b>{1}</b>'s data directory."
-                                       .format(self.dst_item_name, self.src_item_name))
+                self._toolbox.msg.emit("Link established. Data Store <b>{0}</b> reference will "
+                                       "be passed to Tool <b>{1}</b> when executing."
+                                       .format(self.src_item_name, self.dst_item_name))
             elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
                 self._toolbox.msg.emit("Link established. Tool <b>{0}</b> output files will be "
-                                       "passed as reference to <b>{1}</b>'s data directory."
+                                       "passed to item <b>{1}</b> after execution."
                                        .format(self.src_item_name, self.dst_item_name))
             elif src_item_type in ["Data Connection", "Data Store"] \
                     and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("Link established. Input files for a tool's execution "
-                                       "will be looked up in <b>{0}</b> if not found in <b>{1}</b>."
-                                       .format(self.src_item_name, self.dst_item_name))
+                self._toolbox.msg.emit("Link established")
             elif src_item_type == "Data Store" and dst_item_type == "View":
                 self._toolbox.msg_warning.emit("Link established. You can visualize Data Store "
                                                "<b>{0}</b> in View <b>{1}</b>."
                                                .format(self.src_item_name, self.dst_item_name))
             elif src_item_type == "Tool" and dst_item_type == "Tool":
-                self._toolbox.msg_warning.emit("Link established. Interaction between two "
-                                               "Tool items has not been implemented yet.")
+                self._toolbox.msg_warning.emit("Link established.")
             else:
                 self._toolbox.msg_warning.emit("Link established. Interaction between a "
                                                "<b>{0}</b> and a <b>{1}</b> has not been "
