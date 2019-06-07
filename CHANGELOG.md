@@ -18,7 +18,12 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - The Data Store treeview now also has a relationship tree.
 - Support for reordering columns in the treeview.
 - Selecting 'edit object classes' in the treeview now also allows the icon to be selected.
-- There is now an upper limit on how much text is logged in Event Log and Process Log. The oldest lines are removed if the limit is exceeded.
+- There is now an upper limit on how much text is logged in Event Log and Process Log. The oldest lines are removed 
+  if the limit is exceeded.
+- Play button to main window Toolbar that executes all Directed Acyclic Graphs in the Project one after another.
+- Another Play button to main window Toolbar to execute selected Directed Acyclic Graph. Selecting a DAG happens by 
+  selecting one or more project items belonging to the wanted DAG in the Design View or in Project Items list.
+- Stop button to main window Toolbar, which terminates execution.
 
 ### Changed
 - Selecting the Julia environment in Settings now requires picking the Julia interpreter **file** 
@@ -31,11 +36,17 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   needed anymore.
 - New Spine databases can be created in any backend supported by spinedb_api. The Data Store item properties 
   have been changed to allow for this.
+- Executing Directed Acyclic Graphs instead of just Tools.
+- Executing project items does not happen from the Tool Properties anymore. It happens instead by pressing the 
+  Play button in the main window Toolbar.
+
 
 ### Deprecated
 
 ### Removed
-- ConfigurationParser class in configuration.py
+- ConfigurationParser class in configuration.py.
+- Execute button in Tool Properties.
+- Stop button in Tool Properties.
 
 ### Fixed
 
