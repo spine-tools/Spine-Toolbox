@@ -1,4 +1,16 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+######################################################################################################################
+# Copyright (C) 2017 - 2019 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
+-->
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -115,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -343,7 +355,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -426,8 +438,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>420</width>
-              <height>331</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -920,6 +932,19 @@
                 </widget>
                </item>
                <item>
+                <spacer name="verticalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
                 <widget class="QCheckBox" name="checkBox_for_spine_model">
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Add specific data structure for Spine model to the new Spine database.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
@@ -943,19 +968,6 @@
                 </spacer>
                </item>
               </layout>
-             </item>
-             <item>
-              <spacer name="verticalSpacer_3">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
              </item>
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_26">
@@ -1082,6 +1094,18 @@
               <layout class="QHBoxLayout" name="horizontalLayout_27">
                <item>
                 <widget class="QToolButton" name="toolButton_copy_url">
+                 <property name="minimumSize">
+                  <size>
+                   <width>18</width>
+                   <height>18</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>18</width>
+                   <height>18</height>
+                  </size>
+                 </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copy current database url to clipboard.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
@@ -1115,10 +1139,16 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>18</width>
+                   <height>18</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
-                   <width>22</width>
-                   <height>22</height>
+                   <width>18</width>
+                   <height>18</height>
                   </size>
                  </property>
                  <property name="toolTip">
@@ -1215,8 +1245,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>420</width>
-              <height>331</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1450,13 +1480,6 @@
               </widget>
              </item>
              <item>
-              <widget class="Line" name="line_3">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
               <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1">
                <item>
                 <widget class="QPushButton" name="pushButton_datapackage">
@@ -1504,6 +1527,13 @@
                 </spacer>
                </item>
               </layout>
+             </item>
+             <item>
+              <widget class="Line" name="line_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
              </item>
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_7">
@@ -1630,8 +1660,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>420</width>
-              <height>331</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1817,7 +1847,7 @@
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,0,0">
+              <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,0,0,0">
                <item>
                 <widget class="QRadioButton" name="radioButton_execute_in_work">
                  <property name="text">
@@ -1834,6 +1864,19 @@
                   <string>Source directory</string>
                  </property>
                 </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_8">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
                <item>
                 <widget class="QToolButton" name="toolButton_tool_open_dir">
@@ -1936,8 +1979,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>420</width>
-              <height>331</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -1956,13 +1999,6 @@
                </property>
                <property name="rootIsDecorated">
                 <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="Line" name="line_5">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
                </property>
               </widget>
              </item>
@@ -2015,6 +2051,13 @@
               </layout>
              </item>
              <item>
+              <widget class="Line" name="line_5">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
               <layout class="QHBoxLayout" name="horizontalLayout_16">
                <item>
                 <spacer name="horizontalSpacer_12">
@@ -2051,8 +2094,6 @@
               </layout>
              </item>
             </layout>
-            <zorder>line_5</zorder>
-            <zorder>treeView_view</zorder>
            </widget>
           </widget>
          </item>
@@ -2734,12 +2775,13 @@
  <tabstops>
   <tabstop>tabWidget</tabstop>
   <tabstop>treeView_project</tabstop>
-  <tabstop>graphicsView</tabstop>
   <tabstop>listView_tool_templates</tabstop>
   <tabstop>toolButton_add_tool_template</tabstop>
   <tabstop>toolButton_remove_tool_template</tabstop>
+  <tabstop>graphicsView</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>
+  <tabstop>tabWidget_item_properties</tabstop>
   <tabstop>scrollArea_5</tabstop>
   <tabstop>comboBox_dialect</tabstop>
   <tabstop>comboBox_dsn</tabstop>
@@ -2749,6 +2791,7 @@
   <tabstop>lineEdit_port</tabstop>
   <tabstop>lineEdit_database</tabstop>
   <tabstop>toolButton_open_sqlite_file</tabstop>
+  <tabstop>toolButton_create_new_spine_db</tabstop>
   <tabstop>checkBox_for_spine_model</tabstop>
   <tabstop>pushButton_ds_tree_view</tabstop>
   <tabstop>pushButton_ds_graph_view</tabstop>
