@@ -163,6 +163,17 @@ class DataStore(ProjectItem):
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
             self._toolbox.ui.lineEdit_database.setText(url.database)
+        # Final check
+        try:
+            engine = create_engine(url)
+            with engine.connect():
+                pass
+        except Exception as e:
+            log_errors and self._toolbox.msg_error.emit(
+                "Unable to generate URL from <b>{0}</b> selections: {1} "
+                "<br>Please make new selections and try again.".format(self.name, e)
+            )
+            return None
         return url
 
     def project(self):
