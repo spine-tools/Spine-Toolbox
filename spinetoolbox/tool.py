@@ -477,15 +477,19 @@ class Tool(ProjectItem):
             self.instance.args.append("logoption=3")  # TODO: This should be an option in Settings
             self.append_instance_args()  # Append Tool specific cmd line args into args list
         elif self.tool_template().tooltype == "julia":
-            # Prepare command "julia script.jl"
+            # Prepare command "julia --project={PROJECT_DIR} script.jl"
+            # Do this regardless of the `useEmbeddedJulia` setting since we may need to fallback
+            # to `julia --project={PROJECT_DIR} script.jl`
             julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
-            if not julia_path == "":
-                julia_cmd = julia_path
+            if julia_path != "":
+                julia_exe = julia_path
             else:
-                julia_cmd = JULIA_EXECUTABLE
+                julia_exe = JULIA_EXECUTABLE
+            julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="@.")
             work_dir = self.instance.basedir
             script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-            self.instance.program = julia_cmd
+            self.instance.program = julia_exe
+            self.instance.args.append(f"--project={julia_project_path}")
             self.instance.args.append(script_path)
             self.append_instance_args()
             use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
@@ -678,8 +682,9 @@ class Tool(ProjectItem):
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
-                    self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
-                                                 self._project, self.execute_in_work)
+                    self.instance = ToolInstance(
+                        self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
+                    )
                 except OSError as e:
                     self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
                     self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
@@ -711,8 +716,9 @@ class Tool(ProjectItem):
                 pass
         else:  # Tool template does not have requirements
             try:
-                self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
-                                             self._project, self.execute_in_work)
+                self.instance = ToolInstance(
+                    self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
+                )
             except OSError as e:
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort

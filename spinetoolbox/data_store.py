@@ -367,7 +367,8 @@ class DataStore(ProjectItem):
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Dialect not supported")
             msg.setText(
-                "There is no DBAPI installed for dialect '{0}'. " "The default one is '{1}'.".format(dialect, dbapi)
+                "Spine Toolbox needs to install the following DBAPI package: '{0}' "
+                "(support for the {1} dialect).".format(dbapi, dialect)
             )
             msg.setInformativeText("Do you want to install it using pip or conda?")
             pip_button = msg.addButton("pip", QMessageBox.YesRole)
