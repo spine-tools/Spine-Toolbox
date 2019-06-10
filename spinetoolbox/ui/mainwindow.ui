@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2018 Spine project consortium
@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -355,7 +355,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -437,18 +437,33 @@
             <property name="geometry">
              <rect>
               <x>0</x>
-              <y>-29</y>
-              <width>334</width>
-              <height>347</height>
+              <y>0</y>
+              <width>341</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
              <item>
               <widget class="QGroupBox" name="groupBox_3">
                <property name="title">
-                <string>Url</string>
+                <string>URL</string>
                </property>
                <layout class="QVBoxLayout" name="verticalLayout_26">
+                <property name="spacing">
+                 <number>6</number>
+                </property>
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
                 <item>
                  <layout class="QGridLayout" name="gridLayout_3">
                   <item row="4" column="0">
@@ -884,9 +899,22 @@
                 <number>3</number>
                </property>
                <item>
+                <spacer name="horizontalSpacer_4">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
                 <widget class="QPushButton" name="pushButton_create_new_spine_db">
                  <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>2</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
@@ -898,7 +926,7 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create a new Spine database at the selected url or at a default one if the selected is not valid. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates new Spine database to selected URL. If selection is not valid, creates a new Spine database to a default URL.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
                   <string>Create new Spine db</string>
@@ -918,6 +946,19 @@
                   <string>For Spine model</string>
                  </property>
                 </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_7">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
               </layout>
              </item>
@@ -1192,8 +1233,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>338</width>
-              <height>331</height>
+              <width>341</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1607,8 +1648,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>338</width>
-              <height>331</height>
+              <width>341</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1913,8 +1954,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>338</width>
-              <height>331</height>
+              <width>341</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2712,18 +2753,48 @@
   <tabstop>tabWidget</tabstop>
   <tabstop>treeView_project</tabstop>
   <tabstop>graphicsView</tabstop>
+  <tabstop>listView_tool_templates</tabstop>
+  <tabstop>toolButton_add_tool_template</tabstop>
+  <tabstop>toolButton_remove_tool_template</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>
+  <tabstop>tabWidget_item_properties</tabstop>
+  <tabstop>scrollArea_5</tabstop>
+  <tabstop>comboBox_dialect</tabstop>
+  <tabstop>comboBox_dsn</tabstop>
+  <tabstop>lineEdit_username</tabstop>
+  <tabstop>lineEdit_password</tabstop>
+  <tabstop>lineEdit_host</tabstop>
+  <tabstop>lineEdit_port</tabstop>
+  <tabstop>lineEdit_database</tabstop>
+  <tabstop>toolButton_open_sqlite_file</tabstop>
+  <tabstop>pushButton_create_new_spine_db</tabstop>
+  <tabstop>checkBox_for_spine_model</tabstop>
+  <tabstop>pushButton_ds_tree_view</tabstop>
+  <tabstop>pushButton_ds_graph_view</tabstop>
+  <tabstop>pushButton_ds_tabular_view</tabstop>
+  <tabstop>toolButton_copy_url</tabstop>
+  <tabstop>toolButton_ds_open_dir</tabstop>
+  <tabstop>scrollArea_2</tabstop>
   <tabstop>treeView_dc_references</tabstop>
   <tabstop>toolButton_plus</tabstop>
   <tabstop>toolButton_minus</tabstop>
   <tabstop>toolButton_add</tabstop>
   <tabstop>treeView_dc_data</tabstop>
+  <tabstop>pushButton_datapackage</tabstop>
+  <tabstop>toolButton_dc_open_dir</tabstop>
+  <tabstop>scrollArea_3</tabstop>
   <tabstop>comboBox_tool</tabstop>
   <tabstop>toolButton_tool_template</tabstop>
+  <tabstop>treeView_template</tabstop>
   <tabstop>pushButton_tool_results</tabstop>
+  <tabstop>radioButton_execute_in_work</tabstop>
+  <tabstop>radioButton_execute_in_source</tabstop>
+  <tabstop>toolButton_tool_open_dir</tabstop>
+  <tabstop>scrollArea_4</tabstop>
   <tabstop>treeView_view</tabstop>
   <tabstop>pushButton_open_network_map</tabstop>
+  <tabstop>toolButton_view_open_dir</tabstop>
   <tabstop>tableView_connections</tabstop>
  </tabstops>
  <resources>
