@@ -155,7 +155,7 @@ TEXTBROWSER_SS = (
 MAINWINDOW_SS = (
     "QMainWindow::separator{width: 3px; background-color: lightgray; border: 1px solid white;}"
     "QPushButton{background-color: #505F69; border: 1px solid #29353d; color: #F0F0F0; "
-    "border-radius: 4px; padding: 3px; outline: none; min-width: 75px;}"
+    "border-radius: 4px; padding: 3px; outline: none;}"  # min-width: 75px;}"
     "QPushButton:disabled {background-color: #32414B; border: 1px solid #29353d; color: #787878; border-radius: 4px; padding: 3px;}"
     "QPushButton::menu-indicator {subcontrol-origin: padding; subcontrol-position: bottom right; bottom: 4px;}"
     "QPushButton:focus{background-color: #637683; border: 1px solid #148CD2;}"
