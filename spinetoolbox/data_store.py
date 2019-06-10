@@ -92,7 +92,7 @@ class DataStore(ProjectItem):
         s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
         s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
         s[self._toolbox.ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
-        s[self._toolbox.ui.pushButton_create_new_spine_db.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.toolButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._toolbox.ui.toolButton_copy_url.clicked] = self.copy_url
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
         s[self._toolbox.ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
@@ -148,16 +148,6 @@ class DataStore(ProjectItem):
                 drivername = f"{dialect}+{db_api}"
                 url = URL(drivername, **url_copy)
         except Exception as e:  # This is in case one of the keys has invalid format
-            log_errors and self._toolbox.msg_error.emit(
-                "Unable to generate URL from <b>{0}</b> selections: {1} "
-                "<br>Please make new selections and try again.".format(self.name, e)
-            )
-            return None
-        try:
-            engine = create_engine(url)
-            with engine.connect():
-                pass
-        except Exception as e:
             log_errors and self._toolbox.msg_error.emit(
                 "Unable to generate URL from <b>{0}</b> selections: {1} "
                 "<br>Please make new selections and try again.".format(self.name, e)
@@ -603,8 +593,8 @@ class DataStore(ProjectItem):
                 "Unable to generate URL from <b>{0}</b> selections. Defaults will be used...".format(self.name)
             )
             self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
-            self._toolbox.ui.lineEdit_database.setText("spinedb.sqlite")
-            url = self.make_url()
+            self._toolbox.ui.lineEdit_database.setText(os.path.join(self.data_dir, self.name + ".sqlite"))
+            url = self.make_url(log_errors=True)
             if not url:
                 return
         try:

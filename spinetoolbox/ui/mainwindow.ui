@@ -1,16 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!--
-######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http://www.gnu.org/licenses/>.
-######################################################################################################################
--->
+<?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
  <class>MainWindow</class>
  <widget class="QMainWindow" name="MainWindow">
@@ -127,7 +115,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -355,7 +343,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -438,8 +426,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>341</width>
-              <height>361</height>
+              <width>420</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -912,28 +900,22 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QPushButton" name="pushButton_create_new_spine_db">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                   <horstretch>2</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
+                <widget class="QToolButton" name="toolButton_create_new_spine_db">
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Creates new Spine database to selected URL. If selection is not valid, creates a new Spine database to a default URL.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
                  <property name="text">
-                  <string>Create new Spine db</string>
+                  <string>New Spine db</string>
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
                    <normaloff>:/symbols/Spine_symbol.png</normaloff>:/symbols/Spine_symbol.png</iconset>
+                 </property>
+                 <property name="toolButtonStyle">
+                  <enum>Qt::ToolButtonTextBesideIcon</enum>
                  </property>
                 </widget>
                </item>
@@ -1233,8 +1215,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>341</width>
-              <height>361</height>
+              <width>420</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1648,8 +1630,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>341</width>
-              <height>361</height>
+              <width>420</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1954,8 +1936,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>341</width>
-              <height>361</height>
+              <width>420</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2758,7 +2740,6 @@
   <tabstop>toolButton_remove_tool_template</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>
-  <tabstop>tabWidget_item_properties</tabstop>
   <tabstop>scrollArea_5</tabstop>
   <tabstop>comboBox_dialect</tabstop>
   <tabstop>comboBox_dsn</tabstop>
@@ -2768,7 +2749,6 @@
   <tabstop>lineEdit_port</tabstop>
   <tabstop>lineEdit_database</tabstop>
   <tabstop>toolButton_open_sqlite_file</tabstop>
-  <tabstop>pushButton_create_new_spine_db</tabstop>
   <tabstop>checkBox_for_spine_model</tabstop>
   <tabstop>pushButton_ds_tree_view</tabstop>
   <tabstop>pushButton_ds_graph_view</tabstop>
