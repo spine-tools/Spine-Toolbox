@@ -355,7 +355,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>0</number>
+        <number>4</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -920,7 +920,7 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine database at the selecte URL, or at a default one if the selected is not valid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine database at the selecte dURL, or at a default one if the selected is not valid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
                   <string>New Spine db</string>
@@ -1248,8 +1248,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>117</width>
-              <height>272</height>
+              <width>395</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1663,8 +1663,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>326</width>
-              <height>261</height>
+              <width>395</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1982,8 +1982,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>101</width>
-              <height>161</height>
+              <width>395</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">

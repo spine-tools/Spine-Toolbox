@@ -106,7 +106,7 @@
         <property name="geometry">
          <rect>
           <x>-51</x>
-          <y>-43</y>
+          <y>-71</y>
           <width>417</width>
           <height>540</height>
          </rect>
@@ -493,6 +493,9 @@
               </property>
               <property name="placeholderText">
                <string>Using Julia home project</string>
+              </property>
+              <property name="clearButtonEnabled">
+               <bool>true</bool>
               </property>
              </widget>
             </item>
