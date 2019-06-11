@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -355,7 +355,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>0</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -438,8 +438,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>361</height>
+              <width>395</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -919,6 +919,9 @@
                    <height>23</height>
                   </size>
                  </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine database at the selecte URL, or at a default one if the selected is not valid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="text">
                   <string>New Spine db</string>
                  </property>
@@ -1245,8 +1248,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>361</height>
+              <width>117</width>
+              <height>272</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1660,8 +1663,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>361</height>
+              <width>326</width>
+              <height>261</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1979,8 +1982,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>361</height>
+              <width>101</width>
+              <height>161</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
