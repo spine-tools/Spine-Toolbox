@@ -81,6 +81,8 @@ class ProjectItemContextMenu(CustomContextMenu):
             if not self._parent.project():
                 return
             self.add_action("Open project directory...")
+            self.addSeparator()
+            self.add_action("Export project to GraphML")
             self.exec_(position)
             return
         if not index.parent().isValid():
@@ -88,6 +90,8 @@ class ProjectItemContextMenu(CustomContextMenu):
                 return
             # If index is at a category item
             self.add_action("Open project directory...")
+            self.addSeparator()
+            self.add_action("Export project to GraphML")
             self.exec_(position)
             return
         d = self._parent.project_item_model.project_item(index)

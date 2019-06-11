@@ -1224,6 +1224,8 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             ind (QModelIndex): Index of concerned item
         """
+        if not self.project():
+            return
         self.project_item_context_menu = ProjectItemContextMenu(self, pos, ind)
         option = self.project_item_context_menu.get_action()
         d = self.project_item_model.project_item(ind)
@@ -1265,6 +1267,8 @@ class ToolboxUI(QMainWindow):
         elif option == "Open project directory...":
             file_url = "file:///" + self._project.project_dir
             self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
+        elif option == "Export project to GraphML":
+            self.project().export_graphs()
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
@@ -1299,6 +1303,8 @@ class ToolboxUI(QMainWindow):
         Args:
             pos (QPoint): Mouse position
         """
+        if not self.project():
+            return
         ind = self.ui.listView_tool_templates.indexAt(pos)
         global_pos = self.ui.listView_tool_templates.viewport().mapToGlobal(pos)
         self.tool_template_context_menu = ToolTemplateContextMenu(self, global_pos, ind)

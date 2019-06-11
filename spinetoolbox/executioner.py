@@ -362,6 +362,22 @@ class DirectedGraphHandler:
                 return True
         return False
 
+    @staticmethod
+    def export_to_graphml(g, path):
+        """Export given graph to a path in GraphML format.
+
+        Args:
+            g (DiGraph): Graph to export
+            path (str): Full output path for GraphML file
+
+        Returns:
+            bool: Operation success status
+        """
+        if not nx.is_directed_acyclic_graph(g):
+            return False
+        nx.write_graphml(g, path, prettyprint=True)
+        return True
+
 
 class ExecutionInstance(QObject):
     """Class for the graph that is being executed. Contains references to

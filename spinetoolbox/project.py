@@ -646,3 +646,19 @@ class SpineToolboxProject(MetaObject):
                 self._executed_graph_index += 1
         self._invalid_graphs.clear()
         return
+
+    def export_graphs(self):
+        """Export all valid directed acyclic graphs in project to GraphML files."""
+        if len(self.dag_handler.dags()) == 0:
+            self._toolbox.msg.emit_warning("Project has no graphs to export")
+            return
+        i = 0
+        for g in self.dag_handler.dags():
+            fn = str(i) + ".graphml"
+            path = os.path.join(self.project_dir, fn)
+            if not self.dag_handler.export_to_graphml(g, path):
+                self._toolbox.msg_warning.emit("Exporting graph nr. {0} failed. Not a directed acyclic graph".format(i))
+            else:
+                self._toolbox.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
+            i += 1
+        return
