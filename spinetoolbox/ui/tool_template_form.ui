@@ -22,7 +22,7 @@
     <x>0</x>
     <y>0</y>
     <width>600</width>
-    <height>760</height>
+    <height>761</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -328,7 +328,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
+               <normaloff>:/icons/file-link.svg</normaloff>:/icons/file-link.svg</iconset>
              </property>
             </widget>
            </item>
@@ -351,7 +351,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/folder.svg</normaloff>:/icons/folder.svg</iconset>
+               <normaloff>:/icons/folder-link.svg</normaloff>:/icons/folder-link.svg</iconset>
              </property>
             </widget>
            </item>
@@ -495,7 +495,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
+               <normaloff>:/icons/file-link.svg</normaloff>:/icons/file-link.svg</iconset>
              </property>
             </widget>
            </item>
@@ -627,7 +627,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
+               <normaloff>:/icons/file-link.svg</normaloff>:/icons/file-link.svg</iconset>
              </property>
             </widget>
            </item>
@@ -759,7 +759,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/file.svg</normaloff>:/icons/file.svg</iconset>
+               <normaloff>:/icons/file-link.svg</normaloff>:/icons/file-link.svg</iconset>
              </property>
             </widget>
            </item>

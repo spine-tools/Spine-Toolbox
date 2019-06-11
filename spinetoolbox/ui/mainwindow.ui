@@ -867,14 +867,14 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>24</width>
-                        <height>24</height>
+                        <width>22</width>
+                        <height>22</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>24</width>
-                        <height>24</height>
+                        <width>22</width>
+                        <height>22</height>
                        </size>
                       </property>
                       <property name="toolTip">
@@ -882,7 +882,7 @@
                       </property>
                       <property name="icon">
                        <iconset resource="resources/resources_icons.qrc">
-                        <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+                        <normaloff>:/icons/menu_icons/folder-open-regular.svg</normaloff>:/icons/menu_icons/folder-open-regular.svg</iconset>
                       </property>
                      </widget>
                     </item>
@@ -920,7 +920,7 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine database at the selecte dURL, or at a default one if the selected is not valid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine database at the selected URL, or at a default one if the selected is not valid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
                   <string>New Spine db</string>
@@ -1099,14 +1099,14 @@
                 <widget class="QToolButton" name="toolButton_copy_url">
                  <property name="minimumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
@@ -1144,14 +1144,14 @@
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
@@ -1162,7 +1162,7 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -1331,14 +1331,8 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset>
-                   <normaloff>:/icons/plus.png</normaloff>:/icons/plus.png</iconset>
-                 </property>
-                 <property name="iconSize">
-                  <size>
-                   <width>22</width>
-                   <height>22</height>
-                  </size>
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/plus.svg</normaloff>:/icons/plus.svg</iconset>
                  </property>
                  <property name="popupMode">
                   <enum>QToolButton::InstantPopup</enum>
@@ -1379,14 +1373,8 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset>
-                   <normaloff>:/icons/minus.png</normaloff>:/icons/minus.png</iconset>
-                 </property>
-                 <property name="iconSize">
-                  <size>
-                   <width>22</width>
-                   <height>22</height>
-                  </size>
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/minus.svg</normaloff>:/icons/minus.svg</iconset>
                  </property>
                  <property name="popupMode">
                   <enum>QToolButton::InstantPopup</enum>
@@ -1414,8 +1402,8 @@
                   <string/>
                  </property>
                  <property name="icon">
-                  <iconset>
-                   <normaloff>:/icons/import.png</normaloff>:/icons/import.png</iconset>
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/file-download.svg</normaloff>:/icons/file-download.svg</iconset>
                  </property>
                  <property name="iconSize">
                   <size>
@@ -1563,18 +1551,22 @@
                  </property>
                  <property name="minimumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Connection's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -1729,12 +1721,12 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/tool_options.png</normaloff>:/icons/tool_options.png</iconset>
+                   <normaloff>:/icons/wrench.svg</normaloff>:/icons/wrench.svg</iconset>
                  </property>
                  <property name="iconSize">
                   <size>
-                   <width>22</width>
-                   <height>22</height>
+                   <width>16</width>
+                   <height>16</height>
                   </size>
                  </property>
                  <property name="popupMode">
@@ -1885,18 +1877,22 @@
                 <widget class="QToolButton" name="toolButton_tool_open_dir">
                  <property name="minimumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Tool's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -2079,18 +2075,22 @@
                 <widget class="QToolButton" name="toolButton_view_open_dir">
                  <property name="minimumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this View's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -2357,13 +2357,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/add_tool.png</normaloff>:/icons/add_tool.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
+               <normaloff>:/icons/wrench_plus.svg</normaloff>:/icons/wrench_plus.svg</iconset>
              </property>
              <property name="popupMode">
               <enum>QToolButton::InstantPopup</enum>
@@ -2395,13 +2389,7 @@
              </property>
              <property name="icon">
               <iconset resource="resources/resources_icons.qrc">
-               <normaloff>:/icons/remove_tool.png</normaloff>:/icons/remove_tool.png</iconset>
-             </property>
-             <property name="iconSize">
-              <size>
-               <width>22</width>
-               <height>22</height>
-              </size>
+               <normaloff>:/icons/wrench_minus.svg</normaloff>:/icons/wrench_minus.svg</iconset>
              </property>
             </widget>
            </item>
@@ -2607,7 +2595,7 @@
   <action name="actionOpen">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+     <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
    </property>
    <property name="text">
     <string>Open project...</string>
