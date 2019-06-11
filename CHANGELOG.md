@@ -25,6 +25,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   selecting one or more project items belonging to the wanted DAG in the Design View or in Project Items list.
 - Stop button to main window Toolbar, which terminates execution.
 - Now it's possible to specify a dedicated Julia project or environment for Spine Toolbox in the settings.
+- Feature to Export project to GraphML format. Each graph in Design View is written to its own file. To do this, just
+  select 'Export project to GraphML' from the Project Item list context-menu.
 
 ### Changed
 - Selecting the Julia environment in Settings now requires picking the Julia interpreter **file**
@@ -88,7 +90,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
 ### Changed
 - Importing items with names into a spinedatabase moved to spinedatabase_api to
-  allow for easier adding of new import formats in future verisions.
+  allow for easier adding of new import formats in future versions.
 - Tool template list is now located in the Project dock widget below the list of Project items
 - New look for Spine Datapackage editor
 
