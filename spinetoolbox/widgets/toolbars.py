@@ -38,6 +38,7 @@ class ItemToolBar(QToolBar):
     Attributes:
         parent (ToolboxUI): QMainWindow instance
     """
+
     # noinspection PyUnresolvedReferences, PyUnusedLocal
     def __init__(self, parent):
         """Init class."""

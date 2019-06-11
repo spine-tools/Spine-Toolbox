@@ -49,9 +49,9 @@ class TestDataStore(unittest.TestCase):
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
-                mock.patch("ui_main.PythonReplWidget") as mock_python_repl, \
-                mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()

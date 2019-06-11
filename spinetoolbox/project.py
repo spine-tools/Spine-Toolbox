@@ -489,7 +489,8 @@ class SpineToolboxProject(MetaObject):
         determined by the selected project item(s). Aborts, if items from multiple
         graphs are selected."""
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
-                self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
+            self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
         if len(self.dag_handler.dags()) == 0:
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
@@ -515,14 +516,18 @@ class SpineToolboxProject(MetaObject):
         # Calculate bfs-ordered list of project items to execute
         dag = self.dag_handler.dag_with_node(selected_item.name)
         if not dag:
-            self._toolbox.msg_error.emit("[BUG] Could not find a graph containing {0}. "
-                                         "<b>Please reopen the project.</b>".format(selected_item.name))
+            self._toolbox.msg_error.emit(
+                "[BUG] Could not find a graph containing {0}. "
+                "<b>Please reopen the project.</b>".format(selected_item.name)
+            )
             return
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
             self._toolbox.msg.emit("")
-            self._toolbox.msg_warning.emit("Selected graph is not a directed acyclic graph. "
-                                           "Please edit connections in Design View and try again.")
+            self._toolbox.msg_warning.emit(
+                "Selected graph is not a directed acyclic graph. "
+                "Please edit connections in Design View and try again."
+            )
             return
         # Make execution instance, connect signals and start execution
         self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
@@ -541,7 +546,8 @@ class SpineToolboxProject(MetaObject):
         instance for executing the first graph and starts executing it.
         """
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
-                self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
+            self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
         if len(self.dag_handler.dags()) == 0:
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
@@ -555,8 +561,9 @@ class SpineToolboxProject(MetaObject):
             self._ordered_dags[i] = bfs_ordered_nodes
             i += 1
         if len(self._ordered_dags.keys()) < 1:
-            self._toolbox.msg_error.emit("There are no valid Directed Acyclic "
-                                         "Graphs to execute. Please modify connections.")
+            self._toolbox.msg_error.emit(
+                "There are no valid Directed Acyclic " "Graphs to execute. Please modify connections."
+            )
             self._invalid_graphs.clear()
             return
         self._executed_graph_index = 0
@@ -566,8 +573,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
-        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>"
-                               .format(self._executed_graph_index + 1, self._n_graphs))
+        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
@@ -593,7 +599,7 @@ class SpineToolboxProject(MetaObject):
             self._ordered_dags.clear()
             self._invalid_graphs.clear()
             return
-        self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(self._executed_graph_index+1, self._n_graphs))
+        self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(self._executed_graph_index + 1, self._n_graphs))
         self._executed_graph_index += 1
         # Pop next graph
         execution_list = self._ordered_dags.pop(self._executed_graph_index, None)  # Pop next graph
@@ -607,8 +613,7 @@ class SpineToolboxProject(MetaObject):
         self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
-        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>"
-                               .format(self._executed_graph_index+1, self._n_graphs))
+        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
         self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
@@ -630,8 +635,11 @@ class SpineToolboxProject(MetaObject):
                 # Some graphs in the project are not DAGs. Report to user that these will not be executed.
                 self._toolbox.msg.emit("")
                 self._toolbox.msg.emit("---------------------------------------")
-                self._toolbox.msg_warning.emit("<b>Graph {0}/{1} is not a Directed Acyclic Graph</b>"
-                                               .format(self._executed_graph_index+1, self._n_graphs))
+                self._toolbox.msg_warning.emit(
+                    "<b>Graph {0}/{1} is not a Directed Acyclic Graph</b>".format(
+                        self._executed_graph_index + 1, self._n_graphs
+                    )
+                )
                 self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(g.nodes())))
                 self._toolbox.msg.emit("Please edit connections in Design View to execute it.")
                 self._toolbox.msg.emit("---------------------------------------")

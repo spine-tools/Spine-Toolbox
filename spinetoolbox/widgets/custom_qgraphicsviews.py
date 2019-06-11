@@ -463,15 +463,19 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     )
                 )
             elif src_item_type == "Data Store" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("Link established. Data Store <b>{0}</b> reference will "
-                                       "be passed to Tool <b>{1}</b> when executing."
-                                       .format(self.src_item_name, self.dst_item_name))
+                self._toolbox.msg.emit(
+                    "Link established. Data Store <b>{0}</b> reference will "
+                    "be passed to Tool <b>{1}</b> when executing.".format(self.src_item_name, self.dst_item_name)
+                )
             elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> output files will be "
-                                       "passed to item <b>{1}</b> after execution."
-                                       .format(self.src_item_name, self.dst_item_name))
-            elif src_item_type in ["Data Connection", "Data Store"] \
-                    and dst_item_type in ["Data Connection", "Data Store"]:
+                self._toolbox.msg.emit(
+                    "Link established. Tool <b>{0}</b> output files will be "
+                    "passed to item <b>{1}</b> after execution.".format(self.src_item_name, self.dst_item_name)
+                )
+            elif src_item_type in ["Data Connection", "Data Store"] and dst_item_type in [
+                "Data Connection",
+                "Data Store",
+            ]:
                 self._toolbox.msg.emit("Link established")
             elif src_item_type == "Data Store" and dst_item_type == "View":
                 self._toolbox.msg_warning.emit(

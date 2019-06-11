@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QWidget
 
 class MockQWidget(QWidget):
     """Dummy QWidget for mocking test_push_vars method in PythonReplWidget class."""
+
     def __init__(self):
         super().__init__()
 

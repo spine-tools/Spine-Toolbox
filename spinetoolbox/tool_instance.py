@@ -465,8 +465,9 @@ class ToolInstance(QObject):
                     try:
                         shutil.copy(fname_path, dst)
                     except OSError:
-                        self._toolbox.msg_error.emit("[OSError] Copying pattern {0} to {1} failed"
-                                                     .format(fname_path, dst))
+                        self._toolbox.msg_error.emit(
+                            "[OSError] Copying pattern {0} to {1} failed".format(fname_path, dst)
+                        )
                     self._toolbox.project().execution_instance.append_tool_output_file(dst)
                     saved_files.append(os.path.join(dst_subdir, fname))
             else:
@@ -481,8 +482,9 @@ class ToolInstance(QObject):
                 try:
                     shutil.copy(output_file, dst)
                 except OSError:
-                    self._toolbox.msg_error.emit("[OSError] Copying output file {0} to {1} failed"
-                                                 .format(output_file, dst))
+                    self._toolbox.msg_error.emit(
+                        "[OSError] Copying output file {0} to {1} failed".format(output_file, dst)
+                    )
                 self._toolbox.project().execution_instance.append_tool_output_file(dst)
                 saved_files.append(pattern)
         return saved_files, failed_files

@@ -30,6 +30,7 @@ class DirectedGraphHandler:
     Args:
         toolbox (ToolboxUI): QMainWindow instance
     """
+
     def __init__(self, toolbox):
         """Class constructor."""
         self._toolbox = toolbox
@@ -370,6 +371,7 @@ class ExecutionInstance(QObject):
         toolbox (ToolboxUI): QMainWindow instance
         execution_list (list): Ordered list of nodes to execute
     """
+
     graph_execution_finished_signal = Signal(int, name="graph_execution_finished_signal")
     project_item_execution_finished_signal = Signal(int, name="project_item_execution_finished_signal")
 
