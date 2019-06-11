@@ -52,7 +52,7 @@ class SettingsWidget(QWidget):
         # self.ui.toolButton_browse_julia_project.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         # self.ui.toolButton_browse_python.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         # self.ui.toolButton_browse_work.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        # self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
+        self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.setStyleSheet(SETTINGS_SS)
