@@ -4,4 +4,4 @@ repos:
     hooks:
     -   id: black
         files: ^spinetoolbox/
-        exclude: ^spinetoolbox/ui
+        exclude: ^spinetoolbox/ui|.*resources_icons_rc.py|.*resources_logos_rc.py
