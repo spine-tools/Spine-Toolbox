@@ -42,10 +42,8 @@ Remember to update your clone occasionally with the
 
 Python 3.5 or higher is required.
 
-See file `requirements.txt` for must have packages and file `optional-requirements.txt`
-for optional ones. The optional requirements contain the SQL dialect API packages 
-(can also be installed at runtime), packages for building the User Guide (Sphinx), 
-and a package for deploying the application (cx_Freeze).
+See file `requirements.txt` for packages needed to use Spinetoolbox.
+Additional packages are needed for development which are listed in `dev-requirements.txt`.
  
 ### Installing requirements
 
@@ -59,9 +57,9 @@ Run
 
 If everything goes smoothly, you can now run Spine Toolbox.
 
-To install optional requirements run
+To install the developer requirements run
 
-    pip install -r optional-requirements.txt
+    pip install -r dev-requirements.txt
 
 ### Installing requirements for Anaconda & Miniconda Python
 
@@ -83,9 +81,9 @@ The recommended way to install dependencies using Anaconda or Miniconda is:
 
         pip install -r requirements.txt
 
-6. And finally to install optional requirements run
+6. If needed, to install the developer requirements run
 
-        pip install -r optional-requirements.txt
+        pip install -r dev-requirements.txt
 
 ### Upgrading spinedb_api
 
@@ -160,7 +158,7 @@ Below are the bare minimum things you need to know.
 
 ### Setting up development environment
 
-1. Install the optional requirements.
+1. Install the developer requirements.
 2. Optionally, run `pre-commit install` in project's root directory. This sets up some git hooks.
 
 ### Coding Style
