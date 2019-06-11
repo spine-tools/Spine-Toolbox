@@ -15,6 +15,7 @@ The last section contains the complete code reference of Spine Toolbox.
    :maxdepth: 1
    :caption: Contents:
 
+   tutorials
    main_window
    tool_template_editor
    executing_tools
@@ -22,11 +23,11 @@ The last section contains the complete code reference of Spine Toolbox.
    data_store_views
    data_import_export
    spine_datapackage_editor
-   getting_started
    terminology
    dependencies
    contribution_guide
    code_ref
+
 
 Indices and tables
 ==================
