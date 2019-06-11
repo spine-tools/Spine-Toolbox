@@ -6,7 +6,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [Unreleased]
 
 ### Added
-- Zooming (by using the mouse wheel) is now enabled in Design View. You can also select multiple project 
+- Zooming (by using the mouse wheel) is now enabled in Design View. You can also select multiple project
   items by pressing the Ctrl-key down and dragging the mouse.
 - New project item icons on Design View.
 - Two options for the Design View background (grid or solid). See Settings (F1).
@@ -18,26 +18,27 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - The Data Store treeview now also has a relationship tree.
 - Support for reordering columns in the treeview.
 - Selecting 'edit object classes' in the treeview now also allows the icon to be selected.
-- There is now an upper limit on how much text is logged in Event Log and Process Log. The oldest lines are removed 
+- There is now an upper limit on how much text is logged in Event Log and Process Log. The oldest lines are removed
   if the limit is exceeded.
 - Play button to main window Toolbar that executes all Directed Acyclic Graphs in the Project one after another.
-- Another Play button to main window Toolbar to execute selected Directed Acyclic Graph. Selecting a DAG happens by 
+- Another Play button to main window Toolbar to execute selected Directed Acyclic Graph. Selecting a DAG happens by
   selecting one or more project items belonging to the wanted DAG in the Design View or in Project Items list.
 - Stop button to main window Toolbar, which terminates execution.
+- Now it's possible to specify a dedicated Julia project or environment for Spine Toolbox in the settings.
 
 ### Changed
-- Selecting the Julia environment in Settings now requires picking the Julia interpreter **file** 
+- Selecting the Julia environment in Settings now requires picking the Julia interpreter **file**
   (e.g. julia.exe on Windows) instead of the directory where the Julia interpreter is located.
-- Selecting the GAMS program (**file**) in Settings now requires picking the GAMS program (e.g. gams.exe 
+- Selecting the GAMS program (**file**) in Settings now requires picking the GAMS program (e.g. gams.exe
   on Windows) instead of the directory where the GAMS program is located.
-- Selected Julia and GAMS are now stored to persistent memory using Qt's QSettings class and not into 
-  settings.conf file. This means that these options have been set to factory defaults in Settings. 
-- All application Settings are now saved using Qt's QSettings class. *conf/settings.conf* file is not 
+- Selected Julia and GAMS are now stored to persistent memory using Qt's QSettings class and not into
+  settings.conf file. This means that these options have been set to factory defaults in Settings.
+- All application Settings are now saved using Qt's QSettings class. *conf/settings.conf* file is not
   needed anymore.
-- New Spine databases can be created in any backend supported by spinedb_api. The Data Store item properties 
+- New Spine databases can be created in any backend supported by spinedb_api. The Data Store item properties
   have been changed to allow for this.
 - Executing Directed Acyclic Graphs instead of just Tools.
-- Executing project items does not happen from the Tool Properties anymore. It happens instead by pressing the 
+- Executing project items does not happen from the Tool Properties anymore. It happens instead by pressing the
   Play button in the main window Toolbar.
 
 
@@ -57,28 +58,28 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Added
 - New Setting. You can now select whether to delete project item's data directory
   when removing a project item.
-- Graph View is also available from Data Store items, allowing to insert new 
+- Graph View is also available from Data Store items, allowing to insert new
   relationships more graphically.
-- You can now execute Tools in the work directory or the source directory (where the 
-  main program file is located). The Setting is in the Tool template editor and in Tool 
+- You can now execute Tools in the work directory or the source directory (where the
+  main program file is located). The Setting is in the Tool template editor and in Tool
   properties.
 - Tabular view: New view for Data Store items, allowing to view and edit data in a
   pivot table.
 - Tool Properties now shows all information about the attached Tool template
 - Context-menus for Data Connection Properties, Tool Properties, and View Properties
-- Support for optional input files for Tool templates. You can now use Unix style wildcards (`*` and `?`) 
+- Support for optional input files for Tool templates. You can now use Unix style wildcards (`*` and `?`)
   to specify the optional files that a Tool may exploit, e.g. `*.csv`.
 - Wildcard support for Tool template output files
 - Tool template output files now support subdirectories
-- You can now create a new (blank) main program file in the Tool template editor by pressing the the *+* button 
-  and selecting `Make new main program` 
+- You can now create a new (blank) main program file in the Tool template editor by pressing the the *+* button
+  and selecting `Make new main program`
 - A shortcut to Tool template main directory, accessible e.g. in Tool Properties context-menu
 - New Setting. You can select whether the zoom in the Graph view is smooth or discrete
-- Windows installer default location is /Program Files/SpineToolbox/. When new versions are released, the 
+- Windows installer default location is /Program Files/SpineToolbox/. When new versions are released, the
   installer will automatically upgrade Spine Toolbox to a new version in that directory.
 - Support for executing Executable type tools in Linux&Mac. (Windows support was added previously)
-- Tool configuration assistant. Available in menu `File->Tool configuration assistant`. Checks automatically 
-  if the Julia you have selected in Settings supports running Spine Model. If not, the required packages are 
+- Tool configuration assistant. Available in menu `File->Tool configuration assistant`. Checks automatically
+  if the Julia you have selected in Settings supports running Spine Model. If not, the required packages are
   automatically installed.
 
 ### Fixed
