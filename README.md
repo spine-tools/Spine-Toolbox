@@ -161,10 +161,19 @@ Below are the bare minimum things you need to know.
 ### Setting up development environment
 
 1. Install the optional requirements.
-2. Run `pre-commit install` in project's root directory. This sets up some git hooks.
+2. Optionally, run `pre-commit install` in project's root directory. This sets up some git hooks.
 
 ### Coding Style
+
+- [Black](https://github.com/python/black) is used for Python code formatting.
+  The project's GitHub page includes instructions on how to integrate Black in IDEs.
 - Google style docstrings
+
+### Linting
+
+It is advisable to run [`pylint`](https://pylint.readthedocs.io/en/latest/) regularly on files that have been changed.
+The project root includes a configuration file for `pylint`.
+`pylint`'s user guide includes instructions on how to [integrate the tool in IDEs](https://pylint.readthedocs.io/en/latest/user_guide/ide-integration.html#pylint-in-pycharm).
 
 ### Reporting bugs
 If you think you have found a bug, please check the following before creating a new 
