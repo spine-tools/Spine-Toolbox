@@ -122,6 +122,9 @@ class ItemToolBar(QToolBar):
     @Slot(bool, name="stop_clicked")
     def stop_clicked(self, checked=False):
         """Slot for handling the Stop execution tool button clicked signal."""
+        if not self._toolbox.project():
+            self._toolbox.msg.emit("Please create a new project or open an existing one first")
+            return
         self._toolbox.project().stop()
 
 

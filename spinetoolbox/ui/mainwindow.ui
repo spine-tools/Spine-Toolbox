@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -141,6 +141,7 @@
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
+    <addaction name="actionExport_project_to_GraphML"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
     <addaction name="actionPackages"/>
@@ -438,8 +439,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>395</width>
-              <height>331</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -1248,8 +1249,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>395</width>
-              <height>331</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1655,8 +1656,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>395</width>
-              <height>331</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1978,8 +1979,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>395</width>
-              <height>331</height>
+              <width>336</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2733,6 +2734,11 @@
    </property>
    <property name="toolTip">
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all items project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+   </property>
+  </action>
+  <action name="actionExport_project_to_GraphML">
+   <property name="text">
+    <string>Export project to GraphML</string>
    </property>
   </action>
  </widget>

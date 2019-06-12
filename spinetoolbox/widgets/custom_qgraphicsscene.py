@@ -147,7 +147,7 @@ class CustomQGraphicsScene(QGraphicsScene):
             super().dropEvent(event)
             return
         if not self._toolbox.project():
-            self._toolbox.msg.emit("Create or open a project first")
+            self._toolbox.msg.emit("Please open or create a project first")
             event.ignore()
             return
         event.acceptProposedAction()

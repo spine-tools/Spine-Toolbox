@@ -175,6 +175,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen.triggered.connect(self.open_project)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
+        self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
@@ -345,7 +346,7 @@ class ToolboxUI(QMainWindow):
     def save_project(self):
         """Save project."""
         if not self._project:
-            self.msg.emit("No project open")
+            self.msg.emit("Please open or create a project first")
             return
         # Put project's tool template definition files into a list
         tool_templates = list()
@@ -358,7 +359,8 @@ class ToolboxUI(QMainWindow):
     def save_project_as(self):
         """Ask user for a new project name and save. Creates a duplicate of the open project."""
         if not self._project:
-            self.msg.emit("No project open")
+            self.msg.emit("Please open or create a project first")
+            return
         msg = "This creates a copy of the current project. <br/><br/>New name:"
         # noinspection PyCallByClass
         answer = QInputDialog.getText(
@@ -946,6 +948,14 @@ class ToolboxUI(QMainWindow):
             )
         return
 
+    @Slot(name="export_as_graphml")
+    def export_as_graphml(self):
+        """Exports all DAGs in project to separate GraphML files."""
+        if not self.project():
+            self.msg.emit("Please open or create a project first")
+            return
+        self.project().export_graphs()
+
     @Slot("QModelIndex", name="connection_data_changed")
     def connection_data_changed(self, index):
         """[OBSOLETE?] Called when checkbox delegate wants to
@@ -1125,7 +1135,7 @@ class ToolboxUI(QMainWindow):
     def show_add_data_store_form(self, x=0, y=0):
         """Show add data store widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.add_data_store_form = AddDataStoreWidget(self, x, y)
         self.add_data_store_form.show()
@@ -1134,7 +1144,7 @@ class ToolboxUI(QMainWindow):
     def show_add_data_connection_form(self, x=0, y=0):
         """Show add data connection widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.add_data_connection_form = AddDataConnectionWidget(self, x, y)
         self.add_data_connection_form.show()
@@ -1143,7 +1153,7 @@ class ToolboxUI(QMainWindow):
     def show_add_tool_form(self, x=0, y=0):
         """Show add tool widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.add_tool_form = AddToolWidget(self, x, y)
         self.add_tool_form.show()
@@ -1152,7 +1162,7 @@ class ToolboxUI(QMainWindow):
     def show_add_view_form(self, x=0, y=0):
         """Show add view widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.add_view_form = AddViewWidget(self, x, y)
         self.add_view_form.show()
@@ -1161,7 +1171,7 @@ class ToolboxUI(QMainWindow):
     def show_tool_template_form(self, tool_template=None):
         """Show create tool template widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.tool_template_form = ToolTemplateWidget(self, tool_template)
         self.tool_template_form.show()
