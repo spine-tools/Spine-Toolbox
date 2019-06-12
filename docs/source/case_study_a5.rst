@@ -302,11 +302,15 @@ Creating objects
    and ``some_week`` and ``past`` to the ``temporal_block`` object class.
 
 
+Specifying object parameter values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 Establishing relationships
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to establish that power plant units receive water from the station's upper node
-   along the one week horizon:
+#. Follow the steps below to add ``unit__node__direction__temporal_block`` relationships,
+   establishing that power plant units receive water from the station's upper node
+   at each time slice in the one week horizon:
 
    #. Under *Relationship tree*,
       right-click on ``unit__node__direction__temporal_block``
@@ -317,7 +321,7 @@ Establishing relationships
       and press **Ctrl+V**. This will paste the list of plant names from the clipboard into that column.
    #. Repeat the procedure to paste the list of *upper* `node names <water_nodes_names_>`_
       into the **node name** column.
-   #. For each unit and node, enter ``from_node`` under **direction name** and ``some_week``
+   #. For each row in the table, enter ``from_node`` under **direction name** and ``some_week``
       under **temporal block name**. Now the form should be looking like this:
 
       .. image:: img/add_pwr_plant_water_from_node.png
@@ -333,26 +337,72 @@ Establishing relationships
    .. tip:: To enter the same text on several cells, copy the text into the clipboard, then select all
       target cells and press **Ctrl+V**.
 
-#. Repeat the procedure to establish that power plant units release water to the station's lower node
-   along the one week horizon:
+#. Repeat the procedure to add ``unit__node__direction__temporal_block`` relationships class,
+   establishing that power plant units release water to the station's lower node
+   at each time slice in the one week horizon:
 
    .. image:: img/add_pwr_plant_water_to_node.png
       :align: center
 
-#. Repeat the procedure to establish that power plant units release electricity to the common electricity node
-   along the one week horizon:
+#. Repeat the procedure to add ``unit__node__direction__temporal_block`` relationships,
+   establishing that power plant units release electricity to the common electricity node
+   at each time slice in the one week horizon:
 
    .. image:: img/add_pwr_plant_electricity_to_node.png
       :align: center
 
-#. Repeat the procedure to establish that reservoir units take and release water to and from
-   the station's upper node along the one week horizon:
+#. Repeat the procedure to add ``unit__node__direction__temporal_block`` relationships,
+   establishing that reservoir units take and release water to and from
+   the station's upper node at each time slice in the one week horizon:
 
    .. image:: img/add_rsrv_water_to_from_node.png
       :align: center
 
-#. Repeat the procedure to establish that the electricity load takes electricity from
-   the common electricity node along the one week horizon:
+#. Repeat the procedure to add a ``unit__node__direction__temporal_block`` relationship,
+   establishing that the electricity load takes electricity from
+   the common electricity node at each time slice in the one week horizon:
 
    .. image:: img/add_electricity_load_from_node.png
       :align: center
+
+#. Repeat the procedure to add ``connection__node__direction__temporal_block`` relationships,
+   establishing that discharge connections take water from the lower node of one station and release it
+   to the upper node of the downstream station, at each time slice in the one week horizon:
+
+   .. image:: img/add_discharge_water_to_from_node.png
+      :align: center
+
+#. Repeat the procedure to add ``connection__node__direction__temporal_block`` relationships,
+   establishing that spillway connections take water from the upper node of one station and release it
+   to the upper node of the downstream station, at each time slice in the one week horizon:
+
+   .. image:: img/add_spillway_water_to_from_node.png
+      :align: center
+
+#. Repeat the procedure to add ``node__commodity`` relationships,
+   relating all water nodes with the ``water`` commodity, and the electricity node with ``electricity``:
+
+   .. image:: img/add_node_commodity.png
+      :align: center
+
+#. Repeat the procedure to add ``node__temporal_block`` relationships,
+   establishing that all nodes are balanced at each time slice in the one week horizon:
+
+   .. image:: img/add_node_temporal_block.png
+      :align: center
+
+#. Repeat the procedure to add ``storage__unit`` relationships,
+   connecting each storage to the corresponding unit:
+
+   .. image:: img/add_storage_unit.png
+      :align: center
+
+#. Repeat the procedure to add ``storage__commodity`` relationships,
+   establishing that all storages store water:
+
+   .. image:: img/add_storage_commodity.png
+      :align: center
+
+
+Specifying relationship parameter values
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
