@@ -52,17 +52,14 @@ class GraphViewForm(DataStoreForm):
         self.read_only = read_only
         self._has_graph = False
         self._scene_bg = None
-        self.font = QApplication.font()
-        self.font.setPointSize(72)
-        self.font_metric = QFontMetrics(self.font)
-        self.extent = 6 * self.font.pointSize()
+        self.extent = 512
         self._spread = 3 * self.extent
-        self.object_label_color = self.palette().color(QPalette.Normal, QPalette.Window)
-        self.object_label_color.setAlphaF(0.5)
-        self.arc_label_color = self.palette().color(QPalette.Normal, QPalette.Window)
-        self.arc_label_color.setAlphaF(0.8)
+        self.object_label_color = self.palette().color(QPalette.Normal, QPalette.ToolTipBase)
+        self.object_label_color.setAlphaF(0.8)
+        self.arc_token_color = self.palette().color(QPalette.Normal, QPalette.Window)
+        self.arc_token_color.setAlphaF(0.8)
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
-        self.arc_color.setAlphaF(0.75)
+        self.arc_color.setAlphaF(0.8)
         # Set flat object tree
         self.object_tree_model.is_flat = True
         # Data for ObjectItems
@@ -73,9 +70,7 @@ class GraphViewForm(DataStoreForm):
         # Data for ArcItems
         self.arc_object_id_lists = list()
         self.arc_relationship_class_ids = list()
-        self.arc_object_class_name_lists = list()
-        self.arc_label_object_name_lists = list()
-        self.arc_label_object_class_name_lists = list()
+        self.arc_token_object_name_tuple_lists = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         # Data for template ObjectItems and ArcItems (these are persisted across graph builds)
@@ -348,9 +343,7 @@ class GraphViewForm(DataStoreForm):
                     self.object_class_names.append(object_class_name)
         self.arc_object_id_lists = list()
         self.arc_relationship_class_ids = list()
-        self.arc_object_class_name_lists = list()
-        self.arc_label_object_name_lists = list()
-        self.arc_label_object_class_name_lists = list()
+        self.arc_token_object_name_tuple_lists = list()
         self.src_ind_list = list()
         self.dst_ind_list = list()
         relationship_class_dict = {
@@ -380,17 +373,13 @@ class GraphViewForm(DataStoreForm):
                 dst_object_name = self.object_names[dst_ind]
                 self.arc_object_id_lists.append(object_id_list)
                 self.arc_relationship_class_ids.append(relationship.class_id)
-                self.arc_object_class_name_lists.append(object_class_name_list)
                 # Add label items
-                arc_label_object_name_list = list()
-                arc_label_object_class_name_list = list()
+                arc_token_object_name_tuple_list = list()
                 for object_name, object_class_name in zip(split_object_name_list, split_object_class_name_list):
                     if object_name in (src_object_name, dst_object_name):
                         continue
-                    arc_label_object_name_list.append(object_name)
-                    arc_label_object_class_name_list.append(object_class_name)
-                self.arc_label_object_name_lists.append(arc_label_object_name_list)
-                self.arc_label_object_class_name_lists.append(arc_label_object_class_name_list)
+                    arc_token_object_name_tuple_list.append((object_class_name, object_name))
+                self.arc_token_object_name_tuple_lists.append(arc_token_object_name_tuple_list)
         # Add template items hanging around
         scene = self.ui.graphicsView.scene()
         if not scene:
@@ -425,7 +414,7 @@ class GraphViewForm(DataStoreForm):
                 object_ind_dict[item] = object_ind
                 object_ind += 1
         template_arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
-        arc_ind = len(self.arc_label_object_name_lists)
+        arc_ind = len(self.arc_token_object_name_tuple_lists)
         self.arc_template_ids = {}
         for item in template_arc_items:
             src_item = item.src_item
@@ -447,10 +436,8 @@ class GraphViewForm(DataStoreForm):
             object_class_name_list = item.object_class_name_list
             self.arc_object_id_lists.append("")  # TODO: is this one filled when creating the relationship?
             self.arc_relationship_class_ids.append(relationship_class_id)
-            self.arc_object_class_name_lists.append(object_class_name_list)
             # Label don't matter
-            self.arc_label_object_name_lists.append("")
-            self.arc_label_object_class_name_lists.append("")
+            self.arc_token_object_name_tuple_lists.append(("", ""))
             self.arc_template_ids[arc_ind] = item.template_id
             arc_ind += 1
 
@@ -546,14 +533,13 @@ class GraphViewForm(DataStoreForm):
             object_class_name = self.object_class_names[i]
             object_item = ObjectItem(
                 self,
-                object_id,
                 object_name,
                 object_class_id,
                 object_class_name,
                 x[i],
                 y[i],
                 self.extent,
-                label_font=self.font,
+                object_id=object_id,
                 label_color=self.object_label_color,
             )
             try:
@@ -570,29 +556,19 @@ class GraphViewForm(DataStoreForm):
             j = self.dst_ind_list[k]
             object_id_list = self.arc_object_id_lists[k]
             relationship_class_id = self.arc_relationship_class_ids[k]
-            label_object_names = self.arc_label_object_name_lists[k]
-            label_object_class_names = self.arc_label_object_class_name_lists[k]
-            label_parts = self.relationship_graph(
-                label_object_names,
-                label_object_class_names,
-                self.extent,
-                self._spread / 2,
-                label_font=self.font,
-                label_color=Qt.transparent,  # label_color=self.object_label_color
-                relationship_class_id=relationship_class_id,
-            )
+            token_object_name_tuple_list = self.arc_token_object_name_tuple_lists[k]
             arc_item = ArcItem(
                 self,
-                object_id_list,
                 relationship_class_id,
-                label_object_class_names,  # object_class_names,
                 object_items[i],
                 object_items[j],
                 0.25 * self.extent,
                 self.arc_color,
-                token_color=self.object_label_color,
-                label_color=self.arc_label_color,
-                label_parts=label_parts,
+                object_id_list=object_id_list,
+                token_color=self.arc_token_color,
+                token_object_extent=0.75 * self.extent,
+                token_object_label_color=self.object_label_color,
+                token_object_name_tuple_list=token_object_name_tuple_list,
             )
             try:
                 template_id = self.arc_template_ids[k]
@@ -698,7 +674,9 @@ class GraphViewForm(DataStoreForm):
             </ol>
             </html>
         """
-        usage_item = CustomTextItem(usage, self.font)
+        font = QApplication.font()
+        font.setPointSize(self.extent / 8)
+        usage_item = CustomTextItem(usage, font)
         usage_item.linkActivated.connect(self._handle_usage_link_activated)
         scene.addItem(usage_item)
         self._has_graph = False
@@ -731,14 +709,12 @@ class GraphViewForm(DataStoreForm):
             name = class_name
             object_item = ObjectItem(
                 self,
-                0,
                 name,
                 class_id,
                 class_name,
                 scene_pos.x(),
                 scene_pos.y(),
                 self.extent,
-                label_font=self.font,
                 label_color=self.object_label_color,
             )
             scene.addItem(object_item)
@@ -749,20 +725,63 @@ class GraphViewForm(DataStoreForm):
             object_class_name_list = data["object_class_name_list"].split(',')
             object_name_list = object_class_name_list.copy()
             fix_name_ambiguity(object_name_list)
-            relationship_graph = self.relationship_graph(
+            relationship_items = self.relationship_items(
                 object_name_list,
                 object_class_name_list,
                 self.extent,
                 self._spread,
-                label_font=self.font,
                 label_color=self.object_label_color,
                 object_class_id_list=object_class_id_list,
                 relationship_class_id=relationship_class_id,
             )
-            self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_graph)
+            self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_items)
             self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
             self.template_id += 1
         self._has_graph = True
+
+    def relationship_items(
+        self,
+        object_name_list,
+        object_class_name_list,
+        extent,
+        spread,
+        label_color,
+        object_class_id_list=None,
+        relationship_class_id=None,
+    ):
+        """Lists of object and arc items that form a relationship."""
+        if object_class_id_list is None:
+            object_class_id_list = list()
+        object_items = list()
+        arc_items = list()
+        src_ind_list = list(range(len(object_name_list)))
+        dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
+        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
+        if d is None:
+            return [], []
+        x, y = self.vertex_coordinates(d)
+        for i in range(len(object_name_list)):
+            x_ = x[i]
+            y_ = y[i]
+            object_name = object_name_list[i]
+            object_class_name = object_class_name_list[i]
+            try:
+                object_class_id = object_class_id_list[i]
+            except IndexError:
+                object_class_id = None
+            object_item = ObjectItem(
+                self, object_name, object_class_id, object_class_name, x_, y_, extent, label_color=label_color
+            )
+            object_items.append(object_item)
+        for i in range(len(object_items)):
+            src_item = object_items[i]
+            try:
+                dst_item = object_items[i + 1]
+            except IndexError:
+                dst_item = object_items[0]
+            arc_item = ArcItem(self, relationship_class_id, src_item, dst_item, extent / 4, self.arc_color)
+            arc_items.append(arc_item)
+        return object_items, arc_items
 
     def add_relationship_template(self, scene, x, y, object_items, arc_items, dimension_at_origin=None):
         """Add relationship parts into the scene to form a 'relationship template'."""
@@ -829,60 +848,6 @@ class GraphViewForm(DataStoreForm):
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self.msg_error.emit(e.msg)
             return False
-
-    def relationship_graph(
-        self,
-        object_name_list,
-        object_class_name_list,
-        extent,
-        spread,
-        label_font,
-        label_color,
-        object_class_id_list=None,
-        relationship_class_id=None,
-    ):
-        """Lists of object and arc items that form a relationship."""
-        if object_class_id_list is None:
-            object_class_id_list = list()
-        object_items = list()
-        arc_items = list()
-        src_ind_list = list(range(len(object_name_list)))
-        dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
-        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
-        if d is None:
-            return [], []
-        x, y = self.vertex_coordinates(d)
-        for i in range(len(object_name_list)):
-            x_ = x[i]
-            y_ = y[i]
-            object_name = object_name_list[i]
-            object_class_name = object_class_name_list[i]
-            try:
-                object_class_id = object_class_id_list[i]
-            except IndexError:
-                object_class_id = None
-            object_item = ObjectItem(
-                self,
-                None,
-                object_name,
-                object_class_id,
-                object_class_name,
-                x_,
-                y_,
-                extent,
-                label_font=label_font,
-                label_color=label_color,
-            )
-            object_items.append(object_item)
-        for i in range(len(object_items)):
-            src_item = object_items[i]
-            try:
-                dst_item = object_items[i + 1]
-            except IndexError:
-                dst_item = object_items[0]
-            arc_item = ArcItem(self, None, relationship_class_id, None, src_item, dst_item, extent / 4, self.arc_color)
-            arc_items.append(arc_item)
-        return object_items, arc_items
 
     def add_object_classes(self, object_classes):
         """Insert new object classes."""
@@ -958,7 +923,7 @@ class GraphViewForm(DataStoreForm):
             main_item.edit_name()
         elif option == 'Remove':
             self.remove_graph_items()
-        try:
+        elif option in self.object_item_context_menu.relationship_class_dict:
             relationship_class = self.object_item_context_menu.relationship_class_dict[option]
             relationship_class_id = relationship_class["id"]
             relationship_class_name = relationship_class["name"]
@@ -966,12 +931,11 @@ class GraphViewForm(DataStoreForm):
             object_class_name_list = relationship_class['object_class_name_list']
             object_name_list = relationship_class['object_name_list']
             dimension = relationship_class['dimension']
-            object_items, arc_items = self.relationship_graph(
+            object_items, arc_items = self.relationship_items(
                 object_name_list,
                 object_class_name_list,
                 self.extent,
                 self._spread,
-                label_font=self.font,
                 label_color=self.object_label_color,
                 object_class_id_list=object_class_id_list,
                 relationship_class_id=relationship_class_id,
@@ -988,8 +952,6 @@ class GraphViewForm(DataStoreForm):
                 "name": relationship_class_name,
             }
             self.template_id += 1
-        except KeyError:
-            pass
         self.object_item_context_menu.deleteLater()
         self.object_item_context_menu = None
 
