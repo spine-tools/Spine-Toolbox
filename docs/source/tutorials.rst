@@ -13,3 +13,4 @@ The following tutorials are available:
    :maxdepth: 1
 
    getting_started
+   case_study_a5
