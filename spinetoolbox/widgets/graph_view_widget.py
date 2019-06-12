@@ -332,8 +332,7 @@ class GraphViewForm(DataStoreForm):
             is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
             # Fetch object class if needed
             if is_root_selected or is_object_class_selected:
-                if self.object_tree_model.canFetchMore(index):
-                    self.object_tree_model.fetchMore(index)
+                self.object_tree_model.fetchMore(index)
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
                 object_id = object_item.data(Qt.UserRole + 1)["id"]
@@ -382,7 +381,7 @@ class GraphViewForm(DataStoreForm):
                 self.arc_object_id_lists.append(object_id_list)
                 self.arc_relationship_class_ids.append(relationship.class_id)
                 self.arc_object_class_name_lists.append(object_class_name_list)
-                # Find out label items
+                # Add label items
                 arc_label_object_name_list = list()
                 arc_label_object_class_name_list = list()
                 for object_name, object_class_name in zip(split_object_name_list, split_object_class_name_list):
@@ -455,7 +454,8 @@ class GraphViewForm(DataStoreForm):
             self.arc_template_ids[arc_ind] = item.template_id
             arc_ind += 1
 
-    def shortest_path_matrix(self, object_name_list, src_ind_list, dst_ind_list, spread):
+    @staticmethod
+    def shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread):
         """Return the shortest-path matrix."""
         N = len(object_name_list)
         if not N:
@@ -473,7 +473,8 @@ class GraphViewForm(DataStoreForm):
         d[d == 0] = spread * 1e-6
         return d
 
-    def sets(self, N):
+    @staticmethod
+    def sets(N):
         """Return sets of vertex pairs indices."""
         sets = []
         for n in range(1, N):
@@ -489,7 +490,8 @@ class GraphViewForm(DataStoreForm):
                 sets.append(s2)
         return sets
 
-    def vertex_coordinates(self, matrix, heavy_positions=None, iterations=10, weight_exp=-2, initial_diameter=1000):
+    @staticmethod
+    def vertex_coordinates(matrix, heavy_positions=None, iterations=10, weight_exp=-2, initial_diameter=1000):
         """Return x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
         if heavy_positions is None:
             heavy_positions = dict()
@@ -512,7 +514,7 @@ class GraphViewForm(DataStoreForm):
         maxstep = 1 / np.min(weights[mask])
         minstep = 1 / np.max(weights[mask])
         lambda_ = np.log(minstep / maxstep) / (iterations - 1)  # exponential decay of allowed adjustment
-        sets = self.sets(N)  # construct sets of bus pairs
+        sets = GraphViewForm.sets(N)  # construct sets of bus pairs
         for iteration in range(iterations):
             step = maxstep * np.exp(lambda_ * iteration)  # how big adjustments are allowed?
             rand_order = np.random.permutation(N)  # we don't want to use the same pair order each iteration
@@ -617,7 +619,8 @@ class GraphViewForm(DataStoreForm):
         return scene
 
     def extend_scene_bg(self):
-        # Make scene background the size of the view
+        """Make scene background the size of the view.
+        """
         view_rect = self.ui.graphicsView.viewport().rect()
         top_left = self.ui.graphicsView.mapToScene(view_rect.topLeft())
         bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
