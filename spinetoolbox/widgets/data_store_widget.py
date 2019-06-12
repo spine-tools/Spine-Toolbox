@@ -495,12 +495,12 @@ class DataStoreForm(QMainWindow):
             # Recompute self.selected_obj_tree_indexes['object_class']
             # since some new classes might have been inserted above those indexes
             # NOTE: This is only needed for object classes, since all other items are inserted at the bottom
-            self.selected_obj_tree_indexes['object_class'] = sel_obj_cls_indexes = set()
+            self.selected_obj_tree_indexes['object_class'] = sel_obj_cls_indexes = {}
             root_index = self.object_tree_model.indexFromItem(self.object_tree_model.root_item)
             for i in range(self.object_tree_model.root_item.rowCount()):
                 obj_cls_index = self.object_tree_model.index(i, 0, root_index)
                 if obj_cls_index.data(Qt.UserRole + 1)['id'] in self.selected_object_class_ids:
-                    sel_obj_cls_indexes.add(obj_cls_index)
+                    sel_obj_cls_indexes[obj_cls_index] = None
         self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
