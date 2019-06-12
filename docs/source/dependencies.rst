@@ -10,16 +10,18 @@ Spine Toolbox requires Python 3.5 or higher.
 Spine Toolbox uses code from packages and/or projects listed in the table below. Required packages
 must be installed for the application to start. Users can choose the SQL dialect API (pymysql,
 pyodbc psycopg2, and cx_Oracle) they want to use. These can be installed in Spine Toolbox when
-needed. Sphinx, sphinx_rtd_theme, and recommonmark packages are needed for building the user guide.
-If you want to deploy the application by using the provided *setup.py* file, you need to install
-*cx_Freeze* package (6.0b1 version or newer is recommended). All version numbers are minimum
-versions except pyside2 5.12 version is not supported (yet).
+needed. If you want to deploy the application by using the provided *setup.py* file,
+you need to install *cx_Freeze* package (6.0b1 version or newer is recommended).
+All version numbers are minimum versions except pyside2 5.12 version is not supported (yet).
+
+Required packages
+^^^^^^^^^^^^^^^^^
+
+Most of the following packages are available from ``requirements.txt``
 
 +-------------------+---------------+---------------+
 | Package name      |    Version    |     License   |
 +===================+===============+===============+
-| **Required packages (requirements.txt)**          |
-+-------------------+---------------+---------------+
 | pyside2           | <5.12         |     LGPL      |
 +-------------------+---------------+---------------+
 | datapackage       | 1.2.3         |     MIT       |
@@ -28,7 +30,7 @@ versions except pyside2 5.12 version is not supported (yet).
 +-------------------+---------------+---------------+
 | sqlalchemy        | 1.2.6         |     MIT       |
 +-------------------+---------------+---------------+
-| openpyxl          | 2.4.0         |   MIT/Expat   |
+| openpyxl          | 2.5.0         |   MIT/Expat   |
 +-------------------+---------------+---------------+
 | spinedatabase_api | 0.0.1         |     LGPL      |
 +-------------------+---------------+---------------+
@@ -38,9 +40,9 @@ versions except pyside2 5.12 version is not supported (yet).
 +-------------------+---------------+---------------+
 | scipy             | 1.1.0         |    BSD        |
 +-------------------+---------------+---------------+
-| networkx          | 2.2           |    BSD        |
+| jupyter-client    | 5.2.4         |    BSD        |
 +-------------------+---------------+---------------+
-| **Optional packages (optional-requirements.txt)** |
+| networkx          | 2.2           |    BSD        |
 +-------------------+---------------+---------------+
 | pymysql           | 0.9.2         |     MIT       |
 +-------------------+---------------+---------------+
@@ -50,9 +52,26 @@ versions except pyside2 5.12 version is not supported (yet).
 +-------------------+---------------+---------------+
 | cx_Oracle         | 6.3.1         |     BSD       |
 +-------------------+---------------+---------------+
+
+Developer packages
+^^^^^^^^^^^^^^^^^^
+
+The developer packages are available from ``dev-requirements.txt``.
+Sphinx and sphinx_rtd_theme packages are needed for building the user guide.
+Black is used for code formatting while pylint does linting.
+Pre-commit hook enables automatic code formatting at git commit.
+
+
++-------------------+---------------+---------------+
+| Package name      |    Version    |     License   |
++===================+===============+===============+
+| black             | 19.3b0        |     MIT       |
++-------------------+---------------+---------------+
+| pre-commit        |               |     MIT       |
++-------------------+---------------+---------------+
+| pylint            | 2.3.0         |     GPL       |
++-------------------+---------------+---------------+
 | sphinx            | 1.7.5         |     BSD       |
 +-------------------+---------------+---------------+
 | sphinx_rtd_theme  | 0.4.0         |     MIT       |
-+-------------------+---------------+---------------+
-| recommonmark      | 0.4.0         |     MIT       |
 +-------------------+---------------+---------------+
