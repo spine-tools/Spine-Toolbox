@@ -22,7 +22,7 @@ import logging
 import os
 import sys
 from PySide2.QtWidgets import QApplication, QToolButton
-from widgets.data_store_widgets import TreeViewForm
+from widgets.tree_view_widget import TreeViewForm
 from widgets.custom_qdialog import AddObjectClassesDialog
 
 
