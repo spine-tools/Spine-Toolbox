@@ -18,13 +18,11 @@ A Qt widget to use as a matplotlib backend.
 
 import matplotlib
 from PySide2 import QtWidgets
-from pandas.plotting import register_matplotlib_converters
 import logging
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 
 matplotlib.use('Qt5Agg')
-register_matplotlib_converters()
 _mpl_logger = logging.getLogger("matplotlib")
 _mpl_logger.setLevel(logging.WARNING)
 
