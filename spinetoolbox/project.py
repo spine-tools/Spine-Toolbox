@@ -27,6 +27,7 @@ from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
+from data_interface import DataInterface
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 from executioner import DirectedGraphHandler, ExecutionInstance
@@ -211,6 +212,9 @@ class SpineToolboxProject(MetaObject):
                     item_dict[category][name]["execute_in_work"] = item.execute_in_work
                 elif item.item_type == "View":
                     pass
+                elif item.item_type == "Data Interface":
+                    # TODO: Save Data Interface mapping script path here
+                    pass
                 else:
                     logging.error("Unrecognized item type: %s", item.item_type)
         # Save project to file
@@ -229,11 +233,16 @@ class SpineToolboxProject(MetaObject):
         Returns:
             Boolean value depending on operation success.
         """
-        data_stores = item_dict['Data Stores']
-        data_connections = item_dict['Data Connections']
-        tools = item_dict['Tools']
-        views = item_dict['Views']
-        n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + len(views.keys())
+        data_stores = item_dict["Data Stores"]
+        data_connections = item_dict["Data Connections"]
+        tools = item_dict["Tools"]
+        views = item_dict["Views"]
+        try:
+            data_interfaces = item_dict["Data Interfaces"]
+        except KeyError:
+            data_interfaces = dict()
+        n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + \
+            len(views.keys()) + len(data_interfaces.keys())
         self._toolbox.msg.emit("Loading project items...")
         if n == 0:
             self._toolbox.msg_warning.emit("Project has no items")
@@ -307,6 +316,17 @@ class SpineToolboxProject(MetaObject):
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
             self.add_view(name, desc, x, y, verbosity=False)
+        # Recreate Data Interfaces
+        for name in data_interfaces.keys():
+            desc = data_interfaces[name]["description"]
+            try:
+                x = data_interfaces[name]["x"]
+                y = data_interfaces[name]["y"]
+            except KeyError:
+                x = 0
+                y = 0
+            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
+            self.add_data_interface(name, desc, x, y, verbosity=False)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -465,6 +485,30 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(view)
+
+    def add_data_interface(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
+        """Adds a Data Interface to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
+        """
+        category = "Data Interfaces"
+        data_interface = DataInterface(self._toolbox, name, description, x, y)
+        di_category = self._toolbox.project_item_model.find_category(category)
+        self._toolbox.project_item_model.insert_item(data_interface, di_category)
+        # Append connection model
+        self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
+        if verbosity:
+            self._toolbox.msg.emit("Data Interface <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(data_interface)
 
     def append_connection_model(self, item_name, category):
         """Adds new item to connection model to keep project and connection model synchronized."""

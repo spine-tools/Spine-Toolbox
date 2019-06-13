@@ -53,6 +53,7 @@ from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
+from widgets.add_data_interface_widget import AddDataInterfaceWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import ZoomWidget
@@ -125,6 +126,7 @@ class ToolboxUI(QMainWindow):
         self.add_data_connection_form = None
         self.add_tool_form = None
         self.add_view_form = None
+        self.add_data_interface_form = None
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
@@ -183,6 +185,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
         self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
+        self.ui.actionAdd_Data_Interface.triggered.connect(self.show_add_data_interface_form)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
@@ -398,11 +401,13 @@ class ToolboxUI(QMainWindow):
         dc_category = ProjectItem("Data Connections", "", is_root=False, is_category=True)
         tool_category = ProjectItem("Tools", "", is_root=False, is_category=True)
         view_category = ProjectItem("Views", "", is_root=False, is_category=True)
+        di_category = ProjectItem("Data Interfaces", "", is_root=False, is_category=True)
         self.project_item_model = ProjectItemModel(self, root=root_item)
         self.project_item_model.insert_item(ds_category)
         self.project_item_model.insert_item(dc_category)
         self.project_item_model.insert_item(tool_category)
         self.project_item_model.insert_item(view_category)
+        self.project_item_model.insert_item(di_category)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
@@ -1148,6 +1153,15 @@ class ToolboxUI(QMainWindow):
             return
         self.add_data_connection_form = AddDataConnectionWidget(self, x, y)
         self.add_data_connection_form.show()
+
+    @Slot("float", "float", name="show_add_data_interface_form")
+    def show_add_data_interface_form(self, x=0, y=0):
+        """Show add data interface widget."""
+        if not self._project:
+            self.msg.emit("Please open or create a project first")
+            return
+        self.add_data_interface_form = AddDataInterfaceWidget(self, x, y)
+        self.add_data_interface_form.show()
 
     @Slot("float", "float", name="show_add_tool_form")
     def show_add_tool_form(self, x=0, y=0):

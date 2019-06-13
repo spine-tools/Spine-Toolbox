@@ -19,7 +19,7 @@ Custom QGraphicsScene used in the Design View.
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QRectF, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon
+from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon, DataInterfaceIcon
 from widgets.toolbars import DraggableWidget
 from graphics_items import ProjectItemIcon
 

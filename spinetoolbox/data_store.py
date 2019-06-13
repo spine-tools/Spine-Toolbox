@@ -64,7 +64,7 @@ class DataStore(ProjectItem):
             create_dir(self.data_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+                "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
         self._graphics_item = DataStoreIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._sigs = self.make_signal_handler_dict()
@@ -180,10 +180,6 @@ class DataStore(ProjectItem):
     def project(self):
         """Returns current project or None if no project open."""
         return self._project
-
-    def set_icon(self, icon):
-        """Set the icon."""
-        self._graphics_item = icon
 
     def get_icon(self):
         """Returns the item representing this Data Store on the scene."""

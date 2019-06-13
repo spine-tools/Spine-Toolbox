@@ -60,8 +60,8 @@ class DataInterface(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.toolButton_dc_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.toolButton_select_mapping_script.clicked] = self.select_mapping_scipt
+        s[self._toolbox.ui.toolButton_di_open_dir.clicked] = self.open_directory
+        s[self._toolbox.ui.toolButton_select_mapping_script.clicked] = self.select_mapping_script
         s[self._toolbox.ui.pushButton_mapping_editor.clicked] = self.open_mapping_editor
         return s
 
@@ -80,12 +80,20 @@ class DataInterface(ProjectItem):
 
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
-        self._toolbox.ui.label_manipulator_name.setText(self.name)
+        self._toolbox.ui.label_di_name.setText(self.name)
         self._toolbox.ui.lineEdit_mapping_script_path.setText(self.mapping_script_path)
 
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
         self.mapping_script_path = self._toolbox.ui.lineEdit_mapping_script_path.text()
+
+    def get_icon(self):
+        """Returns the graphics item representing this data interface on scene."""
+        return self._graphics_item
+
+    def update_name_label(self):
+        """Update Data Interface tab name label. Used only when renaming project items."""
+        self._toolbox.ui.label_di_name.setText(self.name)
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
@@ -105,7 +113,7 @@ class DataInterface(ProjectItem):
         if not file_path:  # Cancel button clicked
             return
         # Update UI
-        self._toolbox.ui.lineEdit_database.setText(file_path)
+        self._toolbox.ui.lineEdit_mapping_script_path.setText(file_path)
 
     @Slot(bool, name="open_mapping_editor")
     def open_mapping_editor(self, checked=False):
@@ -114,4 +122,15 @@ class DataInterface(ProjectItem):
         if not os.path.exists(script):
             self._toolbox.msg_error.emit("Invalid path: {0}".format(script))
             return
-        self.toolbox.msg.emit("Opening mapping editor for script {0}".format(script))
+        self._toolbox.msg.emit("Opening mapping editor for script {0}".format(script))
+
+    def execute(self):
+        """Executes this Data Interface."""
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("Executing Data Interface <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("***")
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+
+    def stop_execution(self):
+        """Stops executing this Data Interface."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))

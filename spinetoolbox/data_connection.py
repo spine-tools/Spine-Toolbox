@@ -110,10 +110,7 @@ class DataConnection(ProjectItem):
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-
-    def set_icon(self, icon):
-        """Set the icon."""
-        self._graphics_item = icon
+        pass
 
     def get_icon(self):
         """Returns the item representing this data connection in the scene."""
