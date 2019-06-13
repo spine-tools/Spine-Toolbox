@@ -46,11 +46,11 @@ class ItemToolBar(QToolBar):
         self._toolbox = parent
         label = QLabel("Drag & Drop Icon")
         self.addWidget(label)
-        # DS
+        # Data Store
         data_store_pixmap = QIcon(":/icons/project_item_icons/database.svg").pixmap(24, 24)
         data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
         self.addWidget(data_store_widget)
-        # DC
+        # Data Connection
         data_connection_pixmap = QIcon(":/icons/project_item_icons/file-alt.svg").pixmap(24, 24)
         data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
         self.addWidget(data_connection_widget)
@@ -62,6 +62,10 @@ class ItemToolBar(QToolBar):
         view_pixmap = QIcon(":/icons/project_item_icons/binoculars.svg").pixmap(24, 24)
         view_widget = DraggableWidget(self, view_pixmap, "View")
         self.addWidget(view_widget)
+        # Data Interface
+        data_interface_pixmap = QIcon(":/icons/project_item_icons/map-solid.svg").pixmap(24, 24)
+        data_interface_widget = DraggableWidget(self, data_interface_pixmap, "Data Interface")
+        self.addWidget(data_interface_widget)
         # set remove all action
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
         remove_all = QToolButton(parent)

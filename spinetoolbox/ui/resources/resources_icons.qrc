@@ -2,13 +2,14 @@
   <qresource prefix="symbols">
     <file>Spine_symbol.png</file>
     <file>app.ico</file>
-    </qresource>
+  </qresource>
   <qresource prefix="fonts">
     <file>fontawesome5-solid-webfont.ttf</file>
     <file>fontawesome5-codepoints.json</file>
     <file>fontawesome5-searchterms.json</file>
   </qresource>
   <qresource prefix="icons">
+    <file>project_item_icons/map-solid.svg</file>
     <file>wrench.svg</file>
     <file>wrench_minus.svg</file>
     <file>wrench_plus.svg</file>
