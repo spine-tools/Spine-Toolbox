@@ -326,7 +326,7 @@ class GraphViewForm(DataStoreForm):
             index = self.object_tree_model.indexFromItem(object_class_item)
             is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
             # Fetch object class if needed
-            if is_root_selected or is_object_class_selected:
+            if is_root_selected or is_object_class_selected and self.object_tree_model.canFetchMore(index):
                 self.object_tree_model.fetchMore(index)
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)

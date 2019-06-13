@@ -1312,7 +1312,7 @@ class ObjectLabelItem(QGraphicsTextItem):
             self.setFont(scaled_font)
         else:
             self.setFont(self._font)
-        elided = QFontMetrics(self.font()).elidedText(text, Qt.ElideMiddle, self._width)
+        elided = QFontMetrics(self.font()).elidedText(text, Qt.ElideMiddle, 0.9 * self._width)
         self.setPlainText(elided)
 
     def keyPressEvent(self, event):
@@ -1349,19 +1349,18 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self.arc_item = arc_item
         x = 0
         for j, name_tuple in enumerate(object_name_tuples):
-            object_item = SimpleObjectItem(self, object_extent, object_label_color, *name_tuple)
+            object_item = SimpleObjectItem(self, 0.875 * object_extent, object_label_color, *name_tuple)
             if j % 2 == 0:
                 y = 0
             else:
                 y = -0.875 * 0.75 * object_item.boundingRect().height()
                 object_item.setZValue(-1)
             object_item.setPos(x, y)
-            x += 0.875 * 0.5 * object_extent
+            x += 0.875 * 0.5 * object_item.boundingRect().width()
         rectf = self.childrenBoundingRect()
         offset = -rectf.topLeft()
         for item in self.childItems():
             item.setOffset(offset)
-
         rectf = self.childrenBoundingRect()
         width = rectf.width()
         height = rectf.height()
@@ -1403,7 +1402,7 @@ class SimpleObjectItem(QGraphicsPixmapItem):
         self.text_item.setTextWidth(extent)
         font = QApplication.font()
         point_size = font.setPointSize(extent / 8)
-        factor = max(0.75, 0.9 * extent / QFontMetrics(font).width(object_name))
+        factor = max(0.75, extent / QFontMetrics(font).width(object_name))
         if factor < 1:
             font.setPointSizeF(font.pointSize() * factor)
         self.text_item.setFont(font)
