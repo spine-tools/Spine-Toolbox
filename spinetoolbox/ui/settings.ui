@@ -105,8 +105,8 @@
        <widget class="QWidget" name="scrollAreaWidgetContents">
         <property name="geometry">
          <rect>
-          <x>-51</x>
-          <y>-71</y>
+          <x>0</x>
+          <y>0</y>
           <width>417</width>
           <height>540</height>
          </rect>
@@ -406,7 +406,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_julia">
            <property name="title">
-            <string>JULIA</string>
+            <string>Julia</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
             <property name="spacing">
