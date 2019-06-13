@@ -48,7 +48,6 @@ class DataConnection(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Data Connection"
-        # self._widget = DataConnectionWidget(self, self.item_type)
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -111,10 +110,7 @@ class DataConnection(ProjectItem):
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-
-    def set_icon(self, icon):
-        """Set the icon."""
-        self._graphics_item = icon
+        pass
 
     def get_icon(self):
         """Returns the item representing this data connection in the scene."""

@@ -19,7 +19,7 @@ Custom QGraphicsScene used in the Design View.
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QRectF, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon
+from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon, DataInterfaceIcon
 from widgets.toolbars import DraggableWidget
 from graphics_items import ProjectItemIcon
 
@@ -158,7 +158,6 @@ class CustomQGraphicsScene(QGraphicsScene):
         w = 70
         h = 70
         self.item_about_to_be_dropped.emit(x, y)
-        # TODO: Check if the item_shadow stays on scene or if its deleted?
         if text == "Data Store":
             self.item_shadow = DataStoreIcon(self._toolbox, x, y, w, h, "...")
             self._toolbox.show_add_data_store_form(pos.x(), pos.y())
@@ -171,6 +170,9 @@ class CustomQGraphicsScene(QGraphicsScene):
         elif text == "View":
             self.item_shadow = ViewIcon(self._toolbox, x, y, w, h, "...")
             self._toolbox.show_add_view_form(pos.x(), pos.y())
+        elif text == "Data Interface":
+            self.item_shadow = DataInterfaceIcon(self._toolbox, x, y, w, h, "...")
+            self._toolbox.show_add_data_interface_form(pos.x(), pos.y())
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

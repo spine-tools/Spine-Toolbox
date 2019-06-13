@@ -229,10 +229,6 @@ class Tool(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
 
-    def set_icon(self, icon):
-        """Icon setter method."""
-        self._graphics_item = icon
-
     def get_icon(self):
         """Returns the graphics item representing this tool in the scene."""
         return self._graphics_item

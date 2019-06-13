@@ -177,7 +177,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         dim_max = max(size.width(), size.height())
         # logging.debug("p_max:{0}".format(p_max))
         rect_w = self.rect().width()  # Parent rect width
-        margin = 24
+        margin = 32
         self.svg_item.setScale((rect_w - margin) / dim_max)
         x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
         y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
@@ -243,8 +243,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         event.accept()
 
     def mousePressEvent(self, event):
-        """Update UI to show details of this item. Prevents dragging
-        multiple items with a mouse (also with the Ctrl-button pressed).
+        """Update UI to show details of this item.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
@@ -531,6 +530,37 @@ class ViewIcon(ProjectItemIcon):
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/binoculars.svg", QColor("#33cc33"))
         self.setAcceptDrops(False)
         # Group drawn items together by setting the master as the parent of other QGraphicsItems
+        self.name_item.setParentItem(self)
+        for conn in self.connectors.values():
+            conn.setParentItem(self)
+        self.svg_item.setParentItem(self)
+        # Add items to scene
+        self._toolbox.ui.graphicsView.scene().addItem(self)
+
+
+class DataInterfaceIcon(ProjectItemIcon):
+    """Data Interface item that is drawn into QGraphicsScene. NOTE: Make sure
+    to set self._master as the parent of all drawn items. This groups the
+    individual QGraphicsItems together.
+
+    Attributes:
+        toolbox (ToolBoxUI): QMainWindow instance
+        x (int): Icon x coordinate
+        y (int): Icon y coordinate
+        w (int): Width of master icon
+        h (int): Height of master icon
+        name (str): Item name
+    """
+
+    def __init__(self, toolbox, x, y, w, h, name):
+        """Class constructor."""
+        super().__init__(toolbox, x, y, w, h, name)
+        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
+        self.brush = QBrush(QColor("#ffcccc"))  # Brush for filling the bg rect
+        # Setup icons and attributes
+        self.setup(self.pen, self.brush, ":/icons/project_item_icons/map-solid.svg", QColor("#990000"))
+        self.setAcceptDrops(False)
+        # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         self.name_item.setParentItem(self)
         for conn in self.connectors.values():
             conn.setParentItem(self)
