@@ -493,7 +493,7 @@ class Tool(ProjectItem):
                 # Prepare Julia REPL command
                 # TODO: See if this can be simplified
                 mod_work_dir = work_dir.__repr__().strip("'")
-                args = r'["' + r'", "'.join(self.instance.args[1:]) + r'"]'
+                args = r'["' + r'", "'.join(self.get_instance_args()) + r'"]'
                 self.instance.julia_repl_command = (
                     r'cd("{}");'
                     r'empty!(ARGS);'
@@ -536,10 +536,15 @@ class Tool(ProjectItem):
 
     def append_instance_args(self):
         """Append Tool template command line args into instance args list."""
+        self.instance.args += self.get_instance_args()
+
+    def get_instance_args(self):
+        """Return instance args as list."""
         # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
-        if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
-            # Tool template cmdline args is a space delimited string. Add them to a list.
-            self.instance.args += self.tool_template().cmdline_args.split(" ")
+        if (self.tool_template().cmdline_args is not None) and (self.tool_template().cmdline_args != ''):
+            # Tool template cmdline args is a space delimited string. Return them as a list.
+            return self.tool_template().cmdline_args.split(" ")
+        return []
 
     def populate_source_file_model(self, items):
         """Add required source files (includes) into a model.
