@@ -1,4 +1,4 @@
-..  Getting Started
+..  Case Study A5 tutorial
     Created: 18.6.2018
 
 
@@ -22,9 +22,9 @@
 .. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
 
 
-*************
-Case Study A5
-*************
+**********************
+Case Study A5 tutorial
+**********************
 
 Welcome to Spine Toolbox's Case Study A5 tutorial.
 Case Study A5 is one of the Spine Project case studies designed to verify
@@ -34,8 +34,8 @@ on the `Skellefte river <https://en.wikipedia.org/wiki/Skellefte_River>`_,
 which models one week of operation of the fifteen power stations
 along the river.
 
-This tutorial provides a step-by-step guide to run Case Study A5 on Spine Toolbox,
-and consists of the following sections:
+This tutorial provides a step-by-step guide to run Case Study A5 on Spine Toolbox
+and is organized as follows:
 
 .. contents::
    :local:
@@ -105,6 +105,15 @@ Below is a schematic of the model. For clarity, only the Rebnis station is prese
 Guide
 -----
 
+Installing requirements
+=======================
+
+Make sure that Spine Toolbox and julia 1.0 (or greater) are properly installed
+as described at the following links:
+
+- `Running Spine Toolbox <https://github.com/Spine-project/Spine-Toolbox#running-spine-toolbox>`_
+- `Julia downloads <https://julialang.org/downloads/>`_
+
 Setting up project
 ==================
 
@@ -112,12 +121,30 @@ Setting up project
    Type "Case Study A5" as the project name and click **Ok**.
 
 #. Drag the Data Store icon (|ds_icon|)
-   from the *Drag & Drop Icon* toolbar and drop it into the *Design View*.
+   from the toolbar and drop it into the *Design View*.
    This will open the *Add Data Store* dialog.
    Type "input" as the Data Store name and click **Ok**.
 
+#. Repeat the above operation to create a Data Store called "output".
 
-TODO: Continue adding the Tool and 'output' DS.
+#. Drag the Tool icon (|tool_icon|)
+   from the toolbar and drop it into the *Design View*.
+   This will open the *Add Tool* dialog.
+   Type "Spine model" as the Tool name and click **Ok**.
+
+   .. note:: Each item in the *Design view* is equipped with three *connectors*
+      (the small squares at the item boundaries).
+
+#. Click on one of "input" connectors and then on one of "Spine model" connectors. This will create
+   a *connection* from the former to the latter.
+
+#. Repeat the procedure to create a *connection* from "Spine model" to "output". It should look something
+   like this:
+
+   .. image:: img/project_design_view.png
+      :align: center
+
+#. From the main menu, select **File -> Save project**.
 
 Entering input data
 ===================
@@ -128,22 +155,23 @@ Creating input database
 #. Follow the steps below to create a new Spine database for Spine Model in the 'input' Data Store:
 
    #. Select the 'input' Data Store item in the *Design View*.
-   #. Under *Data Store Properties*, check the box that reads **For Spine Model** and then press **New Spine db**.
+   #. Go to *Data Store Properties*, check the box that reads **For Spine Model** and press **New Spine db**.
 
-#. Still under *Data Store Properties*, click **Tree view**. This will open the newly created database
+#. Still in *Data Store Properties*, click **Tree view**. This will open the newly created database
    in the *Data store tree view*, looking similar to this:
 
    .. image:: img/case_study_a5_treeview_empty.png
       :align: center
    |
-   .. note:: The *Data store tree view* provides an interface to visualize and manage Spine databases.
+   .. note:: The *Data store tree view* is a dedicated interface within Spine Toolbox
+      for visualizing and managing Spine databases.
 
 Creating objects
 ~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to add power plants to the ``unit`` object class:
+#. Follow the steps below to add power plants to the model as objects of class ``unit``:
 
-   #. Under *Object tree*,
+   #. Go to *Object tree*,
       right-click on ``unit`` and select **Add objects** from the context menu. This will
       open the *Add objects* dialog.
    #. With your mouse, select the list of plant names from the text-box below
@@ -169,7 +197,7 @@ Creating objects
         Selsfors_pwr_plant
         Kvistforsen_pwr_plant
 
-   #. Back in the *Add objects* dialog, select the first cell under the **object name** column
+   #. Go back to the *Add objects* dialog, select the first cell under the **object name** column
       and press **Ctrl+V**. This will paste the list of plant names from the clipboard into that column,
       looking similar to this:
 
@@ -183,7 +211,7 @@ Creating objects
       Enter "Add power plants" as the commit message and click **Commit**.
 
 
-#. Repeat the procedure to add reservoirs to the ``unit`` object class,
+#. Repeat the procedure to add reservoirs as objects of class ``unit``,
    with the following names:
    ::
 
@@ -205,7 +233,7 @@ Creating objects
 
 
 
-#. Repeat the procedure to add discharge and spillway connections to the ``connection`` object class,
+#. Repeat the procedure to add discharge and spillway connections as objects of class ``connection``,
    with the following names:
    ::
 
@@ -240,7 +268,7 @@ Creating objects
      Selsfors_to_Kvistforsen_spill
      Kvistforsen_to_downstream_spill
 
-#. Repeat the procedure to add water storages to the ``storage`` object class,
+#. Repeat the procedure to add water storages as objects of class ``storage``,
    with the following names:
    ::
 
@@ -260,7 +288,7 @@ Creating objects
      Selsfors_stor
      Kvistforsen_stor
 
-#. Repeat the procedure to add water nodes to the ``node`` object class, with the following names:
+#. Repeat the procedure to add water nodes as objects of class ``node``, with the following names:
 
    .. _water_nodes_names:
 
@@ -297,27 +325,28 @@ Creating objects
      Selsfors_lower
      Kvistforsen_lower
 
-#. Finally, add ``water`` and ``electricity`` to the ``commodity`` object class,
-   ``electricity_node`` to the ``node`` object class, ``electricity_load`` to the ``unit`` object class,
-   and ``some_week`` and ``past`` to the ``temporal_block`` object class.
+#. Finally, add ``water`` and ``electricity`` as objects of class ``commodity``;
+   ``electricity_node`` as an object of clas ``node``; ``electricity_load`` as an object of class ``unit``;
+   and ``some_week`` and ``past`` as objects of class ``temporal_block``.
 
 
 Specifying object parameter values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+TODO
+
 Establishing relationships
 ~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-#. Follow the steps below to add ``unit__node__direction__temporal_block`` relationships,
-   establishing that power plant units receive water from the station's upper node
-   at each time slice in the one week horizon:
+#. Follow the steps below to establish that power plant units receive water from the station's upper node
+   at each time slice in the one week horizon, as relationships of class ``unit__node__direction__temporal_block``:
 
-   #. Under *Relationship tree*,
+   #. Go to *Relationship tree*,
       right-click on ``unit__node__direction__temporal_block``
       and select **Add relationships** from the context menu. This will
       open the *Add relationships* dialog.
    #. Select again all `power plant names <pwr_plant_names_>`_ and copy them to the clipboard (**Ctrl+C**).
-   #. In the *Add relationships* dialog, select the first cell under the **unit name** column
+   #. Go back to the *Add relationships* dialog, select the first cell under the **unit name** column
       and press **Ctrl+V**. This will paste the list of plant names from the clipboard into that column.
    #. Repeat the procedure to paste the list of *upper* `node names <water_nodes_names_>`_
       into the **node name** column.
@@ -327,6 +356,9 @@ Establishing relationships
       .. image:: img/add_pwr_plant_water_from_node.png
         :align: center
 
+      .. tip:: To enter the same text on several cells, copy the text into the clipboard, then select all
+         target cells and press **Ctrl+V**.
+
    #. Click **Ok**.
    #. Back in the *Data store tree view*, under *Relationship tree*, double click on
       ``unit__node__direction__temporal_block``
@@ -334,75 +366,101 @@ Establishing relationships
    #. From the main menu, select **Session -> Commit** to open the *Commit changes* dialog.
       Enter "Add sending nodes of power plants" as the commit message and click **Commit**.
 
-   .. tip:: To enter the same text on several cells, copy the text into the clipboard, then select all
-      target cells and press **Ctrl+V**.
 
-#. Repeat the procedure to add ``unit__node__direction__temporal_block`` relationships class,
-   establishing that power plant units release water to the station's lower node
-   at each time slice in the one week horizon:
+#. Repeat the procedure to establish that power plant units release water to the station's lower node
+   at each time slice in the one week horizon, as relationships of class ``unit__node__direction__temporal_block``:
 
    .. image:: img/add_pwr_plant_water_to_node.png
       :align: center
 
-#. Repeat the procedure to add ``unit__node__direction__temporal_block`` relationships,
-   establishing that power plant units release electricity to the common electricity node
-   at each time slice in the one week horizon:
+#. Repeat the procedure to establish that power plant units release electricity to the common electricity node
+   at each time slice in the one week horizon, as relationships of class ``unit__node__direction__temporal_block``:
 
    .. image:: img/add_pwr_plant_electricity_to_node.png
       :align: center
 
-#. Repeat the procedure to add ``unit__node__direction__temporal_block`` relationships,
-   establishing that reservoir units take and release water to and from
-   the station's upper node at each time slice in the one week horizon:
+#. Repeat the procedure to establish that reservoir units take and release water to and from
+   the station's upper node at each time slice in the one week horizon,
+   as relationships of class ``unit__node__direction__temporal_block``:
 
    .. image:: img/add_rsrv_water_to_from_node.png
       :align: center
 
-#. Repeat the procedure to add a ``unit__node__direction__temporal_block`` relationship,
-   establishing that the electricity load takes electricity from
-   the common electricity node at each time slice in the one week horizon:
+#. Repeat the procedure to establish that the electricity load takes electricity from
+   the common electricity node at each time slice in the one week horizon,
+   as a relationship of class ``unit__node__direction__temporal_block``:
 
    .. image:: img/add_electricity_load_from_node.png
       :align: center
 
-#. Repeat the procedure to add ``connection__node__direction__temporal_block`` relationships,
-   establishing that discharge connections take water from the lower node of one station and release it
-   to the upper node of the downstream station, at each time slice in the one week horizon:
+#. Repeat the procedure to establish that discharge connections
+   take water from the lower node of one station and release it
+   to the upper node of the downstream station, at each time slice in the one week horizon,
+   as relationships of class ``connection__node__direction__temporal_block``:
 
    .. image:: img/add_discharge_water_to_from_node.png
       :align: center
 
-#. Repeat the procedure to add ``connection__node__direction__temporal_block`` relationships,
-   establishing that spillway connections take water from the upper node of one station and release it
-   to the upper node of the downstream station, at each time slice in the one week horizon:
+#. Repeat the procedure to establish that spillway connections
+   take water from the upper node of one station and release it
+   to the upper node of the downstream station, at each time slice in the one week horizon,
+   as relationships of class ``connection__node__direction__temporal_block``:
 
    .. image:: img/add_spillway_water_to_from_node.png
       :align: center
 
-#. Repeat the procedure to add ``node__commodity`` relationships,
-   relating all water nodes with the ``water`` commodity, and the electricity node with ``electricity``:
+#. Repeat the procedure to establish that water nodes balance water,
+   and the electricity node balances electricity, as relationships of class ``node__commodity``:
 
    .. image:: img/add_node_commodity.png
       :align: center
 
-#. Repeat the procedure to add ``node__temporal_block`` relationships,
-   establishing that all nodes are balanced at each time slice in the one week horizon:
+#. Repeat the procedure to establish that all nodes are balanced at each time slice in the one week horizon,
+   as relationships of class ``node__temporal_block``:
 
    .. image:: img/add_node_temporal_block.png
       :align: center
 
-#. Repeat the procedure to add ``storage__unit`` relationships,
-   connecting each storage to the corresponding unit:
+#. Repeat the procedure to establish the connection of each storage to the corresponding unit,
+   as relationships of class ``storage__unit``:
 
    .. image:: img/add_storage_unit.png
       :align: center
 
-#. Repeat the procedure to add ``storage__commodity`` relationships,
-   establishing that all storages store water:
+#. Repeat the procedure to establish that all storages store water,
+   as relationships of class ``storage__commodity``:
 
    .. image:: img/add_storage_commodity.png
       :align: center
 
 
 Specifying relationship parameter values
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TODO
+
+Running Spine model
+===================
+
+Configuring Julia
+~~~~~~~~~~~~~~~~~
+
+#. Go to Spine Toolbox mainwindow and from the main menu, select **File -> Settings**. This will open the
+   *Settings* dialog.
+
+#. Go to the *Julia* group box and enter the path to your julia executable in the first line edit.
+
+#. (Optional) Enter the path of a julia project that you want to use with Spine Toolbox in the second line edit.
+   Leave blank to use julia's home project.
+
+#. Click **Ok**.
+
+#. From the application main menu, select **File -> Tool configuration assistant.** This will install the
+   `Spine Model package <https://github.com/Spine-project/Spine-Model>`_
+   to the julia project specified above. Follow the instructions until completion.
+
+
+Creating a Tool template for Spine Model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+TODO
