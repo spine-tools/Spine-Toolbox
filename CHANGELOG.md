@@ -28,6 +28,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Feature to Export project to GraphML format. Each graph in Design View is written to its own file. To do this, just
   select *Export project to GraphML* from the Project Item list context-menu or from *File -> 
   Export project to GraphML*.
+- New project item: Data Interface
 
 ### Changed
 - Selecting the Julia environment in Settings now requires picking the Julia interpreter **file**
