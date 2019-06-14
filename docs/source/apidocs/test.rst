@@ -4,10 +4,34 @@ test package
 Submodules
 ----------
 
+test.mock\_helpers module
+-------------------------
+
+.. automodule:: test.mock_helpers
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+test.test\_ConnectionModel module
+---------------------------------
+
+.. automodule:: test.test_ConnectionModel
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 test.test\_FilterCheckboxList module
 ------------------------------------
 
 .. automodule:: test.test_FilterCheckboxList
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+test.test\_MinimalTableModel module
+-----------------------------------
+
+.. automodule:: test.test_MinimalTableModel
     :members:
     :undoc-members:
     :show-inheritance:
@@ -28,10 +52,26 @@ test.test\_addItemsDialog module
     :undoc-members:
     :show-inheritance:
 
+test.test\_custom\_qtextbrowser module
+--------------------------------------
+
+.. automodule:: test.test_custom_qtextbrowser
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 test.test\_dataStore module
 ---------------------------
 
 .. automodule:: test.test_dataStore
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+test.test\_directedGraphHandler module
+--------------------------------------
+
+.. automodule:: test.test_directedGraphHandler
     :members:
     :undoc-members:
     :show-inheritance:

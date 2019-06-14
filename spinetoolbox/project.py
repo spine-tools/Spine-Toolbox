@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -19,6 +19,7 @@ Spine Toolbox project class.
 import os
 import logging
 import json
+from PySide2.QtCore import Signal, Slot
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
 from helpers import project_dir, create_dir, copy_dir
@@ -26,8 +27,10 @@ from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
+from data_interface import DataInterface
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
+from executioner import DirectedGraphHandler, ExecutionInstance
 
 
 class SpineToolboxProject(MetaObject):
@@ -40,11 +43,19 @@ class SpineToolboxProject(MetaObject):
         work_dir (str): Project work directory
         ext (str): Project save file extension(.proj)
     """
+
     def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
+        self.dag_handler = DirectedGraphHandler(self._toolbox)
+        self._ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
+        self.execution_instance = None
+        self._graph_index = 0
+        self._n_graphs = 0
+        self._executed_graph_index = 0
+        self._invalid_graphs = list()
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
@@ -57,14 +68,16 @@ class SpineToolboxProject(MetaObject):
         try:
             create_dir(self.project_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating project directory {0} failed."
-                                         " Check permissions.".format(self.project_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating project directory {0} failed." " Check permissions.".format(self.project_dir)
+            )
         # Make work directory
         try:
             create_dir(self.work_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating work directory {0} failed."
-                                         " Check permissions.".format(self.work_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating work directory {0} failed." " Check permissions.".format(self.work_dir)
+            )
 
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
@@ -77,14 +90,6 @@ class SpineToolboxProject(MetaObject):
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         # Update file name and path
         self.change_filename(self.short_name + ".proj")
-
-    def set_description(self, desc):
-        """Change project description. Calls superclass method.
-
-        Args:
-            desc (str): Project description
-        """
-        super().set_description(desc)
 
     def change_filename(self, new_filename):
         """Change the save filename associated with this project.
@@ -179,7 +184,6 @@ class SpineToolboxProject(MetaObject):
         project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
         project_dict["scene_h"] = self._toolbox.ui.graphicsView.scene().sceneRect().height()
         item_dict = dict()  # Dictionary for storing project items
-        n = 0
         # Traverse all items in project model by category
         category_names = [category_item.name for category_item in self._toolbox.project_item_model.root().children()]
         for category in category_names:
@@ -197,7 +201,7 @@ class SpineToolboxProject(MetaObject):
                 item_dict[category][name]["y"] = y
                 # Save item type specific things
                 if item.item_type == "Data Store":
-                    item_dict[category][name]["reference"] = item.current_reference()
+                    item_dict[category][name]["url"] = item.url()
                 elif item.item_type == "Data Connection":
                     item_dict[category][name]["references"] = item.file_references()
                 elif item.item_type == "Tool":
@@ -208,8 +212,11 @@ class SpineToolboxProject(MetaObject):
                     item_dict[category][name]["execute_in_work"] = item.execute_in_work
                 elif item.item_type == "View":
                     pass
+                elif item.item_type == "Data Interface":
+                    # TODO: Save Data Interface mapping script path here
+                    pass
                 else:
-                    logging.error("Unrecognized item type: {0}".format(item.item_type))
+                    logging.error("Unrecognized item type: %s", item.item_type)
         # Save project to file
         saved_dict['project'] = project_dict
         saved_dict['objects'] = item_dict
@@ -226,28 +233,31 @@ class SpineToolboxProject(MetaObject):
         Returns:
             Boolean value depending on operation success.
         """
-        data_stores = item_dict['Data Stores']
-        data_connections = item_dict['Data Connections']
-        tools = item_dict['Tools']
-        views = item_dict['Views']
-        n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + len(views.keys())
+        data_stores = item_dict["Data Stores"]
+        data_connections = item_dict["Data Connections"]
+        tools = item_dict["Tools"]
+        views = item_dict["Views"]
+        try:
+            data_interfaces = item_dict["Data Interfaces"]
+        except KeyError:
+            data_interfaces = dict()
+        n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + \
+            len(views.keys()) + len(data_interfaces.keys())
         self._toolbox.msg.emit("Loading project items...")
         if n == 0:
             self._toolbox.msg_warning.emit("Project has no items")
         # Recreate Data Stores
         for name in data_stores.keys():
-            short_name = data_stores[name]['short name']
             desc = data_stores[name]['description']
             try:
-                ref = data_stores[name]["reference"]
+                url = data_stores[name]["url"]
             except KeyError:
-                # Keep compatibility with previous version where a list of references was stored
-                try:
-                    ref = data_stores[name]["references"][0]
-                except KeyError:
-                    ref = None
-                except IndexError:
-                    ref = None
+                # Keep compatibility with previous version
+                reference = data_stores[name]["reference"]
+                if isinstance(reference, dict) and "url" in reference:
+                    url = reference["url"]
+                else:
+                    url = None
             try:
                 x = data_stores[name]["x"]
                 y = data_stores[name]["y"]
@@ -255,10 +265,9 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, ref))
-            self.add_data_store(name, desc, ref, x, y, verbosity=False)
+            self.add_data_store(name, desc, url, x, y, verbosity=False)
         # Recreate Data Connections
         for name in data_connections.keys():
-            short_name = data_connections[name]['short name']
             desc = data_connections[name]['description']
             try:
                 refs = data_connections[name]["references"]
@@ -274,16 +283,17 @@ class SpineToolboxProject(MetaObject):
             self.add_data_connection(name, desc, refs, x, y, verbosity=False)
         # Recreate Tools
         for name in tools.keys():
-            short_name = tools[name]['short name']
             desc = tools[name]['description']
             tool_name = tools[name]['tool']
             # Find tool template from model
             tool_template = self._toolbox.tool_template_model.find_tool_template(tool_name)
             # Clarifications for user
             if not tool_name == "" and not tool_template:
-                self._toolbox.msg_error.emit("Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                                             "it was not found. Add it to Tool templates and reopen "
-                                             "project.".format(name, tool_name))
+                self._toolbox.msg_error.emit(
+                    "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
+                    "it was not found. Add it to Tool templates and reopen "
+                    "project.".format(name, tool_name)
+                )
             try:
                 x = tools[name]["x"]
                 y = tools[name]["y"]
@@ -297,7 +307,6 @@ class SpineToolboxProject(MetaObject):
             self.add_tool(name, desc, tool_template, execute_in_work, x, y, verbosity=False)
         # Recreate Views
         for name in views.keys():
-            short_name = views[name]['short name']
             desc = views[name]['description']
             try:
                 x = views[name]["x"]
@@ -307,6 +316,17 @@ class SpineToolboxProject(MetaObject):
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
             self.add_view(name, desc, x, y, verbosity=False)
+        # Recreate Data Interfaces
+        for name in data_interfaces.keys():
+            desc = data_interfaces[name]["description"]
+            try:
+                x = data_interfaces[name]["x"]
+                y = data_interfaces[name]["y"]
+            except KeyError:
+                x = 0
+                y = 0
+            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
+            self.add_data_interface(name, desc, x, y, verbosity=False)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -350,8 +370,9 @@ class SpineToolboxProject(MetaObject):
         try:
             _tooltype = definition["tooltype"].lower()
         except KeyError:
-            self._toolbox.msg_error.emit("No tool type defined in tool definition file. Supported types are "
-                                         "'gams', 'julia' and 'executable'")
+            self._toolbox.msg_error.emit(
+                "No tool type defined in tool definition file. Supported types are " "'gams', 'julia' and 'executable'"
+            )
             return None
         if _tooltype == "julia":
             return JuliaTool.load(self._toolbox, path, definition)
@@ -365,24 +386,26 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
             return None
 
-    def add_data_store(self, name, description, reference, x=0, y=0, set_selected=False, verbosity=True):
+    def add_data_store(self, name, description, url, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Store to project item model.
 
         Args:
             name (str): Name
             description (str): Description of item
-            reference (dict): Information on referenced database
+            url (dict): Url information
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
         category = "Data Stores"
-        data_store = DataStore(self._toolbox, name, description, reference, x, y)
+        data_store = DataStore(self._toolbox, name, description, url, x, y)
         ds_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(data_store, ds_category)
         # Append connection model
         self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
         if verbosity:
             self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
         if set_selected:
@@ -406,6 +429,8 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(data_connection, dc_category)
         # Append connection model
         self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
         if verbosity:
             self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
         if set_selected:
@@ -430,6 +455,8 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(tool, tool_category)
         # Append connection model
         self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
         if verbosity:
             self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
         if set_selected:
@@ -452,15 +479,45 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.project_item_model.insert_item(view, view_category)
         # Append connection model
         self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
         if verbosity:
             self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
         if set_selected:
             self.set_item_selected(view)
 
+    def add_data_interface(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
+        """Adds a Data Interface to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
+        """
+        category = "Data Interfaces"
+        data_interface = DataInterface(self._toolbox, name, description, x, y)
+        di_category = self._toolbox.project_item_model.find_category(category)
+        self._toolbox.project_item_model.insert_item(data_interface, di_category)
+        # Append connection model
+        self.append_connection_model(name, category)
+        # Append new node to networkx graph
+        self.add_to_dag(name)
+        if verbosity:
+            self._toolbox.msg.emit("Data Interface <b>{0}</b> added to project.".format(name))
+        if set_selected:
+            self.set_item_selected(data_interface)
+
     def append_connection_model(self, item_name, category):
         """Adds new item to connection model to keep project and connection model synchronized."""
         row_in_con_model = self._toolbox.project_item_model.new_item_index(category)
         self._toolbox.connection_model.append_item(item_name, row_in_con_model)
+
+    def add_to_dag(self, item_name):
+        """Add new directed graph object."""
+        self.dag_handler.add_dag_node(item_name)
 
     def set_item_selected(self, item):
         """Sets item selected and shows its info screen.
@@ -470,3 +527,182 @@ class SpineToolboxProject(MetaObject):
         """
         ind = self._toolbox.project_item_model.find_item(item.name)
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
+
+    def execute_selected(self):
+        """Starts executing selected directed acyclic graph. Selected graph is
+        determined by the selected project item(s). Aborts, if items from multiple
+        graphs are selected."""
+        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+            self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
+        if len(self.dag_handler.dags()) == 0:
+            self._toolbox.msg.emit_warning("Project has no items to execute")
+            return
+        # Get selected item
+        selected_indexes = self._toolbox.ui.treeView_project.selectedIndexes()
+        if len(selected_indexes) == 0:
+            self._toolbox.msg_warning.emit("Please select a project item and try again")
+            return
+        elif len(selected_indexes) == 1:
+            selected_item = self._toolbox.project_item_model.project_item(selected_indexes[0])
+        else:
+            # More than one item selected. Make sure they part of the same graph or abort
+            selected_item = self._toolbox.project_item_model.project_item(selected_indexes.pop())
+            selected_item_graph = self.dag_handler.dag_with_node(selected_item.name)
+            for ind in selected_indexes:
+                # Check that other selected nodes are in the same graph
+                i = self._toolbox.project_item_model.project_item(ind)
+                if not self.dag_handler.dag_with_node(i.name) == selected_item_graph:
+                    self._toolbox.msg_warning.emit("Please select items from only one graph")
+                    return
+        self._executed_graph_index = 0  # Needed in execute_selected() just for printing the number
+        self._n_graphs = 1
+        # Calculate bfs-ordered list of project items to execute
+        dag = self.dag_handler.dag_with_node(selected_item.name)
+        if not dag:
+            self._toolbox.msg_error.emit(
+                "[BUG] Could not find a graph containing {0}. "
+                "<b>Please reopen the project.</b>".format(selected_item.name)
+            )
+            return
+        ordered_nodes = self.dag_handler.calc_exec_order(dag)
+        if not ordered_nodes:
+            self._toolbox.msg.emit("")
+            self._toolbox.msg_warning.emit(
+                "Selected graph is not a directed acyclic graph. "
+                "Please edit connections in Design View and try again."
+            )
+            return
+        # Make execution instance, connect signals and start execution
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("--------------------------------------------------")
+        self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(ordered_nodes)))
+        self._toolbox.msg.emit("--------------------------------------------------")
+        self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
+        self.execution_instance.start_execution()
+        return
+
+    def execute_project(self):
+        """Determines the number of directed acyclic graphs to execute in the project.
+        Determines the execution order of project items in each graph. Creates an
+        instance for executing the first graph and starts executing it.
+        """
+        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
+            self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
+        )
+        if len(self.dag_handler.dags()) == 0:
+            self._toolbox.msg.emit_warning("Project has no items to execute")
+            return
+        self._n_graphs = len(self.dag_handler.dags())
+        i = 0  # Key for self._ordered_dags dictionary TODO: Switch self._ordered_dags to a list?
+        for g in self.dag_handler.dags():
+            bfs_ordered_nodes = self.dag_handler.calc_exec_order(g)
+            if not bfs_ordered_nodes:
+                self._invalid_graphs.append(g)
+                continue
+            self._ordered_dags[i] = bfs_ordered_nodes
+            i += 1
+        if len(self._ordered_dags.keys()) < 1:
+            self._toolbox.msg_error.emit(
+                "There are no valid Directed Acyclic " "Graphs to execute. Please modify connections."
+            )
+            self._invalid_graphs.clear()
+            return
+        self._executed_graph_index = 0
+        # Get first graph, connect signals and start executing it
+        execution_list = self._ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
+        self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("---------------------------------------")
+        self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
+        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
+        self._toolbox.msg.emit("---------------------------------------")
+        self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
+        self.execution_instance.start_execution()
+
+    @Slot(int, name="graph_execution_finished")
+    def graph_execution_finished(self, state):
+        """Releases resources from previous execution and prepares the next
+        graph for execution if there are still graphs left. Otherwise,
+        finishes the run.
+
+        Args:
+            state (int): 0: Ended normally. -1: User pressed Stop button
+        """
+        self.execution_instance.graph_execution_finished_signal.disconnect()
+        self.execution_instance.deleteLater()
+        self.execution_instance = None
+        if state == -1:
+            # Execution failed due to some error in executing the project item. E.g. Tool is missing an input file
+            pass
+        elif state == -2:
+            self._toolbox.msg_error.emit("Execution stopped")
+            self._ordered_dags.clear()
+            self._invalid_graphs.clear()
+            return
+        self._toolbox.msg.emit("<b>DAG {0}/{1} finished</b>".format(self._executed_graph_index + 1, self._n_graphs))
+        self._executed_graph_index += 1
+        # Pop next graph
+        execution_list = self._ordered_dags.pop(self._executed_graph_index, None)  # Pop next graph
+        if not execution_list:
+            # All valid DAGs have been executed. Check if there are invalid DAGs and report these to user
+            self.handle_invalid_graphs()
+            # No more graphs to execute
+            self._toolbox.msg_success.emit("Execution complete")
+            return
+        # Execute next graph
+        self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("---------------------------------------")
+        self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
+        self._toolbox.msg.emit("---------------------------------------")
+        self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
+        self.execution_instance.start_execution()
+
+    def stop(self):
+        """Stops execution of the current DAG. Slot for the main window Stop tool button
+        in the toolbar."""
+        if not self.execution_instance:
+            self._toolbox.msg.emit("No execution in progress")
+            return
+        self._toolbox.msg.emit("Stopping...")
+        self.execution_instance.stop()
+
+    def handle_invalid_graphs(self):
+        """Prints messages to Event Log if there are invalid DAGs (e.g. contain self-loops) in the project."""
+        if len(self._invalid_graphs) > 0:
+            for g in self._invalid_graphs:
+                # Some graphs in the project are not DAGs. Report to user that these will not be executed.
+                self._toolbox.msg.emit("")
+                self._toolbox.msg.emit("---------------------------------------")
+                self._toolbox.msg_warning.emit(
+                    "<b>Graph {0}/{1} is not a Directed Acyclic Graph</b>".format(
+                        self._executed_graph_index + 1, self._n_graphs
+                    )
+                )
+                self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(g.nodes())))
+                self._toolbox.msg.emit("Please edit connections in Design View to execute it.")
+                self._toolbox.msg.emit("---------------------------------------")
+                self._executed_graph_index += 1
+        self._invalid_graphs.clear()
+        return
+
+    def export_graphs(self):
+        """Export all valid directed acyclic graphs in project to GraphML files."""
+        if len(self.dag_handler.dags()) == 0:
+            self._toolbox.msg.emit_warning("Project has no graphs to export")
+            return
+        i = 0
+        for g in self.dag_handler.dags():
+            fn = str(i) + ".graphml"
+            path = os.path.join(self.project_dir, fn)
+            if not self.dag_handler.export_to_graphml(g, path):
+                self._toolbox.msg_warning.emit("Exporting graph nr. {0} failed. Not a directed acyclic graph".format(i))
+            else:
+                self._toolbox.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
+            i += 1
+        return

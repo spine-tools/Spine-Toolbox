@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -31,6 +31,7 @@ class ProjectItem(MetaObject):
         is_root (bool): True if new item should be a root item
         is_category (bool): True if new item should be a category item
     """
+
     def __init__(self, name, description, is_root=False, is_category=False):
         """Class constructor."""
         super().__init__(name, description)
@@ -63,7 +64,7 @@ class ProjectItem(MetaObject):
         try:
             item = self._children[row]
         except IndexError:
-            logging.error("[{0}] has no child on row {1}".format(self.name, row))
+            logging.error("[%s] has no child on row %s", self.name, row)
             return None
         return item
 
@@ -97,7 +98,7 @@ class ProjectItem(MetaObject):
             self._children.append(child_item)
             child_item._parent = self
         else:
-            logging.error("Trying to add '{0}' as the child of '{1}'".format(child_item.name, self.name))
+            logging.error("Trying to add '%s' as the child of '%s'", child_item.name, self.name)
             return False
         return True
 
@@ -129,10 +130,10 @@ class ProjectItem(MetaObject):
                 ret = signal.disconnect(handler)
             except RuntimeError:
                 self._toolbox.msg_error.emit("RuntimeError in disconnecting <b>{0}</b> signals".format(self.name))
-                logging.error("RuntimeError in disconnecting signal:{0} from handler:{1}".format(signal, handler))
+                logging.error("RuntimeError in disconnecting signal %s from handler %s", signal, handler)
                 return False
             if not ret:
                 self._toolbox.msg_error.emit("Disconnecting signal in {0} failed".format(self.name))
-                logging.error("Disconnecting signal {0} from handler {1} failed".format(signal, handler))
+                logging.error("Disconnecting signal %s from handler %s failed", signal, handler)
                 return False
         return True

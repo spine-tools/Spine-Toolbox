@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -393,7 +393,7 @@ class Ui_MainWindow(object):
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsviews import GraphQGraphicsView
+from widgets.custom_qlistview import DragListView
+from widgets.custom_qtableview import AutoFilterCopyPasteTableView
 import resources_icons_rc

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -16,15 +16,24 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:   4.4.2018
 """
 
-import logging
 import os
 from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
-from PySide2.QtWidgets import QGraphicsItem, QGraphicsPathItem, QGraphicsTextItem, \
-    QGraphicsEllipseItem, QGraphicsSimpleTextItem, QGraphicsRectItem, \
-    QGraphicsItemAnimation, QGraphicsPixmapItem, QGraphicsLineItem, QStyle, \
-    QGraphicsColorizeEffect, QGraphicsDropShadowEffect
-from PySide2.QtGui import QColor, QPen, QBrush, QPixmap, QPainterPath, \
-    QFont, QTextCursor, QTransform
+from PySide2.QtWidgets import (
+    QGraphicsItem,
+    QGraphicsPathItem,
+    QGraphicsTextItem,
+    QGraphicsEllipseItem,
+    QGraphicsSimpleTextItem,
+    QGraphicsRectItem,
+    QGraphicsItemAnimation,
+    QGraphicsPixmapItem,
+    QGraphicsLineItem,
+    QStyle,
+    QGraphicsColorizeEffect,
+    QGraphicsDropShadowEffect,
+    QApplication,
+)
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QFontMetrics
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from math import atan2, degrees, sin, cos, pi
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
@@ -38,6 +47,7 @@ class ConnectorButton(QGraphicsRectItem):
         toolbox (ToolBoxUI): QMainWindow instance
         position (str): Either "top", "left", "bottom", or "right"
     """
+
     def __init__(self, parent, toolbox, position="left"):
         """Class constructor."""
         super().__init__()
@@ -54,16 +64,20 @@ class ConnectorButton(QGraphicsRectItem):
         rect = QRectF(0, 0, extent, extent)
         parent_rect = parent.rect()
         if position == "top":
-            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top()+extent/2))
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top() + extent / 2))
         elif position == "left":
-            rect.moveCenter(QPointF(parent_rect.left()+extent/2+1, parent_rect.center().y()))
+            rect.moveCenter(QPointF(parent_rect.left() + extent / 2 + 1, parent_rect.center().y()))
         elif position == "bottom":
-            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom()-extent/2-1))
+            rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.bottom() - extent / 2 - 1))
         elif position == "right":
-            rect.moveCenter(QPointF(parent_rect.right()-extent/2-1, parent_rect.center().y()))
+            rect.moveCenter(QPointF(parent_rect.right() - extent / 2 - 1, parent_rect.center().y()))
         self.setRect(rect)
         self.setAcceptHoverEvents(True)
         self.setCursor(Qt.PointingHandCursor)
+
+    def parent_name(self):
+        """Returns project item name owning this connector button."""
+        return self._parent.name()
 
     def mousePressEvent(self, event):
         """Connector button mouse press event. Starts drawing a link.
@@ -77,7 +91,6 @@ class ConnectorButton(QGraphicsRectItem):
             self._parent.show_item_info()
             # Start drawing a link
             self._toolbox.ui.graphicsView.draw_links(self)
-            # self._toolbox.ui.graphicsView.draw_links(rect, self._parent.name())
 
     def mouseDoubleClickEvent(self, event):
         """Connector button mouse double click event. Makes sure the LinkDrawer is hidden.
@@ -115,6 +128,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         h (int): Icon height
         name (str): Item name
     """
+
     def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
         super().__init__()
@@ -126,12 +140,16 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.name_font_size = 10  # point size
         # Make item name graphics item.
         self.name_item = QGraphicsSimpleTextItem(name)
+        shadow_effect = QGraphicsDropShadowEffect()
+        shadow_effect.setOffset(1)
+        shadow_effect.setEnabled(False)
+        self.setGraphicsEffect(shadow_effect)
         self.set_name_attributes()  # Set font, size, position, etc.
         # Make connector buttons
         self.connectors = dict(
             bottom=ConnectorButton(self, toolbox, position="bottom"),
             left=ConnectorButton(self, toolbox, position="left"),
-            right=ConnectorButton(self, toolbox, position="right")
+            right=ConnectorButton(self, toolbox, position="right"),
         )
 
     def setup(self, pen, brush, svg, svg_color):
@@ -158,9 +176,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item.setElementId("")  # guess empty string loads the whole file
         dim_max = max(size.width(), size.height())
         # logging.debug("p_max:{0}".format(p_max))
-        rect_w = self.rect().width() # Parent rect width
-        margin = 24
-        self.svg_item.setScale((rect_w - margin)/dim_max)
+        rect_w = self.rect().width()  # Parent rect width
+        margin = 32
+        self.svg_item.setScale((rect_w - margin) / dim_max)
         x_offset = (rect_w - self.svg_item.sceneBoundingRect().width()) / 2
         y_offset = (rect_w - self.svg_item.sceneBoundingRect().height()) / 2
         self.svg_item.setPos(self.rect().x() + x_offset, self.rect().y() + y_offset)
@@ -193,8 +211,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         name_width = self.name_item.boundingRect().width()
         name_height = self.name_item.boundingRect().height()
         self.name_item.setPos(
-            self.rect().x() + self.rect().width()/2 - name_width/2,
-            self.rect().y() - name_height - 4)
+            self.rect().x() + self.rect().width() / 2 - name_width / 2, self.rect().y() - name_height - 4
+        )
 
     def conn_button(self, position="left"):
         """Returns items connector button (QWidget)."""
@@ -205,28 +223,27 @@ class ProjectItemIcon(QGraphicsRectItem):
         return connector
 
     def hoverEnterEvent(self, event):
-        """Set a darker shade to icon when mouse enters icon boundaries.
+        """Sets a drop shadow effect to icon when mouse enters its boundaries.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        shadow_effect = QGraphicsDropShadowEffect()
-        shadow_effect.setOffset(1)
-        self.setGraphicsEffect(shadow_effect)
+        self.prepareGeometryChange()
+        self.graphicsEffect().setEnabled(True)
         event.accept()
 
     def hoverLeaveEvent(self, event):
-        """Restore original brush when mouse leaves icon boundaries.
+        """Disables the drop shadow when mouse leaves icon boundaries.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        self.setGraphicsEffect(None)
+        self.prepareGeometryChange()
+        self.graphicsEffect().setEnabled(False)
         event.accept()
 
     def mousePressEvent(self, event):
-        """Update UI to show details of this item. Prevents dragging
-        multiple items with a mouse (also with the Ctrl-button pressed).
+        """Update UI to show details of this item.
 
         Args:
             event (QGraphicsSceneMouseEvent): Event
@@ -273,7 +290,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         if event.key() == Qt.Key_Delete and self.isSelected():
             ind = self._toolbox.project_item_model.find_item(self.name())
             delete_int = int(self._toolbox.qsettings().value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = False if delete_int == 0 else True
+            delete_bool = delete_int != 0
             self._toolbox.remove_item(ind, delete_item=delete_bool)
             event.accept()
         elif event.key() == Qt.Key_R and self.isSelected():
@@ -295,6 +312,22 @@ class ProjectItemIcon(QGraphicsRectItem):
         else:
             super().keyPressEvent(event)
 
+    def itemChange(self, change, value):
+        """
+        Destroys the drop shadow effect when the items is removed from a scene.
+
+        Args:
+            change (GraphicsItemChange): a flag signalling the type of the change
+            value: a value related to the change
+
+        Returns:
+             Whatever super() does with the value parameter
+        """
+        if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
+            self.prepareGeometryChange()
+            self.setGraphicsEffect(None)
+        return super().itemChange(change, value)
+
     def show_item_info(self):
         """Update GUI to show the details of the selected item."""
         ind = self._toolbox.project_item_model.find_item(self.name())
@@ -312,6 +345,7 @@ class DataConnectionIcon(ProjectItemIcon):
         h (int): Height of master icon
         name (str): Item name
     """
+
     def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
         super().__init__(toolbox, x, y, w, h, name)
@@ -392,6 +426,7 @@ class ToolIcon(ProjectItemIcon):
         h (int): Height of master icon
         name (str): Item name
     """
+
     def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
         super().__init__(toolbox, x, y, w, h, name)
@@ -417,7 +452,7 @@ class ToolIcon(ProjectItemIcon):
         self.tool_animation.setItem(self.svg_item)
         self.tool_animation.setTimeLine(self.timer)
         # self.timer.frameChanged.connect(self.test)
-        self.delta = .25 * self.svg_item.sceneBoundingRect().height()
+        self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
 
     def value_for_time(self, msecs):
         rem = (msecs % 1000) / 1000
@@ -427,15 +462,13 @@ class ToolIcon(ProjectItemIcon):
         """Start the animation that plays when the Tool associated to this GraphicsItem is running.
         """
         self.svg_item.moveBy(0, -self.delta)
-        offset = .75 * self.svg_item.sceneBoundingRect().height()
+        offset = 0.75 * self.svg_item.sceneBoundingRect().height()
         for angle in range(1, 45):
             step = angle / 45.0
             self.tool_animation.setTranslationAt(step, 0, offset)
             self.tool_animation.setRotationAt(step, angle)
             self.tool_animation.setTranslationAt(step, 0, -offset)
-            self.tool_animation.setPosAt(
-                step,
-                QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
+            self.tool_animation.setPosAt(step, QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
         self.timer.start()
 
     def stop_animation(self):
@@ -458,6 +491,7 @@ class DataStoreIcon(ProjectItemIcon):
         h (int): Height of master icon
         name (str): Item name
     """
+
     def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
         super().__init__(toolbox, x, y, w, h, name)
@@ -486,6 +520,7 @@ class ViewIcon(ProjectItemIcon):
         h (int): Height of background rectangle
         name (str): Item name
     """
+
     def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
         super().__init__(toolbox, x, y, w, h, name)
@@ -503,6 +538,37 @@ class ViewIcon(ProjectItemIcon):
         self._toolbox.ui.graphicsView.scene().addItem(self)
 
 
+class DataInterfaceIcon(ProjectItemIcon):
+    """Data Interface item that is drawn into QGraphicsScene. NOTE: Make sure
+    to set self._master as the parent of all drawn items. This groups the
+    individual QGraphicsItems together.
+
+    Attributes:
+        toolbox (ToolBoxUI): QMainWindow instance
+        x (int): Icon x coordinate
+        y (int): Icon y coordinate
+        w (int): Width of master icon
+        h (int): Height of master icon
+        name (str): Item name
+    """
+
+    def __init__(self, toolbox, x, y, w, h, name):
+        """Class constructor."""
+        super().__init__(toolbox, x, y, w, h, name)
+        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
+        self.brush = QBrush(QColor("#ffcccc"))  # Brush for filling the bg rect
+        # Setup icons and attributes
+        self.setup(self.pen, self.brush, ":/icons/project_item_icons/map-solid.svg", QColor("#990000"))
+        self.setAcceptDrops(False)
+        # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
+        self.name_item.setParentItem(self)
+        for conn in self.connectors.values():
+            conn.setParentItem(self)
+        self.svg_item.setParentItem(self)
+        # Add items to scene
+        self._toolbox.ui.graphicsView.scene().addItem(self)
+
+
 class Link(QGraphicsPathItem):
     """An item that represents a connection between project items.
 
@@ -511,6 +577,7 @@ class Link(QGraphicsPathItem):
         src_connector (ConnectorButton): Source connector button
         dst_connector (ConnectorButton): Destination connector button
     """
+
     def __init__(self, toolbox, src_connector, dst_connector):
         """Initializes item."""
         super().__init__()
@@ -521,34 +588,36 @@ class Link(QGraphicsPathItem):
         self.dst_icon = dst_connector._parent
         self.setZValue(1)
         self.conn_width = 1.25 * self.src_connector.rect().width()
-        self.arrow_angle = pi/4  # In rads
+        self.arrow_angle = pi / 4  # In rads
         self.ellipse_angle = 30  # In degrees
         self.feedback_size = 12
         # Path parameters
         self.ellipse_rect = QRectF(0, 0, self.conn_width, self.conn_width)
-        self.line_width = self.conn_width/2
+        self.line_width = self.conn_width / 2
         self.arrow_length = self.line_width
         self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
         arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
-        self.t1 = (arrow_base - self.line_width) / arrow_base/2
+        self.t1 = (arrow_base - self.line_width) / arrow_base / 2
         self.t2 = 1.0 - self.t1
         # Inner rect of feedback link
-        self.inner_rect = QRectF(0, 0, 7.5*self.feedback_size, 6*self.feedback_size - self.line_width)
-        inner_shift_x = self.arrow_length/2
+        self.inner_rect = QRectF(0, 0, 7.5 * self.feedback_size, 6 * self.feedback_size - self.line_width)
+        inner_shift_x = self.arrow_length / 2
         angle = atan2(self.conn_width, self.inner_rect.height())
-        inner_shift_y = (self.inner_rect.height()*cos(angle) + self.line_width)/2
+        inner_shift_y = (self.inner_rect.height() * cos(angle) + self.line_width) / 2
         self.inner_shift = QPointF(inner_shift_x, inner_shift_y)
-        self.inner_angle = degrees(atan2(inner_shift_x + self.conn_width/2, inner_shift_y - self.line_width/2))
+        self.inner_angle = degrees(atan2(inner_shift_x + self.conn_width / 2, inner_shift_y - self.line_width / 2))
         # Outer rect of feedback link
-        self.outer_rect = QRectF(0, 0, 8*self.feedback_size, 6*self.feedback_size + self.line_width)
-        outer_shift_x = self.arrow_length/2
+        self.outer_rect = QRectF(0, 0, 8 * self.feedback_size, 6 * self.feedback_size + self.line_width)
+        outer_shift_x = self.arrow_length / 2
         angle = atan2(self.conn_width, self.outer_rect.height())
-        outer_shift_y = (self.outer_rect.height()*cos(angle) - self.line_width)/2
+        outer_shift_y = (self.outer_rect.height() * cos(angle) - self.line_width) / 2
         self.outer_shift = QPointF(outer_shift_x, outer_shift_y)
-        self.outer_angle = degrees(atan2(outer_shift_x + self.conn_width/2, outer_shift_y + self.line_width/2))
+        self.outer_angle = degrees(atan2(outer_shift_x + self.conn_width / 2, outer_shift_y + self.line_width / 2))
         # Tooltip
-        self.setToolTip("<html><p>Connection from <b>{0}</b>'s output "
-                        "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name()))
+        self.setToolTip(
+            "<html><p>Connection from <b>{0}</b>'s output "
+            "to <b>{1}</b>'s input</html>".format(self.src_icon.name(), self.dst_icon.name())
+        )
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
         self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
@@ -632,7 +701,7 @@ class Link(QGraphicsPathItem):
             angle = atan2(-line.dy(), line.dx())
         # Path coordinates. We just need to draw the arrow and the ellipse, lines are drawn automatically
         d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
-        d2 = QPointF(sin(angle + (pi-self.arrow_angle)), cos(angle + (pi-self.arrow_angle)))
+        d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
         arrow_p1 = arrow_p0 - d1 * self.arrow_diag
         arrow_p2 = arrow_p0 - d2 * self.arrow_diag
         line = QLineF(arrow_p1, arrow_p2)
@@ -648,13 +717,13 @@ class Link(QGraphicsPathItem):
         # Draw inner part of feedback link
         if self.src_connector == self.dst_connector:
             self.inner_rect.moveCenter(dst_center - self.inner_shift)
-            path.arcTo(self.inner_rect, 270 - self.inner_angle, 2*self.inner_angle - 360)
+            path.arcTo(self.inner_rect, 270 - self.inner_angle, 2 * self.inner_angle - 360)
         self.ellipse_rect.moveCenter(src_rect.center())
-        path.arcTo(self.ellipse_rect, degrees(angle) + self.ellipse_angle, 360 - 2*self.ellipse_angle)
+        path.arcTo(self.ellipse_rect, degrees(angle) + self.ellipse_angle, 360 - 2 * self.ellipse_angle)
         # Draw outer part of feedback link
         if self.src_connector == self.dst_connector:
             self.outer_rect.moveCenter(dst_center - self.outer_shift)
-            path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2*self.outer_angle)
+            path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2 * self.outer_angle)
         path.closeSubpath()
         self.setPath(path)
 
@@ -680,13 +749,14 @@ class Link(QGraphicsPathItem):
 
 class LinkDrawer(QGraphicsPathItem):
     """An item that allows one to draw links between slot buttons in QGraphicsView."""
+
     def __init__(self):
         """Initializes instance."""
         super().__init__()
         self.src = None  # source point
         self.dst = None  # destination point
         self.drawing = False
-        self.arrow_angle = pi/4
+        self.arrow_angle = pi / 4
         self.ellipse_angle = 30
         self.feedback_size = 12
         # Path parameters
@@ -719,28 +789,28 @@ class LinkDrawer(QGraphicsPathItem):
         # Path parameters
         conn_width = self.src_rect.width()
         self.ellipse_width = conn_width
-        self.line_width = self.ellipse_width/2
+        self.line_width = self.ellipse_width / 2
         self.arrow_length = self.line_width
         self.arrow_diag = self.arrow_length / sin(self.arrow_angle)
         self.ellipse_rect = QRectF(0, 0, self.ellipse_width, self.ellipse_width)
         self.ellipse_rect.moveCenter(self.src)
         arrow_base = 2 * self.arrow_diag * cos(self.arrow_angle)
-        self.t1 = (arrow_base - self.line_width) / arrow_base/2
+        self.t1 = (arrow_base - self.line_width) / arrow_base / 2
         self.t2 = 1.0 - self.t1
         # Inner rect of feedback link
-        self.inner_rect = QRectF(0, 0, 7.5*self.feedback_size, 6*self.feedback_size - self.line_width)
-        inner_shift_x = self.arrow_length/2
+        self.inner_rect = QRectF(0, 0, 7.5 * self.feedback_size, 6 * self.feedback_size - self.line_width)
+        inner_shift_x = self.arrow_length / 2
         angle = atan2(self.ellipse_width, self.inner_rect.height())
-        inner_shift_y = (self.inner_rect.height()*cos(angle) + self.line_width)/2
+        inner_shift_y = (self.inner_rect.height() * cos(angle) + self.line_width) / 2
         self.inner_shift = QPointF(inner_shift_x, inner_shift_y)
-        self.inner_angle = degrees(atan2(inner_shift_x + self.ellipse_width/2, inner_shift_y - self.line_width/2))
+        self.inner_angle = degrees(atan2(inner_shift_x + self.ellipse_width / 2, inner_shift_y - self.line_width / 2))
         # Outer rect of feedback link
-        self.outer_rect = QRectF(0, 0, 8*self.feedback_size, 6*self.feedback_size + self.line_width)
-        outer_shift_x = self.arrow_length/2
+        self.outer_rect = QRectF(0, 0, 8 * self.feedback_size, 6 * self.feedback_size + self.line_width)
+        outer_shift_x = self.arrow_length / 2
         angle = atan2(self.ellipse_width, self.outer_rect.height())
-        outer_shift_y = (self.outer_rect.height()*cos(angle) - self.line_width)/2
+        outer_shift_y = (self.outer_rect.height() * cos(angle) - self.line_width) / 2
         self.outer_shift = QPointF(outer_shift_x, outer_shift_y)
-        self.outer_angle = degrees(atan2(outer_shift_x + self.ellipse_width/2, outer_shift_y + self.line_width/2))
+        self.outer_angle = degrees(atan2(outer_shift_x + self.ellipse_width / 2, outer_shift_y + self.line_width / 2))
         self.update_geometry()
         self.show()
 
@@ -756,7 +826,7 @@ class LinkDrawer(QGraphicsPathItem):
             arrow_p0 = self.dst
         # Path coordinates
         d1 = QPointF(sin(angle + self.arrow_angle), cos(angle + self.arrow_angle))
-        d2 = QPointF(sin(angle + (pi-self.arrow_angle)), cos(angle + (pi-self.arrow_angle)))
+        d2 = QPointF(sin(angle + (pi - self.arrow_angle)), cos(angle + (pi - self.arrow_angle)))
         arrow_p1 = arrow_p0 - d1 * self.arrow_diag
         arrow_p2 = arrow_p0 - d2 * self.arrow_diag
         line = QLineF(arrow_p1, arrow_p2)
@@ -772,12 +842,12 @@ class LinkDrawer(QGraphicsPathItem):
         # Draw inner part of feedback link
         if self.src_rect.contains(self.dst):
             self.inner_rect.moveCenter(self.src - self.inner_shift)
-            path.arcTo(self.inner_rect, 270 - self.inner_angle, 2*self.inner_angle - 360)
-        path.arcTo(self.ellipse_rect, (180/pi)*angle + self.ellipse_angle, 360 - 2*self.ellipse_angle)
+            path.arcTo(self.inner_rect, 270 - self.inner_angle, 2 * self.inner_angle - 360)
+        path.arcTo(self.ellipse_rect, (180 / pi) * angle + self.ellipse_angle, 360 - 2 * self.ellipse_angle)
         # Draw outer part of feedback link
         if self.src_rect.contains(self.dst):
             self.outer_rect.moveCenter(self.src - self.outer_shift)
-            path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2*self.outer_angle)
+            path.arcTo(self.outer_rect, 270 + self.outer_angle, 360 - 2 * self.outer_angle)
         path.closeSubpath()
         self.setPath(path)
 
@@ -787,19 +857,29 @@ class ObjectItem(QGraphicsPixmapItem):
 
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
-        object_id (int): object id (for filtering parameters)
         object_name (str): object name
-        object_class_id (int): object class id (for filtering parameters)
-        object_class_name (str): object class name (for finding the pixmap)
+        object_class_id (int): object class id
+        object_class_name (str): object class name
         x (float): x-coordinate of central point
         y (float): y-coordinate of central point
         extent (int): preferred extent
+        object_id (int): object id (for filtering parameters)
         label_font (QFont): label font
         label_color (QColor): label bg color
-        label_position (str)
     """
-    def __init__(self, graph_view_form, object_id, object_name, object_class_id, object_class_name,
-                 x, y, extent, label_font=QFont(), label_color=Qt.transparent, label_position="under_icon"):
+
+    def __init__(
+        self,
+        graph_view_form,
+        object_name,
+        object_class_id,
+        object_class_name,
+        x,
+        y,
+        extent,
+        object_id=0,
+        label_color=Qt.transparent,
+    ):
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id = object_id
@@ -808,8 +888,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.object_class_name = object_class_name
         self._extent = extent
         self._label_color = label_color
-        self._label_position = label_position
-        self.label_item = ObjectLabelItem(self, object_name, extent, label_font, label_color)
+        self.label_item = ObjectLabelItem(self, object_name, extent, label_color)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
@@ -850,46 +929,12 @@ class ObjectItem(QGraphicsPixmapItem):
         if option.state & (QStyle.State_Selected):
             if self.label_item.hasFocus():
                 self.shade.hide()
-                self.label_item.set_bg_color(self._label_color)
             else:
                 self.shade.show()
-                self.label_item.set_bg_color(self._selected_color)
             option.state &= ~QStyle.State_Selected
         else:
             self.shade.hide()
-            self.label_item.set_bg_color(self._label_color)
         super().paint(painter, option, widget)
-
-    def setParentItem(self, parent):
-        """Set same parent for label item."""
-        super().setParentItem(parent)
-        self.label_item.setParentItem(parent)
-        self.place_label_item()
-
-    def itemChange(self, change, value):
-        """Add label item to same scene if added as top level item."""
-        if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
-            scene = value
-            value.addItem(self.label_item)
-            self.place_label_item()
-        return super().itemChange(change, value)
-
-    def place_label_item(self):
-        """Put label item in position and align its text."""
-        x = self.x() - self.label_item.boundingRect().width() / 2
-        y = self.y() + self.offset().y() + (self.boundingRect().height() - self.label_item.boundingRect().height()) / 2
-        alignment = Qt.AlignCenter
-        if self._label_position == "under_icon":
-            y += self._extent / 2 + self.label_item.boundingRect().height() / 2
-        elif self._label_position == "over_icon":
-            y -= self._extent / 2 + self.label_item.boundingRect().height() / 2
-        elif self._label_position == "beside_icon":
-            x += self._extent / 2 + self.label_item.boundingRect().width() / 2
-            alignment = Qt.AlignLeft
-        self.label_item.setPos(x, y)
-        option = self.label_item.document().defaultTextOption()
-        option.setAlignment(alignment)
-        self.label_item.document().setDefaultTextOption(option)
 
     def make_template(self):
         """Make this object par of a template for a relationship."""
@@ -905,7 +950,8 @@ class ObjectItem(QGraphicsPixmapItem):
         y = rect.center().y() - question_rect.height() / 2
         self.question_item.setPos(x, y)
         if self.template_id_dim:
-            self.setToolTip("""
+            self.setToolTip(
+                """
                 <html>
                 This item is part of a <i>template</i> for a relationship
                 and needs to be associated with an object.
@@ -914,13 +960,20 @@ class ObjectItem(QGraphicsPixmapItem):
                 <li>Give this item a name to create a new <b>{0}</b> object (select it and press F2).</li>
                 <li>Drag-and-drop this item onto an existing <b>{0}</b> object (or viceversa)</li>
                 </ul>
-                </html>""".format(self.object_class_name))
+                </html>""".format(
+                    self.object_class_name
+                )
+            )
         else:
-            self.setToolTip("""
+            self.setToolTip(
+                """
                 <html>
                 This item is a <i>template</i> for a <b>{0}</b>.
                 Please give it a name to create a new <b>{0}</b> object (select it and press F2).
-                </html>""".format(self.object_class_name))
+                </html>""".format(
+                    self.object_class_name
+                )
+            )
 
     def remove_template(self):
         """Make this arc no longer a template."""
@@ -931,6 +984,7 @@ class ObjectItem(QGraphicsPixmapItem):
     def edit_name(self):
         """Start editing object name."""
         self.setSelected(True)
+        self.label_item.set_full_text()
         self.label_item.setTextInteractionFlags(Qt.TextEditorInteraction)
         self.label_item.setFocus()
         cursor = QTextCursor(self.label_item._cursor)
@@ -952,8 +1006,9 @@ class ObjectItem(QGraphicsPixmapItem):
                     self.add_into_relationship()
                 self.remove_template()
             except (SpineDBAPIError, SpineIntegrityError) as e:
-                self.label_item.setPlainText(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
+            finally:
+                self.label_item.set_text(self.object_name)
         else:
             try:
                 kwargs = dict(id=self.object_id, name=name)
@@ -961,8 +1016,9 @@ class ObjectItem(QGraphicsPixmapItem):
                 self._graph_view_form.update_objects(object_)
                 self.object_name = name
             except (SpineDBAPIError, SpineIntegrityError) as e:
-                self.label_item.setPlainText(self.object_name)
                 self._graph_view_form.msg_error.emit(e.msg)
+            finally:
+                self.label_item.set_text(self.object_name)
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1068,7 +1124,6 @@ class ObjectItem(QGraphicsPixmapItem):
             arc_item.dst_item = other
         other.incoming_arc_items.extend(self.incoming_arc_items)
         other.outgoing_arc_items.extend(self.outgoing_arc_items)
-        self.scene().removeItem(self.label_item)
         self.scene().removeItem(self)
         return True
 
@@ -1085,25 +1140,10 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def move_related_items_by(self, pos_diff):
         """Move related items."""
-        self.label_item.moveBy(pos_diff.x(), pos_diff.y())
         for item in self.outgoing_arc_items:
             item.move_src_by(pos_diff)
         for item in self.incoming_arc_items:
             item.move_dst_by(pos_diff)
-
-    def hoverEnterEvent(self, event):
-        """Make related arcs know that this is hovered."""
-        for item in self.incoming_arc_items:
-            item.is_dst_hovered = True
-        for item in self.outgoing_arc_items:
-            item.is_src_hovered = True
-
-    def hoverLeaveEvent(self, event):
-        """Make related arcs know that this isn't hovered."""
-        for item in self.incoming_arc_items:
-            item.is_dst_hovered = False
-        for item in self.outgoing_arc_items:
-            item.is_src_hovered = False
 
     def contextMenuEvent(self, e):
         """Show context menu.
@@ -1119,7 +1159,6 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def set_all_visible(self, on):
         """Set visible status for this item and all related ones."""
-        self.label_item.setVisible(on)
         for item in self.incoming_arc_items + self.outgoing_arc_items:
             item.setVisible(on)
         self.setVisible(on)
@@ -1127,7 +1166,6 @@ class ObjectItem(QGraphicsPixmapItem):
     def wipe_out(self):
         """Remove this item and all related from the scene."""
         scene = self.scene()
-        scene.removeItem(self.label_item)
         for item in self.incoming_arc_items + self.outgoing_arc_items:
             if not item.scene():
                 # Already removed
@@ -1141,31 +1179,39 @@ class ArcItem(QGraphicsLineItem):
 
     Attributes:
         graph_view_form (GraphViewForm): 'owner'
-        object_id_list (str): object id comma separated list (for filtering parameters)
-        relationship_class_id (int): relationship class id (for filtering parameters)
-        object_class_name_list (str): object class name comma separated list (for finding the pixmap)
+        relationship_class_id (int): relationship class id
         src_item (ObjectItem): source item
         dst_item (ObjectItem): destination item
         width (int): Preferred line width
         arc_color (QColor): arc color
-        token_color (QColor): bg color for the token
-        label_color (QColor): color
-        label_parts (tuple): tuple of ObjectItem and ArcItem instances lists
+        object_id_list (str): object id comma separated list
+        token_extent (int): token preferred extent
+        token_color (QColor): token bg color
+        token_name_tuple_list (list): token (object class name, object name) tuple list
     """
-    def __init__(self, graph_view_form, object_id_list, relationship_class_id, object_class_name_list,
-                 src_item, dst_item, width, arc_color, token_color=QColor(), label_color=QColor(), label_parts=()):
+
+    def __init__(
+        self,
+        graph_view_form,
+        relationship_class_id,
+        src_item,
+        dst_item,
+        width,
+        arc_color,
+        object_id_list="",
+        token_color=QColor(),
+        token_object_extent=0,
+        token_object_label_color=QColor(),
+        token_object_name_tuple_list=None,
+    ):
         """Init class."""
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id_list = object_id_list
         self.relationship_class_id = relationship_class_id
-        self.object_class_name_list = object_class_name_list
         self.src_item = src_item
         self.dst_item = dst_item
         self.width = width
-        self.label_item = ArcLabelItem(label_color, *label_parts)
-        self.is_src_hovered = False
-        self.is_dst_hovered = False
         self.is_template = False
         self.template_id = None
         src_x = src_item.x()
@@ -1173,6 +1219,9 @@ class ArcItem(QGraphicsLineItem):
         dst_x = dst_item.x()
         dst_y = dst_item.y()
         self.setLine(src_x, src_y, dst_x, dst_y)
+        self.token_item = ArcTokenItem(
+            self, token_color, token_object_extent, token_object_label_color, *token_object_name_tuple_list
+        )
         self.normal_pen = QPen()
         self.normal_pen.setWidth(self.width)
         self.normal_pen.setColor(arc_color)
@@ -1183,39 +1232,11 @@ class ArcItem(QGraphicsLineItem):
         self.setPen(self.normal_pen)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setZValue(-2)
-        self.shape_item = QGraphicsLineItem()
-        self.shape_item.setLine(src_x, src_y, dst_x, dst_y)
-        shape_pen = QPen()
-        shape_pen.setWidth(3 * self.width)
-        self.shape_item.setPen(shape_pen)
-        self.shape_item.hide()
         src_item.add_outgoing_arc_item(self)
         dst_item.add_incoming_arc_item(self)
         self.setAcceptHoverEvents(True)
         viewport = self._graph_view_form.ui.graphicsView.viewport()
         self.viewport_cursor = viewport.cursor()
-        # Token item
-        self.token_item = QGraphicsPixmapItem()
-        if object_class_name_list:
-            extent = 3 * width
-            join_object_class_name_list = ",".join(object_class_name_list)
-            pixmap = self._graph_view_form.icon_mngr.relationship_pixmap(join_object_class_name_list)
-            self.token_item.setPixmap(pixmap.scaledToWidth(extent))
-            self.token_item.setOffset(-0.5 * extent, -0.5 * extent)
-            diameter = extent / sin(pi / 4)
-            delta = (diameter - extent) / 2
-            rectf = self.token_item.boundingRect().adjusted(-delta, -delta, delta, delta)
-            ellipse_item = QGraphicsEllipseItem(rectf)
-            ellipse_item.setParentItem(self.token_item)
-            ellipse_item.setPen(Qt.NoPen)
-            ellipse_item.setBrush(token_color)
-            ellipse_item.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
-            # Override hover events
-            self.token_item.hoverEnterEvent = self.token_hover_enter_event
-            self.token_item.hoverMoveEvent = self.token_hover_move_event
-            self.token_item.hoverLeaveEvent = self.token_hover_leave_event
-            self.token_item.shape = ellipse_item.shape
-            self.token_item.setAcceptHoverEvents(True)
 
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
@@ -1225,18 +1246,6 @@ class ArcItem(QGraphicsLineItem):
         else:
             self.setPen(self.normal_pen)
         super().paint(painter, option, widget)
-
-    def itemChange(self, change, value):
-        """Add label and pixmap item to same scene if added as top level item."""
-        if change == QGraphicsItem.ItemSceneChange and value and self.topLevelItem() == self:
-            scene = value
-            value.addItem(self.label_item)
-            value.addItem(self.token_item)
-            self.label_item.hide()
-            self.label_item.setZValue(2)  # Arc label over everything
-            self.place_token_item()
-            self.token_item.setZValue(-1)  # Arc pixmap only above arc
-        return super().itemChange(change, value)
 
     def make_template(self):
         """Make this arc part of a template for a relationship."""
@@ -1250,68 +1259,28 @@ class ArcItem(QGraphicsLineItem):
         self.normal_pen.setStyle(Qt.SolidLine)
         self.selected_pen.setStyle(Qt.SolidLine)
 
-    def shape(self):
-        """Shape is a the shape of a slightly thicker line."""
-        return self.shape_item.shape()
-
     def move_src_by(self, pos_diff):
         """Move source point by pos_diff. Used when moving ObjectItems around."""
         line = self.line()
         line.setP1(line.p1() + pos_diff)
         self.setLine(line)
-        self.shape_item.setLine(line)
-        self.place_token_item()
+        self.token_item.update_pos()
 
     def move_dst_by(self, pos_diff):
         """Move destination point by pos_diff. Used when moving ObjectItems around."""
         line = self.line()
         line.setP2(line.p2() + pos_diff)
         self.setLine(line)
-        self.shape_item.setLine(line)
-        self.place_token_item()
-
-    def place_token_item(self):
-        """Put pixmap item in position."""
-        middle = (self.dst_item.pos() + self.src_item.pos()) / 2
-        self.token_item.setPos(middle)
-
-    def token_hover_enter_event(self, event):
-        """Set viewport's cursor to arrow; show label if src and dst are not hovered."""
-        # viewport = self._graph_view_form.ui.graphicsView.viewport()
-        # self.viewport_cursor = viewport.cursor()
-        # viewport.setCursor(Qt.ArrowCursor)
-        self.label_item.setPos(
-            event.scenePos().x() - self.label_item.boundingRect().x() + 16,
-            event.scenePos().y() - self.label_item.boundingRect().y() + 16)
-        if self.is_src_hovered or self.is_dst_hovered:
-            return
-        self.label_item.show()
-
-    def token_hover_move_event(self, event):
-        """Show label if src and dst are not hovered."""
-        self.label_item.setPos(
-            event.scenePos().x() - self.label_item.boundingRect().x() + 16,
-            event.scenePos().y() - self.label_item.boundingRect().y() + 16)
-        if self.is_src_hovered or self.is_dst_hovered:
-            return
-        self.label_item.show()
-
-    def token_hover_leave_event(self, event):
-        """Restore viewport's cursor and hide label."""
-        # viewport = self._graph_view_form.ui.graphicsView.viewport()
-        # viewport.setCursor(self.viewport_cursor)
-        self.label_item.hide()
+        self.token_item.update_pos()
 
     def hoverEnterEvent(self, event):
-        """Set viewport's cursor to arrow, to signify that this item is not draggable."""
-        pass
+        """Set viewport's cursor to arrow."""
         # viewport = self._graph_view_form.ui.graphicsView.viewport()
         # self.viewport_cursor = viewport.cursor()
         # viewport.setCursor(Qt.ArrowCursor)
 
     def hoverLeaveEvent(self, event):
         """Restore viewport's cursor."""
-        pass
         # viewport = self._graph_view_form.ui.graphicsView.viewport()
         # viewport.setCursor(self.viewport_cursor)
 
@@ -1323,35 +1292,58 @@ class ObjectLabelItem(QGraphicsTextItem):
         object_item (ObjectItem): the ObjectItem instance
         text (str): text
         width (int): maximum width
-        font (QFont): font to display the text
         bg_color (QColor): color to paint the label
     """
-    def __init__(self, object_item, text, width, font, bg_color):
+
+    def __init__(self, object_item, text, width, bg_color):
         """Init class."""
-        super().__init__()
+        super().__init__(object_item)
         self.object_item = object_item
-        self._text = text
         self._width = width
-        self._font = font
+        self._font = QApplication.font()
+        self._font.setPointSize(width / 8)
+        self.setFont(self._font)
+        self.set_text(text)
+        self.setTextWidth(self._width)
         self.bg = QGraphicsRectItem()
-        self.setFont(font)
-        self.setPlainText(text)
-        self.setTextWidth(width)
+        self.bg.setRect(self.boundingRect())
         self.bg.setParentItem(self)
         self.set_bg_color(bg_color)
-        self.bg.setPen(Qt.NoPen)
+        # self.bg.setPen(Qt.NoPen)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
+        self.bg.setRect(self.boundingRect())
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
         self._cursor = self.textCursor()
+        # Position
+        x = -self.boundingRect().width() / 2
+        y = -self.boundingRect().height() / 2
+        self.setPos(x, y)
+        option = self.document().defaultTextOption()
+        option.setAlignment(Qt.AlignCenter)
+        self.document().setDefaultTextOption(option)
 
     def set_bg_color(self, bg_color):
         """Set background color."""
         self.bg.setBrush(QBrush(bg_color))
 
-    def setTextWidth(self, width):
-        super().setTextWidth(width)
-        self.bg.setRect(self.boundingRect())
+    def set_full_text(self):
+        self.setPlainText(self._text)
+
+    def set_text(self, text):
+        """Store real text, and then try and fit it as best as possible in the width
+        (reduce font point size, elide text...)
+        """
+        self._text = text
+        factor = max(0.75, 0.9 * self._width / QFontMetrics(self._font).width(text))
+        if factor < 1:
+            scaled_font = QFont(self._font)
+            scaled_font.setPointSizeF(scaled_font.pointSize() * factor)
+            self.setFont(scaled_font)
+        else:
+            self.setFont(self._font)
+        elided = QFontMetrics(self.font()).elidedText(text, Qt.ElideMiddle, 0.9 * self._width)
+        self.setPlainText(elided)
 
     def keyPressEvent(self, event):
         """Give up focus when the user presses Enter or Return.
@@ -1370,26 +1362,95 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.setTextCursor(self._cursor)
 
 
-class ArcLabelItem(QGraphicsRectItem):
-    """Arc label item to use with GraphViewForm.
+class ArcTokenItem(QGraphicsEllipseItem):
+    """Arc token item to use with GraphViewForm.
 
     Attributes:
-        color (QColor): color to paint the label
-        object_items (list): ObjectItem instances
-        arc_items (list): ArcItem instances
+        arc_item (ArcItem): the ArcItem instance
+        color (QColor): color to paint the token
+        object_extent (int): Preferred extent
+        object_label_color (QColor): Preferred extent
+        object_name_tuples (Iterable): one or more (object class name, object name) tuples
     """
-    def __init__(self, color, object_items=[], arc_items=[]):
+
+    def __init__(self, arc_item, color, object_extent, object_label_color, *object_name_tuples):
         """A QGraphicsRectItem with a relationship to use as arc label"""
-        super().__init__()
-        for item in object_items:
-            item._label_position = 'beside_icon'
-            item.label_item.setTextWidth(-1)
-        for item in object_items + arc_items:
-            item.setParentItem(self)
-        rect = self.childrenBoundingRect()
-        self.setBrush(color)
+        super().__init__(arc_item)
+        self.arc_item = arc_item
+        x = 0
+        for j, name_tuple in enumerate(object_name_tuples):
+            object_item = SimpleObjectItem(self, 0.875 * object_extent, object_label_color, *name_tuple)
+            if j % 2 == 0:
+                y = 0
+            else:
+                y = -0.875 * 0.75 * object_item.boundingRect().height()
+                object_item.setZValue(-1)
+            object_item.setPos(x, y)
+            x += 0.875 * 0.5 * object_item.boundingRect().width()
+        rectf = self.childrenBoundingRect()
+        offset = -rectf.topLeft()
+        for item in self.childItems():
+            item.setOffset(offset)
+        rectf = self.childrenBoundingRect()
+        width = rectf.width()
+        height = rectf.height()
+        if width > height:
+            delta = width - height
+            rectf.adjust(0, -delta / 2, 0, delta / 2)
+        else:
+            delta = height - width
+            rectf.adjust(-delta / 2, 0, delta / 2, 0)
+        self.setRect(rectf)
         self.setPen(Qt.NoPen)
-        self.setRect(rect)
+        self.setBrush(color)
+        self.update_pos()
+
+    def update_pos(self):
+        """Put token item in position."""
+        center = self.arc_item.line().center()
+        rectf = self.rect()
+        rectf.moveCenter(center)
+        self.setPos(rectf.topLeft())
+
+
+class SimpleObjectItem(QGraphicsPixmapItem):
+    """Object item to use with GraphViewForm.
+
+    Attributes:
+        parent (ArcTokenItem): arc token item
+        extent (int): preferred extent
+        label_color (QColor): label bg color
+        object_class_name (str): object class name
+        object_name (str): object name
+    """
+
+    def __init__(self, parent, extent, label_color, object_class_name, object_name):
+        super().__init__(parent)
+        pixmap = parent.arc_item._graph_view_form.icon_mngr.object_pixmap(object_class_name).scaledToWidth(extent)
+        self.setPixmap(pixmap)
+        self.text_item = QGraphicsTextItem(self)
+        self.text_item.setTextWidth(extent)
+        font = QApplication.font()
+        point_size = font.setPointSize(extent / 8)
+        factor = max(0.75, extent / QFontMetrics(font).width(object_name))
+        if factor < 1:
+            font.setPointSizeF(font.pointSize() * factor)
+        self.text_item.setFont(font)
+        elided = QFontMetrics(font).elidedText(object_name, Qt.ElideMiddle, extent)
+        self.text_item.setPlainText(elided)
+        x = (self.boundingRect().width() - self.text_item.boundingRect().width()) / 2
+        y = (self.boundingRect().height() - self.text_item.boundingRect().height()) / 2
+        self.text_item.setPos(x, y)
+        option = self.text_item.document().defaultTextOption()
+        option.setAlignment(Qt.AlignCenter)
+        self.text_item.document().setDefaultTextOption(option)
+        self.bg = QGraphicsRectItem(self.text_item.boundingRect(), self.text_item)
+        self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
+        self.bg.setBrush(QBrush(label_color))
+
+    def setOffset(self, offset):
+        super().setOffset(offset)
+        self.text_item.moveBy(offset.x(), offset.y())
 
 
 class OutlinedTextItem(QGraphicsSimpleTextItem):
@@ -1401,6 +1462,7 @@ class OutlinedTextItem(QGraphicsSimpleTextItem):
         brush (QBrus)
         outline_pen (QPen)
     """
+
     def __init__(self, text, font, brush=QBrush(Qt.black), outline_pen=QPen(Qt.white, 3, Qt.SolidLine)):
         """Init class."""
         super().__init__()
@@ -1418,6 +1480,7 @@ class CustomTextItem(QGraphicsTextItem):
         html (str): text to show
         font (QFont): font to display the text
     """
+
     def __init__(self, html, font):
         super().__init__()
         self.setHtml(html)

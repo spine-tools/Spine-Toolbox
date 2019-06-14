@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -103,7 +103,6 @@ class QSubProcess(QObject):
     @Slot(name="process_started")
     def process_started(self):
         """Run when subprocess has started."""
-        pass
         # self._toolbox.msg.emit("\tSubprocess started...")
 
     @Slot("QProcess::ProcessState", name="on_state_changed")
@@ -118,14 +117,15 @@ class QSubProcess(QObject):
             arg_str = " ".join(self._args)
             self._toolbox.msg.emit("\tArguments: <b>{0}</b>".format(arg_str))
         elif new_state == QProcess.Running:
-            self._toolbox.msg_warning.emit("\tExecution is in progress. See Process Log for messages "
-                                           "(stdout&stderr)")
+            self._toolbox.msg_warning.emit(
+                "\tExecution is in progress. See Process Log for messages " "(stdout&stderr)"
+            )
         elif new_state == QProcess.NotRunning:
             # logging.debug("QProcess is not running")
             pass
         else:
             self._toolbox.msg_error.emit("Process is in an unspecified state")
-            logging.error("QProcess unspecified state: {0}".format(new_state))
+            logging.error("QProcess unspecified state: %s", new_state)
 
     @Slot("QProcess::ProcessError", name="'on_process_error")
     def on_process_error(self, process_error):
@@ -143,7 +143,8 @@ class QSubProcess(QObject):
             self._toolbox.msg_error.emit("Timed out")
         elif process_error == QProcess.Crashed:
             self.process_failed = True
-            self._toolbox.msg_error.emit("Process crashed")
+            if not self._user_stopped:
+                self._toolbox.msg_error.emit("Process crashed")
         elif process_error == QProcess.WriteError:
             self._toolbox.msg_error.emit("Process WriteError")
         elif process_error == QProcess.ReadError:
@@ -155,16 +156,51 @@ class QSubProcess(QObject):
 
     def terminate_process(self):
         """Shutdown simulation in a QProcess."""
-        self._toolbox.msg_error.emit("<br/>Terminating process")
+        self._toolbox.msg_error.emit("Terminating process")
+        try:
+            self._process.finished.disconnect(self.process_finished)
+        except AttributeError:
+            pass
+        except RuntimeError:
+            pass
+        try:
+            self._process.readyReadStandardOutput.disconnect(self.on_ready_stdout)
+        except AttributeError:
+            pass
+        except RuntimeError:
+            pass
+        try:
+            self._process.readyReadStandardError.disconnect(self.on_ready_stderr)
+        except AttributeError:
+            pass
+        except RuntimeError:
+            pass
+        try:
+            self._process.error.disconnect(self.on_process_error)  # errorOccurred available in Qt 5.6
+        except AttributeError:
+            pass
+        except RuntimeError:
+            pass
+        try:
+            self._process.stateChanged.disconnect(self.on_state_changed)
+        except AttributeError:
+            pass
+        except RuntimeError:
+            pass
         # logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
         #               .format(self._process.processId(), self._process.state(), self._process.error()))
         self._user_stopped = True
         self.process_failed = True
         try:
-            self._process.close()
+            self._process.terminate()
         except Exception as ex:
             self._toolbox.msg_error.emit("[{0}] exception when terminating process".format(ex))
             logging.exception("Exception in closing QProcess: {}".format(ex))
+        finally:
+            # Delete QProcess
+            self._process.deleteLater()
+            self._process = None
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
 
     @Slot(int, name="process_finished")
     def process_finished(self, exit_code):
@@ -174,6 +210,8 @@ class QSubProcess(QObject):
             exit_code (int): Return code from external program (only valid for normal exits)
         """
         # logging.debug("Error that occurred last: {0}".format(self._process.error()))
+        if not self._process:
+            return
         exit_status = self._process.exitStatus()  # Normal or crash exit
         if exit_status == QProcess.CrashExit:
             if not self._silent:
@@ -198,6 +236,7 @@ class QSubProcess(QObject):
                     self.error_output = errout.strip()
         else:
             self._toolbox.msg.emit("*** Terminating process ***")
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
         # Delete QProcess
         self._process.deleteLater()
         self._process = None
@@ -206,11 +245,15 @@ class QSubProcess(QObject):
     @Slot(name="on_ready_stdout")
     def on_ready_stdout(self):
         """Emit data from stdout."""
+        if not self._process:
+            return
         out = str(self._process.readAllStandardOutput().data(), "utf-8")
         self._toolbox.msg_proc.emit(out.strip())
 
     @Slot(name="on_ready_stderr")
     def on_ready_stderr(self):
         """Emit data from stderr."""
+        if not self._process:
+            return
         err = str(self._process.readAllStandardError().data(), "utf-8")
         self._toolbox.msg_proc_error.emit(err.strip())

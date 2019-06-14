@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -30,6 +30,7 @@ class AboutWidget(QWidget):
         toolbox (ToolboxUI): QMainWindow instance
         version (str): Application version number
     """
+
     def __init__(self, toolbox, version):
         """Initializes About widget."""
         super().__init__(parent=toolbox, f=Qt.Popup)  # Setting the parent inherits the stylesheet
@@ -54,8 +55,8 @@ class AboutWidget(QWidget):
         """Calculate the top-left corner position of this widget in relation to main window
         position and size in order to show about window in the middle of the main window."""
         mw_center = self.parent().frameGeometry().center()
-        about_x = mw_center.x() - self.frameGeometry().width()/2
-        about_y = mw_center.y() - self.frameGeometry().height()/2
+        about_x = mw_center.x() - self.frameGeometry().width() / 2
+        about_y = mw_center.y() - self.frameGeometry().height() / 2
         about_topleft = QPoint(about_x, about_y)
         return about_topleft
 

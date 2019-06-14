@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -30,6 +30,7 @@ class NewProjectForm(QWidget):
     Attributes:
         toolbox (ToolboxUI): Parent widget.
     """
+
     def __init__(self, toolbox):
         """Initialize class."""
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent

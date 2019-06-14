@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -46,24 +46,42 @@ def main(argv):
     # Most dependencies are automatically detected but some need to be manually included.
     # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
     # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
-    build_exe_options = {"packages": [],
-                         "excludes": ["scipy.spatial.cKDTree"],
-                         "includes": ["atexit", "idna.idnadata", "pygments.lexers.python",
-                                      "pygments.lexers.shell", "pygments.lexers.julia",
-                                      "qtconsole.client", "sqlalchemy.sql.default_comparator",
-                                      "sqlalchemy.ext.baked", "numpy.core._methods",
-                                      "matplotlib.backends.backend_tkagg", "scipy.sparse.csgraph._validation",
-                                      "scipy.spatial.ckdtree", "pymysql", "tabulator.loaders.local",
-                                      "tabulator.parsers.csv"],
-                         "include_files": [(doc_path, "docs/"), tcl86t_dll, tk86t_dll,
-                                           changelog_file, readme_file, copying_file, copying_lesser_file],
-                         "include_msvcr": True}
+    build_exe_options = {
+        "packages": [],
+        "excludes": ["scipy.spatial.cKDTree"],
+        "includes": [
+            "atexit",
+            "idna.idnadata",
+            "pygments.lexers.python",
+            "pygments.lexers.shell",
+            "pygments.lexers.julia",
+            "qtconsole.client",
+            "sqlalchemy.sql.default_comparator",
+            "sqlalchemy.ext.baked",
+            "numpy.core._methods",
+            "matplotlib.backends.backend_tkagg",
+            "scipy.sparse.csgraph._validation",
+            "scipy.spatial.ckdtree",
+            "pymysql",
+            "tabulator.loaders.local",
+            "tabulator.parsers.csv",
+        ],
+        "include_files": [
+            (doc_path, "docs/"),
+            tcl86t_dll,
+            tk86t_dll,
+            changelog_file,
+            readme_file,
+            copying_file,
+            copying_lesser_file,
+        ],
+        "include_msvcr": True,
+    }
     # Windows specific options
     if os.name == "nt":  # Windows specific options
         base = "Console"  # set this to "Win32GUI" to not show console
         # Set Windows .msi installer default install path to C:\SpineToolbox-version
         systemdrive = os.environ['SYSTEMDRIVE']
-        default_install_dir = os.path.join(systemdrive, os.path.sep, "SpineToolbox-" + SPINE_TOOLBOX_VERSION)
         # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
         msvcr120_dll = os.path.join(systemdrive, os.path.sep, "Windows", "System32", "msvcr120.dll")
         if not os.path.isfile(msvcr120_dll):
@@ -75,12 +93,14 @@ def main(argv):
     else:
         base = None
     executables = [Executable("spinetoolbox.py", base=base, icon="./ui/resources/app.ico")]
-    setup(name="Spine Toolbox",
-          version=SPINE_TOOLBOX_VERSION,
-          description="An application to define, manage, and execute various energy system simulation models.",
-          author="Spine project consortium",
-          options={"build_exe": build_exe_options},
-          executables=executables)
+    setup(
+        name="Spine Toolbox",
+        version=SPINE_TOOLBOX_VERSION,
+        description="An application to define, manage, and execute various energy system simulation models.",
+        author="Spine project consortium",
+        options={"build_exe": build_exe_options},
+        executables=executables,
+    )
 
 
 if __name__ == '__main__':

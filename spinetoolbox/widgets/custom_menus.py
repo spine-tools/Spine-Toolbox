@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -17,12 +17,13 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu, QSpinBox, QWidgetAction, QAction, QWidget
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget, QLineEdit, QTableView
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimer, QTimeLine
+from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, QItemSelectionModel
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
 from widgets.custom_qwidgets import FilterWidget
+from models import MinimalTableModel
 
 
 class CustomContextMenu(QMenu):
@@ -31,6 +32,7 @@ class CustomContextMenu(QMenu):
     Attributes:
         parent (QWidget): Parent for menu widget (ToolboxUI)
     """
+
     def __init__(self, parent):
         """Constructor."""
         super().__init__(parent=parent)
@@ -70,6 +72,7 @@ class ProjectItemContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -78,6 +81,8 @@ class ProjectItemContextMenu(CustomContextMenu):
             if not self._parent.project():
                 return
             self.add_action("Open project directory...")
+            self.addSeparator()
+            self.add_action("Export project to GraphML")
             self.exec_(position)
             return
         if not index.parent().isValid():
@@ -97,7 +102,6 @@ class ProjectItemContextMenu(CustomContextMenu):
             self.addSeparator()
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
-            self.add_action("Execute")
             self.add_action("Results...")
             if d.get_icon().timer.state() == QTimeLine.Running:
                 self.add_action("Stop")
@@ -130,6 +134,7 @@ class LinkContextMenu(CustomContextMenu):
         index (QModelIndex): Index of item that requested the context-menu
         parallel_link (Link(QGraphicsPathItem)): Link that is parallel to the one that requested the menu
     """
+
     def __init__(self, parent, position, index, parallel_link=None):
         """Class constructor."""
         super().__init__(parent)
@@ -174,6 +179,7 @@ class DcRefContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -200,6 +206,7 @@ class DcDataContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -227,6 +234,7 @@ class ToolPropertiesContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -247,6 +255,7 @@ class ViewPropertiesContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -265,6 +274,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -319,6 +329,7 @@ class RelationshipTreeContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -353,6 +364,7 @@ class ParameterContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -376,6 +388,7 @@ class ParameterValueListContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         index (QModelIndex): Index of item that requested the context-menu
     """
+
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent)
@@ -396,6 +409,7 @@ class GraphViewContextMenu(CustomContextMenu):
         parent (QWidget): Parent for menu widget (GraphViewForm)
         position (QPoint): Position on screen
     """
+
     def __init__(self, parent, position):
         """Class constructor."""
         super().__init__(parent)
@@ -415,6 +429,7 @@ class ObjectItemContextMenu(CustomContextMenu):
         position (QPoint): Position on screen
         graphics_item (ObjectItem (QGraphicsItem)): item that requested the menu
     """
+
     def __init__(self, parent, position, graphics_item):
         """Class constructor."""
         super().__init__(parent)
@@ -459,7 +474,7 @@ class ObjectItemContextMenu(CustomContextMenu):
                     'object_class_id_list': object_class_id_list,
                     'object_class_name_list': object_class_name_list,
                     'object_name_list': fixed_object_class_name_list,
-                    'dimension': i
+                    'dimension': i,
                 }
         self.exec_(position)
 
@@ -470,6 +485,7 @@ class CustomPopupMenu(QMenu):
     Attributes:
         parent (QWidget): Parent widget of this pop-up menu
     """
+
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent=parent)
@@ -494,6 +510,7 @@ class AddToolTemplatePopupMenu(CustomPopupMenu):
     Attributes:
         parent (QWidget): parent widget (ToolboxUI)
     """
+
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
@@ -510,6 +527,7 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
         parent (QWidget): Parent widget of this menu (ToolboxUI)
         tool (Tool): Tool item that is associated with the pressed button
     """
+
     def __init__(self, parent, tool):
         super().__init__(parent)
         enabled = True if tool.tool_template() else False
@@ -528,6 +546,7 @@ class AddIncludesPopupMenu(CustomPopupMenu):
     Attributes:
         parent (QWidget): Parent widget (ToolTemplateWidget)
     """
+
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
@@ -544,6 +563,7 @@ class CreateMainProgramPopupMenu(CustomPopupMenu):
     Attributes:
         parent (QWidget): Parent widget (ToolTemplateWidget)
     """
+
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
@@ -555,6 +575,7 @@ class CreateMainProgramPopupMenu(CustomPopupMenu):
 
 class FilterMenu(QMenu):
     """Filter menu to use together with FilterWidget in TabularViewForm."""
+
     filterChanged = Signal(object, set, bool)
 
     def __init__(self, parent=None):
@@ -663,8 +684,10 @@ class PivotTableModelMenu(QMenu):
         selected = set()
         for i in indexes:
             if self._model.index_in_column_headers(i) or self._model.index_in_row_headers(i):
-                if (i.row() - self._model._num_headers_row in self._model.model._invalid_row
-                    or i.column() - self._model._num_headers_column in self._model.model._invalid_column):
+                if (
+                    i.row() - self._model._num_headers_row in self._model.model._invalid_row
+                    or i.column() - self._model._num_headers_column in self._model.model._invalid_column
+                ):
                     continue
                 key = self._model.get_key(i)
                 key = getter(key)
@@ -722,8 +745,9 @@ class PivotTableModelMenu(QMenu):
 
         if len(indexes) > 1:
             # more than one index selected
-            if (any(self._model.index_in_column_headers(i) for i in indexes) or
-                any(self._model.index_in_row_headers(i) for i in indexes)):
+            if any(self._model.index_in_column_headers(i) for i in indexes) or any(
+                self._model.index_in_row_headers(i) for i in indexes
+            ):
                 self.delete_index_action.setText(self._DELETE_INDEX)
                 self.delete_index_action.setEnabled(True)
                 if self.class_type == self._RELATIONSHIP_CLASS:
@@ -749,7 +773,172 @@ class PivotTableModelMenu(QMenu):
                     self.delete_relationship_action.setText("Delete relationship: {}".format(", ".join(relationship)))
                     self.delete_relationship_action.setEnabled(True)
 
-        pPos=self.parent().mapToGlobal(QPoint(5, 20))
-        mPos=pPos+QPos
+        pPos = self.parent().mapToGlobal(QPoint(5, 20))
+        mPos = pPos + QPos
         self.move(mPos)
         self.show()
+
+
+class AutoFilterMenu(QMenu):
+    """A widget to show the auto filter 'menu'.
+
+    Attributes:
+        parent (QTableView): the parent widget.
+    """
+
+    asc_sort_triggered = Signal(name="asc_sort_triggered")
+    desc_sort_triggered = Signal(name="desc_sort_triggered")
+    filter_triggered = Signal(name="filter_triggered")
+
+    def __init__(self, parent):
+        """Initialize class."""
+        super().__init__(parent)
+        self.row_is_accepted = []
+        self.unchecked_values = dict()
+        self.model = MinimalTableModel(self)
+        self.model.data = self._model_data
+        self.model.flags = self._model_flags
+        self.proxy_model = QSortFilterProxyModel(self)
+        self.proxy_model.setFilterKeyColumn(1)
+        self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
+        self.text_filter = QLineEdit(self)
+        self.text_filter.setPlaceholderText("Search...")
+        self.text_filter.setClearButtonEnabled(True)
+        self.view = QTableView(self)
+        self.view.setModel(self.proxy_model)
+        self.view.verticalHeader().hide()
+        self.view.horizontalHeader().hide()
+        self.view.setShowGrid(False)
+        self.view.setMouseTracking(True)
+        self.view.entered.connect(self._handle_view_entered)
+        self.view.clicked.connect(self._handle_view_clicked)
+        self.view.leaveEvent = self._view_leave_event
+        self.view.keyPressEvent = self._view_key_press_event
+        # sort_asc_action = self.addAction("Sort ascending")
+        # sort_desc_action = self.addAction("Sort descending")
+        text_filter_action = QWidgetAction(self)
+        text_filter_action.setDefaultWidget(self.text_filter)
+        view_action = QWidgetAction(self)
+        view_action.setDefaultWidget(self.view)
+        self.addAction(text_filter_action)
+        self.addAction(view_action)
+        ok_action = self.addAction("Ok")
+        self.text_filter.textEdited.connect(lambda x: self.proxy_model.setFilterRegExp(x))
+        # sort_asc_action.triggered.connect(lambda x: self.asc_sort_triggered.emit())
+        # sort_desc_action.triggered.connect(lambda x: self.desc_sort_triggered.emit())
+        ok_action.triggered.connect(self._handle_ok_action_triggered)
+
+    def _model_flags(self, index):
+        """Return no item flags."""
+        return ~Qt.ItemIsEditable
+
+    def _model_data(self, index, role=Qt.DisplayRole):
+        """Read checked state from first column."""
+        if role == Qt.CheckStateRole:
+            checked = self.model._main_data[index.row()][0]
+            if checked is None:
+                return Qt.PartiallyChecked
+            elif checked is True:
+                return Qt.Checked
+            else:
+                return Qt.Unchecked
+        return MinimalTableModel.data(self.model, index, role)
+
+    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
+        """Overridden method to always accept first row.
+        """
+        if source_row == 0:
+            return True
+        result = QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
+        self.row_is_accepted[source_row] = result
+        return result
+
+    @Slot("QModelIndex", name="_handle_view_entered")
+    def _handle_view_entered(self, index):
+        """Highlight current row."""
+        self.view.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+
+    def _view_key_press_event(self, event):
+        QTableView.keyPressEvent(self.view, event)
+        if event.key() == Qt.Key_Space:
+            index = self.view.currentIndex()
+            self.toggle_checked_state(index)
+
+    @Slot("QModelIndex", name="_handle_view_clicked")
+    def _handle_view_clicked(self, index):
+        self.toggle_checked_state(index)
+
+    def toggle_checked_state(self, checked_index):
+        """Toggle checked state."""
+        index = self.proxy_model.index(checked_index.row(), 0)
+        checked = index.data(Qt.EditRole)
+        row_count = self.proxy_model.rowCount()
+        if index.row() == 0:
+            # All row
+            all_checked = checked in (None, False)
+            for row in range(0, row_count):
+                self.proxy_model.setData(self.proxy_model.index(row, 0), all_checked)
+            self.proxy_model.dataChanged.emit(self.proxy_model.index(0, 1), self.proxy_model.index(row_count - 1, 1))
+        else:
+            # Data row
+            self.proxy_model.setData(index, not checked)
+            self.proxy_model.dataChanged.emit(checked_index, checked_index)
+            self.set_data_for_all_index()
+
+    def _view_leave_event(self, event):
+        """Clear selection."""
+        self.view.selectionModel().clearSelection()
+        event.accept()
+
+    def set_data_for_all_index(self):
+        """Set data for 'all' index based on data from all other indexes."""
+        all_index = self.proxy_model.index(0, 0)
+        true_count = 0
+        row_count = self.proxy_model.rowCount()
+        for row in range(1, row_count):
+            if self.proxy_model.index(row, 0).data():
+                true_count += 1
+        if true_count == row_count - 1:
+            self.proxy_model.setData(all_index, True)
+        elif true_count == 0:
+            self.proxy_model.setData(all_index, False)
+        else:
+            self.proxy_model.setData(all_index, None)
+        index = self.proxy_model.index(0, 1)
+        self.proxy_model.dataChanged.emit(index, index)
+
+    @Slot("bool", name="_handle_ok_action_triggered")
+    def _handle_ok_action_triggered(self, checked=False):
+        """Called when user presses Ok."""
+        self.unchecked_values = dict()
+        for row in range(1, self.model.rowCount()):
+            checked, value, object_class_id_set = self.model._main_data[row]
+            if not self.row_is_accepted[row] or not checked:
+                for object_class_id in object_class_id_set:
+                    self.unchecked_values.setdefault(object_class_id, set()).add(value)
+        self.filter_triggered.emit()
+
+    def set_values(self, values):
+        """Set values to show in the 'menu'."""
+        self.row_is_accepted = [True for _ in range(len(values) + 1)]
+        self.model.reset_model([[None, "(Select All)", ""]] + values)
+        self.set_data_for_all_index()
+        self.view.horizontalHeader().hideSection(0)  # Column 0 holds the checked state
+        self.view.horizontalHeader().hideSection(2)  # Column 2 holds the (cls_id_set)
+        self.proxy_model.setFilterRegExp("")
+
+    def popup(self, pos, width=0, at_action=None):
+        super().popup(pos, at_action)
+        self.text_filter.clear()
+        self.text_filter.setFocus()
+        self.view.horizontalHeader().setMinimumSectionSize(0)
+        self.view.resizeColumnToContents(1)
+        table_width = self.view.horizontalHeader().sectionSize(1) + 2
+        width = max(table_width, width)
+        self.view.horizontalHeader().setMinimumSectionSize(width)
+        parent_section_height = self.parent().verticalHeader().defaultSectionSize()
+        self.view.verticalHeader().setDefaultSectionSize(parent_section_height)
+        # if self.view.verticalScrollBar().isVisible():
+        #    width += qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        self.setFixedWidth(width)

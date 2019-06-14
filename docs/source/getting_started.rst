@@ -1,16 +1,16 @@
-..  Tutorial for Spine Toolbox
+..  Getting Started
     Created: 18.6.2018
 
-.. |dc_icon| image:: ../../spinetoolbox/ui/resources/dc_icon.png
-            :width: 24
-.. |plus| image:: ../../spinetoolbox/ui/resources/plus.png
+.. |dc_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-alt.svg
+            :width: 16
+.. |plus| image:: ../../spinetoolbox/ui/resources/plus.svg
           :width: 16
-.. |tool_icon| image:: ../../spinetoolbox/ui/resources/tool_icon.png
-             :width: 24
-.. |add_tool_template| image:: ../../spinetoolbox/ui/resources/add_tool.png
-              :width: 24
-.. |tool_template_options| image:: ../../spinetoolbox/ui/resources/tool_options.png
-             :width: 24
+.. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
+             :width: 16
+.. |add_tool_template| image:: ../../spinetoolbox/ui/resources/wrench_plus.svg
+              :width: 16
+.. |tool_template_options| image:: ../../spinetoolbox/ui/resources/wrench.svg
+             :width: 16
 
 
 

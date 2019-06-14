@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -17,7 +17,7 @@ Classes for custom QListView.
 """
 
 from PySide2.QtWidgets import QListView, QApplication, QListWidget, QAbstractItemView
-from PySide2.QtGui import QIcon, QPixmap, QDrag, QDropEvent
+from PySide2.QtGui import QDrag, QDropEvent
 from PySide2.QtCore import Qt, QMimeData, Signal
 
 
@@ -63,7 +63,7 @@ class DragListView(QListView):
         drag.setPixmap(self.pixmap)
         drag.setMimeData(self.mime_data)
         drag.setHotSpot(self.pixmap.rect().center())
-        dropAction = drag.exec_()
+        drag.exec_()
         self.drag_start_pos = None
         self.pixmap = None
         self.mime_data = None
@@ -80,7 +80,7 @@ class DragListView(QListView):
 class TestListView(QListWidget):
     afterDrop = Signal(object, QDropEvent)
     allowedDragLists = []
-    
+
     def __init__(self, parent=None):
         super(TestListView, self).__init__(parent)
         self.setDragDropMode(QAbstractItemView.DragDrop)

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -18,12 +18,36 @@ Custom editors for model/view programming.
 """
 
 import json
-import logging
-from PySide2.QtCore import Qt, Slot, Signal, QItemSelectionModel, QSortFilterProxyModel, QRegExp, \
-    QTimer, QEvent, QCoreApplication, QModelIndex, QPoint, QSize
-from PySide2.QtWidgets import QComboBox, QLineEdit, QTableView, QItemDelegate, QTabWidget, QWidget, \
-    QVBoxLayout, QTextEdit, QColorDialog, QDialog, QDialogButtonBox, QListView, QStyle, QLabel
-from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor, QIcon, QBrush
+from PySide2.QtCore import (
+    Qt,
+    Slot,
+    Signal,
+    QItemSelectionModel,
+    QSortFilterProxyModel,
+    QTimer,
+    QEvent,
+    QCoreApplication,
+    QModelIndex,
+    QPoint,
+    QSize,
+)
+from PySide2.QtWidgets import (
+    QComboBox,
+    QLineEdit,
+    QTableView,
+    QItemDelegate,
+    QTabWidget,
+    QWidget,
+    QVBoxLayout,
+    QTextEdit,
+    QColorDialog,
+    QDialog,
+    QDialogButtonBox,
+    QListView,
+    QStyle,
+    QLabel,
+)
+from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
 from models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 
@@ -34,6 +58,7 @@ class CustomLineEditor(QLineEdit):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
+
     data_committed = Signal(name="data_committed")
 
     def __init__(self, parent):
@@ -60,6 +85,7 @@ class CustomComboEditor(QComboBox):
     Attributes:
         parent (QWidget): the widget that wants to edit the data
     """
+
     data_committed = Signal(name="data_committed")
 
     def __init__(self, parent):
@@ -84,6 +110,7 @@ class CustomLineEditDelegate(QItemDelegate):
     Attributes:
         parent (SearchBarEditor): search bar editor
     """
+
     text_edited = Signal("QString", name="text_edited")
 
     def __init__(self, parent):
@@ -124,16 +151,16 @@ class SearchBarEditor(QTableView):
 
     Attributes:
         parent (QWidget): the parent for this widget
-        big_sibling (QWidget or NoneType): another widget which is used to find this widget's position.
+        elder_sibling (QWidget or NoneType): another widget which is used to find this widget's position.
     """
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling=None):
+    def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self._base_size = None
         self._original_text = None
         self._orig_pos = None
@@ -171,8 +198,8 @@ class SearchBarEditor(QTableView):
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self._orig_pos = self.pos()
-        if self._big_sibling:
-            self._orig_pos += self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos())
+        if self._elder_sibling:
+            self._orig_pos += self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos())
         self.refit()
 
     def refit(self):
@@ -262,6 +289,7 @@ class SearchBarDelegate(QItemDelegate):
     Attributes:
         parent (MultiSearchBarEditor): multi search bar editor
     """
+
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
     def __init__(self, parent):
@@ -300,11 +328,11 @@ class MultiSearchBarEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling=None):
+    def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self.alls = None
         self._max_item_count = None
         self._base_size = None
@@ -345,10 +373,11 @@ class MultiSearchBarEditor(QTableView):
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width() / self.model.columnCount())
         self.horizontalHeader().setMaximumHeight(self._base_size.height())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        size = QSize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2).\
-            boundedTo(self._parent.size())
+        size = QSize(self._base_size.width(), self._base_size.height() * (self._max_item_count + 2) + 2).boundedTo(
+            self._parent.size()
+        )
         self.resize(size)
-        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -369,11 +398,11 @@ class CheckListEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling):
+    def __init__(self, parent, elder_sibling):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self._base_size = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
@@ -415,6 +444,7 @@ class CheckListEditor(QTableView):
             else:
                 qitem.setCheckState(Qt.Unchecked)
             qitem.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsUserCheckable)
+            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)
             self.model.appendRow(qitem)
         self.selectionModel().select(self.model.index(0, 0), QItemSelectionModel.Select)
 
@@ -436,7 +466,7 @@ class CheckListEditor(QTableView):
         total_height = self.verticalHeader().length() + 2
         size = QSize(self._base_size.width(), total_height).boundedTo(self._parent.size())
         self.resize(size)
-        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -453,11 +483,11 @@ class JSONEditor(QTabWidget):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling, popup=False):
+    def __init__(self, parent, elder_sibling, popup=False):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self._popup = popup
         self.setTabPosition(QTabWidget.South)
         self.tab_raw = QWidget()
@@ -601,7 +631,7 @@ class JSONEditor(QTabWidget):
         size = size.boundedTo(self._parent.size())
         size = size.expandedTo(min_size)
         self.resize(size)
-        self.move(offset + self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(offset + self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -620,6 +650,7 @@ class JSONEditor(QTabWidget):
 
 class IconPainterDelegate(QItemDelegate):
     """A delegate to highlight decorations in a QListWidget."""
+
     def __init__(self, parent):
         super().__init__(parent)
 
@@ -636,7 +667,7 @@ class IconColorEditor(QDialog):
 
     def __init__(self, parent, icon_mngr):
         """Init class."""
-        super().__init__(parent) # , Qt.Popup)
+        super().__init__(parent)  # , Qt.Popup)
         self.icon_mngr = icon_mngr
         self.setWindowTitle("Select icon and color")
         self.icon_widget = QWidget(self)
@@ -658,7 +689,7 @@ class IconColorEditor(QDialog):
         self.color_dialog.setOption(QColorDialog.NoButtons, True)
         self.color_dialog.setOption(QColorDialog.DontUseNativeDialog, True)
         self.button_box = QDialogButtonBox(self)
-        self.button_box.setStandardButtons(QDialogButtonBox.Cancel|QDialogButtonBox.Ok)
+        self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         layout = QVBoxLayout(self)
         layout.addWidget(self.icon_widget)
         layout.addWidget(self.color_dialog)

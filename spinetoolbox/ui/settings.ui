@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -107,8 +107,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>338</width>
-          <height>482</height>
+          <width>417</width>
+          <height>540</height>
          </rect>
         </property>
         <property name="autoFillBackground">
@@ -394,11 +394,9 @@
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick GAMS by browsing and selecting a GAMS executable (gams.exe on Windows)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
-              <property name="iconSize">
-               <size>
-                <width>20</width>
-                <height>20</height>
-               </size>
+              <property name="icon">
+               <iconset resource="resources/resources_icons.qrc">
+                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
               </property>
              </widget>
             </item>
@@ -408,7 +406,7 @@
          <item>
           <widget class="QGroupBox" name="groupBox_julia">
            <property name="title">
-            <string>JULIA</string>
+            <string>Julia</string>
            </property>
            <layout class="QGridLayout" name="gridLayout_2">
             <property name="spacing">
@@ -437,11 +435,9 @@
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia interpreter by using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
-              <property name="iconSize">
-               <size>
-                <width>20</width>
-                <height>20</height>
-               </size>
+              <property name="icon">
+               <iconset resource="resources/resources_icons.qrc">
+                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
               </property>
              </widget>
             </item>
@@ -463,20 +459,56 @@
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Julia interpreter. Leave blank to use Julia defined in your system path.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="placeholderText">
-               <string>Using Julia interpreter in system path</string>
+               <string>Using Julia executable in system path</string>
               </property>
               <property name="clearButtonEnabled">
                <bool>true</bool>
               </property>
              </widget>
             </item>
-            <item row="4" column="0">
+            <item row="6" column="0">
              <widget class="QCheckBox" name="checkBox_use_embedded_julia">
               <property name="toolTip">
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). If unchecked, Julia Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `julia script.jl` in terminal.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
                <string>Use embedded Julia Console</string>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="0">
+             <widget class="QLineEdit" name="lineEdit_julia_project_path">
+              <property name="maximumSize">
+               <size>
+                <width>16777215</width>
+                <height>20</height>
+               </size>
+              </property>
+              <property name="text">
+               <string/>
+              </property>
+              <property name="placeholderText">
+               <string>Using Julia home project</string>
+              </property>
+              <property name="clearButtonEnabled">
+               <bool>true</bool>
+              </property>
+             </widget>
+            </item>
+            <item row="4" column="1">
+             <widget class="QToolButton" name="toolButton_browse_julia_project">
+              <property name="maximumSize">
+               <size>
+                <width>22</width>
+                <height>22</height>
+               </size>
+              </property>
+              <property name="text">
+               <string>...</string>
+              </property>
+              <property name="icon">
+               <iconset resource="resources/resources_icons.qrc">
+                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
               </property>
              </widget>
             </item>
@@ -542,11 +574,9 @@
             <property name="toolTip">
              <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Python interpreter by using a file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
-            <property name="iconSize">
-             <size>
-              <width>20</width>
-              <height>20</height>
-             </size>
+            <property name="icon">
+             <iconset resource="resources/resources_icons.qrc">
+              <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
             </property>
            </widget>
           </item>
@@ -702,8 +732,8 @@
              <string>&lt;!DOCTYPE HTML PUBLIC &quot;-//W3C//DTD HTML 4.0//EN&quot; &quot;http://www.w3.org/TR/REC-html40/strict.dtd&quot;&gt;
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
-&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'Cantarell'; font-size:11pt; font-weight:400; font-style:normal;&quot;&gt;
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2'; font-size:8.25pt;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="acceptRichText">
              <bool>false</bool>
@@ -766,11 +796,9 @@ p, li { white-space: pre-wrap; }
                 <height>22</height>
                </size>
               </property>
-              <property name="iconSize">
-               <size>
-                <width>20</width>
-                <height>20</height>
-               </size>
+              <property name="icon">
+               <iconset resource="resources/resources_icons.qrc">
+                <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
               </property>
              </widget>
             </item>
@@ -907,6 +935,8 @@ p, li { white-space: pre-wrap; }
   <tabstop>pushButton_ok</tabstop>
   <tabstop>pushButton_cancel</tabstop>
  </tabstops>
- <resources/>
+ <resources>
+  <include location="resources/resources_icons.qrc"/>
+ </resources>
  <connections/>
 </ui>

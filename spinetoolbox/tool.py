@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -44,6 +44,7 @@ class Tool(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
     def __init__(self, toolbox, name, description, tool_template, use_work, x, y):
         """Class constructor."""
         super().__init__(name, description)
@@ -76,8 +77,9 @@ class Tool(ProjectItem):
         try:
             create_dir(self.data_dir)
         except OSError:
-            self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                         " Check permissions.".format(self.data_dir))
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+            )
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
         self._graphics_item = ToolIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
@@ -88,9 +90,7 @@ class Tool(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.toolButton_tool_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_tool_stop.clicked] = self.stop_process
         s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
-        s[self._toolbox.ui.pushButton_tool_execute.clicked] = self.execute
         s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
         s[self._toolbox.ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
         return s
@@ -104,7 +104,7 @@ class Tool(ProjectItem):
         """Save selections and disconnect signals."""
         self.save_selections()
         if not super().disconnect_signals():
-            logging.error("Item {0} deactivation failed".format(self.name))
+            logging.error("Item %s deactivation failed.", self.name)
             return False
         return True
 
@@ -127,7 +127,7 @@ class Tool(ProjectItem):
             self._tool_template_name = ""
         else:
             self._tool_template_name = self.tool_template().name
-        self.execute_in_work = True if self._toolbox.ui.radioButton_execute_in_work.isChecked() else False
+        self.execute_in_work = self._toolbox.ui.radioButton_execute_in_work.isChecked()
 
     @Slot(bool, name="update_execution_mode")
     def update_execution_mode(self, checked):
@@ -219,24 +219,15 @@ class Tool(ProjectItem):
     def open_results(self, checked=False):
         """Open output directory in file browser."""
         if not os.path.exists(self.output_dir):
-            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no results. "
-                                           "Click Execute to generate them.".format(self.name))
+            self._toolbox.msg_warning.emit(
+                "Tool <b>{0}</b> has no results. " "Click Execute to generate them.".format(self.name)
+            )
             return
         url = "file:///" + self.output_dir
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
-
-    @Slot(bool, name="stop_process")
-    def stop_process(self, checked=False):
-        """Terminate Tool template execution."""
-        self.instance.terminate_instance()
-        self._toolbox.msg_warning.emit("Tool <b>{0}</b> has been stopped".format(self.name))
-
-    def set_icon(self, icon):
-        """Icon setter method."""
-        self._graphics_item = icon
 
     def get_icon(self):
         """Returns the graphics item representing this tool in the scene."""
@@ -271,91 +262,6 @@ class Tool(ProjectItem):
     def tool_template(self):
         """Returns Tool template."""
         return self._tool_template
-
-    @Slot(bool, name="execute")
-    def execute(self, checked=False):
-        """Execute button clicked."""
-        self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
-                self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum())
-        if not self.tool_template():
-            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool template to execute".format(self.name))
-            return
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("----------------------------")
-        self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
-        self._toolbox.msg.emit("----------------------------")
-        self._toolbox.msg.emit("")
-        if self.execute_in_work:
-            self._toolbox.msg.emit("*** Executing in <b>work</b> directory mode ***")
-        else:
-            self._toolbox.msg.emit("*** Executing in <b>source</b> directory mode ***")
-        # Find required input files for ToolInstance (if any)
-        if self.input_file_model.rowCount() > 0:
-            self._toolbox.msg.emit("*** Checking Tool template requirements ***")
-            # Abort if there are no input items connected to this Tool
-            inputs = self._toolbox.connection_model.input_items(self.name)
-            if not inputs:
-                self._toolbox.msg_error.emit("This Tool has no input connections. Cannot find required input files.")
-                return
-            n_dirs, n_files = self.count_files_and_dirs()
-            # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
-            if n_files > 0:
-                self._toolbox.msg.emit("*** Searching for required input files ***")
-                file_paths = self.find_input_files()
-                if not file_paths:
-                    self._toolbox.msg_error.emit("Tool execution aborted")
-                    return
-                # Required files and dirs should have been found at this point, so create instance
-                try:
-                    self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
-                                                 self._project, self.execute_in_work)
-                except OSError as e:
-                    self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
-                    return
-                if self.execute_in_work:
-                    self._toolbox.msg.emit("*** Copying input files to work directory ***")
-                else:
-                    self._toolbox.msg.emit("*** Copying input files to source directory ***")
-                # Copy input files to ToolInstance work or source directory
-                if not self.copy_input_files(file_paths):
-                    self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
-                    return
-            else:  # just for testing
-                # logging.debug("No input files to copy")
-                pass
-            if n_dirs > 0:
-                if self.execute_in_work:
-                    self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
-                else:
-                    self._toolbox.msg.emit("*** Creating subdirectories to source directory ***")
-                if not self.create_subdirectories():
-                    # Creating directories failed -> abort
-                    self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted.")
-                    return
-            else:  # just for testing
-                # logging.debug("No directories to create")
-                pass
-        else:  # Tool template does not have requirements
-            try:
-                self.instance = ToolInstance(self.tool_template(), self._toolbox, self.output_dir,
-                                             self._project, self.execute_in_work)
-            except OSError as e:
-                self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
-                return
-        # Check if there are any optional input files to copy
-        if self.opt_input_file_model.rowCount() > 0:
-            self._toolbox.msg.emit("*** Searching for optional input files ***")
-            optional_file_paths = self.find_optional_input_files()
-            for k, v in optional_file_paths.items():
-                self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
-            if not self.copy_optional_input_files(optional_file_paths):
-                self._toolbox.msg_warning.emit("Copying optional input files failed")
-        self._toolbox.ui.pushButton_tool_stop.setEnabled(True)
-        self._toolbox.ui.pushButton_tool_execute.setEnabled(False)
-        self._graphics_item.start_animation()
-        self.update_instance()  # Make command and stuff
-        self.instance.instance_finished_signal.connect(self.execution_finished)
-        self.instance.execute()
 
     def count_files_and_dirs(self):
         """Count the number of files and directories in required input files model.
@@ -396,121 +302,15 @@ class Tool(ProjectItem):
                 try:
                     create_dir(path_to_create)
                 except OSError:
-                    self._toolbox.msg_error.emit("[OSError] Creating directory {0} failed."
-                                                 " Check permissions.".format(path_to_create))
+                    self._toolbox.msg_error.emit(
+                        "[OSError] Creating directory {0} failed." " Check permissions.".format(path_to_create)
+                    )
                     return False
                 self._toolbox.msg.emit("\tDirectory <b>{0}{1}</b> created".format(os.path.sep, path))
             else:
                 # It's a file -> skip
                 pass
         return True
-
-    def find_input_files(self):
-        """Iterate files in required input files model and find them from connected items.
-
-        Returns:
-            Dictionary of paths where required files are found or None if some file was not found.
-        """
-        file_paths = dict()
-        for i in range(self.input_file_model.rowCount()):
-            req_file_path = self.input_file_model.item(i, 0).data(Qt.DisplayRole)
-            # Just get the filename if there is a path attached to the file
-            path, filename = os.path.split(req_file_path)
-            if not filename:
-                # It's a directory
-                continue
-            found_file = self.find_file(filename)
-            if not found_file:
-                self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
-                return None
-            else:
-                file_paths[req_file_path] = found_file
-        return file_paths
-
-    def find_optional_input_files(self):
-        """Find optional input files from connected items.
-
-        Returns:
-            Dictionary of optional input file paths or None if no files found. Key is the
-            optional input item and value is a list of paths that matches the item.
-        """
-        file_paths = dict()
-        for i in range(self.opt_input_file_model.rowCount()):
-            file_path = self.opt_input_file_model.item(i, 0).data(Qt.DisplayRole)
-            # Just get the filename if there is a path attached to the file
-            path, filename = os.path.split(file_path)
-            if not filename:
-                # It's a directory
-                continue
-            found_files = self.find_files(filename)
-            if not found_files:
-                self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(filename))
-            else:
-                file_paths[file_path] = found_files
-        return file_paths
-
-    def find_file(self, fname):
-        """Find required input file for this Tool Instance. Search file from Data
-        Connection or Data Store items that are input items for this Tool. These in turn
-        will search on their own input items and stop when an infinite recursion is detected.
-
-        Args:
-            fname (str): File name (no path)
-
-        Returns:
-            Path to file or None if it was not found.
-        """
-        path = None
-        # Find file from immediate parent items
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            # self._toolbox.msg.emit("Searching for file <b>{0}</b> from item <b>{1}</b>".format(fname, input_item))
-            # Find item from project model
-            found_item_index = self._toolbox.project_item_model.find_item(input_item)
-            found_item = self._toolbox.project_item_model.project_item(found_item_index)
-            if not found_item:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                return path
-            item_data = found_item
-            # Find file from parent Data Stores and Data Connections
-            if item_data.item_type in ["Data Store", "Data Connection"]:
-                visited_items = list()
-                path = item_data.find_file(fname, visited_items)
-                if path is not None:
-                    break
-            elif item_data.item_type == "Tool":
-                # TODO: Find file from output files of parent Tools
-                pass
-        return path
-
-    def find_files(self, pattern):
-        """Finds optional input files that match the given search word. Searches files from Data
-        Connection or Data Store items that are input items for this Tool. These in turn
-        will search on their own input items and stop when an infinite recursion is detected.
-
-        Args:
-            pattern (str): File name (may have wildcards)
-
-        Returns:
-            List of paths to files that match the pattern or an empty list if no matches.
-        """
-        paths = list()
-        # Find file from immediate parent items
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            # self._toolbox.msg.emit("Searching for optional file <b>{0}</b> from item <b>{1}</b>"
-            #                        .format(pattern, input_item))
-            # Find item from project model
-            found_item_index = self._toolbox.project_item_model.find_item(input_item)
-            found_item = self._toolbox.project_item_model.project_item(found_item_index)
-            if not found_item:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                return paths
-            # Find file from parent Data Stores and Data Connections
-            if found_item.item_type in ["Data Store", "Data Connection"]:
-                visited_items = list()
-                matching_paths = found_item.find_files(pattern, visited_items)
-                if matching_paths is not None:
-                    paths = paths + matching_paths
-        return paths
 
     def copy_input_files(self, paths):
         """Copy input files from given paths to work or source directory, depending on
@@ -541,28 +341,31 @@ class Tool(ProjectItem):
                     try:
                         create_dir(work_subdir_path)
                     except OSError:
-                        self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
-                                                     .format(work_subdir_path))
+                        self._toolbox.msg_error.emit(
+                            "[OSError] Creating directory <b>{0}</b> failed.".format(work_subdir_path)
+                        )
                         return False
-                self._toolbox.msg.emit("\tCopying file <b>{0}</b> into subdirectory <b>{2}{1}</b>"
-                                       .format(fname, dst_subdir, os.path.sep))
+                self._toolbox.msg.emit(
+                    "\tCopying file <b>{0}</b> into subdirectory <b>{2}{1}</b>".format(fname, dst_subdir, os.path.sep)
+                )
             try:
                 shutil.copyfile(src_path, dst_path)
                 n_copied_files += 1
             except OSError as e:
-                self._toolbox.msg_error.emit("Copying file <b>{0}</b> to <b>{1}</b> failed"
-                                             .format(src_path, dst_path))
+                self._toolbox.msg_error.emit("Copying file <b>{0}</b> to <b>{1}</b> failed".format(src_path, dst_path))
                 self._toolbox.msg_error.emit("{0}".format(e))
                 if e.errno == 22:
-                    msg = "The reason might be:\n" \
-                          "[1] The destination file already exists and it cannot be " \
-                          "overwritten because it is locked by Julia or some other application.\n" \
-                          "[2] You don't have the necessary permissions to overwrite the file.\n" \
-                          "To solve the problem, you can try the following:\n[1] Execute the Tool in work " \
-                          "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to " \
-                          "Julia 0.7 or newer.\n" \
-                          "[3] Close any other background application(s) that may have locked the file.\n" \
-                          "And try again.\n"
+                    msg = (
+                        "The reason might be:\n"
+                        "[1] The destination file already exists and it cannot be "
+                        "overwritten because it is locked by Julia or some other application.\n"
+                        "[2] You don't have the necessary permissions to overwrite the file.\n"
+                        "To solve the problem, you can try the following:\n[1] Execute the Tool in work "
+                        "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to "
+                        "Julia 0.7 or newer.\n"
+                        "[3] Close any other background application(s) that may have locked the file.\n"
+                        "And try again.\n"
+                    )
                     self._toolbox.msg_warning.emit(msg)
                 return False
         self._toolbox.msg.emit("\tCopied <b>{0}</b> input file(s)".format(n_copied_files))
@@ -604,29 +407,36 @@ class Tool(ProjectItem):
                         try:
                             create_dir(work_subdir_path)
                         except OSError:
-                            self._toolbox.msg_error.emit("[OSError] Creating directory <b>{0}</b> failed."
-                                                         .format(work_subdir_path))
+                            self._toolbox.msg_error.emit(
+                                "[OSError] Creating directory <b>{0}</b> failed.".format(work_subdir_path)
+                            )
                             continue
-                    self._toolbox.msg.emit("\tCopying optional file <b>{0}</b> into subdirectory <b>{2}{1}</b>"
-                                           .format(dst_fname, dst_subdir, os.path.sep))
+                    self._toolbox.msg.emit(
+                        "\tCopying optional file <b>{0}</b> into subdirectory <b>{2}{1}</b>".format(
+                            dst_fname, dst_subdir, os.path.sep
+                        )
+                    )
                     dst_path = os.path.abspath(os.path.join(work_subdir_path, dst_fname))
                 try:
                     shutil.copyfile(src_path, dst_path)
                     n_copied_files += 1
                 except OSError as e:
-                    self._toolbox.msg_error.emit("Copying optional file <b>{0}</b> to <b>{1}</b> failed"
-                                                 .format(src_path, dst_path))
+                    self._toolbox.msg_error.emit(
+                        "Copying optional file <b>{0}</b> to <b>{1}</b> failed".format(src_path, dst_path)
+                    )
                     self._toolbox.msg_error.emit("{0}".format(e))
                     if e.errno == 22:
-                        msg = "The reason might be:\n" \
-                              "[1] The destination file already exists and it cannot be " \
-                              "overwritten because it is locked by Julia or some other application.\n" \
-                              "[2] You don't have the necessary permissions to overwrite the file.\n" \
-                              "To solve the problem, you can try the following:\n[1] Execute the Tool in work " \
-                              "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to " \
-                              "Julia 0.7 or newer.\n" \
-                              "[3] Close any other background application(s) that may have locked the file.\n" \
-                              "And try again.\n"
+                        msg = (
+                            "The reason might be:\n"
+                            "[1] The destination file already exists and it cannot be "
+                            "overwritten because it is locked by Julia or some other application.\n"
+                            "[2] You don't have the necessary permissions to overwrite the file.\n"
+                            "To solve the problem, you can try the following:\n[1] Execute the Tool in work "
+                            "directory.\n[2] If you are executing a Julia Tool with Julia 0.6.x, upgrade to "
+                            "Julia 0.7 or newer.\n"
+                            "[3] Close any other background application(s) that may have locked the file.\n"
+                            "And try again.\n"
+                        )
                         self._toolbox.msg_warning.emit(msg)
         self._toolbox.msg.emit("\tCopied <b>{0}</b> optional input file(s)".format(n_copied_files))
         return True
@@ -647,63 +457,6 @@ class Tool(ProjectItem):
             item_list.append(item_data)
         return item_list
 
-    def create_refs_to_output_files(self, output_items):
-        """Create refs to Tool output files in all child Data Connections and Data Stores.
-        In case of Data Store only one reference is created (to the first file in the list)
-
-        Args:
-            output_items (list): Destination items for output files.
-        """
-        for item in output_items:
-            n_created_refs = 0
-            # NOTE: We need to take the basename here since the tool instance saves
-            # the output files *without* the 'subfolder' part in the output folder
-            for output_file in [os.path.basename(x) for x in self._tool_template.outputfiles]:
-                self._toolbox.msg.emit("*** Creating reference to Tool <b>{0}</b>'s output file {1} "
-                                       "in {2} <b>{3}</b> ***"
-                                       .format(self.name, output_file, item.item_type, item.name))
-                # NOTE: output files are saved
-                src_path = os.path.join(self.instance.output_dir, output_file)
-                if not os.path.exists(src_path):
-                    self._toolbox.msg_error.emit("\t Output file <b>{0}</b> does not exist".format(src_path))
-                    continue
-                if item.item_type == "Data Connection":
-                    item.add_files_to_references([src_path])  # Give path in a list
-                    n_created_refs += 1
-                elif item.item_type == "Data Store":
-                    reference = {
-                        'url': 'sqlite:///{0}'.format(src_path),
-                        'database': output_file,
-                        'username': getpass.getuser()
-                    }
-                    item.set_reference(reference)
-                    item.load_reference_into_selections()
-                    self._toolbox.msg.emit("\tCreated <b>1</b> reference")
-                    break
-                else:
-                    self._toolbox.msg_warning.emit("\t<b>Not implemented</b>")
-                    break
-            if item.item_type == "Data Connection":
-                self._toolbox.msg.emit("\tCreated <b>{0}</b> reference(s)".format(n_created_refs))
-
-    @Slot(int, name="execution_finished")
-    def execution_finished(self, return_code):
-        """Tool execution finished."""
-        self._toolbox.ui.pushButton_tool_stop.setEnabled(False)
-        self._toolbox.ui.pushButton_tool_execute.setEnabled(True)
-        self._graphics_item.stop_animation()
-        # Disconnect instance finished signal
-        self.instance.instance_finished_signal.disconnect(self.execution_finished)
-        if return_code == 0:
-            # copy output files to data directories of connected items
-            output_items = self.find_output_items()
-            if output_items:
-                # self._toolbox.msg.emit("Creating references to Tool output files in connected items")
-                self.create_refs_to_output_files(output_items)
-            self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
-        else:
-            self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
-
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. This is where Tool
         type specific initialization happens (whether the tool is GAMS, Python or Julia script)."""
@@ -720,15 +473,19 @@ class Tool(ProjectItem):
             self.instance.args.append("logoption=3")  # TODO: This should be an option in Settings
             self.append_instance_args()  # Append Tool specific cmd line args into args list
         elif self.tool_template().tooltype == "julia":
-            # Prepare command "julia script.jl"
+            # Prepare command "julia --project={PROJECT_DIR} script.jl"
+            # Do this regardless of the `useEmbeddedJulia` setting since we may need to fallback
+            # to `julia --project={PROJECT_DIR} script.jl`
             julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
-            if not julia_path == "":
-                julia_cmd = julia_path
+            if julia_path != "":
+                julia_exe = julia_path
             else:
-                julia_cmd = JULIA_EXECUTABLE
+                julia_exe = JULIA_EXECUTABLE
+            julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="@.")
             work_dir = self.instance.basedir
             script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-            self.instance.program = julia_cmd
+            self.instance.program = julia_exe
+            self.instance.args.append(f"--project={julia_project_path}")
             self.instance.args.append(script_path)
             self.append_instance_args()
             use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
@@ -736,11 +493,13 @@ class Tool(ProjectItem):
                 # Prepare Julia REPL command
                 # TODO: See if this can be simplified
                 mod_work_dir = work_dir.__repr__().strip("'")
-                args = r'["' + r'", "'.join(self.instance.args[1:]) + r'"]'
-                self.instance.julia_repl_command = r'cd("{}");'\
-                    r'empty!(ARGS);'\
-                    r'append!(ARGS, {});'\
+                args = r'["' + r'", "'.join(self.get_instance_args()) + r'"]'
+                self.instance.julia_repl_command = (
+                    r'cd("{}");'
+                    r'empty!(ARGS);'
+                    r'append!(ARGS, {});'
                     r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
+                )
         elif self.tool_template().tooltype == "python":
             # Prepare command "python script.py"
             python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
@@ -768,7 +527,7 @@ class Tool(ProjectItem):
                 self.instance.ipython_command_list.append(run_script_cmd)
         elif self.tool_template().tooltype == "executable":
             batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
-            if not sys.platform == "win32":
+            if sys.platform != "win32":
                 self.instance.program = "sh"
                 self.instance.args.append(batch_path)
             else:
@@ -777,16 +536,20 @@ class Tool(ProjectItem):
 
     def append_instance_args(self):
         """Append Tool template command line args into instance args list."""
+        self.instance.args += self.get_instance_args()
+
+    def get_instance_args(self):
+        """Return instance args as list."""
         # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
-        if (self.tool_template().cmdline_args is not None) and (not self.tool_template().cmdline_args == ''):
-            # Tool template cmdline args is a space delimited string. Add them to a list.
-            self.instance.args += self.tool_template().cmdline_args.split(" ")
+        if (self.tool_template().cmdline_args is not None) and (self.tool_template().cmdline_args != ''):
+            # Tool template cmdline args is a space delimited string. Return them as a list.
+            return self.tool_template().cmdline_args.split(" ")
+        return []
 
     def populate_source_file_model(self, items):
         """Add required source files (includes) into a model.
         If items is None or an empty list, model is cleared."""
         self.source_file_model.clear()
-        # self.source_file_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -798,7 +561,6 @@ class Tool(ProjectItem):
         """Add required Tool input files into a model.
         If items is None or an empty list, model is cleared."""
         self.input_file_model.clear()
-        # self.input_file_model.setHorizontalHeaderItem(0, QStandardItem("Input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -810,7 +572,6 @@ class Tool(ProjectItem):
         """Add optional Tool template files into a model.
         If items is None or an empty list, model is cleared."""
         self.opt_input_file_model.clear()
-        # self.opt_input_file_model.setHorizontalHeaderItem(0, QStandardItem("Optional input files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -822,7 +583,6 @@ class Tool(ProjectItem):
         """Add Tool output files into a model.
          If items is None or an empty list, model is cleared."""
         self.output_file_model.clear()
-        # self.output_file_model.setHorizontalHeaderItem(0, QStandardItem("Output files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
@@ -890,3 +650,166 @@ class Tool(ProjectItem):
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+
+    def execute(self):
+        """Executes this Tool."""
+        if not self.tool_template():
+            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool template to execute".format(self.name))
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # continue
+            return
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("***")
+        if self.execute_in_work:
+            self._toolbox.msg.emit("*** Executing in <b>work</b> directory mode ***")
+        else:
+            self._toolbox.msg.emit("*** Executing in <b>source</b> directory mode ***")
+        # Find required input files for ToolInstance (if any)
+        if self.input_file_model.rowCount() > 0:
+            self._toolbox.msg.emit("*** Checking Tool template requirements ***")
+            # Abort if there are no input items connected to this Tool. TODO: Is this needed anymore?
+            inputs = self._toolbox.connection_model.input_items(self.name)
+            if not inputs:
+                self._toolbox.msg_error.emit("This Tool has no input connections. Cannot find required input files.")
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
+                return
+            n_dirs, n_files = self.count_files_and_dirs()
+            # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
+            if n_files > 0:
+                self._toolbox.msg.emit("*** Searching for required input files ***")
+                file_paths = self.find_input_files()
+                if not file_paths:
+                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
+                    return
+                # Required files and dirs should have been found at this point, so create instance
+                try:
+                    self.instance = ToolInstance(
+                        self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
+                    )
+                except OSError as e:
+                    self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
+                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
+                    return
+                if self.execute_in_work:
+                    self._toolbox.msg.emit("*** Copying input files to work directory ***")
+                else:
+                    self._toolbox.msg.emit("*** Copying input files to source directory ***")
+                # Copy input files to ToolInstance work or source directory
+                if not self.copy_input_files(file_paths):
+                    self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
+                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
+                    return
+            else:  # just for testing
+                # logging.debug("No input files to copy")
+                pass
+            if n_dirs > 0:
+                if self.execute_in_work:
+                    self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
+                else:
+                    self._toolbox.msg.emit("*** Creating subdirectories to source directory ***")
+                if not self.create_subdirectories():
+                    # Creating directories failed -> abort
+                    self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted.")
+                    self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
+                    return
+            else:  # just for testing
+                # logging.debug("No directories to create")
+                pass
+        else:  # Tool template does not have requirements
+            try:
+                self.instance = ToolInstance(
+                    self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
+                )
+            except OSError as e:
+                self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
+                return
+        # Check if there are any optional input files to copy
+        if self.opt_input_file_model.rowCount() > 0:
+            self._toolbox.msg.emit("*** Searching for optional input files ***")
+            optional_file_paths = self.find_optional_input_files()
+            for k, v in optional_file_paths.items():
+                self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
+            if not self.copy_optional_input_files(optional_file_paths):
+                self._toolbox.msg_warning.emit("Copying optional input files failed")
+        self._graphics_item.start_animation()
+        self.update_instance()  # Make command and stuff
+        self.instance.instance_finished_signal.connect(self.execute_finished)
+        self.instance.execute()
+
+    def find_input_files(self):
+        """Iterates files in required input files model and looks for them from execution instance.
+
+        Returns:
+            Dictionary of paths where required files are found or None if some file was not found.
+        """
+        file_paths = dict()
+        for i in range(self.input_file_model.rowCount()):
+            req_file_path = self.input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Just get the filename if there is a path attached to the file
+            path, filename = os.path.split(req_file_path)
+            if not filename:
+                # It's a directory
+                continue
+            found_file = self._toolbox.project().execution_instance.find_file(filename)
+            if not found_file:
+                self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
+                return None
+            else:
+                file_paths[req_file_path] = found_file
+        return file_paths
+
+    def find_optional_input_files(self):
+        """Tries to find optional input files from previous project items in the DAG. Returns found paths.
+
+        Returns:
+            Dictionary of optional input file paths or an empty dictionary if no files found. Key is the
+            optional input item and value is a list of paths that matches the item.
+        """
+        file_paths = dict()
+        for i in range(self.opt_input_file_model.rowCount()):
+            file_path = self.opt_input_file_model.item(i, 0).data(Qt.DisplayRole)
+            # Just get the filename if there is a path attached to the file
+            path, pattern = os.path.split(file_path)  # Filename may be a pattern (contains wildcards * or ?)
+            if not pattern:
+                # It's a directory -> skip
+                continue
+            # found_files = self.find_files(filename)  # Obsolete
+            found_files = self._toolbox.project().execution_instance.find_optional_files(pattern)
+            if not found_files:
+                self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(pattern))
+            else:
+                file_paths[file_path] = found_files
+        return file_paths
+
+    @Slot(int, name="execute_finished")
+    def execute_finished(self, return_code):
+        """Tool template execution finished.
+
+        Args:
+            return_code (int): Process exit code
+        """
+        self._graphics_item.stop_animation()
+        # Disconnect instance finished signal
+        self.instance.instance_finished_signal.disconnect(self.execute_finished)
+        if return_code == 0:
+            self._toolbox.msg_success.emit("Tool <b>{0}</b> execution finished".format(self.name))
+        else:
+            self._toolbox.msg_error.emit("Tool <b>{0}</b> execution failed".format(self.name))
+        if not self._toolbox.project().execution_instance:
+            # Happens sometimes when Stop button is pressed
+            return
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)
+
+    def stop_execution(self):
+        """Stops executing this Tool."""
+        self.stop_process()
+
+    @Slot(bool, name="stop_process")
+    def stop_process(self, checked=False):
+        """Terminate Tool template execution."""
+        self._graphics_item.stop_animation()
+        self.instance.instance_finished_signal.disconnect(self.execute_finished)
+        self._toolbox.msg_warning.emit("Stopping Tool <b>{0}</b>".format(self.name))
+        self.instance.terminate_instance()
+        # Note: QSubProcess, PythonReplWidget, and JuliaREPLWidget emit project_item_execution_finished_signal

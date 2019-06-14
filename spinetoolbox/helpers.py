@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -25,12 +25,22 @@ import shutil
 import glob
 import json
 import spinedb_api
-from PySide2.QtCore import Qt, Slot, QFile, QTextStream, QIODevice, QSize, QRect, QPoint
+from PySide2.QtCore import Qt, Slot, QFile, QIODevice, QSize, QRect, QPoint
 from PySide2.QtCore import __version__ as qt_version
 from PySide2.QtCore import __version_info__ as qt_version_info
 from PySide2.QtWidgets import QApplication, QMessageBox, QGraphicsScene
-from PySide2.QtGui import QCursor, QImageReader, QPixmap, QPainter, QColor, QIcon, QIconEngine, QFont, \
-    QStandardItemModel, QStandardItem
+from PySide2.QtGui import (
+    QCursor,
+    QImageReader,
+    QPixmap,
+    QPainter,
+    QColor,
+    QIcon,
+    QIconEngine,
+    QFont,
+    QStandardItemModel,
+    QStandardItem,
+)
 from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
@@ -38,6 +48,7 @@ def set_taskbar_icon():
     """Set application icon to Windows taskbar."""
     if os.name == "nt":
         import ctypes
+
         myappid = "{6E794A8A-E508-47C4-9319-1113852224D3}"
         ctypes.windll.shell32.SetCurrentProcessExplicitAppUserModelID(myappid)
 
@@ -47,7 +58,7 @@ def supported_img_formats():
     """Function to check if reading .ico files is supported."""
     img_formats = QImageReader().supportedImageFormats()
     img_formats_str = '\n'.join(str(x) for x in img_formats)
-    logging.debug("Supported Image formats:\n{0}".format(img_formats_str))
+    logging.debug("Supported Image formats:\n%s", img_formats_str)
 
 
 def pyside2_version_check():
@@ -69,7 +80,10 @@ def pyside2_version_check():
 
                 pip install "pyside2<5.12"
 
-            """.format(qt_version))
+            """.format(
+                qt_version
+            )
+        )
         return False
     return True
 
@@ -97,7 +111,10 @@ def spinedb_api_version_check():
 
             pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
-        """.format(REQUIRED_SPINEDB_API_VERSION, current_version, script))
+        """.format(
+            REQUIRED_SPINEDB_API_VERSION, current_version, script
+        )
+    )
     return False
 
 
@@ -107,17 +124,16 @@ def busy_effect(func):
     Args:
         func: Decorated function.
     """
+
     def new_function(*args, **kwargs):
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
         try:
             return func(*args, **kwargs)
-        except Exception as e:
-            logging.exception("Error {}".format(e.args[0]))
-            raise e
         finally:
             # noinspection PyArgumentList
             QApplication.restoreOverrideCursor()
+
     return new_function
 
 
@@ -164,18 +180,13 @@ def create_dir(base_path, folder='', verbosity=False):
         OSError if operation failed.
     """
     directory = os.path.join(base_path, folder)
-    if os.path.exists(directory):
-        if verbosity:
-            logging.debug("Directory found: {0}".format(directory))
-        return True
+    if os.path.exists(directory) and verbosity:
+        logging.debug("Directory found: %s", directory)
     else:
-        try:
-            os.makedirs(directory, exist_ok=True)
-        except OSError:
-            raise
+        os.makedirs(directory, exist_ok=True)
         if verbosity:
-            logging.debug("Directory created: {0}".format(directory))
-        return True
+            logging.debug("Directory created: %s", directory)
+    return True
 
 
 def create_output_dir_timestamp():
@@ -238,14 +249,11 @@ def erase_dir(path, verbosity=False):
     """
     if not os.path.exists(path):
         if verbosity:
-            logging.debug("Path does not exist: {}".format(path))
+            logging.debug("Path does not exist: %s", path)
         return False
     if verbosity:
-        logging.debug("Deleting directory {0}".format(path))
-    try:
-        shutil.rmtree(path)
-    except OSError:
-        raise
+        logging.debug("Deleting directory %s", path)
+    shutil.rmtree(path)
     return True
 
 
@@ -268,18 +276,22 @@ def copy_dir(widget, src_dir, dst_dir):
         return False
     except PermissionError as e:
         logging.exception(e)
-        msg = "Access to directory <br/><b>{0}</b><br/>denied." \
-              "<br/><br/>Possible reasons:" \
-              "<br/>1. Windows Explorer is open in the directory" \
-              "<br/>2. Permission error" \
-              "<br/><br/>Check these and try again.".format(dst_dir)
+        msg = (
+            "Access to directory <br/><b>{0}</b><br/>denied."
+            "<br/><br/>Possible reasons:"
+            "<br/>1. Windows Explorer is open in the directory"
+            "<br/>2. Permission error"
+            "<br/><br/>Check these and try again.".format(dst_dir)
+        )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, title_msg, msg)
         return False
     except OSError:
-        msg = "Copying directory failed. OSError in" \
-              "<br/><b>{0}</b><br/>Possibly because Windows " \
-              "Explorer is open in the directory".format(dst_dir)
+        msg = (
+            "Copying directory failed. OSError in"
+            "<br/><b>{0}</b><br/>Possibly because Windows "
+            "Explorer is open in the directory".format(dst_dir)
+        )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, title_msg, msg)
         return False
@@ -304,18 +316,22 @@ def rename_dir(widget, old_dir, new_dir):
         return False
     except PermissionError as e:
         logging.exception(e)
-        msg = "Access to directory <br/><b>{0}</b><br/>denied." \
-              "<br/><br/>Possible reasons:" \
-              "<br/>1. Windows Explorer is open in the directory" \
-              "<br/>2. Permission error" \
-              "<br/><br/>Check these and try again.".format(old_dir)
+        msg = (
+            "Access to directory <br/><b>{0}</b><br/>denied."
+            "<br/><br/>Possible reasons:"
+            "<br/>1. Windows Explorer is open in the directory"
+            "<br/>2. Permission error"
+            "<br/><br/>Check these and try again.".format(old_dir)
+        )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, "Renaming directory failed", msg)
         return False
     except OSError:
-        msg = "Renaming input directory failed. OSError in" \
-              "<br/><b>{0}</b><br/>Possibly because Windows " \
-              "Explorer is open in the directory".format(old_dir)
+        msg = (
+            "Renaming input directory failed. OSError in"
+            "<br/><b>{0}</b><br/>Possibly because Windows "
+            "Explorer is open in the directory".format(old_dir)
+        )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, "Renaming directory failed", msg)
         return False
@@ -337,12 +353,7 @@ def fix_name_ambiguity(name_list, offset=0):
 
 def tuple_itemgetter(itemgetter_func, num_indexes):
     """Change output of itemgetter to always be a tuple even for one index"""
-    if num_indexes == 1:
-        def g(item):
-            return (itemgetter_func(item),)
-        return g
-    else:
-        return itemgetter_func
+    return (lambda item: (itemgetter_func(item),)) if num_indexes == 1 else itemgetter_func
 
 
 def format_string_list(str_list):
@@ -357,12 +368,12 @@ def format_string_list(str_list):
 
 
 def strip_json_data(data, maxlen):
-    """Return a json equivalent to data, stripped to maxlen characters.
+    """Return a json equivalent to `data`, stripped to `maxlen` characters.
     """
     if not data:
         return data
     try:
-        stripped_data = json.dumps(json.loads(data))
+        stripped_data = json.dumps(json.loads(data), ensure_ascii=False)
     except json.JSONDecodeError:
         stripped_data = data
     if len(stripped_data) > 2 * maxlen:
@@ -372,11 +383,15 @@ def strip_json_data(data, maxlen):
 
 class IconManager:
     """A class to manage object class icons for data store forms."""
+
+    # TODO: Document methods
+
     def __init__(self):
         """Init instance."""
         super().__init__()
         self.obj_cls_icon_cache = {}  # A mapping from object class name to display icon
         self.icon_pixmap_cache = {}  # A mapping from display_icon to associated pixmap
+        self.rel_cls_icon_cache = {}  # A mapping from object class name list to associated pixmap
         self.searchterms = {}
         self.model = QStandardItemModel()
         self.model.data = self._model_data
@@ -407,7 +422,8 @@ class IconManager:
         self.model.invisibleRootItem().appendRows(items)
 
     def _model_data(self, index, role):
-        """Create pixmaps as they're requested, to reduce loading time."""
+        """Replacement method for model.data().
+        Create pixmaps as they're requested by the data() method, to reduce loading time."""
         if role == Qt.DisplayRole:
             return None
         if role != Qt.DecorationRole:
@@ -418,7 +434,7 @@ class IconManager:
 
     def icon_color_code(self, display_icon):
         """Take a display icon integer and return an equivalent tuple of icon and color code."""
-        if type(display_icon) is not int or display_icon < 0:
+        if not isinstance(display_icon, int) or display_icon < 0:
             return int("f1b2", 16), 0
         icon_code = display_icon & 65535
         try:
@@ -431,13 +447,23 @@ class IconManager:
         """Take tuple of icon and color codes, and return equivalent integer."""
         return icon_code + (color_code << 16)
 
+    def default_display_icon(self):
+        return self.display_icon(*self.icon_color_code(None))
+
     def setup_object_pixmaps(self, object_classes):
+        """Called after adding or updating object classes. 
+        Create the corresponding object pixmaps and clear obsolete entries 
+        from the relationship class icon cache."""
         for object_class in object_classes:
             self.create_object_pixmap(object_class.display_icon)
             self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
+        object_class_names = [x.name for x in object_classes]
+        dirty_keys = [k for k in self.rel_cls_icon_cache if any(x in object_class_names for x in k)]
+        for k in dirty_keys:
+            del self.rel_cls_icon_cache[k]
 
     def create_object_pixmap(self, display_icon):
-        """Create a pixmap corresponding to object icon, store it and return it."""
+        """Create a pixmap corresponding to display_icon, cache it, and return it."""
         if display_icon not in self.icon_pixmap_cache:
             icon_code, color_code = self.icon_color_code(display_icon)
             engine = CharIconEngine(chr(icon_code), color_code)
@@ -455,15 +481,18 @@ class IconManager:
         return engine.pixmap(QSize(512, 512))
 
     def object_icon(self, object_class_name):
-        """An object icon from the stored pixmaps if any."""
+        """An icon for the given object class."""
         return QIcon(self.object_pixmap(object_class_name))
 
     def relationship_pixmap(self, str_object_class_name_list):
-        """A pixmap rendered by painting several object pixmaps together."""
+        """A pixmap for the given object class name list,
+        created by rendering several object pixmaps next to each other."""
         if not str_object_class_name_list:
             engine = CharIconEngine("\uf1b3", 0)
             return engine.pixmap(QSize(512, 512))
-        object_class_name_list = str_object_class_name_list.split(",")
+        object_class_name_list = tuple(str_object_class_name_list.split(","))
+        if object_class_name_list in self.rel_cls_icon_cache:
+            return self.rel_cls_icon_cache[object_class_name_list]
         scene = QGraphicsScene()
         x = 0
         for j, object_class_name in enumerate(object_class_name_list):
@@ -472,7 +501,7 @@ class IconManager:
             if j % 2 == 0:
                 y = 0
             else:
-                y = - 0.875 * 0.75 * pixmap_item.boundingRect().height()
+                y = -0.875 * 0.75 * pixmap_item.boundingRect().height()
                 pixmap_item.setZValue(-1)
             pixmap_item.setPos(x, y)
             x += 0.875 * 0.5 * pixmap_item.boundingRect().width()
@@ -482,15 +511,15 @@ class IconManager:
         painter.setRenderHint(QPainter.Antialiasing, True)
         scene.render(painter)
         painter.end()
+        self.rel_cls_icon_cache[object_class_name_list] = pixmap
         return pixmap
 
     def relationship_icon(self, str_object_class_name_list):
-        """A relationship icon corresponding to the list of object names."""
+        """An icon for the given object class name list."""
         return QIcon(self.relationship_pixmap(str_object_class_name_list))
 
 
 class CharIconEngine(QIconEngine):
-
     """Specialization of QIconEngine used to draw font-based icons."""
 
     def __init__(self, char, color):
