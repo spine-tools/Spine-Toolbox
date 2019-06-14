@@ -141,7 +141,7 @@ class DataStore(ProjectItem):
                     "Unable to generate URL from <b>{0}</b> selections: invalid dialect {1}. "
                     "<br>Please select a new dialect and try again.".format(self.name, dialect)
                 )
-                return
+                return  # TODO: Manuel. Shouldn't this return None?
             if dialect == 'sqlite':
                 url = URL('sqlite', **url_copy)
             else:
@@ -588,6 +588,8 @@ class DataStore(ProjectItem):
     def copy_url(self, checked=False):
         """Copy db url to clipboard."""
         url = self.make_url()
+        if not url:
+            return
         url.password = None
         QApplication.clipboard().setText(str(url))
         self._toolbox.msg.emit("Database url '{}' successfully copied to clipboard.".format(url))
