@@ -61,8 +61,8 @@ class DataInterface(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.toolButton_di_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.toolButton_select_mapping_script.clicked] = self.select_mapping_script
-        s[self._toolbox.ui.pushButton_mapping_editor.clicked] = self.open_mapping_editor
+        s[self._toolbox.ui.toolButton_select_imported_file.clicked] = self.select_import_file
+        s[self._toolbox.ui.pushButton_import_editor.clicked] = self.open_import_editor
         return s
 
     def activate(self):
@@ -81,11 +81,11 @@ class DataInterface(ProjectItem):
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_di_name.setText(self.name)
-        self._toolbox.ui.lineEdit_mapping_script_path.setText(self.mapping_script_path)
+        self._toolbox.ui.lineEdit_import_file_path.setText(self.mapping_script_path)
 
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
-        self.mapping_script_path = self._toolbox.ui.lineEdit_mapping_script_path.text()
+        self.mapping_script_path = self._toolbox.ui.lineEdit_import_file_path.text()
 
     def get_icon(self):
         """Returns the graphics item representing this data interface on scene."""
@@ -104,25 +104,25 @@ class DataInterface(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
-    @Slot(bool, name="select_mapping_script")
-    def select_mapping_script(self, checked=False):
+    @Slot(bool, name="select_import_file")
+    def select_import_file(self, checked=False):
         """Opens script path selection dialog."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getOpenFileName(self._toolbox, 'Select mapping script', self.data_dir)
+        answer = QFileDialog.getOpenFileName(self._toolbox, "Select file to import", self.data_dir)
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
         # Update UI
-        self._toolbox.ui.lineEdit_mapping_script_path.setText(file_path)
+        self._toolbox.ui.lineEdit_import_file_path.setText(file_path)
 
-    @Slot(bool, name="open_mapping_editor")
-    def open_mapping_editor(self, checked=False):
-        """Opens mapping script editor."""
-        script = self._toolbox.ui.lineEdit_mapping_script_path.text()
-        if not os.path.exists(script):
-            self._toolbox.msg_error.emit("Invalid path: {0}".format(script))
+    @Slot(bool, name="open_import_editor")
+    def open_import_editor(self, checked=False):
+        """Opens Import editor for the file selected into line edit."""
+        importee = self._toolbox.ui.lineEdit_import_file_path.text()
+        if not os.path.exists(importee):
+            self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
             return
-        self._toolbox.msg.emit("Opening mapping editor for script {0}".format(script))
+        self._toolbox.msg.emit("Opening Import editor for file: {0}".format(importee))
 
     def execute(self):
         """Executes this Data Interface."""

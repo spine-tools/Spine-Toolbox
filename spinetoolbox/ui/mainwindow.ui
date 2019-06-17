@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>21</height>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -440,8 +440,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>361</height>
+              <width>375</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -1250,8 +1250,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>361</height>
+              <width>375</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1657,8 +1657,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>361</height>
+              <width>375</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1980,8 +1980,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
-              <height>361</height>
+              <width>375</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2175,20 +2175,23 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>333</width>
-              <height>361</height>
+              <width>370</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_21">
              <item>
               <layout class="QHBoxLayout" name="horizontalLayout_4">
                <item>
-                <widget class="QLineEdit" name="lineEdit_mapping_script_path">
+                <widget class="QLineEdit" name="lineEdit_import_file_path">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import file path&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
                  <property name="text">
                   <string/>
                  </property>
                  <property name="placeholderText">
-                  <string>Path to mapping script</string>
+                  <string>Select file to import</string>
                  </property>
                  <property name="clearButtonEnabled">
                   <bool>true</bool>
@@ -2196,7 +2199,7 @@
                 </widget>
                </item>
                <item>
-                <widget class="QToolButton" name="toolButton_select_mapping_script">
+                <widget class="QToolButton" name="toolButton_select_imported_file">
                  <property name="enabled">
                   <bool>true</bool>
                  </property>
@@ -2219,7 +2222,7 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open SQLite file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select file to import&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
@@ -2230,9 +2233,12 @@
               </layout>
              </item>
              <item>
-              <widget class="QPushButton" name="pushButton_mapping_editor">
+              <widget class="QPushButton" name="pushButton_import_editor">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open selected file in Import Editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
                <property name="text">
-                <string>Mapping Editor</string>
+                <string>Import Editor</string>
                </property>
               </widget>
              </item>
@@ -3034,9 +3040,9 @@
   <tabstop>toolButton_view_open_dir</tabstop>
   <tabstop>tableView_connections</tabstop>
   <tabstop>scrollArea_6</tabstop>
-  <tabstop>lineEdit_mapping_script_path</tabstop>
-  <tabstop>toolButton_select_mapping_script</tabstop>
-  <tabstop>pushButton_mapping_editor</tabstop>
+  <tabstop>lineEdit_import_file_path</tabstop>
+  <tabstop>toolButton_select_imported_file</tabstop>
+  <tabstop>pushButton_import_editor</tabstop>
   <tabstop>toolButton_di_open_dir</tabstop>
   <tabstop>tabWidget_item_properties</tabstop>
  </tabstops>
