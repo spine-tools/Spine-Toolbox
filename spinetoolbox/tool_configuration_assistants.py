@@ -42,7 +42,9 @@ class SpineModelConfigurationAssistant(QObject):
             self.julia_exe = julia_path
         else:
             self.julia_exe = JULIA_EXECUTABLE
-        self.julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="@.")
+        self.julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if self.julia_project_path == "":
+            self.julia_project_path = "@."
         self._julia_version = None
         self._julia_active_project = None
         self.find_out_julia_version_and_project()
@@ -79,7 +81,7 @@ class SpineModelConfigurationAssistant(QObject):
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("using SpineModel; using Pkg; println(Pkg.installed()[ARGS[1]]);")
+        args.append("using Pkg; Pkg.update(ARGS[1]);")
         args.append("SpineModel")
         return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
 

@@ -118,8 +118,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """
         self._toolbox.msg.emit("\tInitializing Julia...")
         julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
-        self.julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="@.")
-        if not julia_path == "":
+        if julia_path != "":
             self.julia_exe = julia_path
         else:
             self.julia_exe = JULIA_EXECUTABLE
@@ -153,10 +152,14 @@ class JuliaREPLWidget(RichJupyterWidget):
         kernel_name = self.julia_kernel_name()
         if not kernel_name:
             return False
-        if self.kernel_manager and kernel_name == self.kernel_name:
+        julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if julia_project_path == "":
+            julia_project_path = "@."
+        if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             self._toolbox.msg.emit("*** Using previously started Julia Console ***")
             return True
         self.kernel_name = kernel_name
+        self.julia_project_path = julia_project_path
         self.kernel_execution_state = None
         kernel_specs = find_kernel_specs()
         # logging.debug("kernel_specs:{0}".format(kernel_specs))
@@ -288,7 +291,10 @@ class JuliaREPLWidget(RichJupyterWidget):
         kernel_name = self.julia_kernel_name()
         if not kernel_name:
             return
-        if self.kernel_manager and kernel_name == self.kernel_name:
+        julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if julia_project_path == "":
+            julia_project_path = "@."
+        if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             # Restart current kernel
             self.starting = True
             self._toolbox.msg.emit("*** Restarting Julia REPL ***")
@@ -298,6 +304,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         else:
             # No kernel to restart (!) or julia has changed in settings. Start a new kernel
             self.kernel_name = kernel_name
+            self.julia_project_path = julia_project_path
             kernel_specs = find_kernel_specs()
             julia_kernel_names = [x for x in kernel_specs if x.startswith('julia')]
             if self.kernel_name in julia_kernel_names:

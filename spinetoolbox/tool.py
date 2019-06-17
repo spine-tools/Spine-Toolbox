@@ -481,7 +481,9 @@ class Tool(ProjectItem):
                 julia_exe = julia_path
             else:
                 julia_exe = JULIA_EXECUTABLE
-            julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="@.")
+            julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+            if julia_project_path == "":
+                julia_project_path = "@."
             work_dir = self.instance.basedir
             script_path = os.path.join(work_dir, self.tool_template().main_prgm)
             self.instance.program = julia_exe

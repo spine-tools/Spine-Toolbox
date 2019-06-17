@@ -124,8 +124,7 @@ class ToolConfigurationAssistantWidget(QWidget):
                 self.q_process.subprocess_finished_signal.connect(self._handle_spine_model_installation_finished)
                 self.q_process.start_process()
         else:
-            spine_model_version = self.q_process.output
-            self.add_spine_model_msg("SpineModel version {0} is correctly installed.".format(spine_model_version))
+            self.add_spine_model_msg("SpineModel is correctly installed.")
             self.q_process = self.spine_model_config_asst.py_call_program_check()
             self.q_process.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
             self.q_process.start_process()
