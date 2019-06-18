@@ -18,9 +18,9 @@ Contains DataInterface class.
 
 import logging
 import os
-from PySide2.QtCore import Qt, Slot, Signal, QUrl
-from PySide2.QtGui import QDesktopServices
-from PySide2.QtWidgets import QFileDialog
+from PySide2.QtCore import Qt, Slot, Signal, QUrl, QFileInfo
+from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
+from PySide2.QtWidgets import QFileDialog, QFileIconProvider
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir
@@ -37,6 +37,8 @@ class DataInterface(ProjectItem):
         y (int): Initial icon scene Y coordinate
     """
 
+    data_interface_refresh_signal = Signal(name="data_interface_refresh_signal")
+
     def __init__(self, toolbox, name, description, x, y):
         """Class constructor."""
         super().__init__(name, description)
@@ -52,8 +54,11 @@ class DataInterface(ProjectItem):
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
         # Variables for saving selections when item is (de)activated
-        self.mapping_script_path = ""
+        self.import_file_path = ""
+        self.file_model = QStandardItemModel()
         self._graphics_item = DataInterfaceIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
+        # Note: data_interface_refresh_signal is not shared with other proj. items so there's no need to disconnect it
+        self.data_interface_refresh_signal.connect(self.refresh)
         self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
@@ -81,11 +86,14 @@ class DataInterface(ProjectItem):
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_di_name.setText(self.name)
-        self._toolbox.ui.lineEdit_import_file_path.setText(self.mapping_script_path)
+        self._toolbox.ui.lineEdit_import_file_path.setText(self.import_file_path)
+        self._toolbox.ui.treeView_data_interface_files.setModel(self.file_model)
+        self.refresh()
 
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
-        self.mapping_script_path = self._toolbox.ui.lineEdit_import_file_path.text()
+        self.import_file_path = self._toolbox.ui.lineEdit_import_file_path.text()
+        self._toolbox.ui.treeView_data_interface_files.setModel(None)
 
     def get_icon(self):
         """Returns the graphics item representing this data interface on scene."""
@@ -123,6 +131,37 @@ class DataInterface(ProjectItem):
             self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
             return
         self._toolbox.msg.emit("Opening Import editor for file: {0}".format(importee))
+
+    def update_file_model(self, items):
+        """Add given list of items to the file model. If None or
+        an empty list given, the model is cleared."""
+        self.file_model.clear()
+        self.file_model.setHorizontalHeaderItem(0, QStandardItem("Files"))  # Add header
+        if items is not None:
+            for item in items:
+                qitem = QStandardItem(item)
+                qitem.setEditable(False)
+                qitem.setCheckable(True)
+                qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
+                self.file_model.appendRow(qitem)
+
+    @Slot(name="refresh")
+    def refresh(self):
+        """Update the list of files that this item is viewing."""
+        file_list = list()
+        for input_item in self._toolbox.connection_model.input_items(self.name):
+            found_index = self._toolbox.project_item_model.find_item(input_item)
+            if not found_index:
+                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
+                continue
+            item = self._toolbox.project_item_model.project_item(found_index)
+            if item.item_type != "Data Connection":
+                continue
+            files = item.data_files()
+            file_list += files
+            refs = item.file_references()
+            file_list += refs
+        self.update_file_model(file_list)
 
     def execute(self):
         """Executes this Data Interface."""

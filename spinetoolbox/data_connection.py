@@ -330,11 +330,11 @@ class DataConnection(ProjectItem):
         return
 
     def file_references(self):
-        """Return a list of paths to files that are in this item as references."""
+        """Returns a list of paths to files that are in this item as references."""
         return self.references
 
     def data_files(self):
-        """Return a list of files that are in the data directory."""
+        """Returns a list of files that are in the data directory."""
         if not os.path.isdir(self.data_dir):
             return None
         return os.listdir(self.data_dir)

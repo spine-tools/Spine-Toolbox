@@ -487,6 +487,8 @@ class ToolboxUI(QMainWindow):
         # Views
         self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
         # self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # Data Interfaces
+        self.ui.treeView_data_interface_files.setStyleSheet(TREEVIEW_HEADER_SS)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
