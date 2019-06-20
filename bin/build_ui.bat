@@ -44,6 +44,11 @@ CALL pyside2-uic ../spinetoolbox/ui/add_view.ui -o ../spinetoolbox/ui/add_view.p
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_view.py.o > ..\spinetoolbox\ui\add_view.py
 del ..\spinetoolbox\ui\add_view.py.o
 
+ECHO building fixed_step_time_series_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/fixed_step_time_series_editor.ui -o ../spinetoolbox/ui/fixed_step_time_series_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\fixed_step_time_series_editor.py.o > ..\spinetoolbox\ui\fixed_step_time_series_editor.py
+del ..\spinetoolbox\ui\fixed_step_time_series_editor.py.o
+
 ECHO building graph_view_form.py
 CALL pyside2-uic ../spinetoolbox/ui/graph_view_form.ui -o ../spinetoolbox/ui/graph_view_form.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\graph_view_form.py.o > ..\spinetoolbox\ui\graph_view_form.py

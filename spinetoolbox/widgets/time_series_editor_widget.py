@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2019 Spine project consortium
+# Copyright (C) 2017-2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -19,13 +19,13 @@ Contains logic for the time series editor widget.
 import numpy
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog
-from spinedb_api import dumps, ValueDecodeError
+from spinedb_api import ValueDecodeError, VariableTimeSteps
 from models import MinimalTableModel
 from ui.time_series_editor import Ui_TimeSeriesEditor
 from widgets.plot_canvas import PlotCanvas
 
 
-def _map_to_model(data):
+def map_to_model(data):
     """
     Converts time series data to a form understandable by MinimalTableModel
 
@@ -43,7 +43,7 @@ def _map_to_model(data):
     return [[str(element[0]), str(element[1])] for element in transposed]
 
 
-def _map_from_model(data):
+def map_from_model(data):
     """
     Converts time series data from MinimalTableModel to numpy
 
@@ -80,8 +80,8 @@ class TimeSeriesEditor(QDialog):
         self._parent_model = model
         self._parent_model_index = index
         self._model = MinimalTableModel()
-        value_as_numpy = value.as_numpy()
-        self._model.reset_model(_map_to_model(value_as_numpy))
+        value_as_numpy = value.stamps, value.values
+        self._model.reset_model(map_to_model(value_as_numpy))
         self._model.setHeaderData(0, Qt.Horizontal, 'Time')
         self._model.setHeaderData(1, Qt.Horizontal, 'Value')
         self._model.dataChanged.connect(self._model_data_changed)
@@ -94,10 +94,10 @@ class TimeSeriesEditor(QDialog):
     def _model_data_changed(self, topLeft, bottomRight, roles=None):
         """A slot to signal that the table view has changed."""
         try:
-            data = _map_from_model(self._model.model_data())
-            self._parent_model.setData(self._parent_model_index, dumps(data))
+            stamps, values = map_from_model(self._model.model_data())
+            self._parent_model.setData(self._parent_model_index, VariableTimeSteps(stamps, values).as_json())
             self.ui.plot_widget.axes.cla()
-            self.ui.plot_widget.axes.plot(data[0], data[1])
+            self.ui.plot_widget.axes.plot(stamps, values)
             self.ui.plot_widget.draw()
         except (ValueError, ValueDecodeError):
             self._invalidate_table(topLeft, bottomRight)
