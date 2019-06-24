@@ -115,7 +115,9 @@ class ProjectItemContextMenu(CustomContextMenu):
             self.add_action("Edit Tool template", enabled=enabled)
             self.add_action("Edit main program file...", enabled=enabled)
         elif d.item_type == "View":
-            pass
+            self.add_action("Open directory...")
+        elif d.item_type == "Data Interface":
+            self.add_action("Open directory...")
         else:
             logging.error("Unknown item type:{0}".format(d.item_type))
             return
