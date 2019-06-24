@@ -19,10 +19,20 @@ Contains logic for the fixed step time series editor widget.
 import numpy
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog
-from spinedb_api import FixedTimeSteps, ValueDecodeError
+from spinedb_api import FixedTimeSteps, resolution_to_timedelta, timedelta_to_resolution, ValueDecodeError
 from time_series_table_model import TimeSeriesTableModel
 from ui.fixed_step_time_series_editor import Ui_FixedStepTimeSeriesEditor
 from widgets.plot_canvas import PlotCanvas
+
+
+def _resize_value_array(values, length):
+    if len(values) == length:
+        return values
+    if len(values) > length:
+        return values[:length]
+    zero_padded = numpy.zeros(length)
+    zero_padded[0:len(values)] = values
+    return zero_padded
 
 
 class FixedStepTimeSeriesEditor(QDialog):
@@ -47,43 +57,96 @@ class FixedStepTimeSeriesEditor(QDialog):
         values = value.values
         self._model = TimeSeriesTableModel(stamps, values)
         self._model.set_fixed_time_stamps(True)
-        self._model.dataChanged.connect(self._model_data_changed)
-        self.ui.start_time_edit.setText(value.start)
+        self._model.dataChanged.connect(self._table_changed)
+        self._table_valid = True
+        self.ui.start_time_edit.setText(str(value.start))
+        self.ui.start_time_edit.editingFinished.connect(self._start_time_changed)
+        self._start_time_valid = True
+        self._start_time_label_text = self.ui.start_time_label.text()
         self.ui.length_edit.setValue(value.length)
-        self.ui.resolution_edit.setText(value.resolution)
+        self.ui.length_edit.editingFinished.connect(self._length_changed)
+        self.ui.resolution_edit.setText(timedelta_to_resolution(value.timedelta))
+        self.ui.resolution_edit.editingFinished.connect(self._resolution_changed)
+        self._resolution_valid = True
+        self._resolution_label_text = self.ui.resolution_label.text()
         self.ui.time_series_table.setModel(self._model)
         self.ui.plot_widget = PlotCanvas()
         self.ui.splitter.insertWidget(1, self.ui.plot_widget)
         self.ui.plot_widget.axes.plot(stamps, values)
 
-    @Slot("QModelIndex", "QModelIndex", "list", name="_model_data_changed")
-    def _model_data_changed(self, topLeft, bottomRight, roles=None):
-        """A slot to signal that the table view has changed."""
-        try:
-            start = "not implemented"
-            length = self.ui.length_edit.value()
-            resolution = self.ui.resolution_edit.text()
-            stamps = self._model.stamps
-            values = self._model.values
-            data_value = FixedTimeSteps(start, length, resolution, values)
-            self._parent_model.setData(self._parent_model_index, data_value.as_json())
-            self.ui.plot_widget.axes.cla()
-            self.ui.plot_widget.axes.plot(stamps, values)
-            self.ui.plot_widget.draw()
-        except (ValueError, ValueDecodeError):
-            self._invalidate_table(topLeft, bottomRight)
+    @Slot(name='_length_changed')
+    def _length_changed(self):
+        if not self._valid_inputs():
+            return
+        length = self.ui.length_edit.value()
+        values = self._model.values
+        resized = _resize_value_array(values, length)
+        timedelta = resolution_to_timedelta(self.ui.resolution_edit.text())
+        start = numpy.datetime64(self.ui.start_time_edit.text())
+        value = FixedTimeSteps(start, timedelta, resized)
+        self._parent_model.setData(self._parent_model_index, value.to_databse())
+        self._silent_reset_model(value)
+        self._update_plot(value)
 
-    def _invalidate_table(self, top_left, bottom_right):
-        """Write error messages to the table to signal a value conversion error"""
-        self._model.dataChanged.disconnect(self._model_data_changed)
-        invalid_indexes = list()
-        row = top_left.row()
-        while row <= bottom_right.row():
-            column = top_left.column()
-            while column <= bottom_right.column():
-                invalid_indexes.append(self._model.index(row, column))
-                column += 1
-            row += 1
-        errors = len(invalid_indexes) * ['Error']
-        print(self._model.batch_set_data(invalid_indexes, errors))
-        self._model.dataChanged.connect(self._model_data_changed)
+    @Slot(name='_resolution_changed')
+    def _resolution_changed(self):
+        resolution_text = self.ui.resolution_edit.text()
+        try:
+            timedelta = resolution_to_timedelta(resolution_text)
+        except ValueDecodeError:
+            self._resolution_valid = False
+            self.ui.resolution_label.setText(self._resolution_label_text + " (syntax error)")
+            return
+        self.ui.resolution_label.setText(self._resolution_label_text)
+        self._resolution_valid = True
+        if not self._valid_inputs():
+            return
+        start = numpy.datetime64(self.ui.start_time_edit.text())
+        values = self._model.values
+        value = FixedTimeSteps(start, timedelta, values)
+        self._parent_model.setData(self._parent_model_index, value.to_databse())
+        self._silent_reset_model(value)
+        self._update_plot(value)
+
+    def _silent_reset_model(self, value):
+        self._model.dataChanged.disconnect(self._table_changed)
+        self._model.reset(value.stamps, value.values)
+        self._model.dataChanged.connect(self._table_changed)
+
+    @Slot(name='_start_time_changed')
+    def _start_time_changed(self):
+        start_text = self.ui.start_time_edit.text()
+        try:
+            start = numpy.datetime64(start_text)
+        except ValueError:
+            self._start_time_valid = False
+            self.ui.start_time_label.setText(self._start_time_label_text + " (syntax error)")
+            return
+        self.ui.start_time_label.setText(self._start_time_label_text)
+        self._start_time_valid = True
+        if not self._valid_inputs():
+            return
+        timedelta = resolution_to_timedelta(self.ui.resolution_edit.text())
+        values = self._model.values
+        value = FixedTimeSteps(start, timedelta, values)
+        self._parent_model.setData(self._parent_model_index, value.to_databse())
+        self._silent_reset_model(value)
+        self._update_plot(value)
+
+    @Slot("QModelIndex", "QModelIndex", "list", name="_table_changed")
+    def _table_changed(self, topLeft, bottomRight, roles=None):
+        """A slot to signal that the table view has changed."""
+        value = FixedTimeSteps(None, None, None)
+        value.values = self._model.values
+        value.start = numpy.datetime64(self.ui.start_time_edit.text())
+        value.timedelta = resolution_to_timedelta(self.ui.resolution_edit.text())
+        self._parent_model.setData(self._parent_model_index, value.to_databse())
+        self._update_plot(value)
+
+    def _update_plot(self, value):
+        self.ui.plot_widget.axes.cla()
+        self.ui.plot_widget.axes.plot(value.stamps, value.values)
+        self.ui.plot_widget.draw()
+
+    def _valid_inputs(self):
+        return self._table_valid and self._start_time_valid and self._resolution_valid

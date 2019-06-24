@@ -17,14 +17,14 @@ Contains functions to choose a (relationship) parameter value editor.
 """
 
 from PySide2.QtCore import Qt
-from spinedb_api import from_json, FixedTimeSteps, VariableTimeSteps
+from spinedb_api import FixedTimeSteps, value_from_database, VariableTimeSteps
 from widgets.fixed_step_time_series_editor_widget import FixedStepTimeSeriesEditor
 from widgets.time_series_editor_widget import TimeSeriesEditor
 
 
 def select_value_editor(model, index, parent):
     """Returns a widget to edit a (relationship) parameter value."""
-    value = from_json(model.data(index, Qt.EditRole))
+    value = value_from_database(model.data(index, Qt.EditRole))
     if isinstance(value, FixedTimeSteps):
         return FixedStepTimeSeriesEditor(model, index, value, parent)
     if isinstance(value, VariableTimeSteps):

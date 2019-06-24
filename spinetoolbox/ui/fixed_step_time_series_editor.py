@@ -1,3 +1,14 @@
+######################################################################################################################
+# Copyright (C) 2017 - 2019 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
+
 # -*- coding: utf-8 -*-
 
 # Form implementation generated from reading ui file '../spinetoolbox/ui/fixed_step_time_series_editor.ui',
@@ -25,9 +36,18 @@ class Ui_FixedStepTimeSeriesEditor(object):
         self.verticalLayout.setObjectName("verticalLayout")
         self.formLayout = QtWidgets.QFormLayout()
         self.formLayout.setObjectName("formLayout")
-        self.initial_time_label = QtWidgets.QLabel(self.verticalLayoutWidget)
-        self.initial_time_label.setObjectName("initial_time_label")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.initial_time_label)
+        self.start_time_label = QtWidgets.QLabel(self.verticalLayoutWidget)
+        self.start_time_label.setObjectName("start_time_label")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.start_time_label)
+        self.verticalLayout_2 = QtWidgets.QVBoxLayout()
+        self.verticalLayout_2.setObjectName("verticalLayout_2")
+        self.start_time_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget)
+        self.start_time_edit.setObjectName("start_time_edit")
+        self.verticalLayout_2.addWidget(self.start_time_edit)
+        self.label = QtWidgets.QLabel(self.verticalLayoutWidget)
+        self.label.setObjectName("label")
+        self.verticalLayout_2.addWidget(self.label)
+        self.formLayout.setLayout(0, QtWidgets.QFormLayout.FieldRole, self.verticalLayout_2)
         self.length_label = QtWidgets.QLabel(self.verticalLayoutWidget)
         self.length_label.setObjectName("length_label")
         self.formLayout.setWidget(1, QtWidgets.QFormLayout.LabelRole, self.length_label)
@@ -39,15 +59,6 @@ class Ui_FixedStepTimeSeriesEditor(object):
         self.resolution_label = QtWidgets.QLabel(self.verticalLayoutWidget)
         self.resolution_label.setObjectName("resolution_label")
         self.formLayout.setWidget(2, QtWidgets.QFormLayout.LabelRole, self.resolution_label)
-        self.verticalLayout_2 = QtWidgets.QVBoxLayout()
-        self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.start_time_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget)
-        self.start_time_edit.setObjectName("start_time_edit")
-        self.verticalLayout_2.addWidget(self.start_time_edit)
-        self.label = QtWidgets.QLabel(self.verticalLayoutWidget)
-        self.label.setObjectName("label")
-        self.verticalLayout_2.addWidget(self.label)
-        self.formLayout.setLayout(0, QtWidgets.QFormLayout.FieldRole, self.verticalLayout_2)
         self.verticalLayout_3 = QtWidgets.QVBoxLayout()
         self.verticalLayout_3.setObjectName("verticalLayout_3")
         self.resolution_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget)
@@ -76,10 +87,10 @@ class Ui_FixedStepTimeSeriesEditor(object):
 
     def retranslateUi(self, FixedStepTimeSeriesEditor):
         FixedStepTimeSeriesEditor.setWindowTitle(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Edit time series", None, -1))
-        self.initial_time_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Start time", None, -1))
+        self.start_time_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Start time", None, -1))
+        self.label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Format: YYYY-MM-DDThh:mm:ss", None, -1))
         self.length_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Length", None, -1))
         self.resolution_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Resolution", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Format: YYYY-MM-DD hh:mm:ss", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Available units: S, M, H, d, m, y", None, -1))
         self.close_button.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Close", None, -1))
 

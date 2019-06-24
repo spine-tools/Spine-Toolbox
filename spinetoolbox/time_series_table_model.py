@@ -16,15 +16,19 @@ Models for time series editors.
 :date:   18.6.2019
 """
 
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
+from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide2.QtGui import QBrush
 
 
 class TimeSeriesTableModel(QAbstractTableModel):
+
+    set_data_failed = Signal(QModelIndex, name='set_data_failed')
+
     def __init__(self, stamps, values, parent=None):
         super().__init__(parent)
         self._stamps = stamps
-        self._values = values
         self._fixed_stamps = False
+        self._values = values
 
     def columnCount(self, parent=QModelIndex()):
         return 2
@@ -51,6 +55,12 @@ class TimeSeriesTableModel(QAbstractTableModel):
             return section + 1
         return "Time" if section == 0 else "Value"
 
+    def reset(self, stamps, values):
+        self.beginResetModel()
+        self._stamps = stamps
+        self._values = values
+        self.endResetModel()
+
     def rowCount(self, parent=QModelIndex()):
         return len(self._stamps)
 
@@ -58,9 +68,17 @@ class TimeSeriesTableModel(QAbstractTableModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
         if index.column() == 0:
-            self._stamps[index.row()] = value
+            try:
+                self._stamps[index.row()] = value
+            except ValueError:
+                self.set_data_failed.emit(index)
+                return False
         else:
-            self._values[index.row()] = value
+            try:
+                self._values[index.row()] = value
+            except ValueError:
+                self.set_data_failed.emit(index)
+                return False
         self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
 
