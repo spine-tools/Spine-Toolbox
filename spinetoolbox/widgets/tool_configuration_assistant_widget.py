@@ -96,9 +96,9 @@ class ToolConfigurationAssistantWidget(QWidget):
                 "Unable to determine Julia version. Make sure that Julia is correctly installed and try again"
             )
             QApplication.restoreOverrideCursor()
-        elif julia_version > "1.1.0" or julia_version < "1.0.0":
+        elif julia_version < "1.1.0":
             self.add_spine_model_error_msg(
-                "SpineModel.jl requires Julia version 1.x, whereas current version is {}.".format(julia_version)
+                "SpineModel.jl requires Julia version 1.1.0, whereas current version is {}.".format(julia_version)
             )
             QApplication.restoreOverrideCursor()
         else:
