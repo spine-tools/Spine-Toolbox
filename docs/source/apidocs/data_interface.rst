@@ -1,7 +1,7 @@
-tool\_templates module
+data\_interface module
 ======================
 
-.. automodule:: tool_templates
+.. automodule:: data_interface
    :members:
    :undoc-members:
    :show-inheritance:
