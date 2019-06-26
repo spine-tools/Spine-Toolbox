@@ -1,7 +1,7 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -18,8 +18,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>1155</width>
-    <height>840</height>
+    <width>862</width>
+    <height>708</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -126,8 +126,8 @@
     <rect>
      <x>0</x>
      <y>0</y>
-     <width>1155</width>
-     <height>28</height>
+     <width>862</width>
+     <height>26</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -141,6 +141,7 @@
     <addaction name="actionOpen"/>
     <addaction name="actionSave"/>
     <addaction name="actionSave_As"/>
+    <addaction name="actionExport_project_to_GraphML"/>
     <addaction name="separator"/>
     <addaction name="actionSettings"/>
     <addaction name="actionPackages"/>
@@ -164,6 +165,7 @@
     <addaction name="actionAdd_Data_Connection"/>
     <addaction name="actionAdd_Tool"/>
     <addaction name="actionAdd_View"/>
+    <addaction name="actionAdd_Data_Interface"/>
     <addaction name="separator"/>
     <addaction name="actionRemove_all"/>
    </widget>
@@ -323,7 +325,7 @@
    <property name="minimumSize">
     <size>
      <width>356</width>
-     <height>182</height>
+     <height>256</height>
     </size>
    </property>
    <property name="windowTitle">
@@ -355,7 +357,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>4</number>
+        <number>5</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -429,28 +431,43 @@
           </widget>
          </item>
          <item>
-          <widget class="QScrollArea" name="scrollArea">
+          <widget class="QScrollArea" name="scrollArea_5">
            <property name="widgetResizable">
             <bool>true</bool>
            </property>
-           <widget class="QWidget" name="scrollAreaWidgetContents">
+           <widget class="QWidget" name="scrollAreaWidgetContents_7">
             <property name="geometry">
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>379</width>
-              <height>463</height>
+              <width>375</width>
+              <height>338</height>
              </rect>
             </property>
-            <layout class="QVBoxLayout" name="verticalLayout_15">
+            <layout class="QVBoxLayout" name="verticalLayout_25">
              <item>
-              <widget class="QGroupBox" name="groupBox">
+              <widget class="QGroupBox" name="groupBox_3">
                <property name="title">
-                <string>Url</string>
+                <string>URL</string>
                </property>
-               <layout class="QVBoxLayout" name="verticalLayout_21">
+               <layout class="QVBoxLayout" name="verticalLayout_26">
+                <property name="spacing">
+                 <number>6</number>
+                </property>
+                <property name="leftMargin">
+                 <number>0</number>
+                </property>
+                <property name="topMargin">
+                 <number>0</number>
+                </property>
+                <property name="rightMargin">
+                 <number>0</number>
+                </property>
+                <property name="bottomMargin">
+                 <number>0</number>
+                </property>
                 <item>
-                 <layout class="QGridLayout" name="gridLayout">
+                 <layout class="QGridLayout" name="gridLayout_3">
                   <item row="4" column="0">
                    <widget class="QLabel" name="label_host">
                     <property name="sizePolicy">
@@ -470,7 +487,7 @@
                    </widget>
                   </item>
                   <item row="0" column="2" colspan="2">
-                   <layout class="QHBoxLayout" name="horizontalLayout_4">
+                   <layout class="QHBoxLayout" name="horizontalLayout_12">
                     <item>
                      <widget class="QComboBox" name="comboBox_dialect">
                       <property name="sizePolicy">
@@ -501,7 +518,7 @@
                    </layout>
                   </item>
                   <item row="4" column="2" colspan="2">
-                   <layout class="QHBoxLayout" name="horizontalLayout_5">
+                   <layout class="QHBoxLayout" name="horizontalLayout_23">
                     <item>
                      <widget class="QLineEdit" name="lineEdit_host">
                       <property name="enabled">
@@ -796,7 +813,7 @@
                    </widget>
                   </item>
                   <item row="5" column="2" colspan="2">
-                   <layout class="QHBoxLayout" name="horizontalLayout_6">
+                   <layout class="QHBoxLayout" name="horizontalLayout_24">
                     <property name="spacing">
                      <number>0</number>
                     </property>
@@ -852,14 +869,14 @@
                       </property>
                       <property name="minimumSize">
                        <size>
-                        <width>24</width>
-                        <height>24</height>
+                        <width>22</width>
+                        <height>22</height>
                        </size>
                       </property>
                       <property name="maximumSize">
                        <size>
-                        <width>24</width>
-                        <height>24</height>
+                        <width>22</width>
+                        <height>22</height>
                        </size>
                       </property>
                       <property name="toolTip">
@@ -867,7 +884,7 @@
                       </property>
                       <property name="icon">
                        <iconset resource="resources/resources_icons.qrc">
-                        <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+                        <normaloff>:/icons/menu_icons/folder-open-regular.svg</normaloff>:/icons/menu_icons/folder-open-regular.svg</iconset>
                       </property>
                      </widget>
                     </item>
@@ -879,18 +896,25 @@
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_18">
+              <layout class="QHBoxLayout" name="horizontalLayout_25">
                <property name="spacing">
                 <number>3</number>
                </property>
                <item>
-                <widget class="QPushButton" name="pushButton_create_new_spine_db">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Minimum" vsizetype="Fixed">
-                   <horstretch>2</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
+                <spacer name="horizontalSpacer_4">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
                  </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QToolButton" name="toolButton_create_new_spine_db">
                  <property name="maximumSize">
                   <size>
                    <width>16777215</width>
@@ -898,16 +922,32 @@
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create a new Spine database at the selected url or at a default one if the selected is not valid. &lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new Spine database at the selected URL, or at a default one if the selected is not valid.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Create new Spine db</string>
+                  <string>New Spine db</string>
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
                    <normaloff>:/symbols/Spine_symbol.png</normaloff>:/symbols/Spine_symbol.png</iconset>
                  </property>
+                 <property name="toolButtonStyle">
+                  <enum>Qt::ToolButtonTextBesideIcon</enum>
+                 </property>
                 </widget>
+               </item>
+               <item>
+                <spacer name="verticalSpacer_3">
+                 <property name="orientation">
+                  <enum>Qt::Vertical</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>20</width>
+                   <height>40</height>
+                  </size>
+                 </property>
+                </spacer>
                </item>
                <item>
                 <widget class="QCheckBox" name="checkBox_for_spine_model">
@@ -919,23 +959,23 @@
                  </property>
                 </widget>
                </item>
+               <item>
+                <spacer name="horizontalSpacer_7">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
               </layout>
              </item>
              <item>
-              <spacer name="verticalSpacer">
-               <property name="orientation">
-                <enum>Qt::Vertical</enum>
-               </property>
-               <property name="sizeHint" stdset="0">
-                <size>
-                 <width>20</width>
-                 <height>40</height>
-                </size>
-               </property>
-              </spacer>
-             </item>
-             <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_13">
+              <layout class="QHBoxLayout" name="horizontalLayout_26">
                <item>
                 <widget class="QPushButton" name="pushButton_ds_tree_view">
                  <property name="sizePolicy">
@@ -965,7 +1005,7 @@
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer_8">
+                <spacer name="horizontalSpacer_14">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -1006,7 +1046,7 @@
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer_4">
+                <spacer name="horizontalSpacer_15">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -1049,16 +1089,28 @@
               </layout>
              </item>
              <item>
-              <widget class="Line" name="line_2">
+              <widget class="Line" name="line_8">
                <property name="orientation">
                 <enum>Qt::Horizontal</enum>
                </property>
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_14">
+              <layout class="QHBoxLayout" name="horizontalLayout_27">
                <item>
                 <widget class="QToolButton" name="toolButton_copy_url">
+                 <property name="minimumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
                  <property name="toolTip">
                   <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Copy current database url to clipboard.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
@@ -1072,7 +1124,7 @@
                 </widget>
                </item>
                <item>
-                <spacer name="horizontalSpacer_9">
+                <spacer name="horizontalSpacer_16">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
                  </property>
@@ -1092,6 +1144,12 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
                    <width>22</width>
@@ -1106,16 +1164,13 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                  </property>
                 </widget>
                </item>
               </layout>
              </item>
             </layout>
-            <zorder>line_2</zorder>
-            <zorder>verticalSpacer</zorder>
-            <zorder>groupBox</zorder>
            </widget>
           </widget>
          </item>
@@ -1195,8 +1250,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>117</width>
-              <height>274</height>
+              <width>375</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1418,13 +1473,6 @@
               </widget>
              </item>
              <item>
-              <widget class="Line" name="line_3">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
-               </property>
-              </widget>
-             </item>
-             <item>
               <layout class="QHBoxLayout" name="horizontalLayout_3" stretch="0,1">
                <item>
                 <widget class="QPushButton" name="pushButton_datapackage">
@@ -1474,6 +1522,13 @@
               </layout>
              </item>
              <item>
+              <widget class="Line" name="line_3">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
               <layout class="QHBoxLayout" name="horizontalLayout_7">
                <item>
                 <spacer name="horizontalSpacer_10">
@@ -1496,6 +1551,12 @@
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
                    <width>22</width>
@@ -1507,7 +1568,7 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -1596,8 +1657,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>324</width>
-              <height>261</height>
+              <width>375</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1664,6 +1725,12 @@
                   <iconset resource="resources/resources_icons.qrc">
                    <normaloff>:/icons/wrench.svg</normaloff>:/icons/wrench.svg</iconset>
                  </property>
+                 <property name="iconSize">
+                  <size>
+                   <width>16</width>
+                   <height>16</height>
+                  </size>
+                 </property>
                  <property name="popupMode">
                   <enum>QToolButton::InstantPopup</enum>
                  </property>
@@ -1720,40 +1787,6 @@
                 <number>6</number>
                </property>
                <item>
-                <widget class="QPushButton" name="pushButton_tool_stop">
-                 <property name="enabled">
-                  <bool>true</bool>
-                 </property>
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>75</width>
-                   <height>23</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>23</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Stop execution&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="autoFillBackground">
-                  <bool>false</bool>
-                 </property>
-                 <property name="text">
-                  <string>Stop</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
                 <spacer name="horizontalSpacer_6">
                  <property name="orientation">
                   <enum>Qt::Horizontal</enum>
@@ -1782,56 +1815,15 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
-                   <height>23</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>Open results directory in file browser</string>
-                 </property>
-                 <property name="text">
-                  <string>Results...</string>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <spacer name="horizontalSpacer_7">
-                 <property name="orientation">
-                  <enum>Qt::Horizontal</enum>
-                 </property>
-                 <property name="sizeHint" stdset="0">
-                  <size>
-                   <width>40</width>
-                   <height>20</height>
-                  </size>
-                 </property>
-                </spacer>
-               </item>
-               <item>
-                <widget class="QPushButton" name="pushButton_tool_execute">
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
                    <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>16777215</width>
-                   <height>23</height>
-                  </size>
-                 </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Execute tool&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open results archive in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Execute</string>
+                  <string>Results...</string>
                  </property>
                 </widget>
                </item>
@@ -1852,7 +1844,7 @@
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,0,0">
+              <layout class="QHBoxLayout" name="horizontalLayout_15" stretch="0,0,0,0">
                <item>
                 <widget class="QRadioButton" name="radioButton_execute_in_work">
                  <property name="text">
@@ -1871,6 +1863,19 @@
                 </widget>
                </item>
                <item>
+                <spacer name="horizontalSpacer_8">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
                 <widget class="QToolButton" name="toolButton_tool_open_dir">
                  <property name="minimumSize">
                   <size>
@@ -1880,8 +1885,8 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>18</width>
-                   <height>18</height>
+                   <width>22</width>
+                   <height>22</height>
                   </size>
                  </property>
                  <property name="toolTip">
@@ -1889,7 +1894,7 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                  </property>
                 </widget>
                </item>
@@ -1975,8 +1980,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>101</width>
-              <height>163</height>
+              <width>375</width>
+              <height>338</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -1995,13 +2000,6 @@
                </property>
                <property name="rootIsDecorated">
                 <bool>false</bool>
-               </property>
-              </widget>
-             </item>
-             <item>
-              <widget class="Line" name="line_5">
-               <property name="orientation">
-                <enum>Qt::Horizontal</enum>
                </property>
               </widget>
              </item>
@@ -2026,7 +2024,7 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>16777215</width>
+                   <width>75</width>
                    <height>23</height>
                   </size>
                  </property>
@@ -2054,6 +2052,13 @@
               </layout>
              </item>
              <item>
+              <widget class="Line" name="line_5">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
               <layout class="QHBoxLayout" name="horizontalLayout_16">
                <item>
                 <spacer name="horizontalSpacer_12">
@@ -2070,6 +2075,12 @@
                </item>
                <item>
                 <widget class="QToolButton" name="toolButton_view_open_dir">
+                 <property name="minimumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
                  <property name="maximumSize">
                   <size>
                    <width>22</width>
@@ -2081,15 +2092,233 @@
                  </property>
                  <property name="icon">
                   <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
                  </property>
                 </widget>
                </item>
               </layout>
              </item>
             </layout>
-            <zorder>line_5</zorder>
-            <zorder>treeView_view</zorder>
+           </widget>
+          </widget>
+         </item>
+        </layout>
+       </widget>
+       <widget class="QWidget" name="tab_data_interface">
+        <attribute name="title">
+         <string>Data Interface</string>
+        </attribute>
+        <layout class="QVBoxLayout" name="verticalLayout_15">
+         <property name="topMargin">
+          <number>6</number>
+         </property>
+         <property name="rightMargin">
+          <number>6</number>
+         </property>
+         <property name="bottomMargin">
+          <number>6</number>
+         </property>
+         <item>
+          <widget class="QLabel" name="label_di_name">
+           <property name="sizePolicy">
+            <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
+             <horstretch>0</horstretch>
+             <verstretch>0</verstretch>
+            </sizepolicy>
+           </property>
+           <property name="minimumSize">
+            <size>
+             <width>0</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="maximumSize">
+            <size>
+             <width>16777215</width>
+             <height>20</height>
+            </size>
+           </property>
+           <property name="font">
+            <font>
+             <pointsize>10</pointsize>
+             <weight>50</weight>
+             <bold>false</bold>
+            </font>
+           </property>
+           <property name="styleSheet">
+            <string notr="true">background-color: #ecd8c6;</string>
+           </property>
+           <property name="frameShape">
+            <enum>QFrame::Box</enum>
+           </property>
+           <property name="frameShadow">
+            <enum>QFrame::Sunken</enum>
+           </property>
+           <property name="text">
+            <string>Name</string>
+           </property>
+           <property name="alignment">
+            <set>Qt::AlignCenter</set>
+           </property>
+           <property name="wordWrap">
+            <bool>true</bool>
+           </property>
+          </widget>
+         </item>
+         <item>
+          <widget class="QScrollArea" name="scrollArea_6">
+           <property name="widgetResizable">
+            <bool>true</bool>
+           </property>
+           <widget class="QWidget" name="scrollAreaWidgetContents_5">
+            <property name="geometry">
+             <rect>
+              <x>0</x>
+              <y>0</y>
+              <width>370</width>
+              <height>338</height>
+             </rect>
+            </property>
+            <layout class="QVBoxLayout" name="verticalLayout_21">
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_4">
+               <item>
+                <widget class="QLineEdit" name="lineEdit_import_file_path">
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Import file path&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string/>
+                 </property>
+                 <property name="placeholderText">
+                  <string>Select file to import</string>
+                 </property>
+                 <property name="clearButtonEnabled">
+                  <bool>true</bool>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <widget class="QToolButton" name="toolButton_select_imported_file">
+                 <property name="enabled">
+                  <bool>true</bool>
+                 </property>
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Select file to import&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open-regular.svg</normaloff>:/icons/menu_icons/folder-open-regular.svg</iconset>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_import_editor">
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open selected file in Import Editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="text">
+                <string>Import Editor</string>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <widget class="QTreeView" name="treeView_data_interface_files">
+               <property name="indentation">
+                <number>5</number>
+               </property>
+               <property name="uniformRowHeights">
+                <bool>true</bool>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <spacer name="verticalSpacer">
+               <property name="orientation">
+                <enum>Qt::Vertical</enum>
+               </property>
+               <property name="sizeHint" stdset="0">
+                <size>
+                 <width>20</width>
+                 <height>40</height>
+                </size>
+               </property>
+              </spacer>
+             </item>
+             <item>
+              <widget class="Line" name="line_6">
+               <property name="orientation">
+                <enum>Qt::Horizontal</enum>
+               </property>
+              </widget>
+             </item>
+             <item>
+              <layout class="QHBoxLayout" name="horizontalLayout_13">
+               <item>
+                <spacer name="horizontalSpacer_17">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QToolButton" name="toolButton_di_open_dir">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>22</width>
+                   <height>22</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Connection's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="icon">
+                  <iconset resource="resources/resources_icons.qrc">
+                   <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
+                 </property>
+                </widget>
+               </item>
+              </layout>
+             </item>
+            </layout>
            </widget>
           </widget>
          </item>
@@ -2588,7 +2817,7 @@
   <action name="actionOpen">
    <property name="icon">
     <iconset resource="resources/resources_icons.qrc">
-     <normaloff>:/icons/menu_icons/folder-open.svg</normaloff>:/icons/menu_icons/folder-open.svg</iconset>
+     <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
    </property>
    <property name="text">
     <string>Open project...</string>
@@ -2728,6 +2957,24 @@
     <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove all items project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
    </property>
   </action>
+  <action name="actionExport_project_to_GraphML">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/file-export.svg</normaloff>:/icons/menu_icons/file-export.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Export project to GraphML</string>
+   </property>
+  </action>
+  <action name="actionAdd_Data_Interface">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/project_item_icons/map-solid.svg</normaloff>:/icons/project_item_icons/map-solid.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Add Data Interface</string>
+   </property>
+  </action>
  </widget>
  <customwidgets>
   <customwidget>
@@ -2765,8 +3012,7 @@
   <tabstop>graphicsView</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>
-  <tabstop>tabWidget_item_properties</tabstop>
-  <tabstop>scrollArea</tabstop>
+  <tabstop>scrollArea_5</tabstop>
   <tabstop>comboBox_dialect</tabstop>
   <tabstop>comboBox_dsn</tabstop>
   <tabstop>lineEdit_username</tabstop>
@@ -2775,11 +3021,13 @@
   <tabstop>lineEdit_port</tabstop>
   <tabstop>lineEdit_database</tabstop>
   <tabstop>toolButton_open_sqlite_file</tabstop>
-  <tabstop>pushButton_create_new_spine_db</tabstop>
+  <tabstop>toolButton_create_new_spine_db</tabstop>
   <tabstop>checkBox_for_spine_model</tabstop>
   <tabstop>pushButton_ds_tree_view</tabstop>
   <tabstop>pushButton_ds_graph_view</tabstop>
   <tabstop>pushButton_ds_tabular_view</tabstop>
+  <tabstop>toolButton_copy_url</tabstop>
+  <tabstop>toolButton_ds_open_dir</tabstop>
   <tabstop>scrollArea_2</tabstop>
   <tabstop>treeView_dc_references</tabstop>
   <tabstop>toolButton_plus</tabstop>
@@ -2787,27 +3035,29 @@
   <tabstop>toolButton_add</tabstop>
   <tabstop>treeView_dc_data</tabstop>
   <tabstop>pushButton_datapackage</tabstop>
+  <tabstop>toolButton_dc_open_dir</tabstop>
   <tabstop>scrollArea_3</tabstop>
   <tabstop>comboBox_tool</tabstop>
   <tabstop>toolButton_tool_template</tabstop>
   <tabstop>treeView_template</tabstop>
-  <tabstop>pushButton_tool_stop</tabstop>
   <tabstop>pushButton_tool_results</tabstop>
-  <tabstop>pushButton_tool_execute</tabstop>
   <tabstop>radioButton_execute_in_work</tabstop>
   <tabstop>radioButton_execute_in_source</tabstop>
+  <tabstop>toolButton_tool_open_dir</tabstop>
   <tabstop>scrollArea_4</tabstop>
   <tabstop>treeView_view</tabstop>
   <tabstop>pushButton_open_network_map</tabstop>
   <tabstop>toolButton_view_open_dir</tabstop>
-  <tabstop>toolButton_dc_open_dir</tabstop>
-  <tabstop>toolButton_ds_open_dir</tabstop>
   <tabstop>tableView_connections</tabstop>
-  <tabstop>toolButton_tool_open_dir</tabstop>
+  <tabstop>scrollArea_6</tabstop>
+  <tabstop>lineEdit_import_file_path</tabstop>
+  <tabstop>toolButton_select_imported_file</tabstop>
+  <tabstop>pushButton_import_editor</tabstop>
+  <tabstop>toolButton_di_open_dir</tabstop>
+  <tabstop>tabWidget_item_properties</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
-  <include location="resources/resources_logos.qrc"/>
  </resources>
  <connections/>
 </ui>

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -45,7 +45,7 @@ class ToolInstance(QObject):
     def __init__(self, tool_template, toolbox, tool_output_dir, project, execute_in_work):
         """class constructor."""
 
-        super().__init__()
+        super().__init__()  # TODO: Should this be QObject.__init__(self) like in MetaObject class?
         self.tool_template = tool_template
         self._toolbox = toolbox
         self._project = project
@@ -399,7 +399,17 @@ class ToolInstance(QObject):
     def terminate_instance(self):
         """Terminates Tool instance execution."""
         if not self.tool_process:
+            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
             return
+        # Disconnect tool_process signals
+        try:
+            self.tool_process.execution_finished_signal.disconnect()
+        except AttributeError:
+            pass
+        try:
+            self.tool_process.subprocess_finished_signal.disconnect()
+        except AttributeError:
+            pass
         self.tool_process.terminate_process()
 
     def remove(self):
@@ -413,7 +423,7 @@ class ToolInstance(QObject):
             target_dir (str): Destination directory for Tool template output files
 
         Returns:
-            (tuple): Contains two lists. The first list contains paths to successfully
+            tuple: Contains two lists. The first list contains paths to successfully
             copied files. The second list contains paths (or patterns) of Tool template
             output files that were not found.
 
@@ -452,7 +462,13 @@ class ToolInstance(QObject):
                 for fname_path in glob.glob(os.path.join(self.basedir, pattern)):  # fname_path is a full path
                     fname = os.path.split(fname_path)[1]  # File name (no path)
                     dst = os.path.join(target, fname)
-                    shutil.copy(fname_path, dst)
+                    try:
+                        shutil.copy(fname_path, dst)
+                    except OSError:
+                        self._toolbox.msg_error.emit(
+                            "[OSError] Copying pattern {0} to {1} failed".format(fname_path, dst)
+                        )
+                    self._toolbox.project().execution_instance.append_tool_output_file(dst)
                     saved_files.append(os.path.join(dst_subdir, fname))
             else:
                 output_file = os.path.join(self.basedir, pattern)
@@ -463,7 +479,13 @@ class ToolInstance(QObject):
                 # logging.debug("Saving file {0}".format(fname_pattern))
                 dst = os.path.join(target, fname_pattern)
                 # logging.debug("Copying to {0}".format(dst))
-                shutil.copy(output_file, dst)
+                try:
+                    shutil.copy(output_file, dst)
+                except OSError:
+                    self._toolbox.msg_error.emit(
+                        "[OSError] Copying output file {0} to {1} failed".format(output_file, dst)
+                    )
+                self._toolbox.project().execution_instance.append_tool_output_file(dst)
                 saved_files.append(pattern)
         return saved_files, failed_files
 

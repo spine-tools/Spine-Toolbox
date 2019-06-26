@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -19,7 +19,6 @@ Module for data connection class.
 import os
 import shutil
 import logging
-import fnmatch
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
@@ -49,7 +48,6 @@ class DataConnection(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Data Connection"
-        # self._widget = DataConnectionWidget(self, self.item_type)
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -71,7 +69,6 @@ class DataConnection(ProjectItem):
         self.populate_data_list(data_files)
         self._graphics_item = DataConnectionIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
-        # self.ui.toolButton_datapackage.setMenu(self.datapackage_popup_menu)  # TODO: OBSOLETE?
         self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
@@ -113,10 +110,7 @@ class DataConnection(ProjectItem):
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-
-    def set_icon(self, icon):
-        """Set the icon."""
-        self._graphics_item = icon
+        pass
 
     def get_icon(self):
         """Returns the item representing this data connection in the scene."""
@@ -336,107 +330,21 @@ class DataConnection(ProjectItem):
         return
 
     def file_references(self):
-        """Return a list of paths to files that are in this item as references."""
+        """Returns a list of paths to files that are in this item as references."""
         return self.references
 
     def data_files(self):
-        """Return a list of files that are in the data directory."""
+        """Returns a list of files that are in the data directory."""
         if not os.path.isdir(self.data_dir):
             return None
         return os.listdir(self.data_dir)
 
     @Slot(name="refresh")
     def refresh(self):
-        """Refresh data files QTreeView.
+        """Refresh data files in Data Connection Properties.
         NOTE: Might lead to performance issues."""
         d = self.data_files()
         self.populate_data_list(d)
-
-    def find_file(self, fname, visited_items):
-        """Search for filename in references and data and return the path if found.
-        Args:
-            fname (str): File name (no path)
-            visited_items (list): List of project item names that have been visited
-
-        Returns:
-            Full path to file that matches the given file name or None if not found.
-        """
-        # logging.debug("Looking for file {0} in DC {1}.".format(fname, self.name))
-        if self in visited_items:
-            self._toolbox.msg_warning.emit(
-                "There seems to be an infinite loop in your project. Please fix the "
-                "connections and try again. Detected at {0}.".format(self.name)
-            )
-            return None
-        if fname in self.data_files():
-            # logging.debug("{0} found in DC {1}".format(fname, self.name))
-            self._toolbox.msg.emit("\t<b>{0}</b> found in Data Connection <b>{1}</b>".format(fname, self.name))
-            path = os.path.join(self.data_dir, fname)
-            return path
-        for path in self.file_references():  # List of paths including file name
-            fn = os.path.split(path)[1]
-            if fn == fname:
-                # logging.debug("{0} found in DC {1}".format(fname, self.name))
-                self._toolbox.msg.emit(
-                    "\tReference for <b>{0}</b> found in Data Connection <b>{1}</b>".format(fname, self.name)
-                )
-                return path
-        visited_items.append(self)
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            # Find item from project model
-            found_index = self._toolbox.project_item_model.find_item(input_item)
-            if not found_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(found_index)
-            if item.item_type in ["Data Store", "Data Connection"]:
-                path = item.find_file(fname, visited_items)
-                if path is not None:
-                    return path
-        return None
-
-    def find_files(self, pattern, visited_items):
-        """Search for files matching the given pattern (with wildcards) in references
-        and data and return a list of matching paths.
-
-        Args:
-            pattern (str): File name (no path). May contain wildcards.
-            visited_items (list): List of project item names that have been visited
-
-        Returns:
-            List of matching paths. List is empty if no matches found.
-        """
-        paths = list()
-        if self in visited_items:
-            self._toolbox.msg_warning.emit(
-                "There seems to be an infinite loop in your project. Please fix the "
-                "connections and try again. Detected at {0}.".format(self.name)
-            )
-            return paths
-        # Search files that match the pattern from this Data Connection's data directory
-        for data_file in self.data_files():  # data_file is a filename (no path)
-            if fnmatch.fnmatch(data_file, pattern):
-                path = os.path.join(self.data_dir, data_file)
-                paths.append(path)
-        # Search files that match the pattern from this Data Connection's references
-        for ref_file in self.file_references():  # List of paths including file name
-            fn = os.path.split(ref_file)[1]
-            if fnmatch.fnmatch(fn, pattern):
-                paths.append(ref_file)
-        visited_items.append(self)
-        # Find items that are connected to this Data Connection
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            found_index = self._toolbox.project_item_model.find_item(input_item)
-            if not found_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(found_index)
-            if item.item_type in ["Data Store", "Data Connection"]:
-                matching_paths = item.find_files(pattern, visited_items)
-                if matching_paths is not None:
-                    paths = paths + matching_paths
-                    return paths
-        return paths
 
     def populate_reference_list(self, items):
         """List file references in QTreeView.
@@ -473,3 +381,26 @@ class DataConnection(ProjectItem):
     def update_name_label(self):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_dc_name.setText(self.name)
+
+    def execute(self):
+        """Executes this Data Connection."""
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("Executing Data Connection <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("***")
+        inst = self._toolbox.project().execution_instance
+        # Update Data Connection based on project items that are already executed
+        # Add previously executed Tool's output file paths to references
+        self.references += inst.tool_output_files
+        self.populate_reference_list(self.references)
+        # Update execution instance for project items downstream
+        # Add data file references and data files into execution instance
+        refs = self.file_references()
+        inst.append_dc_refs(refs)
+        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        inst.append_dc_files(f_list)
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+
+    def stop_execution(self):
+        """Stops executing this Data Connection."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)

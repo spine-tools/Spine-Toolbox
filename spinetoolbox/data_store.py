@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -20,12 +20,12 @@ import sys
 import os
 import getpass
 import logging
-import fnmatch
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication, QCheckBox
 from project_item import ProjectItem
-from widgets.data_store_widgets import TreeViewForm, GraphViewForm
+from widgets.tree_view_widget import TreeViewForm
+from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
 from helpers import create_dir, busy_effect
@@ -64,7 +64,7 @@ class DataStore(ProjectItem):
             create_dir(self.data_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+                "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
         self._graphics_item = DataStoreIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._sigs = self.make_signal_handler_dict()
@@ -93,7 +93,7 @@ class DataStore(ProjectItem):
         s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
         s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
         s[self._toolbox.ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
-        s[self._toolbox.ui.pushButton_create_new_spine_db.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.toolButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._toolbox.ui.toolButton_copy_url.clicked] = self.copy_url
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
         s[self._toolbox.ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
@@ -141,7 +141,7 @@ class DataStore(ProjectItem):
                     "Unable to generate URL from <b>{0}</b> selections: invalid dialect {1}. "
                     "<br>Please select a new dialect and try again.".format(self.name, dialect)
                 )
-                return
+                return  # TODO: Manuel. Shouldn't this return None?
             if dialect == 'sqlite':
                 url = URL('sqlite', **url_copy)
             else:
@@ -149,16 +149,6 @@ class DataStore(ProjectItem):
                 drivername = f"{dialect}+{db_api}"
                 url = URL(drivername, **url_copy)
         except Exception as e:  # This is in case one of the keys has invalid format
-            log_errors and self._toolbox.msg_error.emit(
-                "Unable to generate URL from <b>{0}</b> selections: {1} "
-                "<br>Please make new selections and try again.".format(self.name, e)
-            )
-            return None
-        try:
-            engine = create_engine(url)
-            with engine.connect():
-                pass
-        except Exception as e:
             log_errors and self._toolbox.msg_error.emit(
                 "Unable to generate URL from <b>{0}</b> selections: {1} "
                 "<br>Please make new selections and try again.".format(self.name, e)
@@ -174,15 +164,22 @@ class DataStore(ProjectItem):
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
             self._toolbox.ui.lineEdit_database.setText(url.database)
+        # Final check
+        try:
+            engine = create_engine(url)
+            with engine.connect():
+                pass
+        except Exception as e:
+            log_errors and self._toolbox.msg_error.emit(
+                "Unable to generate URL from <b>{0}</b> selections: {1} "
+                "<br>Please make new selections and try again.".format(self.name, e)
+            )
+            return None
         return url
 
     def project(self):
         """Returns current project or None if no project open."""
         return self._project
-
-    def set_icon(self, icon):
-        """Set the icon."""
-        self._graphics_item = icon
 
     def get_icon(self):
         """Returns the item representing this Data Store on the scene."""
@@ -367,7 +364,8 @@ class DataStore(ProjectItem):
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Dialect not supported")
             msg.setText(
-                "There is no DBAPI installed for dialect '{0}'. " "The default one is '{1}'.".format(dialect, dbapi)
+                "Spine Toolbox needs to install the following DBAPI package: '{0}' "
+                "(support for the {1} dialect).".format(dbapi, dialect)
             )
             msg.setInformativeText("Do you want to install it using pip or conda?")
             pip_button = msg.addButton("pip", QMessageBox.YesRole)
@@ -586,98 +584,12 @@ class DataStore(ProjectItem):
             return None
         return os.listdir(self.data_dir)
 
-    def find_file(self, fname, visited_items):
-        """Search for filename in data and return the path if found."""
-        # logging.debug("Looking for file {0} in DS {1}.".format(fname, self.name))
-        if self in visited_items:
-            self._toolbox.msg_warning.emit(
-                "There seems to be an infinite loop in your project. Please fix the "
-                "connections and try again. Detected at {0}.".format(self.name)
-            )
-            return None
-        url = self.make_url()
-        if not url:
-            # Data Store has no valid url
-            return None
-        if not url.drivername.lower().startswith('sqlite'):
-            return None
-        file_path = os.path.abspath(url.database)
-        if not os.path.exists(file_path):
-            return None
-        if fname == os.path.basename(file_path):
-            # logging.debug("{0} found in DS {1}".format(fname, self.name))
-            self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
-            return file_path
-        visited_items.append(self)
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            # Find item from project model
-            item_index = self._toolbox.project_item_model.find_item(input_item)
-            if not item_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(item_index)
-            if item.item_type in ["Data Store", "Data Connection"]:
-                path = item.find_file(fname, visited_items)
-                if path is not None:
-                    return path
-        return None
-
-    def find_files(self, pattern, visited_items):
-        """Search for files matching the given pattern (with wildcards) in data directory
-        and return a list of matching paths.
-
-        Args:
-            pattern (str): File name (no path). May contain wildcards.
-            visited_items (list): List of project item names that have been visited
-
-        Returns:
-            List of matching paths. List is empty if no matches found.
-        """
-        paths = list()
-        if self in visited_items:
-            self._toolbox.msg_warning.emit(
-                "There seems to be an infinite loop in your project. Please fix the "
-                "connections and try again. Detected at {0}.".format(self.name)
-            )
-            return paths
-        # Check the current url. If it is an sqlite file, this is a possible match
-        # If dialect is not sqlite, the url is ignored
-        url = self.make_url()
-        if url and url.drivername.lower().startswith('sqlite'):
-            file_path = os.path.abspath(url.database)
-            if os.path.exists(file_path):
-                if fnmatch.fnmatch(file_path, pattern):  # fname == os.path.basename(file_path):
-                    # self._toolbox.msg.emit("\t<b>{0}</b> found in Data Store <b>{1}</b>".format(fname, self.name))
-                    paths.append(file_path)
-        else:  # Not an SQLite url
-            pass
-        # Search files that match the pattern from this Data Store's data directory
-        for data_file in self.data_files():  # data_file is a filename (no path)
-            if fnmatch.fnmatch(data_file, pattern):
-                # self._toolbox.msg.emit("\t<b>{0}</b> matches pattern <b>{1}</b> in Data Store <b>{2}</b>"
-                #                        .format(data_file, pattern, self.name))
-                path = os.path.join(self.data_dir, data_file)
-                if path not in paths:  # Skip if the sqlite file was already added from the url
-                    paths.append(path)
-        visited_items.append(self)
-        # Find items that are connected to this Data Connection
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            found_index = self._toolbox.project_item_model.find_item(input_item)
-            if not found_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(found_index)
-            if item.item_type in ["Data Store", "Data Connection"]:
-                matching_paths = item.find_files(pattern, visited_items)
-                if matching_paths is not None:
-                    paths = paths + matching_paths
-                    return paths
-        return paths
-
     @Slot(bool, name="copy_url")
     def copy_url(self, checked=False):
         """Copy db url to clipboard."""
         url = self.make_url()
+        if not url:
+            return
         url.password = None
         QApplication.clipboard().setText(str(url))
         self._toolbox.msg.emit("Database url '{}' successfully copied to clipboard.".format(url))
@@ -692,8 +604,8 @@ class DataStore(ProjectItem):
                 "Unable to generate URL from <b>{0}</b> selections. Defaults will be used...".format(self.name)
             )
             self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
-            self._toolbox.ui.lineEdit_database.setText("spinedb.sqlite")
-            url = self.make_url()
+            self._toolbox.ui.lineEdit_database.setText(os.path.join(self.data_dir, self.name + ".sqlite"))
+            url = self.make_url(log_errors=True)
             if not url:
                 return
         try:
@@ -721,3 +633,54 @@ class DataStore(ProjectItem):
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_ds_name.setText(self.name)
+
+    def execute(self):
+        """Executes this Data Store."""
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
+        inst = self._toolbox.project().execution_instance
+        # Update Data Store based on project items that are already executed
+        # Override reference if there's an sqlite Tool output file in the execution instance
+        # NOTE: Takes the first .sqlite file that is found
+        for output_file_path in inst.tool_output_files:
+            p, fn = os.path.split(output_file_path)
+            if fn.lower().endswith(".sqlite"):
+                self._toolbox.msg_warning.emit("Overriding database reference")
+                self.enable_sqlite()
+                url = dict(dialect="sqlite", database=output_file_path)
+                self.set_url(url)
+                self.load_url_into_selections()
+                self._toolbox.msg.emit("New URL:<i>{0}<i/>".format(url))
+        # Update execution instance for project items downstream
+        url = self.make_url()
+        if not url:
+            # Invalid url, nothing else to do here
+            self._toolbox.msg_warning.emit(
+                "No database url set. Please provide a <i>path</i> to an "
+                "SQLite file or <i>host</i>, <i>port</i>, and <i>username</i> "
+                "& <i>password</i> for other database dialects."
+            )
+        else:
+            if url.drivername.lower().startswith('sqlite'):
+                # If dialect is sqlite, append full path of the sqlite file to execution_instance
+                sqlite_file = url.database
+                if not sqlite_file or not os.path.isfile(sqlite_file):
+                    self._toolbox.msg_warning.emit(
+                        "Warning: Data Store <b>{0}</b> SQLite url is not valid.".format(self.name)
+                    )
+                else:
+                    # Add Data Store reference into execution instance
+                    inst.add_ds_ref("sqlite", sqlite_file)
+            else:
+                # If dialect is other than sqlite file, just pass for now
+                # TODO: What needs to be done here?
+                # IDEA: just add the entire url dictionary to some attribute in the `ExecutionInstance` object,
+                # then figure everything out in `ExecutionInstance.find_file`
+                pass
+        self._toolbox.msg.emit("***")
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+
+    def stop_execution(self):
+        """Stops executing this Data Store."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)

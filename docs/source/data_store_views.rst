@@ -1,9 +1,3 @@
-.. |plus_object_parameter| image:: ../../spinetoolbox/ui/resources/plus_object_parameter_icon.png
-      :width: 24
-
-.. |plus_relationship_parameter| image:: ../../spinetoolbox/ui/resources/plus_relationship_parameter_icon.png
-      :width: 24
-
 ****************
 Data store views
 ****************
@@ -169,9 +163,6 @@ Editing parameters definitions and values
 
 To add new parameter definitions or values you can directly do it in the last row of each table.
 The tables also support pasting values from the clipboard.
-
-Additionally, you can automatically enter data for the first columns by selecting some items in the *Object tree*
-and then pressing the |plus_object_parameter| or |plus_relationship_parameter| buttons:
 
 .. image:: img/tree_view_table_parameter_tools.png
    :align: center

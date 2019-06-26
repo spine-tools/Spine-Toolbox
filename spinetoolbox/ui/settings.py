@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -49,7 +49,7 @@ class Ui_SettingsForm(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 338, 482))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 417, 540))
         self.scrollAreaWidgetContents.setAutoFillBackground(True)
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
@@ -150,7 +150,9 @@ class Ui_SettingsForm(object):
         self.gridLayout.addWidget(self.lineEdit_gams_path, 2, 0, 1, 1)
         self.toolButton_browse_gams = QtWidgets.QToolButton(self.groupBox_gams)
         self.toolButton_browse_gams.setMaximumSize(QtCore.QSize(22, 22))
-        self.toolButton_browse_gams.setIconSize(QtCore.QSize(20, 20))
+        icon = QtGui.QIcon()
+        icon.addPixmap(QtGui.QPixmap(":/icons/menu_icons/folder-open-solid.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
+        self.toolButton_browse_gams.setIcon(icon)
         self.toolButton_browse_gams.setObjectName("toolButton_browse_gams")
         self.gridLayout.addWidget(self.toolButton_browse_gams, 2, 1, 1, 1)
         self.verticalLayout_5.addWidget(self.groupBox_gams)
@@ -167,7 +169,7 @@ class Ui_SettingsForm(object):
         self.gridLayout_2.addWidget(self.label_5, 2, 0, 1, 1)
         self.toolButton_browse_julia = QtWidgets.QToolButton(self.groupBox_julia)
         self.toolButton_browse_julia.setMaximumSize(QtCore.QSize(22, 22))
-        self.toolButton_browse_julia.setIconSize(QtCore.QSize(20, 20))
+        self.toolButton_browse_julia.setIcon(icon)
         self.toolButton_browse_julia.setObjectName("toolButton_browse_julia")
         self.gridLayout_2.addWidget(self.toolButton_browse_julia, 3, 1, 1, 1)
         self.lineEdit_julia_path = QtWidgets.QLineEdit(self.groupBox_julia)
@@ -178,7 +180,18 @@ class Ui_SettingsForm(object):
         self.gridLayout_2.addWidget(self.lineEdit_julia_path, 3, 0, 1, 1)
         self.checkBox_use_embedded_julia = QtWidgets.QCheckBox(self.groupBox_julia)
         self.checkBox_use_embedded_julia.setObjectName("checkBox_use_embedded_julia")
-        self.gridLayout_2.addWidget(self.checkBox_use_embedded_julia, 4, 0, 1, 1)
+        self.gridLayout_2.addWidget(self.checkBox_use_embedded_julia, 6, 0, 1, 1)
+        self.lineEdit_julia_project_path = QtWidgets.QLineEdit(self.groupBox_julia)
+        self.lineEdit_julia_project_path.setMaximumSize(QtCore.QSize(16777215, 20))
+        self.lineEdit_julia_project_path.setText("")
+        self.lineEdit_julia_project_path.setClearButtonEnabled(True)
+        self.lineEdit_julia_project_path.setObjectName("lineEdit_julia_project_path")
+        self.gridLayout_2.addWidget(self.lineEdit_julia_project_path, 4, 0, 1, 1)
+        self.toolButton_browse_julia_project = QtWidgets.QToolButton(self.groupBox_julia)
+        self.toolButton_browse_julia_project.setMaximumSize(QtCore.QSize(22, 22))
+        self.toolButton_browse_julia_project.setIcon(icon)
+        self.toolButton_browse_julia_project.setObjectName("toolButton_browse_julia_project")
+        self.gridLayout_2.addWidget(self.toolButton_browse_julia_project, 4, 1, 1, 1)
         self.verticalLayout_5.addWidget(self.groupBox_julia)
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_5.addItem(spacerItem1)
@@ -199,7 +212,7 @@ class Ui_SettingsForm(object):
         self.gridLayout_3.addWidget(self.lineEdit_python_path, 1, 0, 1, 1)
         self.toolButton_browse_python = QtWidgets.QToolButton(self.groupBox_python)
         self.toolButton_browse_python.setMaximumSize(QtCore.QSize(22, 22))
-        self.toolButton_browse_python.setIconSize(QtCore.QSize(20, 20))
+        self.toolButton_browse_python.setIcon(icon)
         self.toolButton_browse_python.setObjectName("toolButton_browse_python")
         self.gridLayout_3.addWidget(self.toolButton_browse_python, 1, 1, 1, 1)
         self.label_8 = QtWidgets.QLabel(self.groupBox_python)
@@ -287,7 +300,7 @@ class Ui_SettingsForm(object):
         sizePolicy.setHeightForWidth(self.toolButton_browse_work.sizePolicy().hasHeightForWidth())
         self.toolButton_browse_work.setSizePolicy(sizePolicy)
         self.toolButton_browse_work.setMaximumSize(QtCore.QSize(22, 22))
-        self.toolButton_browse_work.setIconSize(QtCore.QSize(20, 20))
+        self.toolButton_browse_work.setIcon(icon)
         self.toolButton_browse_work.setObjectName("toolButton_browse_work")
         self.horizontalLayout_3.addWidget(self.toolButton_browse_work)
         self.verticalLayout_2.addLayout(self.horizontalLayout_3)
@@ -368,13 +381,15 @@ class Ui_SettingsForm(object):
         self.lineEdit_gams_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Path to GAMS executable. Leave blank to use GAMS defined in your system path</p></body></html>", None, -1))
         self.lineEdit_gams_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using GAMS in system path", None, -1))
         self.toolButton_browse_gams.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick GAMS by browsing and selecting a GAMS executable (gams.exe on Windows)</p></body></html>", None, -1))
-        self.groupBox_julia.setTitle(QtWidgets.QApplication.translate("SettingsForm", "JULIA", None, -1))
+        self.groupBox_julia.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Julia", None, -1))
         self.label_5.setText(QtWidgets.QApplication.translate("SettingsForm", "Julia interpreter", None, -1))
         self.toolButton_browse_julia.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick Julia interpreter by using a file browser</p></body></html>", None, -1))
         self.lineEdit_julia_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Julia interpreter. Leave blank to use Julia defined in your system path.</p></body></html>", None, -1))
-        self.lineEdit_julia_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using Julia interpreter in system path", None, -1))
+        self.lineEdit_julia_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using Julia executable in system path", None, -1))
         self.checkBox_use_embedded_julia.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>If checked, Julia Tools and scripts will be executed in the embedded Julia Console (Shell). If unchecked, Julia Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `julia script.jl` in terminal.</p></body></html>", None, -1))
         self.checkBox_use_embedded_julia.setText(QtWidgets.QApplication.translate("SettingsForm", "Use embedded Julia Console", None, -1))
+        self.lineEdit_julia_project_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using Julia home project", None, -1))
+        self.toolButton_browse_julia_project.setText(QtWidgets.QApplication.translate("SettingsForm", "...", None, -1))
         self.groupBox_python.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Python", None, -1))
         self.checkBox_use_embedded_python.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>If checked, Python Tools and scripts will be executed in the embedded Python Console (Shell). If unchecked, Python Tools and scripts will be executed in a terminal as an individual process. I.e. the same as running `python script.py` in terminal.</p></body></html>", None, -1))
         self.checkBox_use_embedded_python.setText(QtWidgets.QApplication.translate("SettingsForm", "Use embedded Python Console", None, -1))
@@ -394,8 +409,8 @@ class Ui_SettingsForm(object):
         self.textEdit_project_description.setHtml(QtWidgets.QApplication.translate("SettingsForm", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
-"</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None, -1))
+"</style></head><body style=\" font-family:\'Cantarell\'; font-size:11pt; font-weight:400; font-style:normal;\">\n"
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'MS Shell Dlg 2\'; font-size:8.25pt;\"><br /></p></body></html>", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Work directory", None, -1))
         self.lineEdit_work_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Work directory location. Leave empty to use default (\\work).</p></body></html>", None, -1))
         self.lineEdit_work_dir.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using default directory", None, -1))
@@ -404,3 +419,4 @@ class Ui_SettingsForm(object):
         self.pushButton_cancel.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Closes the window without saving changes</p></body></html>", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("SettingsForm", "Cancel", None, -1))
 
+import resources_icons_rc

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -46,10 +46,12 @@ class SettingsWidget(QWidget):
         # Set up the ui from Qt Designer files
         self.ui = ui.settings.Ui_SettingsForm()
         self.ui.setupUi(self)
-        self.ui.toolButton_browse_gams.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        self.ui.toolButton_browse_julia.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        self.ui.toolButton_browse_python.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        self.ui.toolButton_browse_work.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # NOTE: Commented so we can try fontawesome icons (issue #286)
+        # self.ui.toolButton_browse_gams.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # self.ui.toolButton_browse_julia.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # self.ui.toolButton_browse_julia_project.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # self.ui.toolButton_browse_python.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
+        # self.ui.toolButton_browse_work.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -68,6 +70,7 @@ class SettingsWidget(QWidget):
         self.ui.pushButton_cancel.clicked.connect(self.close)
         self.ui.toolButton_browse_gams.clicked.connect(self.browse_gams_path)
         self.ui.toolButton_browse_julia.clicked.connect(self.browse_julia_path)
+        self.ui.toolButton_browse_julia_project.clicked.connect(self.browse_julia_project_path)
         self.ui.toolButton_browse_python.clicked.connect(self.browse_python_path)
         self.ui.toolButton_browse_work.clicked.connect(self.browse_work_path)
         self.ui.toolButton_bg_color.clicked.connect(self.show_color_dialog)
@@ -107,10 +110,10 @@ class SettingsWidget(QWidget):
 
     @Slot(bool, name="browse_julia_path")
     def browse_julia_path(self, checked=False):
-        """Open file browser where user can select a Julia interpreter (i.e. julia.exe on Windows)."""
+        """Open file browser where user can select a Julia executable (i.e. julia.exe on Windows)."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileName(
-            self, "Select Julia Interpreter (e.g. julia.exe on Windows)", os.path.abspath('C:\\')
+            self, "Select Julia Executable (e.g. julia.exe on Windows)", os.path.abspath('C:\\')
         )
         if answer[0] == "":  # Canceled (american-english), cancelled (british-english)
             return
@@ -135,6 +138,14 @@ class SettingsWidget(QWidget):
             return
         self.ui.lineEdit_julia_path.setText(answer[0])
         return
+
+    @Slot(bool, name="browse_julia_project_path")
+    def browse_julia_project_path(self, checked=False):
+        """Open file browser where user can select a Julia project path."""
+        answer = QFileDialog.getExistingDirectory(self, "Select Julia project directory", os.path.abspath('C:\\'))
+        if answer == "":  # Canceled (american-english), cancelled (british-english)
+            return
+        self.ui.lineEdit_julia_project_path.setText(answer)
 
     @Slot(bool, name="browse_python_path")
     def browse_python_path(self, checked=False):
@@ -224,6 +235,7 @@ class SettingsWidget(QWidget):
         gams_path = self._qsettings.value("appSettings/gamsPath", defaultValue="")
         use_embedded_julia = self._qsettings.value("appSettings/useEmbeddedJulia", defaultValue="2")
         julia_path = self._qsettings.value("appSettings/juliaPath", defaultValue="")
+        julia_project_path = self._qsettings.value("appSettings/juliaProjectPath", defaultValue="")
         use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="0")
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
@@ -266,6 +278,7 @@ class SettingsWidget(QWidget):
         if use_embedded_julia == "2":
             self.ui.checkBox_use_embedded_julia.setCheckState(Qt.Checked)
         self.ui.lineEdit_julia_path.setText(julia_path)
+        self.ui.lineEdit_julia_project_path.setText(julia_project_path)
         if use_embedded_python == "2":
             self.ui.checkBox_use_embedded_python.setCheckState(Qt.Checked)
         self.ui.lineEdit_python_path.setText(python_path)
@@ -315,9 +328,13 @@ class SettingsWidget(QWidget):
         use_emb_julia = str(int(self.ui.checkBox_use_embedded_julia.checkState()))  # Cast to str because of Linux
         self._qsettings.setValue("appSettings/useEmbeddedJulia", use_emb_julia)
         julia_path = self.ui.lineEdit_julia_path.text().strip()
-        if not self.file_is_valid(julia_path, "Invalid Julia Interpreter"):  # Check it's a file and it exists
+        if not self.file_is_valid(julia_path, "Invalid Julia Executable"):  # Check it's a file and it exists
             return
         self._qsettings.setValue("appSettings/juliaPath", julia_path)
+        julia_project_path = self.ui.lineEdit_julia_project_path.text().strip()
+        if not self.dir_is_valid(julia_project_path, "Invalid Julia Project"):  # Check it's a directory and it exists
+            return
+        self._qsettings.setValue("appSettings/juliaProjectPath", julia_project_path)
         # Python
         use_emb_python = str(int(self.ui.checkBox_use_embedded_python.checkState()))  # Cast to str because of Linux
         self._qsettings.setValue("appSettings/useEmbeddedPython", use_emb_python)
@@ -380,6 +397,18 @@ class SettingsWidget(QWidget):
             return False
         if not os.path.exists(file_path):
             msg = "File {0} does not exist".format(file_path)
+            # noinspection PyCallByClass, PyArgumentList
+            QMessageBox.warning(self, msgbox_title, msg)
+            return False
+        return True
+
+    def dir_is_valid(self, dir_path, msgbox_title):
+        """Checks that given path is a directory.
+        Needed because the QLineEdits are editable."""
+        if dir_path == "":
+            return True
+        if not os.path.isdir(dir_path):
+            msg = "Please select a valid directory"
             # noinspection PyCallByClass, PyArgumentList
             QMessageBox.warning(self, msgbox_title, msg)
             return False

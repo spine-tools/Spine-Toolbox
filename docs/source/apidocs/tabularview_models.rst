@@ -2,6 +2,6 @@ tabularview\_models module
 ==========================
 
 .. automodule:: tabularview_models
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

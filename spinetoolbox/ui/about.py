@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -170,15 +170,15 @@ class Ui_Form(object):
         self.verticalLayout.addWidget(self.label_version_str)
         spacerItem1 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout.addItem(spacerItem1)
-        self.label_spinedatabase_api = QtWidgets.QLabel(self.widget_9)
+        self.label_spinedb_api = QtWidgets.QLabel(self.widget_9)
         font = QtGui.QFont()
         font.setFamily("Arial Black")
         font.setPointSize(8)
-        self.label_spinedatabase_api.setFont(font)
-        self.label_spinedatabase_api.setStyleSheet("color: rgb(255, 255, 255);")
-        self.label_spinedatabase_api.setAlignment(QtCore.Qt.AlignCenter)
-        self.label_spinedatabase_api.setObjectName("label_spinedatabase_api")
-        self.verticalLayout.addWidget(self.label_spinedatabase_api)
+        self.label_spinedb_api.setFont(font)
+        self.label_spinedb_api.setStyleSheet("color: rgb(255, 255, 255);")
+        self.label_spinedb_api.setAlignment(QtCore.Qt.AlignCenter)
+        self.label_spinedb_api.setObjectName("label_spinedb_api")
+        self.verticalLayout.addWidget(self.label_spinedb_api)
         self.label_api_version_str = QtWidgets.QLabel(self.widget_9)
         font = QtGui.QFont()
         font.setFamily("Arial Black")
@@ -527,7 +527,7 @@ class Ui_Form(object):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "About Spine Toolbox", None, -1))
         self.label_spine_toolbox.setText(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Spine Toolbox</p></body></html>", None, -1))
         self.label_version_str.setText(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Version</p></body></html>", None, -1))
-        self.label_spinedatabase_api.setText(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>spinedatabase_api</p></body></html>", None, -1))
+        self.label_spinedb_api.setText(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>spinedb_api</p></body></html>", None, -1))
         self.label_api_version_str.setText(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Version</p></body></html>", None, -1))
         self.textBrowser.setHtml(QtWidgets.QApplication.translate("Form", "<!DOCTYPE HTML PUBLIC \"-//W3C//DTD HTML 4.0//EN\" \"http://www.w3.org/TR/REC-html40/strict.dtd\">\n"
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"

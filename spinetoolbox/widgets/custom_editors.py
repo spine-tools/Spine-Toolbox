@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -151,16 +151,16 @@ class SearchBarEditor(QTableView):
 
     Attributes:
         parent (QWidget): the parent for this widget
-        big_sibling (QWidget or NoneType): another widget which is used to find this widget's position.
+        elder_sibling (QWidget or NoneType): another widget which is used to find this widget's position.
     """
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling=None):
+    def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self._base_size = None
         self._original_text = None
         self._orig_pos = None
@@ -198,8 +198,8 @@ class SearchBarEditor(QTableView):
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self._orig_pos = self.pos()
-        if self._big_sibling:
-            self._orig_pos += self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos())
+        if self._elder_sibling:
+            self._orig_pos += self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos())
         self.refit()
 
     def refit(self):
@@ -328,11 +328,11 @@ class MultiSearchBarEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling=None):
+    def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self.alls = None
         self._max_item_count = None
         self._base_size = None
@@ -377,7 +377,7 @@ class MultiSearchBarEditor(QTableView):
             self._parent.size()
         )
         self.resize(size)
-        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -398,11 +398,11 @@ class CheckListEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling):
+    def __init__(self, parent, elder_sibling):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self._base_size = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
@@ -466,7 +466,7 @@ class CheckListEditor(QTableView):
         total_height = self.verticalHeader().length() + 2
         size = QSize(self._base_size.width(), total_height).boundedTo(self._parent.size())
         self.resize(size)
-        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -483,11 +483,11 @@ class JSONEditor(QTabWidget):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling, popup=False):
+    def __init__(self, parent, elder_sibling, popup=False):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self._popup = popup
         self.setTabPosition(QTabWidget.South)
         self.tab_raw = QWidget()
@@ -631,7 +631,7 @@ class JSONEditor(QTabWidget):
         size = size.boundedTo(self._parent.size())
         size = size.expandedTo(min_size)
         self.resize(size)
-        self.move(offset + self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(offset + self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())

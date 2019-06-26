@@ -6,9 +6,11 @@ spinetoolbox
 
    config
    data_connection
+   data_interface
    data_store
    datapackage_import_export
    excel_import_export
+   executioner
    graphics_items
    helpers
    metaobject

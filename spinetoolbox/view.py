@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt, Slot, Signal, QUrl
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
 from project_item import ProjectItem
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from widgets.data_store_widgets import GraphViewForm
+from widgets.graph_view_widget import GraphViewForm
 from graphics_items import ViewIcon
 from helpers import busy_effect, create_dir
 from sqlalchemy.engine.url import make_url
@@ -95,9 +95,6 @@ class View(ProjectItem):
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
         self._toolbox.ui.treeView_view.setModel(None)
-
-    def set_icon(self, icon):
-        self._graphics_item = icon
 
     def get_icon(self):
         """Returns the item representing this Data Store on the scene."""
@@ -209,3 +206,14 @@ class View(ProjectItem):
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+
+    def execute(self):
+        """Executes this View."""
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("Executing View <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("***")
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
+
+    def stop_execution(self):
+        """Stops executing this View."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))

@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -399,6 +399,8 @@ class PythonReplWidget(RichJupyterWidget):
     def terminate_process(self):
         """Send interrupt signal to kernel."""
         self.kernel_manager.interrupt_kernel()
+        # TODO: Block execution until kernel has been interrupted and then emit the signal
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
 
     def shutdown_kernel(self, hush=False):
         """Shut down Python kernel."""

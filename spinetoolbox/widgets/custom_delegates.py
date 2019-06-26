@@ -1,5 +1,5 @@
 ######################################################################################################################
-# Copyright (C) 2017 - 2018 Spine project consortium
+# Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
 # Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
@@ -464,6 +464,15 @@ class AddItemsDelegate(QItemDelegate):
         self.closeEditor.emit(editor)
         self.setModelData(editor, model, index)
 
+    def updateEditorGeometry(self, editor, option, index):
+        super().updateEditorGeometry(editor, option, index)
+        if type(editor) in (SearchBarEditor,):
+            size = option.rect.size()
+            if index.data(Qt.DecorationRole):
+                size.setWidth(size.width() - 22)  # FIXME
+            editor.set_base_size(size)
+            editor.update_geometry()
+
 
 class AddObjectsDelegate(AddItemsDelegate):
     """A delegate for the model and view in AddObjectsDialog.
@@ -479,21 +488,15 @@ class AddObjectsDelegate(AddItemsDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'object class name':
-            editor = CustomComboEditor(parent)
-        else:
-            editor = CustomLineEditor(parent)
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
-        return editor
-
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'object class name':
+            editor = SearchBarEditor(parent)
             object_class_name_list = [x.name for x in self.db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
         else:
+            editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
 
 
 class AddRelationshipClassesDelegate(AddItemsDelegate):
@@ -511,33 +514,15 @@ class AddRelationshipClassesDelegate(AddItemsDelegate):
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship class name':
             editor = CustomLineEditor(parent)
+            data = index.data(Qt.EditRole)
+            editor.set_data(index.data(Qt.EditRole))
         else:
-            editor = CustomComboEditor(parent)
+            editor = SearchBarEditor(parent)
+            object_class_name_list = [x.name for x in self.db_map.object_class_list()]
+            editor.set_data(index.data(Qt.EditRole), object_class_name_list)
         model = index.model()
         editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
         return editor
-
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'relationship class name':
-            data = index.data(Qt.EditRole)
-            if data:
-                editor.set_data(index.data(Qt.EditRole))
-            else:
-                editor.set_data(self.relationship_class_name(index))
-        else:
-            object_class_name_list = [x.name for x in self.db_map.object_class_list()]
-            editor.set_data(index.data(Qt.EditRole), object_class_name_list)
-
-    def relationship_class_name(self, index):
-        """A relationship class name composed by concatenating object class names."""
-        object_class_name_list = list()
-        for column in range(index.column()):
-            object_class_name = index.sibling(index.row(), column).data(Qt.DisplayRole)
-            if object_class_name:
-                object_class_name_list.append(object_class_name)
-        return "__".join(object_class_name_list)
 
 
 class AddRelationshipsDelegate(AddItemsDelegate):
@@ -555,49 +540,18 @@ class AddRelationshipsDelegate(AddItemsDelegate):
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship name':
             editor = CustomLineEditor(parent)
+            data = index.data(Qt.EditRole)
+            editor.set_data(data)
         else:
-            editor = CustomComboEditor(parent)
+            editor = SearchBarEditor(parent)
+            object_class_name = header[index.column()].split(' ', 1)[0]
+            object_class = self.db_map.object_class_list().filter_by(name=object_class_name).one_or_none()
+            if object_class:
+                object_name_list = [x.name for x in self.db_map.object_list(class_id=object_class.id)]
+                editor.set_data(index.data(Qt.EditRole), object_name_list)
         model = index.model()
         editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
         return editor
-
-    def setEditorData(self, editor, index):
-        """Set editor data."""
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'relationship name':
-            data = index.data(Qt.EditRole)
-            if data:
-                editor.set_data(data)
-            else:
-                editor.set_data(self.relationship_name(index))
-        else:
-            object_class_name = header[index.column()].split(' ', 1)[0]
-            object_class = self.db_map.object_class_list().filter_by(name=object_class_name).one_or_none()
-            if not object_class:
-                object_name_list = list()
-            else:
-                object_name_list = [x.name for x in self.db_map.object_list(class_id=object_class.id)]
-            editor.set_data(index.data(Qt.EditRole), object_name_list)
-
-    def relationship_name(self, index):
-        """A relationship name composed by concatenating object names."""
-        object_name_list = list()
-        for column in range(index.column()):
-            object_name = index.sibling(index.row(), column).data(Qt.DisplayRole)
-            if object_name:
-                object_name_list.append(object_name)
-        return "__".join(object_name_list)
-
-
-class AddParameterEnumsDelegate(LineEditDelegate):
-    """A delegate for the model and view in AddRelationshipsDialog.
-
-    Attributes:
-        parent (QMainWindow): tree or graph view form
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
 
 class ForeignKeysDelegate(QItemDelegate):
