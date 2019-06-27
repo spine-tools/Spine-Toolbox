@@ -1,4 +1,20 @@
-# -*- coding: utf-8 -*-
+######################################################################################################################
+# Copyright (C) 2017 - 2019 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
+
+"""
+Contains ImportDialog class.
+
+:author: P. Vennström (VTT)
+:date:   1.6.2019
+"""
 
 from PySide2.QtWidgets import (
     QWidget,
@@ -13,7 +29,6 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Qt
 import spinedb_api
-
 from helpers import busy_effect
 from spine_io.importers.csv_reader import CSVConnector
 from spine_io.importers.excel_reader import ExcelConnector
@@ -123,8 +138,6 @@ class ImportDialog(QDialog):
     def data_ready(self, data, errors):
         if self.import_data(data, errors):
             self.accept()
-        else:
-            pass
 
     def launch_import_preview(self):
         if self._selected_connector:
@@ -133,14 +146,12 @@ class ImportDialog(QDialog):
             valid_source = self.active_connector.connection_ui()
             if valid_source:
                 # Create instance of ImportPreviewWidget and configure
-
                 self._import_preview = ImportPreviewWidget(self.active_connector, self)
                 self._import_preview.set_loading_status(True)
                 self._import_preview.rejected.connect(self.reject)
                 # Connect data_ready method to the widget
                 self._import_preview.mappedDataReady.connect(self.data_ready)
                 self.layout().addWidget(self._import_preview)
-
                 self.active_connector.connectionFailed.connect(self._handle_failed_connection)
                 self.active_connector.init_connection()
                 # show preview widget

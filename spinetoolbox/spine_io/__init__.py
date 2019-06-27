@@ -10,8 +10,8 @@
 ######################################################################################################################
 
 """
-Init file for widgets package. Intentionally empty.
+Init file for spine_io package. Intentionally empty.
 
-:author: P. Savolainen (VTT)
-:date:   3.1.2018
+:author: P. Vennström (VTT)
+:date:   1.6.2019
 """
