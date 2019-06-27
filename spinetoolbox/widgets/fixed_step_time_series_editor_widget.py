@@ -16,10 +16,11 @@ Contains logic for the fixed step time series editor widget.
 :date:   14.6.2019
 """
 
-import numpy
+import dateutil.parser
+import numpy as np
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog
-from spinedb_api import FixedTimeSteps, resolution_to_timedelta, timedelta_to_resolution, ValueDecodeError
+from spinedb_api import duration_to_relativedelta, ParameterValueFormatError, relativedelta_to_duration, TimeSeriesFixedResolution
 from time_series_table_model import TimeSeriesTableModel
 from ui.fixed_step_time_series_editor import Ui_FixedStepTimeSeriesEditor
 from widgets.plot_canvas import PlotCanvas
@@ -30,9 +31,20 @@ def _resize_value_array(values, length):
         return values
     if len(values) > length:
         return values[:length]
-    zero_padded = numpy.zeros(length)
+    zero_padded = np.zeros(length)
     zero_padded[0:len(values)] = values
     return zero_padded
+
+
+def _resolution_to_text(resolution):
+    if len(resolution) == 1:
+        return relativedelta_to_duration(resolution[0])
+    affix = ''
+    text = ''
+    for r in resolution:
+        text = text + affix + relativedelta_to_duration(r)
+        affix = ', '
+    return text
 
 
 class FixedStepTimeSeriesEditor(QDialog):
@@ -53,7 +65,7 @@ class FixedStepTimeSeriesEditor(QDialog):
         self.ui.close_button.clicked.connect(self.close)
         self._parent_model = model
         self._parent_model_index = index
-        stamps = value.stamps
+        stamps = value.indexes
         values = value.values
         self._model = TimeSeriesTableModel(stamps, values)
         self._model.set_fixed_time_stamps(True)
@@ -63,9 +75,9 @@ class FixedStepTimeSeriesEditor(QDialog):
         self.ui.start_time_edit.editingFinished.connect(self._start_time_changed)
         self._start_time_valid = True
         self._start_time_label_text = self.ui.start_time_label.text()
-        self.ui.length_edit.setValue(value.length)
+        self.ui.length_edit.setValue(len(value))
         self.ui.length_edit.editingFinished.connect(self._length_changed)
-        self.ui.resolution_edit.setText(timedelta_to_resolution(value.timedelta))
+        self.ui.resolution_edit.setText(_resolution_to_text(value.resolution))
         self.ui.resolution_edit.editingFinished.connect(self._resolution_changed)
         self._resolution_valid = True
         self._resolution_label_text = self.ui.resolution_label.text()
@@ -81,10 +93,10 @@ class FixedStepTimeSeriesEditor(QDialog):
         length = self.ui.length_edit.value()
         values = self._model.values
         resized = _resize_value_array(values, length)
-        timedelta = resolution_to_timedelta(self.ui.resolution_edit.text())
-        start = numpy.datetime64(self.ui.start_time_edit.text())
-        value = FixedTimeSteps(start, timedelta, resized)
-        self._parent_model.setData(self._parent_model_index, value.to_databse())
+        timedelta = duration_to_relativedelta(self.ui.resolution_edit.text())
+        start = dateutil.parser.parse(self.ui.start_time_edit.text())
+        value = TimeSeriesFixedResolution(start, [timedelta], resized, False, False)
+        self._parent_model.setData(self._parent_model_index, value.to_database())
         self._silent_reset_model(value)
         self._update_plot(value)
 
@@ -92,8 +104,8 @@ class FixedStepTimeSeriesEditor(QDialog):
     def _resolution_changed(self):
         resolution_text = self.ui.resolution_edit.text()
         try:
-            timedelta = resolution_to_timedelta(resolution_text)
-        except ValueDecodeError:
+            timedelta = duration_to_relativedelta(resolution_text)
+        except ParameterValueFormatError:
             self._resolution_valid = False
             self.ui.resolution_label.setText(self._resolution_label_text + " (syntax error)")
             return
@@ -101,10 +113,10 @@ class FixedStepTimeSeriesEditor(QDialog):
         self._resolution_valid = True
         if not self._valid_inputs():
             return
-        start = numpy.datetime64(self.ui.start_time_edit.text())
+        start = dateutil.parser.parse(self.ui.start_time_edit.text())
         values = self._model.values
-        value = FixedTimeSteps(start, timedelta, values)
-        self._parent_model.setData(self._parent_model_index, value.to_databse())
+        value = TimeSeriesFixedResolution(start, [timedelta], values)
+        self._parent_model.setData(self._parent_model_index, value.to_database())
         self._silent_reset_model(value)
         self._update_plot(value)
 
@@ -117,7 +129,7 @@ class FixedStepTimeSeriesEditor(QDialog):
     def _start_time_changed(self):
         start_text = self.ui.start_time_edit.text()
         try:
-            start = numpy.datetime64(start_text)
+            start = dateutil.parser.parse(start_text)
         except ValueError:
             self._start_time_valid = False
             self.ui.start_time_label.setText(self._start_time_label_text + " (syntax error)")
@@ -126,21 +138,21 @@ class FixedStepTimeSeriesEditor(QDialog):
         self._start_time_valid = True
         if not self._valid_inputs():
             return
-        timedelta = resolution_to_timedelta(self.ui.resolution_edit.text())
+        timedelta = duration_to_relativedelta(self.ui.resolution_edit.text())
         values = self._model.values
-        value = FixedTimeSteps(start, timedelta, values)
-        self._parent_model.setData(self._parent_model_index, value.to_databse())
+        value = TimeSeriesFixedResolution(start, [timedelta], values, False, False)
+        self._parent_model.setData(self._parent_model_index, value.to_database())
         self._silent_reset_model(value)
         self._update_plot(value)
 
     @Slot("QModelIndex", "QModelIndex", "list", name="_table_changed")
     def _table_changed(self, topLeft, bottomRight, roles=None):
         """A slot to signal that the table view has changed."""
-        value = FixedTimeSteps(None, None, None)
-        value.values = self._model.values
-        value.start = numpy.datetime64(self.ui.start_time_edit.text())
-        value.timedelta = resolution_to_timedelta(self.ui.resolution_edit.text())
-        self._parent_model.setData(self._parent_model_index, value.to_databse())
+        values = self._model.values
+        start = dateutil.parser.parse(self.ui.start_time_edit.text())
+        timedelta = duration_to_relativedelta(self.ui.resolution_edit.text())
+        value = TimeSeriesFixedResolution(start, timedelta, values, False, False)
+        self._parent_model.setData(self._parent_model_index, value.to_database())
         self._update_plot(value)
 
     def _update_plot(self, value):

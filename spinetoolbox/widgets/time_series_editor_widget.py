@@ -19,7 +19,7 @@ Contains logic for the time series editor widget.
 import numpy
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog
-from spinedb_api import ValueDecodeError, VariableTimeSteps
+from spinedb_api import ParameterValueFormatError, TimeSeriesVariableResolution
 from models import MinimalTableModel
 from ui.time_series_editor import Ui_TimeSeriesEditor
 from widgets.plot_canvas import PlotCanvas
@@ -80,7 +80,7 @@ class TimeSeriesEditor(QDialog):
         self._parent_model = model
         self._parent_model_index = index
         self._model = MinimalTableModel()
-        value_as_numpy = value.stamps, value.values
+        value_as_numpy = value.indexes, value.values
         self._model.reset_model(map_to_model(value_as_numpy))
         self._model.setHeaderData(0, Qt.Horizontal, 'Time')
         self._model.setHeaderData(1, Qt.Horizontal, 'Value')
@@ -95,11 +95,11 @@ class TimeSeriesEditor(QDialog):
         """A slot to signal that the table view has changed."""
         try:
             stamps, values = map_from_model(self._model.model_data())
-            self._parent_model.setData(self._parent_model_index, VariableTimeSteps(stamps, values).as_json())
+            self._parent_model.setData(self._parent_model_index, TimeSeriesVariableResolution(stamps, values).as_json())
             self.ui.plot_widget.axes.cla()
             self.ui.plot_widget.axes.plot(stamps, values)
             self.ui.plot_widget.draw()
-        except (ValueError, ValueDecodeError):
+        except (ValueError, ParameterValueFormatError):
             self._invalidate_table(topLeft, bottomRight)
 
     def _invalidate_table(self, top_left, bottom_right):
