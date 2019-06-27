@@ -23,7 +23,7 @@ from PySide2.QtWidgets import QDialog
 from spinedb_api import duration_to_relativedelta, ParameterValueFormatError, relativedelta_to_duration, TimeSeriesFixedResolution
 from time_series_table_model import TimeSeriesTableModel
 from ui.fixed_step_time_series_editor import Ui_FixedStepTimeSeriesEditor
-from widgets.plot_canvas import PlotCanvas
+from widgets.plot_widget import PlotWidget
 
 
 def _resize_value_array(values, length):
@@ -82,9 +82,9 @@ class FixedStepTimeSeriesEditor(QDialog):
         self._resolution_valid = True
         self._resolution_label_text = self.ui.resolution_label.text()
         self.ui.time_series_table.setModel(self._model)
-        self.ui.plot_widget = PlotCanvas()
+        self.ui.plot_widget = PlotWidget()
         self.ui.splitter.insertWidget(1, self.ui.plot_widget)
-        self.ui.plot_widget.axes.plot(stamps, values)
+        self.ui.plot_widget.canvas.axes.plot(stamps, values)
 
     @Slot(name='_length_changed')
     def _length_changed(self):
@@ -156,9 +156,9 @@ class FixedStepTimeSeriesEditor(QDialog):
         self._update_plot(value)
 
     def _update_plot(self, value):
-        self.ui.plot_widget.axes.cla()
-        self.ui.plot_widget.axes.plot(value.stamps, value.values)
-        self.ui.plot_widget.draw()
+        self.ui.plot_widget.canvas.axes.cla()
+        self.ui.plot_widget.canvas.axes.plot(value.stamps, value.values)
+        self.ui.plot_widget.canvas.draw()
 
     def _valid_inputs(self):
         return self._table_valid and self._start_time_valid and self._resolution_valid

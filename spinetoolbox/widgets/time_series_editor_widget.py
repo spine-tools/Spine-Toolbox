@@ -22,7 +22,7 @@ from PySide2.QtWidgets import QDialog
 from spinedb_api import ParameterValueFormatError, TimeSeriesVariableResolution
 from models import MinimalTableModel
 from ui.time_series_editor import Ui_TimeSeriesEditor
-from widgets.plot_canvas import PlotCanvas
+from widgets.plot_widget import PlotWidget
 
 
 def map_to_model(data):
@@ -86,9 +86,9 @@ class TimeSeriesEditor(QDialog):
         self._model.setHeaderData(1, Qt.Horizontal, 'Value')
         self._model.dataChanged.connect(self._model_data_changed)
         self.ui.time_series_table.setModel(self._model)
-        self.ui.plot_widget = PlotCanvas()
+        self.ui.plot_widget = PlotWidget()
         self.ui.splitter.insertWidget(1, self.ui.plot_widget)
-        self.ui.plot_widget.axes.plot(value_as_numpy[0], value_as_numpy[1])
+        self.ui.plot_widget.canvas.axes.plot(value_as_numpy[0], value_as_numpy[1])
 
     @Slot("QModelIndex", "QModelIndex", "list", name="_model_data_changed")
     def _model_data_changed(self, topLeft, bottomRight, roles=None):
@@ -96,8 +96,8 @@ class TimeSeriesEditor(QDialog):
         try:
             stamps, values = map_from_model(self._model.model_data())
             self._parent_model.setData(self._parent_model_index, TimeSeriesVariableResolution(stamps, values).as_json())
-            self.ui.plot_widget.axes.cla()
-            self.ui.plot_widget.axes.plot(stamps, values)
+            self.ui.plot_widget.canvas.axes.cla()
+            self.ui.plot_widget.canvas.axes.plot(stamps, values)
             self.ui.plot_widget.draw()
         except (ValueError, ParameterValueFormatError):
             self._invalidate_table(topLeft, bottomRight)
