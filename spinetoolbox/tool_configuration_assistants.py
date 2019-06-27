@@ -105,6 +105,16 @@ class SpineModelConfigurationAssistant(QObject):
         args.append("https://github.com/Spine-project/Spine-Model.git")
         return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=False)
 
+    def install_py_call(self):
+        """Return qsubprocess that installs PyCall in current julia version.
+        """
+        args = list()
+        args.append(f"--project={self.julia_project_path}")
+        args.append("-e")
+        args.append("using Pkg; Pkg.add(ARGS[1]);")
+        args.append("PyCall")
+        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=False)
+
     def reconfigure_py_call(self, pyprogramname):
         """Return qsubprocess that reconfigure PyCall to use given python program.
         """
