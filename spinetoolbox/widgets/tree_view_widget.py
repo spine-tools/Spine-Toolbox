@@ -19,7 +19,7 @@ Contains the TreeViewForm class.
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 import logging
-from PySide2.QtWidgets import QFileDialog, QApplication, QDockWidget, QTreeView, QTableView
+from PySide2.QtWidgets import QFileDialog, QApplication, QDockWidget, QTreeView, QTableView, QDialog, QMessageBox
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QIcon
 from ui.tree_view_form import Ui_MainWindow
@@ -36,6 +36,7 @@ from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect
+from spine_io.widgets.import_widget import ImportDialog
 
 
 class TreeViewForm(DataStoreForm):
@@ -395,13 +396,19 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="show_import_file_dialog")
     def show_import_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to import."""
-        answer = QFileDialog.getOpenFileName(
-            self, "Select file to import", self._data_store.project().project_dir, "*.*"
-        )
-        file_path = answer[0]
-        if not file_path:  # Cancel button clicked
+        if self.db_map.has_pending_changes():
+            commit_warning = QMessageBox()
+            commit_warning.setText("Please commit or rollback before importing data")
+            commit_warning.setStandardButtons(QMessageBox.Ok)
+            commit_warning.exec()
             return
-        self.import_file(file_path)
+        dialog = ImportDialog(parent=self)
+        # assume that dialog is modal, if not use accepted, rejected signals
+        if dialog.exec() == QDialog.Accepted:
+            if self.db_map.has_pending_changes():
+                self.msg.emit("Import was successfull")
+                self.commit_available.emit(True)
+                self.init_models()
 
     @busy_effect
     def import_file(self, file_path, checked=False):
