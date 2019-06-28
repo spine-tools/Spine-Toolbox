@@ -18,15 +18,10 @@ Contains functions to choose a (relationship) parameter value editor.
 
 from PySide2.QtCore import Qt
 from spinedb_api import from_database, TimeSeriesFixedResolution, TimeSeriesVariableResolution
-from widgets.fixed_step_time_series_editor_widget import FixedStepTimeSeriesEditor
-from widgets.time_series_editor_widget import TimeSeriesEditor
+from widgets.parameter_value_editor import ParameterValueEditor
 
 
-def select_value_editor(model, index, parent):
+def select_value_editor(model, index):
     """Returns a widget to edit a (relationship) parameter value."""
     value = from_database(model.data(index, Qt.EditRole))
-    if isinstance(value, TimeSeriesFixedResolution):
-        return FixedStepTimeSeriesEditor(model, index, value, parent)
-    if isinstance(value, TimeSeriesVariableResolution):
-        return TimeSeriesEditor(model, index, value, parent)
-    raise NotImplementedError("No editor widget available for value '{}'.".format(value.raw))
+    return ParameterValueEditor(model, index, value)

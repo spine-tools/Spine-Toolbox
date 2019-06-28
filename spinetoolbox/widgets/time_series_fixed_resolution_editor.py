@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog
 from spinedb_api import duration_to_relativedelta, ParameterValueFormatError, relativedelta_to_duration, TimeSeriesFixedResolution
 from time_series_table_model import TimeSeriesTableModel
-from ui.fixed_step_time_series_editor import Ui_FixedStepTimeSeriesEditor
+from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 from widgets.plot_widget import PlotWidget
 
 
@@ -47,7 +47,7 @@ def _resolution_to_text(resolution):
     return text
 
 
-class FixedStepTimeSeriesEditor(QDialog):
+class TimeSeriesFixedResolutionEditor(QDialog):
     """
     A widget for editing time series data with a fixed time step.
 
@@ -60,9 +60,8 @@ class FixedStepTimeSeriesEditor(QDialog):
 
     def __init__(self, model, index, value, parent=None):
         super().__init__(parent)
-        self.ui = Ui_FixedStepTimeSeriesEditor()
+        self.ui = Ui_TimeSeriesFixedResolutionEditor()
         self.ui.setupUi(self)
-        self.ui.close_button.clicked.connect(self.close)
         self._parent_model = model
         self._parent_model_index = index
         stamps = value.indexes

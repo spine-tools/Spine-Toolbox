@@ -9,5 +9,5 @@ matplotlib >=2.2.3
 scipy >=1.1.0
 jupyter-client >= 5.2.4
 networkx > 2.2
-dateutil >= 2.8.0
+python-dateutil >= 2.8.0
 pandas >= 0.24.0

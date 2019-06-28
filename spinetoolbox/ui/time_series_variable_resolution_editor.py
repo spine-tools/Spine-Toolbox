@@ -11,40 +11,30 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/time_series_editor.ui',
-# licensing of '../spinetoolbox/ui/time_series_editor.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/time_series_variable_resolution_editor.ui',
+# licensing of '../spinetoolbox/ui/time_series_variable_resolution_editor.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-class Ui_TimeSeriesEditor(object):
-    def setupUi(self, TimeSeriesEditor):
-        TimeSeriesEditor.setObjectName("TimeSeriesEditor")
-        TimeSeriesEditor.setWindowModality(QtCore.Qt.WindowModal)
-        TimeSeriesEditor.resize(563, 418)
-        self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesEditor)
+class Ui_TimeSeriesVariableResolutionEditor(object):
+    def setupUi(self, TimeSeriesVariableResolutionEditor):
+        TimeSeriesVariableResolutionEditor.setObjectName("TimeSeriesVariableResolutionEditor")
+        TimeSeriesVariableResolutionEditor.resize(400, 300)
+        self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesVariableResolutionEditor)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.splitter = QtWidgets.QSplitter(TimeSeriesEditor)
+        self.splitter = QtWidgets.QSplitter(TimeSeriesVariableResolutionEditor)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
         self.splitter.setObjectName("splitter")
         self.time_series_table = QtWidgets.QTableView(self.splitter)
         self.time_series_table.setObjectName("time_series_table")
         self.verticalLayout.addWidget(self.splitter)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
-        self.close_button = QtWidgets.QPushButton(TimeSeriesEditor)
-        self.close_button.setObjectName("close_button")
-        self.horizontalLayout.addWidget(self.close_button)
-        self.verticalLayout.addLayout(self.horizontalLayout)
 
-        self.retranslateUi(TimeSeriesEditor)
-        QtCore.QMetaObject.connectSlotsByName(TimeSeriesEditor)
+        self.retranslateUi(TimeSeriesVariableResolutionEditor)
+        QtCore.QMetaObject.connectSlotsByName(TimeSeriesVariableResolutionEditor)
 
-    def retranslateUi(self, TimeSeriesEditor):
-        TimeSeriesEditor.setWindowTitle(QtWidgets.QApplication.translate("TimeSeriesEditor", "Edit time series", None, -1))
-        self.close_button.setText(QtWidgets.QApplication.translate("TimeSeriesEditor", "Close", None, -1))
+    def retranslateUi(self, TimeSeriesVariableResolutionEditor):
+        TimeSeriesVariableResolutionEditor.setWindowTitle(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Form", None, -1))
 

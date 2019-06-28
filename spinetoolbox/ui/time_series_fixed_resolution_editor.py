@@ -1,28 +1,38 @@
+######################################################################################################################
+# Copyright (C) 2017 - 2019 Spine project consortium
+# This file is part of Spine Toolbox.
+# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
+# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
+# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
+# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
+# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
+# this program. If not, see <http://www.gnu.org/licenses/>.
+######################################################################################################################
+
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/fixed_step_time_series_editor.ui',
-# licensing of '../spinetoolbox/ui/fixed_step_time_series_editor.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/time_series_fixed_resolution_editor.ui',
+# licensing of '../spinetoolbox/ui/time_series_fixed_resolution_editor.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-class Ui_FixedStepTimeSeriesEditor(object):
-    def setupUi(self, FixedStepTimeSeriesEditor):
-        FixedStepTimeSeriesEditor.setObjectName("FixedStepTimeSeriesEditor")
-        FixedStepTimeSeriesEditor.setWindowModality(QtCore.Qt.WindowModal)
-        FixedStepTimeSeriesEditor.resize(563, 418)
-        self.verticalLayout_4 = QtWidgets.QVBoxLayout(FixedStepTimeSeriesEditor)
-        self.verticalLayout_4.setObjectName("verticalLayout_4")
-        self.splitter = QtWidgets.QSplitter(FixedStepTimeSeriesEditor)
+class Ui_TimeSeriesFixedResolutionEditor(object):
+    def setupUi(self, TimeSeriesFixedResolutionEditor):
+        TimeSeriesFixedResolutionEditor.setObjectName("TimeSeriesFixedResolutionEditor")
+        TimeSeriesFixedResolutionEditor.resize(400, 300)
+        self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesFixedResolutionEditor)
+        self.verticalLayout.setObjectName("verticalLayout")
+        self.splitter = QtWidgets.QSplitter(TimeSeriesFixedResolutionEditor)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
         self.splitter.setObjectName("splitter")
         self.verticalLayoutWidget = QtWidgets.QWidget(self.splitter)
         self.verticalLayoutWidget.setObjectName("verticalLayoutWidget")
-        self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
-        self.verticalLayout.setContentsMargins(0, 0, 0, 0)
-        self.verticalLayout.setObjectName("verticalLayout")
+        self.left_layout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
+        self.left_layout.setContentsMargins(0, 0, 0, 0)
+        self.left_layout.setObjectName("left_layout")
         self.formLayout = QtWidgets.QFormLayout()
         self.formLayout.setObjectName("formLayout")
         self.start_time_label = QtWidgets.QLabel(self.verticalLayoutWidget)
@@ -57,7 +67,7 @@ class Ui_FixedStepTimeSeriesEditor(object):
         self.label_2.setObjectName("label_2")
         self.verticalLayout_3.addWidget(self.label_2)
         self.formLayout.setLayout(2, QtWidgets.QFormLayout.FieldRole, self.verticalLayout_3)
-        self.verticalLayout.addLayout(self.formLayout)
+        self.left_layout.addLayout(self.formLayout)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -72,31 +82,22 @@ class Ui_FixedStepTimeSeriesEditor(object):
         self.horizontalLayout_2.addWidget(self.repeat_check_box)
         spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem2)
-        self.verticalLayout.addLayout(self.horizontalLayout_2)
+        self.left_layout.addLayout(self.horizontalLayout_2)
         self.time_series_table = QtWidgets.QTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName("time_series_table")
-        self.verticalLayout.addWidget(self.time_series_table)
-        self.verticalLayout_4.addWidget(self.splitter)
-        self.horizontalLayout = QtWidgets.QHBoxLayout()
-        self.horizontalLayout.setObjectName("horizontalLayout")
-        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem3)
-        self.close_button = QtWidgets.QPushButton(FixedStepTimeSeriesEditor)
-        self.close_button.setObjectName("close_button")
-        self.horizontalLayout.addWidget(self.close_button)
-        self.verticalLayout_4.addLayout(self.horizontalLayout)
+        self.left_layout.addWidget(self.time_series_table)
+        self.verticalLayout.addWidget(self.splitter)
 
-        self.retranslateUi(FixedStepTimeSeriesEditor)
-        QtCore.QMetaObject.connectSlotsByName(FixedStepTimeSeriesEditor)
+        self.retranslateUi(TimeSeriesFixedResolutionEditor)
+        QtCore.QMetaObject.connectSlotsByName(TimeSeriesFixedResolutionEditor)
 
-    def retranslateUi(self, FixedStepTimeSeriesEditor):
-        FixedStepTimeSeriesEditor.setWindowTitle(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Edit time series", None, -1))
-        self.start_time_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Start time", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Format: YYYY-MM-DDThh:mm:ss", None, -1))
-        self.length_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Length", None, -1))
-        self.resolution_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Resolution", None, -1))
-        self.label_2.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Available units: S, M, H, d, m, y", None, -1))
-        self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Ignore year", None, -1))
-        self.repeat_check_box.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Repeat", None, -1))
-        self.close_button.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Close", None, -1))
+    def retranslateUi(self, TimeSeriesFixedResolutionEditor):
+        TimeSeriesFixedResolutionEditor.setWindowTitle(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Form", None, -1))
+        self.start_time_label.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Start time", None, -1))
+        self.label.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Format: YYYY-MM-DDThh:mm:ss", None, -1))
+        self.length_label.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Length", None, -1))
+        self.resolution_label.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Resolution", None, -1))
+        self.label_2.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Available units: s, m, h, D, M, Y", None, -1))
+        self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Ignore year", None, -1))
+        self.repeat_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Repeat", None, -1))
 

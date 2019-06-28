@@ -1911,7 +1911,7 @@ class TreeViewForm(DataStoreForm):
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
         current = selection.takeFirst()
         model_indexes = current.indexes()
-        self._relationship_parameter_value_editor = select_value_editor(current.model(), model_indexes[0], self)
+        self._relationship_parameter_value_editor = select_value_editor(current.model(), model_indexes[0])
         self._relationship_parameter_value_editor.show()
 
     @busy_effect

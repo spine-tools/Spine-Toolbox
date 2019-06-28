@@ -21,11 +21,11 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog
 from spinedb_api import ParameterValueFormatError, TimeSeriesVariableResolution
 from time_series_table_model import TimeSeriesTableModel
-from ui.time_series_editor import Ui_TimeSeriesEditor
+from ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 from widgets.plot_widget import PlotWidget
 
 
-class TimeSeriesEditor(QDialog):
+class TimeSeriesVariableResolutionEditor(QDialog):
     """
     A widget for editing time series data.
 
@@ -38,9 +38,8 @@ class TimeSeriesEditor(QDialog):
 
     def __init__(self, model, index, value, parent=None):
         super().__init__(parent)
-        self.ui = Ui_TimeSeriesEditor()
+        self.ui = Ui_TimeSeriesVariableResolutionEditor()
         self.ui.setupUi(self)
-        self.ui.close_button.clicked.connect(self.close)
         self._parent_model = model
         self._parent_model_index = index
         self._model = TimeSeriesTableModel(value.indexes, value.values)
