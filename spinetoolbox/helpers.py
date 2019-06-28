@@ -367,15 +367,13 @@ def format_string_list(str_list):
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def strip_json_data(data, maxlen):
-    """Return a json equivalent to `data`, stripped to `maxlen` characters.
+def strip_json_data(json_data, maxlen):
+    """Return a string representation of `json_data`, stripped to `maxlen` characters.
     """
-    if not data:
-        return data
-    try:
-        stripped_data = json.dumps(json.loads(data), ensure_ascii=False)
-    except json.JSONDecodeError:
-        stripped_data = data
+    data = json.loads(json_data)
+    if data is None:
+        return ""
+    stripped_data = str(data)
     if len(stripped_data) > 2 * maxlen:
         stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
     return stripped_data
@@ -451,8 +449,8 @@ class IconManager:
         return self.display_icon(*self.icon_color_code(None))
 
     def setup_object_pixmaps(self, object_classes):
-        """Called after adding or updating object classes. 
-        Create the corresponding object pixmaps and clear obsolete entries 
+        """Called after adding or updating object classes.
+        Create the corresponding object pixmaps and clear obsolete entries
         from the relationship class icon cache."""
         for object_class in object_classes:
             self.create_object_pixmap(object_class.display_icon)

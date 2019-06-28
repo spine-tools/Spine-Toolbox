@@ -48,7 +48,7 @@ from PySide2.QtWidgets import (
     QLabel,
 )
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from treeview_models import JSONArrayModel
+from treeview_models import LazyLoadingArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 
 
@@ -509,8 +509,7 @@ class JSONEditor(QTabWidget):
         self.addTab(self.tab_table, "Table")
         self.setCurrentIndex(0)
         self._base_size = None
-        self.json_data = None
-        self.model = JSONArrayModel(self)
+        self.model = LazyLoadingArrayModel(self)
         self.table_view.setModel(self.model)
         self.text_edit.installEventFilter(self)
         self.table_view.installEventFilter(self)
@@ -570,17 +569,17 @@ class JSONEditor(QTabWidget):
         """Update json data on text edit or table view, and set focus.
         """
         if index == 0:
-            data = self.model.json_data()
-            if not data:
-                data = self.json_data
-            try:
-                formatted_data = json.dumps(json.loads(data), indent=4)
+            data = self.model.all_data()
+            if data is not None:
+                formatted_data = json.dumps(data, indent=4)
                 self.text_edit.setText(formatted_data)
-            except (TypeError, json.JSONDecodeError):
-                pass
             self.text_edit.setFocus()
         elif index == 1:
-            data = self.text_edit.toPlainText()
+            text = self.text_edit.toPlainText()
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError:
+                data = None
             self.model.reset_model(data)
             self.table_view.setFocus()
             self.table_view.setCurrentIndex(self.model.index(0, 0))
@@ -589,17 +588,19 @@ class JSONEditor(QTabWidget):
     def set_data(self, data, current_index):
         """Set data on text edit or table view (model) depending on current index.
         """
-        self.json_data = data
         self.setCurrentIndex(current_index)
         self.currentChanged.connect(self._handle_current_changed)
+        try:
+            loaded_data = json.loads(data)
+        except (TypeError, json.JSONDecodeError):
+            # NOTE: TypeError happens when data is None
+            loaded_data = None
         if current_index == 0:
-            try:
-                formatted_data = json.dumps(json.loads(data), indent=4)
+            if loaded_data is not None:
+                formatted_data = json.dumps(loaded_data, indent=4)
                 self.text_edit.setText(formatted_data)
-            except (TypeError, json.JSONDecodeError):
-                pass
         elif current_index == 1:
-            self.model.reset_model(data)
+            self.model.reset_model(loaded_data)
         QTimer.singleShot(0, self.start_editing)
 
     def start_editing(self):
@@ -642,10 +643,12 @@ class JSONEditor(QTabWidget):
     def data(self):
         index = self.currentIndex()
         if index == 0:
-            return self.text_edit.toPlainText()
+            text = self.text_edit.toPlainText()
+            if not text:  # empty string is not valid JSON
+                text = 'null'
+            return text
         elif index == 1:
-            return self.model.json_data()
-        return None
+            return json.dumps(self.model.all_data())
 
 
 class IconPainterDelegate(QItemDelegate):

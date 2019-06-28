@@ -17,7 +17,6 @@ Classes for handling models in tree and graph views.
 """
 
 import os
-import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
 from helpers import busy_effect, format_string_list, strip_json_data
@@ -901,21 +900,18 @@ class SubParameterValueModel(SubParameterModel):
         header = self._parent.horizontal_header_labels()
         id_column = header.index('id')
         for k, index in enumerate(indexes):
-            index_data = index.data(Qt.EditRole)
-            if not data[k] or str(data[k]).isspace():
-                data[k] = None
-            if data[k] == index_data:
-                continue
-            if str(data[k]) == str(index_data):
-                continue
             row = index.row()
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
             if not id_:
                 continue
             field_name = header[index.column()]
-            if field_name == "parameter_id":
-                field_name = "parameter_definition_id"  # FIXME: This should be fixed in spinedb_api
-            item = {"id": id_, field_name: data[k]}
+            if field_name != "value":
+                continue
+            value = data[k]
+            if value == index.data(Qt.EditRole):
+                # nothing to do really
+                continue
+            item = {"id": id_, "value": value}
             items_to_update.setdefault(id_, dict()).update(item)
         return list(items_to_update.values())
 
@@ -936,7 +932,7 @@ class SubParameterValueModel(SubParameterModel):
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
         if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 512)
+            return strip_json_data(super().data(index, Qt.DisplayRole), 256)
         if role == Qt.DisplayRole and self._parent.header[index.column()] == 'value':
             return strip_json_data(super().data(index, Qt.DisplayRole), 16)
         return super().data(index, role)
@@ -964,13 +960,6 @@ class SubParameterDefinitionModel(SubParameterModel):
         new_indexes = []
         new_data = []
         for k, index in enumerate(indexes):
-            index_data = index.data(Qt.EditRole)
-            if str(data[k]) == str(index_data):
-                continue
-            if not data[k] and not index_data:
-                continue
-            if str(data[k]).isspace():
-                data[k] = None
             row = index.row()
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
             if not id_:
@@ -999,8 +988,10 @@ class SubParameterDefinitionModel(SubParameterModel):
                     self.error_log.append("Invalid value list '{}'.".format(value_list_name))
             elif field_name == "parameter_name":
                 item.update({"name": data[k]})
-            else:
-                item.update({field_name: data[k]})
+            elif field_name == "default_value":
+                default_value = data[k]
+                if default_value != index.data(Qt.EditRole):
+                    item.update({"default_value": default_value})
             items_to_update.setdefault(id_, dict()).update(item)
         indexes.extend(new_indexes)
         data.extend(new_data)
@@ -1030,7 +1021,7 @@ class SubParameterDefinitionModel(SubParameterModel):
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
         if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'default_value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 512)
+            return strip_json_data(super().data(index, Qt.DisplayRole), 256)
         if role == Qt.DisplayRole and self._parent.header[index.column()] == 'default_value':
             return strip_json_data(super().data(index, Qt.DisplayRole), 16)
         return super().data(index, role)
@@ -1106,13 +1097,14 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
         Extend set of indexes as additional data is set."""
         items_to_add = dict()
         # Get column numbers
-        header = self._parent.horizontal_header_labels()
-        object_class_id_column = header.index('object_class_id')
-        object_class_name_column = header.index('object_class_name')
-        object_id_column = header.index('object_id')
-        object_name_column = header.index('object_name')
-        parameter_id_column = header.index('parameter_id')
-        parameter_name_column = header.index('parameter_name')
+        header_index = self._parent.horizontal_header_labels().index
+        object_class_id_column = header_index('object_class_id')
+        object_class_name_column = header_index('object_class_name')
+        object_id_column = header_index('object_id')
+        object_name_column = header_index('object_name')
+        parameter_id_column = header_index('parameter_id')
+        parameter_name_column = header_index('parameter_name')
+        value_column = header_index('value')
         # Query db and build ad-hoc dicts
         object_class_list = self._parent.db_map.object_class_list().all()
         object_class_dict = {x.name: x.id for x in object_class_list}
@@ -1169,9 +1161,8 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
                     indexes.append(self.index(row, object_class_name_column))
             if object_ is None or parameter is None:
                 continue
-            item = {"object_id": object_['id'], "parameter_definition_id": parameter['id']}
-            for column in range(parameter_name_column + 1, self.columnCount()):
-                item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+            value = self.index(row, value_column).data(Qt.DisplayRole)
+            item = {"object_id": object_['id'], "parameter_definition_id": parameter['id'], "value": value}
             items_to_add[row] = item
         return items_to_add
 
@@ -1217,15 +1208,15 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         relationships_on_the_fly = dict()
         relationships_to_add = dict()
         # Get column numbers
-        header = self._parent.horizontal_header_labels()
-        relationship_class_id_column = header.index('relationship_class_id')
-        relationship_class_name_column = header.index('relationship_class_name')
-        object_class_id_list_column = header.index('object_class_id_list')
-        object_class_name_list_column = header.index('object_class_name_list')
-        object_id_list_column = header.index('object_id_list')
-        object_name_list_column = header.index('object_name_list')
-        parameter_id_column = header.index('parameter_id')
-        parameter_name_column = header.index('parameter_name')
+        header_index = self._parent.horizontal_header_labels().index
+        relationship_class_id_column = header_index('relationship_class_id')
+        relationship_class_name_column = header_index('relationship_class_name')
+        object_class_id_list_column = header_index('object_class_id_list')
+        object_class_name_list_column = header_index('object_class_name_list')
+        object_id_list_column = header_index('object_id_list')
+        object_name_list_column = header_index('object_name_list')
+        parameter_id_column = header_index('parameter_id')
+        parameter_name_column = header_index('parameter_name')
         # Query db and build ad-hoc dicts
         relationship_class_dict = {
             x.name: {
@@ -1332,11 +1323,11 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         Extend set of indexes as additional data is set."""
         items_to_add = dict()
         # Get column numbers
-        header = self._parent.horizontal_header_labels()
-        relationship_id_column = header.index('relationship_id')
-        parameter_id_column = header.index('parameter_id')
-        parameter_name_column = header.index('parameter_name')
-        # Query db and build ad-hoc dicts
+        header_index = self._parent.horizontal_header_labels().index
+        relationship_id_column = header_index('relationship_id')
+        parameter_id_column = header_index('parameter_id')
+        parameter_name_column = header_index('parameter_name')
+        value_column = header_index('value')
         for row in {ind.row() for ind in indexes}:
             parameter_id = self.index(row, parameter_id_column).data(Qt.DisplayRole)
             if parameter_id is None:
@@ -1346,9 +1337,8 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                 self._main_data[row][relationship_id_column] = relationship_id
             except KeyError:
                 continue
-            item = {"relationship_id": relationship_id, "parameter_definition_id": parameter_id}
-            for column in range(parameter_name_column + 1, self.columnCount()):
-                item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+            value = self.index(row, value_column).data(Qt.DisplayRole)
+            item = {"relationship_id": relationship_id, "parameter_definition_id": parameter_id, "value": value}
             items_to_add[row] = item
         return items_to_add
 
@@ -1402,14 +1392,15 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
         """Return a dictionary of rows (int) to items (dict) to add to the db."""
         items_to_add = dict()
         # Get column numbers
-        header = self._parent.horizontal_header_labels()
-        object_class_id_column = header.index('object_class_id')
-        object_class_name_column = header.index('object_class_name')
-        parameter_name_column = header.index('parameter_name')
-        parameter_tag_list_column = header.index('parameter_tag_list')
-        parameter_tag_id_list_column = header.index('parameter_tag_id_list')
-        value_list_id_column = header.index('value_list_id')
-        value_list_name_column = header.index('value_list_name')
+        header_index = self._parent.horizontal_header_labels().index
+        object_class_id_column = header_index('object_class_id')
+        object_class_name_column = header_index('object_class_name')
+        parameter_name_column = header_index('parameter_name')
+        parameter_tag_list_column = header_index('parameter_tag_list')
+        parameter_tag_id_list_column = header_index('parameter_tag_id_list')
+        value_list_id_column = header_index('value_list_id')
+        value_list_name_column = header_index('value_list_name')
+        default_value_column = header_index('default_value')
         # Query db and build ad-hoc dicts
         object_class_dict = {x.name: x.id for x in self._parent.db_map.object_class_list()}
         parameter_tag_dict = {x.tag: x.id for x in self._parent.db_map.parameter_tag_list()}
@@ -1420,30 +1411,33 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
             parameter_tag_list = self.index(row, parameter_tag_list_column).data(Qt.DisplayRole)
             value_list_name = self.index(row, value_list_name_column).data(Qt.DisplayRole)
             object_class_id = None
+            item = {"name": parameter_name}
             if object_class_name:
                 try:
                     object_class_id = object_class_dict[object_class_name]
-                    self._main_data[row][object_class_id_column] = object_class_id
                 except KeyError:
                     self.error_log.append("Invalid object class '{}'".format(object_class_name))
+                self._main_data[row][object_class_id_column] = object_class_id
+                item["object_class_id"] = object_class_id
             if parameter_tag_list:
+                split_parameter_tag_list = parameter_tag_list.split(",")
                 try:
-                    split_parameter_tag_list = parameter_tag_list.split(",")
                     parameter_tag_id_list = ",".join(str(parameter_tag_dict[x]) for x in split_parameter_tag_list)
-                    self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid parameter tag '{}'".format(e))
+                self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
+                item["parameter_tag_id_list"] = parameter_tag_id_list
             if value_list_name:
                 try:
                     value_list_id = parameter_value_list_dict[value_list_name]
-                    self._main_data[row][value_list_id_column] = value_list_id
                 except KeyError:
                     self.error_log.append("Invalid value list '{}'".format(value_list_name))
-            if not parameter_name or object_class_id is None:
+                self._main_data[row][value_list_id_column] = value_list_id
+                item["parameter_value_list_id"] = value_list_id
+            if not parameter_name or not object_class_id:
                 continue
-            item = {"object_class_id": object_class_id, "name": parameter_name}
-            for column in range(parameter_name_column + 1, self.columnCount()):
-                item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+            default_value = self.index(row, default_value_column).data(Qt.DisplayRole)
+            item["default_value"] = default_value
             items_to_add[row] = item
         return items_to_add
 
@@ -1461,16 +1455,17 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
         Extend set of indexes as additional data is set."""
         items_to_add = dict()
         # Get column numbers
-        header = self._parent.horizontal_header_labels()
-        relationship_class_id_column = header.index('relationship_class_id')
-        relationship_class_name_column = header.index('relationship_class_name')
-        object_class_id_list_column = header.index('object_class_id_list')
-        object_class_name_list_column = header.index('object_class_name_list')
-        parameter_name_column = header.index('parameter_name')
-        parameter_tag_list_column = header.index('parameter_tag_list')
-        parameter_tag_id_list_column = header.index('parameter_tag_id_list')
-        value_list_id_column = header.index('value_list_id')
-        value_list_name_column = header.index('value_list_name')
+        header_index = self._parent.horizontal_header_labels().index
+        relationship_class_id_column = header_index('relationship_class_id')
+        relationship_class_name_column = header_index('relationship_class_name')
+        object_class_id_list_column = header_index('object_class_id_list')
+        object_class_name_list_column = header_index('object_class_name_list')
+        parameter_name_column = header_index('parameter_name')
+        parameter_tag_list_column = header_index('parameter_tag_list')
+        parameter_tag_id_list_column = header_index('parameter_tag_id_list')
+        value_list_id_column = header_index('value_list_id')
+        value_list_name_column = header_index('value_list_name')
+        default_value_column = header_index('default_value')
         # Query db and build ad-hoc dicts
         relationship_class_dict = {
             x.name: {
@@ -1490,36 +1485,39 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
             parameter_tag_list = self.index(row, parameter_tag_list_column).data(Qt.DisplayRole)
             value_list_name = self.index(row, value_list_name_column).data(Qt.DisplayRole)
             relationship_class_id = None
+            item = {"name": parameter_name}
             if relationship_class_name:
                 try:
                     relationship_class = relationship_class_dict[relationship_class_name]
-                    relationship_class_id = relationship_class['id']
-                    object_class_id_list = relationship_class['object_class_id_list']
-                    object_class_name_list = relationship_class['object_class_name_list']
-                    self._main_data[row][relationship_class_id_column] = relationship_class_id
-                    self._main_data[row][object_class_id_list_column] = object_class_id_list
-                    self._main_data[row][object_class_name_list_column] = object_class_name_list
-                    indexes.append(self.index(row, object_class_name_list_column))
                 except KeyError:
                     self.error_log.append("Invalid relationship class '{}'".format(relationship_class_name))
+                relationship_class_id = relationship_class['id']
+                object_class_id_list = relationship_class['object_class_id_list']
+                object_class_name_list = relationship_class['object_class_name_list']
+                self._main_data[row][relationship_class_id_column] = relationship_class_id
+                self._main_data[row][object_class_id_list_column] = object_class_id_list
+                self._main_data[row][object_class_name_list_column] = object_class_name_list
+                indexes.append(self.index(row, object_class_name_list_column))
+                item["relationship_class_id"] = relationship_class_id
             if parameter_tag_list:
                 try:
                     split_parameter_tag_list = parameter_tag_list.split(",")
                     parameter_tag_id_list = ",".join(str(parameter_tag_dict[x]) for x in split_parameter_tag_list)
-                    self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid tag '{}'".format(e))
+                self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
+                item["parameter_tag_id_list"] = parameter_tag_id_list
             if value_list_name:
                 try:
                     value_list_id = parameter_value_list_dict[value_list_name]
-                    self._main_data[row][value_list_id_column] = value_list_id
                 except KeyError:
                     self.error_log.append("Invalid value list '{}'".format(value_list_name))
-            if not parameter_name or relationship_class_id is None:
+                self._main_data[row][value_list_id_column] = value_list_id
+                item["parameter_value_list_id"] = value_list_id
+            if not parameter_name or not relationship_class_id:
                 continue
-            item = {"relationship_class_id": relationship_class_id, "name": parameter_name}
-            for column in range(parameter_name_column + 1, self.columnCount()):
-                item[header[column]] = self.index(row, column).data(Qt.DisplayRole)
+            default_value = self.index(row, default_value_column).data(Qt.DisplayRole)
+            item["default_value"] = default_value
             items_to_add[row] = item
         return items_to_add
 
@@ -3049,7 +3047,9 @@ class ParameterValueListModel(QAbstractItemModel):
                         to_add.append(dict(parent=index, name=name, value_list=value_list))
         else:
             # The changes correspond to list *values*, so it's enough to check the parent
-            value_list = [self.index(i, 0, parent).internalPointer().text for i in range(self.rowCount(parent) - 1)]
+            value_list = [
+                str(self.index(i, 0, parent).internalPointer().text) for i in range(self.rowCount(parent) - 1)
+            ]
             id = parent.internalPointer().id
             if id:
                 # Update
@@ -3095,8 +3095,8 @@ class ParameterValueListModel(QAbstractItemModel):
         self.endRemoveRows()
 
 
-class JSONArrayModel(EmptyRowModel):
-    """A model of JSON array data, used by TreeViewForm.
+class LazyLoadingArrayModel(EmptyRowModel):
+    """A model of array data, used by TreeViewForm.
 
     Attributes:
         parent (JSONEditor): the parent widget
@@ -3106,51 +3106,52 @@ class JSONArrayModel(EmptyRowModel):
     def __init__(self, parent, stride=256):
         """Initialize class"""
         super().__init__(parent)
-        self._json_data = []
+        self._orig_data = []
         self._stride = stride
         self.set_horizontal_header_labels("json")
+        self._wrong_data = False
 
-    def reset_model(self, json_data):
-        """Store JSON array into a list.
-        Initialize `stride` rows.
+    def reset_model(self, arr):
+        """Store given array into the `_orig_data` attribute.
+        Initialize first `_stride` rows of the model.
         """
-        try:
-            self._json_data = json.loads(json_data)
-        except (TypeError, json.JSONDecodeError):
-            self._json_data = []
-        if not isinstance(self._json_data, list):
-            self._json_data = []
-        data = []
+        if arr is None:
+            arr = []
+        self._orig_data = arr
+        if not isinstance(self._orig_data, list):
+            return
+        data = list()
         for i in range(self._stride):
             try:
-                data.append([json.dumps(self._json_data.pop(0))])
+                data.append([self._orig_data.pop(0)])
             except IndexError:
                 break
         super().reset_model(data)
 
     def canFetchMore(self, parent):
-        return len(self._json_data) > 0
+        if isinstance(self._orig_data, list):
+            return len(self._orig_data) > 0
+        return False
 
     def fetchMore(self, parent):
-        """Pop data from the _json_data attribute and add it to the model."""
+        """Pop data from the _orig_data attribute and add it to the model."""
         data = list()
-        count = 0
         for i in range(self._stride):
             try:
-                data.append(json.dumps(self._json_data.pop(0)))
-                count += 1
+                data.append([self._orig_data.pop(0)])
             except IndexError:
                 break
+        count = len(data)
         last_data_row = self.rowCount() - 1
         self.insertRows(last_data_row, count)
         indexes = [self.index(last_data_row + i, 0) for i in range(count)]
         self.batch_set_data(indexes, data)
 
-    def json_data(self):
-        """Return data into JSON array."""
+    def all_data(self):
+        """Return all data into a list."""
+        if not isinstance(self._orig_data, list):
+            return self._orig_data
         last_data_row = self.rowCount() - 1
-        new_json_data = [json.loads(self._main_data[i][0]) for i in range(last_data_row)]
-        new_json_data.extend(self._json_data)  # Whatever remains unfetched
-        if not new_json_data:
-            return None
-        return json.dumps(new_json_data)
+        all_data = [self._main_data[i][0] for i in range(last_data_row)]
+        all_data.extend(self._orig_data)  # Whatever remains unfetched
+        return all_data
