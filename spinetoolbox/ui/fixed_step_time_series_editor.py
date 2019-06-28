@@ -1,14 +1,3 @@
-######################################################################################################################
-# Copyright (C) 2017 - 2019 Spine project consortium
-# This file is part of Spine Toolbox.
-# Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
-# Public License as published by the Free Software Foundation, either version 3 of the License, or (at your option)
-# any later version. This program is distributed in the hope that it will be useful, but WITHOUT ANY WARRANTY;
-# without even the implied warranty of MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the GNU Lesser General
-# Public License for more details. You should have received a copy of the GNU Lesser General Public License along with
-# this program. If not, see <http://www.gnu.org/licenses/>.
-######################################################################################################################
-
 # -*- coding: utf-8 -*-
 
 # Form implementation generated from reading ui file '../spinetoolbox/ui/fixed_step_time_series_editor.ui',
@@ -69,14 +58,29 @@ class Ui_FixedStepTimeSeriesEditor(object):
         self.verticalLayout_3.addWidget(self.label_2)
         self.formLayout.setLayout(2, QtWidgets.QFormLayout.FieldRole, self.verticalLayout_3)
         self.verticalLayout.addLayout(self.formLayout)
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
+        self.ignore_year_check_box = QtWidgets.QCheckBox(self.verticalLayoutWidget)
+        self.ignore_year_check_box.setObjectName("ignore_year_check_box")
+        self.horizontalLayout_2.addWidget(self.ignore_year_check_box)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem1)
+        self.repeat_check_box = QtWidgets.QCheckBox(self.verticalLayoutWidget)
+        self.repeat_check_box.setObjectName("repeat_check_box")
+        self.horizontalLayout_2.addWidget(self.repeat_check_box)
+        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem2)
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.time_series_table = QtWidgets.QTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName("time_series_table")
         self.verticalLayout.addWidget(self.time_series_table)
         self.verticalLayout_4.addWidget(self.splitter)
         self.horizontalLayout = QtWidgets.QHBoxLayout()
         self.horizontalLayout.setObjectName("horizontalLayout")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout.addItem(spacerItem)
+        spacerItem3 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout.addItem(spacerItem3)
         self.close_button = QtWidgets.QPushButton(FixedStepTimeSeriesEditor)
         self.close_button.setObjectName("close_button")
         self.horizontalLayout.addWidget(self.close_button)
@@ -92,5 +96,7 @@ class Ui_FixedStepTimeSeriesEditor(object):
         self.length_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Length", None, -1))
         self.resolution_label.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Resolution", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Available units: S, M, H, d, m, y", None, -1))
+        self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Ignore year", None, -1))
+        self.repeat_check_box.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Repeat", None, -1))
         self.close_button.setText(QtWidgets.QApplication.translate("FixedStepTimeSeriesEditor", "Close", None, -1))
 

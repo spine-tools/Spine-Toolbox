@@ -17,7 +17,6 @@ Models for time series editors.
 """
 
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
-from PySide2.QtGui import QBrush
 
 
 class TimeSeriesTableModel(QAbstractTableModel):

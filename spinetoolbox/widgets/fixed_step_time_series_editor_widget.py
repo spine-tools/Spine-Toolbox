@@ -103,26 +103,29 @@ class FixedStepTimeSeriesEditor(QDialog):
     @Slot(name='_resolution_changed')
     def _resolution_changed(self):
         resolution_text = self.ui.resolution_edit.text()
-        try:
-            timedelta = duration_to_relativedelta(resolution_text)
-        except ParameterValueFormatError:
-            self._resolution_valid = False
-            self.ui.resolution_label.setText(self._resolution_label_text + " (syntax error)")
-            return
+        tokens = resolution_text.split(',')
+        resolution = list()
+        for token in tokens:
+            try:
+                resolution.append(duration_to_relativedelta(token.strip()))
+            except ParameterValueFormatError:
+                self._resolution_valid = False
+                self.ui.resolution_label.setText(self._resolution_label_text + " (syntax error)")
+                return
         self.ui.resolution_label.setText(self._resolution_label_text)
         self._resolution_valid = True
         if not self._valid_inputs():
             return
         start = dateutil.parser.parse(self.ui.start_time_edit.text())
         values = self._model.values
-        value = TimeSeriesFixedResolution(start, [timedelta], values)
+        value = TimeSeriesFixedResolution(start, resolution, values, False, False)
         self._parent_model.setData(self._parent_model_index, value.to_database())
         self._silent_reset_model(value)
         self._update_plot(value)
 
     def _silent_reset_model(self, value):
         self._model.dataChanged.disconnect(self._table_changed)
-        self._model.reset(value.stamps, value.values)
+        self._model.reset(value.indexes, value.values)
         self._model.dataChanged.connect(self._table_changed)
 
     @Slot(name='_start_time_changed')
@@ -157,7 +160,7 @@ class FixedStepTimeSeriesEditor(QDialog):
 
     def _update_plot(self, value):
         self.ui.plot_widget.canvas.axes.cla()
-        self.ui.plot_widget.canvas.axes.plot(value.stamps, value.values)
+        self.ui.plot_widget.canvas.axes.plot(value.indexes, value.values)
         self.ui.plot_widget.canvas.draw()
 
     def _valid_inputs(self):
