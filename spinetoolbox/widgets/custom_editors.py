@@ -156,11 +156,12 @@ class SearchBarEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, elder_sibling=None):
+    def __init__(self, parent, elder_sibling=None, is_json=False):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
         self._elder_sibling = elder_sibling
+        self._is_json = is_json
         self._base_size = None
         self._original_text = None
         self._orig_pos = None
@@ -175,12 +176,14 @@ class SearchBarEditor(QTableView):
         self.setShowGrid(False)
         self.setMouseTracking(True)
         self.setTabKeyNavigation(False)
-        self._delegate = CustomLineEditDelegate(self)
-        self._delegate.text_edited.connect(self._handle_delegate_text_edited)
-        self.setItemDelegateForRow(0, self._delegate)
+        delegate = CustomLineEditDelegate(self)
+        delegate.text_edited.connect(self._handle_delegate_text_edited)
+        self.setItemDelegateForRow(0, delegate)
 
     def set_data(self, current, all):
         """Populate model and initialize first index."""
+        if self._is_json:
+            all = [json.loads(x) for x in all]
         item_list = [QStandardItem(current)]
         for name in all:
             qitem = QStandardItem(name)
@@ -217,7 +220,10 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
-        return self.first_index.data()
+        data = self.first_index.data(Qt.EditRole)
+        if self._is_json:
+            data = json.dumps(data)
+        return data
 
     @Slot("QString", name="_handle_delegate_text_edited")
     def _handle_delegate_text_edited(self, text):
@@ -279,7 +285,7 @@ class SearchBarEditor(QTableView):
         index = self.indexAt(event.pos())
         if index.row() == 0:
             return
-        self.proxy_model.setData(self.first_index, index.data())
+        self.proxy_model.setData(self.first_index, index.data(Qt.EditRole))
         self.data_committed.emit()
 
 

@@ -240,16 +240,17 @@ class ObjectParameterValueDelegate(ParameterDelegate):
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.parameter_definition_list().filter_by(id=parameter_id).one_or_none()
             if parameter:
-                value_list = (
+                parameter_value_list = (
                     self.db_map.wide_parameter_value_list_list()
                     .filter_by(id=parameter.parameter_value_list_id)
                     .one_or_none()
                 )
             else:
-                value_list = None
-            if value_list:
-                editor = SearchBarEditor(self._parent, parent)
-                editor.set_data(index.data(Qt.EditRole), value_list.value_list.split(","))
+                parameter_value_list = None
+            if parameter_value_list:
+                editor = SearchBarEditor(self._parent, parent, is_json=True)
+                value_list = parameter_value_list.value_list.split(",")
+                editor.set_data(index.data(Qt.DisplayRole), value_list)
             else:
                 editor = JSONEditor(self._parent, parent)
                 editor.currentChanged.connect(self._handle_json_editor_current_changed)
@@ -347,14 +348,15 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
             parameter_id = index.sibling(index.row(), h('parameter_id')).data(Qt.DisplayRole)
             parameter = self.db_map.parameter_definition_list().filter_by(id=parameter_id).one_or_none()
             if parameter:
-                value_list = self.db_map.wide_parameter_value_list_list(
+                parameter_value_list = self.db_map.wide_parameter_value_list_list(
                     id_list=[parameter.parameter_value_list_id]
                 ).one_or_none()
             else:
-                value_list = None
-            if value_list:
-                editor = SearchBarEditor(self._parent, parent)
-                editor.set_data(index.data(Qt.EditRole), value_list.value_list.split(","))
+                parameter_value_list = None
+            if parameter_value_list:
+                editor = SearchBarEditor(self._parent, parent, is_json=True)
+                value_list = parameter_value_list.value_list.split(",")
+                editor.set_data(index.data(Qt.DisplayRole), value_list)
             else:
                 editor = JSONEditor(self._parent, parent)
                 editor.currentChanged.connect(self._handle_json_editor_current_changed)

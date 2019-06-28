@@ -17,6 +17,7 @@ Classes for handling models in tree and graph views.
 """
 
 import os
+import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
 from helpers import busy_effect, format_string_list, strip_json_data
@@ -2950,18 +2951,19 @@ class ParameterValueListModel(QAbstractItemModel):
         """
         if not index.isValid():
             return None
-        if role == Qt.FontRole:
-            if not index.parent().isValid():
-                return self.bold_font
-            return None
-        if role == Qt.ForegroundRole:
-            if index.row() == self.rowCount(index.parent()) - 1:
-                return self.gray_brush
-            return None
-        if role not in (Qt.DisplayRole, Qt.EditRole):
-            return None
-        node = index.internalPointer()
-        return node.text
+        if role == Qt.FontRole and not index.parent().isValid():
+            # Bold top-level items
+            return self.bold_font
+        if role == Qt.ForegroundRole and index.row() == self.rowCount(index.parent()) - 1:
+            # Paint gray last item in each level
+            return self.gray_brush
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            text = index.internalPointer().text
+            # Deserialize value (so we don't see e.g. quotes around strings)
+            if role == Qt.DisplayRole and index.parent().isValid() and index.row() != self.rowCount(index.parent()) - 1:
+                text = json.loads(text)
+            return text
+        return None
 
     def flags(self, index):
         """Returns the item flags for the given index.
@@ -2978,6 +2980,9 @@ class ParameterValueListModel(QAbstractItemModel):
         if role != Qt.EditRole:
             return False
         node = index.internalPointer()
+        if index.parent().isValid():
+            # list values are stored as json (list *names*, as normal python types)
+            value = json.dumps(value)
         if value == node.text:
             return False
         node.text = value

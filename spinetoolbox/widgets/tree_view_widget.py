@@ -1196,9 +1196,7 @@ class TreeViewForm(DataStoreForm):
             id = parent.internalPointer().id
             removed_rows = [ind.row() for ind in indexes]
             all_rows = range(model.rowCount(parent) - 1)
-            value_list = [
-                model.index(row, 0, parent).data(Qt.DisplayRole) for row in all_rows if row not in removed_rows
-            ]
+            value_list = [model.index(row, 0, parent).data(Qt.EditRole) for row in all_rows if row not in removed_rows]
             to_update.append(dict(id=id, value_list=value_list))
         # Get ids to remove
         removed_ids = [ind.internalPointer().id for ind in toplevel_indexes]
