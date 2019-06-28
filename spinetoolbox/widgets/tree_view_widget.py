@@ -31,7 +31,7 @@ from widgets.custom_menus import (
     ParameterContextMenu,
     ParameterValueListContextMenu,
 )
-from models import RelationshipTreeModel
+from treeview_models import RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine

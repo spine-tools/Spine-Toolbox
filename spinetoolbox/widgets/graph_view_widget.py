@@ -29,7 +29,7 @@ from spinedb_api import SpineDBAPIError, SpineIntegrityError
 from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_qwidgets import ZoomWidget
-from models import ObjectClassListModel, RelationshipClassListModel
+from treeview_models import ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
 

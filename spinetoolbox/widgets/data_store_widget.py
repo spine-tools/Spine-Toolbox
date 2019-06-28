@@ -40,7 +40,7 @@ from widgets.custom_qdialog import (
     CommitDialog,
 )
 from widgets.toolbars import ParameterTagToolBar
-from models import (
+from treeview_models import (
     ObjectTreeModel,
     ObjectParameterDefinitionModel,
     ObjectParameterValueModel,

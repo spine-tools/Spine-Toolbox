@@ -48,7 +48,7 @@ from PySide2.QtWidgets import (
     QLabel,
 )
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from models import JSONArrayModel
+from treeview_models import JSONArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 
 
