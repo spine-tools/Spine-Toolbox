@@ -69,10 +69,10 @@ CALL pyside2-uic ../spinetoolbox/ui/parameter_value_editor.ui -o ../spinetoolbox
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\parameter_value_editor.py.o > ..\spinetoolbox\ui\parameter_value_editor.py
 del ..\spinetoolbox\ui\parameter_value_editor.py.o
 
-ECHO building plain_number_editor.py
-CALL pyside2-uic ../spinetoolbox/ui/plain_number_editor.ui -o ../spinetoolbox/ui/plain_number_editor.py.o
-findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\plain_number_editor.py.o > ..\spinetoolbox\ui\plain_number_editor.py
-del ..\spinetoolbox\ui\plain_number_editor.py.o
+ECHO building plain_parameter_value_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/plain_parameter_value_editor.ui -o ../spinetoolbox/ui/plain_parameter_value_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\plain_parameter_value_editor.py.o > ..\spinetoolbox\ui\plain_parameter_value_editor.py
+del ..\spinetoolbox\ui\plain_parameter_value_editor.py.o
 
 ECHO building project_form.py
 CALL pyside2-uic ../spinetoolbox/ui/project_form.ui -o ../spinetoolbox/ui/project_form.py.o
@@ -143,7 +143,7 @@ CALL append_license_xml ..\spinetoolbox\ui\datetime_editor.ui
 CALL append_license_xml ..\spinetoolbox\ui\graph_view_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\parameter_value_editor.ui
-CALL append_license_xml ..\spinetoolbox\ui\plain_number_editor.ui
+CALL append_license_xml ..\spinetoolbox\ui\plain_parameter_value_editor.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
 CALL append_license_xml ..\spinetoolbox\ui\spine_datapackage_form.ui
@@ -166,7 +166,7 @@ CALL append_license_py ..\spinetoolbox\ui\datetime_editor.py
 CALL append_license_py ..\spinetoolbox\ui\graph_view_form.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\parameter_value_editor.py
-CALL append_license_py ..\spinetoolbox\ui\plain_number_editor.py
+CALL append_license_py ..\spinetoolbox\ui\plain_parameter_value_editor.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py
 CALL append_license_py ..\spinetoolbox\ui\spine_datapackage_form.py

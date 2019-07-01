@@ -61,7 +61,7 @@ class Ui_ParameterValueEditor(object):
     def retranslateUi(self, ParameterValueEditor):
         ParameterValueEditor.setWindowTitle(QtWidgets.QApplication.translate("ParameterValueEditor", "Edit parameter value", None, -1))
         self.parameter_type_selector_label.setText(QtWidgets.QApplication.translate("ParameterValueEditor", "Parameter type", None, -1))
-        self.parameter_type_selector.setItemText(0, QtWidgets.QApplication.translate("ParameterValueEditor", "Plain number", None, -1))
+        self.parameter_type_selector.setItemText(0, QtWidgets.QApplication.translate("ParameterValueEditor", "Plain value", None, -1))
         self.parameter_type_selector.setItemText(1, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - fixed resolution", None, -1))
         self.parameter_type_selector.setItemText(2, QtWidgets.QApplication.translate("ParameterValueEditor", "Time series - variable resolution", None, -1))
         self.parameter_type_selector.setItemText(3, QtWidgets.QApplication.translate("ParameterValueEditor", "Time pattern", None, -1))

@@ -11,34 +11,34 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/plain_number_editor.ui',
-# licensing of '../spinetoolbox/ui/plain_number_editor.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/plain_parameter_value_editor.ui',
+# licensing of '../spinetoolbox/ui/plain_parameter_value_editor.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-class Ui_NumberEditor(object):
-    def setupUi(self, NumberEditor):
-        NumberEditor.setObjectName("NumberEditor")
-        NumberEditor.resize(400, 300)
-        self.verticalLayout = QtWidgets.QVBoxLayout(NumberEditor)
+class Ui_PlainParameterValueEditor(object):
+    def setupUi(self, PlainParameterValueEditor):
+        PlainParameterValueEditor.setObjectName("PlainParameterValueEditor")
+        PlainParameterValueEditor.resize(400, 300)
+        self.verticalLayout = QtWidgets.QVBoxLayout(PlainParameterValueEditor)
         self.verticalLayout.setObjectName("verticalLayout")
         self.edit_layout = QtWidgets.QFormLayout()
         self.edit_layout.setObjectName("edit_layout")
-        self.value_edit_label = QtWidgets.QLabel(NumberEditor)
+        self.value_edit_label = QtWidgets.QLabel(PlainParameterValueEditor)
         self.value_edit_label.setObjectName("value_edit_label")
         self.edit_layout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.value_edit_label)
-        self.value_edit = QtWidgets.QLineEdit(NumberEditor)
+        self.value_edit = QtWidgets.QLineEdit(PlainParameterValueEditor)
         self.value_edit.setObjectName("value_edit")
         self.edit_layout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.value_edit)
         self.verticalLayout.addLayout(self.edit_layout)
 
-        self.retranslateUi(NumberEditor)
-        QtCore.QMetaObject.connectSlotsByName(NumberEditor)
+        self.retranslateUi(PlainParameterValueEditor)
+        QtCore.QMetaObject.connectSlotsByName(PlainParameterValueEditor)
 
-    def retranslateUi(self, NumberEditor):
-        NumberEditor.setWindowTitle(QtWidgets.QApplication.translate("NumberEditor", "Form", None, -1))
-        self.value_edit_label.setText(QtWidgets.QApplication.translate("NumberEditor", "Parameter value", None, -1))
+    def retranslateUi(self, PlainParameterValueEditor):
+        PlainParameterValueEditor.setWindowTitle(QtWidgets.QApplication.translate("PlainParameterValueEditor", "Form", None, -1))
+        self.value_edit_label.setText(QtWidgets.QApplication.translate("PlainParameterValueEditor", "Parameter value", None, -1))
 

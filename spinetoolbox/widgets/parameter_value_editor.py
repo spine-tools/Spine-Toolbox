@@ -22,13 +22,14 @@ from spinedb_api import DateTime, Duration, TimePattern, TimeSeriesFixedResoluti
 from ui.parameter_value_editor import Ui_ParameterValueEditor
 from widgets.duration_editor import DurationEditor
 from widgets.datetime_editor import DatetimeEditor
-from widgets.plain_number_editor import PlainNumberEditor
+from widgets.plain_parameter_value_editor import PlainParameterValueEditor
 from widgets.time_pattern_editor import TimePatternEditor
 from widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutionEditor
 from widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
 
+
 class _Editor(Enum):
-    NUMBER = 0
+    PLAIN_VALUE = 0
     TIME_SERIES_FIXED_RESOLUTION = 1
     TIME_SERIES_VARIABLE_RESOLUTION = 2
     TIME_PATTERN = 3
@@ -43,12 +44,14 @@ class ParameterValueEditor(QDialog):
         self._ui.setupUi(self)
         self._ui.close_button.clicked.connect(self.close)
         self._time_pattern_editor = TimePatternEditor()
-        self._plain_number_editor = PlainNumberEditor()
+        self._plain_value_editor = PlainParameterValueEditor()
         self._time_series_fixed_resolution_editor = TimeSeriesFixedResolutionEditor(parent_model, parent_index, value)
-        self._time_series_variable_resolution_editor = TimeSeriesVariableResolutionEditor(parent_model, parent_index, value)
+        self._time_series_variable_resolution_editor = TimeSeriesVariableResolutionEditor(
+            parent_model, parent_index, value
+        )
         self._datetime_editor = DatetimeEditor()
         self._duration_editor = DurationEditor()
-        self._ui.editor_stack.addWidget(self._plain_number_editor)
+        self._ui.editor_stack.addWidget(self._plain_value_editor)
         self._ui.editor_stack.addWidget(self._time_series_fixed_resolution_editor)
         self._ui.editor_stack.addWidget(self._time_series_variable_resolution_editor)
         self._ui.editor_stack.addWidget(self._time_pattern_editor)
@@ -56,8 +59,8 @@ class ParameterValueEditor(QDialog):
         self._ui.editor_stack.addWidget(self._duration_editor)
         self._ui.parameter_type_selector.activated.connect(self._ui.editor_stack.setCurrentIndex)
         if isinstance(value, (int, float)):
-            self._ui.parameter_type_selector.setCurrentIndex(_Editor.NUMBER.value)
-            self._ui.editor_stack.setCurrentIndex(_Editor.NUMBER.value)
+            self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
+            self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)
         elif isinstance(value, TimeSeriesFixedResolution):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_SERIES_FIXED_RESOLUTION.value)
             self._ui.editor_stack.setCurrentIndex(_Editor.TIME_SERIES_FIXED_RESOLUTION.value)

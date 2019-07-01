@@ -39,7 +39,7 @@
       <widget class="QComboBox" name="parameter_type_selector">
        <item>
         <property name="text">
-         <string>Plain number</string>
+         <string>Plain value</string>
         </property>
        </item>
        <item>

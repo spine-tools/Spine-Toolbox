@@ -12,8 +12,8 @@
 ######################################################################################################################
 -->
 <ui version="4.0">
- <class>NumberEditor</class>
- <widget class="QWidget" name="NumberEditor">
+ <class>PlainParameterValueEditor</class>
+ <widget class="QWidget" name="PlainParameterValueEditor">
   <property name="geometry">
    <rect>
     <x>0</x>

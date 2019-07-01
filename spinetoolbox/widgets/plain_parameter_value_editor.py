@@ -17,10 +17,10 @@ An editor widget for editing plain number database (relationship) parameter valu
 """
 
 from PySide2.QtWidgets import QWidget
-from ui.plain_number_editor import Ui_NumberEditor
+from ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
 
-class PlainNumberEditor(QWidget):
+class PlainParameterValueEditor(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._ui = Ui_NumberEditor()
+        self._ui = Ui_PlainParameterValueEditor()
         self._ui.setupUi(self)
