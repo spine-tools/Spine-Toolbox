@@ -22,9 +22,24 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_TimeSeriesVariableResolutionEditor(object):
     def setupUi(self, TimeSeriesVariableResolutionEditor):
         TimeSeriesVariableResolutionEditor.setObjectName("TimeSeriesVariableResolutionEditor")
-        TimeSeriesVariableResolutionEditor.resize(400, 300)
+        TimeSeriesVariableResolutionEditor.resize(570, 391)
         self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesVariableResolutionEditor)
         self.verticalLayout.setObjectName("verticalLayout")
+        self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
+        self.horizontalLayout_2.setObjectName("horizontalLayout_2")
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
+        self.ignore_year_check_box = QtWidgets.QCheckBox(TimeSeriesVariableResolutionEditor)
+        self.ignore_year_check_box.setObjectName("ignore_year_check_box")
+        self.horizontalLayout_2.addWidget(self.ignore_year_check_box)
+        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem1)
+        self.repeat_check_box = QtWidgets.QCheckBox(TimeSeriesVariableResolutionEditor)
+        self.repeat_check_box.setObjectName("repeat_check_box")
+        self.horizontalLayout_2.addWidget(self.repeat_check_box)
+        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem2)
+        self.verticalLayout.addLayout(self.horizontalLayout_2)
         self.splitter = QtWidgets.QSplitter(TimeSeriesVariableResolutionEditor)
         self.splitter.setOrientation(QtCore.Qt.Horizontal)
         self.splitter.setObjectName("splitter")
@@ -37,4 +52,6 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
 
     def retranslateUi(self, TimeSeriesVariableResolutionEditor):
         TimeSeriesVariableResolutionEditor.setWindowTitle(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Form", None, -1))
+        self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Ignore year", None, -1))
+        self.repeat_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Repeat", None, -1))
 

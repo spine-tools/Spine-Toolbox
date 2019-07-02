@@ -16,11 +16,32 @@ An editor widget for editing datetime database (relationship) parameter values.
 :date:   28.6.2019
 """
 
+import numpy as np
 from PySide2.QtWidgets import QWidget
+from spinedb_api import TimePattern
 from ui.time_pattern_editor import Ui_TimePatternEditor
+from indexed_value_table_model import IndexedValueTableModel
+
 
 class TimePatternEditor(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        indexes = np.array(["1-7d"])
+        values = np.array([0.0])
         self._ui = Ui_TimePatternEditor()
         self._ui.setupUi(self)
+        self._set_model(indexes, values)
+
+    def _set_model(self, indexes, values):
+        self._model = IndexedValueTableModel(indexes, values, str, float)
+        self._model.set_index_header("Patterns")
+        self._model.set_value_header("Values")
+        self._ui.pattern_edit_table.setModel(self._model)
+
+    def set_value(self, value):
+        self._set_model(value.indexes, value.values)
+
+    def value(self):
+        indexes = self._model.indexes
+        values = self._model.values
+        return TimePattern(indexes, values)

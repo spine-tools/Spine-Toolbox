@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Models for time series editors.
+A model for indexed parameter values, used by the parameter value editors editors.
 
 :authors: A. Soininen (VTT)
 :date:   18.6.2019
@@ -19,15 +19,17 @@ Models for time series editors.
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
 
 
-class TimeSeriesTableModel(QAbstractTableModel):
+class IndexedValueTableModel(QAbstractTableModel):
 
-    set_data_failed = Signal(QModelIndex, name='set_data_failed')
-
-    def __init__(self, stamps, values, parent=None):
+    def __init__(self, indexes, values, text_to_index, text_to_value, parent=None):
         super().__init__(parent)
-        self._stamps = stamps
-        self._fixed_stamps = False
+        self._indexes = indexes
+        self._index_header = ""
+        self._fixed_indexes = False
+        self._text_to_index = text_to_index
         self._values = values
+        self._value_header = ""
+        self._text_to_value = text_to_value
 
     def columnCount(self, parent=QModelIndex()):
         return 2
@@ -36,14 +38,14 @@ class TimeSeriesTableModel(QAbstractTableModel):
         if not index.isValid() or role != Qt.DisplayRole:
             return None
         if index.column() == 0:
-            return str(self._stamps[index.row()])
+            return str(self._indexes[index.row()])
         return float(self._values[index.row()])
 
     def flags(self, index):
         """Return index flags."""
         if not index.isValid():
             return Qt.NoItemFlags
-        if index.column() == 0 and self._fixed_stamps:
+        if index.column() == 0 and self._fixed_indexes:
             return Qt.ItemIsSelectable
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
 
@@ -52,41 +54,45 @@ class TimeSeriesTableModel(QAbstractTableModel):
             return None
         if orientation == Qt.Vertical:
             return section + 1
-        return "Time" if section == 0 else "Value"
+        return self._index_header if section == 0 else self._value_header
 
-    def reset(self, stamps, values):
+    def reset(self, indexes, values):
         self.beginResetModel()
-        self._stamps = stamps
+        self._indexes = indexes
         self._values = values
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self._stamps)
+        return len(self._indexes)
 
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid() or role != Qt.EditRole:
             return False
         if index.column() == 0:
             try:
-                self._stamps[index.row()] = value
+                self._indexes[index.row()] = self._text_to_index(value)
             except ValueError:
-                self.set_data_failed.emit(index)
                 return False
         else:
             try:
-                self._values[index.row()] = value
+                self._values[index.row()] = self._text_to_value(value)
             except ValueError:
-                self.set_data_failed.emit(index)
                 return False
         self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
 
-    def set_fixed_time_stamps(self, fixed):
-        self._fixed_stamps = fixed
+    def set_fixed_indexes(self, fixed):
+        self._fixed_indexes = fixed
+
+    def set_index_header(self, header):
+        self._index_header = header
+
+    def set_value_header(self, header):
+        self._value_header = header
 
     @property
-    def stamps(self):
-        return self._stamps
+    def indexes(self):
+        return self._indexes
 
     @property
     def values(self):

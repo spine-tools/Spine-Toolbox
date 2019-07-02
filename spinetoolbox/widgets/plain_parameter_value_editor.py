@@ -16,11 +16,59 @@ An editor widget for editing plain number database (relationship) parameter valu
 :date:   28.6.2019
 """
 
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
 from ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
 
+
+class _ValueModel:
+    def __init__(self, value):
+        self._value = value
+
+    @property
+    def value(self):
+        return self._value
+
+    @value.setter
+    def value(self, value):
+        try:
+            self._value = float(value)
+        except ValueError:
+            value = value.strip().lower()
+            if value == 'true':
+                self._value = True
+            elif value == 'false':
+                self._value = False
+            else:
+                raise
+
+
 class PlainParameterValueEditor(QWidget):
-    def __init__(self, parent=None):
-        super().__init__(parent)
+    def __init__(self, parent_widget=None):
+        super().__init__(parent_widget)
         self._ui = Ui_PlainParameterValueEditor()
         self._ui.setupUi(self)
+        self._ui.value_edit.editingFinished.connect(self._value_changed)
+        self._model = _ValueModel(0.0)
+
+    def is_value_valid(self):
+        return self._value_valid
+
+    def set_value(self, value):
+        if not isinstance(value, (int, float, bool)):
+            value = 0.0
+        self._model = _ValueModel(value)
+        self._ui.value_edit.setText(str(value))
+
+    @Slot(name="_value_changed")
+    def _value_changed(self):
+        new_value = self._ui.value_edit.text()
+        if new_value:
+            try:
+                self._model.value = new_value
+            except ValueError:
+                self._ui.value_edit.setText(str(self._model.value))
+                return
+
+    def value(self):
+        return self._model.value

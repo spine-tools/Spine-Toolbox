@@ -19,9 +19,14 @@ Contains logic for the fixed step time series editor widget.
 import dateutil.parser
 import numpy as np
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QDialog
-from spinedb_api import duration_to_relativedelta, ParameterValueFormatError, relativedelta_to_duration, TimeSeriesFixedResolution
-from time_series_table_model import TimeSeriesTableModel
+from PySide2.QtWidgets import QWidget
+from spinedb_api import (
+    duration_to_relativedelta,
+    ParameterValueFormatError,
+    relativedelta_to_duration,
+    TimeSeriesFixedResolution,
+)
+from indexed_value_table_model import IndexedValueTableModel
 from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 from widgets.plot_widget import PlotWidget
 
@@ -32,7 +37,7 @@ def _resize_value_array(values, length):
     if len(values) > length:
         return values[:length]
     zero_padded = np.zeros(length)
-    zero_padded[0:len(values)] = values
+    zero_padded[0 : len(values)] = values
     return zero_padded
 
 
@@ -47,7 +52,54 @@ def _resolution_to_text(resolution):
     return text
 
 
-class TimeSeriesFixedResolutionEditor(QDialog):
+class _FixedResolutionModel:
+    def __init__(self, start, resolution):
+        self._start = start
+        self._resolution = resolution
+
+    @property
+    def start(self):
+        return self._start
+
+    @property
+    def resolution(self):
+        return self._resolution
+
+    @start.setter
+    def start(self, start):
+        self._start = dateutil.parser.parse(start)
+
+    @resolution.setter
+    def resolution(self, resolution):
+        tokens = resolution.split(',')
+        self._resolution = list()
+        for token in tokens:
+            self._resolution.append(duration_to_relativedelta(token.strip()))
+
+
+class TimeSeriesAttributesModel:
+    def __init__(self, ignore_year, repeat):
+        self._ignore_year = ignore_year
+        self._repeat = repeat
+
+    @property
+    def ignore_year(self):
+        return self._ignore_year
+
+    @ignore_year.setter
+    def ignore_year(self, ignore_year):
+        self._ignore_year = ignore_year
+
+    @property
+    def repeat(self):
+        return self._repeat
+
+    @repeat.setter
+    def repeat(self, repeat):
+        self._repeat = repeat
+
+
+class TimeSeriesFixedResolutionEditor(QWidget):
     """
     A widget for editing time series data with a fixed time step.
 
@@ -58,109 +110,125 @@ class TimeSeriesFixedResolutionEditor(QDialog):
         parent (QWidget): a parent widget
     """
 
-    def __init__(self, model, index, value, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.ui = Ui_TimeSeriesFixedResolutionEditor()
-        self.ui.setupUi(self)
-        self._parent_model = model
-        self._parent_model_index = index
-        stamps = value.indexes
-        values = value.values
-        self._model = TimeSeriesTableModel(stamps, values)
-        self._model.set_fixed_time_stamps(True)
-        self._model.dataChanged.connect(self._table_changed)
-        self._table_valid = True
-        self.ui.start_time_edit.setText(str(value.start))
-        self.ui.start_time_edit.editingFinished.connect(self._start_time_changed)
-        self._start_time_valid = True
-        self._start_time_label_text = self.ui.start_time_label.text()
-        self.ui.length_edit.setValue(len(value))
-        self.ui.length_edit.editingFinished.connect(self._length_changed)
-        self.ui.resolution_edit.setText(_resolution_to_text(value.resolution))
-        self.ui.resolution_edit.editingFinished.connect(self._resolution_changed)
-        self._resolution_valid = True
-        self._resolution_label_text = self.ui.resolution_label.text()
-        self.ui.time_series_table.setModel(self._model)
-        self.ui.plot_widget = PlotWidget()
-        self.ui.splitter.insertWidget(1, self.ui.plot_widget)
-        self.ui.plot_widget.canvas.axes.plot(stamps, values)
+        self._table_model = None
+        self._resolution_model = None
+        self._ui = Ui_TimeSeriesFixedResolutionEditor()
+        self._ui.setupUi(self)
+        self._ui.start_time_edit.editingFinished.connect(self._start_time_changed)
+        self._ui.length_edit.editingFinished.connect(self._length_changed)
+        self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
+        self._plot_widget = PlotWidget()
+        self._ui.splitter.insertWidget(1, self._plot_widget)
+        self._attributes_model = TimeSeriesAttributesModel(True, True)
+        self._ui.ignore_year_check_box.toggled.connect(self._change_ignore_year)
+        self._ui.repeat_check_box.toggled.connect(self._change_repeat)
+
+    @Slot(bool, name="_change_ignore_year")
+    def _change_ignore_year(self, ignore_year):
+        self._attributes_model.ignore_year = ignore_year
+
+    @Slot(bool, name="_change_repeat")
+    def _change_repeat(self, repeat):
+        self._attributes_model.repeat = repeat
 
     @Slot(name='_length_changed')
     def _length_changed(self):
-        if not self._valid_inputs():
-            return
-        length = self.ui.length_edit.value()
-        values = self._model.values
+        length = self._ui.length_edit.value()
+        values = self._table_model.values
         resized = _resize_value_array(values, length)
-        timedelta = duration_to_relativedelta(self.ui.resolution_edit.text())
-        start = dateutil.parser.parse(self.ui.start_time_edit.text())
-        value = TimeSeriesFixedResolution(start, [timedelta], resized, False, False)
-        self._parent_model.setData(self._parent_model_index, value.to_database())
+        start = dateutil.parser.parse(self._ui.start_time_edit.text())
+        value = TimeSeriesFixedResolution(
+            self._resolution_model.start,
+            self._resolution_model.resolution,
+            resized,
+            self._attributes_model.ignore_year,
+            self._attributes_model.repeat,
+        )
         self._silent_reset_model(value)
-        self._update_plot(value)
+        self._update_plot()
+
+    def _reset_attributes_model(self, ignore_year, repeat):
+        self._attributes_model.ignore_year = ignore_year
+        self._attributes_model.repeat = repeat
+        self._ui.ignore_year_check_box.setChecked(ignore_year)
+        self._ui.repeat_check_box.setChecked(repeat)
 
     @Slot(name='_resolution_changed')
     def _resolution_changed(self):
-        resolution_text = self.ui.resolution_edit.text()
-        tokens = resolution_text.split(',')
-        resolution = list()
-        for token in tokens:
-            try:
-                resolution.append(duration_to_relativedelta(token.strip()))
-            except ParameterValueFormatError:
-                self._resolution_valid = False
-                self.ui.resolution_label.setText(self._resolution_label_text + " (syntax error)")
-                return
-        self.ui.resolution_label.setText(self._resolution_label_text)
-        self._resolution_valid = True
-        if not self._valid_inputs():
+        try:
+            self._resolution_model.resolution = self._ui.resolution_edit.text()
+        except ParameterValueFormatError:
+            self._ui.resolution_edit.setText(_resolution_to_text(self._resolution_model.resolution))
             return
-        start = dateutil.parser.parse(self.ui.start_time_edit.text())
-        values = self._model.values
-        value = TimeSeriesFixedResolution(start, resolution, values, False, False)
-        self._parent_model.setData(self._parent_model_index, value.to_database())
+        values = self._table_model.values
+        value = TimeSeriesFixedResolution(
+            self._resolution_model.start,
+            self._resolution_model.resolution,
+            values,
+            self._attributes_model.ignore_year,
+            self._attributes_model.repeat,
+        )
         self._silent_reset_model(value)
-        self._update_plot(value)
+        self._update_plot()
+
+    def set_value(self, value):
+        self._table_model = IndexedValueTableModel(value.indexes, value.values, None, float)
+        self._table_model.set_index_header("Time stamps")
+        self._table_model.set_value_header("Values")
+        self._table_model.set_fixed_indexes(True)
+        self._table_model.dataChanged.connect(self._table_changed)
+        self._resolution_model = _FixedResolutionModel(value.start, value.resolution)
+        self._ui.time_series_table.setModel(self._table_model)
+        self._ui.start_time_edit.setText(str(value.start))
+        self._ui.length_edit.setValue(len(value))
+        self._ui.resolution_edit.setText(_resolution_to_text(value.resolution))
+        self._reset_attributes_model(value.ignore_year, value.repeat)
+        self._update_plot()
 
     def _silent_reset_model(self, value):
-        self._model.dataChanged.disconnect(self._table_changed)
-        self._model.reset(value.indexes, value.values)
-        self._model.dataChanged.connect(self._table_changed)
+        self._table_model.dataChanged.disconnect(self._table_changed)
+        self._table_model.reset(value.indexes, value.values)
+        self._table_model.dataChanged.connect(self._table_changed)
 
     @Slot(name='_start_time_changed')
     def _start_time_changed(self):
-        start_text = self.ui.start_time_edit.text()
+        start_text = self._ui.start_time_edit.text()
         try:
-            start = dateutil.parser.parse(start_text)
+            self._resolution_model.start = start_text
         except ValueError:
-            self._start_time_valid = False
-            self.ui.start_time_label.setText(self._start_time_label_text + " (syntax error)")
+            self._ui.start_time_edit.setText(str(self._resolution_model.start))
             return
-        self.ui.start_time_label.setText(self._start_time_label_text)
-        self._start_time_valid = True
-        if not self._valid_inputs():
-            return
-        timedelta = duration_to_relativedelta(self.ui.resolution_edit.text())
-        values = self._model.values
-        value = TimeSeriesFixedResolution(start, [timedelta], values, False, False)
-        self._parent_model.setData(self._parent_model_index, value.to_database())
+        value = TimeSeriesFixedResolution(
+            self._resolution_model.start,
+            self._resolution_model.resolution,
+            self._table_model.values,
+            self._attributes_model.ignore_year,
+            self._attributes_model.repeat,
+        )
         self._silent_reset_model(value)
-        self._update_plot(value)
+        self._update_plot()
 
     @Slot("QModelIndex", "QModelIndex", "list", name="_table_changed")
     def _table_changed(self, topLeft, bottomRight, roles=None):
         """A slot to signal that the table view has changed."""
-        values = self._model.values
-        start = dateutil.parser.parse(self.ui.start_time_edit.text())
-        timedelta = duration_to_relativedelta(self.ui.resolution_edit.text())
-        value = TimeSeriesFixedResolution(start, timedelta, values, False, False)
-        self._parent_model.setData(self._parent_model_index, value.to_database())
-        self._update_plot(value)
+        self._update_plot()
 
-    def _update_plot(self, value):
-        self.ui.plot_widget.canvas.axes.cla()
-        self.ui.plot_widget.canvas.axes.plot(value.indexes, value.values)
-        self.ui.plot_widget.canvas.draw()
+    def _update_plot(self,):
+        self._plot_widget.canvas.axes.cla()
+        stamps = self._table_model.indexes
+        values = self._table_model.values
+        self._plot_widget.canvas.axes.plot(stamps, values)
+        self._plot_widget.canvas.draw()
 
-    def _valid_inputs(self):
-        return self._table_valid and self._start_time_valid and self._resolution_valid
+    def value(self):
+        values = self._table_model.values
+        value = TimeSeriesFixedResolution(
+            self._resolution_model.start,
+            self._resolution_model.resolution,
+            values,
+            self._attributes_model.ignore_year,
+            self._attributes_model.repeat,
+        )
+        return value

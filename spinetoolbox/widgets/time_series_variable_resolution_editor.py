@@ -16,16 +16,17 @@ Contains logic for the time series editor widget.
 :date:   31.5.2019
 """
 
-import numpy
+import dateutil.parser
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QDialog
+from PySide2.QtWidgets import QWidget
 from spinedb_api import ParameterValueFormatError, TimeSeriesVariableResolution
-from time_series_table_model import TimeSeriesTableModel
+from indexed_value_table_model import IndexedValueTableModel
 from ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 from widgets.plot_widget import PlotWidget
+from widgets.time_series_fixed_resolution_editor import TimeSeriesAttributesModel
 
 
-class TimeSeriesVariableResolutionEditor(QDialog):
+class TimeSeriesVariableResolutionEditor(QWidget):
     """
     A widget for editing time series data.
 
@@ -36,42 +37,54 @@ class TimeSeriesVariableResolutionEditor(QDialog):
         parent (QWidget): a parent widget
     """
 
-    def __init__(self, model, index, value, parent=None):
+    def __init__(self, parent=None):
         super().__init__(parent)
-        self.ui = Ui_TimeSeriesVariableResolutionEditor()
-        self.ui.setupUi(self)
-        self._parent_model = model
-        self._parent_model_index = index
-        self._model = TimeSeriesTableModel(value.indexes, value.values)
-        self._model.dataChanged.connect(self._model_data_changed)
-        self.ui.time_series_table.setModel(self._model)
-        self.ui.plot_widget = PlotWidget()
-        self.ui.splitter.insertWidget(1, self.ui.plot_widget)
-        self.ui.plot_widget.canvas.axes.plot(value.indexes, value.values)
+        self._table_model = None
+        self._attributes_model = TimeSeriesAttributesModel(True, True)
+        self._ui = Ui_TimeSeriesVariableResolutionEditor()
+        self._ui.setupUi(self)
+        self._plot_widget = PlotWidget()
+        self._ui.splitter.insertWidget(1, self._plot_widget)
+        self._ui.ignore_year_check_box.setChecked(self._attributes_model.ignore_year)
+        self._ui.ignore_year_check_box.toggled.connect(self._change_ignore_year)
+        self._ui.repeat_check_box.setChecked(self._attributes_model.repeat)
+        self._ui.repeat_check_box.toggled.connect(self._change_repeat)
 
-    @Slot("QModelIndex", "QModelIndex", "list", name="_model_data_changed")
-    def _model_data_changed(self, topLeft, bottomRight, roles=None):
+    @Slot(bool, name="_change_ignore_year")
+    def _change_ignore_year(self, ignore_year):
+        self._attributes_model.ignore_year = ignore_year
+
+    @Slot(bool, name="_change_repeat")
+    def _change_repeat(self, repeat):
+        self._attributes_model.repeat = repeat
+
+    def _reset_attributes_model(self, ignore_year, repeat):
+        self._attributes_model.ignore_year = ignore_year
+        self._attributes_model.repeat = repeat
+        self._ui.ignore_year_check_box.setChecked(ignore_year)
+        self._ui.repeat_check_box.setChecked(repeat)
+
+    @Slot("QModelIndex", "QModelIndex", "list", name="_table_model_data_changed")
+    def _table_model_data_changed(self, topLeft, bottomRight, roles=None):
         """A slot to signal that the table view has changed."""
-        try:
-            stamps, values = map_from_model(self._model.model_data())
-            self._parent_model.setData(self._parent_model_index, TimeSeriesVariableResolution(stamps, values).as_json())
-            self.ui.plot_widget.canvas.axes.cla()
-            self.ui.plot_widget.canvas.axes.plot(stamps, values)
-            self.ui.plot_widget.canvas.draw()
-        except (ValueError, ParameterValueFormatError):
-            self._invalidate_table(topLeft, bottomRight)
+        stamps = self._table_model.indexes
+        values = self._table_model.values
+        self._plot_widget.canvas.axes.cla()
+        self._plot_widget.canvas.axes.plot(stamps, values)
+        self._plot_widget.canvas.draw()
 
-    def _invalidate_table(self, top_left, bottom_right):
-        """Write error messages to the table to signal a value conversion error"""
-        self._model.dataChanged.disconnect(self._model_data_changed)
-        invalid_indexes = list()
-        row = top_left.row()
-        while row <= bottom_right.row():
-            column = top_left.column()
-            while column <= bottom_right.column():
-                invalid_indexes.append(self._model.index(row, column))
-                column += 1
-            row += 1
-        errors = len(invalid_indexes) * ['Error']
-        print(self._model.batch_set_data(invalid_indexes, errors))
-        self._model.dataChanged.connect(self._model_data_changed)
+    def set_value(self, value):
+        self._table_model = IndexedValueTableModel(value.indexes, value.values, dateutil.parser.parse, float)
+        self._table_model.set_index_header("Time stamps")
+        self._table_model.set_value_header("Values")
+        self._table_model.dataChanged.connect(self._table_model_data_changed)
+        self._ui.time_series_table.setModel(self._table_model)
+        self._reset_attributes_model(value.ignore_year, value.repeat)
+        self._plot_widget.canvas.axes.plot(value.indexes, value.values)
+
+    def value(self):
+        stamps = self._table_model.indexes
+        values = self._table_model.values
+        return TimeSeriesVariableResolution(
+            stamps, values, self._attributes_model.ignore_year, self._attributes_model.repeat
+        )

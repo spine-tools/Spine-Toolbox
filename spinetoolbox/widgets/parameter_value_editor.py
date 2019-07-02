@@ -17,8 +17,18 @@ An editor dialog for editing database (relationship) parameter values.
 """
 
 from enum import Enum
-from PySide2.QtWidgets import QDialog, QWidget
-from spinedb_api import DateTime, Duration, TimePattern, TimeSeriesFixedResolution, TimeSeriesVariableResolution
+import dateutil.parser
+from PySide2.QtCore import Slot
+from PySide2.QtWidgets import QDialog
+from spinedb_api import (
+    DateTime,
+    Duration,
+    duration_to_relativedelta,
+    TimePattern,
+    TimeSeriesFixedResolution,
+    TimeSeriesVariableResolution,
+    to_database,
+)
 from ui.parameter_value_editor import Ui_ParameterValueEditor
 from widgets.duration_editor import DurationEditor
 from widgets.datetime_editor import DatetimeEditor
@@ -38,17 +48,17 @@ class _Editor(Enum):
 
 
 class ParameterValueEditor(QDialog):
-    def __init__(self, parent_model, parent_index, value, parent=None):
-        super().__init__(parent)
+    def __init__(self, parent_model, parent_index, value, parent_widget=None):
+        super().__init__(parent_widget)
+        self._parent_model = parent_model
+        self._parent_index = parent_index
         self._ui = Ui_ParameterValueEditor()
         self._ui.setupUi(self)
-        self._ui.close_button.clicked.connect(self.close)
+        self._ui.close_button.clicked.connect(self._close_editor)
         self._time_pattern_editor = TimePatternEditor()
         self._plain_value_editor = PlainParameterValueEditor()
-        self._time_series_fixed_resolution_editor = TimeSeriesFixedResolutionEditor(parent_model, parent_index, value)
-        self._time_series_variable_resolution_editor = TimeSeriesVariableResolutionEditor(
-            parent_model, parent_index, value
-        )
+        self._time_series_fixed_resolution_editor = TimeSeriesFixedResolutionEditor()
+        self._time_series_variable_resolution_editor = TimeSeriesVariableResolutionEditor()
         self._datetime_editor = DatetimeEditor()
         self._duration_editor = DurationEditor()
         self._ui.editor_stack.addWidget(self._plain_value_editor)
@@ -57,24 +67,69 @@ class ParameterValueEditor(QDialog):
         self._ui.editor_stack.addWidget(self._time_pattern_editor)
         self._ui.editor_stack.addWidget(self._datetime_editor)
         self._ui.editor_stack.addWidget(self._duration_editor)
-        self._ui.parameter_type_selector.activated.connect(self._ui.editor_stack.setCurrentIndex)
-        if isinstance(value, (int, float)):
+        self._ui.parameter_type_selector.activated.connect(self._change_parameter_type)
+        if isinstance(value, (int, float, bool)):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
             self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)
+            self._plain_value_editor.set_value(value)
         elif isinstance(value, TimeSeriesFixedResolution):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_SERIES_FIXED_RESOLUTION.value)
             self._ui.editor_stack.setCurrentIndex(_Editor.TIME_SERIES_FIXED_RESOLUTION.value)
+            self._time_series_fixed_resolution_editor.set_value(value)
         elif isinstance(value, TimeSeriesVariableResolution):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_SERIES_VARIABLE_RESOLUTION.value)
             self._ui.editor_stack.setCurrentIndex(_Editor.TIME_SERIES_VARIABLE_RESOLUTION.value)
+            self._time_series_variable_resolution_editor.set_value(value)
         elif isinstance(value, TimePattern):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.TIME_PATTERN.value)
             self._ui.editor_stack.setCurrentIndex(_Editor.TIME_PATTERN.value)
+            self._time_pattern_editor.set_value(value)
         elif isinstance(value, DateTime):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.DATETIME.value)
             self._ui.editor_stack.setCurrentIndex(_Editor.DATETIME.value)
+            self._datetime_editor.set_value(value)
         elif isinstance(value, Duration):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.DURATION.value)
             self._ui.editor_stack.setCurrentIndex(_Editor.DURATION.value)
+            self._duration_editor.set_value(value)
         else:
             raise RuntimeError('Could not open editor for parameter value: unknown value type')
+
+    @Slot(int, name="_change_parameter_type")
+    def _change_parameter_type(self, selector_index):
+        old_index = self._ui.editor_stack.currentIndex()
+        if (
+            selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION.value
+            and old_index == _Editor.TIME_SERIES_FIXED_RESOLUTION.value
+        ):
+            fixed_resolution_value = self._time_series_fixed_resolution_editor
+            stamps = fixed_resolution_value.indexes
+            values = fixed_resolution_value.values
+            variable_resolution_value = TimeSeriesVariableResolution(
+                stamps, values, fixed_resolution_value.ignore_year, fixed_resolution_value.repeat
+            )
+            self._time_series_variable_resolution_editor.set_value(variable_resolution_value)
+        elif (
+            selector_index == _Editor.TIME_SERIES_FIXED_RESOLUTION
+            and old_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION
+        ):
+            variable_resolution_value = self._time_series_variable_resolution_editor.value()
+            stamps = variable_resolution_value.indexes
+            start = stamps[0]
+            difference = stamps[1] - start
+            resolution = [duration_to_relativedelta(difference)]
+            fixed_resolution_value = TimeSeriesFixedResolution(
+                start,
+                resolution,
+                variable_resolution_value.values,
+                variable_resolution_value.ignore_year,
+                variable_resolution_value.repeat,
+            )
+            self._time_series_fixed_resolution_editor.set_value(fixed_resolution_value)
+        self._ui.editor_stack.setCurrentIndex(selector_index)
+
+    @Slot(name="_close_editor")
+    def _close_editor(self):
+        editor = self._ui.editor_stack.currentWidget()
+        self._parent_model.setData(self._parent_index, to_database(editor.value()))
+        self.close()
