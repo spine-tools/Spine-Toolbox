@@ -264,27 +264,14 @@ class ObjectTreeModel(QStandardItemModel):
             object_class_item = self.itemFromIndex(parent)
             object_class = parent.data(Qt.UserRole + 1)
             object_list = self.db_map.object_list(class_id=object_class['id'])
-            object_item_list = list()
-            for object_ in object_list:
-                object_item = QStandardItem(object_.name)
-                object_item.setData('object', Qt.UserRole)
-                object_item.setData(object_._asdict(), Qt.UserRole + 1)
-                object_item.setData(object_.description, Qt.ToolTipRole)
-                object_item_list.append(object_item)
+            object_item_list = [self.new_object_item(x) for x in object_list]
             object_class_item.appendRows(object_item_list)
             self._fetched['object_class'].add(object_class['id'])
         elif parent_type == 'object':
             object_item = self.itemFromIndex(parent)
             object_ = parent.data(Qt.UserRole + 1)
             relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_['class_id'])
-            relationship_class_item_list = list()
-            for relationship_class in relationship_class_list:
-                relationship_class_item = QStandardItem(relationship_class.name)
-                relationship_class_item.setData('relationship_class', Qt.UserRole)
-                relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
-                relationship_class_item.setData(relationship_class.object_class_name_list, Qt.ToolTipRole)
-                relationship_class_item.setData(self.bold_font, Qt.FontRole)
-                relationship_class_item_list.append(relationship_class_item)
+            relationship_class_item_list = [self.new_relationship_class_item(x) for x in relationship_class_list]
             object_item.appendRows(relationship_class_item_list)
             self._fetched['object'].add(object_['id'])
         elif parent_type == 'relationship_class':
@@ -294,12 +281,7 @@ class ObjectTreeModel(QStandardItemModel):
             relationship_list = self.db_map.wide_relationship_list(
                 class_id=relationship_class['id'], object_id=object_['id']
             )
-            relationship_item_list = list()
-            for relationship in relationship_list:
-                relationship_item = QStandardItem(relationship.object_name_list)
-                relationship_item.setData('relationship', Qt.UserRole)
-                relationship_item.setData(relationship._asdict(), Qt.UserRole + 1)
-                relationship_item_list.append(relationship_item)
+            relationship_item_list = [self.new_relationship_item(x) for x in relationship_list]
             relationship_class_item.appendRows(relationship_item_list)
             self._fetched['relationship_class'].add((object_['id'], relationship_class['id']))
         self.dataChanged.emit(parent, parent)
@@ -339,7 +321,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_item.setData(object_.description, Qt.ToolTipRole)
         return object_item
 
-    def new_relationship_class_item(self, wide_relationship_class, object_):
+    def new_relationship_class_item(self, wide_relationship_class):
         """Returns new relationship class item."""
         relationship_class_item = QStandardItem(wide_relationship_class.name)
         relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
@@ -420,7 +402,7 @@ class ObjectTreeModel(QStandardItemModel):
             # Already fetched, add new items manually
             relationship_class_item_list = list()
             for relationship_class in relationship_class_list:
-                relationship_class_item = self.new_relationship_class_item(relationship_class, visited_object)
+                relationship_class_item = self.new_relationship_class_item(relationship_class)
                 relationship_class_item_list.append(relationship_class_item)
             visited_item.appendRows(relationship_class_item_list)
 
