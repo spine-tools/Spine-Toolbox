@@ -17,6 +17,7 @@ An editor widget for editing datetime database (relationship) parameter values.
 """
 
 import numpy as np
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimePattern
 from ui.time_pattern_editor import Ui_TimePatternEditor
@@ -31,6 +32,21 @@ class TimePatternEditor(QWidget):
         self._ui = Ui_TimePatternEditor()
         self._ui.setupUi(self)
         self._set_model(indexes, values)
+        self._ui.length_edit.editingFinished.connect(self._change_length)
+
+    @Slot(int, name="_change_length")
+    def _change_length(self):
+        length = self._ui.length_edit.value()
+        old_length = len(self._model.indexes)
+        if length < old_length:
+            new_indexes = self._model.indexes[:length]
+            new_values = self._model.values[:length]
+            self._model.reset(new_indexes, new_values)
+        elif length > old_length:
+            new_indexes = self._model.indexes + (length - old_length) * [""]
+            new_values = np.zeros(length)
+            new_values[:old_length] = self._model.values
+            self._model.reset(new_indexes, new_values)
 
     def _set_model(self, indexes, values):
         self._model = IndexedValueTableModel(indexes, values, str, float)
@@ -40,6 +56,7 @@ class TimePatternEditor(QWidget):
 
     def set_value(self, value):
         self._set_model(value.indexes, value.values)
+        self._ui.length_edit.setValue(len(value))
 
     def value(self):
         indexes = self._model.indexes

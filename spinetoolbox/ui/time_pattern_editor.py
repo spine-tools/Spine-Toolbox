@@ -22,9 +22,20 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_TimePatternEditor(object):
     def setupUi(self, TimePatternEditor):
         TimePatternEditor.setObjectName("TimePatternEditor")
-        TimePatternEditor.resize(400, 300)
+        TimePatternEditor.resize(586, 443)
         self.verticalLayout = QtWidgets.QVBoxLayout(TimePatternEditor)
         self.verticalLayout.setObjectName("verticalLayout")
+        self.formLayout = QtWidgets.QFormLayout()
+        self.formLayout.setObjectName("formLayout")
+        self.length_edit_label = QtWidgets.QLabel(TimePatternEditor)
+        self.length_edit_label.setObjectName("length_edit_label")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.length_edit_label)
+        self.length_edit = QtWidgets.QSpinBox(TimePatternEditor)
+        self.length_edit.setMinimum(1)
+        self.length_edit.setMaximum(999999)
+        self.length_edit.setObjectName("length_edit")
+        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.length_edit)
+        self.verticalLayout.addLayout(self.formLayout)
         self.pattern_edit_table = QtWidgets.QTableView(TimePatternEditor)
         self.pattern_edit_table.setObjectName("pattern_edit_table")
         self.verticalLayout.addWidget(self.pattern_edit_table)
@@ -34,4 +45,5 @@ class Ui_TimePatternEditor(object):
 
     def retranslateUi(self, TimePatternEditor):
         TimePatternEditor.setWindowTitle(QtWidgets.QApplication.translate("TimePatternEditor", "Form", None, -1))
+        self.length_edit_label.setText(QtWidgets.QApplication.translate("TimePatternEditor", "Length", None, -1))
 

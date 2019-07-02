@@ -117,7 +117,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui = Ui_TimeSeriesFixedResolutionEditor()
         self._ui.setupUi(self)
         self._ui.start_time_edit.editingFinished.connect(self._start_time_changed)
-        self._ui.length_edit.editingFinished.connect(self._length_changed)
+        self._ui.length_edit.editingFinished.connect(self._change_length)
         self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
         self._plot_widget = PlotWidget()
         self._ui.splitter.insertWidget(1, self._plot_widget)
@@ -133,12 +133,11 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     def _change_repeat(self, repeat):
         self._attributes_model.repeat = repeat
 
-    @Slot(name='_length_changed')
-    def _length_changed(self):
+    @Slot(name='_change_length')
+    def _change_length(self):
         length = self._ui.length_edit.value()
         values = self._table_model.values
         resized = _resize_value_array(values, length)
-        start = dateutil.parser.parse(self._ui.start_time_edit.text())
         value = TimeSeriesFixedResolution(
             self._resolution_model.start,
             self._resolution_model.resolution,
