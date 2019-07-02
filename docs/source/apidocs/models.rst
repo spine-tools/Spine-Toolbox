@@ -2,6 +2,6 @@ models module
 =============
 
 .. automodule:: models
-    :members:
-    :undoc-members:
-    :show-inheritance:
+   :members:
+   :undoc-members:
+   :show-inheritance:

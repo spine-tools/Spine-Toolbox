@@ -327,8 +327,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_name = dst_connector.parent_name()  # Project item name
         dst_item_index = self._project_item_model.find_item(dst_name)
         dst_item = self._project_item_model.project_item(dst_item_index)
+        # TODO: Add refresh signal and method to all project items, so that we don't need check what item is the dst
+        # Refresh View and Data Interface items
         if dst_item.item_type == "View":
             dst_item.view_refresh_signal.emit()
+        elif dst_item.item_type == "Data Interface":
+            dst_item.data_interface_refresh_signal.emit()
         # Add edge (connection link) to a dag as well
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
@@ -346,9 +350,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_item = self._project_item_model.project_item(self._project_item_model.find_item(dst_name))
         self.scene().removeItem(link)
         self._connection_model.setData(index, None)
-        # Refresh View references
+        # TODO: Add refresh signal and method to all project items, so that we don't need check what item is the dst
+        # Refresh View and Data Interface items
         if dst_item.item_type == "View":
             dst_item.view_refresh_signal.emit()
+        elif dst_item.item_type == "Data Interface":
+            dst_item.data_interface_refresh_signal.emit()
         # Remove edge (connection link) from dag
         self._toolbox.project().dag_handler.remove_graph_edge(src_name, dst_name)
 
@@ -463,15 +470,20 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     )
                 )
             elif src_item_type == "Data Store" and dst_item_type == "Tool":
-                self._toolbox.msg.emit("Link established. Data Store <b>{0}</b> reference will "
-                                       "be passed to Tool <b>{1}</b> when executing."
-                                       .format(self.src_item_name, self.dst_item_name))
+                self._toolbox.msg.emit(
+                    "Link established. Data Store <b>{0}</b> reference will "
+                    "be passed to Tool <b>{1}</b> when executing.".format(self.src_item_name, self.dst_item_name)
+                )
             elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit("Link established. Tool <b>{0}</b> output files will be "
-                                       "passed to item <b>{1}</b> after execution."
-                                       .format(self.src_item_name, self.dst_item_name))
-            elif src_item_type in ["Data Connection", "Data Store"] \
-                    and dst_item_type in ["Data Connection", "Data Store"]:
+                self._toolbox.msg.emit(
+                    "Link established. Tool <b>{0}</b> output files will be "
+                    "passed to item <b>{1}</b> after execution.".format(self.src_item_name, self.dst_item_name)
+                )
+            elif src_item_type in ["Data Connection", "Data Store", "Data Interface"] and dst_item_type in [
+                "Data Connection",
+                "Data Store",
+                "Data Interface"
+            ]:
                 self._toolbox.msg.emit("Link established")
             elif src_item_type == "Data Store" and dst_item_type == "View":
                 self._toolbox.msg_warning.emit(

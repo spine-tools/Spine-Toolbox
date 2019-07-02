@@ -48,7 +48,7 @@ from PySide2.QtWidgets import (
     QLabel,
 )
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from models import JSONArrayModel
+from treeview_models import LazyLoadingArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 
 
@@ -151,16 +151,17 @@ class SearchBarEditor(QTableView):
 
     Attributes:
         parent (QWidget): the parent for this widget
-        big_sibling (QWidget or NoneType): another widget which is used to find this widget's position.
+        elder_sibling (QWidget or NoneType): another widget which is used to find this widget's position.
     """
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling=None):
+    def __init__(self, parent, elder_sibling=None, is_json=False):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
+        self._is_json = is_json
         self._base_size = None
         self._original_text = None
         self._orig_pos = None
@@ -175,12 +176,14 @@ class SearchBarEditor(QTableView):
         self.setShowGrid(False)
         self.setMouseTracking(True)
         self.setTabKeyNavigation(False)
-        self._delegate = CustomLineEditDelegate(self)
-        self._delegate.text_edited.connect(self._handle_delegate_text_edited)
-        self.setItemDelegateForRow(0, self._delegate)
+        delegate = CustomLineEditDelegate(self)
+        delegate.text_edited.connect(self._handle_delegate_text_edited)
+        self.setItemDelegateForRow(0, delegate)
 
     def set_data(self, current, all):
         """Populate model and initialize first index."""
+        if self._is_json:
+            all = [json.loads(x) for x in all]
         item_list = [QStandardItem(current)]
         for name in all:
             qitem = QStandardItem(name)
@@ -198,8 +201,8 @@ class SearchBarEditor(QTableView):
         self.horizontalHeader().setDefaultSectionSize(self._base_size.width())
         self.verticalHeader().setDefaultSectionSize(self._base_size.height())
         self._orig_pos = self.pos()
-        if self._big_sibling:
-            self._orig_pos += self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos())
+        if self._elder_sibling:
+            self._orig_pos += self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos())
         self.refit()
 
     def refit(self):
@@ -217,7 +220,10 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
-        return self.first_index.data()
+        data = self.first_index.data(Qt.EditRole)
+        if self._is_json:
+            data = json.dumps(data)
+        return data
 
     @Slot("QString", name="_handle_delegate_text_edited")
     def _handle_delegate_text_edited(self, text):
@@ -279,7 +285,7 @@ class SearchBarEditor(QTableView):
         index = self.indexAt(event.pos())
         if index.row() == 0:
             return
-        self.proxy_model.setData(self.first_index, index.data())
+        self.proxy_model.setData(self.first_index, index.data(Qt.EditRole))
         self.data_committed.emit()
 
 
@@ -328,11 +334,11 @@ class MultiSearchBarEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling=None):
+    def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self.alls = None
         self._max_item_count = None
         self._base_size = None
@@ -377,7 +383,7 @@ class MultiSearchBarEditor(QTableView):
             self._parent.size()
         )
         self.resize(size)
-        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -398,11 +404,11 @@ class CheckListEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling):
+    def __init__(self, parent, elder_sibling):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self._base_size = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
@@ -466,7 +472,7 @@ class CheckListEditor(QTableView):
         total_height = self.verticalHeader().length() + 2
         size = QSize(self._base_size.width(), total_height).boundedTo(self._parent.size())
         self.resize(size)
-        self.move(self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -483,11 +489,11 @@ class JSONEditor(QTabWidget):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, big_sibling, popup=False):
+    def __init__(self, parent, elder_sibling, popup=False):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
-        self._big_sibling = big_sibling
+        self._elder_sibling = elder_sibling
         self._popup = popup
         self.setTabPosition(QTabWidget.South)
         self.tab_raw = QWidget()
@@ -509,8 +515,7 @@ class JSONEditor(QTabWidget):
         self.addTab(self.tab_table, "Table")
         self.setCurrentIndex(0)
         self._base_size = None
-        self.json_data = None
-        self.model = JSONArrayModel(self)
+        self.model = LazyLoadingArrayModel(self)
         self.table_view.setModel(self.model)
         self.text_edit.installEventFilter(self)
         self.table_view.installEventFilter(self)
@@ -570,17 +575,17 @@ class JSONEditor(QTabWidget):
         """Update json data on text edit or table view, and set focus.
         """
         if index == 0:
-            data = self.model.json_data()
-            if not data:
-                data = self.json_data
-            try:
-                formatted_data = json.dumps(json.loads(data), indent=4)
+            data = self.model.all_data()
+            if data is not None:
+                formatted_data = json.dumps(data, indent=4)
                 self.text_edit.setText(formatted_data)
-            except (TypeError, json.JSONDecodeError):
-                pass
             self.text_edit.setFocus()
         elif index == 1:
-            data = self.text_edit.toPlainText()
+            text = self.text_edit.toPlainText()
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError:
+                data = None
             self.model.reset_model(data)
             self.table_view.setFocus()
             self.table_view.setCurrentIndex(self.model.index(0, 0))
@@ -589,17 +594,19 @@ class JSONEditor(QTabWidget):
     def set_data(self, data, current_index):
         """Set data on text edit or table view (model) depending on current index.
         """
-        self.json_data = data
         self.setCurrentIndex(current_index)
         self.currentChanged.connect(self._handle_current_changed)
+        try:
+            loaded_data = json.loads(data)
+        except (TypeError, json.JSONDecodeError):
+            # NOTE: TypeError happens when data is None
+            loaded_data = None
         if current_index == 0:
-            try:
-                formatted_data = json.dumps(json.loads(data), indent=4)
+            if loaded_data is not None:
+                formatted_data = json.dumps(loaded_data, indent=4)
                 self.text_edit.setText(formatted_data)
-            except (TypeError, json.JSONDecodeError):
-                pass
         elif current_index == 1:
-            self.model.reset_model(data)
+            self.model.reset_model(loaded_data)
         QTimer.singleShot(0, self.start_editing)
 
     def start_editing(self):
@@ -631,7 +638,7 @@ class JSONEditor(QTabWidget):
         size = size.boundedTo(self._parent.size())
         size = size.expandedTo(min_size)
         self.resize(size)
-        self.move(offset + self.pos() + self._big_sibling.mapTo(self._parent, self._big_sibling.parent().pos()))
+        self.move(offset + self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -642,10 +649,12 @@ class JSONEditor(QTabWidget):
     def data(self):
         index = self.currentIndex()
         if index == 0:
-            return self.text_edit.toPlainText()
+            text = self.text_edit.toPlainText()
+            if not text:  # empty string is not valid JSON
+                text = 'null'
+            return text
         elif index == 1:
-            return self.model.json_data()
-        return None
+            return json.dumps(self.model.all_data())
 
 
 class IconPainterDelegate(QItemDelegate):

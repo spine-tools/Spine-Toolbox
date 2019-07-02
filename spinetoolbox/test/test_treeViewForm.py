@@ -22,7 +22,7 @@ import sys
 from unittest import mock
 from PySide2.QtWidgets import QApplication, QStyleOptionViewItem
 from PySide2.QtCore import Qt, QItemSelectionModel, QItemSelection
-from widgets.data_store_widgets import TreeViewForm
+from widgets.tree_view_widget import TreeViewForm
 from collections import namedtuple
 from widgets.custom_editors import SearchBarEditor, MultiSearchBarEditor, CustomLineEditor, JSONEditor
 

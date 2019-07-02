@@ -16,10 +16,10 @@ Classes for tool configuration assistants.
 :date:   10.1.2019
 """
 
-import sys
 import qsubprocess
 from PySide2.QtCore import QObject, Signal
-from config import JULIA_EXECUTABLE
+from config import JULIA_EXECUTABLE, APPLICATION_PATH
+from helpers import busy_effect
 
 
 class SpineModelConfigurationAssistant(QObject):
@@ -38,117 +38,91 @@ class SpineModelConfigurationAssistant(QObject):
         super().__init__(toolbox)
         self._toolbox = toolbox
         julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
-        if not julia_path == "":
-            julia_exe = julia_path
+        if julia_path != "":
+            self.julia_exe = julia_path
         else:
-            julia_exe = JULIA_EXECUTABLE
-        self.julia_program = "{0}".format(julia_exe)
-        self.py_call_python_program = None
+            self.julia_exe = JULIA_EXECUTABLE
+        self.julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if self.julia_project_path == "":
+            self.julia_project_path = "@."
+        self._julia_version = None
+        self._julia_active_project = None
+        self.find_out_julia_version_and_project()
 
-    def julia_version(self):
-        """Return current julia version."""
-        program = self.julia_program
+    @busy_effect
+    def find_out_julia_version_and_project(self):
         args = list()
         args.append("-e")
         args.append("println(VERSION)")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        q_process = qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
         q_process.start_process()
-        if not q_process.wait_for_finished(msecs=5000):
-            return None
-        return q_process.output
-
-    def spine_model_installed_check(self):
-        """Start qsubprocess that checks if SpineModel is installed in current julia version.
-        Return the qsubprocess.
-        """
-        program = self.julia_program
+        if q_process.wait_for_finished(msecs=5000):
+            self._julia_version = q_process.output
         args = list()
+        args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("try using Pkg catch; end; using SpineModel; println(Pkg.installed()[ARGS[1]]);")
-        args.append("SpineModel")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
+        args.append("println(Base.active_project())")
+        q_process = qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
         q_process.start_process()
-        return q_process
+        if q_process.wait_for_finished(msecs=5000):
+            self._julia_active_project = q_process.output
+
+    def julia_version(self):
+        """Return current julia version."""
+        return self._julia_version
+
+    def julia_active_project(self):
+        """Return current julia active project."""
+        return self._julia_active_project
+
+    def spine_model_version_check(self):
+        """Return qsubprocess that checks current version of SpineModel.
+        """
+        args = list()
+        args.append(f"--project={self.julia_project_path}")
+        args.append("-e")
+        args.append("using Pkg; Pkg.update(ARGS[1]);")
+        args.append("SpineModel")
+        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
 
     def py_call_program_check(self):
-        """Start qsubprocess that checks the python program used by PyCall in current julia version.
-        Return the qsubprocess.
+        """Return qsubprocess that checks the python program used by PyCall in current julia version.
         """
-        program = self.julia_program
         args = list()
+        args.append(f"--project={self.julia_project_path}")
         args.append("-e")
         args.append("using PyCall; println(PyCall.pyprogramname);")
-        args.append("")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
-        q_process.start_process()
-        return q_process
-
-    def spinedb_api_installed_check(self):
-        """Start qsubprocess that checks if spinedb_api is installed in PyCall's python.
-        Return the qsubprocess.
-        """
-        program = self.py_call_python_program
-        args = list()
-        args.append("-m")
-        args.append("pip")
-        args.append("show")
-        args.append("spinedb_api")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
-        q_process.start_process()
-        return q_process
+        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
 
     def install_spine_model(self):
-        """Start qsubprocess that installs SpineModel in current julia version.
-        Return the qsubprocess.
+        """Return qsubprocess that installs SpineModel in current julia version.
         """
-        program = self.julia_program
         args = list()
+        args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("try using Pkg catch; end; Pkg.clone(ARGS[1], ARGS[2]);")
+        args.append("using Pkg; Pkg.add(PackageSpec(url=ARGS[1])); Pkg.add(PackageSpec(url=ARGS[2]));")
+        args.append("https://github.com/Spine-project/SpineInterface.jl.git")
         args.append("https://github.com/Spine-project/Spine-Model.git")
-        args.append("SpineModel")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=False)
-        q_process.start_process()
-        return q_process
+        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=False)
 
     def install_py_call(self):
-        """Start qsubprocess that installs PyCall in current julia version.
-        Return the qsubprocess.
+        """Return qsubprocess that installs PyCall in current julia version.
         """
-        program = self.julia_program
         args = list()
+        args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("try using Pkg catch; end; Pkg.add(ARGS[1]);")
+        args.append("using Pkg; Pkg.add(ARGS[1]);")
         args.append("PyCall")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=False)
-        q_process.start_process()
-        return q_process
+        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=False)
 
-    def install_spinedb_api(self):
-        """Start qsubprocess that installs spinedb_api in PyCall's python.
-        Return the qsubprocess.
+    def reconfigure_py_call(self, pyprogramname):
+        """Return qsubprocess that reconfigure PyCall to use given python program.
         """
-        program = self.py_call_python_program
         args = list()
-        args.append("-m")
-        args.append("pip")
-        args.append("install")
-        args.append("git+https://github.com/Spine-project/Spine-Database-API.git")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=False)
-        q_process.start_process()
-        return q_process
-
-    def reconfigure_py_call(self):
-        """Start qsubprocess that reconfigure PyCall to point to Spine Toolbox's python.
-        Return the qsubprocess.
-        """
-        program = self.julia_program
-        args = list()
+        args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("using PyCall; ENV[ARGS[1]] = ARGS[2]; try using Pkg catch; end; Pkg.build(ARGS[3])")
+        args.append("using PyCall; ENV[ARGS[1]] = ARGS[2]; using Pkg; Pkg.build(ARGS[3]);")
         args.append("PYTHON")
-        args.append(sys.executable)
+        args.append(pyprogramname)
         args.append("PyCall")
-        q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
-        q_process.start_process()
-        return q_process
+        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)

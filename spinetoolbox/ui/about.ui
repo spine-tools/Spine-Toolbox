@@ -450,7 +450,7 @@
           </spacer>
          </item>
          <item>
-          <widget class="QLabel" name="label_spinedatabase_api">
+          <widget class="QLabel" name="label_spinedb_api">
            <property name="font">
             <font>
              <family>Arial Black</family>
@@ -461,7 +461,7 @@
             <string notr="true">color: rgb(255, 255, 255);</string>
            </property>
            <property name="text">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;spinedatabase_api&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;spinedb_api&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="alignment">
             <set>Qt::AlignCenter</set>

@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt, Slot, Signal, QUrl
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
 from project_item import ProjectItem
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from widgets.data_store_widgets import GraphViewForm
+from widgets.graph_view_widget import GraphViewForm
 from graphics_items import ViewIcon
 from helpers import busy_effect, create_dir
 from sqlalchemy.engine.url import make_url
@@ -95,9 +95,6 @@ class View(ProjectItem):
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
         self._toolbox.ui.treeView_view.setModel(None)
-
-    def set_icon(self, icon):
-        self._graphics_item = icon
 
     def get_icon(self):
         """Returns the item representing this Data Store on the scene."""

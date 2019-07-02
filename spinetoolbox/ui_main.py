@@ -53,6 +53,7 @@ from widgets.add_data_store_widget import AddDataStoreWidget
 from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
+from widgets.add_data_interface_widget import AddDataInterfaceWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import ZoomWidget
@@ -125,6 +126,7 @@ class ToolboxUI(QMainWindow):
         self.add_data_connection_form = None
         self.add_tool_form = None
         self.add_view_form = None
+        self.add_data_interface_form = None
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
@@ -175,6 +177,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionOpen.triggered.connect(self.open_project)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
+        self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
@@ -182,6 +185,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
         self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
+        self.ui.actionAdd_Data_Interface.triggered.connect(self.show_add_data_interface_form)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
@@ -345,7 +349,7 @@ class ToolboxUI(QMainWindow):
     def save_project(self):
         """Save project."""
         if not self._project:
-            self.msg.emit("No project open")
+            self.msg.emit("Please open or create a project first")
             return
         # Put project's tool template definition files into a list
         tool_templates = list()
@@ -358,7 +362,8 @@ class ToolboxUI(QMainWindow):
     def save_project_as(self):
         """Ask user for a new project name and save. Creates a duplicate of the open project."""
         if not self._project:
-            self.msg.emit("No project open")
+            self.msg.emit("Please open or create a project first")
+            return
         msg = "This creates a copy of the current project. <br/><br/>New name:"
         # noinspection PyCallByClass
         answer = QInputDialog.getText(
@@ -396,11 +401,13 @@ class ToolboxUI(QMainWindow):
         dc_category = ProjectItem("Data Connections", "", is_root=False, is_category=True)
         tool_category = ProjectItem("Tools", "", is_root=False, is_category=True)
         view_category = ProjectItem("Views", "", is_root=False, is_category=True)
+        di_category = ProjectItem("Data Interfaces", "", is_root=False, is_category=True)
         self.project_item_model = ProjectItemModel(self, root=root_item)
         self.project_item_model.insert_item(ds_category)
         self.project_item_model.insert_item(dc_category)
         self.project_item_model.insert_item(tool_category)
         self.project_item_model.insert_item(view_category)
+        self.project_item_model.insert_item(di_category)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
@@ -480,6 +487,8 @@ class ToolboxUI(QMainWindow):
         # Views
         self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
         # self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
+        # Data Interfaces
+        self.ui.treeView_data_interface_files.setStyleSheet(TREEVIEW_HEADER_SS)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -946,6 +955,14 @@ class ToolboxUI(QMainWindow):
             )
         return
 
+    @Slot(name="export_as_graphml")
+    def export_as_graphml(self):
+        """Exports all DAGs in project to separate GraphML files."""
+        if not self.project():
+            self.msg.emit("Please open or create a project first")
+            return
+        self.project().export_graphs()
+
     @Slot("QModelIndex", name="connection_data_changed")
     def connection_data_changed(self, index):
         """[OBSOLETE?] Called when checkbox delegate wants to
@@ -1125,7 +1142,7 @@ class ToolboxUI(QMainWindow):
     def show_add_data_store_form(self, x=0, y=0):
         """Show add data store widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.add_data_store_form = AddDataStoreWidget(self, x, y)
         self.add_data_store_form.show()
@@ -1134,16 +1151,25 @@ class ToolboxUI(QMainWindow):
     def show_add_data_connection_form(self, x=0, y=0):
         """Show add data connection widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.add_data_connection_form = AddDataConnectionWidget(self, x, y)
         self.add_data_connection_form.show()
+
+    @Slot("float", "float", name="show_add_data_interface_form")
+    def show_add_data_interface_form(self, x=0, y=0):
+        """Show add data interface widget."""
+        if not self._project:
+            self.msg.emit("Please open or create a project first")
+            return
+        self.add_data_interface_form = AddDataInterfaceWidget(self, x, y)
+        self.add_data_interface_form.show()
 
     @Slot("float", "float", name="show_add_tool_form")
     def show_add_tool_form(self, x=0, y=0):
         """Show add tool widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.add_tool_form = AddToolWidget(self, x, y)
         self.add_tool_form.show()
@@ -1152,7 +1178,7 @@ class ToolboxUI(QMainWindow):
     def show_add_view_form(self, x=0, y=0):
         """Show add view widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.add_view_form = AddViewWidget(self, x, y)
         self.add_view_form.show()
@@ -1161,7 +1187,7 @@ class ToolboxUI(QMainWindow):
     def show_tool_template_form(self, tool_template=None):
         """Show create tool template widget."""
         if not self._project:
-            self.msg.emit("Create or open a project first")
+            self.msg.emit("Please open or create a project first")
             return
         self.tool_template_form = ToolTemplateWidget(self, tool_template)
         self.tool_template_form.show()
@@ -1224,6 +1250,8 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             ind (QModelIndex): Index of concerned item
         """
+        if not self.project():
+            return
         self.project_item_context_menu = ProjectItemContextMenu(self, pos, ind)
         option = self.project_item_context_menu.get_action()
         d = self.project_item_model.project_item(ind)
@@ -1265,6 +1293,8 @@ class ToolboxUI(QMainWindow):
         elif option == "Open project directory...":
             file_url = "file:///" + self._project.project_dir
             self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
+        elif option == "Export project to GraphML":
+            self.project().export_graphs()
         else:  # No option selected
             pass
         self.project_item_context_menu.deleteLater()
@@ -1299,6 +1329,8 @@ class ToolboxUI(QMainWindow):
         Args:
             pos (QPoint): Mouse position
         """
+        if not self.project():
+            return
         ind = self.ui.listView_tool_templates.indexAt(pos)
         global_pos = self.ui.listView_tool_templates.viewport().mapToGlobal(pos)
         self.tool_template_context_menu = ToolTemplateContextMenu(self, global_pos, ind)

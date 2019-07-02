@@ -24,7 +24,8 @@ from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication, QCheckBox
 from project_item import ProjectItem
-from widgets.data_store_widgets import TreeViewForm, GraphViewForm
+from widgets.tree_view_widget import TreeViewForm
+from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
 from helpers import create_dir, busy_effect
@@ -63,7 +64,7 @@ class DataStore(ProjectItem):
             create_dir(self.data_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+                "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
         self._graphics_item = DataStoreIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._sigs = self.make_signal_handler_dict()
@@ -92,7 +93,7 @@ class DataStore(ProjectItem):
         s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
         s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
         s[self._toolbox.ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
-        s[self._toolbox.ui.pushButton_create_new_spine_db.clicked] = self.create_new_spine_database
+        s[self._toolbox.ui.toolButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._toolbox.ui.toolButton_copy_url.clicked] = self.copy_url
         s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
         s[self._toolbox.ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
@@ -140,7 +141,7 @@ class DataStore(ProjectItem):
                     "Unable to generate URL from <b>{0}</b> selections: invalid dialect {1}. "
                     "<br>Please select a new dialect and try again.".format(self.name, dialect)
                 )
-                return
+                return  # TODO: Manuel. Shouldn't this return None?
             if dialect == 'sqlite':
                 url = URL('sqlite', **url_copy)
             else:
@@ -148,16 +149,6 @@ class DataStore(ProjectItem):
                 drivername = f"{dialect}+{db_api}"
                 url = URL(drivername, **url_copy)
         except Exception as e:  # This is in case one of the keys has invalid format
-            log_errors and self._toolbox.msg_error.emit(
-                "Unable to generate URL from <b>{0}</b> selections: {1} "
-                "<br>Please make new selections and try again.".format(self.name, e)
-            )
-            return None
-        try:
-            engine = create_engine(url)
-            with engine.connect():
-                pass
-        except Exception as e:
             log_errors and self._toolbox.msg_error.emit(
                 "Unable to generate URL from <b>{0}</b> selections: {1} "
                 "<br>Please make new selections and try again.".format(self.name, e)
@@ -173,15 +164,22 @@ class DataStore(ProjectItem):
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
             self._toolbox.ui.lineEdit_database.setText(url.database)
+        # Final check
+        try:
+            engine = create_engine(url)
+            with engine.connect():
+                pass
+        except Exception as e:
+            log_errors and self._toolbox.msg_error.emit(
+                "Unable to generate URL from <b>{0}</b> selections: {1} "
+                "<br>Please make new selections and try again.".format(self.name, e)
+            )
+            return None
         return url
 
     def project(self):
         """Returns current project or None if no project open."""
         return self._project
-
-    def set_icon(self, icon):
-        """Set the icon."""
-        self._graphics_item = icon
 
     def get_icon(self):
         """Returns the item representing this Data Store on the scene."""
@@ -366,7 +364,8 @@ class DataStore(ProjectItem):
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("Dialect not supported")
             msg.setText(
-                "There is no DBAPI installed for dialect '{0}'. " "The default one is '{1}'.".format(dialect, dbapi)
+                "Spine Toolbox needs to install the following DBAPI package: '{0}' "
+                "(support for the {1} dialect).".format(dbapi, dialect)
             )
             msg.setInformativeText("Do you want to install it using pip or conda?")
             pip_button = msg.addButton("pip", QMessageBox.YesRole)
@@ -589,6 +588,8 @@ class DataStore(ProjectItem):
     def copy_url(self, checked=False):
         """Copy db url to clipboard."""
         url = self.make_url()
+        if not url:
+            return
         url.password = None
         QApplication.clipboard().setText(str(url))
         self._toolbox.msg.emit("Database url '{}' successfully copied to clipboard.".format(url))
@@ -603,8 +604,8 @@ class DataStore(ProjectItem):
                 "Unable to generate URL from <b>{0}</b> selections. Defaults will be used...".format(self.name)
             )
             self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
-            self._toolbox.ui.lineEdit_database.setText("spinedb.sqlite")
-            url = self.make_url()
+            self._toolbox.ui.lineEdit_database.setText(os.path.join(self.data_dir, self.name + ".sqlite"))
+            url = self.make_url(log_errors=True)
             if not url:
                 return
         try:

@@ -29,7 +29,7 @@ version of the source code to your computer.
 Step-by-step instructions:
 
 1. Clone either the `master` or `dev` branch onto your computer
-2. Install Python (3.5->)
+2. Install Python (3.6->)
 3. Install requirements (see below)
 4. Go to directory `\spinetoolbox` and run 
 
@@ -40,12 +40,10 @@ Remember to update your clone occasionally with the
 
 ## Requirements
 
-Python 3.5 or higher is required.
+Python 3.6 or higher is required.
 
-See file `requirements.txt` for must have packages and file `optional-requirements.txt`
-for optional ones. The optional requirements contain the SQL dialect API packages 
-(can also be installed at runtime), packages for building the User Guide (Sphinx), 
-and a package for deploying the application (cx_Freeze).
+See file `requirements.txt` for packages needed to use Spinetoolbox.
+Additional packages are needed for development which are listed in `dev-requirements.txt`.
  
 ### Installing requirements
 
@@ -59,9 +57,9 @@ Run
 
 If everything goes smoothly, you can now run Spine Toolbox.
 
-To install optional requirements run
+To install the developer requirements run
 
-    pip install -r optional-requirements.txt
+    pip install -r dev-requirements.txt
 
 ### Installing requirements for Anaconda & Miniconda Python
 
@@ -83,9 +81,9 @@ The recommended way to install dependencies using Anaconda or Miniconda is:
 
         pip install -r requirements.txt
 
-6. And finally to install optional requirements run
+6. If needed, to install the developer requirements run
 
-        pip install -r optional-requirements.txt
+        pip install -r dev-requirements.txt
 
 ### Upgrading spinedb_api
 
@@ -160,11 +158,20 @@ Below are the bare minimum things you need to know.
 
 ### Setting up development environment
 
-1. Install the optional requirements.
-2. Run `pre-commit install` in project's root directory. This sets up some git hooks.
+1. Install the developer requirements.
+2. Optionally, run `pre-commit install` in project's root directory. This sets up some git hooks.
 
 ### Coding Style
+
+- [Black](https://github.com/python/black) is used for Python code formatting.
+  The project's GitHub page includes instructions on how to integrate Black in IDEs.
 - Google style docstrings
+
+### Linting
+
+It is advisable to run [`pylint`](https://pylint.readthedocs.io/en/latest/) regularly on files that have been changed.
+The project root includes a configuration file for `pylint`.
+`pylint`'s user guide includes instructions on how to [integrate the tool in IDEs](https://pylint.readthedocs.io/en/latest/user_guide/ide-integration.html#pylint-in-pycharm).
 
 ### Reporting bugs
 If you think you have found a bug, please check the following before creating a new 

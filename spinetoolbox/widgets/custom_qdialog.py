@@ -59,6 +59,7 @@ class ManageItemsDialog(QDialog):
         self._parent = parent
         self.table_view = CopyPasteTableView(self)
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.table_view.verticalHeader().setDefaultSectionSize(parent.default_row_height)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
         layout = QVBoxLayout(self)
@@ -274,21 +275,19 @@ class AddObjectsDialog(AddItemsDialog):
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
+        obj_cls_dict = {x.name: x.id for x in self._parent.db_map.object_class_list()}
         kwargs_list = list()
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)[:-1]
             class_name, name, description = row_data
-            if not class_name:
-                self._parent.msg_error.emit("Object class name missing at row {}".format(i + 1))
+            if class_name not in obj_cls_dict:
+                self._parent.msg_error.emit("Invalid object class '{}' at row {}".format(class_name, i + 1))
                 return
+            class_id = obj_cls_dict[class_name]
             if not name:
                 self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
                 return
-            class_ = self._parent.db_map.object_class_list().filter_by(name=class_name).one_or_none()
-            if not class_:
-                self._parent.msg_error.emit("Couldn't find object class '{}' at row {}".format(class_name, i + 1))
-                return
-            kwargs = {'class_id': class_.id, 'name': name, 'description': description}
+            kwargs = {'class_id': class_id, 'name': name, 'description': description}
             kwargs_list.append(kwargs)
         if not kwargs_list:
             self._parent.msg_error.emit("Nothing to add")
@@ -402,6 +401,7 @@ class AddRelationshipClassesDialog(AddItemsDialog):
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
+        obj_cls_dict = {x.name: x.id for x in self._parent.db_map.object_class_list()}
         wide_kwargs_list = list()
         name_column = self.model.horizontal_header_labels().index("relationship class name")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -413,16 +413,11 @@ class AddRelationshipClassesDialog(AddItemsDialog):
             object_class_id_list = list()
             for column in range(name_column):  # Leave 'name' column outside
                 object_class_name = row_data[column]
-                if not object_class_name:
-                    self._parent.msg_error.emit("Object class name missing at row {}".format(i + 1))
+                if object_class_name not in obj_cls_dict:
+                    self._parent.msg_error.emit("Invalid object class '{}' at row {}".format(class_name, i + 1))
                     return
-                object_class = self._parent.db_map.object_class_list().filter_by(name=object_class_name).one_or_none()
-                if not object_class:
-                    self._parent.msg_error.emit(
-                        "Couldn't find object class '{}' at row {}".format(object_class_name, i + 1)
-                    )
-                    return
-                object_class_id_list.append(object_class.id)
+                object_class_id = obj_cls_dict[object_class_name]
+                object_class_id_list.append(object_class_id)
             wide_kwargs = {'name': relationship_class_name, 'object_class_id_list': object_class_id_list}
             wide_kwargs_list.append(wide_kwargs)
         if not wide_kwargs_list:
@@ -562,14 +557,15 @@ class AddRelationshipsDialog(AddItemsDialog):
             if not relationship_name:
                 self._parent.msg_error.emit("Relationship name missing at row {}".format(i + 1))
                 return
-            object_name_list = list()
+            object_id_list = list()
             for column in range(name_column):  # Leave 'name' column outside
                 object_name = row_data[column]
-                if not object_name:
-                    self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
+                object_dict = object_dicts[column]
+                if object_name not in object_dict:
+                    self._parent.msg_error.emit("Invalid object '{}' at row {}".format(object_name, i + 1))
                     return
-                object_name_list.append(object_name)
-            object_id_list = [object_dicts[k][x] for k, x in enumerate(object_name_list)]
+                object_id = object_dict[object_name]
+                object_id_list.append(object_id)
             wide_kwargs = {
                 'name': relationship_name,
                 'object_id_list': object_id_list,
