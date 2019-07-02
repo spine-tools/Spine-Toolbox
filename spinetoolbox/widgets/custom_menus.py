@@ -382,6 +382,24 @@ class ParameterContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
+class SimpleEditableParameterValueContextMenu(CustomContextMenu):
+    """Context menu class for object (relationship) parameter value items in tree views.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        self.add_action("Open in editor...")
+        self.exec_(position)
+
+
 class EditableParameterValueContextMenu(CustomContextMenu):
     """Context menu class for object (relationship) parameter value items in tree views.
 
