@@ -28,6 +28,7 @@ from ui.graph_view_form import Ui_MainWindow
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
 from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
+from treeview_models import ObjectTreeModel
 from widgets.custom_qwidgets import ZoomWidget
 from treeview_models import ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
@@ -44,10 +45,10 @@ class GraphViewForm(DataStoreForm):
         read_only (bool): Whether or not the form should be editable
     """
 
-    def __init__(self, owner, db_map, database, read_only=False):
+    def __init__(self, owner, db_map, read_only=False):
         """Initialize class."""
         tic = time.clock()
-        super().__init__(owner, db_map, database, Ui_MainWindow())
+        super().__init__(owner, Ui_MainWindow(), db_map)
         self.ui.graphicsView._graph_view_form = self
         self.read_only = read_only
         self._has_graph = False
@@ -60,8 +61,8 @@ class GraphViewForm(DataStoreForm):
         self.arc_token_color.setAlphaF(0.8)
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.arc_color.setAlphaF(0.8)
-        # Set flat object tree
-        self.object_tree_model.is_flat = True
+        # Object tree model
+        self.object_tree_model = ObjectTreeModel(self, flat=True)
         # Data for ObjectItems
         self.object_ids = list()
         self.object_names = list()
@@ -112,7 +113,7 @@ class GraphViewForm(DataStoreForm):
         self.settings_group = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
         self.init_commit_rollback_actions()
-        title = database + " (read only) " if read_only else database
+        title = self.database + " (read only) " if read_only else self.database
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
@@ -130,7 +131,7 @@ class GraphViewForm(DataStoreForm):
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        self.object_tree_model.build_tree(self.database)
+        self.object_tree_model.build_tree()
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
@@ -967,7 +968,7 @@ class GraphViewForm(DataStoreForm):
         object_ids = set(x['id'] for x in removed_objects)
         try:
             self.db_map.remove_items(object_ids=object_ids)
-            self.object_tree_model.remove_items("object", object_ids)
+            self.object_tree_model.remove_objects(object_ids)
             # Parameter models
             self.object_parameter_value_model.remove_objects(removed_objects)
             self.relationship_parameter_value_model.remove_objects(removed_objects)
