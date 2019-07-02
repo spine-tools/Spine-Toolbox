@@ -16,7 +16,7 @@ A model for indexed parameter values, used by the parameter value editors editor
 :date:   18.6.2019
 """
 
-from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt, Signal
+from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 
 
 class IndexedValueTableModel(QAbstractTableModel):
