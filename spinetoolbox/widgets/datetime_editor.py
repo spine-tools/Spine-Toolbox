@@ -40,7 +40,7 @@ class _DatetimeModel:
 class DatetimeEditor(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._model = _DatetimeModel(DateTime(datetime(year=1, month=1,day=1)))
+        self._model = _DatetimeModel(DateTime(datetime(year=1, month=1, day=1)))
         self._ui = Ui_DatetimeEditor()
         self._ui.setupUi(self)
         self._ui.datetime_edit.editingFinished.connect(self._change_datetime)

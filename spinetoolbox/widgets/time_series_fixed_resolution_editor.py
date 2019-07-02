@@ -18,7 +18,7 @@ Contains logic for the fixed step time series editor widget.
 
 import dateutil.parser
 import numpy as np
-from PySide2.QtCore import Qt, Slot
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import (
     duration_to_relativedelta,

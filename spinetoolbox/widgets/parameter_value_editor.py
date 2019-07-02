@@ -17,7 +17,6 @@ An editor dialog for editing database (relationship) parameter values.
 """
 
 from enum import Enum
-import dateutil.parser
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QDialog
 from spinedb_api import (

@@ -16,12 +16,12 @@ A Qt widget to use as a matplotlib backend.
 :date:   3.6.2019
 """
 
-import matplotlib
-from PySide2 import QtWidgets
 import logging
+import matplotlib
 from matplotlib.backends.backend_qt5agg import FigureCanvasQTAgg
 from matplotlib.figure import Figure
 from pandas.plotting import register_matplotlib_converters
+from PySide2 import QtWidgets
 
 
 register_matplotlib_converters()  # Needed to plot the time series indexes

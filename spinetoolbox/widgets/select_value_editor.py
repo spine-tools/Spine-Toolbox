@@ -17,7 +17,7 @@ Contains functions to choose a (relationship) parameter value editor.
 """
 
 from PySide2.QtCore import Qt
-from spinedb_api import from_database, TimeSeriesFixedResolution, TimeSeriesVariableResolution
+from spinedb_api import from_database
 from widgets.parameter_value_editor import ParameterValueEditor
 
 
