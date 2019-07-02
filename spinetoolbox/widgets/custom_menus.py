@@ -382,7 +382,7 @@ class ParameterContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
-class ParameterValueContextMenu(CustomContextMenu):
+class EditableParameterValueContextMenu(CustomContextMenu):
     """Context menu class for object (relationship) parameter value items in tree views.
 
     Attributes:

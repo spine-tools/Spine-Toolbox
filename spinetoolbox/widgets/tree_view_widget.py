@@ -18,19 +18,20 @@ Contains the TreeViewForm class.
 
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
-import logging
-from PySide2.QtWidgets import QFileDialog, QApplication, QDockWidget, QTreeView, QTableView
+from PySide2.QtWidgets import QFileDialog, QDockWidget, QTreeView, QTableView
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QIcon
 from ui.tree_view_form import Ui_MainWindow
 from spinedb_api import SpineDBAPIError
 from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import (
+    EditableParameterValueContextMenu,
     ObjectTreeContextMenu,
     RelationshipTreeContextMenu,
     ParameterContextMenu,
     ParameterValueListContextMenu,
 )
+from widgets.parameter_value_editor import ParameterValueEditor
 from treeview_models import RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
@@ -69,8 +70,6 @@ class TreeViewForm(DataStoreForm):
         # Context menus
         self.object_tree_context_menu = None
         self.relationship_tree_context_menu = None
-        self.object_parameter_value_context_menu = None
-        self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
         self.parameter_value_list_context_menu = None
@@ -969,16 +968,24 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_object_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
-        self.object_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
-        option = self.object_parameter_value_context_menu.get_action()
-        if option == "Remove selection":
+        flags = self.object_parameter_value_model.flags(index)
+        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
+        is_value = self.object_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
+        if editable and is_value:
+            menu = EditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            menu = ParameterContextMenu(self, global_pos, index)
+        option = menu.get_action()
+        if option == "Open in editor...":
+            editor = ParameterValueEditor(self.object_parameter_value_model, index, self)
+            editor.show()
+        elif option == "Remove selection":
             self.remove_object_parameter_values()
         elif option == "Copy":
             self.ui.tableView_object_parameter_value.copy()
         elif option == "Paste":
             self.ui.tableView_object_parameter_value.paste()
-        self.object_parameter_value_context_menu.deleteLater()
-        self.object_parameter_value_context_menu = None
+        menu.deleteLater()
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
@@ -989,16 +996,24 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
-        self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
-        option = self.relationship_parameter_value_context_menu.get_action()
-        if option == "Remove selection":
+        flags = self.relationship_parameter_value_model.flags(index)
+        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
+        is_value = self.relationship_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
+        if editable and is_value:
+            menu = EditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            menu = ParameterContextMenu(self, global_pos, index)
+        option = menu.get_action()
+        if option == "Open in editor...":
+            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, self)
+            editor.show()
+        elif option == "Remove selection":
             self.remove_relationship_parameter_values()
         elif option == "Copy":
             self.ui.tableView_relationship_parameter_value.copy()
         elif option == "Paste":
             self.ui.tableView_relationship_parameter_value.paste()
-        self.relationship_parameter_value_context_menu.deleteLater()
-        self.relationship_parameter_value_context_menu = None
+        menu.deleteLater()
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
     def show_object_parameter_context_menu(self, pos):

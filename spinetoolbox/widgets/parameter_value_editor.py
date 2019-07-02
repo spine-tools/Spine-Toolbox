@@ -17,12 +17,13 @@ An editor dialog for editing database (relationship) parameter values.
 """
 
 from enum import Enum
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QDialog
 from spinedb_api import (
     DateTime,
     Duration,
     duration_to_relativedelta,
+    from_database,
     TimePattern,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
@@ -47,7 +48,7 @@ class _Editor(Enum):
 
 
 class ParameterValueEditor(QDialog):
-    def __init__(self, parent_model, parent_index, value, parent_widget=None):
+    def __init__(self, parent_model, parent_index, parent_widget=None):
         super().__init__(parent_widget)
         self._parent_model = parent_model
         self._parent_index = parent_index
@@ -67,6 +68,7 @@ class ParameterValueEditor(QDialog):
         self._ui.editor_stack.addWidget(self._datetime_editor)
         self._ui.editor_stack.addWidget(self._duration_editor)
         self._ui.parameter_type_selector.activated.connect(self._change_parameter_type)
+        value = from_database(parent_model.data(parent_index, Qt.EditRole))
         if isinstance(value, (int, float, bool)):
             self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
             self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)
