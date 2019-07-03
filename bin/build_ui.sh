@@ -21,23 +21,29 @@ echo --- Building Spine Toolbox GUI ---
 
 path="$( cd "$( dirname "${BASH_SOURCE[0]}" )" >/dev/null 2>&1 && pwd )" # path of this script
 ui_path="$path/../spinetoolbox/ui/"
+spinetoolbox_path="$path/../spinetoolbox/"
 
 for diff_file in $(git diff --name-only $ui_path); do
-    full_dif_file="$path/../$diff_file"
-    extension="${full_dif_file##*.}"
+    extension="${diff_file##*.}"
     if [ "$extension" == "ui" ]
     then
-      py_file="${full_dif_file%.ui}.py"
+      ui_file="$path/../$diff_file"
+      py_file="${ui_file%.ui}.py"
+      py_file=$(basename "$py_file")
+      py_file=$ui_path/$py_file
       echo building $(basename "$py_file")
-      pyside2-uic $full_dif_file -o $py_file
+      pyside2-uic $ui_file -o $py_file
       sed -i '/# Created:/d;/#      by:/d' $py_file
-      bash "$path/append_license_xml.sh" $full_dif_file
+      bash "$path/append_license_xml.sh" $ui_file
       bash "$path/append_license_py.sh" $py_file
     elif [ "$extension" == "qrc" ]
     then
-      py_file="${full_dif_file%.qrc}.py"
+      qrc_file="$path/../$diff_file"
+      py_file="${qrc_file%.qrc}_rc.py"
+      py_file=$(basename "$py_file")
+      py_file=$spinetoolbox_path/$py_file
       echo building $(basename "$py_file")
-      pyside2-rcc -o $py_file $full_dif_file
+      pyside2-rcc -o $py_file $qrc_file
       sed -i '/# Created:/d;/#      by:/d' $py_file
     fi
 done
