@@ -482,12 +482,12 @@ class DataStore(ProjectItem):
         db_map = self.get_db_map(url)
         if not db_map:
             return
-        self.do_open_tree_view(db_map, url.database)
+        self.do_open_tree_view(db_map)
 
     @busy_effect
-    def do_open_tree_view(self, db_map, database):
+    def do_open_tree_view(self, db_map):
         """Open url in tree view form."""
-        self.tree_view_form = TreeViewForm(self, db_map, database)
+        self.tree_view_form = TreeViewForm(self, db_map)
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -519,12 +519,12 @@ class DataStore(ProjectItem):
         db_map = self.get_db_map(url)
         if not db_map:
             return
-        self.do_open_graph_view(db_map, url.database)
+        self.do_open_graph_view(db_map)
 
     @busy_effect
-    def do_open_graph_view(self, db_map, database):
+    def do_open_graph_view(self, db_map):
         """Open url in graph view form."""
-        self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
+        self.graph_view_form = GraphViewForm(self, db_map, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 

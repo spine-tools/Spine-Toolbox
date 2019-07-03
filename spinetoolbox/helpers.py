@@ -370,7 +370,10 @@ def format_string_list(str_list):
 def strip_json_data(json_data, maxlen):
     """Return a string representation of `json_data`, stripped to `maxlen` characters.
     """
-    data = json.loads(json_data)
+    try:
+        data = json.loads(json_data)
+    except json.JSONDecodeError:
+        data = None
     if data is None:
         return ""
     stripped_data = str(data)

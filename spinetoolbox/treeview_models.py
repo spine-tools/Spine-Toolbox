@@ -115,237 +115,12 @@ class RelationshipClassListModel(QStandardItemModel):
         return super().data(index, role)
 
 
-class RelationshipTreeModel(QStandardItemModel):
-    """A class to display Spine data structure in a treeview
-    with relationship classes at the outer level.
-    """
-
-    def __init__(self, tree_view_form):
-        """Initialize class"""
-        super().__init__(tree_view_form)
-        self._tree_view_form = tree_view_form
-        self.db_map = tree_view_form.db_map
-        self.root_item = None
-        self.bold_font = QFont()
-        self.bold_font.setBold(True)
-        self._fetched_relationship_class_id = set()
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Returns the data stored under the given role for the item referred to by the index."""
-        if role == Qt.ForegroundRole:
-            item_type = index.data(Qt.UserRole)
-            if item_type.endswith('class') and not self.hasChildren(index):
-                return QBrush(Qt.gray)
-        if role == Qt.DecorationRole:
-            item_type = index.data(Qt.UserRole)
-            if item_type == 'relationship_class':
-                return self._tree_view_form.icon_mngr.relationship_icon(
-                    index.data(Qt.UserRole + 1)["object_class_name_list"]
-                )
-            if item_type == 'relationship':
-                return self._tree_view_form.icon_mngr.relationship_icon(
-                    index.parent().data(Qt.UserRole + 1)["object_class_name_list"]
-                )
-        return super().data(index, role)
-
-    def hasChildren(self, parent):
-        """Return True if not fetched, so the user can try and expand it."""
-        if not parent.isValid():
-            return super().hasChildren(parent)
-        parent_type = parent.data(Qt.UserRole)
-        if parent_type == 'root':
-            return super().hasChildren(parent)
-        if parent_type == 'relationship_class':
-            relationship_class_id = parent.data(Qt.UserRole + 1)['id']
-            if relationship_class_id in self._fetched_relationship_class_id:
-                return super().hasChildren(parent)
-            return True
-        elif parent_type == 'relationship':
-            return False
-        return super().hasChildren(parent)
-
-    def canFetchMore(self, parent):
-        """Return True if not fetched."""
-        if not parent.isValid():
-            return True
-        parent_type = parent.data(Qt.UserRole)
-        if parent_type == 'root':
-            return True
-        if parent_type == 'relationship_class':
-            parent_id = parent.data(Qt.UserRole + 1)['id']
-            return parent_id not in self._fetched_relationship_class_id
-        if parent_type == 'relationship':
-            return False
-
-    @busy_effect
-    def fetchMore(self, parent):
-        """Build the deeper level of the tree"""
-        if not parent.isValid():
-            return False
-        parent_type = parent.data(Qt.UserRole)
-        if parent_type == 'root':
-            return False
-        parent_type = parent.data(Qt.UserRole)
-        if parent_type == 'relationship_class':
-            relationship_class_item = self.itemFromIndex(parent)
-            relationship_class = parent.data(Qt.UserRole + 1)
-            relationship_list = self.db_map.wide_relationship_list(class_id=relationship_class['id'])
-            self.add_relationships_to_class(relationship_list, relationship_class_item)
-            self._fetched_relationship_class_id.add(relationship_class['id'])
-        self.dataChanged.emit(parent, parent)
-
-    def build_tree(self, database):
-        """Build the first level of the tree"""
-        self.clear()
-        self._fetched_relationship_class_id = set()
-        self.root_item = QStandardItem(database)
-        self.root_item.setData('root', Qt.UserRole)
-        icon = QIcon(":/symbols/Spine_symbol.png")
-        self.root_item.setData(icon, Qt.DecorationRole)
-        self.add_relationship_classes(self.db_map.wide_relationship_class_list().all())
-        self.appendRow(self.root_item)
-
-    def new_relationship_class_item(self, wide_relationship_class):
-        """Returns new relationship class item."""
-        relationship_class_item = QStandardItem(wide_relationship_class.name)
-        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
-        relationship_class_item.setData('relationship_class', Qt.UserRole)
-        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
-        relationship_class_item.setData(self.bold_font, Qt.FontRole)
-        return relationship_class_item
-
-    def new_relationship_item(self, wide_relationship, icon):
-        """Returns new relationship item."""
-        relationship_item = QStandardItem(wide_relationship.object_name_list)
-        relationship_item.setData(icon, Qt.DecorationRole)
-        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
-        relationship_item.setData('relationship', Qt.UserRole)
-        return relationship_item
-
-    def add_relationship_classes(self, relationship_classes):
-        """Add relationship class items to the model."""
-        relationship_class_item_list = list()
-        for relationship_class in relationship_classes:
-            relationship_class_item = self.new_relationship_class_item(relationship_class)
-            relationship_class_item_list.append(relationship_class_item)
-        self.root_item.appendRows(relationship_class_item_list)
-
-    def add_relationships_to_class(self, relationship_list, relationship_class_item):
-        """Add relationship class items to the model."""
-        icon = relationship_class_item.data(Qt.DecorationRole)
-        relationship_item_list = list()
-        for relationship in relationship_list:
-            relationship_item = self.new_relationship_item(relationship, icon)
-            relationship_item_list.append(relationship_item)
-        relationship_class_item.appendRows(relationship_item_list)
-
-    def add_relationships(self, relationships):
-        """Add relationship items to the model."""
-        relationship_dict = {}
-        for relationship in relationships:
-            relationship_dict.setdefault(relationship.class_id, list()).append(relationship)
-        # Sweep first level and check if there's something to append
-        for i in range(self.root_item.rowCount()):
-            relationship_class_item = self.root_item.child(i)
-            relationship_class_id = relationship_class_item.data(Qt.UserRole + 1)['id']
-            try:
-                relationship_list = relationship_dict[relationship_class_id]
-            except KeyError:
-                continue
-            # If not fetched, fetch it and continue
-            relationship_class_index = self.indexFromItem(relationship_class_item)
-            if self.canFetchMore(relationship_class_index):
-                self.fetchMore(relationship_class_index)  # NOTE: this also adds the new items, which are now in the db
-                continue
-            # Already fetched, add new items manually
-            self.add_relationships_to_class(relationship_list, relationship_class_item)
-
-    def update_objects(self, updated_items):
-        """Update object in the model.
-        This of course means updating the object name in relationship items.
-        """
-        updated_items_dict = {x.id: x for x in updated_items}
-        for i in range(self.root_item.rowCount()):
-            relationship_class_item = self.root_item.child(i)
-            for j in range(relationship_class_item.rowCount()):
-                visited_item = relationship_class_item.child(j)
-                relationship = visited_item.data(Qt.UserRole + 1)
-                object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
-                object_name_list = relationship['object_name_list'].split(",")
-                found = False
-                for i, id in enumerate(object_id_list):
-                    try:
-                        updated_item = updated_items_dict[id]
-                        object_name_list[i] = updated_item.name
-                        found = True
-                    except KeyError:
-                        continue
-                if found:
-                    str_object_name_list = ",".join(object_name_list)
-                    relationship['object_name_list'] = str_object_name_list
-                    visited_item.setText(str_object_name_list)
-                    visited_item.setData(relationship, Qt.UserRole + 1)
-
-    def update_relationship_classes(self, updated_items):
-        """Update relationship classes in the model."""
-        updated_items_dict = {x.id: x for x in updated_items}
-        for i in range(self.root_item.rowCount()):
-            visited_item = self.root_item.child(i)
-            visited_id = visited_item.data(Qt.UserRole + 1)['id']
-            updated_item = updated_items_dict.pop(visited_id, None)
-            if not updated_item:
-                continue
-            visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-            visited_item.setText(updated_item.name)
-
-    def update_relationships(self, updated_items):
-        """Update relationships in the model."""
-        updated_items_dict = {x.id: x for x in updated_items}
-        for i in range(self.root_item.rowCount()):
-            relationship_class_item = self.root_item.child(i)
-            for j in range(relationship_class_item.rowCount()):
-                visited_item = relationship_class_item.child(j)
-                visited_id = visited_item.data(Qt.UserRole + 1)['id']
-                updated_item = updated_items_dict.pop(visited_id, None)
-                if not updated_item:
-                    continue
-                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-                visited_item.setText(updated_item.object_name_list)
-
-    def remove_items(self, removed_type, removed_ids):
-        """Remove all matched items and their 'childs'."""
-        # TODO: try and remove all rows at once, if possible
-        if not removed_ids:
-            return
-        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        for visited_item in reversed(items):
-            visited_type = visited_item.data(Qt.UserRole)
-            visited = visited_item.data(Qt.UserRole + 1)
-            if visited_type == 'root':
-                continue
-            # Get visited id
-            visited_id = visited['id']
-            visited_index = self.indexFromItem(visited_item)
-            if visited_type == removed_type and visited_id in removed_ids:
-                self.removeRows(visited_index.row(), 1, visited_index.parent())
-            # When removing an object class, also remove 'child' relationship classes
-            if removed_type == 'object_class' and visited_type == 'relationship_class':
-                object_class_id_list = visited['object_class_id_list']
-                if any([id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids]):
-                    self.removeRows(visited_index.row(), 1, visited_index.parent())
-            # When removing an object, also remove 'child' relationships
-            if removed_type == 'object' and visited_type == 'relationship':
-                object_id_list = visited['object_id_list']
-                if any([id in [int(x) for x in object_id_list.split(',')] for id in removed_ids]):
-                    self.removeRows(visited_index.row(), 1, visited_index.parent())
-
-
 class ObjectTreeModel(QStandardItemModel):
     """A class to display Spine data structure in a treeview
     with object classes at the outer level.
     """
 
-    def __init__(self, tree_view_form):
+    def __init__(self, tree_view_form, flat=False):
         """Initialize class"""
         super().__init__(tree_view_form)
         self._tree_view_form = tree_view_form
@@ -353,7 +128,7 @@ class ObjectTreeModel(QStandardItemModel):
         self.root_item = None
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self.is_flat = False
+        self.flat = flat
         self._fetched = {"object_class": set(), "object": set(), "relationship_class": set()}
 
     def data(self, index, role=Qt.DisplayRole):
@@ -364,6 +139,8 @@ class ObjectTreeModel(QStandardItemModel):
                 return QBrush(Qt.gray)
         elif role == Qt.DecorationRole:
             item_type = index.data(Qt.UserRole)
+            if item_type == 'root':
+                return QIcon(":/symbols/Spine_symbol.png")
             if item_type == 'object_class':
                 return self._tree_view_form.icon_mngr.object_icon(index.data(Qt.DisplayRole))
             if item_type == 'object':
@@ -436,7 +213,7 @@ class ObjectTreeModel(QStandardItemModel):
                 return super().hasChildren(parent)
             return True
         elif parent_type == 'object':
-            if self.is_flat:
+            if self.flat:
                 # The flat model doesn't go beyond the 'object' level
                 return False
             object_id = parent.data(Qt.UserRole + 1)['id']
@@ -445,7 +222,7 @@ class ObjectTreeModel(QStandardItemModel):
                 return super().hasChildren(parent)
             return True
         elif parent_type == 'relationship_class':
-            if self.is_flat:
+            if self.flat:
                 # The flat model doesn't go beyond the 'object' level
                 return False
             object_id = parent.parent().data(Qt.UserRole + 1)['id']
@@ -486,30 +263,15 @@ class ObjectTreeModel(QStandardItemModel):
         if parent_type == 'object_class':
             object_class_item = self.itemFromIndex(parent)
             object_class = parent.data(Qt.UserRole + 1)
-            object_icon = parent.data(Qt.DecorationRole)
             object_list = self.db_map.object_list(class_id=object_class['id'])
-            object_item_list = list()
-            for object_ in object_list:
-                object_item = QStandardItem(object_.name)
-                object_item.setData('object', Qt.UserRole)
-                object_item.setData(object_._asdict(), Qt.UserRole + 1)
-                object_item.setData(object_.description, Qt.ToolTipRole)
-                object_item.setData(object_icon, Qt.DecorationRole)
-                object_item_list.append(object_item)
+            object_item_list = [self.new_object_item(x) for x in object_list]
             object_class_item.appendRows(object_item_list)
             self._fetched['object_class'].add(object_class['id'])
         elif parent_type == 'object':
             object_item = self.itemFromIndex(parent)
             object_ = parent.data(Qt.UserRole + 1)
             relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_['class_id'])
-            relationship_class_item_list = list()
-            for relationship_class in relationship_class_list:
-                relationship_class_item = QStandardItem(relationship_class.name)
-                relationship_class_item.setData('relationship_class', Qt.UserRole)
-                relationship_class_item.setData(relationship_class._asdict(), Qt.UserRole + 1)
-                relationship_class_item.setData(relationship_class.object_class_name_list, Qt.ToolTipRole)
-                relationship_class_item.setData(self.bold_font, Qt.FontRole)
-                relationship_class_item_list.append(relationship_class_item)
+            relationship_class_item_list = [self.new_relationship_class_item(x) for x in relationship_class_list]
             object_item.appendRows(relationship_class_item_list)
             self._fetched['object'].add(object_['id'])
         elif parent_type == 'relationship_class':
@@ -519,24 +281,18 @@ class ObjectTreeModel(QStandardItemModel):
             relationship_list = self.db_map.wide_relationship_list(
                 class_id=relationship_class['id'], object_id=object_['id']
             )
-            relationship_item_list = list()
-            for relationship in relationship_list:
-                relationship_item = QStandardItem(relationship.object_name_list)
-                relationship_item.setData('relationship', Qt.UserRole)
-                relationship_item.setData(relationship._asdict(), Qt.UserRole + 1)
-                relationship_item_list.append(relationship_item)
+            relationship_item_list = [self.new_relationship_item(x) for x in relationship_list]
             relationship_class_item.appendRows(relationship_item_list)
             self._fetched['relationship_class'].add((object_['id'], relationship_class['id']))
         self.dataChanged.emit(parent, parent)
 
-    def build_tree(self, database, flat=False):
+    def build_tree(self, flat=False):
         """Build the first level of the tree"""
         self.clear()
         self._fetched = {"object_class": set(), "object": set(), "relationship_class": set()}
+        database = self._tree_view_form.database
         self.root_item = QStandardItem(database)
         self.root_item.setData('root', Qt.UserRole)
-        icon = QIcon(":/symbols/Spine_symbol.png")
-        self.root_item.setData(icon, Qt.DecorationRole)
         object_class_item_list = list()
         for object_class in self.db_map.object_class_list():
             object_class_item = QStandardItem(object_class.name)
@@ -565,7 +321,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_item.setData(object_.description, Qt.ToolTipRole)
         return object_item
 
-    def new_relationship_class_item(self, wide_relationship_class, object_):
+    def new_relationship_class_item(self, wide_relationship_class):
         """Returns new relationship class item."""
         relationship_class_item = QStandardItem(wide_relationship_class.name)
         relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
@@ -608,17 +364,14 @@ class ObjectTreeModel(QStandardItemModel):
                 object_list = object_dict[object_class_id]
             except KeyError:
                 continue
-            # If not fetched, fetch it and continue
+            # If not fetched, just continue
             object_class_index = self.indexFromItem(object_class_item)
             if self.canFetchMore(object_class_index):
-                self.fetchMore(object_class_index)  # NOTE: this also adds the new items, which are now in the db
                 continue
             # Already fetched, add new items manually
             object_item_list = list()
             for object_ in object_list:
                 object_item = self.new_object_item(object_)
-                icon = object_class_item.data(Qt.DecorationRole)
-                object_item.setData(icon, Qt.DecorationRole)
                 object_item_list.append(object_item)
             object_class_item.appendRows(object_item_list)
 
@@ -642,15 +395,14 @@ class ObjectTreeModel(QStandardItemModel):
                     relationship_class_list.extend(relationship_classes)
             if not relationship_class_list:
                 continue
-            # If not fetched, fetch it and continue
+            # If not fetched, just continue
             visited_index = self.indexFromItem(visited_item)
             if self.canFetchMore(visited_index):
-                self.fetchMore(visited_index)  # NOTE: this also adds the new items, which are now in the db
                 continue
             # Already fetched, add new items manually
             relationship_class_item_list = list()
             for relationship_class in relationship_class_list:
-                relationship_class_item = self.new_relationship_class_item(relationship_class, visited_object)
+                relationship_class_item = self.new_relationship_class_item(relationship_class)
                 relationship_class_item_list.append(relationship_class_item)
             visited_item.appendRows(relationship_class_item_list)
 
@@ -669,10 +421,9 @@ class ObjectTreeModel(QStandardItemModel):
                 relationship_list = relationship_dict[visited_relationship_class_id]
             except KeyError:
                 continue
-            # If not fetched, fetch it and continue
+            # If not fetched, just continue
             visited_index = self.indexFromItem(visited_item)
             if self.canFetchMore(visited_index):
-                self.fetchMore(visited_index)  # NOTE: this also adds the new items, which are now in the db
                 continue
             # Already fetched, add new items manually
             relationship_item_list = list()
@@ -682,8 +433,6 @@ class ObjectTreeModel(QStandardItemModel):
                 if visited_object_id not in [int(x) for x in object_id_list.split(',')]:
                     continue
                 relationship_item = self.new_relationship_item(relationship)
-                icon = visited_item.data(Qt.DecorationRole)
-                relationship_item.setData(icon, Qt.DecorationRole)
                 relationship_item_list.append(relationship_item)
             visited_item.appendRows(relationship_item_list)
 
@@ -754,8 +503,9 @@ class ObjectTreeModel(QStandardItemModel):
         Move rows if the objects in the relationship change."""
         items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
         updated_items_dict = {x.id: x for x in updated_items}
+        ids_to_remove = set()
         relationships_to_add = set()
-        for visited_item in reversed(items):
+        for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != "relationship":
                 continue
@@ -768,40 +518,111 @@ class ObjectTreeModel(QStandardItemModel):
             visited_object_id_list = visited_item.data(Qt.UserRole + 1)['object_id_list']
             updated_object_id_list = updated_item.object_id_list
             if visited_object_id_list != updated_object_id_list:
-                visited_index = self.indexFromItem(visited_item)
-                self.removeRows(visited_index.row(), 1, visited_index.parent())
+                ids_to_remove.add(visited_id)
                 relationships_to_add.add(updated_item)
             else:
                 visited_item.setText(updated_item.object_name_list)
                 visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+        self.remove_relationships(ids_to_remove)
         self.add_relationships(relationships_to_add)
 
-    def remove_items(self, removed_type, removed_ids):
-        """Remove all matched items and their 'childs'."""
-        # TODO: try and remove all rows at once, if possible
+    def remove_object_classes(self, removed_ids):
+        """Remove object classes and their childs."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        for visited_item in reversed(items):
+        removed_object_classes = {}
+        removed_relationship_classes = {}
+        for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
-            visited = visited_item.data(Qt.UserRole + 1)
-            if visited_type == 'root':
+            if visited_type not in ('object_class', 'relationship_class'):
                 continue
-            # Get visited id
-            visited_id = visited['id']
+            # Get visited
+            visited = visited_item.data(Qt.UserRole + 1)
             visited_index = self.indexFromItem(visited_item)
-            if visited_type == removed_type and visited_id in removed_ids:
-                self.removeRows(visited_index.row(), 1, visited_index.parent())
-            # When removing an object class, also remove 'child' relationship classes
-            if removed_type == 'object_class' and visited_type == 'relationship_class':
+            if visited_type == 'object_class':
+                visited_id = visited['id']
+                if visited_id in removed_ids:
+                    removed_object_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
+            elif visited_type == 'relationship_class':
                 object_class_id_list = visited['object_class_id_list']
-                if any([id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids]):
-                    self.removeRows(visited_index.row(), 1, visited_index.parent())
-            # When removing an object, also remove 'child' relationships
-            if removed_type == 'object' and visited_type == 'relationship':
+                if any(id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids):
+                    removed_relationship_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for parent, rows in removed_relationship_classes.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
+        for parent, rows in removed_object_classes.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
+
+    def remove_objects(self, removed_ids):
+        """Remove objects and their childs."""
+        if not removed_ids:
+            return
+        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        removed_objects = {}
+        removed_relationships = {}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type not in ('object', 'relationship'):
+                continue
+            # Get visited
+            visited = visited_item.data(Qt.UserRole + 1)
+            visited_index = self.indexFromItem(visited_item)
+            if visited_type == 'object':
+                visited_id = visited['id']
+                if visited_id in removed_ids:
+                    removed_objects.setdefault(visited_index.parent(), []).append(visited_index.row())
+            elif visited_type == 'relationship':
                 object_id_list = visited['object_id_list']
-                if any([id in [int(x) for x in object_id_list.split(',')] for id in removed_ids]):
-                    self.removeRows(visited_index.row(), 1, visited_index.parent())
+                if any(id in [int(x) for x in object_id_list.split(',')] for id in removed_ids):
+                    removed_relationships.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for parent, rows in removed_relationships.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
+        for parent, rows in removed_objects.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
+
+    def remove_relationship_classes(self, removed_ids):
+        """Remove relationship classes and their childs."""
+        if not removed_ids:
+            return
+        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        removed_relationship_classes = {}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != 'relationship_class':
+                continue
+            # Get visited
+            visited = visited_item.data(Qt.UserRole + 1)
+            visited_index = self.indexFromItem(visited_item)
+            visited_id = visited['id']
+            if visited_id in removed_ids:
+                removed_relationship_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for parent, rows in removed_relationship_classes.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
+
+    def remove_relationships(self, removed_ids):
+        """Remove relationships."""
+        if not removed_ids:
+            return
+        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        removed_relationships = {}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != 'relationship':
+                continue
+            # Get visited
+            visited = visited_item.data(Qt.UserRole + 1)
+            visited_index = self.indexFromItem(visited_item)
+            visited_id = visited['id']
+            if visited_id in removed_ids:
+                removed_relationships.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for parent, rows in removed_relationships.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
 
     def next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
@@ -823,6 +644,282 @@ class ObjectTreeModel(QStandardItemModel):
             return None
         position = (position + 1) % len(items)
         return self.indexFromItem(items[position])
+
+
+class RelationshipTreeModel(QStandardItemModel):
+    """A class to display Spine data structure in a treeview
+    with relationship classes at the outer level.
+    """
+
+    def __init__(self, tree_view_form):
+        """Initialize class"""
+        super().__init__(tree_view_form)
+        self._tree_view_form = tree_view_form
+        self.db_map = tree_view_form.db_map
+        self.root_item = None
+        self.bold_font = QFont()
+        self.bold_font.setBold(True)
+        self._fetched_relationship_class_id = set()
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data stored under the given role for the item referred to by the index."""
+        if role == Qt.ForegroundRole:
+            item_type = index.data(Qt.UserRole)
+            if item_type.endswith('class') and not self.hasChildren(index):
+                return QBrush(Qt.gray)
+        if role == Qt.DecorationRole:
+            item_type = index.data(Qt.UserRole)
+            if item_type == 'root':
+                return QIcon(":/symbols/Spine_symbol.png")
+            if item_type == 'relationship_class':
+                return self._tree_view_form.icon_mngr.relationship_icon(
+                    index.data(Qt.UserRole + 1)["object_class_name_list"]
+                )
+            if item_type == 'relationship':
+                return self._tree_view_form.icon_mngr.relationship_icon(
+                    index.parent().data(Qt.UserRole + 1)["object_class_name_list"]
+                )
+        return super().data(index, role)
+
+    def hasChildren(self, parent):
+        """Return True if not fetched, so the user can try and expand it."""
+        if not parent.isValid():
+            return super().hasChildren(parent)
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'root':
+            return super().hasChildren(parent)
+        if parent_type == 'relationship_class':
+            relationship_class_id = parent.data(Qt.UserRole + 1)['id']
+            if relationship_class_id in self._fetched_relationship_class_id:
+                return super().hasChildren(parent)
+            return True
+        elif parent_type == 'relationship':
+            return False
+        return super().hasChildren(parent)
+
+    def canFetchMore(self, parent):
+        """Return True if not fetched."""
+        if not parent.isValid():
+            return True
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'root':
+            return True
+        if parent_type == 'relationship_class':
+            parent_id = parent.data(Qt.UserRole + 1)['id']
+            return parent_id not in self._fetched_relationship_class_id
+        if parent_type == 'relationship':
+            return False
+
+    @busy_effect
+    def fetchMore(self, parent):
+        """Build the deeper level of the tree"""
+        if not parent.isValid():
+            return False
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'root':
+            return False
+        parent_type = parent.data(Qt.UserRole)
+        if parent_type == 'relationship_class':
+            relationship_class_item = self.itemFromIndex(parent)
+            relationship_class = parent.data(Qt.UserRole + 1)
+            relationship_list = self.db_map.wide_relationship_list(class_id=relationship_class['id'])
+            self.add_relationships_to_class(relationship_list, relationship_class_item)
+            self._fetched_relationship_class_id.add(relationship_class['id'])
+        self.dataChanged.emit(parent, parent)
+
+    def build_tree(self):
+        """Build the first level of the tree"""
+        self.clear()
+        self._fetched_relationship_class_id = set()
+        database = self._tree_view_form.database
+        self.root_item = QStandardItem(database)
+        self.root_item.setData('root', Qt.UserRole)
+        self.add_relationship_classes(self.db_map.wide_relationship_class_list().all())
+        self.appendRow(self.root_item)
+
+    def new_relationship_class_item(self, wide_relationship_class):
+        """Returns new relationship class item."""
+        relationship_class_item = QStandardItem(wide_relationship_class.name)
+        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
+        relationship_class_item.setData('relationship_class', Qt.UserRole)
+        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+        relationship_class_item.setData(self.bold_font, Qt.FontRole)
+        return relationship_class_item
+
+    def new_relationship_item(self, wide_relationship):
+        """Returns new relationship item."""
+        relationship_item = QStandardItem(wide_relationship.object_name_list)
+        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+        relationship_item.setData('relationship', Qt.UserRole)
+        return relationship_item
+
+    def add_relationship_classes(self, relationship_classes):
+        """Add relationship class items to the model."""
+        relationship_class_item_list = list()
+        for relationship_class in relationship_classes:
+            relationship_class_item = self.new_relationship_class_item(relationship_class)
+            relationship_class_item_list.append(relationship_class_item)
+        self.root_item.appendRows(relationship_class_item_list)
+
+    def add_relationships_to_class(self, relationship_list, relationship_class_item):
+        """Add relationship class items to the model."""
+        relationship_item_list = list()
+        for relationship in relationship_list:
+            relationship_item = self.new_relationship_item(relationship)
+            relationship_item_list.append(relationship_item)
+        relationship_class_item.appendRows(relationship_item_list)
+
+    def add_relationships(self, relationships):
+        """Add relationship items to the model."""
+        relationship_dict = {}
+        for relationship in relationships:
+            relationship_dict.setdefault(relationship.class_id, list()).append(relationship)
+        # Sweep first level and check if there's something to append
+        for i in range(self.root_item.rowCount()):
+            relationship_class_item = self.root_item.child(i)
+            relationship_class_id = relationship_class_item.data(Qt.UserRole + 1)['id']
+            try:
+                relationship_list = relationship_dict[relationship_class_id]
+            except KeyError:
+                continue
+            # If not fetched, continue
+            relationship_class_index = self.indexFromItem(relationship_class_item)
+            if self.canFetchMore(relationship_class_index):
+                continue
+            # Already fetched, add new items manually
+            self.add_relationships_to_class(relationship_list, relationship_class_item)
+
+    def update_objects(self, updated_items):
+        """Update object in the model.
+        This of course means updating the object name in relationship items.
+        """
+        updated_items_dict = {x.id: x for x in updated_items}
+        for i in range(self.root_item.rowCount()):
+            relationship_class_item = self.root_item.child(i)
+            for j in range(relationship_class_item.rowCount()):
+                visited_item = relationship_class_item.child(j)
+                relationship = visited_item.data(Qt.UserRole + 1)
+                object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
+                object_name_list = relationship['object_name_list'].split(",")
+                found = False
+                for i, id in enumerate(object_id_list):
+                    try:
+                        updated_item = updated_items_dict[id]
+                        object_name_list[i] = updated_item.name
+                        found = True
+                    except KeyError:
+                        continue
+                if found:
+                    str_object_name_list = ",".join(object_name_list)
+                    relationship['object_name_list'] = str_object_name_list
+                    visited_item.setText(str_object_name_list)
+                    visited_item.setData(relationship, Qt.UserRole + 1)
+
+    def update_relationship_classes(self, updated_items):
+        """Update relationship classes in the model."""
+        updated_items_dict = {x.id: x for x in updated_items}
+        for i in range(self.root_item.rowCount()):
+            visited_item = self.root_item.child(i)
+            visited_id = visited_item.data(Qt.UserRole + 1)['id']
+            updated_item = updated_items_dict.pop(visited_id, None)
+            if not updated_item:
+                continue
+            visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+            visited_item.setText(updated_item.name)
+
+    def update_relationships(self, updated_items):
+        """Update relationships in the model."""
+        updated_items_dict = {x.id: x for x in updated_items}
+        for i in range(self.root_item.rowCount()):
+            relationship_class_item = self.root_item.child(i)
+            for j in range(relationship_class_item.rowCount()):
+                visited_item = relationship_class_item.child(j)
+                visited_id = visited_item.data(Qt.UserRole + 1)['id']
+                updated_item = updated_items_dict.pop(visited_id, None)
+                if not updated_item:
+                    continue
+                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
+                visited_item.setText(updated_item.object_name_list)
+
+    def remove_object_classes(self, removed_ids):
+        """Remove object classes and their childs."""
+        if not removed_ids:
+            return
+        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        removed_relationship_classes = {}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != 'relationship_class':
+                continue
+            # Get visited
+            visited = visited_item.data(Qt.UserRole + 1)
+            visited_index = self.indexFromItem(visited_item)
+            object_class_id_list = visited['object_class_id_list']
+            if any(id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids):
+                removed_relationship_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for parent, rows in removed_relationship_classes.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
+
+    def remove_objects(self, removed_ids):
+        """Remove objects and their childs."""
+        if not removed_ids:
+            return
+        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        removed_relationships = {}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != 'relationship':
+                continue
+            # Get visited
+            visited = visited_item.data(Qt.UserRole + 1)
+            visited_index = self.indexFromItem(visited_item)
+            object_id_list = visited['object_id_list']
+            if any(id in [int(x) for x in object_id_list.split(',')] for id in removed_ids):
+                removed_relationships.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for parent, rows in removed_relationships.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
+
+    def remove_relationship_classes(self, removed_ids):
+        """Remove relationship classes and their childs."""
+        if not removed_ids:
+            return
+        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        removed_relationship_classes = {}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != 'relationship_class':
+                continue
+            # Get visited
+            visited = visited_item.data(Qt.UserRole + 1)
+            visited_index = self.indexFromItem(visited_item)
+            visited_id = visited['id']
+            if visited_id in removed_ids:
+                removed_relationship_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for parent, rows in removed_relationship_classes.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
+
+    def remove_relationships(self, removed_ids):
+        """Remove relationships."""
+        if not removed_ids:
+            return
+        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
+        removed_relationships = {}
+        for visited_item in items:
+            visited_type = visited_item.data(Qt.UserRole)
+            if visited_type != 'relationship':
+                continue
+            # Get visited
+            visited = visited_item.data(Qt.UserRole + 1)
+            visited_index = self.indexFromItem(visited_item)
+            visited_id = visited['id']
+            if visited_id in removed_ids:
+                removed_relationships.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for parent, rows in removed_relationships.items():
+            for row in sorted(rows, reverse=True):
+                self.removeRows(row, 1, parent)
 
 
 class SubParameterModel(MinimalTableModel):

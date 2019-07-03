@@ -32,7 +32,7 @@ from widgets.custom_menus import (
     ParameterValueListContextMenu,
 )
 from widgets.parameter_value_editor import ParameterValueEditor
-from treeview_models import RelationshipTreeModel
+from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
@@ -60,11 +60,13 @@ class TreeViewForm(DataStoreForm):
     rel_parameter_value_selection_available = Signal("bool", name="rel_parameter_value_selection_available")
     parameter_value_list_selection_available = Signal("bool", name="parameter_value_list_selection_available")
 
-    def __init__(self, data_store, db_map, database):
+    def __init__(self, data_store, db_map):
         """Initialize class."""
         tic = time.process_time()
-        super().__init__(data_store, db_map, database, Ui_MainWindow())
+        super().__init__(data_store, Ui_MainWindow(), db_map)
         self.takeCentralWidget()
+        # Object tree model
+        self.object_tree_model = ObjectTreeModel(self)
         self.relationship_tree_model = RelationshipTreeModel(self)
         self.selected_rel_tree_indexes = {}
         # Context menus
@@ -479,12 +481,12 @@ class TreeViewForm(DataStoreForm):
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        self.object_tree_model.build_tree(self.database)
+        self.object_tree_model.build_tree()
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
 
     def init_relationship_tree_model(self):
         """Initialize relationship tree model."""
-        self.relationship_tree_model.build_tree(self.database)
+        self.relationship_tree_model.build_tree()
 
     def init_views(self):
         """Initialize model views."""
@@ -695,11 +697,11 @@ class TreeViewForm(DataStoreForm):
         for ind in self.selected_obj_tree_indexes.get('relationship_class', {}):
             object_class_id = ind.parent().data(Qt.UserRole + 1)['class_id']
             object_id = ind.parent().data(Qt.UserRole + 1)['id']
-            self.selected_object_ids.setdefault(object_class_id, {}).add(object_id)
+            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
         for ind in self.selected_obj_tree_indexes.get('relationship', set()):
             object_class_id = ind.parent().parent().data(Qt.UserRole + 1)['class_id']
             object_id = ind.parent().parent().data(Qt.UserRole + 1)['id']
-            self.selected_object_ids.setdefault(object_class_id, {}).add(object_id)
+            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
 
     def update_selected_relationship_class_ids(self):
         """Update set of selected relationship class id."""
@@ -909,14 +911,14 @@ class TreeViewForm(DataStoreForm):
                 relationship_class_ids=relationship_class_ids,
                 relationship_ids=relationship_ids,
             )
-            self.object_tree_model.remove_items("object_class", object_class_ids)
-            self.object_tree_model.remove_items("object", object_ids)
-            self.object_tree_model.remove_items("relationship_class", relationship_class_ids)
-            self.object_tree_model.remove_items("relationship", relationship_ids)
-            self.relationship_tree_model.remove_items("object_class", object_class_ids)
-            self.relationship_tree_model.remove_items("object", object_ids)
-            self.relationship_tree_model.remove_items("relationship_class", relationship_class_ids)
-            self.relationship_tree_model.remove_items("relationship", relationship_ids)
+            self.object_tree_model.remove_object_classes(object_class_ids)
+            self.object_tree_model.remove_objects(object_ids)
+            self.object_tree_model.remove_relationship_classes(relationship_class_ids)
+            self.object_tree_model.remove_relationships(relationship_ids)
+            self.relationship_tree_model.remove_object_classes(object_class_ids)
+            self.relationship_tree_model.remove_objects(object_ids)
+            self.relationship_tree_model.remove_relationship_classes(relationship_class_ids)
+            self.relationship_tree_model.remove_relationships(relationship_ids)
             # Parameter models
             self.object_parameter_value_model.remove_object_classes(object_classes)
             self.object_parameter_value_model.remove_objects(objects)
@@ -945,10 +947,10 @@ class TreeViewForm(DataStoreForm):
         relationship_ids = set(x['id'] for x in relationships)
         try:
             self.db_map.remove_items(relationship_class_ids=relationship_class_ids, relationship_ids=relationship_ids)
-            self.object_tree_model.remove_items("relationship_class", relationship_class_ids)
-            self.object_tree_model.remove_items("relationship", relationship_ids)
-            self.relationship_tree_model.remove_items("relationship_class", relationship_class_ids)
-            self.relationship_tree_model.remove_items("relationship", relationship_ids)
+            self.object_tree_model.remove_relationship_classes(relationship_class_ids)
+            self.object_tree_model.remove_relationships(relationship_ids)
+            self.relationship_tree_model.remove_relationship_classes(relationship_class_ids)
+            self.relationship_tree_model.remove_relationships(relationship_ids)
             # Parameter models
             self.relationship_parameter_value_model.remove_relationship_classes(relationship_classes)
             self.relationship_parameter_value_model.remove_relationships(relationships)

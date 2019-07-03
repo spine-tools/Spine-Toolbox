@@ -41,7 +41,6 @@ from widgets.custom_qdialog import (
 )
 from widgets.toolbars import ParameterTagToolBar
 from treeview_models import (
-    ObjectTreeModel,
     ObjectParameterDefinitionModel,
     ObjectParameterValueModel,
     RelationshipParameterDefinitionModel,
@@ -66,7 +65,7 @@ class DataStoreForm(QMainWindow):
     msg_error = Signal(str, name="msg_error")
     commit_available = Signal("bool", name="commit_available")
 
-    def __init__(self, data_store, db_map, database, ui):
+    def __init__(self, data_store, ui, db_map):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
         self._data_store = data_store
@@ -83,11 +82,9 @@ class DataStoreForm(QMainWindow):
         self.err_msg = QErrorMessage(self)
         # DB
         self.db_map = db_map
-        self.database = database
+        self.database = db_map.sa_url.database
         self.icon_mngr = IconManager()
         self.icon_mngr.setup_object_pixmaps(self.db_map.object_class_list())
-        # Object tree model
-        self.object_tree_model = ObjectTreeModel(self)
         # Object tree selected indexes
         self.selected_obj_tree_indexes = {}
         self.selected_object_class_ids = set()
