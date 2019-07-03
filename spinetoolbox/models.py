@@ -72,7 +72,7 @@ class ProjectItemModel(QAbstractItemModel):
         if not index.internalPointer().is_category:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
         else:
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
+            return Qt.ItemIsEnabled  # | Qt.ItemIsSelectable
 
     def parent(self, index=QModelIndex()):
         """Returns index of the parent of given index.

@@ -293,14 +293,7 @@ class ObjectTreeModel(QStandardItemModel):
         database = self._tree_view_form.database
         self.root_item = QStandardItem(database)
         self.root_item.setData('root', Qt.UserRole)
-        object_class_item_list = list()
-        for object_class in self.db_map.object_class_list():
-            object_class_item = QStandardItem(object_class.name)
-            object_class_item.setData('object_class', Qt.UserRole)
-            object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
-            object_class_item.setData(object_class.description, Qt.ToolTipRole)
-            object_class_item.setData(self.bold_font, Qt.FontRole)
-            object_class_item_list.append(object_class_item)
+        object_class_item_list = [self.new_object_class_item(x) for x in self.db_map.object_class_list()]
         self.root_item.appendRows(object_class_item_list)
         self.appendRow(self.root_item)
 

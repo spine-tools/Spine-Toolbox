@@ -109,6 +109,7 @@ class ToolboxUI(QMainWindow):
         self.tool_template_model = None
         self.connection_model = None
         self.show_datetime = self.update_datetime()
+        self.active_project_item = None
         # Widget and form references
         self.settings_form = None
         self.tool_config_asst_form = None
@@ -389,7 +390,8 @@ class ToolboxUI(QMainWindow):
             tool_template_paths (list): List of tool definition file paths used in this project
         """
         self.init_project_item_model()
-        self.ui.treeView_project.selectionModel().currentChanged.connect(self.current_item_changed)
+        # self.ui.treeView_project.selectionModel().currentChanged.connect(self.current_item_changed)
+        self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self.init_tool_template_model(tool_template_paths)
         self.init_connection_model()
 
@@ -531,53 +533,39 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.clear()
         self.ui.graphicsView.scene().clear()  # Clear all items from scene
 
-    @Slot("QModelIndex", "QModelIndex", name="current_item_changed")
-    def current_item_changed(self, current, previous):
-        """Disconnect signals of previous item, connect signals of current item
-        and show correct properties tab for the current item."""
-        # TODO: Fix multiple selection in project tree view.
-        if not current.isValid() or not current.parent().isValid():  # Current is root or category
-            if not previous:  # Previous is None
-                return
-            elif not previous.isValid():  # Previous is root
-                return
-            elif not previous.parent().isValid():  # Previous is category
-                return
-            else:  # Previous is a ProjectItem -> disconnect
-                previous_item = self.project_item_model.project_item(previous)
-                # self.msg.emit("Deactivating {0}".format(previous_item.name))
-                # Deselect previous item's QGraphicsItem
-                if previous_item.get_icon().isSelected():
-                    previous_item.get_icon().setSelected(False)  # Emits selectionChanged signal to scene
-                ret = previous_item.deactivate()
-                if not ret:
-                    self.msg_error.emit("Something went wrong in disconnecting {0} signals.".format(previous_item.name))
-                # Show No Selection tab because the item has been deactivated anyway
-                self.activate_no_selection_tab()
-            return
-        # Current item is a project item
-        current_item = self.project_item_model.project_item(current)
-        if not previous:
-            pass  # Previous item was None
-        elif not previous.isValid():
-            pass  # Previous item was root
-        elif not previous.parent().isValid():
-            pass  # Previous item was a category
+    @Slot("QItemSelection", "QItemSelection", name="item_selection_changed")
+    def item_selection_changed(self, selected, deselected):
+        """Synchronize selection with scene. Check if only one item is selected and make it the
+        active item: disconnect signals of previous active item, connect signals of current active item
+        and show correct properties tab for the latter.
+        """
+        # TODO: use `selected` and `deselected` to keep a list of selected indexes?
+        inds = self.ui.treeView_project.selectedIndexes()
+        proj_items = [self.project_item_model.project_item(i) for i in inds]
+        scene = self.ui.graphicsView.scene()
+        scene.ignore_selection_changed = True
+        scene.clearSelection()
+        for item in proj_items:
+            item.get_icon().setSelected(True)
+        scene.ignore_selection_changed = False
+        if len(proj_items) == 1:
+            new_active_project_item = proj_items[0]
         else:
-            previous_item = self.project_item_model.project_item(previous)
-            # self.msg.emit("Deactivating {0}".format(previous_item.name))
-            # Deselect previous item's QGraphicsItem
-            if previous_item.get_icon().isSelected():
-                previous_item.get_icon().setSelected(False)  # Emits selectionChanged signal to scene
-            ret = previous_item.deactivate()
+            new_active_project_item = None
+        if self.active_project_item and self.active_project_item != new_active_project_item:
+            # Deactivate old active project item
+            ret = self.active_project_item.deactivate()
             if not ret:
-                self.msg_error.emit("Something went wrong in disconnecting {0} signals".format(previous_item.name))
-        # self.msg.emit("Activating {0}".format(current_item.name))
-        # Set current item QGraphicsItem selected
-        if not current_item.get_icon().isSelected():
-            current_item.get_icon().setSelected(True)  # Emits selectionChanged signal to scene
-        current_item.activate()
-        self.activate_item_tab(current_item)
+                self.msg_error.emit(
+                    "Something went wrong in disconnecting {0} signals".format(self.active_project_item.name)
+                )
+        self.active_project_item = new_active_project_item
+        if self.active_project_item:
+            # Activate new active project item
+            self.active_project_item.activate()
+            self.activate_item_tab(self.active_project_item)
+        else:
+            self.activate_no_selection_tab()
 
     def activate_no_selection_tab(self):
         """Shows 'No Selection' tab."""
