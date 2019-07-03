@@ -28,7 +28,7 @@ from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
-from helpers import create_dir, busy_effect
+from helpers import create_dir, busy_effect, get_db_map
 from sqlalchemy import create_engine
 from sqlalchemy.exc import SQLAlchemyError, DatabaseError, ArgumentError
 from sqlalchemy.engine.url import make_url, URL
@@ -424,41 +424,6 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
             return False
 
-    def get_db_map(self, url, upgrade=False):
-        """Return a DiffDatabaseMapping instance to work with.
-        """
-        try:
-            db_map = self.do_get_db_map(url, upgrade)
-            return db_map
-        except spinedb_api.SpineDBVersionError:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Incompatible database version")
-            msg.setText(
-                "The database at <b>{}</b> is from an older version of Spine "
-                "and needs to be upgraded in order to be used with the current version.".format(url)
-            )
-            msg.setInformativeText(
-                "Do you want to upgrade it now?"
-                "<p><b>WARNING</b>: After the upgrade, "
-                "the database may no longer be used "
-                "with previous versions of Spine."
-            )
-            msg.addButton(QMessageBox.Cancel)
-            msg.addButton("Upgrade", QMessageBox.YesRole)
-            ret = msg.exec_()  # Show message box
-            if ret == QMessageBox.Cancel:
-                return None
-            return self.get_db_map(url, upgrade=True)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            return None
-
-    @busy_effect
-    def do_get_db_map(self, url, upgrade):
-        """Separate method so 'busy_effect' don't overlay any message box."""
-        return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
-
     @Slot(bool, name="open_tree_view")
     def open_tree_view(self, checked=False):
         """Open url in tree view form."""
@@ -479,7 +444,11 @@ class DataStore(ProjectItem):
                 return
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
-        db_map = self.get_db_map(url)
+        try:
+            db_map = get_db_map(url)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            db_map = None
         if not db_map:
             return
         self.do_open_tree_view(db_map)
@@ -487,7 +456,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tree_view(self, db_map):
         """Open url in tree view form."""
-        self.tree_view_form = TreeViewForm(self, db_map)
+        self.tree_view_form = TreeViewForm(self._project, db_map)
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -516,7 +485,11 @@ class DataStore(ProjectItem):
                 return
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
-        db_map = self.get_db_map(url)
+        try:
+            db_map = get_db_map(url)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            db_map = None
         if not db_map:
             return
         self.do_open_graph_view(db_map)
@@ -524,7 +497,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_graph_view(self, db_map):
         """Open url in graph view form."""
-        self.graph_view_form = GraphViewForm(self, db_map, read_only=False)
+        self.graph_view_form = GraphViewForm(self._project, db_map, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
@@ -553,7 +526,11 @@ class DataStore(ProjectItem):
                 return
             self.tabular_view_form.destroyed.disconnect(self.tabular_view_form_destroyed)
             self.tabular_view_form.close()
-        db_map = self.get_db_map(url)
+        try:
+            db_map = get_db_map(url)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            db_map = None
         if not db_map:
             return
         self.do_open_tabular_view(db_map, url.database)
@@ -564,6 +541,7 @@ class DataStore(ProjectItem):
         self.tabular_view_form = TabularViewForm(self, db_map, database)
         self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
         self.tabular_view_form.show()
+        self.destroyed.connect(self.tabular_view_form.close)
 
     @Slot(name="tabular_view_form_destroyed")
     def tabular_view_form_destroyed(self):

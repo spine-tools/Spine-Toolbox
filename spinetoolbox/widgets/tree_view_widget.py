@@ -59,10 +59,10 @@ class TreeViewForm(DataStoreForm):
     rel_parameter_value_selection_available = Signal("bool", name="rel_parameter_value_selection_available")
     parameter_value_list_selection_available = Signal("bool", name="parameter_value_list_selection_available")
 
-    def __init__(self, data_store, db_map):
+    def __init__(self, data_store, *db_maps):
         """Initialize class."""
         tic = time.process_time()
-        super().__init__(data_store, Ui_MainWindow(), db_map)
+        super().__init__(data_store, Ui_MainWindow(), *db_maps)
         self.takeCentralWidget()
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
@@ -92,7 +92,7 @@ class TreeViewForm(DataStoreForm):
         self.add_toggle_view_actions()
         self.connect_signals()
         self.restore_ui()
-        self.setWindowTitle("Data store tree view    -- {} --".format(self.database))
+        self.setWindowTitle("Data store tree view    -- {} --".format(self.databases))
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
@@ -397,9 +397,7 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="show_import_file_dialog")
     def show_import_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to import."""
-        answer = QFileDialog.getOpenFileName(
-            self, "Select file to import", self._data_store.project().project_dir, "*.*"
-        )
+        answer = QFileDialog.getOpenFileName(self, "Select file to import", self._project.project_dir, "*.*")
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
             return
@@ -441,10 +439,7 @@ class TreeViewForm(DataStoreForm):
         """Show dialog to allow user to select a file to export."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getSaveFileName(
-            self,
-            "Export to file",
-            self._data_store.project().project_dir,
-            "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)",
+            self, "Export to file", self._project.project_dir, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
         )
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
@@ -483,7 +478,12 @@ class TreeViewForm(DataStoreForm):
     def init_object_tree_model(self):
         """Initialize object tree model."""
         self.object_tree_model.build_tree()
-        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
+        self.ui.actionExport.setEnabled(
+            any(
+                self.object_tree_model.invisibleRootItem().child(i).hasChildren()
+                for i in range(self.object_tree_model.rowCount())
+            )
+        )
 
     def init_relationship_tree_model(self):
         """Initialize relationship tree model."""
@@ -498,7 +498,8 @@ class TreeViewForm(DataStoreForm):
         """Init object tree view."""
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         self.ui.treeView_relationship.header().hide()
-        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_item.index())
+        for i in range(self.object_tree_model.rowCount()):
+            self.ui.treeView_relationship.expand(self.relationship_tree_model.index(i, 0))
         self.ui.treeView_relationship.resizeColumnToContents(0)
 
     @Slot("QModelIndex", name="find_next_leaf")
@@ -931,7 +932,12 @@ class TreeViewForm(DataStoreForm):
             self.relationship_parameter_definition_model.remove_object_classes(object_classes)
             self.relationship_parameter_definition_model.remove_relationship_classes(relationship_classes)
             self.commit_available.emit(True)
-            self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
+            self.ui.actionExport.setEnabled(
+                any(
+                    self.object_tree_model.invisibleRootItem().child(i).hasChildren()
+                    for i in range(self.object_tree_model.rowCount())
+                )
+            )
             self.msg.emit("Successfully removed items.")
             self.object_tree_selection_available.emit(False)
         except SpineDBAPIError as e:

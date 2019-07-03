@@ -382,6 +382,49 @@ def strip_json_data(json_data, maxlen):
     return stripped_data
 
 
+def get_db_map(url, upgrade=False):
+    """Return a DiffDatabaseMapping instance to work with.
+    """
+    try:
+        db_map = do_get_db_map(url, upgrade)
+        return db_map
+    except spinedb_api.SpineDBVersionError:
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setWindowTitle("Incompatible database version")
+        msg.setText(
+            "The database at <b>{}</b> is from an older version of Spine "
+            "and needs to be upgraded in order to be used with the current version.".format(url)
+        )
+        msg.setInformativeText(
+            "Do you want to upgrade it now?"
+            "<p><b>WARNING</b>: After the upgrade, "
+            "the database may no longer be used "
+            "with previous versions of Spine."
+        )
+        msg.addButton(QMessageBox.Cancel)
+        msg.addButton("Upgrade", QMessageBox.YesRole)
+        ret = msg.exec_()  # Show message box
+        if ret == QMessageBox.Cancel:
+            return None
+        return get_db_map(url, upgrade=True)
+
+
+@busy_effect
+def do_get_db_map(url, upgrade):
+    """Separate method so 'busy_effect' don't overlay any message box."""
+    return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
+
+
+def short_db_name(db_map):
+    """Returns a short db name.
+    """
+    url = db_map.sa_url
+    if url.drivername == 'sqlite':
+        return os.path.basename(url.database)
+    return url.database
+
+
 class IconManager:
     """A class to manage object class icons for data store forms."""
 

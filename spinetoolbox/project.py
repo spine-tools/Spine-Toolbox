@@ -22,12 +22,13 @@ import json
 from PySide2.QtCore import Signal, Slot
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
-from helpers import project_dir, create_dir, copy_dir
+from helpers import project_dir, create_dir, copy_dir, get_db_map
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
 from data_interface import DataInterface
+from widgets.tree_view_widget import TreeViewForm
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 from executioner import DirectedGraphHandler, ExecutionInstance
@@ -241,8 +242,13 @@ class SpineToolboxProject(MetaObject):
             data_interfaces = item_dict["Data Interfaces"]
         except KeyError:
             data_interfaces = dict()
-        n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + \
-            len(views.keys()) + len(data_interfaces.keys())
+        n = (
+            len(data_stores.keys())
+            + len(data_connections.keys())
+            + len(tools.keys())
+            + len(views.keys())
+            + len(data_interfaces.keys())
+        )
         self._toolbox.msg.emit("Loading project items...")
         if n == 0:
             self._toolbox.msg_warning.emit("Project has no items")
@@ -706,3 +712,17 @@ class SpineToolboxProject(MetaObject):
                 self._toolbox.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
             i += 1
         return
+
+    def open_tree_view(self):
+        """Open all selected data stores in tree view.
+        """
+        indexes = self._toolbox.ui.treeView_project.selectedIndexes()
+        proj_items = [self._toolbox.project_item_model.project_item(ind) for ind in indexes]
+        data_stores = [item for item in proj_items if item.item_type == "Data Store"]
+        if not data_stores:
+            self._toolbox.msg_error.emit("No Data Store selected. Please select one or more Data Store items.")
+            return
+        urls = [ds.make_url() for ds in data_stores]
+        db_maps = [get_db_map(url) for url in urls]
+        tree_view_form = TreeViewForm(self, *db_maps)
+        tree_view_form.show()

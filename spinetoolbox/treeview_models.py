@@ -20,13 +20,15 @@ import os
 import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
-from helpers import busy_effect, format_string_list, strip_json_data
+from helpers import busy_effect, format_string_list, strip_json_data, short_db_name
 from spinedb_api import SpineDBAPIError
 from models import MinimalTableModel, EmptyRowModel, HybridTableModel
 
 
 class ObjectClassListModel(QStandardItemModel):
     """A class to list object classes in the GraphViewForm."""
+
+    # TODO: go from db_map to db_maps
 
     def __init__(self, graph_view_form):
         """Initialize class"""
@@ -74,6 +76,8 @@ class ObjectClassListModel(QStandardItemModel):
 
 class RelationshipClassListModel(QStandardItemModel):
     """A class to list relationship classes in the GraphViewForm."""
+
+    # TODO: go from db_map to db_maps
 
     def __init__(self, graph_view_form):
         """Initialize class"""
@@ -124,15 +128,17 @@ class ObjectTreeModel(QStandardItemModel):
         """Initialize class"""
         super().__init__(tree_view_form)
         self._tree_view_form = tree_view_form
-        self.db_map = tree_view_form.db_map
-        self.root_item = None
+        self.db_maps = tree_view_form.db_maps
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.flat = flat
-        self._fetched = {"object_class": set(), "object": set(), "relationship_class": set()}
+        self._fetched = {}
+        self.root_item = None
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
+        if index.column() != 0:
+            return super().data(index, role)
         if role == Qt.ForegroundRole:
             item_type = index.data(Qt.UserRole)
             if item_type.endswith('class') and not self.hasChildren(index):
@@ -146,13 +152,9 @@ class ObjectTreeModel(QStandardItemModel):
             if item_type == 'object':
                 return self._tree_view_form.icon_mngr.object_icon(index.parent().data(Qt.DisplayRole))
             if item_type == 'relationship_class':
-                return self._tree_view_form.icon_mngr.relationship_icon(
-                    index.data(Qt.UserRole + 1)["object_class_name_list"]
-                )
+                return self._tree_view_form.icon_mngr.relationship_icon(index.data(Qt.ToolTipRole))
             if item_type == 'relationship':
-                return self._tree_view_form.icon_mngr.relationship_icon(
-                    index.parent().data(Qt.UserRole + 1)["object_class_name_list"]
-                )
+                return self._tree_view_form.icon_mngr.relationship_icon(index.parent().data(Qt.ToolTipRole))
         return super().data(index, role)
 
     def backward_sweep(self, index, call=None):
@@ -207,32 +209,14 @@ class ObjectTreeModel(QStandardItemModel):
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'root':
             return super().hasChildren(parent)
-        if parent_type == 'object_class':
-            object_class_id = parent.data(Qt.UserRole + 1)['id']
-            if object_class_id in self._fetched['object_class']:
-                return super().hasChildren(parent)
-            return True
-        elif parent_type == 'object':
-            if self.flat:
-                # The flat model doesn't go beyond the 'object' level
-                return False
-            object_id = parent.data(Qt.UserRole + 1)['id']
-            object_class_id = parent.data(Qt.UserRole + 1)['class_id']
-            if object_id in self._fetched['object']:
-                return super().hasChildren(parent)
-            return True
-        elif parent_type == 'relationship_class':
-            if self.flat:
-                # The flat model doesn't go beyond the 'object' level
-                return False
-            object_id = parent.parent().data(Qt.UserRole + 1)['id']
-            relationship_class_id = parent.data(Qt.UserRole + 1)['id']
-            if (object_id, relationship_class_id) in self._fetched['relationship_class']:
-                return super().hasChildren(parent)
-            return True
-        elif parent_type == 'relationship':
+        if parent_type == 'relationship':
             return False
-        return super().hasChildren(parent)
+        if self.flat and parent_type in ('object', 'relationship_class'):
+            return False
+        fetched = self._fetched[parent_type]
+        if parent in fetched:
+            return super().hasChildren(parent)
+        return True
 
     def canFetchMore(self, parent):
         """Return True if not fetched."""
@@ -241,15 +225,8 @@ class ObjectTreeModel(QStandardItemModel):
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'root':
             return True
-        if parent_type in ('object_class', 'object'):
-            parent_id = parent.data(Qt.UserRole + 1)['id']
-            return parent_id not in self._fetched[parent_type]
-        if parent_type == 'relationship_class':
-            object_id = parent.parent().data(Qt.UserRole + 1)['id']
-            relationship_class_id = parent.data(Qt.UserRole + 1)['id']
-            return (object_id, relationship_class_id) not in self._fetched[parent_type]
-        if parent_type == 'relationship':
-            return False
+        fetched = self._fetched[parent_type]
+        return parent not in fetched
 
     @busy_effect
     def fetchMore(self, parent):
@@ -260,74 +237,98 @@ class ObjectTreeModel(QStandardItemModel):
         if parent_type == 'root':
             return False
         parent_type = parent.data(Qt.UserRole)
+        fetched = self._fetched[parent_type]
         if parent_type == 'object_class':
+            parent_db_map_dict = parent.data(Qt.UserRole + 1)
+            object_d = {}
+            for db_map, object_class in parent_db_map_dict.items():
+                for item in db_map.object_list(class_id=object_class['id']):
+                    object_d.setdefault(item.name, {})[db_map] = item._asdict()
+                    # NOTE: the object name is unique within one class
             object_class_item = self.itemFromIndex(parent)
-            object_class = parent.data(Qt.UserRole + 1)
-            object_list = self.db_map.object_list(class_id=object_class['id'])
-            object_item_list = [self.new_object_item(x) for x in object_list]
-            object_class_item.appendRows(object_item_list)
-            self._fetched['object_class'].add(object_class['id'])
+            for name, db_map_dict in object_d.items():
+                object_item = self.new_object_item(name, db_map_dict)
+                databases = str([short_db_name(x) for x in db_map_dict])
+                object_class_item.appendRow([object_item, QStandardItem(databases)])
+            fetched.add(parent)
         elif parent_type == 'object':
+            parent_db_map_dict = parent.data(Qt.UserRole + 1)
+            relationship_class_d = {}
+            for db_map, object_ in parent_db_map_dict.items():
+                for item in db_map.wide_relationship_class_list(object_class_id=object_['class_id']):
+                    key = (item.name, item.object_class_name_list)
+                    relationship_class_d.setdefault(key, {})[db_map] = item._asdict()
             object_item = self.itemFromIndex(parent)
-            object_ = parent.data(Qt.UserRole + 1)
-            relationship_class_list = self.db_map.wide_relationship_class_list(object_class_id=object_['class_id'])
-            relationship_class_item_list = [self.new_relationship_class_item(x) for x in relationship_class_list]
-            object_item.appendRows(relationship_class_item_list)
-            self._fetched['object'].add(object_['id'])
+            for (name, object_class_name_list), db_map_dict in relationship_class_d.items():
+                relationship_class_item = self.new_relationship_class_item(name, object_class_name_list, db_map_dict)
+                databases = str([short_db_name(x) for x in db_map_dict])
+                object_item.appendRow([relationship_class_item, QStandardItem(databases)])
+            fetched.add(parent)
         elif parent_type == 'relationship_class':
+            grand_parent_db_map_dict = parent.parent().data(Qt.UserRole + 1)
+            parent_db_map_dict = parent.data(Qt.UserRole + 1)
+            relationship_d = {}
+            for db_map, relationship_class in parent_db_map_dict.items():
+                object_ = grand_parent_db_map_dict[db_map]
+                for item in db_map.wide_relationship_list(class_id=relationship_class['id'], object_id=object_['id']):
+                    relationship_d.setdefault(item.object_name_list, {})[db_map] = item._asdict()
             relationship_class_item = self.itemFromIndex(parent)
-            relationship_class = parent.data(Qt.UserRole + 1)
-            object_ = parent.parent().data(Qt.UserRole + 1)
-            relationship_list = self.db_map.wide_relationship_list(
-                class_id=relationship_class['id'], object_id=object_['id']
-            )
-            relationship_item_list = [self.new_relationship_item(x) for x in relationship_list]
-            relationship_class_item.appendRows(relationship_item_list)
-            self._fetched['relationship_class'].add((object_['id'], relationship_class['id']))
+            for object_name_list, db_map_dict in relationship_d.items():
+                relationship_item = self.new_relationship_item(object_name_list, db_map_dict)
+                databases = str([short_db_name(x) for x in db_map_dict])
+                relationship_class_item.appendRow([relationship_item, QStandardItem(databases)])
+            fetched.add(parent)
         self.dataChanged.emit(parent, parent)
 
     def build_tree(self, flat=False):
         """Build the first level of the tree"""
         self.clear()
-        self._fetched = {"object_class": set(), "object": set(), "relationship_class": set()}
-        database = self._tree_view_form.database
-        self.root_item = QStandardItem(database)
+        self.setHorizontalHeaderLabels(["item", "databases"])
+        self._fetched = {"object_class": set(), "object": set(), "relationship_class": set(), "relationship": set()}
+        self.root_item = QStandardItem('root')
         self.root_item.setData('root', Qt.UserRole)
-        object_class_item_list = [self.new_object_class_item(x) for x in self.db_map.object_class_list()]
-        self.root_item.appendRows(object_class_item_list)
-        self.appendRow(self.root_item)
+        object_class_d = {}
+        for db_map in self.db_maps:
+            for object_class in db_map.object_class_list():
+                object_class_d.setdefault(object_class.name, {})[db_map] = object_class._asdict()
+        for name, db_map_dict in object_class_d.items():
+            object_class_item = self.new_object_class_item(name, db_map_dict)
+            databases = str([short_db_name(x) for x in db_map_dict])
+            self.root_item.appendRow([object_class_item, QStandardItem(databases)])
+        databases = str([short_db_name(x) for x in self.db_maps])
+        self.appendRow([self.root_item, QStandardItem(databases)])
 
-    def new_object_class_item(self, object_class):
+    def new_object_class_item(self, name, db_map_dict):
         """Returns new object class item."""
-        object_class_item = QStandardItem(object_class.name)
+        object_class_item = QStandardItem(name)
         object_class_item.setData('object_class', Qt.UserRole)
-        object_class_item.setData(object_class._asdict(), Qt.UserRole + 1)
-        object_class_item.setData(object_class.description, Qt.ToolTipRole)
+        object_class_item.setData(db_map_dict, Qt.UserRole + 1)
+        object_class_item.setData([v['description'] for v in db_map_dict.values()], Qt.ToolTipRole)
         object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
-    def new_object_item(self, object_):
+    def new_object_item(self, name, db_map_dict):
         """Returns new object item."""
-        object_item = QStandardItem(object_.name)
+        object_item = QStandardItem(name)
         object_item.setData('object', Qt.UserRole)
-        object_item.setData(object_._asdict(), Qt.UserRole + 1)
-        object_item.setData(object_.description, Qt.ToolTipRole)
+        object_item.setData(db_map_dict, Qt.UserRole + 1)
+        object_item.setData([v['description'] for v in db_map_dict.values()], Qt.ToolTipRole)
         return object_item
 
-    def new_relationship_class_item(self, wide_relationship_class):
+    def new_relationship_class_item(self, name, object_class_name_list, db_map_dict):
         """Returns new relationship class item."""
-        relationship_class_item = QStandardItem(wide_relationship_class.name)
-        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
+        relationship_class_item = QStandardItem(name)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
-        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+        relationship_class_item.setData(db_map_dict, Qt.UserRole + 1)
+        relationship_class_item.setData(object_class_name_list, Qt.ToolTipRole)
         relationship_class_item.setData(self.bold_font, Qt.FontRole)
         return relationship_class_item
 
-    def new_relationship_item(self, wide_relationship):
+    def new_relationship_item(self, object_name_list, db_map_dict):
         """Returns new relationship item."""
-        relationship_item = QStandardItem(wide_relationship.object_name_list)
+        relationship_item = QStandardItem(object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
-        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+        relationship_item.setData(db_map_dict, Qt.UserRole + 1)
         return relationship_item
 
     def add_object_classes(self, object_classes):
@@ -1622,7 +1623,8 @@ class ObjectParameterModel(MinimalTableModel):
         """Init class."""
         super().__init__(tree_view_form)
         self._tree_view_form = tree_view_form
-        self.db_map = tree_view_form.db_map
+        self.db_maps = tree_view_form.db_maps
+        self.db_map = self.db_maps[0]
         self.sub_models = []
         self.empty_row_model = None
         self.fixed_columns = list()
@@ -1918,13 +1920,13 @@ class ObjectParameterValueModel(ObjectParameterModel):
         for a different object class."""
         self.beginResetModel()
         self.sub_models = []
-        header = self.db_map.object_parameter_value_fields()
-        data = self.db_map.object_parameter_value_list()
+        header = self.db_maps[0].object_parameter_value_fields() + ["database"]
         self.fixed_columns = [header.index(x) for x in ('object_class_name', 'object_name', 'parameter_name')]
         self.object_class_name_column = header.index('object_class_name')
         parameter_definition_id_column = header.index('parameter_id')
         object_id_column = header.index('object_id')
         self.set_horizontal_header_labels(header)
+        data = self.db_maps[0].object_parameter_value_list()
         data_dict = {}
         for parameter_value in data:
             object_class_id = parameter_value.object_class_id

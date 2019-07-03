@@ -70,43 +70,57 @@ class ItemToolBar(QToolBar):
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
         remove_all = QToolButton(parent)
         remove_all.setIcon(remove_all_icon)
-        remove_all.clicked.connect(self.remove_all_clicked)
+        remove_all.clicked.connect(self.remove_all)
+        remove_all.setToolTip("Remove all items from project.")
         self.addSeparator()
         self.addWidget(remove_all)
         # Execute label and button
         self.addSeparator()
-        ex_label = QLabel("Execute Project")
+        ex_label = QLabel("Execute")
         self.addWidget(ex_label)
         execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(24, 24)
         execute_project = QToolButton(parent)
         execute_project.setIcon(execute_project_icon)
-        execute_project.clicked.connect(self.execute_project_clicked)
+        execute_project.clicked.connect(self.execute_project)
+        execute_project.setToolTip("Execute project.")
         self.addWidget(execute_project)
-        ex_selected_label = QLabel("Execute Selected")
-        self.addWidget(ex_selected_label)
+        # ex_selected_label = QLabel("Execute Selected")
+        # self.addWidget(ex_selected_label)
         execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(24, 24)
         execute_selected = QToolButton(parent)
         execute_selected.setIcon(execute_selected_icon)
-        execute_selected.clicked.connect(self.execute_selected_clicked)
+        execute_selected.clicked.connect(self.execute_selected)
+        execute_selected.setToolTip("Execute selection.")
         self.addWidget(execute_selected)
         self.addSeparator()
         stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(24, 24)
         stop = QToolButton(parent)
         stop.setIcon(stop_icon)
-        stop.clicked.connect(self.stop_clicked)
+        stop.clicked.connect(self.stop_execution)
+        stop.setToolTip("Stop execution.")
         self.addWidget(stop)
+        # Data label and button
+        self.addSeparator()
+        data_label = QLabel("Data")
+        self.addWidget(data_label)
+        open_tree_view_icon = QIcon(":/icons/project_item_icons/tree.svg").pixmap(24, 24)
+        open_tree_view = QToolButton(parent)
+        open_tree_view.setIcon(open_tree_view_icon)
+        open_tree_view.clicked.connect(self.open_tree_view)
+        open_tree_view.setToolTip("Open selected data stores in tree view.")
+        self.addWidget(open_tree_view)
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
 
-    @Slot(bool, name="remove_all_clicked")
-    def remove_all_clicked(self, checked=False):
+    @Slot(bool, name="remove_all")
+    def remove_all(self, checked=False):
         """Slot for handling the remove all tool button clicked signal.
         Calls ToolboxUI remove_all_items() method."""
         self._toolbox.remove_all_items()
 
-    @Slot(bool, name="execute_project_clicked")
-    def execute_project_clicked(self, checked=False):
+    @Slot(bool, name="execute_project")
+    def execute_project(self, checked=False):
         """Slot for handling the Execute project tool button clicked signal."""
         if not self._toolbox.project():
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
@@ -114,8 +128,8 @@ class ItemToolBar(QToolBar):
         self._toolbox.project().execute_project()
         return
 
-    @Slot(bool, name="execute_selected_clicked")
-    def execute_selected_clicked(self, checked=False):
+    @Slot(bool, name="execute_selected")
+    def execute_selected(self, checked=False):
         """Slot for handling the Execute selected tool button clicked signal."""
         if not self._toolbox.project():
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
@@ -123,13 +137,21 @@ class ItemToolBar(QToolBar):
         self._toolbox.project().execute_selected()
         return
 
-    @Slot(bool, name="stop_clicked")
-    def stop_clicked(self, checked=False):
+    @Slot(bool, name="stop_execution")
+    def stop_execution(self, checked=False):
         """Slot for handling the Stop execution tool button clicked signal."""
         if not self._toolbox.project():
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().stop()
+
+    @Slot(bool, name="open_tree_view")
+    def open_tree_view(self, checked=False):
+        """Slot for handling the Open tree view tool button clicked signal."""
+        if not self._toolbox.project():
+            self._toolbox.msg.emit("Please create a new project or open an existing one first")
+            return
+        self._toolbox.project().open_tree_view()
 
 
 class DraggableWidget(QLabel):
@@ -147,11 +169,7 @@ class DraggableWidget(QLabel):
         self.setPixmap(pixmap)
         self.drag_start_pos = None
         self.setToolTip(
-            """
-            <p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>
-        """.format(
-                self.text
-            )
+            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(self.text)
         )
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
