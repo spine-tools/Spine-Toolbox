@@ -50,6 +50,7 @@ class PlainParameterValueEditor(QWidget):
         self._ui.setupUi(self)
         self._ui.value_edit.editingFinished.connect(self._value_changed)
         self._model = _ValueModel(0.0)
+        self._ui.value_edit.setText(str(self._model.value))
 
     def is_value_valid(self):
         return self._value_valid

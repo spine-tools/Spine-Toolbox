@@ -60,17 +60,28 @@ class TimeSeriesVariableResolutionEditor(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._table_model = None
-        self._attributes_model = TimeSeriesAttributesModel(True, True)
+        stamps = np.array([np.datetime64("2000-01-01T00:00:00"), np.datetime64("2000-01-02T00:00:00")])
+        zeros = np.zeros(len(stamps))
+        initial_value = TimeSeriesVariableResolution(stamps, zeros, False, False)
+        self._table_model = IndexedValueTableModel(
+            initial_value.indexes, initial_value.values, _text_to_datetime, float
+        )
+        self._table_model.set_index_header("Time stamps")
+        self._table_model.set_value_header("Values")
+        self._table_model.dataChanged.connect(self._table_model_data_changed)
+        self._attributes_model = TimeSeriesAttributesModel(initial_value.ignore_year, initial_value.repeat)
         self._ui = Ui_TimeSeriesVariableResolutionEditor()
         self._ui.setupUi(self)
         self._plot_widget = PlotWidget()
         self._ui.splitter.insertWidget(1, self._plot_widget)
+        self._ui.time_series_table.setModel(self._table_model)
+        self._ui.length_edit.setValue(len(initial_value))
         self._ui.length_edit.editingFinished.connect(self._change_length)
         self._ui.ignore_year_check_box.setChecked(self._attributes_model.ignore_year)
-        self._ui.ignore_year_check_box.toggled.connect(self._change_ignore_year)
         self._ui.repeat_check_box.setChecked(self._attributes_model.repeat)
+        self._ui.ignore_year_check_box.toggled.connect(self._change_ignore_year)
         self._ui.repeat_check_box.toggled.connect(self._change_repeat)
+        self._update_plot()
 
     @Slot(bool, name="_change_ignore_year")
     def _change_ignore_year(self, ignore_year):
@@ -99,14 +110,10 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._ui.repeat_check_box.setChecked(repeat)
 
     def set_value(self, value):
-        self._table_model = IndexedValueTableModel(value.indexes, value.values, _text_to_datetime, float)
-        self._table_model.set_index_header("Time stamps")
-        self._table_model.set_value_header("Values")
-        self._table_model.dataChanged.connect(self._table_model_data_changed)
-        self._ui.time_series_table.setModel(self._table_model)
+        self._silent_reset_model(value)
         self._ui.length_edit.setValue(len(value))
         self._reset_attributes_model(value.ignore_year, value.repeat)
-        self._plot_widget.canvas.axes.plot(value.indexes, value.values)
+        self._update_plot()
 
     def _silent_reset_model(self, value):
         self._table_model.dataChanged.disconnect(self._table_model_data_changed)

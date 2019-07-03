@@ -103,7 +103,7 @@ class ParameterValueEditor(QDialog):
             selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION.value
             and old_index == _Editor.TIME_SERIES_FIXED_RESOLUTION.value
         ):
-            fixed_resolution_value = self._time_series_fixed_resolution_editor
+            fixed_resolution_value = self._time_series_fixed_resolution_editor.value()
             stamps = fixed_resolution_value.indexes
             values = fixed_resolution_value.values
             variable_resolution_value = TimeSeriesVariableResolution(

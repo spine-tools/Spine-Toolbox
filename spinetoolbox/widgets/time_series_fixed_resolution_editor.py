@@ -16,6 +16,7 @@ Contains logic for the fixed step time series editor widget.
 :date:   14.6.2019
 """
 
+from datetime import datetime
 import dateutil.parser
 import numpy as np
 from PySide2.QtCore import Slot
@@ -112,18 +113,33 @@ class TimeSeriesFixedResolutionEditor(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._table_model = None
-        self._resolution_model = None
+        start = datetime(year=2000, month=1, day=1)
+        resolution = [duration_to_relativedelta("1 day")]
+        values = np.zeros(2)
+        initial_value = TimeSeriesFixedResolution(start, resolution, values, False, False)
+        self._attributes_model = TimeSeriesAttributesModel(initial_value.ignore_year, initial_value.repeat)
+        self._table_model = IndexedValueTableModel(initial_value.indexes, initial_value.values, None, float)
+        self._table_model.set_index_header("Time stamps")
+        self._table_model.set_value_header("Values")
+        self._table_model.set_fixed_indexes(True)
+        self._table_model.dataChanged.connect(self._table_changed)
+        self._resolution_model = _FixedResolutionModel(initial_value.start, initial_value.resolution)
         self._ui = Ui_TimeSeriesFixedResolutionEditor()
         self._ui.setupUi(self)
+        self._plot_widget = PlotWidget()
+        self._ui.splitter.insertWidget(1, self._plot_widget)
+        self._ui.start_time_edit.setText(str(initial_value.start))
+        self._ui.length_edit.setValue(len(initial_value))
+        self._ui.resolution_edit.setText(_resolution_to_text(initial_value.resolution))
+        self._ui.time_series_table.setModel(self._table_model)
         self._ui.start_time_edit.editingFinished.connect(self._start_time_changed)
         self._ui.length_edit.editingFinished.connect(self._change_length)
         self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
-        self._plot_widget = PlotWidget()
-        self._ui.splitter.insertWidget(1, self._plot_widget)
-        self._attributes_model = TimeSeriesAttributesModel(True, True)
+        self._ui.ignore_year_check_box.setChecked(self._attributes_model.ignore_year)
+        self._ui.repeat_check_box.setChecked(self._attributes_model.repeat)
         self._ui.ignore_year_check_box.toggled.connect(self._change_ignore_year)
         self._ui.repeat_check_box.toggled.connect(self._change_repeat)
+        self._update_plot()
 
     @Slot(bool, name="_change_ignore_year")
     def _change_ignore_year(self, ignore_year):
@@ -154,6 +170,13 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.ignore_year_check_box.setChecked(ignore_year)
         self._ui.repeat_check_box.setChecked(repeat)
 
+    def _reset_resolution_model(self, start, resolution, length):
+        self._resolution_model.start = str(start)
+        self._resolution_model.resolution = _resolution_to_text(resolution)
+        self._ui.start_time_edit.setText(str(start))
+        self._ui.length_edit.setValue(length)
+        self._ui.resolution_edit.setText(_resolution_to_text(resolution))
+
     @Slot(name='_resolution_changed')
     def _resolution_changed(self):
         try:
@@ -173,16 +196,8 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._update_plot()
 
     def set_value(self, value):
-        self._table_model = IndexedValueTableModel(value.indexes, value.values, None, float)
-        self._table_model.set_index_header("Time stamps")
-        self._table_model.set_value_header("Values")
-        self._table_model.set_fixed_indexes(True)
-        self._table_model.dataChanged.connect(self._table_changed)
-        self._resolution_model = _FixedResolutionModel(value.start, value.resolution)
-        self._ui.time_series_table.setModel(self._table_model)
-        self._ui.start_time_edit.setText(str(value.start))
-        self._ui.length_edit.setValue(len(value))
-        self._ui.resolution_edit.setText(_resolution_to_text(value.resolution))
+        self._silent_reset_model(value)
+        self._reset_resolution_model(value.start, value.resolution, len(value))
         self._reset_attributes_model(value.ignore_year, value.repeat)
         self._update_plot()
 
