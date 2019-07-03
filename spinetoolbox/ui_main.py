@@ -542,12 +542,15 @@ class ToolboxUI(QMainWindow):
         # TODO: use `selected` and `deselected` to keep a list of selected indexes?
         inds = self.ui.treeView_project.selectedIndexes()
         proj_items = [self.project_item_model.project_item(i) for i in inds]
+        # NOTE: Category items are not selectable anymore
+        # Sync selection with the scene
         scene = self.ui.graphicsView.scene()
-        scene.ignore_selection_changed = True
+        scene.sync_selection = False  # This tells the scene not to sync back
         scene.clearSelection()
         for item in proj_items:
             item.get_icon().setSelected(True)
-        scene.ignore_selection_changed = False
+        scene.sync_selection = True
+        # Refresh active item if needed
         if len(proj_items) == 1:
             new_active_project_item = proj_items[0]
         else:

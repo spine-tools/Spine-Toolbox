@@ -35,7 +35,7 @@ class CustomQGraphicsScene(QGraphicsScene):
         super().__init__(parent)
         self._toolbox = toolbox
         self.item_shadow = None
-        self.ignore_selection_changed = False
+        self.sync_selection = True
         # Set background attributes
         grid = self._toolbox.qsettings().value("appSettings/bgGrid", defaultValue="false")
         self.bg_grid = False if grid == "false" else True
@@ -68,7 +68,7 @@ class CustomQGraphicsScene(QGraphicsScene):
     def handle_selection_changed(self):
         """Synchronize selection with the project tree.
         """
-        if self.ignore_selection_changed:
+        if not self.sync_selection:
             return
         selected_items = [item for item in self.selectedItems() if isinstance(item, ProjectItemIcon)]
         self._toolbox.ui.treeView_project.clearSelection()
