@@ -25,8 +25,8 @@ from indexed_value_table_model import IndexedValueTableModel
 class TestIndexedValueTableModel(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
-        """Overridden method. Runs once before all tests in this class."""
-        cls.app = QApplication().processEvents()
+        if not QApplication.instance():
+            QApplication()
 
     def setUp(self):
         self._indexes = ['a', 'b', 'c']

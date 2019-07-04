@@ -22,15 +22,25 @@ from ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
 
 
 class _ValueModel:
+    """
+    A model to handle the parameter value in the editor.
+
+    Mostly useful because of the handy conversion of strings to floats or booleans.
+
+    Attributes:
+        value (float, bool): a parameter value
+    """
     def __init__(self, value):
         self._value = value
 
     @property
     def value(self):
+        """Returns the value held by the model."""
         return self._value
 
     @value.setter
     def value(self, value):
+        """Converts a value string to float or boolean."""
         try:
             self._value = float(value)
         except ValueError:
@@ -44,6 +54,12 @@ class _ValueModel:
 
 
 class PlainParameterValueEditor(QWidget):
+    """
+    A widget to edit float or boolean type parameter values.
+
+    Attributes:
+        parent_widget (QWidget): a parent widget
+    """
     def __init__(self, parent_widget=None):
         super().__init__(parent_widget)
         self._ui = Ui_PlainParameterValueEditor()
@@ -52,10 +68,8 @@ class PlainParameterValueEditor(QWidget):
         self._model = _ValueModel(0.0)
         self._ui.value_edit.setText(str(self._model.value))
 
-    def is_value_valid(self):
-        return self._value_valid
-
     def set_value(self, value):
+        """Sets the value to be edited in this widget."""
         if not isinstance(value, (int, float, bool)):
             value = 0.0
         self._model = _ValueModel(value)
@@ -63,6 +77,7 @@ class PlainParameterValueEditor(QWidget):
 
     @Slot(name="_value_changed")
     def _value_changed(self):
+        """Updates the model."""
         new_value = self._ui.value_edit.text()
         if new_value:
             try:
@@ -72,4 +87,5 @@ class PlainParameterValueEditor(QWidget):
                 return
 
     def value(self):
+        """Returns the value currently being edited."""
         return self._model.value

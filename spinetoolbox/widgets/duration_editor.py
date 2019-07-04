@@ -22,39 +22,26 @@ from spinedb_api import Duration, duration_to_relativedelta, ParameterValueForma
 from ui.duration_editor import Ui_DurationEditor
 
 
-class _DurationModel:
-    def __init__(self, value):
-        self._value = value
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        self._value = Duration(duration_to_relativedelta(value))
-
-
 class DurationEditor(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._model = _DurationModel(Duration(duration_to_relativedelta("1 hour")))
+        self._value = Duration(duration_to_relativedelta("1 hour"))
         self._ui = Ui_DurationEditor()
         self._ui.setupUi(self)
         self._ui.duration_edit.editingFinished.connect(self._change_duration)
-        self._ui.duration_edit.setText(relativedelta_to_duration(self._model.value.value))
+        self._ui.duration_edit.setText(relativedelta_to_duration(self._value.value))
 
     @Slot(name="_change_duration")
     def _change_duration(self):
         try:
-            self._model.value = self._ui.duration_edit.text()
+            self._value = self._ui.duration_edit.text()
         except ParameterValueFormatError:
-            self._ui.duration_edit.setText(relativedelta_to_duration(self._model.value.value))
+            self._ui.duration_edit.setText(relativedelta_to_duration(self._value.value))
             return
 
     def set_value(self, value):
-        self._model = _DurationModel(value)
+        self._value = value
         self._ui.duration_edit.setText(relativedelta_to_duration(value.value))
 
     def value(self):
-        return self._model.value
+        return self._value

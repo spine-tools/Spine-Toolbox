@@ -39,6 +39,7 @@ from widgets.time_series_variable_resolution_editor import TimeSeriesVariableRes
 
 
 class _Editor(Enum):
+    """Indexes for the specialized editors corresponding to the selector combo box and editor stack."""
     PLAIN_VALUE = 0
     TIME_SERIES_FIXED_RESOLUTION = 1
     TIME_SERIES_VARIABLE_RESOLUTION = 2
@@ -48,13 +49,27 @@ class _Editor(Enum):
 
 
 class ParameterValueEditor(QDialog):
+    """
+    Dialog for editing (relationship) parameter values.
+
+    The dialog takes the editable value from a parent model and shows a specialized editor
+    corresponding to the value type in a stack widget. The user can change the value type
+    by changing the specialized editor using a combo box.
+    When the dialog is closed the value from the currently shown specialized editor is
+    written back to the parent model.
+
+    Attributes:
+        parent_model (ObjectParameterValueModel, RelationshipParameterValueModel): a parent model
+        parent_index (QModelIndex): an index to a parameter value in parent_model
+        parent_widget (QWidget): a parent widget
+    """
     def __init__(self, parent_model, parent_index, parent_widget=None):
         super().__init__(parent_widget)
         self._parent_model = parent_model
         self._parent_index = parent_index
         self._ui = Ui_ParameterValueEditor()
         self._ui.setupUi(self)
-        self._ui.close_button.clicked.connect(self._close_editor)
+        self._ui.close_button.clicked.connect(self.close)
         self._time_pattern_editor = TimePatternEditor()
         self._plain_value_editor = PlainParameterValueEditor()
         self._time_series_fixed_resolution_editor = TimeSeriesFixedResolutionEditor()
@@ -98,6 +113,15 @@ class ParameterValueEditor(QDialog):
 
     @Slot(int, name="_change_parameter_type")
     def _change_parameter_type(self, selector_index):
+        """
+        Handles switching between value types.
+
+        Does a rude conversion between fixed and variable resolution time series.
+        In other cases, a default 'empty' value is used.
+
+        Args:
+            selector_index (int): an index to the selector combo box
+        """
         old_index = self._ui.editor_stack.currentIndex()
         if (
             selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION.value
@@ -129,8 +153,15 @@ class ParameterValueEditor(QDialog):
             self._time_series_fixed_resolution_editor.set_value(fixed_resolution_value)
         self._ui.editor_stack.setCurrentIndex(selector_index)
 
-    @Slot(name="_close_editor")
-    def _close_editor(self):
+    def closeEvent(self, event):
+        """
+        Handles the close event.
+
+        Writes the value from the currently selected specialized editor to the parent model.
+
+        Args:
+            event (QCloseEvent): the close event
+        """
         editor = self._ui.editor_stack.currentWidget()
         self._parent_model.setData(self._parent_index, to_database(editor.value()))
-        self.close()
+        event.accept()

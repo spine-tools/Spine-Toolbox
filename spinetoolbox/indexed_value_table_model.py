@@ -46,7 +46,7 @@ class IndexedValueTableModel(QAbstractTableModel):
         if not index.isValid():
             return Qt.NoItemFlags
         if index.column() == 0 and self._fixed_indexes:
-            return Qt.ItemIsSelectable
+            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):

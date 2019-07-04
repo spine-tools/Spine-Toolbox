@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains logic for the time series editor widget.
+Contains logic for the variable resolution time series editor widget.
 
 :author: A. Soininen (VTT)
 :date:   31.5.2019
@@ -28,6 +28,20 @@ from widgets.time_series_fixed_resolution_editor import TimeSeriesAttributesMode
 
 
 def _resize_series(indexes, values, length):
+    """
+    Resizes the indexes and values arrays to given length.
+
+    Crops the arrays if length < len(indexes).
+    If length > len(indexes) adds new time stamps with the step of the last duration
+    in the series and pads values with zeros.
+
+    Args:
+        indexes (numpy.ndarray): an array of numpy.datetime64 time stamps
+        values (numpy.ndarray): an array of numbers
+
+    Returns:
+        Copies of resized indexes and values as a tuple
+    """
     old_length = len(indexes)
     if old_length == length:
         return
@@ -44,23 +58,21 @@ def _resize_series(indexes, values, length):
 
 
 def _text_to_datetime(text):
+    """Converts a string to a numpy.datetime64 object."""
     return np.datetime64(dateutil.parser.parse(text))
 
 
 class TimeSeriesVariableResolutionEditor(QWidget):
     """
-    A widget for editing time series data.
+    A widget for editing variable resolution time series data.
 
     Attributes:
-        model (MinimalTableModel): the model cell of which is being edited
-        index (QModelIndex): an index to model
-        value (ParameterValue): parameter value at index
         parent (QWidget): a parent widget
     """
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        stamps = np.array([np.datetime64("2000-01-01T00:00:00"), np.datetime64("2000-01-02T00:00:00")])
+        stamps = np.array([np.datetime64("2000-01-01T00:00:00"), np.datetime64("2000-01-01T01:00:00")])
         zeros = np.zeros(len(stamps))
         initial_value = TimeSeriesVariableResolution(stamps, zeros, False, False)
         self._table_model = IndexedValueTableModel(
@@ -68,7 +80,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         )
         self._table_model.set_index_header("Time stamps")
         self._table_model.set_value_header("Values")
-        self._table_model.dataChanged.connect(self._table_model_data_changed)
+        self._table_model.dataChanged.connect(self._update_plot)
         self._attributes_model = TimeSeriesAttributesModel(initial_value.ignore_year, initial_value.repeat)
         self._ui = Ui_TimeSeriesVariableResolutionEditor()
         self._ui.setupUi(self)
@@ -76,7 +88,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._ui.splitter.insertWidget(1, self._plot_widget)
         self._ui.time_series_table.setModel(self._table_model)
         self._ui.length_edit.setValue(len(initial_value))
-        self._ui.length_edit.editingFinished.connect(self._change_length)
+        self._ui.length_edit.valueChanged.connect(self._change_length)
         self._ui.ignore_year_check_box.setChecked(self._attributes_model.ignore_year)
         self._ui.repeat_check_box.setChecked(self._attributes_model.repeat)
         self._ui.ignore_year_check_box.toggled.connect(self._change_ignore_year)
@@ -85,47 +97,43 @@ class TimeSeriesVariableResolutionEditor(QWidget):
 
     @Slot(bool, name="_change_ignore_year")
     def _change_ignore_year(self, ignore_year):
+        """Updates the attributes model."""
         self._attributes_model.ignore_year = ignore_year
 
-    @Slot(name='_change_length')
-    def _change_length(self):
-        length = self._ui.length_edit.value()
+    @Slot(int, name='_change_length')
+    def _change_length(self, length):
+        """Resizes the time series."""
         indexes = self._table_model.indexes
         values = self._table_model.values
         resized_indexes, resized_values = _resize_series(indexes, values, length)
         value = TimeSeriesVariableResolution(
             resized_indexes, resized_values, self._attributes_model.ignore_year, self._attributes_model.repeat
         )
-        self._silent_reset_model(value)
+        self._table_model.reset(value.indexes, value.values)
         self._update_plot()
 
     @Slot(bool, name="_change_repeat")
     def _change_repeat(self, repeat):
+        """Updates the attributes model."""
         self._attributes_model.repeat = repeat
 
     def _reset_attributes_model(self, ignore_year, repeat):
+        """Resets the attributes model."""
         self._attributes_model.ignore_year = ignore_year
         self._attributes_model.repeat = repeat
         self._ui.ignore_year_check_box.setChecked(ignore_year)
         self._ui.repeat_check_box.setChecked(repeat)
 
     def set_value(self, value):
-        self._silent_reset_model(value)
+        """Sets the time series being edited."""
+        self._table_model.reset(value.indexes, value.values)
         self._ui.length_edit.setValue(len(value))
         self._reset_attributes_model(value.ignore_year, value.repeat)
         self._update_plot()
 
-    def _silent_reset_model(self, value):
-        self._table_model.dataChanged.disconnect(self._table_model_data_changed)
-        self._table_model.reset(value.indexes, value.values)
-        self._table_model.dataChanged.connect(self._table_model_data_changed)
-
     @Slot("QModelIndex", "QModelIndex", "list", name="_table_model_data_changed")
-    def _table_model_data_changed(self, topLeft, bottomRight, roles=None):
-        """A slot to signal that the table view has changed."""
-        self._update_plot()
-
     def _update_plot(self):
+        """Updates the plot widget."""
         stamps = self._table_model.indexes
         values = self._table_model.values
         self._plot_widget.canvas.axes.cla()
@@ -133,6 +141,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._plot_widget.canvas.draw()
 
     def value(self):
+        """Return the time series currently being edited."""
         stamps = self._table_model.indexes
         values = self._table_model.values
         return TimeSeriesVariableResolution(

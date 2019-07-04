@@ -25,18 +25,29 @@ from indexed_value_table_model import IndexedValueTableModel
 
 
 class TimePatternEditor(QWidget):
+    """
+    A widget for editing time patterns.
+
+    Attributes:
+        parent (QWidget):
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
-        indexes = np.array(["1-7d"])
+        indexes = ["1-7d"]
         values = np.array([0.0])
         self._ui = Ui_TimePatternEditor()
         self._ui.setupUi(self)
         self._set_model(indexes, values)
-        self._ui.length_edit.editingFinished.connect(self._change_length)
+        self._ui.length_edit.valueChanged.connect(self._change_length)
 
     @Slot(int, name="_change_length")
-    def _change_length(self):
-        length = self._ui.length_edit.value()
+    def _change_length(self, length):
+        """
+        Updates the length of the model.
+
+        If new length is shorter, crop the data, otherwise append with empty time periods and zeros.
+        """
         old_length = len(self._model.indexes)
         if length < old_length:
             new_indexes = self._model.indexes[:length]
@@ -49,16 +60,19 @@ class TimePatternEditor(QWidget):
             self._model.reset(new_indexes, new_values)
 
     def _set_model(self, indexes, values):
+        """Updates the model and the interface."""
         self._model = IndexedValueTableModel(indexes, values, str, float)
         self._model.set_index_header("Patterns")
         self._model.set_value_header("Values")
         self._ui.pattern_edit_table.setModel(self._model)
 
     def set_value(self, value):
+        """Sets the parameter value to be edited."""
         self._set_model(value.indexes, value.values)
         self._ui.length_edit.setValue(len(value))
 
     def value(self):
+        """Returns the parameter value currently being edited."""
         indexes = self._model.indexes
         values = self._model.values
         return TimePattern(indexes, values)

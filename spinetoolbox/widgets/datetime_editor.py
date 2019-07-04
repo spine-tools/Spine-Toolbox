@@ -16,48 +16,42 @@ An editor widget for editing datetime database (relationship) parameter values.
 :date:   28.6.2019
 """
 
-from datetime import datetime
-import dateutil.parser
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import DateTime
 from ui.datetime_editor import Ui_DatetimeEditor
 
 
-class _DatetimeModel:
-    def __init__(self, value):
-        self._value = value
-
-    @property
-    def value(self):
-        return self._value
-
-    @value.setter
-    def value(self, value):
-        self._value = DateTime(dateutil.parser.parse(value))
-
-
 class DatetimeEditor(QWidget):
+    """
+    An editor widget for DateTime type parameter values.
+
+    Attributes:
+        parent (QWidget): a parent widget
+    """
     def __init__(self, parent=None):
         super().__init__(parent)
-        self._model = _DatetimeModel(DateTime(datetime(year=1, month=1, day=1)))
+        self._value = DateTime("2000-01-01")
         self._ui = Ui_DatetimeEditor()
         self._ui.setupUi(self)
         self._ui.datetime_edit.editingFinished.connect(self._change_datetime)
-        self._ui.datetime_edit.setText(str(self._model.value.value))
+        self._ui.datetime_edit.setText(str(self._value.value))
 
     @Slot(name="_change_datetime")
     def _change_datetime(self):
+        """Updates the internal DateTime value"""
         new_value = self._ui.datetime_edit.text()
         try:
-            self._model.value = new_value
+            self._value = new_value
         except ValueError:
-            self._ui.datetime_edit.setText(str(self._model.value))
+            self._ui.datetime_edit.setText(str(self._value))
             return
 
     def set_value(self, value):
-        self._model = _DatetimeModel(value)
+        """Sets the value to be edited."""
+        self._value = value
         self._ui.datetime_edit.setText(str(value.value))
 
     def value(self):
-        return self._model.value
+        """Returns the editor's current value."""
+        return self._value
