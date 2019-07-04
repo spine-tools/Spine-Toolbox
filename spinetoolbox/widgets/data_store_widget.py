@@ -329,6 +329,7 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
+        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('url'))
         self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)

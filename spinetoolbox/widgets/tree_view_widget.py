@@ -35,7 +35,7 @@ from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect
+from helpers import busy_effect, short_db_name
 
 
 class TreeViewForm(DataStoreForm):
@@ -85,13 +85,13 @@ class TreeViewForm(DataStoreForm):
         self.settings_group = 'treeViewWidget'
         self.do_clear_selections = True
         self.restore_dock_widgets()
+        self.restore_ui()
         # init models and views
         self.init_models()
         self.init_views()
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.connect_signals()
-        self.restore_ui()
         self.setWindowTitle("Data store tree view    -- {} --".format(self.databases))
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
@@ -528,12 +528,12 @@ class TreeViewForm(DataStoreForm):
 
     def clear_selections(self, *skip_widgets):
         """Clear selections in all widgets except `skip_widgets`."""
+        self.do_clear_selections = False
         for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
             if w in skip_widgets:
                 continue
-            self.do_clear_selections = False
             w.selectionModel().clearSelection()
-            self.do_clear_selections = True
+        self.do_clear_selections = True
 
     @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
@@ -660,50 +660,40 @@ class TreeViewForm(DataStoreForm):
 
     def update_filter(self):
         """Update filters on parameter models according to selected and deselected object tree indexes."""
-        self.update_selected_object_class_ids()
-        self.update_selected_object_ids()
-        self.update_selected_relationship_class_ids()
-        self.update_selected_object_id_lists()
-        self.do_update_filter()
-
-    def update_selected_object_class_ids(self):
-        """Update set of selected object class id, by combining selectiong from tree
-        and parameter tag.
-        """
+        # Prepare stuff
+        rel_inds = {
+            (db_map, ind): None
+            for ind in self.selected_obj_tree_indexes.get('relationship', {})
+            for db_map in ind.data(Qt.UserRole + 1)
+        }
+        rel_cls_inds = {
+            (db_map, ind): None
+            for ind in self.selected_obj_tree_indexes.get('relationship_class', {})
+            for db_map in ind.data(Qt.UserRole + 1)
+        }
+        rel_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in rel_inds})
+        obj_inds = {
+            (db_map, ind): None
+            for ind in self.selected_obj_tree_indexes.get('object', {})
+            for db_map in ind.data(Qt.UserRole + 1)
+        }
+        obj_inds.update({(db_map, ind.parent()): None for db_map, ind in rel_cls_inds})
+        obj_cls_inds = {
+            (db_map, ind): None
+            for ind in self.selected_obj_tree_indexes.get('object_class', {})
+            for db_map in ind.data(Qt.UserRole + 1)
+        }
+        obj_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in obj_inds})
+        # Update selected...
         self.selected_object_class_ids = set(
-            ind.data(Qt.UserRole + 1)['id'] for ind in self.selected_obj_tree_indexes.get('object_class', {})
+            (db_map, ind.data(Qt.UserRole + 1)[db_map]['id']) for db_map, ind in obj_cls_inds
         )
-        self.selected_object_class_ids.update(
-            set(ind.data(Qt.UserRole + 1)['class_id'] for ind in self.selected_obj_tree_indexes.get('object', {}))
-        )
-        self.selected_object_class_ids.update(
-            set(
-                ind.parent().data(Qt.UserRole + 1)['class_id']
-                for ind in self.selected_obj_tree_indexes.get('relationship_class', {})
-            )
-        )
-        self.selected_object_class_ids.update(
-            set(
-                ind.parent().parent().data(Qt.UserRole + 1)['class_id']
-                for ind in self.selected_obj_tree_indexes.get('relationship', {})
-            )
-        )
-
-    def update_selected_object_ids(self):
-        """Update set of selected object id."""
-        self.selected_object_ids = {}
-        for ind in self.selected_obj_tree_indexes.get('object', {}):
-            object_class_id = ind.data(Qt.UserRole + 1)['class_id']
-            object_id = ind.data(Qt.UserRole + 1)['id']
-            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
-        for ind in self.selected_obj_tree_indexes.get('relationship_class', {}):
-            object_class_id = ind.parent().data(Qt.UserRole + 1)['class_id']
-            object_id = ind.parent().data(Qt.UserRole + 1)['id']
-            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
-        for ind in self.selected_obj_tree_indexes.get('relationship', set()):
-            object_class_id = ind.parent().parent().data(Qt.UserRole + 1)['class_id']
-            object_id = ind.parent().parent().data(Qt.UserRole + 1)['id']
-            self.selected_object_ids.setdefault(object_class_id, set()).add(object_id)
+        self.selected_object_ids = dict()
+        for db_map, ind in obj_inds:
+            d = ind.data(Qt.UserRole + 1)[db_map]
+            self.selected_object_ids.setdefault((db_map, d['class_id']), set()).add((db_map.db_url, d['id']))
+        rel_inds.update()
+        self.do_update_filter()
 
     def update_selected_relationship_class_ids(self):
         """Update set of selected relationship class id."""
@@ -1224,28 +1214,3 @@ class TreeViewForm(DataStoreForm):
             self.msg.emit("Successfully removed parameter value list(s).")
         except SpineDBAPIError as e:
             self._tree_view_form.msg_error.emit(e.msg)
-
-    def close_editors(self):
-        """Close any open editor in the parameter table views.
-        Call this before closing the database mapping."""
-        current = self.ui.tableView_object_parameter_definition.currentIndex()
-        if self.ui.tableView_object_parameter_definition.isPersistentEditorOpen(current):
-            self.ui.tableView_object_parameter_definition.closePersistentEditor(current)
-        current = self.ui.tableView_object_parameter_value.currentIndex()
-        if self.ui.tableView_object_parameter_value.isPersistentEditorOpen(current):
-            self.ui.tableView_object_parameter_value.closePersistentEditor(current)
-        current = self.ui.tableView_relationship_parameter_definition.currentIndex()
-        if self.ui.tableView_relationship_parameter_definition.isPersistentEditorOpen(current):
-            self.ui.tableView_relationship_parameter_definition.closePersistentEditor(current)
-        current = self.ui.tableView_relationship_parameter_value.currentIndex()
-        if self.ui.tableView_relationship_parameter_value.isPersistentEditorOpen(current):
-            self.ui.tableView_relationship_parameter_value.closePersistentEditor(current)
-
-    def closeEvent(self, event=None):
-        """Handle close window.
-
-        Args:
-            event (QEvent): Closing event if 'X' is clicked.
-        """
-        super().closeEvent(event)
-        self.close_editors()

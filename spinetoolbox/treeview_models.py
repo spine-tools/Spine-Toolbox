@@ -230,7 +230,7 @@ class ObjectTreeModel(QStandardItemModel):
 
     @busy_effect
     def fetchMore(self, parent):
-        """Build the deeper level of the tree"""
+        """Build the deeper levels of the tree"""
         if not parent.isValid():
             return False
         parent_type = parent.data(Qt.UserRole)
@@ -240,43 +240,27 @@ class ObjectTreeModel(QStandardItemModel):
         fetched = self._fetched[parent_type]
         if parent_type == 'object_class':
             parent_db_map_dict = parent.data(Qt.UserRole + 1)
-            object_d = {}
-            for db_map, object_class in parent_db_map_dict.items():
-                for item in db_map.object_list(class_id=object_class['id']):
-                    object_d.setdefault(item.name, {})[db_map] = item._asdict()
-                    # NOTE: the object name is unique within one class
             object_class_item = self.itemFromIndex(parent)
-            for name, db_map_dict in object_d.items():
-                object_item = self.new_object_item(name, db_map_dict)
-                databases = str([short_db_name(x) for x in db_map_dict])
-                object_class_item.appendRow([object_item, QStandardItem(databases)])
+            for db_map, object_class in parent_db_map_dict.items():
+                self.add_objects_to_class(db_map, db_map.object_list(class_id=object_class['id']), object_class_item)
             fetched.add(parent)
         elif parent_type == 'object':
             parent_db_map_dict = parent.data(Qt.UserRole + 1)
-            relationship_class_d = {}
-            for db_map, object_ in parent_db_map_dict.items():
-                for item in db_map.wide_relationship_class_list(object_class_id=object_['class_id']):
-                    key = (item.name, item.object_class_name_list)
-                    relationship_class_d.setdefault(key, {})[db_map] = item._asdict()
             object_item = self.itemFromIndex(parent)
-            for (name, object_class_name_list), db_map_dict in relationship_class_d.items():
-                relationship_class_item = self.new_relationship_class_item(name, object_class_name_list, db_map_dict)
-                databases = str([short_db_name(x) for x in db_map_dict])
-                object_item.appendRow([relationship_class_item, QStandardItem(databases)])
+            for db_map, object_ in parent_db_map_dict.items():
+                relationship_classes = db_map.wide_relationship_class_list(object_class_id=object_['class_id'])
+                self.add_relationships_classes_to_object(db_map, relationship_classes, object_item)
             fetched.add(parent)
         elif parent_type == 'relationship_class':
             grand_parent_db_map_dict = parent.parent().data(Qt.UserRole + 1)
             parent_db_map_dict = parent.data(Qt.UserRole + 1)
-            relationship_d = {}
+            rel_cls_item = self.itemFromIndex(parent)
             for db_map, relationship_class in parent_db_map_dict.items():
-                object_ = grand_parent_db_map_dict[db_map]
-                for item in db_map.wide_relationship_list(class_id=relationship_class['id'], object_id=object_['id']):
-                    relationship_d.setdefault(item.object_name_list, {})[db_map] = item._asdict()
-            relationship_class_item = self.itemFromIndex(parent)
-            for object_name_list, db_map_dict in relationship_d.items():
-                relationship_item = self.new_relationship_item(object_name_list, db_map_dict)
-                databases = str([short_db_name(x) for x in db_map_dict])
-                relationship_class_item.appendRow([relationship_item, QStandardItem(databases)])
+                object_ = grand_parent_db_map_dict[db_map]  # TODO: is KeyError possible here?
+                relationships = db_map.wide_relationship_list(
+                    class_id=relationship_class['id'], object_id=object_['id']
+                )
+                self.add_relationships_to_class(db_map, relationships, rel_cls_item)
             fetched.add(parent)
         self.dataChanged.emit(parent, parent)
 
@@ -287,148 +271,227 @@ class ObjectTreeModel(QStandardItemModel):
         self._fetched = {"object_class": set(), "object": set(), "relationship_class": set(), "relationship": set()}
         self.root_item = QStandardItem('root')
         self.root_item.setData('root', Qt.UserRole)
-        object_class_d = {}
+        db_item = QStandardItem(", ".join([short_db_name(x) for x in self.db_maps]))
         for db_map in self.db_maps:
-            for object_class in db_map.object_class_list():
-                object_class_d.setdefault(object_class.name, {})[db_map] = object_class._asdict()
-        for name, db_map_dict in object_class_d.items():
-            object_class_item = self.new_object_class_item(name, db_map_dict)
-            databases = str([short_db_name(x) for x in db_map_dict])
-            self.root_item.appendRow([object_class_item, QStandardItem(databases)])
-        databases = str([short_db_name(x) for x in self.db_maps])
-        self.appendRow([self.root_item, QStandardItem(databases)])
+            self.add_object_classes(db_map, db_map.object_class_list())
+        self.appendRow([self.root_item, db_item])
 
-    def new_object_class_item(self, name, db_map_dict):
+    def new_object_class_row(self, db_map, object_class):
         """Returns new object class item."""
-        object_class_item = QStandardItem(name)
+        object_class_item = QStandardItem(object_class.name)
         object_class_item.setData('object_class', Qt.UserRole)
-        object_class_item.setData(db_map_dict, Qt.UserRole + 1)
-        object_class_item.setData([v['description'] for v in db_map_dict.values()], Qt.ToolTipRole)
+        object_class_item.setData({db_map: object_class._asdict()}, Qt.UserRole + 1)
+        object_class_item.setData(object_class.description, Qt.ToolTipRole)
         object_class_item.setData(self.bold_font, Qt.FontRole)
-        return object_class_item
+        db_item = QStandardItem(short_db_name(db_map))
+        return [object_class_item, db_item]
 
-    def new_object_item(self, name, db_map_dict):
+    def new_object_row(self, db_map, object_):
         """Returns new object item."""
-        object_item = QStandardItem(name)
+        object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
-        object_item.setData(db_map_dict, Qt.UserRole + 1)
-        object_item.setData([v['description'] for v in db_map_dict.values()], Qt.ToolTipRole)
-        return object_item
+        object_item.setData({db_map: object_._asdict()}, Qt.UserRole + 1)
+        object_item.setData(object_.description, Qt.ToolTipRole)
+        db_item = QStandardItem(short_db_name(db_map))
+        return [object_item, db_item]
 
-    def new_relationship_class_item(self, name, object_class_name_list, db_map_dict):
+    def new_relationship_class_row(self, db_map, relationship_class):
         """Returns new relationship class item."""
-        relationship_class_item = QStandardItem(name)
+        relationship_class_item = QStandardItem(relationship_class.name)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
-        relationship_class_item.setData(db_map_dict, Qt.UserRole + 1)
-        relationship_class_item.setData(object_class_name_list, Qt.ToolTipRole)
+        relationship_class_item.setData({db_map: relationship_class._asdict()}, Qt.UserRole + 1)
+        relationship_class_item.setData(relationship_class.object_class_name_list, Qt.ToolTipRole)
         relationship_class_item.setData(self.bold_font, Qt.FontRole)
-        return relationship_class_item
+        db_item = QStandardItem(short_db_name(db_map))
+        return [relationship_class_item, db_item]
 
-    def new_relationship_item(self, object_name_list, db_map_dict):
+    def new_relationship_row(self, db_map, relationship):
         """Returns new relationship item."""
-        relationship_item = QStandardItem(object_name_list)
+        relationship_item = QStandardItem(relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
-        relationship_item.setData(db_map_dict, Qt.UserRole + 1)
-        return relationship_item
+        relationship_item.setData({db_map: relationship._asdict()}, Qt.UserRole + 1)
+        db_item = QStandardItem(short_db_name(db_map))
+        return [relationship_item, db_item]
 
-    def add_object_classes(self, object_classes):
-        """Add object class items to the model."""
+    def add_object_classes(self, db_map, object_classes):
+        """Add object class items to given db.
+        """
+        existing_rows = [
+            [self.root_item.child(i, 0), self.root_item.child(i, 1)] for i in range(self.root_item.rowCount())
+        ]
+        existing_row_d = {row[0].text(): row for row in existing_rows}
+        new_rows = []
         for object_class in object_classes:
-            object_class_item = self.new_object_class_item(object_class)
+            if object_class.name in existing_row_d:
+                # Already in model, append db_map information
+                object_class_item, db_item = existing_row_d[object_class.name]
+                db_map_dict = object_class_item.data(Qt.UserRole + 1)
+                db_map_dict[db_map] = object_class._asdict()
+                databases = db_item.data(Qt.DisplayRole)
+                databases += ", " + short_db_name(db_map)
+                db_item.setData(databases, Qt.DisplayRole)
+            else:
+                new_rows.append(self.new_object_class_row(db_map, object_class))
+        # Insert rows at right position given display_order
+        for row in new_rows:
+            object_class_item = row[0]
+            db_map_dict = object_class_item.data(Qt.UserRole + 1)
+            object_class = db_map_dict[db_map]
             for i in range(self.root_item.rowCount()):
                 visited_object_class_item = self.root_item.child(i)
-                visited_object_class = visited_object_class_item.data(Qt.UserRole + 1)
-                if visited_object_class['display_order'] >= object_class.display_order:
+                visited_db_map_dict = visited_object_class_item.data(Qt.UserRole + 1)
+                if db_map not in visited_db_map_dict:
+                    continue
+                visited_object_class = visited_db_map_dict[db_map]
+                if visited_object_class['display_order'] >= object_class['display_order']:
                     self.root_item.insertRow(i, QStandardItem())
-                    self.root_item.setChild(i, 0, object_class_item)
+                    self.root_item.setChild(i, 0, row)
                     break
             else:
-                self.root_item.appendRow(object_class_item)
+                self.root_item.appendRow(row)
 
-    def add_objects(self, objects):
-        """Add object items to the model."""
+    def add_objects(self, db_map, objects):
+        """Add object items to the given db."""
         object_dict = {}
         for object_ in objects:
             object_dict.setdefault(object_.class_id, list()).append(object_)
-        # Sweep first level and check if there's something to append
         for i in range(self.root_item.rowCount()):
-            object_class_item = self.root_item.child(i)
-            object_class_id = object_class_item.data(Qt.UserRole + 1)['id']
-            try:
-                object_list = object_dict[object_class_id]
-            except KeyError:
-                continue
-            # If not fetched, just continue
+            object_class_item = self.root_item.child(i, 0)
             object_class_index = self.indexFromItem(object_class_item)
             if self.canFetchMore(object_class_index):
                 continue
-            # Already fetched, add new items manually
-            object_item_list = list()
-            for object_ in object_list:
-                object_item = self.new_object_item(object_)
-                object_item_list.append(object_item)
-            object_class_item.appendRows(object_item_list)
+            db_map_dict = object_class_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
+                # Can someone be adding objects to a class that doesn't exist in the same db?
+                continue
+            object_class = db_map_dict[db_map]
+            object_class_id = object_class['id']
+            if object_class_id not in object_dict:
+                continue
+            objects = object_dict[object_class_id]
+            self.add_objects_to_class(db_map, objects, object_class_item)
 
-    def add_relationship_classes(self, relationship_classes):
+    def add_objects_to_class(self, db_map, objects, object_class_item):
+        existing_rows = [
+            [object_class_item.child(j, 0), object_class_item.child(j, 1)] for j in range(object_class_item.rowCount())
+        ]
+        existing_row_d = {row[0].text(): row for row in existing_rows}
+        new_rows = []
+        for object_ in objects:
+            if object_.name in existing_row_d:
+                # Already in model, append db_map information
+                object_item, db_item = existing_row_d[object_.name]
+                db_map_dict = object_item.data(Qt.UserRole + 1)
+                db_map_dict[db_map] = object_._asdict()
+                databases = db_item.data(Qt.DisplayRole)
+                databases += ", " + short_db_name(db_map)
+                db_item.setData(databases, Qt.DisplayRole)
+            else:
+                new_rows.append(self.new_object_row(db_map, object_))
+        for row in new_rows:
+            object_class_item.appendRow(row)
+
+    def add_relationship_classes(self, db_map, relationship_classes):
         """Add relationship class items to model."""
         relationship_class_dict = {}
         for relationship_class in relationship_classes:
-            relationship_class_dict.setdefault(relationship_class.object_class_id_list, list()).append(
-                relationship_class
-            )
-        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        for visited_item in items:
-            visited_type = visited_item.data(Qt.UserRole)
-            if not visited_type == 'object':
+            for object_class_id in relationship_class.object_class_id_list.split(","):
+                relationship_class_dict.setdefault(int(object_class_id), list()).append(relationship_class)
+        for i in range(self.root_item.rowCount()):
+            object_class_item = self.root_item.child(i, 0)
+            object_class_index = self.indexFromItem(object_class_item)
+            if self.canFetchMore(object_class_index):
                 continue
-            visited_object = visited_item.data(Qt.UserRole + 1)
-            visited_object_class_id = visited_object['class_id']
-            relationship_class_list = list()
-            for object_class_id_list, relationship_classes in relationship_class_dict.items():
-                if visited_object_class_id in [int(x) for x in object_class_id_list.split(',')]:
-                    relationship_class_list.extend(relationship_classes)
-            if not relationship_class_list:
+            db_map_dict = object_class_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
+                # Can someone be adding relationship classes where one of the classes doesn't exist in the same db?
                 continue
-            # If not fetched, just continue
-            visited_index = self.indexFromItem(visited_item)
-            if self.canFetchMore(visited_index):
+            object_class = db_map_dict[db_map]
+            object_class_id = object_class['id']
+            if object_class_id not in relationship_class_dict:
                 continue
-            # Already fetched, add new items manually
-            relationship_class_item_list = list()
-            for relationship_class in relationship_class_list:
-                relationship_class_item = self.new_relationship_class_item(relationship_class)
-                relationship_class_item_list.append(relationship_class_item)
-            visited_item.appendRows(relationship_class_item_list)
+            relationship_classes = relationship_class_dict[object_class_id]
+            for j in range(object_class_item.rowCount()):
+                object_item = object_class_item.child(j, 0)
+                object_index = self.indexFromItem(object_item)
+                if self.canFetchMore(object_index):
+                    continue
+                self.add_relationships_classes_to_object(db_map, relationship_classes, object_item)
+
+    def add_relationships_classes_to_object(self, db_map, relationship_classes, object_item):
+        existing_rows = [[object_item.child(j, 0), object_item.child(j, 1)] for j in range(object_item.rowCount())]
+        existing_row_d = {(row[0].text(), row[0].data(Qt.ToolTipRole)): row for row in existing_rows}
+        new_rows = []
+        for rel_cls in relationship_classes:
+            if (rel_cls.name, rel_cls.object_class_name_list) in existing_row_d:
+                # Already in model, append db_map information
+                rel_cls_item, db_item = existing_row_d[rel_cls.name, rel_cls.object_class_name_list]
+                db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+                db_map_dict[db_map] = rel_cls._asdict()
+                databases = db_item.data(Qt.DisplayRole)
+                databases += ", " + short_db_name(db_map)
+                db_item.setData(databases, Qt.DisplayRole)
+            else:
+                new_rows.append(self.new_relationship_class_row(db_map, rel_cls))
+        for row in new_rows:
+            object_item.appendRow(row)
 
     def add_relationships(self, relationships):
         """Add relationship items to model."""
         relationship_dict = {}
         for relationship in relationships:
-            relationship_dict.setdefault(relationship.class_id, list()).append(relationship)
-        items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        for visited_item in items:
-            visited_type = visited_item.data(Qt.UserRole)
-            if not visited_type == 'relationship_class':
+            class_id = relationship['class_id']
+            for object_id in relationship.object_id_list.split(","):
+                relationship_dict.setdefault((int(object_id), class_id), list()).append(relationship)
+        for i in range(self.root_item.rowCount()):
+            object_class_item = self.root_item.child(i, 0)
+            object_class_index = self.indexFromItem(object_class_item)
+            if self.canFetchMore(object_class_index):
                 continue
-            visited_relationship_class_id = visited_item.data(Qt.UserRole + 1)['id']
-            try:
-                relationship_list = relationship_dict[visited_relationship_class_id]
-            except KeyError:
-                continue
-            # If not fetched, just continue
-            visited_index = self.indexFromItem(visited_item)
-            if self.canFetchMore(visited_index):
-                continue
-            # Already fetched, add new items manually
-            relationship_item_list = list()
-            visited_object_id = visited_item.parent().data(Qt.UserRole + 1)['id']
-            for relationship in relationship_list:
-                object_id_list = relationship.object_id_list
-                if visited_object_id not in [int(x) for x in object_id_list.split(',')]:
+            for j in range(object_class_item.rowCount()):
+                object_item = object_class_item.child(j, 0)
+                object_index = self.indexFromItem(object_item)
+                if self.canFetchMore(object_index):
                     continue
-                relationship_item = self.new_relationship_item(relationship)
-                relationship_item_list.append(relationship_item)
-            visited_item.appendRows(relationship_item_list)
+                db_map_dict = object_item.data(Qt.UserRole + 1)
+                if db_map not in db_map_dict:
+                    # Can someone be adding relationships where one of the objects doesn't exist in the same db?
+                    continue
+                object_ = db_map_dict[db_map]
+                object_id = object_['id']
+                for k in range(object_item.rowCount()):
+                    rel_cls_item = object_item.child(k, 0)
+                    rel_cls_index = self.indexFromItem(rel_cls_item)
+                    if self.canFetchMore(rel_cls_index):
+                        continue
+                    db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+                    if db_map not in db_map_dict:
+                        # Can someone be adding relationships to a class that doesn't exist in the same db?
+                        continue
+                    rel_cls = db_map_dict[db_map]
+                    rel_cls_id = rel_cls['id']
+                    if (object_id, rel_cls_id) not in relationship_dict:
+                        continue
+                    relationships = relationship_dict[object_id, rel_cls_id]
+                    self.add_relationships_to_class(db_map, relationships, rel_cls_item)
+
+    def add_relationships_to_class(self, db_map, relationships, rel_cls_item):
+        existing_rows = [[rel_cls_item.child(j, 0), rel_cls_item.child(j, 1)] for j in range(rel_cls_item.rowCount())]
+        existing_row_d = {row[0].text(): row for row in existing_rows}
+        new_rows = []
+        for relationship in relationships:
+            if relationship.object_name_list in existing_row_d:
+                # Already in model, append db_map information
+                relationship_item, db_item = existing_row_d[relationship.object_name_list]
+                db_map_dict = relationship_item.data(Qt.UserRole + 1)
+                db_map_dict[db_map] = relationship._asdict()
+                databases = db_item.data(Qt.DisplayRole)
+                databases += ", " + short_db_name(db_map)
+                db_item.setData(databases, Qt.DisplayRole)
+            else:
+                new_rows.append(self.new_relationship_row(db_map, relationship))
+        for row in new_rows:
+            rel_cls_item.appendRow(row)
 
     def update_object_classes(self, updated_items):
         """Update object classes in the model."""
@@ -1920,21 +1983,26 @@ class ObjectParameterValueModel(ObjectParameterModel):
         for a different object class."""
         self.beginResetModel()
         self.sub_models = []
-        header = self.db_maps[0].object_parameter_value_fields() + ["database"]
+        header = self.db_maps[0].object_parameter_value_fields() + ["database", "url"]
         self.fixed_columns = [header.index(x) for x in ('object_class_name', 'object_name', 'parameter_name')]
         self.object_class_name_column = header.index('object_class_name')
         parameter_definition_id_column = header.index('parameter_id')
         object_id_column = header.index('object_id')
+        url_column = header.index('url')
         self.set_horizontal_header_labels(header)
-        data = self.db_maps[0].object_parameter_value_list()
         data_dict = {}
-        for parameter_value in data:
-            object_class_id = parameter_value.object_class_id
-            data_dict.setdefault(object_class_id, list()).append(parameter_value)
+        for db_map in self.db_maps:
+            for parameter_value in db_map.object_parameter_value_list():
+                object_class_id = (db_map, parameter_value.object_class_id)
+                data_dict.setdefault(object_class_id, list()).append(
+                    list(parameter_value) + [short_db_name(db_map), db_map.db_url]
+                )
         for object_class_id, data in data_dict.items():
             source_model = SubParameterValueModel(self)
             source_model.reset_model([list(x) for x in data])
-            model = ObjectParameterValueFilterProxyModel(self, parameter_definition_id_column, object_id_column)
+            model = ObjectParameterValueFilterProxyModel(
+                self, parameter_definition_id_column, object_id_column, url_column
+            )
             model.setSourceModel(source_model)
             self.sub_models.append((object_class_id, model))
         self.empty_row_model.set_horizontal_header_labels(header)
@@ -2827,11 +2895,12 @@ class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
 class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyModel):
     """A filter proxy model for object parameter value models."""
 
-    def __init__(self, parent, parameter_definition_id_column, object_id_column):
+    def __init__(self, parent, parameter_definition_id_column, object_id_column, url_column):
         """Init class."""
         super().__init__(parent, parameter_definition_id_column)
         self.object_ids = set()
         self.object_id_column = object_id_column
+        self.url_column = url_column
 
     def update_filter(self, parameter_definition_ids, object_ids):
         """Update filter."""
@@ -2846,7 +2915,8 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
         if not super().main_filter_accepts_row(source_row, source_parent):
             return False
         if self.object_ids:
-            return self.sourceModel()._main_data[source_row][self.object_id_column] in self.object_ids
+            row_data = self.sourceModel()._main_data[source_row]
+            return (row_data[self.url_column], row_data[self.object_id_column]) in self.object_ids
         return True
 
 
