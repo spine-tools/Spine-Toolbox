@@ -22,7 +22,7 @@ import json
 from PySide2.QtCore import Signal, Slot
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
-from helpers import project_dir, create_dir, copy_dir, get_db_map
+from helpers import project_dir, create_dir, copy_dir, get_db_map, busy_effect
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
@@ -713,6 +713,7 @@ class SpineToolboxProject(MetaObject):
             i += 1
         return
 
+    @busy_effect
     def open_tree_view(self):
         """Open all selected data stores in tree view.
         """

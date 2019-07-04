@@ -35,7 +35,7 @@ from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect, short_db_name
+from helpers import busy_effect
 
 
 class TreeViewForm(DataStoreForm):
@@ -93,7 +93,7 @@ class TreeViewForm(DataStoreForm):
         self.add_toggle_view_actions()
         self.connect_signals()
         self.setWindowTitle(
-            "Data store tree view    -- {} --".format(", ".join([short_db_name(x) for x in self.db_maps]))
+            "Data store tree view    -- {} --".format(", ".join([self.db_map_to_name[x] for x in self.db_maps]))
         )
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
@@ -702,7 +702,9 @@ class TreeViewForm(DataStoreForm):
         self.selected_object_ids = dict()
         for db_map, ind in obj_inds:
             d = ind.data(Qt.UserRole + 1)[db_map]
-            self.selected_object_ids.setdefault((db_map, d['class_id']), set()).add((db_map.db_url, d['id']))
+            self.selected_object_ids.setdefault((db_map, d['class_id']), set()).add(
+                (self.db_map_to_name[db_map], d['id'])
+            )
         self.selected_relationship_class_ids = set(
             (db_map, ind.data(Qt.UserRole + 1)[db_map]['id']) for db_map, ind in rel_cls_inds
         )
@@ -710,7 +712,7 @@ class TreeViewForm(DataStoreForm):
         for db_map, ind in rel_inds:
             d = ind.data(Qt.UserRole + 1)[db_map]
             self.selected_object_id_lists.setdefault((db_map, d['class_id']), set()).add(
-                (db_map.db_url, d['object_id_list'])
+                (self.db_map_to_name[db_map], d['object_id_list'])
             )
         self.do_update_filter()
 
@@ -813,9 +815,9 @@ class TreeViewForm(DataStoreForm):
         else:
             self.show_add_relationships_form(relationship_class_id=relationship_class['id'])
 
-    def add_object_classes(self, object_classes):
+    def add_object_classes(self, db_map, object_classes):
         """Insert new object classes."""
-        if super().add_object_classes(object_classes):
+        if super().add_object_classes(db_map, object_classes):
             self.ui.actionExport.setEnabled(True)
             return True
         return False

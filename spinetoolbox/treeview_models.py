@@ -20,7 +20,7 @@ import os
 import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
-from helpers import busy_effect, format_string_list, strip_json_data, short_db_name
+from helpers import busy_effect, format_string_list, strip_json_data
 from spinedb_api import SpineDBAPIError
 from models import MinimalTableModel, EmptyRowModel, HybridTableModel
 
@@ -124,11 +124,11 @@ class ObjectTreeModel(QStandardItemModel):
     with object classes at the outer level.
     """
 
-    def __init__(self, tree_view_form, flat=False):
+    def __init__(self, parent, flat=False):
         """Initialize class"""
-        super().__init__(tree_view_form)
-        self._tree_view_form = tree_view_form
-        self.db_maps = tree_view_form.db_maps
+        super().__init__(parent)
+        self._parent = parent
+        self.db_maps = parent.db_maps
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         self.flat = flat
@@ -148,13 +148,13 @@ class ObjectTreeModel(QStandardItemModel):
             if item_type == 'root':
                 return QIcon(":/symbols/Spine_symbol.png")
             if item_type == 'object_class':
-                return self._tree_view_form.icon_mngr.object_icon(index.data(Qt.DisplayRole))
+                return self._parent.icon_mngr.object_icon(index.data(Qt.DisplayRole))
             if item_type == 'object':
-                return self._tree_view_form.icon_mngr.object_icon(index.parent().data(Qt.DisplayRole))
+                return self._parent.icon_mngr.object_icon(index.parent().data(Qt.DisplayRole))
             if item_type == 'relationship_class':
-                return self._tree_view_form.icon_mngr.relationship_icon(index.data(Qt.ToolTipRole))
+                return self._parent.icon_mngr.relationship_icon(index.data(Qt.ToolTipRole))
             if item_type == 'relationship':
-                return self._tree_view_form.icon_mngr.relationship_icon(index.parent().data(Qt.ToolTipRole))
+                return self._parent.icon_mngr.relationship_icon(index.parent().data(Qt.ToolTipRole))
         return super().data(index, role)
 
     def backward_sweep(self, index, call=None):
@@ -271,7 +271,7 @@ class ObjectTreeModel(QStandardItemModel):
         self._fetched = {"object_class": set(), "object": set(), "relationship_class": set(), "relationship": set()}
         self.root_item = QStandardItem('root')
         self.root_item.setData('root', Qt.UserRole)
-        db_item = QStandardItem(", ".join([short_db_name(x) for x in self.db_maps]))
+        db_item = QStandardItem(", ".join([self._parent.db_map_to_name[x] for x in self.db_maps]))
         for db_map in self.db_maps:
             self.add_object_classes(db_map, db_map.object_class_list())
         self.appendRow([self.root_item, db_item])
@@ -283,7 +283,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData({db_map: object_class._asdict()}, Qt.UserRole + 1)
         object_class_item.setData(object_class.description, Qt.ToolTipRole)
         object_class_item.setData(self.bold_font, Qt.FontRole)
-        db_item = QStandardItem(short_db_name(db_map))
+        db_item = QStandardItem(self._parent.db_map_to_name[db_map])
         return [object_class_item, db_item]
 
     def new_object_row(self, db_map, object_):
@@ -292,7 +292,7 @@ class ObjectTreeModel(QStandardItemModel):
         object_item.setData('object', Qt.UserRole)
         object_item.setData({db_map: object_._asdict()}, Qt.UserRole + 1)
         object_item.setData(object_.description, Qt.ToolTipRole)
-        db_item = QStandardItem(short_db_name(db_map))
+        db_item = QStandardItem(self._parent.db_map_to_name[db_map])
         return [object_item, db_item]
 
     def new_relationship_class_row(self, db_map, relationship_class):
@@ -302,7 +302,7 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item.setData({db_map: relationship_class._asdict()}, Qt.UserRole + 1)
         relationship_class_item.setData(relationship_class.object_class_name_list, Qt.ToolTipRole)
         relationship_class_item.setData(self.bold_font, Qt.FontRole)
-        db_item = QStandardItem(short_db_name(db_map))
+        db_item = QStandardItem(self._parent.db_map_to_name[db_map])
         return [relationship_class_item, db_item]
 
     def new_relationship_row(self, db_map, relationship):
@@ -310,7 +310,7 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_item = QStandardItem(relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
         relationship_item.setData({db_map: relationship._asdict()}, Qt.UserRole + 1)
-        db_item = QStandardItem(short_db_name(db_map))
+        db_item = QStandardItem(self._parent.db_map_to_name[db_map])
         return [relationship_item, db_item]
 
     def add_object_classes(self, db_map, object_classes):
@@ -328,7 +328,7 @@ class ObjectTreeModel(QStandardItemModel):
                 db_map_dict = object_class_item.data(Qt.UserRole + 1)
                 db_map_dict[db_map] = object_class._asdict()
                 databases = db_item.data(Qt.DisplayRole)
-                databases += ", " + short_db_name(db_map)
+                databases += ", " + self._parent.db_map_to_name[db_map]
                 db_item.setData(databases, Qt.DisplayRole)
             else:
                 new_rows.append(self.new_object_class_row(db_map, object_class))
@@ -383,7 +383,7 @@ class ObjectTreeModel(QStandardItemModel):
                 db_map_dict = object_item.data(Qt.UserRole + 1)
                 db_map_dict[db_map] = object_._asdict()
                 databases = db_item.data(Qt.DisplayRole)
-                databases += ", " + short_db_name(db_map)
+                databases += ", " + self._parent.db_map_to_name[db_map]
                 db_item.setData(databases, Qt.DisplayRole)
             else:
                 new_rows.append(self.new_object_row(db_map, object_))
@@ -428,7 +428,7 @@ class ObjectTreeModel(QStandardItemModel):
                 db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
                 db_map_dict[db_map] = rel_cls._asdict()
                 databases = db_item.data(Qt.DisplayRole)
-                databases += ", " + short_db_name(db_map)
+                databases += ", " + self._parent.db_map_to_name[db_map]
                 db_item.setData(databases, Qt.DisplayRole)
             else:
                 new_rows.append(self.new_relationship_class_row(db_map, rel_cls))
@@ -485,7 +485,7 @@ class ObjectTreeModel(QStandardItemModel):
                 db_map_dict = relationship_item.data(Qt.UserRole + 1)
                 db_map_dict[db_map] = relationship._asdict()
                 databases = db_item.data(Qt.DisplayRole)
-                databases += ", " + short_db_name(db_map)
+                databases += ", " + self._parent.db_map_to_name[db_map]
                 db_item.setData(databases, Qt.DisplayRole)
             else:
                 new_rows.append(self.new_relationship_row(db_map, relationship))
@@ -707,11 +707,11 @@ class RelationshipTreeModel(QStandardItemModel):
     with relationship classes at the outer level.
     """
 
-    def __init__(self, tree_view_form):
+    def __init__(self, parent):
         """Initialize class"""
-        super().__init__(tree_view_form)
-        self._tree_view_form = tree_view_form
-        self.db_maps = tree_view_form.db_maps
+        super().__init__(parent)
+        self._parent = parent
+        self.db_maps = parent.db_maps
         self.root_item = None
         self.bold_font = QFont()
         self.bold_font.setBold(True)
@@ -730,9 +730,9 @@ class RelationshipTreeModel(QStandardItemModel):
             if item_type == 'root':
                 return QIcon(":/symbols/Spine_symbol.png")
             if item_type == 'relationship_class':
-                return self._tree_view_form.icon_mngr.relationship_icon(index.data(Qt.ToolTipRole))
+                return self._parent.icon_mngr.relationship_icon(index.data(Qt.ToolTipRole))
             if item_type == 'relationship':
-                return self._tree_view_form.icon_mngr.relationship_icon(index.parent().data(Qt.ToolTipRole))
+                return self._parent.icon_mngr.relationship_icon(index.parent().data(Qt.ToolTipRole))
         return super().data(index, role)
 
     def hasChildren(self, parent):
@@ -782,7 +782,7 @@ class RelationshipTreeModel(QStandardItemModel):
         self._fetched = set()
         self.root_item = QStandardItem('root')
         self.root_item.setData('root', Qt.UserRole)
-        db_item = QStandardItem(", ".join([short_db_name(x) for x in self.db_maps]))
+        db_item = QStandardItem(", ".join([self._parent.db_map_to_name[x] for x in self.db_maps]))
         for db_map in self.db_maps:
             self.add_relationship_classes(db_map, db_map.wide_relationship_class_list())
         self.appendRow([self.root_item, db_item])
@@ -794,7 +794,7 @@ class RelationshipTreeModel(QStandardItemModel):
         relationship_class_item.setData({db_map: relationship_class._asdict()}, Qt.UserRole + 1)
         relationship_class_item.setData(relationship_class.object_class_name_list, Qt.ToolTipRole)
         relationship_class_item.setData(self.bold_font, Qt.FontRole)
-        db_item = QStandardItem(short_db_name(db_map))
+        db_item = QStandardItem(self._parent.db_map_to_name[db_map])
         return [relationship_class_item, db_item]
 
     def new_relationship_row(self, db_map, relationship):
@@ -802,7 +802,7 @@ class RelationshipTreeModel(QStandardItemModel):
         relationship_item = QStandardItem(relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
         relationship_item.setData({db_map: relationship._asdict()}, Qt.UserRole + 1)
-        db_item = QStandardItem(short_db_name(db_map))
+        db_item = QStandardItem(self._parent.db_map_to_name[db_map])
         return [relationship_item, db_item]
 
     def add_relationship_classes(self, db_map, relationship_classes):
@@ -819,7 +819,7 @@ class RelationshipTreeModel(QStandardItemModel):
                 db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
                 db_map_dict[db_map] = rel_cls._asdict()
                 databases = db_item.data(Qt.DisplayRole)
-                databases += ", " + short_db_name(db_map)
+                databases += ", " + self._parent.db_map_to_name[db_map]
                 db_item.setData(databases, Qt.DisplayRole)
             else:
                 new_rows.append(self.new_relationship_class_row(db_map, rel_cls))
@@ -858,7 +858,7 @@ class RelationshipTreeModel(QStandardItemModel):
                 db_map_dict = relationship_item.data(Qt.UserRole + 1)
                 db_map_dict[db_map] = relationship._asdict()
                 databases = db_item.data(Qt.DisplayRole)
-                databases += ", " + short_db_name(db_map)
+                databases += ", " + self._parent.db_map_to_name[db_map]
                 db_item.setData(databases, Qt.DisplayRole)
             else:
                 new_rows.append(self.new_relationship_row(db_map, relationship))
@@ -1484,8 +1484,8 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
             items = list(relationships_to_add.values())
             rows = list(relationships_to_add.keys())
             relationships, error_log = self._parent.db_map.add_wide_relationships(*items)
-            self._parent._tree_view_form.object_tree_model.add_relationships(relationships)
-            self._parent._tree_view_form.relationship_tree_model.add_relationships(relationships)
+            self._parent._parent.object_tree_model.add_relationships(relationships)
+            self._parent._parent.relationship_tree_model.add_relationships(relationships)
             self.error_log.extend(error_log)
             return dict(zip(rows, [x.id for x in relationships]))
         except SpineDBAPIError as e:
@@ -1701,11 +1701,11 @@ class ObjectParameterModel(MinimalTableModel):
     one per object class.
     """
 
-    def __init__(self, tree_view_form=None):
+    def __init__(self, parent=None):
         """Init class."""
-        super().__init__(tree_view_form)
-        self._tree_view_form = tree_view_form
-        self.db_maps = tree_view_form.db_maps
+        super().__init__(parent)
+        self._parent = parent
+        self.db_maps = parent.db_maps
         self.sub_models = []
         self.empty_row_model = None
         self.fixed_columns = list()
@@ -1720,7 +1720,7 @@ class ObjectParameterModel(MinimalTableModel):
         """
         row = index.row()
         column = index.column()
-        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
+        selected_object_class_ids = self._parent.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models:
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -1736,19 +1736,19 @@ class ObjectParameterModel(MinimalTableModel):
         """
         row = index.row()
         column = index.column()
-        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
+        selected_object_class_ids = self._parent.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models:
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
             if row < model.rowCount():
                 if role == Qt.DecorationRole and column == self.object_class_name_column:
                     object_class_name = model.index(row, column).data(Qt.DisplayRole)
-                    return self._tree_view_form.icon_mngr.object_icon(object_class_name)
+                    return self._parent.icon_mngr.object_icon(object_class_name)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
         if role == Qt.DecorationRole and column == self.object_class_name_column:
             object_class_name = self.empty_row_model.index(row, column).data(Qt.DisplayRole)
-            return self._tree_view_form.icon_mngr.object_icon(object_class_name)
+            return self._parent.icon_mngr.object_icon(object_class_name)
         return self.empty_row_model.index(row, column).data(role)
 
     def rowCount(self, parent=QModelIndex()):
@@ -1756,7 +1756,7 @@ class ObjectParameterModel(MinimalTableModel):
         Skip models whose object class id is not selected.
         """
         count = 0
-        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
+        selected_object_class_ids = self._parent.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models:
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -1774,7 +1774,7 @@ class ObjectParameterModel(MinimalTableModel):
             return False
         model_indexes = {}
         model_data = {}
-        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
+        selected_object_class_ids = self._parent.all_selected_object_class_ids()
         for k, index in enumerate(indexes):
             if not index.isValid():
                 continue
@@ -1810,20 +1810,20 @@ class ObjectParameterModel(MinimalTableModel):
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         if added_rows:
             self.move_rows_to_sub_models(added_rows)
-            self._tree_view_form.commit_available.emit(True)
-            self._tree_view_form.msg.emit("Successfully added entries.")
+            self._parent.commit_available.emit(True)
+            self._parent.msg.emit("Successfully added entries.")
         if updated_count:
-            self._tree_view_form.commit_available.emit(True)
-            self._tree_view_form.msg.emit("Successfully updated entries.")
+            self._parent.commit_available.emit(True)
+            self._parent.msg.emit("Successfully updated entries.")
         error_log = add_error_log + update_error_log
         if error_log:
             msg = format_string_list(error_log)
-            self._tree_view_form.msg_error.emit(msg)
+            self._parent.msg_error.emit(msg)
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Find the right sub-model (or the empty model) and call insertRows on it."""
-        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
+        selected_object_class_ids = self._parent.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models:
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -1837,7 +1837,7 @@ class ObjectParameterModel(MinimalTableModel):
         if row < 0 or row + count - 1 >= self.rowCount():
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
-        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
+        selected_object_class_ids = self._parent.all_selected_object_class_ids()
         model_row_sets = dict()
         for i in range(row, row + count):
             for object_class_id, model in self.sub_models:
@@ -1888,7 +1888,7 @@ class ObjectParameterModel(MinimalTableModel):
         3) A set of object class ids where the value is found.
         """
         values = dict()
-        selected_object_class_ids = self._tree_view_form.all_selected_object_class_ids()
+        selected_object_class_ids = self._parent.all_selected_object_class_ids()
         for object_class_id, model in self.sub_models:
             if selected_object_class_ids and object_class_id not in selected_object_class_ids:
                 continue
@@ -1990,9 +1990,9 @@ class ObjectParameterValueModel(ObjectParameterModel):
     one per object class.
     """
 
-    def __init__(self, tree_view_form=None):
+    def __init__(self, parent=None):
         """Init class."""
-        super().__init__(tree_view_form)
+        super().__init__(parent)
         self.empty_row_model = EmptyObjectParameterValueModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
@@ -2001,27 +2001,27 @@ class ObjectParameterValueModel(ObjectParameterModel):
         for a different object class."""
         self.beginResetModel()
         self.sub_models = []
-        header = self.db_maps[0].object_parameter_value_fields() + ["database", "url"]
+        header = self.db_maps[0].object_parameter_value_fields() + ["database"]
         self.fixed_columns = [
             header.index(x) for x in ('object_class_name', 'object_name', 'parameter_name', "database")
         ]
         self.object_class_name_column = header.index('object_class_name')
         parameter_definition_id_column = header.index('parameter_id')
         object_id_column = header.index('object_id')
-        url_column = header.index('url')
+        db_column = header.index('database')
         self.set_horizontal_header_labels(header)
         data_dict = {}
         for db_map in self.db_maps:
             for parameter_value in db_map.object_parameter_value_list():
                 object_class_id = (db_map, parameter_value.object_class_id)
                 data_dict.setdefault(object_class_id, list()).append(
-                    list(parameter_value) + [short_db_name(db_map), db_map.db_url]
+                    list(parameter_value) + [self._parent.db_map_to_name[db_map]]
                 )
         for object_class_id, data in data_dict.items():
             source_model = SubParameterValueModel(self)
             source_model.reset_model([list(x) for x in data])
             model = ObjectParameterValueFilterProxyModel(
-                self, parameter_definition_id_column, object_id_column, url_column
+                self, parameter_definition_id_column, object_id_column, db_column
             )
             model.setSourceModel(source_model)
             self.sub_models.append((object_class_id, model))
@@ -2032,8 +2032,8 @@ class ObjectParameterValueModel(ObjectParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        selected_parameter_definition_ids = self._tree_view_form.selected_obj_parameter_definition_ids
-        selected_object_ids = self._tree_view_form.selected_object_ids
+        selected_parameter_definition_ids = self._parent.selected_obj_parameter_definition_ids
+        selected_object_ids = self._parent.selected_object_ids
         for object_class_id, model in self.sub_models:
             parameter_definition_ids = selected_parameter_definition_ids.get(object_class_id, {})
             object_ids = selected_object_ids.get(object_class_id, {})
@@ -2127,9 +2127,9 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
     (one per object class) vertically.
     """
 
-    def __init__(self, tree_view_form=None):
+    def __init__(self, parent=None):
         """Init class."""
-        super().__init__(tree_view_form)
+        super().__init__(parent)
         self.empty_row_model = EmptyObjectParameterDefinitionModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
@@ -2138,7 +2138,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         for a different object class."""
         self.beginResetModel()
         self.sub_models = []
-        header = self.db_maps[0].object_parameter_definition_fields() + ["database", "url"]
+        header = self.db_maps[0].object_parameter_definition_fields() + ["database"]
         self.fixed_columns = [header.index('object_class_name'), header.index('database')]
         self.object_class_name_column = header.index('object_class_name')
         parameter_definition_id_column = header.index('id')
@@ -2148,7 +2148,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
             for parameter_definition in db_map.object_parameter_definition_list():
                 object_class_id = (db_map, parameter_definition.object_class_id)
                 data_dict.setdefault(object_class_id, list()).append(
-                    list(parameter_definition) + [short_db_name(db_map), db_map.db_url]
+                    list(parameter_definition) + [self._parent.db_map_to_name[db_map]]
                 )
         for object_class_id, data in data_dict.items():
             source_model = SubParameterDefinitionModel(self)
@@ -2163,7 +2163,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        selected_parameter_definition_ids = self._tree_view_form.selected_obj_parameter_definition_ids
+        selected_parameter_definition_ids = self._parent.selected_obj_parameter_definition_ids
         for object_class_id, model in self.sub_models:
             model.update_filter(selected_parameter_definition_ids.get(object_class_id, {}))
             model.clear_filtered_out_values()
@@ -2229,12 +2229,11 @@ class RelationshipParameterModel(MinimalTableModel):
     (one per relationship class), one on top of the other.
     """
 
-    def __init__(self, tree_view_form=None):
+    def __init__(self, parent=None):
         """Init class."""
-        super().__init__(tree_view_form)
-        self._tree_view_form = tree_view_form
-        self.db_map = tree_view_form.db_map
-        self.db_maps = tree_view_form.db_maps
+        super().__init__(parent)
+        self._parent = parent
+        self.db_maps = parent.db_maps
         self.sub_models = []
         self.object_class_id_lists = {}
         self.empty_row_model = EmptyRowModel(self)
@@ -2261,8 +2260,8 @@ class RelationshipParameterModel(MinimalTableModel):
         """
         row = index.row()
         column = index.column()
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        selected_object_class_ids = self._parent.selected_object_class_ids
+        selected_relationship_class_ids = self._parent.all_selected_relationship_class_ids()
         for relationship_class_id, model in self.sub_models:
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2284,8 +2283,8 @@ class RelationshipParameterModel(MinimalTableModel):
         """
         row = index.row()
         column = index.column()
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        selected_object_class_ids = self._parent.selected_object_class_ids
+        selected_relationship_class_ids = self._parent.all_selected_relationship_class_ids()
         for relationship_class_id, model in self.sub_models:
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2297,14 +2296,14 @@ class RelationshipParameterModel(MinimalTableModel):
             if row < model.rowCount():
                 if role == Qt.DecorationRole and column == self.relationship_class_name_column:
                     object_class_name_list = model.index(row, self.object_class_name_list_column).data(Qt.DisplayRole)
-                    return self._tree_view_form.icon_mngr.relationship_icon(object_class_name_list)
+                    return self._parent.icon_mngr.relationship_icon(object_class_name_list)
                 return model.index(row, column).data(role)
             row -= model.rowCount()
         if role == Qt.DecorationRole and column == self.relationship_class_name_column:
             object_class_name_list = self.empty_row_model.index(row, self.object_class_name_list_column).data(
                 Qt.DisplayRole
             )
-            return self._tree_view_form.icon_mngr.relationship_icon(object_class_name_list)
+            return self._parent.icon_mngr.relationship_icon(object_class_name_list)
         return self.empty_row_model.index(row, column).data(role)
 
     def rowCount(self, parent=QModelIndex()):
@@ -2313,8 +2312,8 @@ class RelationshipParameterModel(MinimalTableModel):
         Models whose object class id list doesn't intersect the selected ones are also skipped.
         """
         count = 0
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        selected_object_class_ids = self._parent.selected_object_class_ids
+        selected_relationship_class_ids = self._parent.all_selected_relationship_class_ids()
         for relationship_class_id, model in self.sub_models:
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2337,8 +2336,8 @@ class RelationshipParameterModel(MinimalTableModel):
             return False
         model_indexes = {}
         model_data = {}
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        selected_object_class_ids = self._parent.selected_object_class_ids
+        selected_relationship_class_ids = self._parent.all_selected_relationship_class_ids()
         for k, index in enumerate(indexes):
             if not index.isValid():
                 continue
@@ -2379,21 +2378,21 @@ class RelationshipParameterModel(MinimalTableModel):
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         if added_rows:
             self.move_rows_to_sub_models(added_rows)
-            self._tree_view_form.commit_available.emit(True)
-            self._tree_view_form.msg.emit("Successfully added entries.")
+            self._parent.commit_available.emit(True)
+            self._parent.msg.emit("Successfully added entries.")
         if updated_count:
-            self._tree_view_form.commit_available.emit(True)
-            self._tree_view_form.msg.emit("Successfully updated entries.")
+            self._parent.commit_available.emit(True)
+            self._parent.msg.emit("Successfully updated entries.")
         error_log = add_error_log + update_error_log
         if error_log:
             msg = format_string_list(error_log)
-            self._tree_view_form.msg_error.emit(msg)
+            self._parent.msg_error.emit(msg)
         return True
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Find the right sub-model (or the empty model) and call insertRows on it."""
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        selected_object_class_ids = self._parent.selected_object_class_ids
+        selected_relationship_class_ids = self._parent.all_selected_relationship_class_ids()
         for relationship_class_id, model in self.sub_models:
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2412,8 +2411,8 @@ class RelationshipParameterModel(MinimalTableModel):
         if row < 0 or row + count - 1 >= self.rowCount():
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        selected_object_class_ids = self._parent.selected_object_class_ids
+        selected_relationship_class_ids = self._parent.all_selected_relationship_class_ids()
         model_row_sets = {}
         for i in range(row, row + count):
             for relationship_class_id, model in self.sub_models:
@@ -2469,8 +2468,8 @@ class RelationshipParameterModel(MinimalTableModel):
         3) A set of relationship class ids where the value is found.
         """
         values = dict()
-        selected_object_class_ids = self._tree_view_form.selected_object_class_ids
-        selected_relationship_class_ids = self._tree_view_form.all_selected_relationship_class_ids()
+        selected_object_class_ids = self._parent.selected_object_class_ids
+        selected_relationship_class_ids = self._parent.all_selected_relationship_class_ids()
         for relationship_class_id, model in self.sub_models:
             if selected_object_class_ids:
                 object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2610,9 +2609,9 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
     (one per relationship class), one on top of the other.
     """
 
-    def __init__(self, tree_view_form=None):
+    def __init__(self, parent=None):
         """Init class."""
-        super().__init__(tree_view_form)
+        super().__init__(parent)
         self.empty_row_model = EmptyRelationshipParameterValueModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
@@ -2623,7 +2622,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         self.sub_models = []
         for db_map in self.db_maps:
             self.add_object_class_id_lists(db_map, db_map.wide_relationship_class_list())
-        header = self.db_maps[0].relationship_parameter_value_fields() + ["database", "url"]
+        header = self.db_maps[0].relationship_parameter_value_fields() + ["database"]
         self.fixed_columns = [
             header.index(x) for x in ('relationship_class_name', 'object_name_list', 'parameter_name', "database")
         ]
@@ -2631,20 +2630,20 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         self.object_class_name_list_column = header.index('object_class_name_list')
         parameter_definition_id_column = header.index('parameter_id')
         object_id_list_column = header.index('object_id_list')
-        url_column = header.index('url')
+        db_column = header.index('database')
         self.set_horizontal_header_labels(header)
         data_dict = {}
         for db_map in self.db_maps:
             for parameter_value in db_map.relationship_parameter_value_list():
                 relationship_class_id = (db_map, parameter_value.relationship_class_id)
                 data_dict.setdefault(relationship_class_id, list()).append(
-                    list(parameter_value) + [short_db_name(db_map), db_map.db_url]
+                    list(parameter_value) + [self._parent.db_map_to_name[db_map]]
                 )
         for relationship_class_id, data in data_dict.items():
             source_model = SubParameterValueModel(self)
             source_model.reset_model([list(x) for x in data])
             model = RelationshipParameterValueFilterProxyModel(
-                self, parameter_definition_id_column, object_id_list_column, url_column
+                self, parameter_definition_id_column, object_id_list_column, db_column
             )
             model.setSourceModel(source_model)
             self.sub_models.append((relationship_class_id, model))
@@ -2655,9 +2654,9 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        selected_parameter_definition_ids = self._tree_view_form.selected_rel_parameter_definition_ids
-        selected_object_ids = self._tree_view_form.selected_object_ids
-        selected_object_id_lists = self._tree_view_form.selected_object_id_lists
+        selected_parameter_definition_ids = self._parent.selected_rel_parameter_definition_ids
+        selected_object_ids = self._parent.selected_object_ids
+        selected_object_id_lists = self._parent.selected_object_id_lists
         for relationship_class_id, model in self.sub_models:
             parameter_definition_ids = selected_parameter_definition_ids.get(relationship_class_id, {})
             object_class_id_list = self.object_class_id_lists[relationship_class_id]
@@ -2763,9 +2762,9 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
     (one per relationship class), one on top of the other.
     """
 
-    def __init__(self, tree_view_form=None):
+    def __init__(self, parent=None):
         """Init class."""
-        super().__init__(tree_view_form)
+        super().__init__(parent)
         self.empty_row_model = EmptyRelationshipParameterDefinitionModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
 
@@ -2776,7 +2775,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         self.sub_models = []
         for db_map in self.db_maps:
             self.add_object_class_id_lists(db_map, db_map.wide_relationship_class_list())
-        header = self.db_maps[0].relationship_parameter_definition_fields() + ["database", "url"]
+        header = self.db_maps[0].relationship_parameter_definition_fields() + ["database"]
         self.fixed_columns = [
             header.index(x) for x in ('relationship_class_name', 'object_class_name_list', 'database')
         ]
@@ -2789,7 +2788,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
             for parameter_definition in db_map.relationship_parameter_definition_list():
                 relationship_class_id = (db_map, parameter_definition.relationship_class_id)
                 data_dict.setdefault(relationship_class_id, list()).append(
-                    list(parameter_definition) + [short_db_name(db_map), db_map.db_url]
+                    list(parameter_definition) + [self._parent.db_map_to_name[db_map]]
                 )
         for relationship_class_id, data in data_dict.items():
             source_model = SubParameterDefinitionModel(self)
@@ -2804,7 +2803,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
-        selected_parameter_definition_ids = self._tree_view_form.selected_rel_parameter_definition_ids
+        selected_parameter_definition_ids = self._parent.selected_rel_parameter_definition_ids
         for relationship_class_id, model in self.sub_models:
             parameter_definition_ids = selected_parameter_definition_ids.get(relationship_class_id, {})
             model.update_filter(parameter_definition_ids)
@@ -2931,12 +2930,12 @@ class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
 class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyModel):
     """A filter proxy model for object parameter value models."""
 
-    def __init__(self, parent, parameter_definition_id_column, object_id_column, url_column):
+    def __init__(self, parent, parameter_definition_id_column, object_id_column, db_column):
         """Init class."""
         super().__init__(parent, parameter_definition_id_column)
         self.object_ids = set()
         self.object_id_column = object_id_column
-        self.url_column = url_column
+        self.db_column = db_column
 
     def update_filter(self, parameter_definition_ids, object_ids):
         """Update filter."""
@@ -2951,9 +2950,9 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
         if not super().main_filter_accepts_row(source_row, source_parent):
             return False
         if self.object_ids:
-            url = self.sourceModel()._main_data[source_row][self.url_column]
+            db = self.sourceModel()._main_data[source_row][self.db_column]
             object_id = self.sourceModel()._main_data[source_row][self.object_id_column]
-            return (url, object_id) in self.object_ids
+            return (db, object_id) in self.object_ids
         return True
 
 
@@ -3022,13 +3021,13 @@ class RelationshipParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
 class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinitionFilterProxyModel):
     """A filter proxy model for relationship parameter value models."""
 
-    def __init__(self, parent, parameter_definition_id_column, object_id_list_column, url_column):
+    def __init__(self, parent, parameter_definition_id_column, object_id_list_column, db_column):
         """Init class."""
         super().__init__(parent, parameter_definition_id_column)
         self.object_ids = dict()
         self.object_id_lists = set()
         self.object_id_list_column = object_id_list_column
-        self.url_column = url_column
+        self.db_column = db_column
 
     def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):
         """Update filter."""
@@ -3048,11 +3047,11 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
         if not super().main_filter_accepts_row(source_row, source_parent):
             return False
         object_id_list = self.sourceModel()._main_data[source_row][self.object_id_list_column]
-        url = self.sourceModel()._main_data[source_row][self.url_column]
+        db = self.sourceModel()._main_data[source_row][self.db_column]
         if self.object_id_lists:
-            return (url, object_id_list) in self.object_id_lists
+            return (db, object_id_list) in self.object_id_lists
         if self.object_ids:
-            return len(self.object_ids.intersection((url, int(x)) for x in object_id_list.split(","))) > 0
+            return len(self.object_ids.intersection((db, int(x)) for x in object_id_list.split(","))) > 0
         return True
 
 
@@ -3077,11 +3076,11 @@ class TreeNode:
 class ParameterValueListModel(QAbstractItemModel):
     """A class to display parameter value list data in a treeview."""
 
-    def __init__(self, tree_view_form):
+    def __init__(self, parent):
         """Initialize class"""
-        super().__init__(tree_view_form)
-        self._tree_view_form = tree_view_form
-        self.db_map = tree_view_form.db_map
+        super().__init__(parent)
+        self._parent = parent
+        self.db_map = parent.db_map
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         gray_color = QGuiApplication.palette().text().color()
@@ -3216,8 +3215,8 @@ class ParameterValueListModel(QAbstractItemModel):
             return
         self.append_empty_rows(bottom_right, parent)
         to_add, to_update = self.items_to_add_and_update(top_left.row(), bottom_right.row(), parent)
-        self._tree_view_form.add_parameter_value_lists(*to_add)
-        self._tree_view_form.update_parameter_value_lists(*to_update)
+        self._parent.add_parameter_value_lists(*to_add)
+        self._parent.update_parameter_value_lists(*to_update)
 
     def append_empty_rows(self, index, parent):
         """Append emtpy rows if index is the last children, so the user can continue editing the model.

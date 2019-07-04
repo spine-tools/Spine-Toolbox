@@ -383,7 +383,8 @@ class MultiSearchBarEditor(QTableView):
             self._parent.size()
         )
         self.resize(size)
-        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
+        if self._elder_sibling:
+            self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -404,7 +405,7 @@ class CheckListEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, elder_sibling):
+    def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
@@ -472,7 +473,8 @@ class CheckListEditor(QTableView):
         total_height = self.verticalHeader().length() + 2
         size = QSize(self._base_size.width(), total_height).boundedTo(self._parent.size())
         self.resize(size)
-        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
+        if self._elder_sibling:
+            self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -674,6 +676,8 @@ class IconColorEditor(QDialog):
     """An editor to let the user select an icon and a color for an object class.
     """
 
+    data_committed = Signal(name="data_committed")
+
     def __init__(self, parent, icon_mngr):
         """Init class."""
         super().__init__(parent)  # , Qt.Popup)
@@ -736,6 +740,8 @@ class IconColorEditor(QDialog):
         self.color_dialog.setCurrentColor(QColor(color_code))
 
     def data(self):
+        if not self.result():
+            return None
         icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return self.icon_mngr.display_icon(icon_code, color_code)

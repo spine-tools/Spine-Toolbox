@@ -36,11 +36,10 @@ from PySide2.QtGui import QIcon
 from spinedb_api import SpineDBAPIError
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import (
+    AddObjectClassesDelegate,
     AddObjectsDelegate,
     AddRelationshipClassesDelegate,
     AddRelationshipsDelegate,
-    LineEditDelegate,
-    IconColorDialogDelegate,
 )
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect, format_string_list
@@ -167,20 +166,21 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.table_view.setModel(self.model)
         self.combo_box = QComboBox(self)
         self.layout().insertWidget(0, self.combo_box)
-        self.object_class_list = self._parent.db_map.object_class_list()
+        # self.object_class_list = self._parent.db_map.object_class_list()
         self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
-        self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.table_view.setItemDelegateForColumn(2, IconColorDialogDelegate(parent))
+        self.table_view.setItemDelegate(AddObjectClassesDelegate(parent))
         self.connect_signals()
-        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon'])
+        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
+        db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps])
+        self.model.set_default_row(**{'databases': db_names})
         self.model.clear()
         insert_at_position_list = ['Insert new classes at the top']
-        insert_at_position_list.extend(["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
+        # insert_at_position_list.extend(["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
         self.combo_box.addItems(insert_at_position_list)
 
     def connect_signals(self):
         super().connect_signals()
-        self.table_view.itemDelegateForColumn(2).data_committed.connect(self._handle_data_committed)
+        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
 
     @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
     def _handle_data_committed(self, index, data):
@@ -192,7 +192,7 @@ class AddObjectClassesDialog(AddItemsDialog):
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
-        kwargs_list = list()
+        object_class_d = dict()
         index = self.combo_box.currentIndex()
         if index == 0:
             try:
@@ -203,25 +203,33 @@ class AddObjectClassesDialog(AddItemsDialog):
             display_order = self.object_class_list.all()[index - 1].display_order + 1
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)[:-1]
-            name, description, display_icon = row_data
+            name, description, display_icon, db_names = row_data
+            db_name_list = db_names.split(",")
+            try:
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+            except KeyError as e:
+                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                return
             if not name:
                 self._parent.msg_error.emit("Object class name missing at row {0}".format(i + 1))
                 return
-            kwargs = {
+            item = {
                 'name': name,
                 'description': description,
                 'display_icon': display_icon if display_icon else self.parent().icon_mngr.default_display_icon(),
                 'display_order': display_order,
             }
-            kwargs_list.append(kwargs)
-        if not kwargs_list:
+            for db_map in db_maps:
+                object_class_d.setdefault(db_map, []).append(item)
+        if not object_class_d:
             self._parent.msg_error.emit("Nothing to add")
             return
         try:
-            object_classes, error_log = self._parent.db_map.add_object_classes(*kwargs_list)
-            self._parent.add_object_classes(object_classes)
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
+            for db_map, items in object_class_d.items():
+                object_classes, error_log = db_map.add_object_classes(*items)
+                self._parent.add_object_classes(db_map, object_classes)
+                if error_log:
+                    self._parent.msg_error.emit(format_string_list(error_log))
             super().accept()
         except SpineDBAPIError as e:
             self._parent.msg_error.emit(e.msg)

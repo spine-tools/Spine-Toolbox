@@ -48,7 +48,7 @@ from treeview_models import (
     ParameterValueListModel,
 )
 from spinedb_api import copy_database
-from helpers import busy_effect, format_string_list, IconManager
+from helpers import busy_effect, format_string_list, IconManager, fix_name_ambiguity, short_db_name
 
 
 class DataStoreForm(QMainWindow):
@@ -83,6 +83,10 @@ class DataStoreForm(QMainWindow):
         # DB
         self.db_map = db_maps[0]
         self.db_maps = db_maps
+        db_names = [short_db_name(db_map) for db_map in self.db_maps]
+        fix_name_ambiguity(db_names)
+        self.db_name_to_map = dict(zip(db_names, self.db_maps))
+        self.db_map_to_name = dict(zip(self.db_maps, db_names))
         self.database = self.db_map.sa_url.database
         self.databases = [x.sa_url.database for x in self.db_maps]
         self.icon_mngr = IconManager()
@@ -329,7 +333,6 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('url'))
         self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -347,7 +350,6 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_id_list'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('url'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_relationship_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -362,7 +364,6 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('url'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
         self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
@@ -378,7 +379,6 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('url'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().setSectionResizeMode(
             QHeaderView.Interactive
         )
@@ -487,22 +487,22 @@ class DataStoreForm(QMainWindow):
         )
         dialog.show()
 
-    def add_object_classes(self, object_classes):
+    def add_object_classes(self, db_map, object_classes):
         """Insert new object classes."""
         if not object_classes.count():
             return False
         self.icon_mngr.setup_object_pixmaps(object_classes)
-        self.object_tree_model.add_object_classes(object_classes)
-        if self.selected_object_class_ids:
-            # Recompute self.selected_obj_tree_indexes['object_class']
-            # since some new classes might have been inserted above those indexes
-            # NOTE: This is only needed for object classes, since all other items are inserted at the bottom
-            self.selected_obj_tree_indexes['object_class'] = sel_obj_cls_indexes = {}
-            root_index = self.object_tree_model.indexFromItem(self.object_tree_model.root_item)
-            for i in range(self.object_tree_model.root_item.rowCount()):
-                obj_cls_index = self.object_tree_model.index(i, 0, root_index)
-                if obj_cls_index.data(Qt.UserRole + 1)['id'] in self.selected_object_class_ids:
-                    sel_obj_cls_indexes[obj_cls_index] = None
+        self.object_tree_model.add_object_classes(db_map, object_classes)
+        # if self.selected_object_class_ids:
+        #    # Recompute self.selected_obj_tree_indexes['object_class']
+        #    # since some new classes might have been inserted above those indexes
+        #    # NOTE: This is only needed for object classes, since all other items are inserted at the bottom
+        #    self.selected_obj_tree_indexes['object_class'] = sel_obj_cls_indexes = {}
+        #    root_index = self.object_tree_model.indexFromItem(self.object_tree_model.root_item)
+        #    for i in range(self.object_tree_model.root_item.rowCount()):
+        #        obj_cls_index = self.object_tree_model.index(i, 0, root_index)
+        #        if obj_cls_index.data(Qt.UserRole + 1)['id'] in self.selected_object_class_ids:
+        #            sel_obj_cls_indexes[obj_cls_index] = None
         self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)

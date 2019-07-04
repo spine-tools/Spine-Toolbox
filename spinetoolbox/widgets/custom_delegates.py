@@ -434,12 +434,51 @@ class AddItemsDelegate(QItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
-        if type(editor) in (SearchBarEditor,):
+        if type(editor) in (SearchBarEditor, CheckListEditor):
             size = option.rect.size()
             if index.data(Qt.DecorationRole):
                 size.setWidth(size.width() - 22)  # FIXME
             editor.set_base_size(size)
             editor.update_geometry()
+
+
+class AddObjectClassesDelegate(AddItemsDelegate):
+    """A delegate for the model and view in AddObjectClassesDialog.
+
+    Attributes:
+        parent (QMainWindow): tree or graph view form
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        """Return editor."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'display icon':
+            editor = IconColorEditor(parent, self._parent.icon_mngr)
+            editor.set_data(index.data(Qt.DisplayRole))
+        elif header[index.column()] == 'databases':
+            editor = CheckListEditor(parent)
+            all_databases = [self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps]
+            databases = index.data(Qt.DisplayRole).split(",")
+            editor.set_data(all_databases, databases)
+        else:
+            editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
+        model = index.model()
+        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        return editor
+
+    def paint(self, painter, option, index):
+        """Get a pixmap from the index data and paint it in the middle of the cell."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'display icon':
+            pixmap = self.parent().icon_mngr.create_object_pixmap(index.data(Qt.DisplayRole))
+            icon = QIcon(pixmap)
+            icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
+        else:
+            super().paint(painter, option, index)
 
 
 class AddObjectsDelegate(AddItemsDelegate):
