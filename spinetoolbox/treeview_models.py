@@ -343,7 +343,7 @@ class ObjectTreeModel(QStandardItemModel):
                 if db_map not in visited_db_map_dict:
                     continue
                 visited_object_class = visited_db_map_dict[db_map]
-                if visited_object_class['display_order'] >= object_class['display_order']:
+                if visited_object_class['display_order'] > object_class['display_order']:
                     self.root_item.insertRow(i, row)
                     break
             else:

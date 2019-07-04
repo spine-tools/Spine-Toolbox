@@ -815,9 +815,9 @@ class TreeViewForm(DataStoreForm):
         else:
             self.show_add_relationships_form(relationship_class_id=relationship_class['id'])
 
-    def add_object_classes(self, db_map, object_classes):
+    def add_object_classes(self, object_class_d):
         """Insert new object classes."""
-        if super().add_object_classes(db_map, object_classes):
+        if super().add_object_classes(object_class_d):
             self.ui.actionExport.setEnabled(True)
             return True
         return False

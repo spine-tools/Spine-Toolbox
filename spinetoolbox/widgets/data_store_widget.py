@@ -90,7 +90,8 @@ class DataStoreForm(QMainWindow):
         self.database = self.db_map.sa_url.database
         self.databases = [x.sa_url.database for x in self.db_maps]
         self.icon_mngr = IconManager()
-        self.icon_mngr.setup_object_pixmaps(self.db_maps[0].object_class_list())
+        for db_map in self.db_maps:
+            self.icon_mngr.setup_object_pixmaps(db_map.object_class_list())
         # Object tree selected indexes
         self.selected_obj_tree_indexes = {}
         self.selected_object_class_ids = set()
@@ -487,25 +488,34 @@ class DataStoreForm(QMainWindow):
         )
         dialog.show()
 
-    def add_object_classes(self, db_map, object_classes):
+    def add_object_classes(self, object_class_d):
         """Insert new object classes."""
-        if not object_classes.count():
+        added_names = set()
+        for db_map, items in object_class_d.items():
+            added, error_log = db_map.add_object_classes(*items)
+            if not added.count():
+                continue
+            self.icon_mngr.setup_object_pixmaps(added)
+            self.object_tree_model.add_object_classes(db_map, added)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            added_names.update(x.name for x in added)
+        if not added_names:
             return False
-        self.icon_mngr.setup_object_pixmaps(object_classes)
-        self.object_tree_model.add_object_classes(db_map, object_classes)
-        # if self.selected_object_class_ids:
-        #    # Recompute self.selected_obj_tree_indexes['object_class']
-        #    # since some new classes might have been inserted above those indexes
-        #    # NOTE: This is only needed for object classes, since all other items are inserted at the bottom
-        #    self.selected_obj_tree_indexes['object_class'] = sel_obj_cls_indexes = {}
-        #    root_index = self.object_tree_model.indexFromItem(self.object_tree_model.root_item)
-        #    for i in range(self.object_tree_model.root_item.rowCount()):
-        #        obj_cls_index = self.object_tree_model.index(i, 0, root_index)
-        #        if obj_cls_index.data(Qt.UserRole + 1)['id'] in self.selected_object_class_ids:
-        #            sel_obj_cls_indexes[obj_cls_index] = None
+        msg = "Successfully added new object class(es) '{}'.".format("', '".join(added_names))
         self.commit_available.emit(True)
-        msg = "Successfully added new object class(es) '{}'.".format("', '".join([x.name for x in object_classes]))
         self.msg.emit(msg)
+        if self.selected_object_class_ids:
+            # Recompute self.selected_obj_tree_indexes['object_class']
+            # since some new classes might have been inserted above those indexes
+            # NOTE: This is only needed for object classes, since all other items are inserted at the bottom
+            self.selected_obj_tree_indexes['object_class'] = {}
+            is_selected = self.ui.treeView_object.selectionModel().isSelected
+            root_index = self.object_tree_model.indexFromItem(self.object_tree_model.root_item)
+            for i in range(self.object_tree_model.root_item.rowCount()):
+                obj_cls_index = self.object_tree_model.index(i, 0, root_index)
+                if is_selected(obj_cls_index):
+                    self.selected_obj_tree_indexes['object_class'][obj_cls_index] = None
         return True
 
     def add_objects(self, objects):

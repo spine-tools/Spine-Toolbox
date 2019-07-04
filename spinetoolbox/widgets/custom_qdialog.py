@@ -166,7 +166,8 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.table_view.setModel(self.model)
         self.combo_box = QComboBox(self)
         self.layout().insertWidget(0, self.combo_box)
-        # self.object_class_list = self._parent.db_map.object_class_list()
+        model = self._parent.object_tree_model
+        self.object_class_items = [model.root_item.child(i, 0) for i in range(model.root_item.rowCount())]
         self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
         self.table_view.setItemDelegate(AddObjectClassesDelegate(parent))
         self.connect_signals()
@@ -175,7 +176,9 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.model.set_default_row(**{'databases': db_names})
         self.model.clear()
         insert_at_position_list = ['Insert new classes at the top']
-        # insert_at_position_list.extend(["Insert new classes after '{}'".format(i.name) for i in self.object_class_list])
+        insert_at_position_list.extend(
+            ["Insert new classes after '{}'".format(it.text()) for it in self.object_class_items]
+        )
         self.combo_box.addItems(insert_at_position_list)
 
     def connect_signals(self):
@@ -195,12 +198,17 @@ class AddObjectClassesDialog(AddItemsDialog):
         object_class_d = dict()
         index = self.combo_box.currentIndex()
         if index == 0:
-            try:
-                display_order = self.object_class_list.first().display_order - 1
-            except AttributeError:
-                display_order = 1
+            # At the top
+            if not self.object_class_items:
+                # Whatever
+                display_order = 0
+            else:
+                item = self.object_class_items[0]
+                display_order = min(x['display_order'] for x in item.data(Qt.UserRole + 1).values()) - 1
         else:
-            display_order = self.object_class_list.all()[index - 1].display_order + 1
+            # After the item
+            item = self.object_class_items[index - 1]
+            display_order = max(x['display_order'] for x in item.data(Qt.UserRole + 1).values())
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)[:-1]
             name, description, display_icon, db_names = row_data
@@ -224,15 +232,8 @@ class AddObjectClassesDialog(AddItemsDialog):
         if not object_class_d:
             self._parent.msg_error.emit("Nothing to add")
             return
-        try:
-            for db_map, items in object_class_d.items():
-                object_classes, error_log = db_map.add_object_classes(*items)
-                self._parent.add_object_classes(db_map, object_classes)
-                if error_log:
-                    self._parent.msg_error.emit(format_string_list(error_log))
-            super().accept()
-        except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
+        self._parent.add_object_classes(object_class_d)
+        super().accept()
 
 
 class AddObjectsDialog(AddItemsDialog):

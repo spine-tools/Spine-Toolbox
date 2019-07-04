@@ -676,7 +676,7 @@ class IconColorEditor(QDialog):
     """An editor to let the user select an icon and a color for an object class.
     """
 
-    data_committed = Signal(name="data_committed")
+    data_committed = Signal(name="data_committed")  # NOTE: never emited, only to keep consistency
 
     def __init__(self, parent, icon_mngr):
         """Init class."""
