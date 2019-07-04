@@ -344,8 +344,7 @@ class ObjectTreeModel(QStandardItemModel):
                     continue
                 visited_object_class = visited_db_map_dict[db_map]
                 if visited_object_class['display_order'] >= object_class['display_order']:
-                    self.root_item.insertRow(i, QStandardItem())
-                    self.root_item.setChild(i, 0, row)
+                    self.root_item.insertRow(i, row)
                     break
             else:
                 self.root_item.appendRow(row)
@@ -712,14 +711,16 @@ class RelationshipTreeModel(QStandardItemModel):
         """Initialize class"""
         super().__init__(tree_view_form)
         self._tree_view_form = tree_view_form
-        self.db_map = tree_view_form.db_map
+        self.db_maps = tree_view_form.db_maps
         self.root_item = None
         self.bold_font = QFont()
         self.bold_font.setBold(True)
-        self._fetched_relationship_class_id = set()
+        self._fetched = set()
 
     def data(self, index, role=Qt.DisplayRole):
         """Returns the data stored under the given role for the item referred to by the index."""
+        if index.column() != 0:
+            return super().data(index, role)
         if role == Qt.ForegroundRole:
             item_type = index.data(Qt.UserRole)
             if item_type.endswith('class') and not self.hasChildren(index):
@@ -729,13 +730,9 @@ class RelationshipTreeModel(QStandardItemModel):
             if item_type == 'root':
                 return QIcon(":/symbols/Spine_symbol.png")
             if item_type == 'relationship_class':
-                return self._tree_view_form.icon_mngr.relationship_icon(
-                    index.data(Qt.UserRole + 1)["object_class_name_list"]
-                )
+                return self._tree_view_form.icon_mngr.relationship_icon(index.data(Qt.ToolTipRole))
             if item_type == 'relationship':
-                return self._tree_view_form.icon_mngr.relationship_icon(
-                    index.parent().data(Qt.UserRole + 1)["object_class_name_list"]
-                )
+                return self._tree_view_form.icon_mngr.relationship_icon(index.parent().data(Qt.ToolTipRole))
         return super().data(index, role)
 
     def hasChildren(self, parent):
@@ -745,14 +742,11 @@ class RelationshipTreeModel(QStandardItemModel):
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'root':
             return super().hasChildren(parent)
-        if parent_type == 'relationship_class':
-            relationship_class_id = parent.data(Qt.UserRole + 1)['id']
-            if relationship_class_id in self._fetched_relationship_class_id:
-                return super().hasChildren(parent)
-            return True
-        elif parent_type == 'relationship':
+        if parent_type == 'relationship':
             return False
-        return super().hasChildren(parent)
+        if parent in self._fetched:
+            return super().hasChildren(parent)
+        return True
 
     def canFetchMore(self, parent):
         """Return True if not fetched."""
@@ -761,11 +755,7 @@ class RelationshipTreeModel(QStandardItemModel):
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'root':
             return True
-        if parent_type == 'relationship_class':
-            parent_id = parent.data(Qt.UserRole + 1)['id']
-            return parent_id not in self._fetched_relationship_class_id
-        if parent_type == 'relationship':
-            return False
+        return parent not in self._fetched
 
     @busy_effect
     def fetchMore(self, parent):
@@ -777,74 +767,103 @@ class RelationshipTreeModel(QStandardItemModel):
             return False
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'relationship_class':
-            relationship_class_item = self.itemFromIndex(parent)
-            relationship_class = parent.data(Qt.UserRole + 1)
-            relationship_list = self.db_map.wide_relationship_list(class_id=relationship_class['id'])
-            self.add_relationships_to_class(relationship_list, relationship_class_item)
-            self._fetched_relationship_class_id.add(relationship_class['id'])
+            parent_db_map_dict = parent.data(Qt.UserRole + 1)
+            rel_cls_item = self.itemFromIndex(parent)
+            for db_map, relationship_class in parent_db_map_dict.items():
+                relationships = db_map.wide_relationship_list(class_id=relationship_class['id'])
+                self.add_relationships_to_class(db_map, relationships, rel_cls_item)
+            self._fetched.add(parent)
         self.dataChanged.emit(parent, parent)
 
     def build_tree(self):
         """Build the first level of the tree"""
         self.clear()
-        self._fetched_relationship_class_id = set()
-        database = self._tree_view_form.database
-        self.root_item = QStandardItem(database)
+        self.setHorizontalHeaderLabels(["item", "databases"])
+        self._fetched = set()
+        self.root_item = QStandardItem('root')
         self.root_item.setData('root', Qt.UserRole)
-        self.add_relationship_classes(self.db_map.wide_relationship_class_list().all())
-        self.appendRow(self.root_item)
+        db_item = QStandardItem(", ".join([short_db_name(x) for x in self.db_maps]))
+        for db_map in self.db_maps:
+            self.add_relationship_classes(db_map, db_map.wide_relationship_class_list())
+        self.appendRow([self.root_item, db_item])
 
-    def new_relationship_class_item(self, wide_relationship_class):
+    def new_relationship_class_row(self, db_map, relationship_class):
         """Returns new relationship class item."""
-        relationship_class_item = QStandardItem(wide_relationship_class.name)
-        relationship_class_item.setData(wide_relationship_class._asdict(), Qt.UserRole + 1)
+        relationship_class_item = QStandardItem(relationship_class.name)
         relationship_class_item.setData('relationship_class', Qt.UserRole)
-        relationship_class_item.setData(wide_relationship_class.object_class_name_list, Qt.ToolTipRole)
+        relationship_class_item.setData({db_map: relationship_class._asdict()}, Qt.UserRole + 1)
+        relationship_class_item.setData(relationship_class.object_class_name_list, Qt.ToolTipRole)
         relationship_class_item.setData(self.bold_font, Qt.FontRole)
-        return relationship_class_item
+        db_item = QStandardItem(short_db_name(db_map))
+        return [relationship_class_item, db_item]
 
-    def new_relationship_item(self, wide_relationship):
+    def new_relationship_row(self, db_map, relationship):
         """Returns new relationship item."""
-        relationship_item = QStandardItem(wide_relationship.object_name_list)
-        relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
+        relationship_item = QStandardItem(relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
-        return relationship_item
+        relationship_item.setData({db_map: relationship._asdict()}, Qt.UserRole + 1)
+        db_item = QStandardItem(short_db_name(db_map))
+        return [relationship_item, db_item]
 
-    def add_relationship_classes(self, relationship_classes):
+    def add_relationship_classes(self, db_map, relationship_classes):
         """Add relationship class items to the model."""
-        relationship_class_item_list = list()
-        for relationship_class in relationship_classes:
-            relationship_class_item = self.new_relationship_class_item(relationship_class)
-            relationship_class_item_list.append(relationship_class_item)
-        self.root_item.appendRows(relationship_class_item_list)
-
-    def add_relationships_to_class(self, relationship_list, relationship_class_item):
-        """Add relationship class items to the model."""
-        relationship_item_list = list()
-        for relationship in relationship_list:
-            relationship_item = self.new_relationship_item(relationship)
-            relationship_item_list.append(relationship_item)
-        relationship_class_item.appendRows(relationship_item_list)
+        existing_rows = [
+            [self.root_item.child(j, 0), self.root_item.child(j, 1)] for j in range(self.root_item.rowCount())
+        ]
+        existing_row_d = {(row[0].text(), row[0].data(Qt.ToolTipRole)): row for row in existing_rows}
+        new_rows = []
+        for rel_cls in relationship_classes:
+            if (rel_cls.name, rel_cls.object_class_name_list) in existing_row_d:
+                # Already in model, append db_map information
+                rel_cls_item, db_item = existing_row_d[rel_cls.name, rel_cls.object_class_name_list]
+                db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+                db_map_dict[db_map] = rel_cls._asdict()
+                databases = db_item.data(Qt.DisplayRole)
+                databases += ", " + short_db_name(db_map)
+                db_item.setData(databases, Qt.DisplayRole)
+            else:
+                new_rows.append(self.new_relationship_class_row(db_map, rel_cls))
+        for row in new_rows:
+            self.root_item.appendRow(row)
 
     def add_relationships(self, relationships):
-        """Add relationship items to the model."""
+        """Add relationship items to model."""
         relationship_dict = {}
         for relationship in relationships:
             relationship_dict.setdefault(relationship.class_id, list()).append(relationship)
-        # Sweep first level and check if there's something to append
         for i in range(self.root_item.rowCount()):
-            relationship_class_item = self.root_item.child(i)
-            relationship_class_id = relationship_class_item.data(Qt.UserRole + 1)['id']
-            try:
-                relationship_list = relationship_dict[relationship_class_id]
-            except KeyError:
+            rel_cls_item = self.root_item.child(i, 0)
+            rel_cls_index = self.indexFromItem(rel_cls_item)
+            if self.canFetchMore(rel_cls_index):
                 continue
-            # If not fetched, continue
-            relationship_class_index = self.indexFromItem(relationship_class_item)
-            if self.canFetchMore(relationship_class_index):
+            db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
+                # Can someone be adding relationships to a class that doesn't exist in the same db?
                 continue
-            # Already fetched, add new items manually
-            self.add_relationships_to_class(relationship_list, relationship_class_item)
+            relationship_class = db_map_dict[db_map]
+            relationship_class_id = relationship_class['id']
+            if relationship_class_id not in relationship_dict:
+                continue
+            relationships = relationship_dict[relationship_class_id]
+            self.add_relationships_to_class(db_map, relationships, rel_cls_item)
+
+    def add_relationships_to_class(self, db_map, relationships, rel_cls_item):
+        existing_rows = [[rel_cls_item.child(j, 0), rel_cls_item.child(j, 1)] for j in range(rel_cls_item.rowCount())]
+        existing_row_d = {row[0].text(): row for row in existing_rows}
+        new_rows = []
+        for relationship in relationships:
+            if relationship.object_name_list in existing_row_d:
+                # Already in model, append db_map information
+                relationship_item, db_item = existing_row_d[relationship.object_name_list]
+                db_map_dict = relationship_item.data(Qt.UserRole + 1)
+                db_map_dict[db_map] = relationship._asdict()
+                databases = db_item.data(Qt.DisplayRole)
+                databases += ", " + short_db_name(db_map)
+                db_item.setData(databases, Qt.DisplayRole)
+            else:
+                new_rows.append(self.new_relationship_row(db_map, relationship))
+        for row in new_rows:
+            rel_cls_item.appendRow(row)
 
     def update_objects(self, updated_items):
         """Update object in the model.
@@ -1687,7 +1706,6 @@ class ObjectParameterModel(MinimalTableModel):
         super().__init__(tree_view_form)
         self._tree_view_form = tree_view_form
         self.db_maps = tree_view_form.db_maps
-        self.db_map = self.db_maps[0]
         self.sub_models = []
         self.empty_row_model = None
         self.fixed_columns = list()
@@ -1984,7 +2002,9 @@ class ObjectParameterValueModel(ObjectParameterModel):
         self.beginResetModel()
         self.sub_models = []
         header = self.db_maps[0].object_parameter_value_fields() + ["database", "url"]
-        self.fixed_columns = [header.index(x) for x in ('object_class_name', 'object_name', 'parameter_name')]
+        self.fixed_columns = [
+            header.index(x) for x in ('object_class_name', 'object_name', 'parameter_name', "database")
+        ]
         self.object_class_name_column = header.index('object_class_name')
         parameter_definition_id_column = header.index('parameter_id')
         object_id_column = header.index('object_id')
@@ -2118,16 +2138,18 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         for a different object class."""
         self.beginResetModel()
         self.sub_models = []
-        header = self.db_map.object_parameter_definition_fields()
-        data = self.db_map.object_parameter_definition_list()
-        self.fixed_columns = [header.index('object_class_name')]
+        header = self.db_maps[0].object_parameter_definition_fields() + ["database", "url"]
+        self.fixed_columns = [header.index('object_class_name'), header.index('database')]
         self.object_class_name_column = header.index('object_class_name')
         parameter_definition_id_column = header.index('id')
         self.set_horizontal_header_labels(header)
         data_dict = {}
-        for parameter_definition in data:
-            object_class_id = parameter_definition.object_class_id
-            data_dict.setdefault(object_class_id, list()).append(parameter_definition)
+        for db_map in self.db_maps:
+            for parameter_definition in db_map.object_parameter_definition_list():
+                object_class_id = (db_map, parameter_definition.object_class_id)
+                data_dict.setdefault(object_class_id, list()).append(
+                    list(parameter_definition) + [short_db_name(db_map), db_map.db_url]
+                )
         for object_class_id, data in data_dict.items():
             source_model = SubParameterDefinitionModel(self)
             source_model.reset_model([list(x) for x in data])
@@ -2212,6 +2234,7 @@ class RelationshipParameterModel(MinimalTableModel):
         super().__init__(tree_view_form)
         self._tree_view_form = tree_view_form
         self.db_map = tree_view_form.db_map
+        self.db_maps = tree_view_form.db_maps
         self.sub_models = []
         self.object_class_id_lists = {}
         self.empty_row_model = EmptyRowModel(self)
@@ -2220,10 +2243,14 @@ class RelationshipParameterModel(MinimalTableModel):
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
 
-    def add_object_class_id_lists(self, wide_relationship_class_list):
+    def add_object_class_id_lists(self, db_map, wide_relationship_class_list):
         """Populate a dictionary of object class id lists per relationship class."""
+        # NOTE: this must be called when adding new relationship classes
         self.object_class_id_lists.update(
-            {x.id: [int(x) for x in x.object_class_id_list.split(",")] for x in wide_relationship_class_list}
+            {
+                (db_map, x.id): [(db_map, int(x)) for x in x.object_class_id_list.split(",")]
+                for x in wide_relationship_class_list
+            }
         )
 
     def flags(self, index):
@@ -2594,26 +2621,30 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         for a different relationship class."""
         self.beginResetModel()
         self.sub_models = []
-        self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
-        header = self.db_map.relationship_parameter_value_fields()
-        data = self.db_map.relationship_parameter_value_list()
+        for db_map in self.db_maps:
+            self.add_object_class_id_lists(db_map, db_map.wide_relationship_class_list())
+        header = self.db_maps[0].relationship_parameter_value_fields() + ["database", "url"]
         self.fixed_columns = [
-            header.index(x) for x in ('relationship_class_name', 'object_name_list', 'parameter_name')
+            header.index(x) for x in ('relationship_class_name', 'object_name_list', 'parameter_name', "database")
         ]
         self.relationship_class_name_column = header.index('relationship_class_name')
         self.object_class_name_list_column = header.index('object_class_name_list')
         parameter_definition_id_column = header.index('parameter_id')
         object_id_list_column = header.index('object_id_list')
+        url_column = header.index('url')
         self.set_horizontal_header_labels(header)
         data_dict = {}
-        for parameter_value in data:
-            relationship_class_id = parameter_value.relationship_class_id
-            data_dict.setdefault(relationship_class_id, list()).append(parameter_value)
+        for db_map in self.db_maps:
+            for parameter_value in db_map.relationship_parameter_value_list():
+                relationship_class_id = (db_map, parameter_value.relationship_class_id)
+                data_dict.setdefault(relationship_class_id, list()).append(
+                    list(parameter_value) + [short_db_name(db_map), db_map.db_url]
+                )
         for relationship_class_id, data in data_dict.items():
             source_model = SubParameterValueModel(self)
             source_model.reset_model([list(x) for x in data])
             model = RelationshipParameterValueFilterProxyModel(
-                self, parameter_definition_id_column, object_id_list_column
+                self, parameter_definition_id_column, object_id_list_column, url_column
             )
             model.setSourceModel(source_model)
             self.sub_models.append((relationship_class_id, model))
@@ -2743,18 +2774,23 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         for a different relationship class."""
         self.beginResetModel()
         self.sub_models = []
-        self.add_object_class_id_lists(self.db_map.wide_relationship_class_list())
-        header = self.db_map.relationship_parameter_definition_fields()
-        data = self.db_map.relationship_parameter_definition_list()
-        self.fixed_columns = [header.index(x) for x in ('relationship_class_name', 'object_class_name_list')]
+        for db_map in self.db_maps:
+            self.add_object_class_id_lists(db_map, db_map.wide_relationship_class_list())
+        header = self.db_maps[0].relationship_parameter_definition_fields() + ["database", "url"]
+        self.fixed_columns = [
+            header.index(x) for x in ('relationship_class_name', 'object_class_name_list', 'database')
+        ]
         self.relationship_class_name_column = header.index('relationship_class_name')
         self.object_class_name_list_column = header.index('object_class_name_list')
         parameter_definition_id_column = header.index('id')
         self.set_horizontal_header_labels(header)
         data_dict = {}
-        for parameter_definition in data:
-            relationship_class_id = parameter_definition.relationship_class_id
-            data_dict.setdefault(relationship_class_id, list()).append(parameter_definition)
+        for db_map in self.db_maps:
+            for parameter_definition in db_map.relationship_parameter_definition_list():
+                relationship_class_id = (db_map, parameter_definition.relationship_class_id)
+                data_dict.setdefault(relationship_class_id, list()).append(
+                    list(parameter_definition) + [short_db_name(db_map), db_map.db_url]
+                )
         for relationship_class_id, data in data_dict.items():
             source_model = SubParameterDefinitionModel(self)
             source_model.reset_model([list(x) for x in data])
@@ -2915,8 +2951,9 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
         if not super().main_filter_accepts_row(source_row, source_parent):
             return False
         if self.object_ids:
-            row_data = self.sourceModel()._main_data[source_row]
-            return (row_data[self.url_column], row_data[self.object_id_column]) in self.object_ids
+            url = self.sourceModel()._main_data[source_row][self.url_column]
+            object_id = self.sourceModel()._main_data[source_row][self.object_id_column]
+            return (url, object_id) in self.object_ids
         return True
 
 
@@ -2985,12 +3022,13 @@ class RelationshipParameterDefinitionFilterProxyModel(QSortFilterProxyModel):
 class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinitionFilterProxyModel):
     """A filter proxy model for relationship parameter value models."""
 
-    def __init__(self, parent, parameter_definition_id_column, object_id_list_column):
+    def __init__(self, parent, parameter_definition_id_column, object_id_list_column, url_column):
         """Init class."""
         super().__init__(parent, parameter_definition_id_column)
         self.object_ids = dict()
         self.object_id_lists = set()
         self.object_id_list_column = object_id_list_column
+        self.url_column = url_column
 
     def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):
         """Update filter."""
@@ -3010,10 +3048,11 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
         if not super().main_filter_accepts_row(source_row, source_parent):
             return False
         object_id_list = self.sourceModel()._main_data[source_row][self.object_id_list_column]
+        url = self.sourceModel()._main_data[source_row][self.url_column]
         if self.object_id_lists:
-            return object_id_list in self.object_id_lists
+            return (url, object_id_list) in self.object_id_lists
         if self.object_ids:
-            return len(self.object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
+            return len(self.object_ids.intersection((url, int(x)) for x in object_id_list.split(","))) > 0
         return True
 
 
