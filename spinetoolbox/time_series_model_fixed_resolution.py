@@ -23,11 +23,28 @@ from indexed_value_table_model import IndexedValueTableModel
 
 
 class TimeSeriesModelFixedResolution(IndexedValueTableModel):
+    """
+    A model for fixed resolution time series type parameter values.
+
+    Attributes:
+        series (TimeSeriesFixedResolution): a time series
+    """
+
     def __init__(self, series):
         super().__init__(series, "Time stamp", "Values")
+        # Cache the time steps so they need not be recalculated every single time they are needed.
         self._index_cache = self._value.indexes
 
     def data(self, index, role=Qt.DisplayRole):
+        """
+        Returns the time stamp or the corresponding value at given model index.
+
+        Column index 0 refers to time stamps while index 1 to values.
+
+        Args:
+            index (QModelIndex): an index to the model
+            role (int): a role
+        """
         if not index.isValid() or role not in (Qt.DisplayRole, Qt.EditRole):
             return None
         if index.column() == 0:
@@ -44,9 +61,22 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
 
     @property
     def indexes(self):
+        """Returns the time stamps as an array."""
         return self._index_cache
 
     def insertRows(self, row, count, parent=QModelIndex()):
+        """
+        Inserts new values to the series.
+
+        The new values are set to zero. Start time or resolution are left unchanged.
+
+        Args:
+            row (int): a numeric index to the first stamp/value to insert
+            count (int): number of stamps/values to insert
+            parent (QModelIndex): index to a parent model
+        Returns:
+            True if the operation was successful
+        """
         self.beginInsertRows(parent, row, row + count - 1)
         old_values = self._value.values
         if row == len(old_values):
@@ -62,6 +92,16 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         return True
 
     def removeRows(self, row, count, parent=QModelIndex()):
+        """
+        Removes values from the series.
+
+        Args:
+            row (int): a numeric index to the series where to begin removing
+            count (int): how many stamps/values to remove
+            parent (QModelIndex): an index to the parent model
+        Returns:
+            True if the operation was successful.
+        """
         if len(self._value) == 2:
             return False
         if count == len(self._value):
@@ -79,12 +119,26 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         return True
 
     def reset(self, value):
+        """Resets the model with new time series data."""
         self.beginResetModel()
         self._value = value
         self._index_cache = self._value.indexes
         self.endResetModel()
 
     def setData(self, index, value, role=Qt.EditRole):
+        """
+        Sets a given value in the series.
+
+        Column index 1 refers to values.
+        Note it does not make sense to set the time stamps in fixed resolution series.
+
+        Args:
+            index (QModelIndex): an index to the model
+            value (numpy.datetime64, float): a new stamp or value
+            role (int): a role
+        Returns:
+            True if the operation was successful
+        """
         if not index.isValid() or role != Qt.EditRole:
             return False
         self._value.values[index.row()] = value
@@ -92,22 +146,27 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
 
     @Slot(bool, name="set_ignore_year")
     def set_ignore_year(self, ignore_year):
+        """Sets the ignore_year option of the time series."""
         self._value.ignore_year = ignore_year
 
     @Slot(bool, name="set_repeat")
     def set_repeat(self, repeat):
+        """Sets the repeat option of the time series."""
         self._value.repeat = repeat
 
     def set_resolution(self, resolution):
+        """Sets the resolution."""
         self._value.resolution = resolution
         self._index_cache = self._value.indexes
         self.dataChanged.emit(self.index(0, 0), self.index(len(self._value) - 1, 0))
 
     def set_start(self, start):
+        """Sets the start datetime."""
         self._value.start = start
         self._index_cache = self._value.indexes
         self.dataChanged.emit(self.index(0, 0), self.index(len(self._value) - 1, 0))
 
     @property
     def values(self):
+        """Returns the values of the time series as an array."""
         return self._value.values

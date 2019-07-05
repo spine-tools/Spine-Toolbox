@@ -23,10 +23,26 @@ from indexed_value_table_model import IndexedValueTableModel
 
 
 class TimeSeriesModelVariableResolution(IndexedValueTableModel):
+    """
+    A model for variable resolution time series type parameter values.
+
+    Attributes:
+        series (TimeSeriesVariableResolution): a time series
+    """
+
     def __init__(self, series):
         super().__init__(series, "Time stamp", "Values")
 
     def data(self, index, role=Qt.DisplayRole):
+        """
+        Returns the time stamp or the corresponding value at given model index.
+
+        Column index 0 refers to time stamps while index 1 to values.
+
+        Args:
+            index (QModelIndex): an index to the model
+            role (int): a role
+        """
         if not index.isValid() or role not in (Qt.DisplayRole, Qt.EditRole):
             return None
         if index.column() == 0:
@@ -34,6 +50,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
         return float(self._value.values[index.row()])
 
     def flags(self, index):
+        """Returns the flags for given model index."""
         """Returns flags at index."""
         if not index.isValid():
             return Qt.NoItemFlags
@@ -41,9 +58,27 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
 
     @property
     def indexes(self):
+        """Returns the time stamps as an array."""
         return self._value.indexes
 
     def insertRows(self, row, count, parent=QModelIndex()):
+        """
+        Inserts new time stamps and values to the series.
+
+        When inserting in the middle of the series the new time stamps are distributed evenly
+        among the time span between the two time stamps around the insertion point.
+        When inserting at the beginning or at the end of the series the duration between
+        the new time stamps is set equal to the first/last duration in the original series.
+
+        The new values are set to zero.
+
+        Args:
+            row (int): a numeric index to the first stamp/value to insert
+            count (int): number of stamps/values to insert
+            parent (QModelIndex): index to a parent model
+        Returns:
+            True if the insertion was successful
+        """
         self.beginInsertRows(parent, row, row + count - 1)
         old_indexes = self._value.indexes
         old_values = self._value.values
@@ -82,6 +117,16 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
         return True
 
     def removeRows(self, row, count, parent=QModelIndex()):
+        """
+        Removes time stamps/values from the series.
+
+        Args:
+            row (int): a numeric index to the series where to begin removing
+            count (int): how many stamps/values to remove
+            parent (QModelIndex): an index to the parent model
+        Returns:
+            True if the operation was successful.
+        """
         if len(self._value) == 2:
             return False
         if count == len(self._value):
@@ -98,11 +143,24 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
         return True
 
     def reset(self, value):
+        """Resets the model with new time series data."""
         self.beginResetModel()
         self._value = value
         self.endResetModel()
 
     def setData(self, index, value, role=Qt.EditRole):
+        """
+        Sets a given time stamp or value in the series.
+
+        Column index 0 refers to time stamps while index 1 to values.
+
+        Args:
+            index (QModelIndex): an index to the model
+            value (numpy.datetime64, float): a new stamp or value
+            role (int): a role
+        Returns:
+            True if the operation was successful
+        """
         if not index.isValid() or role != Qt.EditRole:
             return False
         self._value.values[index.row()] = value
@@ -110,12 +168,15 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
 
     @Slot(bool, name="set_ignore_year")
     def set_ignore_year(self, ignore_year):
+        """Sets the ignore_year option of the time series."""
         self._value.ignore_year = ignore_year
 
     @Slot(bool, name="set_repeat")
     def set_repeat(self, repeat):
+        """Sets the repeat option of the time series."""
         self._value.repeat = repeat
 
     @property
     def values(self):
+        """Returns the values of the time series as an array."""
         return self._value.values

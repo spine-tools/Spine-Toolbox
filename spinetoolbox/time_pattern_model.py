@@ -21,7 +21,15 @@ from PySide2.QtCore import QModelIndex, Qt
 from spinedb_api import TimePattern
 from indexed_value_table_model import IndexedValueTableModel
 
+
 class TimePatternModel(IndexedValueTableModel):
+    """
+    A model for time pattern type parameter values.
+
+    Attributes:
+        value (TimePattern): a time pattern value
+    """
+
     def __init__(self, value):
         super().__init__(value, "Time period", "Value")
 
@@ -32,6 +40,18 @@ class TimePatternModel(IndexedValueTableModel):
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
 
     def insertRows(self, row, count, parent=QModelIndex()):
+        """
+        Inserts new time period - value pairs into the pattern.
+
+        New time periods are initialized to empty strings and the corresponding values to zeros.
+
+        Args:
+            row (int): an index where to insert the new data
+            count (int): number of time period - value pairs to insert
+            parent (QModelIndex): an index to a parent model
+        Returns:
+            True if the operation was successful
+        """
         self.beginInsertRows(parent, row, row + count - 1)
         old_indexes = self._value.indexes
         old_values = self._value.values
@@ -48,6 +68,16 @@ class TimePatternModel(IndexedValueTableModel):
         return True
 
     def removeRows(self, row, count, parent=QModelIndex()):
+        """
+        Removes time period - value pairs from the pattern.
+
+        Attributes:
+            row (int): an index where to remove the data
+            count (int): number of time period - value pairs to remove
+            parent (QModelIndex): an index to a parent model
+        Returns:
+            True if the operation was successful
+        """
         if len(self._value) == 1:
             return False
         if count == len(self._value):
@@ -57,7 +87,7 @@ class TimePatternModel(IndexedValueTableModel):
         old_indexes = self._value.indexes
         old_values = self._value.values
         new_indexes = list(old_indexes)
-        del new_indexes[row:row + count]
+        del new_indexes[row : row + count]
         remove_indexes = range(row, row + count) if count > 1 else row
         new_values = np.delete(old_values, remove_indexes)
         self._value = TimePattern(new_indexes, new_values)
@@ -65,6 +95,18 @@ class TimePatternModel(IndexedValueTableModel):
         return True
 
     def setData(self, index, value, role=Qt.EditRole):
+        """
+        Sets a time period or a value in the pattern.
+
+        Column index 0 corresponds to the time periods while 1 corresponds to the values.
+
+        Attributes:
+            index (QModelIndex): an index to the model
+            value (str, float): a new time period or value
+            role (int): a role
+        Returns:
+            True if the operation was successful
+        """
         if not index.isValid() or role != Qt.EditRole:
             return False
         if index.column() == 0:

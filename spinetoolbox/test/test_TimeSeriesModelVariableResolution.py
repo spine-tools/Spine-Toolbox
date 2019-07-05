@@ -77,7 +77,6 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False)
         )
         self.assertTrue(model.insertRows(2, 1))
-        print(model.value.indexes)
         self.assertEqual(
             model.value,
             TimeSeriesVariableResolution(
