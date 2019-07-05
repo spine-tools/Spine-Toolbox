@@ -48,7 +48,7 @@ from treeview_models import (
     ParameterValueListModel,
 )
 from spinedb_api import copy_database
-from helpers import busy_effect, format_string_list, IconManager, fix_name_ambiguity, short_db_name
+from helpers import busy_effect, format_string_list, IconManager
 
 
 class DataStoreForm(QMainWindow):
@@ -56,16 +56,15 @@ class DataStoreForm(QMainWindow):
 
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
-        db_map (DiffDatabaseMapping): The object relational database mapping
-        database (str): The database name
         ui: UI definition of the form that is initialized
+        db_maps: named DiffDatabaseMapping instances
     """
 
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
     commit_available = Signal("bool", name="commit_available")
 
-    def __init__(self, project, ui, *db_maps):
+    def __init__(self, project, ui, **db_maps):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
         self._project = project
@@ -81,10 +80,8 @@ class DataStoreForm(QMainWindow):
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB
-        self.db_map = db_maps[0]
-        self.db_maps = db_maps
-        db_names = [short_db_name(db_map) for db_map in self.db_maps]
-        fix_name_ambiguity(db_names)
+        db_names, self.db_maps = zip(*db_maps.items())
+        self.db_map = self.db_maps[0]  # TODO: Remove when over
         self.db_name_to_map = dict(zip(db_names, self.db_maps))
         self.db_map_to_name = dict(zip(self.db_maps, db_names))
         self.database = self.db_map.sa_url.database

@@ -723,7 +723,6 @@ class SpineToolboxProject(MetaObject):
         if not data_stores:
             self._toolbox.msg_error.emit("No Data Store selected. Please select one or more Data Store items.")
             return
-        urls = [ds.make_url() for ds in data_stores]
-        db_maps = [get_db_map(url) for url in urls]
-        tree_view_form = TreeViewForm(self, *db_maps)
+        db_maps = {ds.name: get_db_map(ds.make_url()) for ds in data_stores}
+        tree_view_form = TreeViewForm(self, **db_maps)
         tree_view_form.show()

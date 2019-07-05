@@ -416,15 +416,6 @@ def do_get_db_map(url, upgrade):
     return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
 
 
-def short_db_name(db_map):
-    """Returns a short db name.
-    """
-    url = db_map.sa_url
-    if url.drivername == 'sqlite':
-        return os.path.basename(url.database)
-    return url.database
-
-
 class IconManager:
     """A class to manage object class icons for data store forms."""
 
