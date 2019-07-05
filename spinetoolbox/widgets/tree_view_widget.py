@@ -577,7 +577,7 @@ class TreeViewForm(DataStoreForm):
 
     def set_default_parameter_rows(self, selection):
         """Set default rows for parameter models according to selection in object tree."""
-        # TODO: Check if this is doing what we want
+        return  # For now
         if selection.isEmpty():
             return
         index = selection.indexes()[-1]

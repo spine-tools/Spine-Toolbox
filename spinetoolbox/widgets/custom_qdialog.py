@@ -30,6 +30,7 @@ from PySide2.QtWidgets import (
     QLabel,
     QComboBox,
     QSpinBox,
+    QStyle,
 )
 from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QIcon
@@ -58,6 +59,7 @@ class ManageItemsDialog(QDialog):
         self._parent = parent
         self.table_view = CopyPasteTableView(self)
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+        self.table_view.horizontalHeader().setStretchLastSection(True)
         self.table_view.verticalHeader().setDefaultSectionSize(parent.default_row_height)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
@@ -73,7 +75,6 @@ class ManageItemsDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
         self.model.dataChanged.connect(self._handle_model_data_changed)
-        self.model.modelReset.connect(self._handle_model_reset)
 
     def resize_window_to_columns(self):
         margins = self.layout().contentsMargins()
@@ -82,19 +83,14 @@ class ManageItemsDialog(QDialog):
             + margins.right()
             + self.table_view.frameWidth() * 2
             + self.table_view.verticalHeader().width()
-            + self.table_view.horizontalHeader().length(),
-            # + self.table_view.style().pixelMetric(QStyle.PM_ScrollBarExtent),
+            + self.table_view.horizontalHeader().length()
+            + self.table_view.style().pixelMetric(QStyle.PM_ScrollBarExtent),
             400,
         )
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         """Reimplement in subclasses to handle changes in model data."""
-        pass
-
-    @Slot(name="_handle_model_reset")
-    def _handle_model_reset(self):
-        """Reimplement in subclasses to handle model resetting."""
         pass
 
     @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
@@ -108,48 +104,20 @@ class ManageItemsDialog(QDialog):
 class AddItemsDialog(ManageItemsDialog):
     def __init__(self, parent):
         super().__init__(parent)
+        self.remove_rows_button = QToolButton()
+        self.remove_rows_button.setToolTip("<p>Remove selected rows.</p>")
+        self.layout().insertWidget(1, self.remove_rows_button)
 
     def connect_signals(self):
         super().connect_signals()
-        self.model.rowsInserted.connect(self._handle_model_rows_inserted)
+        self.remove_rows_button.clicked.connect(self.remove_selected_rows)
 
-    @Slot(name="_handle_model_reset")
-    def _handle_model_reset(self):
-        """Add an extra column to hold the remove row button."""
-        self.model.insert_horizontal_header_labels(self.model.columnCount(), [""])
-        self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 1, QHeaderView.Fixed)
-        # TODO: Try to make the stretch work with the resizing
-        # self.table_view.horizontalHeader().setSectionResizeMode(self.model.columnCount() - 2, QHeaderView.Stretch)
-        self.table_view.resizeColumnsToContents()
-        self.table_view.horizontalHeader().resizeSection(self.model.columnCount() - 1, 32)
-        self.resize_window_to_columns()
-
-    @Slot("QModelIndex", "int", "int", name="_handle_model_rows_inserted")
-    def _handle_model_rows_inserted(self, parent, first, last):
-        """Add remove row buttons."""
-        column = self.model.columnCount() - 1
-        for row in range(first, last + 1):
-            index = self.model.index(row, column, parent)
-            button = self.create_remove_row_button(index)
-            self.table_view.setIndexWidget(index, button)
-
-    def create_remove_row_button(self, index):
-        """Create button to remove row."""
-        action = QAction("remove")
-        action.setIcon(self.remove_row_icon)
-        button = QToolButton()
-        button.setDefaultAction(action)
-        button.setIconSize(QSize(20, 20))
-        action.triggered.connect(lambda: self.remove_clicked_row(button))
-        return button
-
-    def remove_clicked_row(self, button):
-        column = self.model.columnCount() - 1
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, column)
-            if button == self.table_view.indexWidget(index):
-                self.model.removeRows(row, 1)
-                break
+    @Slot("bool", name="remove_selected_rows")
+    def remove_selected_rows(self, checked=True):
+        indexes = self.table_view.selectedIndexes()
+        rows = list(set(ind.row() for ind in indexes))
+        for row in sorted(rows, reverse=True):
+            self.model.removeRows(row, 1)
 
 
 class AddObjectClassesDialog(AddItemsDialog):
@@ -169,46 +137,28 @@ class AddObjectClassesDialog(AddItemsDialog):
         model = self._parent.object_tree_model
         self.object_class_items = [model.root_item.child(i, 0) for i in range(model.root_item.rowCount())]
         self.remove_row_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
+        self.remove_rows_button.setIcon(self.remove_row_icon)
         self.table_view.setItemDelegate(AddObjectClassesDelegate(parent))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
         db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps])
-        self.model.set_default_row(**{'databases': db_names})
+        self.default_display_icon = self._parent.icon_mngr.default_display_icon()
+        self.model.set_default_row(**{'databases': db_names, 'display icon': self.default_display_icon})
         self.model.clear()
+        self.table_view.resizeColumnsToContents()
+        self.resize_window_to_columns()
         insert_at_position_list = ['Insert new classes at the top']
         insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(it.text()) for it in self.object_class_items]
         )
         self.combo_box.addItems(insert_at_position_list)
 
-    def connect_signals(self):
-        super().connect_signals()
-        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
-
-    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
-    def _handle_data_committed(self, index, data):
-        """Update model data."""
-        if data is None:
-            return
-        self.model.setData(index, data, Qt.EditRole)
-
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to add items."""
         object_class_d = dict()
-        index = self.combo_box.currentIndex()
-        if index == 0:
-            # At the top
-            if not self.object_class_items:
-                # Whatever
-                display_order = 0
-            else:
-                item = self.object_class_items[0]
-                display_order = min(x['display_order'] for x in item.data(Qt.UserRole + 1).values()) - 1
-        else:
-            # After the item
-            item = self.object_class_items[index - 1]
-            display_order = max(x['display_order'] for x in item.data(Qt.UserRole + 1).values())
+        # Display order
+        combo_index = self.combo_box.currentIndex()
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)[:-1]
             name, description, display_icon, db_names = row_data
@@ -221,13 +171,27 @@ class AddObjectClassesDialog(AddItemsDialog):
             if not name:
                 self._parent.msg_error.emit("Object class name missing at row {0}".format(i + 1))
                 return
-            item = {
-                'name': name,
-                'description': description,
-                'display_icon': display_icon if display_icon else self.parent().icon_mngr.default_display_icon(),
-                'display_order': display_order,
-            }
+            if not display_icon:
+                display_icon = self.default_display_icon
+            item = {'name': name, 'description': description, 'display_icon': display_icon}
             for db_map in db_maps:
+                if not self.object_class_items:
+                    display_order = 0
+                elif combo_index == 0:
+                    # At the top
+                    db_map_dict = self.object_class_items[0].data(Qt.UserRole + 1)
+                    if db_map not in db_map_dict:
+                        display_order = 0
+                    else:
+                        display_order = db_map_dict[db_map]['display_order'] - 1
+                else:
+                    # After the item
+                    db_map_dict = self.object_class_items[combo_index - 1].data(Qt.UserRole + 1)
+                    if db_map not in db_map_dict:
+                        display_order = 0
+                    else:
+                        display_order = db_map_dict[db_map]['display_order']
+                item['display_order'] = display_order
                 object_class_d.setdefault(db_map, []).append(item)
         if not object_class_d:
             self._parent.msg_error.emit("Nothing to add")
