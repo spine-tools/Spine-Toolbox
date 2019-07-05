@@ -921,7 +921,6 @@ class MinimalTableModel(QAbstractTableModel):
         if not labels:
             return
         self.header = labels
-        # self.aux_header = len(labels) * [{}]  # Doesn't work, dicts need to be independent
         self.aux_header = [{} for _ in range(len(labels))]
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
 
@@ -1172,7 +1171,6 @@ class EmptyRowModel(MinimalTableModel):
         self.dataChanged.connect(self._handle_data_changed)
         self.rowsRemoved.connect(self._handle_rows_removed)
         self.rowsInserted.connect(self._handle_rows_inserted)
-        self.columnsInserted.connect(self._handle_columns_inserted)
 
     def flags(self, index):
         """Return default flags except if forcing defaults."""
@@ -1252,28 +1250,6 @@ class EmptyRowModel(MinimalTableModel):
             return
         top_left = self.index(first, left)
         bottom_right = self.index(last, right)
-        self.dataChanged.emit(top_left, bottom_right)
-
-    @Slot("QModelIndex", "int", "int", name="_handle_columns_inserted")
-    def _handle_columns_inserted(self, parent, first, last):
-        """Set default data in newly inserted columns."""
-        left = None
-        right = None
-        for column in range(first, last + 1):
-            try:
-                name = self.header[column]
-            except IndexError:
-                continue
-            default = self.default_row.get(name)
-            if left is None:
-                left = column
-            right = column
-            for row in range(self.rowCount()):
-                self._main_data[row][column] = default
-        if left is None:
-            return
-        top_left = self.index(0, left)
-        bottom_right = self.index(self.rowCount() - 1, right)
         self.dataChanged.emit(top_left, bottom_right)
 
 

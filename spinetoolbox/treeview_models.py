@@ -435,11 +435,11 @@ class ObjectTreeModel(QStandardItemModel):
         for row in new_rows:
             object_item.appendRow(row)
 
-    def add_relationships(self, relationships):
+    def add_relationships(self, db_map, relationships):
         """Add relationship items to model."""
         relationship_dict = {}
         for relationship in relationships:
-            class_id = relationship['class_id']
+            class_id = relationship.class_id
             for object_id in relationship.object_id_list.split(","):
                 relationship_dict.setdefault((int(object_id), class_id), list()).append(relationship)
         for i in range(self.root_item.rowCount()):
@@ -685,11 +685,13 @@ class ObjectTreeModel(QStandardItemModel):
         if index.data(Qt.UserRole) != 'relationship':
             return None
         object_name_list = index.data(Qt.DisplayRole)
-        class_id = index.data(Qt.UserRole + 1)["class_id"]
+        class_name = index.parent().data(Qt.DisplayRole)
+        object_class_name_list = index.parent().data(Qt.ToolTipRole)
         items = [
             item
             for item in self.findItems(object_name_list, Qt.MatchExactly | Qt.MatchRecursive, column=0)
-            if item.data(Qt.UserRole + 1)["class_id"] == class_id
+            if item.parent().data(Qt.DisplayRole) == class_name
+            and item.parent().data(Qt.ToolTipRole) == object_class_name_list
         ]
         position = None
         for i, item in enumerate(items):
@@ -826,7 +828,7 @@ class RelationshipTreeModel(QStandardItemModel):
         for row in new_rows:
             self.root_item.appendRow(row)
 
-    def add_relationships(self, relationships):
+    def add_relationships(self, db_map, relationships):
         """Add relationship items to model."""
         relationship_dict = {}
         for relationship in relationships:

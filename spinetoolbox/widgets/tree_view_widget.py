@@ -795,25 +795,25 @@ class TreeViewForm(DataStoreForm):
             self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.collapse)
 
     def call_show_add_objects_form(self, index):
-        class_id = index.data(Qt.UserRole + 1)['id']
-        self.show_add_objects_form(class_id=class_id)
+        class_name = index.data(Qt.DisplayRole)
+        self.show_add_objects_form(class_name=class_name)
 
     def call_show_add_relationship_classes_form(self, index):
-        object_class_id = index.data(Qt.UserRole + 1)['id']
-        self.show_add_relationship_classes_form(object_class_id=object_class_id)
+        object_class_one_name = index.data(Qt.DisplayRole)
+        self.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
 
     def call_show_add_relationships_form(self, index):
-        relationship_class = index.data(Qt.UserRole + 1)
+        relationship_class_key = (index.data(Qt.DisplayRole), index.data(Qt.ToolTipRole))
         if index.model() == self.object_tree_model:
-            object_ = index.parent().data(Qt.UserRole + 1)
-            object_class = index.parent().parent().data(Qt.UserRole + 1)
+            object_name = index.parent().data(Qt.DisplayRole)
+            object_class_name = index.parent().parent().data(Qt.DisplayRole)
             self.show_add_relationships_form(
-                relationship_class_id=relationship_class['id'],
-                object_id=object_['id'],
-                object_class_id=object_class['id'],
+                relationship_class_key=relationship_class_key,
+                object_class_name=object_class_name,
+                object_name=object_name,
             )
         else:
-            self.show_add_relationships_form(relationship_class_id=relationship_class['id'])
+            self.show_add_relationships_form(relationship_class_key=relationship_class_key)
 
     def add_object_classes(self, object_class_d):
         """Insert new object classes."""
@@ -822,19 +822,45 @@ class TreeViewForm(DataStoreForm):
             return True
         return False
 
-    def add_relationship_classes(self, relationship_classes):
+    def add_relationship_classes(self, rel_cls_d):
         """Insert new relationship classes."""
-        if super().add_relationship_classes(relationship_classes):
-            self.relationship_tree_model.add_relationship_classes(relationship_classes)
-            return True
-        return False
+        added_names = set()
+        for db_map, items in rel_cls_d.items():
+            added, error_log = db_map.add_wide_relationship_classes(*items)
+            if not added.count():
+                continue
+            self.object_tree_model.add_relationship_classes(db_map, added)
+            self.relationship_tree_model.add_relationship_classes(db_map, added)
+            self.relationship_parameter_definition_model.add_object_class_id_lists(db_map, added)
+            self.relationship_parameter_value_model.add_object_class_id_lists(db_map, added)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            added_names.update(x.name for x in added)
+        if not added_names:
+            return False
+        self.commit_available.emit(True)
+        msg = "Successfully added new relationship class(es) '{}'.".format("', '".join(added_names))
+        self.msg.emit(msg)
+        return True
 
-    def add_relationships(self, relationships):
+    def add_relationships(self, relationship_d):
         """Insert new relationships."""
-        if super().add_relationships(relationships):
-            self.relationship_tree_model.add_relationships(relationships)
-            return True
-        return False
+        added_names = set()
+        for db_map, items in relationship_d.items():
+            added, error_log = db_map.add_wide_relationships(*items)
+            if not added.count():
+                continue
+            self.object_tree_model.add_relationships(db_map, added)
+            self.relationship_tree_model.add_relationships(db_map, added)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            added_names.update(x.name for x in added)
+        if not added_names:
+            return False
+        self.commit_available.emit(True)
+        msg = "Successfully added new relationship(s) '{}'.".format("', '".join(added_names))
+        self.msg.emit(msg)
+        return True
 
     def edit_object_tree_items(self):
         """Called when F2 is pressed while the object tree has focus.

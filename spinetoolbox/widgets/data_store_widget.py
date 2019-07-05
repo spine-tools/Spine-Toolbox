@@ -466,25 +466,28 @@ class DataStoreForm(QMainWindow):
         dialog = AddObjectClassesDialog(self)
         dialog.show()
 
-    @Slot("bool", name="show_add_objects_form")
-    def show_add_objects_form(self, checked=False, class_id=None):
+    @Slot("bool", "str", name="show_add_objects_form")
+    def show_add_objects_form(self, checked=False, class_name=""):
         """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, class_id=class_id)
+        dialog = AddObjectsDialog(self, class_name=class_name)
         dialog.show()
 
-    @Slot("bool", name="show_add_relationship_classes_form")
-    def show_add_relationship_classes_form(self, checked=False, object_class_id=None):
+    @Slot("bool", "str", name="show_add_relationship_classes_form")
+    def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
         """Show dialog to let user select preferences for new relationship class."""
-        dialog = AddRelationshipClassesDialog(self, object_class_one_id=object_class_id)
+        dialog = AddRelationshipClassesDialog(self, object_class_one_name=object_class_one_name)
         dialog.show()
 
-    @Slot("bool", name="show_add_relationships_form")
+    @Slot("bool", "tuple", "str", "str", name="show_add_relationships_form")
     def show_add_relationships_form(
-        self, checked=False, relationship_class_id=None, object_id=None, object_class_id=None
+        self, checked=False, relationship_class_key=(), object_class_name="", object_name=""
     ):
         """Show dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
-            self, relationship_class_id=relationship_class_id, object_id=object_id, object_class_id=object_class_id
+            self,
+            relationship_class_key=relationship_class_key,
+            object_class_name=object_class_name,
+            object_name=object_name,
         )
         dialog.show()
 
@@ -502,8 +505,8 @@ class DataStoreForm(QMainWindow):
             added_names.update(x.name for x in added)
         if not added_names:
             return False
-        msg = "Successfully added new object class(es) '{}'.".format("', '".join(added_names))
         self.commit_available.emit(True)
+        msg = "Successfully added new object class(es) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         if self.selected_object_class_ids:
             # Recompute self.selected_obj_tree_indexes['object_class']
@@ -518,37 +521,59 @@ class DataStoreForm(QMainWindow):
                     self.selected_obj_tree_indexes['object_class'][obj_cls_index] = None
         return True
 
-    def add_objects(self, objects):
+    def add_objects(self, object_d):
         """Insert new objects."""
-        if not objects.count():
+        added_names = set()
+        for db_map, items in object_d.items():
+            added, error_log = db_map.add_objects(*items)
+            if not added.count():
+                continue
+            self.object_tree_model.add_objects(db_map, added)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            added_names.update(x.name for x in added)
+        if not added_names:
             return False
-        self.object_tree_model.add_objects(objects)
         self.commit_available.emit(True)
-        msg = "Successfully added new object(s) '{}'.".format("', '".join([x.name for x in objects]))
+        msg = "Successfully added new object(s) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
 
-    def add_relationship_classes(self, relationship_classes):
+    def add_relationship_classes(self, rel_cls_d):
         """Insert new relationship classes."""
-        if not relationship_classes.count():
+        added_names = set()
+        for db_map, items in rel_cls_d.items():
+            added, error_log = db_map.add_wide_relationship_classes(*items)
+            if not added.count():
+                continue
+            self.object_tree_model.add_relationship_classes(db_map, added)
+            self.relationship_parameter_definition_model.add_object_class_id_lists(db_map, added)
+            self.relationship_parameter_value_model.add_object_class_id_lists(db_map, added)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            added_names.update(x.name for x in added)
+        if not added_names:
             return False
-        self.object_tree_model.add_relationship_classes(relationship_classes)
-        self.relationship_parameter_definition_model.add_object_class_id_lists(relationship_classes)
-        self.relationship_parameter_value_model.add_object_class_id_lists(relationship_classes)
         self.commit_available.emit(True)
-        relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
-        msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
+        msg = "Successfully added new relationship class(es) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
 
-    def add_relationships(self, relationships):
+    def add_relationships(self, relationship_d):
         """Insert new relationships."""
-        if not relationships.count():
+        added_names = set()
+        for db_map, items in relationship_d.items():
+            added, error_log = db_map.add_wide_relationships(*items)
+            if not added.count():
+                continue
+            self.object_tree_model.add_relationships(db_map, added)
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            added_names.update(x.name for x in added)
+        if not added_names:
             return False
-        self.object_tree_model.add_relationships(relationships)
         self.commit_available.emit(True)
-        relationship_name_list = "', '".join([x.name for x in relationships])
-        msg = "Successfully added new relationship(s) '{}'.".format(relationship_name_list)
+        msg = "Successfully added new relationship(s) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
 
