@@ -33,17 +33,6 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
         self.verticalLayout = QtWidgets.QVBoxLayout(self.verticalLayoutWidget)
         self.verticalLayout.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.formLayout = QtWidgets.QFormLayout()
-        self.formLayout.setObjectName("formLayout")
-        self.label = QtWidgets.QLabel(self.verticalLayoutWidget)
-        self.label.setObjectName("label")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.label)
-        self.length_edit = QtWidgets.QSpinBox(self.verticalLayoutWidget)
-        self.length_edit.setMinimum(2)
-        self.length_edit.setMaximum(999999)
-        self.length_edit.setObjectName("length_edit")
-        self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.length_edit)
-        self.verticalLayout.addLayout(self.formLayout)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
@@ -69,7 +58,6 @@ class Ui_TimeSeriesVariableResolutionEditor(object):
 
     def retranslateUi(self, TimeSeriesVariableResolutionEditor):
         TimeSeriesVariableResolutionEditor.setWindowTitle(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Form", None, -1))
-        self.label.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Length", None, -1))
         self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Ignore year", None, -1))
         self.repeat_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesVariableResolutionEditor", "Repeat", None, -1))
 

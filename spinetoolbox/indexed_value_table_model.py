@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A model for indexed parameter values, used by the parameter value editors editors.
+A model for indexed parameter values, used by the parameter value editors.
 
 :authors: A. Soininen (VTT)
 :date:   18.6.2019
@@ -20,80 +20,52 @@ from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 
 
 class IndexedValueTableModel(QAbstractTableModel):
+    """
+    A base class for time pattern and time series models.
 
-    def __init__(self, indexes, values, text_to_index, text_to_value, parent=None):
-        super().__init__(parent)
-        self._indexes = indexes
-        self._index_header = ""
-        self._fixed_indexes = False
-        self._text_to_index = text_to_index
-        self._values = values
-        self._value_header = ""
-        self._text_to_value = text_to_value
+    Attributes:
+        value (TimePattern, TimeSeriesFixedStep, TimeSeriesVariableStep): a parameter value
+        index_header (str): a header for the index column
+        value_header (str): a header for the value column
+    """
+
+    def __init__(self, value, index_header, value_header):
+        super().__init__(parent=None)
+        self._value = value
+        self._index_header = index_header
+        self._value_header = value_header
 
     def columnCount(self, parent=QModelIndex()):
+        """Returns the number of columns which is two."""
         return 2
 
     def data(self, index, role=Qt.DisplayRole):
-        if not index.isValid() or role != Qt.DisplayRole:
+        """Returns the data at index for given role."""
+        if not index.isValid() or role not in (Qt.DisplayRole, Qt.EditRole):
             return None
         if index.column() == 0:
-            return str(self._indexes[index.row()])
-        return float(self._values[index.row()])
-
-    def flags(self, index):
-        """Return index flags."""
-        if not index.isValid():
-            return Qt.NoItemFlags
-        if index.column() == 0 and self._fixed_indexes:
-            return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable
+            return str(self._value.indexes[index.row()])
+        return float(self._value.values[index.row()])
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+        """Returns a header."""
         if role != Qt.DisplayRole:
             return None
         if orientation == Qt.Vertical:
             return section + 1
         return self._index_header if section == 0 else self._value_header
 
-    def reset(self, indexes, values):
+    def reset(self, value):
+        """Resets the model."""
         self.beginResetModel()
-        self._indexes = indexes
-        self._values = values
+        self._value = value
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self._indexes)
-
-    def setData(self, index, value, role=Qt.EditRole):
-        if not index.isValid() or role != Qt.EditRole:
-            return False
-        if index.column() == 0:
-            try:
-                self._indexes[index.row()] = self._text_to_index(value)
-            except ValueError:
-                return False
-        else:
-            try:
-                self._values[index.row()] = self._text_to_value(value)
-            except ValueError:
-                return False
-        self.dataChanged.emit(index, index, [Qt.EditRole])
-        return True
-
-    def set_fixed_indexes(self, fixed):
-        self._fixed_indexes = fixed
-
-    def set_index_header(self, header):
-        self._index_header = header
-
-    def set_value_header(self, header):
-        self._value_header = header
+        """Returns the number of rows."""
+        return len(self._value)
 
     @property
-    def indexes(self):
-        return self._indexes
-
-    @property
-    def values(self):
-        return self._values
+    def value(self):
+        """Returns the parameter value associated with the model."""
+        return self._value

@@ -38,12 +38,6 @@ class TestTimePatternEditor(unittest.TestCase):
         editor.set_value(TimePattern(["1,5d", "2-4,6,7d"], [2.2, 2.1]))
         self.assertEqual(editor.value(), TimePattern(["1,5d", "2-4,6,7d"], [2.2, 2.1]))
 
-    def test_reducing_pattern_length(self):
-        editor = TimePatternEditor()
-        editor.set_value(TimePattern(["1,5d", "2-4d", "6-7d"], [2.2, 2.1, 2.0]))
-        editor._ui.length_edit.setValue(2)
-        self.assertEqual(editor.value(), TimePattern(["1,5d", "2-4d"], [2.2, 2.1]))
-
 
 if __name__ == '__main__':
     unittest.main()

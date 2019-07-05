@@ -10,18 +10,19 @@
 ######################################################################################################################
 
 """
-An editor widget for editing datetime database (relationship) parameter values.
+An editor widget for editing a time pattern type (relationship) parameter values.
 
 :author: A. Soininen (VTT)
 :date:   28.6.2019
 """
 
 import numpy as np
-from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QWidget
+from PySide2.QtCore import Qt, Slot
+from PySide2.QtWidgets import QMenu, QWidget
 from spinedb_api import TimePattern
 from ui.time_pattern_editor import Ui_TimePatternEditor
-from indexed_value_table_model import IndexedValueTableModel
+from time_pattern_model import TimePatternModel
+from widgets.indexed_value_table_context_menu import handle_table_context_menu
 
 
 class TimePatternEditor(QWidget):
@@ -34,45 +35,21 @@ class TimePatternEditor(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        indexes = ["1-7d"]
-        values = np.array([0.0])
+        self._model = TimePatternModel(TimePattern(["1-7d"], [0.0]))
         self._ui = Ui_TimePatternEditor()
         self._ui.setupUi(self)
-        self._set_model(indexes, values)
-        self._ui.length_edit.valueChanged.connect(self._change_length)
-
-    @Slot(int, name="_change_length")
-    def _change_length(self, length):
-        """
-        Updates the length of the model.
-
-        If new length is shorter, crop the data, otherwise append with empty time periods and zeros.
-        """
-        old_length = len(self._model.indexes)
-        if length < old_length:
-            new_indexes = self._model.indexes[:length]
-            new_values = self._model.values[:length]
-            self._model.reset(new_indexes, new_values)
-        elif length > old_length:
-            new_indexes = self._model.indexes + (length - old_length) * [""]
-            new_values = np.zeros(length)
-            new_values[:old_length] = self._model.values
-            self._model.reset(new_indexes, new_values)
-
-    def _set_model(self, indexes, values):
-        """Updates the model and the interface."""
-        self._model = IndexedValueTableModel(indexes, values, str, float)
-        self._model.set_index_header("Patterns")
-        self._model.set_value_header("Values")
         self._ui.pattern_edit_table.setModel(self._model)
+        self._ui.pattern_edit_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._ui.pattern_edit_table.customContextMenuRequested.connect(self._show_table_context_menu)
+
+    @Slot("QPoint", name="_show_table_context_menu")
+    def _show_table_context_menu(self, pos):
+        handle_table_context_menu(pos, self._ui.pattern_edit_table, self._model, self)
 
     def set_value(self, value):
         """Sets the parameter value to be edited."""
-        self._set_model(value.indexes, value.values)
-        self._ui.length_edit.setValue(len(value))
+        self._model.reset(value)
 
     def value(self):
         """Returns the parameter value currently being edited."""
-        indexes = self._model.indexes
-        values = self._model.values
-        return TimePattern(indexes, values)
+        return self._model.value
