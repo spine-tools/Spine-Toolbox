@@ -23,6 +23,7 @@ from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxy
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
 from widgets.custom_qwidgets import FilterWidget
+from widgets.parameter_value_editor import ParameterValueEditor
 from models import MinimalTableModel
 
 
@@ -359,7 +360,7 @@ class RelationshipTreeContextMenu(CustomContextMenu):
 
 
 class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for object (relationship) parameter (value) items in tree views.
+    """Context menu class for object (relationship) parameter items in tree views.
 
     Attributes:
         parent (QWidget): Parent for menu widget (TreeViewForm)
@@ -375,6 +376,49 @@ class ParameterContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         paste_icon = self._parent.ui.actionPaste.icon()
         remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
+        self.add_action("Copy", copy_icon)
+        self.add_action("Paste", paste_icon)
+        self.addSeparator()
+        self.add_action("Remove selection", remove_icon)
+        self.exec_(position)
+
+
+class SimpleEditableParameterValueContextMenu(CustomContextMenu):
+    """Context menu class for object (relationship) parameter value items in tree views.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        self.add_action("Open in editor...")
+        self.exec_(position)
+
+
+class EditableParameterValueContextMenu(CustomContextMenu):
+    """
+    Context menu class for object (relationship) parameter value items in tree views.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+
+    def __init__(self, parent, position, index):
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        paste_icon = self._parent.ui.actionPaste.icon()
+        remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
+        self.add_action("Open in editor...")
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()
@@ -639,6 +683,8 @@ class PivotTableModelMenu(QMenu):
         self._RELATIONSHIP_CLASS = "relationship"
 
         # actions
+        self.open_value_editor_action = self.addAction('Open in editor...')
+        self.addSeparator()
         self.restore_values_action = self.addAction('Restore selected values')
         self.delete_values_action = self.addAction('Delete selected values')
         self.delete_index_action = self.addAction(self._DELETE_INDEX)
@@ -649,6 +695,7 @@ class PivotTableModelMenu(QMenu):
         self.insert_col_action = self.addAction('Insert columns')
 
         # connect signals
+        self.open_value_editor_action.triggered.connect(self.open_value_editor)
         self.restore_values_action.triggered.connect(self.restore_values)
         self.delete_values_action.triggered.connect(self.delete_values)
         self.delete_index_action.triggered.connect(self.delete_index_values)
@@ -740,6 +787,10 @@ class PivotTableModelMenu(QMenu):
         if delete_tuples:
             self._model.delete_tuple_index_values({self.relationship_tuple_key: delete_tuples})
 
+    def open_value_editor(self):
+        value_editor = ParameterValueEditor(self._model, self._get_selected_indexes()[0], self.parent())
+        value_editor.show()
+
     def request_menu(self, QPos=None):
         indexes = self._get_selected_indexes()
         self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
@@ -758,7 +809,9 @@ class PivotTableModelMenu(QMenu):
 
         elif len(indexes) == 1:
             # one selected, show names
+            selected_data = self._model.data(indexes[0])
             selected_index = self._find_selected_indexes(indexes)
+            self.open_value_editor_action.setEnabled(self._model.index_in_data(indexes[0]))
             if selected_index:
                 index_name = list(selected_index.keys())[0]
                 index_value = list(selected_index[index_name])[0]

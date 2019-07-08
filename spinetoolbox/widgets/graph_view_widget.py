@@ -27,9 +27,10 @@ from PySide2.QtGui import QFontMetrics, QIcon, QPalette
 from ui.graph_view_form import Ui_MainWindow
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
 from widgets.data_store_widget import DataStoreForm
-from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
+from widgets.custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from treeview_models import ObjectTreeModel
 from widgets.custom_qwidgets import ZoomWidget
+from widgets.parameter_value_editor import ParameterValueEditor
 from treeview_models import ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
@@ -196,6 +197,12 @@ class GraphViewForm(DataStoreForm):
         self.ui.actionGraph_show_hidden.triggered.connect(self.show_hidden_items)
         self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
         self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
+        self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
+            self.show_object_parameter_value_context_menu
+        )
+        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.connect(
+            self.show_relationship_parameter_value_context_menu
+        )
         # Dock Widgets menu action
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
@@ -955,6 +962,40 @@ class GraphViewForm(DataStoreForm):
             self.template_id += 1
         self.object_item_context_menu.deleteLater()
         self.object_item_context_menu = None
+
+    @Slot("QPoint", name="show_object_parameter_value_context_menu")
+    def show_object_parameter_value_context_menu(self, pos):
+        index = self.ui.tableView_object_parameter_value.indexAt(pos)
+        global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
+        flags = self.object_parameter_value_model.flags(index)
+        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
+        is_value = self.object_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
+        if editable and is_value:
+            menu = SimpleEditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            return
+        option = menu.get_action()
+        if option == "Open in editor...":
+            editor = ParameterValueEditor(self.object_parameter_value_model, index, self)
+            editor.show()
+        menu.deleteLater()
+
+    @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
+    def show_relationship_parameter_value_context_menu(self, pos):
+        index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
+        global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
+        flags = self.relationship_parameter_value_model.flags(index)
+        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
+        is_value = self.relationship_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
+        if editable and is_value:
+            menu = SimpleEditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            return
+        option = menu.get_action()
+        if option == "Open in editor...":
+            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, self)
+            editor.show()
+        menu.deleteLater()
 
     @busy_effect
     @Slot("bool", name="remove_graph_items")
