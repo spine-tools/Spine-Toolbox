@@ -1305,7 +1305,7 @@ class PivotTableModel(QAbstractTableModel):
         return False
 
     def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole:
+        if role == Qt.DisplayRole or role == Qt.EditRole:
             if self.index_in_data(index):
                 # get values
                 data = self.model.get_pivoted_data(
