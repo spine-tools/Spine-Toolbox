@@ -74,6 +74,7 @@ class ManageItemsDialog(QDialog):
         self.button_box.rejected.connect(self.reject)
         self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
         self.model.dataChanged.connect(self._handle_model_data_changed)
+        self.model.modelReset.connect(self._handle_model_reset)
 
     def resize_window_to_columns(self):
         margins = self.layout().contentsMargins()
@@ -96,6 +97,12 @@ class ManageItemsDialog(QDialog):
         if data is None:
             return
         self.model.setData(index, data, Qt.EditRole)
+
+    @Slot(name="_handle_model_reset")
+    def _handle_model_reset(self):
+        """Resize columns and form."""
+        self.table_view.resizeColumnsToContents()
+        self.resize_window_to_columns()
 
 
 class AddItemsDialog(ManageItemsDialog):
@@ -142,8 +149,6 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.default_display_icon = self._parent.icon_mngr.default_display_icon()
         self.model.set_default_row(**{'databases': db_names, 'display icon': self.default_display_icon})
         self.model.clear()
-        self.table_view.resizeColumnsToContents()
-        self.resize_window_to_columns()
         insert_at_position_list = ['Insert new classes at the top']
         insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(it.text()) for it in self.object_class_items]
@@ -227,8 +232,6 @@ class AddObjectsDialog(AddItemsDialog):
         db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in default_db_maps])
         self.model.set_default_row(**{'object class name': class_name, 'databases': db_names})
         self.model.clear()
-        self.table_view.resizeColumnsToContents()
-        self.resize_window_to_columns()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
@@ -322,8 +325,6 @@ class AddRelationshipClassesDialog(AddItemsDialog):
         db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in default_db_maps])
         self.model.set_default_row(**{'object class 1 name': object_class_one_name, 'databases': db_names})
         self.model.clear()
-        self.table_view.resizeColumnsToContents()
-        self.resize_window_to_columns()
 
     def connect_signals(self):
         """Connect signals to slots."""
@@ -506,8 +507,6 @@ class AddRelationshipsDialog(AddItemsDialog):
             defaults.update({header[j]: self.default_object_name for j in columns})
         self.model.set_default_row(**defaults)
         self.model.clear()
-        self.table_view.resizeColumnsToContents()
-        self.resize_window_to_columns()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
@@ -582,79 +581,66 @@ class EditItemsDialog(ManageItemsDialog):
     def __init__(self, parent):
         super().__init__(parent)
 
-    @Slot(name="_handle_model_reset")
-    def _handle_model_reset(self):
-        """Resize columns and form."""
-        self.table_view.horizontalHeader().setStretchLastSection(True)
-        self.table_view.resizeColumnsToContents()
-        self.resize_window_to_columns()
-
 
 class EditObjectClassesDialog(EditItemsDialog):
     """A dialog to query user's preferences for updating object classes.
 
     Attributes:
-        parent (TreeViewForm): data store widget
-        kwargs_list (list): list of dictionaries corresponding to object classes to edit/update
+        parent (DataStoreForm): data store widget
+        db_map_dicts (list): list of dictionaries corresponding to object classes to edit/update
     """
 
-    def __init__(self, parent, kwargs_list):
+    def __init__(self, parent, db_map_dicts):
         super().__init__(parent)
         self.setWindowTitle("Edit object classes")
         self.model = MinimalTableModel(self)
-        self.model.set_horizontal_header_labels(['object class name', 'description', 'display_icon'])
+        self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
         self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(LineEditDelegate(parent))
-        self.table_view.setItemDelegateForColumn(2, IconColorDialogDelegate(parent))
+        self.table_view.setItemDelegate(AddObjectClassesDelegate(parent))
         self.connect_signals()
         self.orig_data = list()
-        self.id_list = list()
+        self.ids = list()
+        self.default_display_icon = self._parent.icon_mngr.default_display_icon()
         model_data = list()
-        for kwargs in kwargs_list:
-            try:
-                self.id_list.append(kwargs["id"])
-            except KeyError:
+        for db_map_dict in db_map_dicts:
+            self.ids.append({db_map: x['id'] for db_map, x in db_map_dict.items()})
+            db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
+            db_map, item = db_map_dict.popitem()
+            name = item.get('name')
+            if not name:
                 continue
-            try:
-                name = kwargs["name"]
-            except KeyError:
-                continue
-            try:
-                description = kwargs["description"]
-            except KeyError:
-                description = None
-            try:
-                display_icon = kwargs["display_icon"]
-            except KeyError:
-                display_icon = None
+            description = item.get('description')
+            display_icon = item.get('display_icon')
             row_data = [name, description, display_icon]
             self.orig_data.append(row_data.copy())
+            row_data.append(db_names)
             model_data.append(row_data)
         self.model.reset_model(model_data)
-
-    def connect_signals(self):
-        super().connect_signals()
-        self.table_view.itemDelegateForColumn(2).data_committed.connect(self._handle_data_committed)
 
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
-        kwargs_list = list()
+        object_class_d = list()
         for i in range(self.model.rowCount()):
-            id = self.id_list[i]
-            name, description, display_icon = self.model.row_data(i)
+            name, description, display_icon, db_names = self.model.row_data(i)
+            try:
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+            except KeyError as e:
+                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                return
             if not name:
                 self._parent.msg_error.emit("Object class name missing at row {}".format(i + 1))
                 return
-            orig_name, orig_description, orig_display_icon = self.orig_data[i]
-            if name == orig_name and description == orig_description and display_icon == orig_display_icon:
+            orig_row = self.orig_data[i]
+            if [name, description, display_icon] == orig_row:
                 continue
-            kwargs = {
-                'id': id,
-                'name': name,
-                'description': description,
-                'display_icon': int(display_icon) if display_icon else self.parent().icon_mngr.default_display_icon(),
-            }
+            if not display_icon:
+                display_icon = self.default_display_icon
+            item = {'name': name, 'description': description, 'display_icon': display_icon}
+            for db_map, id_ in self.ids[i].items():
+                item['id'] = id_
+                object_class_d.setdefault(db_map, []).append(item)
+            ids = self.ids[i]
             kwargs_list.append(kwargs)
         if not kwargs_list:
             self._parent.msg_error.emit("Nothing to update")
@@ -705,7 +691,6 @@ class EditObjectsDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.table_view.resizeColumnsToContents()
 
     @busy_effect
     def accept(self):
@@ -767,7 +752,6 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.table_view.resizeColumnsToContents()
 
     @busy_effect
     def accept(self):
@@ -835,7 +819,6 @@ class EditRelationshipsDialog(EditItemsDialog):
             self.orig_data.append(row_data.copy())
             model_data.append(row_data)
         self.model.reset_model(model_data)
-        self.table_view.resizeColumnsToContents()
 
     @busy_effect
     def accept(self):

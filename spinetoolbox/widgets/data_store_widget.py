@@ -576,22 +576,20 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
-        try:
-            indexes = self.selected_obj_tree_indexes['object_class']
-        except KeyError:
+        indexes = self.selected_obj_tree_indexes.get('object_class')
+        if not indexes:
             return
-        kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditObjectClassesDialog(self, kwargs_list)
+        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
+        dialog = EditObjectClassesDialog(self, db_map_dicts)
         dialog.show()
 
     @Slot("bool", name="show_edit_objects_form")
     def show_edit_objects_form(self, checked=False):
-        try:
-            indexes = self.selected_obj_tree_indexes['object']
-        except KeyError:
+        indexes = self.selected_obj_tree_indexes.get('object')
+        if not indexes:
             return
-        kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditObjectsDialog(self, kwargs_list)
+        items = [ind.data(Qt.UserRole + 1) for ind in indexes]
+        dialog = EditObjectsDialog(self, items)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationship_classes_form")
@@ -604,8 +602,8 @@ class DataStoreForm(QMainWindow):
             return
         if not indexes:
             return
-        kwargs_list = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditRelationshipClassesDialog(self, kwargs_list)
+        items = [ind.data(Qt.UserRole + 1) for ind in indexes]
+        dialog = EditRelationshipClassesDialog(self, items)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationships_form")
