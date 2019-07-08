@@ -259,7 +259,8 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def commit_session(self, commit_msg):
         try:
-            self.db_map.commit_session(commit_msg)
+            for db_map in self.db_maps:
+                db_map.commit_session(commit_msg)
             self.commit_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -270,7 +271,8 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="rollback_session")
     def rollback_session(self, checked=False):
         try:
-            self.db_map.rollback_session()
+            for db_map in self.db_maps:
+                db_map.rollback_session()
             self.commit_available.emit(False)
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
@@ -492,12 +494,12 @@ class DataStoreForm(QMainWindow):
         added_names = set()
         for db_map, items in object_class_d.items():
             added, error_log = db_map.add_object_classes(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
             if not added.count():
                 continue
             self.icon_mngr.setup_object_pixmaps(added)
             self.object_tree_model.add_object_classes(db_map, added)
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
             added_names.update(x.name for x in added)
         if not added_names:
             return False
@@ -522,11 +524,11 @@ class DataStoreForm(QMainWindow):
         added_names = set()
         for db_map, items in object_d.items():
             added, error_log = db_map.add_objects(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
             if not added.count():
                 continue
             self.object_tree_model.add_objects(db_map, added)
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
             added_names.update(x.name for x in added)
         if not added_names:
             return False
@@ -540,11 +542,11 @@ class DataStoreForm(QMainWindow):
         added_names = set()
         for db_map, items in rel_cls_d.items():
             added, error_log = db_map.add_wide_relationship_classes(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
             if not added.count():
                 continue
             self.add_relationship_classes_to_models(db_map, added)
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
             added_names.update(x.name for x in added)
         if not added_names:
             return False
@@ -563,12 +565,12 @@ class DataStoreForm(QMainWindow):
         added_names = set()
         for db_map, items in relationship_d.items():
             added, error_log = db_map.add_wide_relationships(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
+            added_names.update(x.name for x in added)
             if not added.count():
                 continue
             self.add_relationships_to_models(db_map, added)
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
-            added_names.update(x.name for x in added)
         if not added_names:
             return False
         self.commit_available.emit(True)
@@ -639,10 +641,10 @@ class DataStoreForm(QMainWindow):
         updated_names = set()
         for db_map, items in object_class_d.items():
             updated, error_log = db_map.update_object_classes(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
             self.icon_mngr.setup_object_pixmaps(updated)
             self.update_object_classes_in_models(db_map, updated)
             updated_names.update(x.name for x in updated)
@@ -666,10 +668,10 @@ class DataStoreForm(QMainWindow):
         updated_names = set()
         for db_map, items in object_d.items():
             updated, error_log = db_map.update_objects(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
             self.update_objects_in_models(db_map, updated)
             updated_names.update(x.name for x in updated)
         if not updated_names:
@@ -690,10 +692,10 @@ class DataStoreForm(QMainWindow):
         updated_names = set()
         for db_map, items in rel_cls_d.items():
             updated, error_log = db_map.update_wide_relationship_classes(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
             self.update_relationship_classes_in_models(db_map, updated)
             updated_names.update(x.name for x in updated)
         if not updated_names:
@@ -714,10 +716,10 @@ class DataStoreForm(QMainWindow):
         updated_names = set()
         for db_map, items in relationship_d.items():
             updated, error_log = db_map.update_wide_relationships(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
             self.update_relationships_in_models(db_map, updated)
             updated_names.update(x.name for x in updated)
         if not updated_names:

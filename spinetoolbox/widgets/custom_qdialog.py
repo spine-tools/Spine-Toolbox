@@ -483,7 +483,7 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
                     object_class_name = row_data[column]
                     if object_class_name not in object_classes:
                         self._parent.msg_error.emit(
-                            "Invalid object class '{}' for db '{}' at row {}".format(class_name, db_name, i + 1)
+                            "Invalid object class '{}' for db '{}' at row {}".format(object_class_name, db_name, i + 1)
                         )
                         return
                     object_class_id = object_classes[object_class_name]

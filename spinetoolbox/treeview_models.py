@@ -398,6 +398,7 @@ class ObjectTreeModel(QStandardItemModel):
                 relationship_class_dict.setdefault(int(object_class_id), list()).append(relationship_class)
         for i in range(self.root_item.rowCount()):
             object_class_item = self.root_item.child(i, 0)
+            db_map_dict = object_class_item.data(Qt.UserRole + 1)
             if db_map not in db_map_dict:
                 # Can someone be adding relationship classes where one of the classes doesn't exist in the same db?
                 continue
@@ -490,7 +491,12 @@ class ObjectTreeModel(QStandardItemModel):
         """Update object classes in the model.
         This of course means updating the object class name in relationship class items.
         """
+        existing_rows = [
+            [self.root_item.child(i, 0), self.root_item.child(i, 1)] for i in range(self.root_item.rowCount())
+        ]
+        existing_row_d = {row[0].text(): row for row in existing_rows}
         object_class_d = {x.id: x for x in object_classes}
+        removed_rows = []
         for i in range(self.root_item.rowCount()):
             object_class_item = self.root_item.child(i)
             db_map_dict = object_class_item.data(Qt.UserRole + 1)
@@ -501,9 +507,23 @@ class ObjectTreeModel(QStandardItemModel):
             upd_object_class = object_class_d.pop(object_class_id, None)
             if not upd_object_class:
                 continue
-            db_map_dict[db_map] = upd_object_class._asdict()
-            object_class_item.setData(upd_object_class.name, Qt.DisplayRole)
-            object_class_item.setData(upd_object_class.description, Qt.ToolTipRole)
+            if upd_object_class.name in existing_row_d:
+                # Already in model, merge!
+                rows = [object_class_item.takeRow(0) for _ in range(object_class_item.rowCount())]
+                object_class_item, db_item = existing_row_d[upd_object_class.name]
+                db_map_dict = object_class_item.data(Qt.UserRole + 1)
+                db_map_dict[db_map] = upd_object_class._asdict()
+                databases = db_item.data(Qt.DisplayRole)
+                databases += ", " + self._parent.db_map_to_name[db_map]
+                db_item.setData(databases, Qt.DisplayRole)
+                object_class_index = self.indexFromItem(object_class_item)
+                if not self.canFetchMore(object_class_index):
+                    self.merge_object_rows_into_class(rows, object_class_item)
+                removed_rows.append(i)
+            else:
+                db_map_dict[db_map] = upd_object_class._asdict()
+                object_class_item.setData(upd_object_class.name, Qt.DisplayRole)
+                object_class_item.setData(upd_object_class.description, Qt.ToolTipRole)
             # Update child relationship class items
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
@@ -520,6 +540,8 @@ class ObjectTreeModel(QStandardItemModel):
                             obj_cls_name_list[k] = upd_object_class.name
                     rel_cls['object_class_name_list'] = ",".join(obj_cls_name_list)
                     rel_cls_item.setData(",".join(obj_cls_name_list), Qt.ToolTipRole)
+        for row in reversed(removed_rows):
+            self.root_item.removeRow(row)
 
     def update_objects(self, db_map, objects):
         """Update object in the model.
@@ -538,6 +560,12 @@ class ObjectTreeModel(QStandardItemModel):
             class_object_dict = object_d.pop(object_class_id, None)
             if not class_object_dict:
                 continue
+            existing_rows = [
+                [object_class_item.child(j, 0), object_class_item.child(j, 1)]
+                for j in range(object_class_item.rowCount())
+            ]
+            existing_row_d = {row[0].text(): row for row in existing_rows}
+            removed_rows = []
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
                 db_map_dict = object_item.data(Qt.UserRole + 1)
@@ -548,9 +576,23 @@ class ObjectTreeModel(QStandardItemModel):
                 upd_object = class_object_dict.pop(object_id, None)
                 if not upd_object:
                     continue
-                db_map_dict[db_map] = upd_object._asdict()
-                object_item.setData(upd_object.name, Qt.DisplayRole)
-                object_item.setData(upd_object.description, Qt.ToolTipRole)
+                if upd_object.name in existing_row_d:
+                    # Already in model, merge!
+                    rows = [object_item.takeRow(0) for _ in range(object_item.rowCount())]
+                    object_item, db_item = existing_row_d[upd_object.name]
+                    db_map_dict = object_item.data(Qt.UserRole + 1)
+                    db_map_dict[db_map] = upd_object._asdict()
+                    databases = db_item.data(Qt.DisplayRole)
+                    databases += ", " + self._parent.db_map_to_name[db_map]
+                    db_item.setData(databases, Qt.DisplayRole)
+                    object_index = self.indexFromItem(object_item)
+                    if not self.canFetchMore(object_index):
+                        self.merge_relationship_class_rows_into_object(rows, object_item)
+                    removed_rows.append(j)
+                else:
+                    db_map_dict[db_map] = upd_object._asdict()
+                    object_item.setData(upd_object.name, Qt.DisplayRole)
+                    object_item.setData(upd_object.description, Qt.ToolTipRole)
                 # Update child relationship items
                 for k in range(object_item.rowCount()):
                     rel_cls_item = object_item.child(k, 0)
@@ -567,6 +609,8 @@ class ObjectTreeModel(QStandardItemModel):
                                 object_name_list[k] = upd_object.name
                         relationship['object_name_list'] = ",".join(object_name_list)
                         relationship_item.setData(",".join(object_name_list), Qt.DisplayRole)
+            for row in reversed(removed_rows):
+                object_class_item.removeRow(row)
 
     def update_relationship_classes(self, db_map, relationship_classes):
         """Update relationship classes in the model."""
@@ -586,6 +630,11 @@ class ObjectTreeModel(QStandardItemModel):
                 continue
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
+                existing_rows = [
+                    [object_item.child(k, 0), object_item.child(k, 1)] for k in range(object_item.rowCount())
+                ]
+                existing_row_d = {(row[0].text(), row[0].data(Qt.ToolTipRole)): row for row in existing_rows}
+                removed_rows = []
                 for k in range(object_item.rowCount()):
                     rel_cls_item = object_item.child(k, 0)
                     db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
@@ -596,8 +645,25 @@ class ObjectTreeModel(QStandardItemModel):
                     if rel_cls_id not in class_rel_cls_dict:
                         continue
                     upd_rel_cls = class_rel_cls_dict[rel_cls_id]
-                    db_map_dict[db_map] = upd_rel_cls._asdict()
-                    rel_cls_item.setData(upd_rel_cls.name, Qt.DisplayRole)
+                    upd_rel_cls_key = (upd_rel_cls.name, upd_rel_cls.object_class_name_list)
+                    if upd_rel_cls_key in existing_row_d:
+                        # Already in model, merge!
+                        rows = [rel_cls_item.takeRow(0) for _ in range(rel_cls_item.rowCount())]
+                        rel_cls_item, db_item = existing_row_d[upd_rel_cls_key]
+                        db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+                        db_map_dict[db_map] = upd_rel_cls._asdict()
+                        databases = db_item.data(Qt.DisplayRole)
+                        databases += ", " + self._parent.db_map_to_name[db_map]
+                        db_item.setData(databases, Qt.DisplayRole)
+                        rel_cls_index = self.indexFromItem(rel_cls_item)
+                        if not self.canFetchMore(rel_cls_index):
+                            self.merge_relationship_rows_into_class(rows, rel_cls_item)
+                        removed_rows.append(k)
+                    else:
+                        db_map_dict[db_map] = upd_rel_cls._asdict()
+                        rel_cls_item.setData(upd_rel_cls.name, Qt.DisplayRole)
+                for row in reversed(removed_rows):
+                    object_item.removeRow(row)
 
     def update_relationships(self, db_map, relationships):
         """Update relationships in the model.
@@ -639,6 +705,61 @@ class ObjectTreeModel(QStandardItemModel):
                             object_item.setData(upd_relationship.name, Qt.DisplayRole)
         # self.remove_relationships(db_map, ids_to_remove)  # TODO
         self.add_relationships(db_map, relationships_to_add)
+
+    def merge_object_rows_into_class(self, rows, object_class_item):
+        existing_rows = [
+            [object_class_item.child(j, 0), object_class_item.child(j, 1)] for j in range(object_class_item.rowCount())
+        ]
+        existing_row_d = {row[0].text(): row for row in existing_rows}
+        for row in rows:
+            object_item = row[0]
+            if object_item.text() in existing_row_d:
+                # Already in model, append db_map information
+                existing_object_item, db_item = existing_row_d[object_item.text()]
+                existing_db_map_dict = existing_object_item.data(Qt.UserRole + 1)
+                db_map_dict = object_item.data(Qt.UserRole + 1)
+                existing_db_map_dict.update(db_map_dict)
+                databases = ", ".join(self._parent.db_map_to_name[db_map] for db_map in existing_db_map_dict)
+                db_item.setData(databases, Qt.DisplayRole)
+                rel_cls_rows = [object_item.takeRow(0) for _ in range(object_item.rowCount())]
+                self.merge_relationship_class_rows_into_object(rel_cls_rows, existing_object_item)
+            else:
+                object_class_item.appendRow(row)
+
+    def merge_relationship_class_rows_into_object(self, rows, object_item):
+        existing_rows = [[object_item.child(j, 0), object_item.child(j, 1)] for j in range(object_item.rowCount())]
+        existing_row_d = {(row[0].text(), row[0].data(Qt.ToolTipRole)): row for row in existing_rows}
+        for row in rows:
+            rel_cls_item = row[0]
+            rel_cls_key = (rel_cls_item.text(), rel_cls_item.data(Qt.ToolTipRole))
+            if rel_cls_key in existing_row_d:
+                # Already in model, append db_map information
+                existing_rel_cls_item, db_item = existing_row_d[rel_cls_key]
+                existing_db_map_dict = existing_rel_cls_item.data(Qt.UserRole + 1)
+                db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+                existing_db_map_dict.update(db_map_dict)
+                databases = ", ".join(self._parent.db_map_to_name[db_map] for db_map in existing_db_map_dict)
+                db_item.setData(databases, Qt.DisplayRole)
+                relationship_rows = [rel_cls_item.takeRow(0) for _ in range(rel_cls_item.rowCount())]
+                self.merge_relationship_rows_into_class(relationship_rows, existing_rel_cls_item)
+            else:
+                object_item.appendRow(row)
+
+    def merge_relationship_rows_into_class(self, rows, rel_cls_item):
+        existing_rows = [[rel_cls_item.child(j, 0), rel_cls_item.child(j, 1)] for j in range(rel_cls_item.rowCount())]
+        existing_row_d = {row[0].text(): row for row in existing_rows}
+        for row in rows:
+            relationship_item = row[0]
+            if relationship_item.text() in existing_row_d:
+                # Already in model, append db_map information
+                existing_relationship_item, db_item = existing_row_d[relationship_item.text()]
+                existing_db_map_dict = existing_relationship_item.data(Qt.UserRole + 1)
+                db_map_dict = relationship_item.data(Qt.UserRole + 1)
+                existing_db_map_dict.update(db_map_dict)
+                databases = ", ".join(self._parent.db_map_to_name[db_map] for db_map in existing_db_map_dict)
+                db_item.setData(databases, Qt.DisplayRole)
+            else:
+                object_item.appendRow(row)
 
     def remove_object_classes(self, removed_ids):
         """Remove object classes and their childs."""
