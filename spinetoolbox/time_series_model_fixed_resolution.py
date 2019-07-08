@@ -142,6 +142,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         if not index.isValid() or role != Qt.EditRole:
             return False
         self._value.values[index.row()] = value
+        self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
 
     @Slot(bool, name="set_ignore_year")
