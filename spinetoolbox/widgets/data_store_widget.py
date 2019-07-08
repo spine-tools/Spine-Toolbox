@@ -318,7 +318,6 @@ class DataStoreForm(QMainWindow):
     def init_object_tree_view(self):
         """Init object tree view."""
         self.ui.treeView_object.setModel(self.object_tree_model)
-        # self.ui.treeView_object.header().hide()
         for i in range(self.object_tree_model.rowCount()):
             self.ui.treeView_object.expand(self.object_tree_model.index(i, 0))
         self.ui.treeView_object.resizeColumnToContents(0)
@@ -543,9 +542,7 @@ class DataStoreForm(QMainWindow):
             added, error_log = db_map.add_wide_relationship_classes(*items)
             if not added.count():
                 continue
-            self.object_tree_model.add_relationship_classes(db_map, added)
-            self.relationship_parameter_definition_model.add_object_class_id_lists(db_map, added)
-            self.relationship_parameter_value_model.add_object_class_id_lists(db_map, added)
+            self.add_relationship_classes_to_models(db_map, added)
             if error_log:
                 self._parent.msg_error.emit(format_string_list(error_log))
             added_names.update(x.name for x in added)
@@ -556,6 +553,11 @@ class DataStoreForm(QMainWindow):
         self.msg.emit(msg)
         return True
 
+    def add_relationship_classes_to_models(self, db_map, added):
+        self.object_tree_model.add_relationship_classes(db_map, added)
+        self.relationship_parameter_definition_model.add_object_class_id_lists(db_map, added)
+        self.relationship_parameter_value_model.add_object_class_id_lists(db_map, added)
+
     def add_relationships(self, relationship_d):
         """Insert new relationships."""
         added_names = set()
@@ -563,7 +565,7 @@ class DataStoreForm(QMainWindow):
             added, error_log = db_map.add_wide_relationships(*items)
             if not added.count():
                 continue
-            self.object_tree_model.add_relationships(db_map, added)
+            self.add_relationships_to_models(db_map, added)
             if error_log:
                 self._parent.msg_error.emit(format_string_list(error_log))
             added_names.update(x.name for x in added)
@@ -573,6 +575,9 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully added new relationship(s) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
+
+    def add_relationships_to_models(self, db_map, added):
+        self.object_tree_model.add_relationships(db_map, added)
 
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
@@ -588,8 +593,8 @@ class DataStoreForm(QMainWindow):
         indexes = self.selected_obj_tree_indexes.get('object')
         if not indexes:
             return
-        items = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditObjectsDialog(self, items)
+        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
+        dialog = EditObjectsDialog(self, db_map_dicts)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationship_classes_form")
@@ -602,8 +607,8 @@ class DataStoreForm(QMainWindow):
             return
         if not indexes:
             return
-        items = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditRelationshipClassesDialog(self, items)
+        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
+        dialog = EditRelationshipClassesDialog(self, db_map_dicts)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationships_form")
@@ -613,78 +618,117 @@ class DataStoreForm(QMainWindow):
             current = self.ui.treeView_object.currentIndex()
             if current.data(Qt.UserRole) != "relationship":
                 return
-            class_id = current.data(Qt.UserRole + 1)['class_id']
-            wide_relationship_class = current.parent().data(Qt.UserRole + 1)
             indexes = self.selected_obj_tree_indexes.get('relationship')
         elif self.widget_with_selection == self.ui.treeView_relationship:
             current = self.ui.treeView_relationship.currentIndex()
             if current.data(Qt.UserRole) != "relationship":
                 return
-            class_id = current.data(Qt.UserRole + 1)['class_id']
-            wide_relationship_class = current.parent().data(Qt.UserRole + 1)
             indexes = self.selected_rel_tree_indexes.get('relationship')
-        kwargs_list = list()
+        ref_class_key = (current.parent().data(Qt.DisplayRole), current.parent().data(Qt.ToolTipRole))
+        db_map_dicts = []
         for index in indexes:
-            if index.data(Qt.UserRole + 1)['class_id'] != class_id:
-                continue
-            kwargs_list.append(index.data(Qt.UserRole + 1))
-        dialog = EditRelationshipsDialog(self, kwargs_list, wide_relationship_class)
+            class_key = (index.parent().data(Qt.DisplayRole), index.parent().data(Qt.ToolTipRole))
+            if class_key == ref_class_key:
+                db_map_dicts.append(index.data(Qt.UserRole + 1))
+        dialog = EditRelationshipsDialog(self, db_map_dicts, ref_class_key)
         dialog.show()
 
     @busy_effect
-    def update_object_classes(self, object_classes):
+    def update_object_classes(self, object_class_d):
         """Update object classes."""
-        if not object_classes.count():
+        updated_names = set()
+        for db_map, items in object_class_d.items():
+            updated, error_log = db_map.update_object_classes(*items)
+            if not updated.count():
+                continue
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            self.icon_mngr.setup_object_pixmaps(updated)
+            self.update_object_classes_in_models(db_map, updated)
+            updated_names.update(x.name for x in updated)
+        if not updated_names:
             return False
-        self.icon_mngr.setup_object_pixmaps(object_classes)
-        self.object_tree_model.update_object_classes(object_classes)
-        self.object_parameter_value_model.rename_object_classes(object_classes)
-        self.object_parameter_definition_model.rename_object_classes(object_classes)
-        self.relationship_parameter_value_model.rename_object_classes(object_classes)
-        self.relationship_parameter_definition_model.rename_object_classes(object_classes)
         self.commit_available.emit(True)
-        msg = "Successfully updated object classes '{}'.".format("', '".join([x.name for x in object_classes]))
+        msg = "Successfully updated object class(es) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
         return True
 
+    def update_object_classes_in_models(self, db_map, updated):
+        self.object_tree_model.update_object_classes(db_map, updated)
+        self.object_parameter_value_model.rename_object_classes(db_map, updated)
+        self.object_parameter_definition_model.rename_object_classes(db_map, updated)
+        self.relationship_parameter_value_model.rename_object_classes(db_map, updated)
+        self.relationship_parameter_definition_model.rename_object_classes(db_map, updated)
+
     @busy_effect
-    def update_objects(self, objects):
+    def update_objects(self, object_d):
         """Update objects."""
-        if not objects.count():
+        updated_names = set()
+        for db_map, items in object_d.items():
+            updated, error_log = db_map.update_objects(*items)
+            if not updated.count():
+                continue
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            self.update_objects_in_models(db_map, updated)
+            updated_names.update(x.name for x in updated)
+        if not updated_names:
             return False
-        self.object_tree_model.update_objects(objects)
-        self.object_parameter_value_model.rename_objects(objects)
-        self.relationship_parameter_value_model.rename_objects(objects)
         self.commit_available.emit(True)
-        msg = "Successfully updated objects '{}'.".format("', '".join([x.name for x in objects]))
+        msg = "Successfully updated object(s) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
         return True
 
+    def update_objects_in_models(self, db_map, updated):
+        self.object_tree_model.update_objects(db_map, updated)
+        self.object_parameter_value_model.rename_objects(db_map, updated)
+        self.relationship_parameter_value_model.rename_objects(db_map, updated)
+
     @busy_effect
-    def update_relationship_classes(self, wide_relationship_classes):
+    def update_relationship_classes(self, rel_cls_d):
         """Update relationship classes."""
-        if not wide_relationship_classes.count():
+        updated_names = set()
+        for db_map, items in rel_cls_d.items():
+            updated, error_log = db_map.update_wide_relationship_classes(*items)
+            if not updated.count():
+                continue
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            self.update_relationship_classes_in_models(db_map, updated)
+            updated_names.update(x.name for x in updated)
+        if not updated_names:
             return False
-        self.object_tree_model.update_relationship_classes(wide_relationship_classes)
-        self.relationship_parameter_value_model.rename_relationship_classes(wide_relationship_classes)
-        self.relationship_parameter_definition_model.rename_relationship_classes(wide_relationship_classes)
         self.commit_available.emit(True)
-        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
-        msg = "Successfully updated relationship classes '{}'.".format(relationship_class_name_list)
+        msg = "Successfully relationship class(es) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
         return True
 
+    def update_relationship_classes_in_models(self, db_map, updated):
+        self.object_tree_model.update_relationship_classes(db_map, updated)
+        self.relationship_parameter_value_model.rename_relationship_classes(db_map, updated)
+        self.relationship_parameter_definition_model.rename_relationship_classes(db_map, updated)
+
     @busy_effect
-    def update_relationships(self, wide_relationships):
+    def update_relationships(self, relationship_d):
         """Update relationships."""
-        if not wide_relationships.count():
+        updated_names = set()
+        for db_map, items in relationship_d.items():
+            updated, error_log = db_map.update_wide_relationships(*items)
+            if not updated.count():
+                continue
+            if error_log:
+                self._parent.msg_error.emit(format_string_list(error_log))
+            self.update_relationships_in_models(db_map, updated)
+            updated_names.update(x.name for x in updated)
+        if not updated_names:
             return False
-        self.object_tree_model.update_relationships(wide_relationships)
         self.commit_available.emit(True)
-        relationship_name_list = "', '".join([x.name for x in wide_relationships])
-        msg = "Successfully updated relationships '{}'.".format(relationship_name_list)
+        msg = "Successfully relationship(s) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
         return True
+
+    def update_relationships_in_models(self, db_map, updated):
+        self.object_tree_model.update_relationships(db_map, updated)
 
     def add_parameter_value_lists(self, *to_add):
         if not any(to_add):

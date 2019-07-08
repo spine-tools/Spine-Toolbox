@@ -822,45 +822,13 @@ class TreeViewForm(DataStoreForm):
             return True
         return False
 
-    def add_relationship_classes(self, rel_cls_d):
-        """Insert new relationship classes."""
-        added_names = set()
-        for db_map, items in rel_cls_d.items():
-            added, error_log = db_map.add_wide_relationship_classes(*items)
-            if not added.count():
-                continue
-            self.object_tree_model.add_relationship_classes(db_map, added)
-            self.relationship_tree_model.add_relationship_classes(db_map, added)
-            self.relationship_parameter_definition_model.add_object_class_id_lists(db_map, added)
-            self.relationship_parameter_value_model.add_object_class_id_lists(db_map, added)
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
-            added_names.update(x.name for x in added)
-        if not added_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new relationship class(es) '{}'.".format("', '".join(added_names))
-        self.msg.emit(msg)
-        return True
+    def add_relationship_classes_to_models(self, db_map, added):
+        super().add_relationship_classes_to_models(db_map, added)
+        self.relationship_tree_model.add_relationship_classes(db_map, added)
 
-    def add_relationships(self, relationship_d):
-        """Insert new relationships."""
-        added_names = set()
-        for db_map, items in relationship_d.items():
-            added, error_log = db_map.add_wide_relationships(*items)
-            if not added.count():
-                continue
-            self.object_tree_model.add_relationships(db_map, added)
-            self.relationship_tree_model.add_relationships(db_map, added)
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
-            added_names.update(x.name for x in added)
-        if not added_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new relationship(s) '{}'.".format("', '".join(added_names))
-        self.msg.emit(msg)
-        return True
+    def add_relationships_to_models(self, db_map, added):
+        super().add_relationships_to_models(db_map, added)
+        self.relationship_tree_model.add_relationships(db_map, added)
 
     def edit_object_tree_items(self):
         """Called when F2 is pressed while the object tree has focus.
@@ -888,28 +856,21 @@ class TreeViewForm(DataStoreForm):
         elif current_type == 'relationship':
             self.show_edit_relationships_form()
 
-    def update_objects(self, objects):
-        """Update objects."""
-        if super().update_objects(objects):
-            self.relationship_tree_model.update_objects(objects)
-            return True
-        return False
+    def update_object_classes_in_models(self, db_map, updated):
+        super().update_object_classes_in_models(db_map, updated)
+        self.relationship_tree_model.update_object_classes(db_map, updated)
 
-    @busy_effect
-    def update_relationship_classes(self, wide_relationship_classes):
-        """Update relationship classes."""
-        if super().update_relationship_classes(wide_relationship_classes):
-            self.relationship_tree_model.update_relationship_classes(wide_relationship_classes)
-            return True
-        return False
+    def update_objects_in_models(self, db_map, updated):
+        super().update_objects_in_models(db_map, updated)
+        self.relationship_tree_model.update_objects(db_map, updated)
 
-    @busy_effect
-    def update_relationships(self, wide_relationships):
-        """Update relationships."""
-        if super().update_relationships(wide_relationships):
-            self.relationship_tree_model.update_relationships(wide_relationships)
-            return True
-        return False
+    def update_relationship_classes_in_models(self, db_map, updated):
+        super().update_relationship_classes_in_models(db_map, updated)
+        self.relationship_tree_model.update_relationship_classes(db_map, updated)
+
+    def update_relationships_in_models(self, db_map, updated):
+        super().update_relationships_in_models(db_map, updated)
+        self.relationship_tree_model.update_relationships(db_map, updated)
 
     @busy_effect
     @Slot("bool", name="remove_object_tree_items")

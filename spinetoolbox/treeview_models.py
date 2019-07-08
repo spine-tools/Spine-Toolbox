@@ -398,10 +398,6 @@ class ObjectTreeModel(QStandardItemModel):
                 relationship_class_dict.setdefault(int(object_class_id), list()).append(relationship_class)
         for i in range(self.root_item.rowCount()):
             object_class_item = self.root_item.child(i, 0)
-            object_class_index = self.indexFromItem(object_class_item)
-            if self.canFetchMore(object_class_index):
-                continue
-            db_map_dict = object_class_item.data(Qt.UserRole + 1)
             if db_map not in db_map_dict:
                 # Can someone be adding relationship classes where one of the classes doesn't exist in the same db?
                 continue
@@ -441,23 +437,21 @@ class ObjectTreeModel(QStandardItemModel):
         for relationship in relationships:
             class_id = relationship.class_id
             for object_id in relationship.object_id_list.split(","):
-                relationship_dict.setdefault((int(object_id), class_id), list()).append(relationship)
+                d = relationship_dict.setdefault(int(object_id), {})
+                d.setdefault(class_id, []).append(relationship)
         for i in range(self.root_item.rowCount()):
             object_class_item = self.root_item.child(i, 0)
-            object_class_index = self.indexFromItem(object_class_item)
-            if self.canFetchMore(object_class_index):
-                continue
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
-                object_index = self.indexFromItem(object_item)
-                if self.canFetchMore(object_index):
-                    continue
                 db_map_dict = object_item.data(Qt.UserRole + 1)
                 if db_map not in db_map_dict:
                     # Can someone be adding relationships where one of the objects doesn't exist in the same db?
                     continue
                 object_ = db_map_dict[db_map]
                 object_id = object_['id']
+                if object_id not in relationship_dict:
+                    continue
+                class_relationship_dict = relationship_dict[object_id]
                 for k in range(object_item.rowCount()):
                     rel_cls_item = object_item.child(k, 0)
                     rel_cls_index = self.indexFromItem(rel_cls_item)
@@ -469,9 +463,9 @@ class ObjectTreeModel(QStandardItemModel):
                         continue
                     rel_cls = db_map_dict[db_map]
                     rel_cls_id = rel_cls['id']
-                    if (object_id, rel_cls_id) not in relationship_dict:
+                    if rel_cls_id not in class_relationship_dict:
                         continue
-                    relationships = relationship_dict[object_id, rel_cls_id]
+                    relationships = class_relationship_dict[rel_cls_id]
                     self.add_relationships_to_class(db_map, relationships, rel_cls_item)
 
     def add_relationships_to_class(self, db_map, relationships, rel_cls_item):
@@ -492,95 +486,159 @@ class ObjectTreeModel(QStandardItemModel):
         for row in new_rows:
             rel_cls_item.appendRow(row)
 
-    def update_object_classes(self, updated_items):
-        """Update object classes in the model."""
-        updated_items_dict = {x.id: x for x in updated_items}
+    def update_object_classes(self, db_map, object_classes):
+        """Update object classes in the model.
+        This of course means updating the object class name in relationship class items.
+        """
+        object_class_d = {x.id: x for x in object_classes}
         for i in range(self.root_item.rowCount()):
-            visited_item = self.root_item.child(i)
-            visited_id = visited_item.data(Qt.UserRole + 1)['id']
-            updated_item = updated_items_dict.pop(visited_id, None)
-            if not updated_item:
+            object_class_item = self.root_item.child(i)
+            db_map_dict = object_class_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
                 continue
-            visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-            visited_item.setData(updated_item.name, Qt.DisplayRole)
+            object_class = db_map_dict[db_map]
+            object_class_id = object_class['id']
+            upd_object_class = object_class_d.pop(object_class_id, None)
+            if not upd_object_class:
+                continue
+            db_map_dict[db_map] = upd_object_class._asdict()
+            object_class_item.setData(upd_object_class.name, Qt.DisplayRole)
+            object_class_item.setData(upd_object_class.description, Qt.ToolTipRole)
+            # Update child relationship class items
+            for j in range(object_class_item.rowCount()):
+                object_item = object_class_item.child(j, 0)
+                for k in range(object_item.rowCount()):
+                    rel_cls_item = object_item.child(k, 0)
+                    db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+                    if db_map not in db_map_dict:
+                        continue
+                    rel_cls = db_map_dict[db_map]
+                    obj_cls_name_list = rel_cls['object_class_name_list'].split(',')
+                    obj_cls_id_list = [int(x) for x in rel_cls['object_class_id_list'].split(',')]
+                    for k, id_ in enumerate(obj_cls_id_list):
+                        if id_ == object_class_id:
+                            obj_cls_name_list[k] = upd_object_class.name
+                    rel_cls['object_class_name_list'] = ",".join(obj_cls_name_list)
+                    rel_cls_item.setData(",".join(obj_cls_name_list), Qt.ToolTipRole)
 
-    def update_objects(self, updated_items):
+    def update_objects(self, db_map, objects):
         """Update object in the model.
         This of course means updating the object name in relationship items.
         """
-        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        updated_items_dict = {x.id: x for x in updated_items}
-        for visited_item in items:
-            visited_type = visited_item.data(Qt.UserRole)
-            if visited_type == 'object':
-                visited_id = visited_item.data(Qt.UserRole + 1)['id']
-                try:
-                    updated_item = updated_items_dict[visited_id]
-                    visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-                    visited_item.setText(updated_item.name)
-                except KeyError:
+        object_d = {}
+        for object_ in objects:
+            object_d.setdefault(object_.class_id, {}).update({object_.id: object_})
+        for i in range(self.root_item.rowCount()):
+            object_class_item = self.root_item.child(i, 0)
+            db_map_dict = object_class_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
+                continue
+            object_class = db_map_dict[db_map]
+            object_class_id = object_class['id']
+            class_object_dict = object_d.pop(object_class_id, None)
+            if not class_object_dict:
+                continue
+            for j in range(object_class_item.rowCount()):
+                object_item = object_class_item.child(j, 0)
+                db_map_dict = object_item.data(Qt.UserRole + 1)
+                if db_map not in db_map_dict:
                     continue
-            elif visited_type == 'relationship':
-                relationship = visited_item.data(Qt.UserRole + 1)
-                object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
-                object_name_list = relationship['object_name_list'].split(",")
-                found = False
-                for i, id in enumerate(object_id_list):
-                    try:
-                        updated_item = updated_items_dict[id]
-                        object_name_list[i] = updated_item.name
-                        found = True
-                    except KeyError:
-                        continue
-                if found:
-                    str_object_name_list = ",".join(object_name_list)
-                    relationship['object_name_list'] = str_object_name_list
-                    visited_item.setText(str_object_name_list)
-                    visited_item.setData(relationship, Qt.UserRole + 1)
+                object_ = db_map_dict[db_map]
+                object_id = object_['id']
+                upd_object = class_object_dict.pop(object_id, None)
+                if not upd_object:
+                    continue
+                db_map_dict[db_map] = upd_object._asdict()
+                object_item.setData(upd_object.name, Qt.DisplayRole)
+                object_item.setData(upd_object.description, Qt.ToolTipRole)
+                # Update child relationship items
+                for k in range(object_item.rowCount()):
+                    rel_cls_item = object_item.child(k, 0)
+                    for l in range(rel_cls_item.rowCount()):
+                        relationship_item = rel_cls_item.child(l, 0)
+                        db_map_dict = relationship_item.data(Qt.UserRole + 1)
+                        if db_map not in db_map_dict:
+                            continue
+                        relationship = db_map_dict[db_map]
+                        object_name_list = relationship['object_name_list'].split(',')
+                        object_id_list = [int(x) for x in relationship['object_id_list'].split(',')]
+                        for k, id_ in enumerate(object_id_list):
+                            if id_ == object_id:
+                                object_name_list[k] = upd_object.name
+                        relationship['object_name_list'] = ",".join(object_name_list)
+                        relationship_item.setData(",".join(object_name_list), Qt.DisplayRole)
 
-    def update_relationship_classes(self, updated_items):
+    def update_relationship_classes(self, db_map, relationship_classes):
         """Update relationship classes in the model."""
-        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        updated_items_dict = {x.id: x for x in updated_items}
-        for visited_item in items:
-            visited_type = visited_item.data(Qt.UserRole)
-            if visited_type != 'relationship_class':
+        relationship_class_dict = {}
+        for rel_cls in relationship_classes:
+            for object_class_id in rel_cls.object_class_id_list.split(","):
+                relationship_class_dict.setdefault(int(object_class_id), {}).update({rel_cls.id: rel_cls})
+        for i in range(self.root_item.rowCount()):
+            object_class_item = self.root_item.child(i, 0)
+            db_map_dict = object_class_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
                 continue
-            visited_id = visited_item.data(Qt.UserRole + 1)['id']
-            try:
-                updated_item = updated_items_dict[visited_id]
-                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-                visited_item.setText(updated_item.name)
-            except KeyError:
+            object_class = db_map_dict[db_map]
+            object_class_id = object_class['id']
+            class_rel_cls_dict = relationship_class_dict.pop(object_class_id, None)
+            if not class_rel_cls_dict:
                 continue
+            for j in range(object_class_item.rowCount()):
+                object_item = object_class_item.child(j, 0)
+                for k in range(object_item.rowCount()):
+                    rel_cls_item = object_item.child(k, 0)
+                    db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+                    if db_map not in db_map_dict:
+                        continue
+                    rel_cls = db_map_dict[db_map]
+                    rel_cls_id = rel_cls['id']
+                    if rel_cls_id not in class_rel_cls_dict:
+                        continue
+                    upd_rel_cls = class_rel_cls_dict[rel_cls_id]
+                    db_map_dict[db_map] = upd_rel_cls._asdict()
+                    rel_cls_item.setData(upd_rel_cls.name, Qt.DisplayRole)
 
-    def update_relationships(self, updated_items):
+    def update_relationships(self, db_map, relationships):
         """Update relationships in the model.
         Move rows if the objects in the relationship change."""
-        items = self.findItems("*", Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        updated_items_dict = {x.id: x for x in updated_items}
+        relationship_dict = {}
+        for relationship in relationships:
+            relationship_dict.setdefault(relationship.class_id, {}).update({relationship.id: relationship})
         ids_to_remove = set()
         relationships_to_add = set()
-        for visited_item in items:
-            visited_type = visited_item.data(Qt.UserRole)
-            if visited_type != "relationship":
-                continue
-            visited_id = visited_item.data(Qt.UserRole + 1)['id']
-            try:
-                updated_item = updated_items_dict[visited_id]
-            except KeyError:
-                continue
-            # Handle changes in object path
-            visited_object_id_list = visited_item.data(Qt.UserRole + 1)['object_id_list']
-            updated_object_id_list = updated_item.object_id_list
-            if visited_object_id_list != updated_object_id_list:
-                ids_to_remove.add(visited_id)
-                relationships_to_add.add(updated_item)
-            else:
-                visited_item.setText(updated_item.object_name_list)
-                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-        self.remove_relationships(ids_to_remove)
-        self.add_relationships(relationships_to_add)
+        for i in range(self.root_item.rowCount()):
+            object_class_item = self.root_item.child(i, 0)
+            for j in range(object_class_item.rowCount()):
+                object_item = object_class_item.child(j, 0)
+                for k in range(object_item.rowCount()):
+                    rel_cls_item = object_item.child(k, 0)
+                    db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+                    if db_map not in db_map_dict:
+                        continue
+                    rel_cls = db_map_dict[db_map]
+                    rel_cls_id = rel_cls['id']
+                    if rel_cls_id not in relationship_dict:
+                        continue
+                    class_relationship_dict = relationship_dict[rel_cls_id]
+                    for l in range(rel_cls_item.rowCount()):
+                        relationship_item = rel_cls_item.child(l, 0)
+                        db_map_dict = relationship_item.data(Qt.UserRole + 1)
+                        if db_map not in db_map_dict:
+                            continue
+                        relationship = db_map_dict[db_map]
+                        relationship_id = relationship['id']
+                        if relationship_id not in class_relationship_dict:
+                            continue
+                        upd_relationship = class_relationship_dict[relationship_id]
+                        if upd_relationship.object_id_list != relationship['object_id_list']:
+                            ids_to_remove.add(relationship_id)
+                            relationships_to_add.add(upd_relationship)
+                        else:
+                            db_map_dict[db_map] = upd_relationship._asdict()
+                            object_item.setData(upd_relationship.name, Qt.DisplayRole)
+        # self.remove_relationships(db_map, ids_to_remove)  # TODO
+        self.add_relationships(db_map, relationships_to_add)
 
     def remove_object_classes(self, removed_ids):
         """Remove object classes and their childs."""
@@ -867,57 +925,91 @@ class RelationshipTreeModel(QStandardItemModel):
         for row in new_rows:
             rel_cls_item.appendRow(row)
 
-    def update_objects(self, updated_items):
-        """Update object in the model.
-        This of course means updating the object name in relationship items.
+    def update_object_classes(self, db_map, object_classes):
+        """Update object classes in the model.
+        This just means updating the object class name in relationship class items.
         """
-        updated_items_dict = {x.id: x for x in updated_items}
+        object_class_d = {x.id: x.name for x in object_classes}
+        for i in range(self.root_item.rowCount()):
+            rel_cls_item = self.root_item.child(i, 0)
+            db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
+                continue
+            rel_cls = db_map_dict[db_map]
+            obj_cls_name_list = rel_cls['object_class_name_list'].split(',')
+            obj_cls_id_list = [int(x) for x in rel_cls['object_class_id_list'].split(',')]
+            for k, id_ in enumerate(obj_cls_id_list):
+                if id_ in object_class_d:
+                    obj_cls_name_list[k] = object_class_d[id_]
+            rel_cls['object_class_name_list'] = ",".join(obj_cls_name_list)
+            rel_cls_item.setData(",".join(obj_cls_name_list), Qt.ToolTipRole)
+
+    def update_objects(self, db_map, objects):
+        """Update object in the model.
+        This just means updating the object name in relationship items.
+        """
+        object_d = {x.id: x.name for x in objects}
         for i in range(self.root_item.rowCount()):
             relationship_class_item = self.root_item.child(i)
             for j in range(relationship_class_item.rowCount()):
-                visited_item = relationship_class_item.child(j)
-                relationship = visited_item.data(Qt.UserRole + 1)
+                relationship_item = relationship_class_item.child(j)
+                db_map_dict = relationship_item.data(Qt.UserRole + 1)
+                if db_map not in db_map_dict:
+                    continue
+                relationship = db_map_dict[db_map]
                 object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
                 object_name_list = relationship['object_name_list'].split(",")
-                found = False
-                for i, id in enumerate(object_id_list):
-                    try:
-                        updated_item = updated_items_dict[id]
-                        object_name_list[i] = updated_item.name
-                        found = True
-                    except KeyError:
-                        continue
-                if found:
-                    str_object_name_list = ",".join(object_name_list)
-                    relationship['object_name_list'] = str_object_name_list
-                    visited_item.setText(str_object_name_list)
-                    visited_item.setData(relationship, Qt.UserRole + 1)
+                for k, id_ in enumerate(object_id_list):
+                    if id_ in object_d:
+                        object_name_list[k] = object_d[id_]
+                str_object_name_list = ",".join(object_name_list)
+                relationship['object_name_list'] = str_object_name_list
+                relationship_item.setData(str_object_name_list, Qt.DisplayRole)
 
-    def update_relationship_classes(self, updated_items):
+    def update_relationship_classes(self, db_map, relationship_classes):
         """Update relationship classes in the model."""
-        updated_items_dict = {x.id: x for x in updated_items}
+        rel_cls_d = {x.id: x for x in relationship_classes}
         for i in range(self.root_item.rowCount()):
-            visited_item = self.root_item.child(i)
-            visited_id = visited_item.data(Qt.UserRole + 1)['id']
-            updated_item = updated_items_dict.pop(visited_id, None)
-            if not updated_item:
+            rel_cls_item = self.root_item.child(i)
+            db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
                 continue
-            visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-            visited_item.setText(updated_item.name)
+            rel_cls = db_map_dict[db_map]
+            rel_cls_id = rel_cls['id']
+            upd_rel_cls = rel_cls_d.pop(rel_cls_id, None)
+            if not upd_rel_cls:
+                continue
+            db_map_dict[db_map] = upd_rel_cls._asdict()
+            rel_cls_item.setData(upd_rel_cls.name, Qt.DisplayRole)
+            rel_cls_item.setData(upd_rel_cls.object_class_name_list, Qt.ToolTipRole)
 
-    def update_relationships(self, updated_items):
+    def update_relationships(self, db_map, relationships):
         """Update relationships in the model."""
-        updated_items_dict = {x.id: x for x in updated_items}
+        relationship_d = {}
+        for rel in relationships:
+            relationship_d.setdefault(rel.class_id, {}).update({rel.id: rel})
         for i in range(self.root_item.rowCount()):
             relationship_class_item = self.root_item.child(i)
+            db_map_dict = relationship_class_item.data(Qt.UserRole + 1)
+            if db_map not in db_map_dict:
+                continue
+            rel_cls = db_map_dict[db_map]
+            rel_cls_id = rel_cls['id']
+            class_relationship_dict = relationship_d.pop(rel_cls_id, None)
+            if not class_relationship_dict:
+                continue
             for j in range(relationship_class_item.rowCount()):
-                visited_item = relationship_class_item.child(j)
-                visited_id = visited_item.data(Qt.UserRole + 1)['id']
-                updated_item = updated_items_dict.pop(visited_id, None)
-                if not updated_item:
+                relationship_item = relationship_class_item.child(j)
+                db_map_dict = relationship_item.data(Qt.UserRole + 1)
+                if db_map not in db_map_dict:
                     continue
-                visited_item.setData(updated_item._asdict(), Qt.UserRole + 1)
-                visited_item.setText(updated_item.object_name_list)
+                relationship = db_map_dict[db_map]
+                relationship_id = relationship['id']
+                upd_relationship = class_relationship_dict.pop(relationship_id, None)
+                if not upd_relationship:
+                    continue
+                db_map_dict[db_map] = upd_relationship._asdict()
+                relationship_item.setData(upd_relationship.object_name_list, Qt.DisplayRole)
 
     def remove_object_classes(self, removed_ids):
         """Remove object classes and their childs."""
@@ -1922,10 +2014,10 @@ class ObjectParameterModel(MinimalTableModel):
             self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
         self.filtered_out = dict()
 
-    def rename_object_classes(self, object_classes):
+    def rename_object_classes(self, db_map, object_classes):
         """Rename object classes in model."""
         object_class_name_column = self.header.index("object_class_name")
-        object_class_id_name = {x.id: x.name for x in object_classes}
+        object_class_id_name = {(db_map, x.id): x.name for x in object_classes}
         for object_class_id, model in self.sub_models:
             if object_class_id not in object_class_id_name:
                 continue
@@ -2044,13 +2136,13 @@ class ObjectParameterValueModel(ObjectParameterModel):
         self.clear_filtered_out_values()
         self.layoutChanged.emit()
 
-    def rename_objects(self, objects):
+    def rename_objects(self, db_map, objects):
         """Rename objects in model."""
         object_id_column = self.header.index("object_id")
         object_name_column = self.header.index("object_name")
         object_dict = {}
         for object_ in objects:
-            object_dict.setdefault(object_.class_id, {}).update({object_.id: object_.name})
+            object_dict.setdefault((db_map, object_.class_id), {}).update({object_.id: object_.name})
         for object_class_id, model in self.sub_models:
             if object_class_id not in object_dict:
                 continue
@@ -2508,37 +2600,31 @@ class RelationshipParameterModel(MinimalTableModel):
             self.setHeaderData(column, Qt.Horizontal, None, Qt.FontRole)
         self.filtered_out = dict()
 
-    def rename_object_classes(self, object_classes):
+    def rename_object_classes(self, db_map, object_classes):
         """Rename object classes in model."""
         object_class_name_list_column = self.header.index("object_class_name_list")
-        object_class_id_name = {x.id: x.name for x in object_classes}
+        object_class_d = {(db_map, x.id): x.name for x in object_classes}
         for relationship_class_id, model in self.sub_models:
             object_class_id_list = self.object_class_id_lists[relationship_class_id]
-            new_object_class_name_dict = {}
-            for k, object_class_id in enumerate(object_class_id_list):
-                if object_class_id in object_class_id_name:
-                    object_class_name = object_class_id_name[object_class_id]
-                    new_object_class_name_dict.update({k: object_class_name})
-            if not new_object_class_name_dict:
+            obj_cls_name_d = {
+                k: object_class_d[id_] for k, id_ in enumerate(object_class_id_list) if id_ in object_class_d
+            }
+            if not obj_cls_name_d:
                 continue
             for row_data in model.sourceModel()._main_data:
                 object_class_name_list = row_data[object_class_name_list_column].split(',')
-                object_class_name_dict = {i: name for i, name in enumerate(object_class_name_list)}
-                object_class_name_dict.update(new_object_class_name_dict)
-                new_object_class_name_list = ",".join(
-                    [object_class_name_dict[i] for i in range(len(object_class_name_dict))]
-                )
-                row_data[object_class_name_list_column] = new_object_class_name_list
+                for k, new_name in obj_cls_name_d.items():
+                    object_class_name_list[k] = new_name
+                row_data[object_class_name_list_column] = ",".join(object_class_name_list)
 
-    def rename_relationship_classes(self, relationship_classes):
+    def rename_relationship_classes(self, db_map, relationship_classes):
         """Rename relationship classes in model."""
         relationship_class_name_column = self.header.index("relationship_class_name")
-        relationship_class_id_name = {x.id: x.name for x in relationship_classes}
+        relationship_class_id_name = {(db_map, x.id): x.name for x in relationship_classes}
         for relationship_class_id, model in self.sub_models:
-            if relationship_class_id in relationship_class_id_name:
-                relationship_class_name = relationship_class_id_name[relationship_class_id]
-            else:
+            if relationship_class_id not in relationship_class_id_name:
                 continue
+            relationship_class_name = relationship_class_id_name[relationship_class_id]
             for row_data in model.sourceModel()._main_data:
                 row_data[relationship_class_name_column] = relationship_class_name
 
@@ -2693,12 +2779,14 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
             self.empty_row_model.removeRows(row, 1)
         self.invalidate_filter()
 
-    def rename_objects(self, objects):
+    def rename_objects(self, db_map, objects):
         """Rename objects in model."""
         object_id_list_column = self.header.index("object_id_list")
         object_name_list_column = self.header.index("object_name_list")
         object_id_name = {x.id: x.name for x in objects}
-        for _, model in self.sub_models:
+        for relationship_class_id, model in self.sub_models:
+            if relationship_class_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 object_id_list = [int(x) for x in row_data[object_id_list_column].split(',')]
                 object_name_list = row_data[object_name_list_column].split(',')
