@@ -29,6 +29,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   select *Export project to GraphML* from the Project Item list context-menu or from *File -> 
   Export project to GraphML*.
 - New project item: Data Interface
+- Parameter and relationship parameter values can now be edited in a dedicated editor window in Tree, Graph and Tabular
+  views. The editor is accessible from when right clicking a value and selecting `Open in editor...`.
 
 ### Changed
 - Selecting the Julia environment in Settings now requires picking the Julia interpreter **file**
