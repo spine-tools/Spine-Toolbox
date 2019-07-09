@@ -1897,29 +1897,25 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
     def add_items_to_db(self, items_to_add):
         """Add parameter definitions to database.
         """
-        if not items_to_add:
-            return
-        try:
-            items = list(items_to_add.values())
+        for db_map, row_dict in items_to_add.items():
+            items = list(row_dict.values())
             name_tag_dict = dict()
             for item in items:
                 parameter_tag_id_list = item.pop("parameter_tag_id_list", None)
                 if parameter_tag_id_list is None:
                     continue
                 name_tag_dict[item["name"]] = parameter_tag_id_list
-            parameters, error_log = self._parent.db_map.add_parameter_definitions(*items)
-            self.added_rows = list(items_to_add.keys())
+            par_defs, error_log = db_map.add_parameter_definitions(*items)
+            self.added_rows = list(row_dict.keys())
             self.error_log.extend(error_log)
             id_column = self._parent.horizontal_header_labels().index('id')
             tag_dict = dict()
-            for i, parameter in enumerate(parameters):
-                if parameter.name in name_tag_dict:
-                    tag_dict[parameter.id] = name_tag_dict[parameter.name]
-                self._main_data[self.added_rows[i]][id_column] = parameter.id
-            upd_def_tag_list, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
+            for i, par_def in enumerate(par_defs):
+                if par_def.name in name_tag_dict:
+                    tag_dict[par_def.id] = name_tag_dict[par_def.name]
+                self._main_data[self.added_rows[i]][id_column] = par_def.id
+            _, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict)
             self.error_log.extend(def_tag_error_log)
-        except SpineDBAPIError as e:
-            self.error_log.append(e.msg)
 
 
 class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
@@ -1935,6 +1931,7 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
         items_to_add = dict()
         # Get column numbers
         header_index = self._parent.horizontal_header_labels().index
+        db_column = header_index('database')
         object_class_id_column = header_index('object_class_id')
         object_class_name_column = header_index('object_class_name')
         parameter_name_column = header_index('parameter_name')
@@ -1943,11 +1940,13 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
         value_list_id_column = header_index('value_list_id')
         value_list_name_column = header_index('value_list_name')
         default_value_column = header_index('default_value')
-        # Query db and build ad-hoc dicts
-        object_class_dict = {x.name: x.id for x in self._parent.db_map.object_class_list()}
-        parameter_tag_dict = {x.tag: x.id for x in self._parent.db_map.parameter_tag_list()}
-        parameter_value_list_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_value_list_list()}
+        # Lookup dicts (these are filled below as needed with data from the db corresponding to each row)
+        object_class_dict = {}
+        parameter_tag_dict = {}
+        parameter_value_list_dict = {}
         for row in {ind.row() for ind in indexes}:
+            db_name = self.index(row, db_column).data(Qt.DisplayRole)
+            db_map = self._parent.db_name_to_map[db_name]
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             parameter_tag_list = self.index(row, parameter_tag_list_column).data(Qt.DisplayRole)
@@ -1955,23 +1954,28 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
             object_class_id = None
             item = {"name": parameter_name}
             if object_class_name:
+                d = object_class_dict.setdefault(db_map, {x.name: x.id for x in db_map.object_class_list()})
                 try:
-                    object_class_id = object_class_dict[object_class_name]
+                    object_class_id = d[object_class_name]
                 except KeyError:
                     self.error_log.append("Invalid object class '{}'".format(object_class_name))
                 self._main_data[row][object_class_id_column] = object_class_id
                 item["object_class_id"] = object_class_id
             if parameter_tag_list:
+                d = parameter_tag_dict.setdefault(db_map, {x.tag: x.id for x in db_map.parameter_tag_list()})
                 split_parameter_tag_list = parameter_tag_list.split(",")
                 try:
-                    parameter_tag_id_list = ",".join(str(parameter_tag_dict[x]) for x in split_parameter_tag_list)
+                    parameter_tag_id_list = ",".join(str(d[x]) for x in split_parameter_tag_list)
                 except KeyError as e:
                     self.error_log.append("Invalid parameter tag '{}'".format(e))
                 self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
                 item["parameter_tag_id_list"] = parameter_tag_id_list
             if value_list_name:
+                d = parameter_value_list_dict.setdefault(
+                    db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
+                )
                 try:
-                    value_list_id = parameter_value_list_dict[value_list_name]
+                    value_list_id = d[value_list_name]
                 except KeyError:
                     self.error_log.append("Invalid value list '{}'".format(value_list_name))
                 self._main_data[row][value_list_id_column] = value_list_id
@@ -1980,7 +1984,7 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
                 continue
             default_value = self.index(row, default_value_column).data(Qt.DisplayRole)
             item["default_value"] = default_value
-            items_to_add[row] = item
+            items_to_add.setdefault(db_map, {})[row] = item
         return items_to_add
 
 
@@ -1998,6 +2002,7 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
         items_to_add = dict()
         # Get column numbers
         header_index = self._parent.horizontal_header_labels().index
+        db_column = header_index('database')
         relationship_class_id_column = header_index('relationship_class_id')
         relationship_class_name_column = header_index('relationship_class_name')
         object_class_id_list_column = header_index('object_class_id_list')
@@ -2008,19 +2013,14 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
         value_list_id_column = header_index('value_list_id')
         value_list_name_column = header_index('value_list_name')
         default_value_column = header_index('default_value')
-        # Query db and build ad-hoc dicts
-        relationship_class_dict = {
-            x.name: {
-                'id': x.id,
-                'object_class_id_list': x.object_class_id_list,
-                'object_class_name_list': x.object_class_name_list,
-            }
-            for x in self._parent.db_map.wide_relationship_class_list()
-        }
-        parameter_tag_dict = {x.tag: x.id for x in self._parent.db_map.parameter_tag_list()}
-        parameter_value_list_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_value_list_list()}
+        # Lookup dicts (these are filled below as needed with data from the db corresponding to each row)
+        relationship_class_dict = {}
+        parameter_tag_dict = {}
+        parameter_value_list_dict = {}
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
+            db_name = self.index(row, db_column).data(Qt.DisplayRole)
+            db_map = self._parent.db_name_to_map[db_name]
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             object_class_name_list = self.index(row, object_class_name_list_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
@@ -2029,8 +2029,19 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
             relationship_class_id = None
             item = {"name": parameter_name}
             if relationship_class_name:
+                d = relationship_class_dict.setdefault(
+                    db_map,
+                    {
+                        x.name: {
+                            'id': x.id,
+                            'object_class_id_list': x.object_class_id_list,
+                            'object_class_name_list': x.object_class_name_list,
+                        }
+                        for x in db_map.wide_relationship_class_list()
+                    },
+                )
                 try:
-                    relationship_class = relationship_class_dict[relationship_class_name]
+                    relationship_class = d[relationship_class_name]
                 except KeyError:
                     self.error_log.append("Invalid relationship class '{}'".format(relationship_class_name))
                 relationship_class_id = relationship_class['id']
@@ -2042,16 +2053,20 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
                 indexes.append(self.index(row, object_class_name_list_column))
                 item["relationship_class_id"] = relationship_class_id
             if parameter_tag_list:
+                d = parameter_tag_dict.setdefault(db_map, {x.tag: x.id for x in db_map.parameter_tag_list()})
+                split_parameter_tag_list = parameter_tag_list.split(",")
                 try:
-                    split_parameter_tag_list = parameter_tag_list.split(",")
-                    parameter_tag_id_list = ",".join(str(parameter_tag_dict[x]) for x in split_parameter_tag_list)
+                    parameter_tag_id_list = ",".join(str(d[x]) for x in split_parameter_tag_list)
                 except KeyError as e:
                     self.error_log.append("Invalid tag '{}'".format(e))
                 self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
                 item["parameter_tag_id_list"] = parameter_tag_id_list
             if value_list_name:
+                d = parameter_value_list_dict.setdefault(
+                    db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
+                )
                 try:
-                    value_list_id = parameter_value_list_dict[value_list_name]
+                    value_list_id = d[value_list_name]
                 except KeyError:
                     self.error_log.append("Invalid value list '{}'".format(value_list_name))
                 self._main_data[row][value_list_id_column] = value_list_id
@@ -2060,7 +2075,7 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
                 continue
             default_value = self.index(row, default_value_column).data(Qt.DisplayRole)
             item["default_value"] = default_value
-            items_to_add[row] = item
+            items_to_add.setdefault(db_map, {})[row] = item
         return items_to_add
 
 
@@ -2547,6 +2562,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         """Move rows from empty row model to a new sub_model.
         Called when the empty row model succesfully inserts new data in the db.
         """
+        db_column = self.header.index("database")
         object_class_id_column = self.header.index("object_class_id")
         parameter_definition_id_column = self.header.index('id')
         model_data_dict = {}
@@ -3190,6 +3206,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         """Move rows from empty row model to a new sub_model.
         Called when the empty row model succesfully inserts new data in the db.
         """
+        db_column = self.header.index("database")
         relationship_class_id_column = self.header.index("relationship_class_id")
         parameter_definition_id_column = self.header.index('id')
         model_data_dict = {}
