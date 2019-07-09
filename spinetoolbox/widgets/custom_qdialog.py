@@ -41,6 +41,7 @@ from widgets.custom_delegates import (
     ManageObjectsDelegate,
     ManageRelationshipClassesDelegate,
     ManageRelationshipsDelegate,
+    RemoveTreeItemsDelegate,
 )
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect, format_string_list
@@ -652,7 +653,7 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
         super().accept()
 
 
-class EditItemsDialog(ManageItemsDialog):
+class EditOrRemoveItemsDialog(ManageItemsDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.db_map_ids = list()
@@ -664,7 +665,7 @@ class EditItemsDialog(ManageItemsDialog):
         return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_ids[row]]
 
 
-class EditObjectClassesDialog(EditItemsDialog):
+class EditObjectClassesDialog(EditOrRemoveItemsDialog):
     """A dialog to query user's preferences for updating object classes.
 
     Attributes:
@@ -731,7 +732,7 @@ class EditObjectClassesDialog(EditItemsDialog):
         super().accept()
 
 
-class EditObjectsDialog(EditItemsDialog):
+class EditObjectsDialog(EditOrRemoveItemsDialog):
     """A dialog to query user's preferences for updating objects.
 
     Attributes:
@@ -794,7 +795,7 @@ class EditObjectsDialog(EditItemsDialog):
         super().accept()
 
 
-class EditRelationshipClassesDialog(EditItemsDialog):
+class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
     """A dialog to query user's preferences for updating relationship classes.
 
     Attributes:
@@ -856,7 +857,7 @@ class EditRelationshipClassesDialog(EditItemsDialog):
         super().accept()
 
 
-class EditRelationshipsDialog(EditItemsDialog, GetObjectsMixin):
+class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
     """A dialog to query user's preferences for updating relationships.
 
     Attributes:
@@ -966,7 +967,57 @@ class EditRelationshipsDialog(EditItemsDialog, GetObjectsMixin):
         super().accept()
 
 
-class ManageParameterTagsDialog(AddItemsDialog):
+class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
+    """A dialog to query user's preferences for removing tree items.
+
+    Attributes:
+        parent (TreeViewForm): data store widget
+    """
+
+    def __init__(self, parent, **kwargs):
+        super().__init__(parent)
+        self.setWindowTitle("Remove items")
+        self.model = MinimalTableModel(self)
+        self.table_view.setModel(self.model)
+        self.table_view.setItemDelegate(RemoveTreeItemsDelegate(self))
+        self.connect_signals()
+        self.model.set_horizontal_header_labels(['type', 'name', 'databases'])
+        model_data = list()
+        for item_type, db_map_dicts in kwargs.items():
+            for db_map_dict in db_map_dicts:
+                self.db_map_ids.append({db_map: x['id'] for db_map, x in db_map_dict.items()})
+                db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
+                item = list(db_map_dict.values())[0]
+                name = item.get('name')
+                if not name:
+                    continue
+                row_data = [item_type, name, db_names]
+                model_data.append(row_data)
+        self.model.reset_model(model_data)
+
+    @busy_effect
+    def accept(self):
+        """Collect info from dialog and try to remove items."""
+        item_d = dict()
+        for i in range(self.model.rowCount()):
+            item_type, _, db_names = self.model.row_data(i)
+            db_name_list = db_names.split(",")
+            try:
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list if x in self._parent.db_name_to_map]
+            except KeyError as e:
+                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                return
+            for db_map in db_maps:
+                id_ = self.db_map_ids[i][db_map]
+                item_d.setdefault(db_map, {}).setdefault(item_type, []).append(id_)
+        if not item_d:
+            self._parent.msg_error.emit("Nothing to remove")
+            return
+        self._parent.remove_tree_items(item_d)
+        super().accept()
+
+
+class ManageParameterTagsDialog(AddItemsDialog):  # TODO: inherit from ManageItemsDialog maybe?
     """A dialog to query user's preferences for managing parameter tags.
 
     Attributes:

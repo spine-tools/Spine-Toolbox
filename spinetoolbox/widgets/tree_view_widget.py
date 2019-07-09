@@ -31,6 +31,7 @@ from widgets.custom_menus import (
     ParameterContextMenu,
     ParameterValueListContextMenu,
 )
+from widgets.custom_qdialog import RemoveTreeItemsDialog
 from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from spinedb_api import copy_database
@@ -321,14 +322,14 @@ class TreeViewForm(DataStoreForm):
 
     @Slot("bool", name="remove_selection")
     def remove_selection(self, checked=False):
-        """Remove selection items."""
+        """Remove selection of items."""
         if not self.widget_with_selection:
             return
         name = self.widget_with_selection.accessibleName()
         if name == "object tree":
-            self.remove_object_tree_items()
+            self.show_remove_object_tree_items_form()
         elif name == "relationship tree":
-            self.remove_relationship_tree_items()
+            self.show_remove_relationship_tree_items_form()
         elif name == "object parameter definition":
             self.remove_object_parameter_definitions()
         elif name == "object parameter value":
@@ -748,7 +749,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Find next":
             self.find_next(index)
         elif option.startswith("Remove selection"):
-            self.remove_object_tree_items()
+            self.show_remove_object_tree_items_form()
         elif option == "Fully expand":
             self.fully_expand_selection()
         elif option == "Fully collapse":
@@ -780,7 +781,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Edit relationships":
             self.show_edit_relationships_form()
         elif option.startswith("Remove selection"):
-            self.remove_relationship_tree_items()
+            self.show_remove_relationship_tree_items_form()
         else:  # No option selected
             pass
         self.relationship_tree_context_menu.deleteLater()
@@ -872,75 +873,94 @@ class TreeViewForm(DataStoreForm):
         super().update_relationships_in_models(db_map, updated)
         self.relationship_tree_model.update_relationships(db_map, updated)
 
-    @busy_effect
-    @Slot("bool", name="remove_object_tree_items")
-    def remove_object_tree_items(self, checked=False):
-        """Remove all selected items from the object treeview."""
-        indexes = self.selected_obj_tree_indexes
-        object_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object_class', {})]
-        objects = [ind.data(Qt.UserRole + 1) for ind in indexes.get('object', {})]
-        relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', {})]
-        relationships = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship', {})]
-        object_class_ids = set(x['id'] for x in object_classes)
-        object_ids = set(x['id'] for x in objects)
-        relationship_class_ids = set(x['id'] for x in relationship_classes)
-        relationship_ids = set(x['id'] for x in relationships)
-        try:
-            self.db_map.remove_items(
-                object_class_ids=object_class_ids,
-                object_ids=object_ids,
-                relationship_class_ids=relationship_class_ids,
-                relationship_ids=relationship_ids,
-            )
-            self.object_tree_model.remove_object_classes(object_class_ids)
-            self.object_tree_model.remove_objects(object_ids)
-            self.object_tree_model.remove_relationship_classes(relationship_class_ids)
-            self.object_tree_model.remove_relationships(relationship_ids)
-            self.relationship_tree_model.remove_object_classes(object_class_ids)
-            self.relationship_tree_model.remove_objects(object_ids)
-            self.relationship_tree_model.remove_relationship_classes(relationship_class_ids)
-            self.relationship_tree_model.remove_relationships(relationship_ids)
-            # Parameter models
-            self.object_parameter_value_model.remove_object_classes(object_classes)
-            self.object_parameter_value_model.remove_objects(objects)
-            self.object_parameter_definition_model.remove_object_classes(object_classes)
-            self.relationship_parameter_value_model.remove_object_classes(object_classes)
-            self.relationship_parameter_value_model.remove_objects(objects)
-            self.relationship_parameter_value_model.remove_relationship_classes(relationship_classes)
-            self.relationship_parameter_value_model.remove_relationships(relationships)
-            self.relationship_parameter_definition_model.remove_object_classes(object_classes)
-            self.relationship_parameter_definition_model.remove_relationship_classes(relationship_classes)
-            self.commit_available.emit(True)
-            self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
-            self.msg.emit("Successfully removed items.")
-            self.object_tree_selection_available.emit(False)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+    def show_remove_object_tree_items_form(self):
+        """Show form to remove items from object treeview."""
+        kwargs = {
+            item_type: [ind.data(Qt.UserRole + 1) for ind in self.selected_obj_tree_indexes.get(item_type, {})]
+            for item_type in ('object_class', 'object', 'relationship_class', 'relationship')
+        }
+        dialog = RemoveTreeItemsDialog(self, **kwargs)
+        dialog.show()
+
+    def show_remove_relationship_tree_items_form(self):
+        """Show form to remove items from relationship treeview."""
+        kwargs = {
+            item_type: [ind.data(Qt.UserRole + 1) for ind in self.selected_rel_tree_indexes.get(item_type, {})]
+            for item_type in ('relationship_class', 'relationship')
+        }
+        dialog = RemoveTreeItemsDialog(self, **kwargs)
+        dialog.show()
 
     @busy_effect
-    @Slot("bool", name="remove_relationship_tree_items")
-    def remove_relationship_tree_items(self, checked=False):
-        """Remove all selected items from the relationship treeview."""
-        indexes = self.selected_rel_tree_indexes
-        relationship_classes = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship_class', {})]
-        relationships = [ind.data(Qt.UserRole + 1) for ind in indexes.get('relationship', {})]
-        relationship_class_ids = set(x['id'] for x in relationship_classes)
-        relationship_ids = set(x['id'] for x in relationships)
-        try:
-            self.db_map.remove_items(relationship_class_ids=relationship_class_ids, relationship_ids=relationship_ids)
-            self.object_tree_model.remove_relationship_classes(relationship_class_ids)
-            self.object_tree_model.remove_relationships(relationship_ids)
-            self.relationship_tree_model.remove_relationship_classes(relationship_class_ids)
-            self.relationship_tree_model.remove_relationships(relationship_ids)
-            # Parameter models
-            self.relationship_parameter_value_model.remove_relationship_classes(relationship_classes)
-            self.relationship_parameter_value_model.remove_relationships(relationships)
-            self.relationship_parameter_definition_model.remove_relationship_classes(relationship_classes)
-            self.commit_available.emit(True)
-            self.msg.emit("Successfully removed items.")
-            self.relationship_tree_selection_available.emit(False)
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+    def remove_tree_items(self, item_d):
+        """Remove items from tree views."""
+        removed = 0
+        for db_map, item_type_ids in item_d.items():
+            object_class_ids = item_type_ids.get("object_class", ())
+            object_ids = item_type_ids.get("object", ())
+            relationship_class_ids = item_type_ids.get("relationship_class", ())
+            relationship_ids = item_type_ids.get("relationship", ())
+            try:
+                db_map.remove_items(
+                    object_class_ids=object_class_ids,
+                    object_ids=object_ids,
+                    relationship_class_ids=relationship_class_ids,
+                    relationship_ids=relationship_ids,
+                )
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+            if object_class_ids:
+                self.object_tree_model.remove_object_classes(db_map, object_class_ids)
+                self.relationship_tree_model.remove_object_classes(db_map, object_class_ids)
+                # self.object_parameter_definition_model.remove_object_classes(db_map, object_classes)
+                # self.object_parameter_value_model.remove_object_classes(db_map, object_classes)
+                # self.relationship_parameter_definition_model.remove_object_classes(db_map, object_classes)
+                # self.relationship_parameter_value_model.remove_object_classes(db_map,object_classes)
+            if object_ids:
+                self.object_tree_model.remove_objects(db_map, object_ids)
+                self.relationship_tree_model.remove_objects(db_map, object_ids)
+                # self.object_parameter_value_model.remove_objects(db_map, objects)
+                # self.relationship_parameter_value_model.remove_objects(db_map, objects)
+            if relationship_class_ids:
+                self.object_tree_model.remove_relationship_classes(db_map, relationship_class_ids)
+                self.relationship_tree_model.remove_relationship_classes(db_map, relationship_class_ids)
+                # self.relationship_parameter_definition_model.remove_relationship_classes(db_map, relationship_classes)
+                # self.relationship_parameter_value_model.remove_relationship_classes(db_map, relationship_classes)
+            if relationship_ids:
+                self.object_tree_model.remove_relationships(db_map, relationship_ids)
+                self.relationship_tree_model.remove_relationships(db_map, relationship_ids)
+                # self.relationship_parameter_value_model.remove_relationships(db_map, relationships)
+            removed += len(object_class_ids) + len(object_ids) + len(relationship_class_ids) + len(relationship_ids)
+        if not removed:
+            return
+        self.commit_available.emit(True)
+        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
+        self.msg.emit("Successfully removed {} item(s).".format(removed))
+        # Update selected (object and relationship) tree indexes
+        self.selected_obj_tree_indexes = {}
+        for index in self.ui.treeView_object.selectedIndexes():
+            item_type = index.data(Qt.UserRole)
+            self.selected_obj_tree_indexes.setdefault(item_type, {})[index] = None
+        self.selected_rel_tree_indexes = {}
+        for index in self.ui.treeView_relationship.selectedIndexes():
+            item_type = index.data(Qt.UserRole)
+            self.selected_rel_tree_indexes.setdefault(item_type, {})[index] = None
+        # Emit selection_available signals
+        self.object_tree_selection_available.emit(any(v for v in self.selected_obj_tree_indexes.values()))
+        self.object_class_selection_available.emit(len(self.selected_obj_tree_indexes.get('object_class', {})) > 0)
+        self.object_selection_available.emit(len(self.selected_obj_tree_indexes.get('object', {})) > 0)
+        self.relationship_tree_selection_available.emit(any(v for v in self.selected_rel_tree_indexes.values()))
+        self.relationship_class_selection_available.emit(
+            len(self.selected_obj_tree_indexes.get('relationship_class', {}))
+            + len(self.selected_rel_tree_indexes.get('relationship_class', {}))
+            > 0
+        )
+        self.relationship_selection_available.emit(
+            len(self.selected_obj_tree_indexes.get('relationship', {}))
+            + len(self.selected_rel_tree_indexes.get('relationship', {}))
+            > 0
+        )
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):

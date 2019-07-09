@@ -789,103 +789,111 @@ class ObjectTreeModel(QStandardItemModel):
                 databases.remove(self._parent.db_map_to_name[db_map])
                 db_item.setData(",".join(databases), Qt.DisplayRole)
 
-    def remove_object_classes(self, removed_ids):
+    def remove_object_classes(self, db_map, removed_ids):
         """Remove object classes and their childs."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_object_classes = {}
-        removed_relationship_classes = {}
+        removed_object_class_rows = []
+        removed_relationship_class_row_d = {}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type not in ('object_class', 'relationship_class'):
                 continue
             # Get visited
-            visited = visited_item.data(Qt.UserRole + 1)
-            visited_index = self.indexFromItem(visited_item)
+            db_map_dict = visited_item.data(Qt.UserRole + 1)
+            visited = db_map_dict.get(db_map)
+            if not visited:
+                continue
             if visited_type == 'object_class':
                 visited_id = visited['id']
                 if visited_id in removed_ids:
-                    removed_object_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
+                    removed_object_class_rows.append(visited_item.row())
             elif visited_type == 'relationship_class':
                 object_class_id_list = visited['object_class_id_list']
-                if any(id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids):
-                    removed_relationship_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
-        for parent, rows in removed_relationship_classes.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
-        for parent, rows in removed_object_classes.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
+                if any(str(id) in object_class_id_list.split(',') for id in removed_ids):
+                    visited_index = self.indexFromItem(visited_item.parent())
+                    removed_relationship_class_row_d.setdefault(visited_index, []).append(visited_item.row())
+        for object_index, rows in removed_relationship_class_row_d.items():
+            object_item = self.itemFromIndex(object_index)
+            self.remove_relationship_class_rows(db_map, rows, object_item)
+        self.remove_object_class_rows(db_map, removed_object_class_rows)
 
-    def remove_objects(self, removed_ids):
+    def remove_objects(self, db_map, removed_ids):
         """Remove objects and their childs."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_objects = {}
-        removed_relationships = {}
+        removed_object_row_d = {}
+        removed_relationship_row_d = {}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type not in ('object', 'relationship'):
                 continue
             # Get visited
-            visited = visited_item.data(Qt.UserRole + 1)
+            db_map_dict = visited_item.data(Qt.UserRole + 1)
+            visited = db_map_dict.get(db_map)
+            if not visited:
+                continue
             visited_index = self.indexFromItem(visited_item)
             if visited_type == 'object':
                 visited_id = visited['id']
                 if visited_id in removed_ids:
-                    removed_objects.setdefault(visited_index.parent(), []).append(visited_index.row())
+                    removed_object_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
             elif visited_type == 'relationship':
                 object_id_list = visited['object_id_list']
                 if any(id in [int(x) for x in object_id_list.split(',')] for id in removed_ids):
-                    removed_relationships.setdefault(visited_index.parent(), []).append(visited_index.row())
-        for parent, rows in removed_relationships.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
-        for parent, rows in removed_objects.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
+                    removed_relationship_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for rel_cls_index, rows in removed_relationship_row_d.items():
+            rel_cls_item = self.itemFromIndex(rel_cls_index)
+            self.remove_relationship_rows(db_map, rows, rel_cls_item)
+        for obj_cls_index, rows in removed_object_row_d.items():
+            obj_cls_item = self.itemFromIndex(obj_cls_index)
+            self.remove_object_rows(db_map, rows, obj_cls_item)
 
-    def remove_relationship_classes(self, removed_ids):
+    def remove_relationship_classes(self, db_map, removed_ids):
         """Remove relationship classes and their childs."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_relationship_classes = {}
+        removed_relationship_row_d = {}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != 'relationship_class':
                 continue
             # Get visited
-            visited = visited_item.data(Qt.UserRole + 1)
-            visited_index = self.indexFromItem(visited_item)
-            visited_id = visited['id']
-            if visited_id in removed_ids:
-                removed_relationship_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
-        for parent, rows in removed_relationship_classes.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
+            db_map_dict = visited_item.data(Qt.UserRole + 1)
+            visited = db_map_dict.get(db_map)
+            if not visited:
+                continue
+            if visited['id'] in removed_ids:
+                visited_index = self.indexFromItem(visited_item)
+                removed_relationship_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for object_index, rows in removed_relationship_class_row_d.items():
+            object_item = self.itemFromIndex(object_index)
+            self.remove_relationship_class_rows(db_map, rows, object_item)
 
-    def remove_relationships(self, removed_ids):
+    def remove_relationships(self, db_map, removed_ids):
         """Remove relationships."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_relationships = {}
+        removed_relationship_row_d = {}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != 'relationship':
                 continue
             # Get visited
-            visited = visited_item.data(Qt.UserRole + 1)
-            visited_index = self.indexFromItem(visited_item)
-            visited_id = visited['id']
-            if visited_id in removed_ids:
-                removed_relationships.setdefault(visited_index.parent(), []).append(visited_index.row())
-        for parent, rows in removed_relationships.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
+            db_map_dict = visited_item.data(Qt.UserRole + 1)
+            visited = db_map_dict.get(db_map)
+            if not visited:
+                continue
+            if visited['id'] in removed_ids:
+                visited_index = self.indexFromItem(visited_item)
+                removed_relationship_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for rel_cls_index, rows in removed_relationship_row_d.items():
+            rel_cls_item = self.itemFromIndex(rel_cls_index)
+            self.remove_relationship_rows(db_map, rows, rel_cls_item)
 
     def next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
@@ -1225,85 +1233,91 @@ class RelationshipTreeModel(QStandardItemModel):
                 databases.remove(self._parent.db_map_to_name[db_map])
                 db_item.setData(",".join(databases), Qt.DisplayRole)
 
-    def remove_object_classes(self, removed_ids):
+    def remove_object_classes(self, db_map, removed_ids):
         """Remove object classes and their childs."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_relationship_classes = {}
+        removed_relationship_class_rows = []
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != 'relationship_class':
                 continue
             # Get visited
-            visited = visited_item.data(Qt.UserRole + 1)
-            visited_index = self.indexFromItem(visited_item)
+            db_map_dict = visited_item.data(Qt.UserRole + 1)
+            visited = db_map_dict.get(db_map)
+            if not visited:
+                continue
             object_class_id_list = visited['object_class_id_list']
-            if any(id in [int(x) for x in object_class_id_list.split(',')] for id in removed_ids):
-                removed_relationship_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
-        for parent, rows in removed_relationship_classes.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
+            if any(str(id) in object_class_id_list.split(',') for id in removed_ids):
+                removed_relationship_class_rows.append(visited_item.row())
+        self.remove_relationship_class_rows(db_map, removed_relationship_class_rows)
 
-    def remove_objects(self, removed_ids):
+    def remove_objects(self, db_map, removed_ids):
         """Remove objects and their childs."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_relationships = {}
+        removed_relationship_row_d = {}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != 'relationship':
                 continue
             # Get visited
-            visited = visited_item.data(Qt.UserRole + 1)
-            visited_index = self.indexFromItem(visited_item)
+            db_map_dict = visited_item.data(Qt.UserRole + 1)
+            visited = db_map_dict.get(db_map)
+            if not visited:
+                continue
             object_id_list = visited['object_id_list']
-            if any(id in [int(x) for x in object_id_list.split(',')] for id in removed_ids):
-                removed_relationships.setdefault(visited_index.parent(), []).append(visited_index.row())
-        for parent, rows in removed_relationships.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
+            if any(str(id) in object_id_list.split(',') for id in removed_ids):
+                visited_index = self.indexFromItem(visited_item)
+                removed_relationship_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for rel_cls_index, rows in removed_relationship_row_d.items():
+            rel_cls_item = self.itemFromIndex(rel_cls_index)
+            self.remove_relationship_rows(db_map, rows, object_item)
 
-    def remove_relationship_classes(self, removed_ids):
+    def remove_relationship_classes(self, db_map, removed_ids):
         """Remove relationship classes and their childs."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_relationship_classes = {}
+        removed_relationship_class_rows = []
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != 'relationship_class':
                 continue
             # Get visited
-            visited = visited_item.data(Qt.UserRole + 1)
-            visited_index = self.indexFromItem(visited_item)
+            db_map_dict = visited_item.data(Qt.UserRole + 1)
+            visited = db_map_dict.get(db_map)
+            if not visited:
+                continue
             visited_id = visited['id']
             if visited_id in removed_ids:
-                removed_relationship_classes.setdefault(visited_index.parent(), []).append(visited_index.row())
-        for parent, rows in removed_relationship_classes.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
+                visited_index = self.indexFromItem(visited_item)
+                removed_relationship_class_rows.append(visited_index.row())
+        self.remove_relationship_class_rows(db_map, removed_relationship_class_rows)
 
-    def remove_relationships(self, removed_ids):
+    def remove_relationships(self, db_map, removed_ids):
         """Remove relationships."""
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_relationships = {}
+        removed_relationship_row_d = {}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != 'relationship':
                 continue
             # Get visited
-            visited = visited_item.data(Qt.UserRole + 1)
-            visited_index = self.indexFromItem(visited_item)
-            visited_id = visited['id']
-            if visited_id in removed_ids:
-                removed_relationships.setdefault(visited_index.parent(), []).append(visited_index.row())
-        for parent, rows in removed_relationships.items():
-            for row in sorted(rows, reverse=True):
-                self.removeRows(row, 1, parent)
+            db_map_dict = visited_item.data(Qt.UserRole + 1)
+            visited = db_map_dict.get(db_map)
+            if not visited:
+                continue
+            if visited['id'] in removed_ids:
+                visited_index = self.indexFromItem(visited_item)
+                removed_relationship_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
+        for rel_cls_index, rows in removed_relationship_row_d.items():
+            rel_cls_item = self.itemFromIndex(rel_cls_index)
+            self.remove_relationship_rows(db_map, rows, rel_cls_item)
 
 
 class SubParameterModel(MinimalTableModel):

@@ -572,6 +572,29 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
         return editor
 
 
+class RemoveTreeItemsDelegate(ManageItemsDelegate):
+    """A delegate for the model and view in RemoveTreeItemsDialog.
+
+    Attributes:
+        parent (DataStoreForm): tree or graph view form
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent)
+
+    def createEditor(self, parent, option, index):
+        """Return editor."""
+        header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'databases':
+            editor = CheckListEditor(parent)
+            all_databases = self._parent.all_databases(index.row())
+            databases = index.data(Qt.DisplayRole).split(",")
+            editor.set_data(all_databases, databases)
+            model = index.model()
+            editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+            return editor
+
+
 class ForeignKeysDelegate(QItemDelegate):
     """A QComboBox delegate with checkboxes.
 
