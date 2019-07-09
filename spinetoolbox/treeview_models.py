@@ -1470,11 +1470,9 @@ class SubParameterDefinitionModel(SubParameterModel):
             # Handle changes in parameter tag list: update tag id list accordingly
             if field_name == "parameter_tag_list":
                 split_parameter_tag_list = value.split(",") if value else []
-                parameter_tag_d = parameter_tag_dict.setdefault(
-                    db_map, {x.tag: x.id for x in db_map.parameter_tag_list()}
-                )
+                d = parameter_tag_dict.setdefault(db_map, {x.tag: x.id for x in db_map.parameter_tag_list()})
                 try:
-                    parameter_tag_id_list = ",".join(str(parameter_tag_d[x]) for x in split_parameter_tag_list)
+                    parameter_tag_id_list = ",".join(str(d[x]) for x in split_parameter_tag_list)
                     new_indexes.append(index.sibling(row, parameter_tag_id_list_column))
                     new_data.append(parameter_tag_id_list)
                     item.update({'parameter_tag_id_list': parameter_tag_id_list})
@@ -1483,11 +1481,11 @@ class SubParameterDefinitionModel(SubParameterModel):
             # Handle changes in value_list name: update value_list id accordingly
             elif field_name == "value_list_name":
                 value_list_name = value
-                parameter_value_list_d = parameter_value_list_dict.setdefault(
+                d = parameter_value_list_dict.setdefault(
                     db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
                 )
                 try:
-                    value_list_id = parameter_value_list_d[value_list_name]
+                    value_list_id = d[value_list_name]
                     new_indexes.append(index.sibling(row, value_list_id_column))
                     new_data.append(value_list_id)
                     item.update({'parameter_value_list_id': value_list_id})
@@ -1548,7 +1546,8 @@ class EmptyParameterModel(EmptyRowModel):
         """Batch set data for indexes.
         Set data in model first, then check if the database needs to be updated as well.
         Extend set of indexes as additional data is set (for emitting dataChanged at the end).
-        Subclasses need to implement `items_to_add` and `add_items_to_db`."""
+        """
+        # TODO: emit dataChanged? Perhaps we need to call `super().batch_set_data` at the end
         self.error_log = []
         self.added_rows = []
         if not super().batch_set_data(indexes, data):
@@ -1556,6 +1555,12 @@ class EmptyParameterModel(EmptyRowModel):
         items_to_add = self.items_to_add(indexes)
         self.add_items_to_db(items_to_add)
         return True
+
+    def items_to_add(self, indexes):
+        raise NotImplementedError()
+
+    def add_items_to_db(self, items_to_add):
+        raise NotImplementedError()
 
 
 class EmptyParameterValueModel(EmptyParameterModel):
@@ -1573,18 +1578,14 @@ class EmptyParameterValueModel(EmptyParameterModel):
     def add_items_to_db(self, items_to_add):
         """Add parameter values to database.
         """
-        if not items_to_add:
-            return
-        try:
-            items = list(items_to_add.values())
-            parameter_values, error_log = self._parent.db_map.add_parameter_values(*items)
-            self.added_rows = list(items_to_add.keys())
+        for db_map, row_dict in items_to_add.items():
+            items = list(row_dict.values())
+            parameter_values, error_log = db_map.add_parameter_values(*items)
+            self.added_rows = list(row_dict.keys())
             id_column = self._parent.horizontal_header_labels().index('id')
             for i, parameter_value in enumerate(parameter_values):
                 self._main_data[self.added_rows[i]][id_column] = parameter_value.id
             self.error_log.extend(error_log)
-        except SpineDBAPIError as e:
-            self.error_log.append(e.msg)
 
 
 class EmptyObjectParameterValueModel(EmptyParameterValueModel):
@@ -1603,6 +1604,7 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
         items_to_add = dict()
         # Get column numbers
         header_index = self._parent.horizontal_header_labels().index
+        db_column = header_index('database')
         object_class_id_column = header_index('object_class_id')
         object_class_name_column = header_index('object_class_name')
         object_id_column = header_index('object_id')
@@ -1610,18 +1612,15 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
         parameter_id_column = header_index('parameter_id')
         parameter_name_column = header_index('parameter_name')
         value_column = header_index('value')
-        # Query db and build ad-hoc dicts
-        object_class_list = self._parent.db_map.object_class_list().all()
-        object_class_dict = {x.name: x.id for x in object_class_list}
-        object_class_name_dict = {x.id: x.name for x in object_class_list}
-        object_dict = {x.name: {'id': x.id, 'class_id': x.class_id} for x in self._parent.db_map.object_list()}
+        # Lookup dicts (these are filled below as needed with data from the db corresponding to each row)
+        object_class_dict = {}
+        object_class_name_dict = {}
+        object_dict = {}
         parameter_dict = {}
-        for x in self._parent.db_map.object_parameter_definition_list():
-            parameter_dict.setdefault(x.parameter_name, {}).update(
-                {x.object_class_id: {'id': x.id, 'object_class_id': x.object_class_id}}
-            )
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
+            db_name = self.index(row, db_column).data(Qt.DisplayRole)
+            db_map = self._parent.db_name_to_map[db_name]
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             object_name = self.index(row, object_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
@@ -1629,20 +1628,29 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
             object_ = None
             parameter = None
             if object_class_name:
+                d = object_class_dict.setdefault(db_map, {x.name: x.id for x in db_map.object_class_list()})
                 try:
-                    object_class_id = object_class_dict[object_class_name]
+                    object_class_id = d[object_class_name]
                     self._main_data[row][object_class_id_column] = object_class_id
                 except KeyError:
                     self.error_log.append("Invalid object class '{}'".format(object_class_name))
             if object_name:
+                d = object_dict.setdefault(
+                    db_map, {x.name: {'id': x.id, 'class_id': x.class_id} for x in db_map.object_list()}
+                )
                 try:
-                    object_ = object_dict[object_name]
+                    object_ = d[object_name]
                     self._main_data[row][object_id_column] = object_['id']
                 except KeyError:
                     self.error_log.append("Invalid object '{}'".format(object_name))
             if parameter_name:
+                d = parameter_dict.setdefault(db_map, {})
+                for x in db_map.object_parameter_definition_list():
+                    d.setdefault(x.parameter_name, {}).update(
+                        {x.object_class_id: {'id': x.id, 'object_class_id': x.object_class_id}}
+                    )
                 try:
-                    dup_parameters = parameter_dict[parameter_name]
+                    dup_parameters = d[parameter_name]
                     if len(dup_parameters) == 1:
                         parameter = list(dup_parameters.values())[0]
                     elif object_class_id in dup_parameters:
@@ -1652,15 +1660,16 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
                 except KeyError:
                     self.error_log.append("Invalid parameter '{}'".format(parameter_name))
             if object_class_id is None:
+                d = object_class_name_dict.setdefault(db_map, {x.id: x.name for x in db_map.object_class_list()})
                 if object_ is not None:
                     object_class_id = object_['class_id']
-                    object_class_name = object_class_name_dict[object_class_id]
+                    object_class_name = d[object_class_id]
                     self._main_data[row][object_class_id_column] = object_class_id
                     self._main_data[row][object_class_name_column] = object_class_name
                     indexes.append(self.index(row, object_class_name_column))
                 elif parameter is not None:
                     object_class_id = parameter['object_class_id']
-                    object_class_name = object_class_name_dict[object_class_id]
+                    object_class_name = d[object_class_id]
                     self._main_data[row][object_class_id_column] = object_class_id
                     self._main_data[row][object_class_name_column] = object_class_name
                     indexes.append(self.index(row, object_class_name_column))
@@ -1668,7 +1677,7 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
                 continue
             value = self.index(row, value_column).data(Qt.DisplayRole)
             item = {"object_id": object_['id'], "parameter_definition_id": parameter['id'], "value": value}
-            items_to_add[row] = item
+            items_to_add.setdefault(db_map, {})[row] = item
         return items_to_add
 
 
@@ -1683,8 +1692,9 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         self._parent = parent
 
     def batch_set_data(self, indexes, data):
-        """Batch set data for indexes. A little different from the base class implementation,
-        since here we need to manage creating relationships on the fly.
+        """Batch set data for indexes.
+        A little different from the base class implementation,
+        since here we need to support creating relationships on the fly.
         """
         self.error_log = []
         self.added_rows = []
@@ -1714,6 +1724,7 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         relationships_to_add = dict()
         # Get column numbers
         header_index = self._parent.horizontal_header_labels().index
+        db_column = header_index('database')
         relationship_class_id_column = header_index('relationship_class_id')
         relationship_class_name_column = header_index('relationship_class_name')
         object_class_id_list_column = header_index('object_class_id_list')
@@ -1722,25 +1733,16 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         object_name_list_column = header_index('object_name_list')
         parameter_id_column = header_index('parameter_id')
         parameter_name_column = header_index('parameter_name')
-        # Query db and build ad-hoc dicts
-        relationship_class_dict = {
-            x.name: {
-                "id": x.id,
-                "object_class_id_list": x.object_class_id_list,
-                "object_class_name_list": x.object_class_name_list,
-            }
-            for x in self._parent.db_map.wide_relationship_class_list()
-        }
-        relationship_class_name_dict = {x.id: x.name for x in self._parent.db_map.wide_relationship_class_list()}
+        # Lookup dicts (these are filled below as needed with data from the db corresponding to each row)
+        relationship_class_dict = {}
+        relationship_class_name_dict = {}
         parameter_dict = {}
-        for x in self._parent.db_map.relationship_parameter_definition_list():
-            parameter_dict.setdefault(x.parameter_name, {}).update(
-                {x.relationship_class_id: {'id': x.id, 'relationship_class_id': x.relationship_class_id}}
-            )
-        relationship_dict = {(x.class_id, x.object_id_list): x.id for x in self._parent.db_map.wide_relationship_list()}
-        object_dict = {x.name: x.id for x in self._parent.db_map.object_list()}
+        relationship_dict = {}
+        object_dict = {}
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
+            db_name = self.index(row, db_column).data(Qt.DisplayRole)
+            db_map = self._parent.db_name_to_map[db_name]
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             object_name_list = self.index(row, object_name_list_column).data(Qt.DisplayRole)
@@ -1748,8 +1750,19 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
             object_id_list = None
             parameter = None
             if relationship_class_name:
+                d = relationship_class_dict.setdefault(
+                    db_map,
+                    {
+                        x.name: {
+                            "id": x.id,
+                            "object_class_id_list": x.object_class_id_list,
+                            "object_class_name_list": x.object_class_name_list,
+                        }
+                        for x in db_map.wide_relationship_class_list()
+                    },
+                )
                 try:
-                    relationship_class = relationship_class_dict[relationship_class_name]
+                    relationship_class = d[relationship_class_name]
                     relationship_class_id = relationship_class['id']
                     object_class_id_list = relationship_class['object_class_id_list']
                     object_class_name_list = relationship_class['object_class_name_list']
@@ -1760,15 +1773,21 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                 except KeyError:
                     self.error_log.append("Invalid relationship class '{}'".format(relationship_class_name))
             if object_name_list:
+                d = object_dict.setdefault(db_map, {x.name: x.id for x in db_map.object_list()})
                 try:
-                    object_id_list = [object_dict[x] for x in object_name_list.split(",")]
+                    object_id_list = [d[x] for x in object_name_list.split(",")]
                     join_object_id_list = ",".join(str(x) for x in object_id_list)
                     self._main_data[row][object_id_list_column] = join_object_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid object '{}'".format(e))
             if parameter_name:
+                d = parameter_dict.setdefault(db_map, {})
+                for x in db_map.relationship_parameter_definition_list():
+                    d.setdefault(x.parameter_name, {}).update(
+                        {x.relationship_class_id: {'id': x.id, 'relationship_class_id': x.relationship_class_id}}
+                    )
                 try:
-                    dup_parameters = parameter_dict[parameter_name]
+                    dup_parameters = d[parameter_name]
                     if len(dup_parameters) == 1:
                         parameter = list(dup_parameters.values())[0]
                     elif relationship_class_id in dup_parameters:
@@ -1779,8 +1798,22 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                     self.error_log.append("Invalid parameter '{}'".format(parameter_name))
             if relationship_class_id is None and parameter is not None:
                 relationship_class_id = parameter['relationship_class_id']
-                relationship_class_name = relationship_class_name_dict[relationship_class_id]
-                relationship_class = relationship_class_dict[relationship_class_name]
+                d1 = relationship_class_name_dict.setdefault(
+                    db_map, {x.id: x.name for x in db_map.wide_relationship_class_list()}
+                )
+                d2 = relationship_class_dict.setdefault(
+                    db_map,
+                    {
+                        x.name: {
+                            "id": x.id,
+                            "object_class_id_list": x.object_class_id_list,
+                            "object_class_name_list": x.object_class_name_list,
+                        }
+                        for x in db_map.wide_relationship_class_list()
+                    },
+                )
+                relationship_class_name = d1[relationship_class_id]
+                relationship_class = d2[relationship_class_name]
                 object_class_id_list = relationship_class['object_class_id_list']
                 object_class_name_list = relationship_class['object_class_name_list']
                 self._main_data[row][relationship_class_id_column] = relationship_class_id
@@ -1791,8 +1824,11 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                 indexes.append(self.index(row, object_class_name_list_column))
             if relationship_class_id is None or object_id_list is None:
                 continue
+            d = relationship_dict.setdefault(
+                db_map, {(x.class_id, x.object_id_list): x.id for x in db_map.wide_relationship_list()}
+            )
             try:
-                relationship_id = relationship_dict[relationship_class_id, join_object_id_list]
+                relationship_id = d[relationship_class_id, join_object_id_list]
                 relationships_on_the_fly[row] = relationship_id
             except KeyError:
                 relationship_name = relationship_class_name + "_" + object_name_list.replace(",", "__")
@@ -1801,27 +1837,25 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
                     "object_id_list": object_id_list,
                     "class_id": relationship_class_id,
                 }
-                relationships_to_add[row] = relationship
-        new_relationships = self.add_relationships(relationships_to_add)
-        if new_relationships:
-            relationships_on_the_fly.update(new_relationships)
+                relationships_to_add.setdefault(db_map, {})[row] = relationship
+        added_relationships = self.add_relationships(relationships_to_add)
+        if added_relationships:
+            relationships_on_the_fly.update(added_relationships)
         return relationships_on_the_fly
 
     def add_relationships(self, relationships_to_add):
         """Add relationships to database on the fly and return them."""
-        if not relationships_to_add:
-            return {}
-        try:
-            items = list(relationships_to_add.values())
-            rows = list(relationships_to_add.keys())
-            relationships, error_log = self._parent.db_map.add_wide_relationships(*items)
-            self._parent._parent.object_tree_model.add_relationships(relationships)
-            self._parent._parent.relationship_tree_model.add_relationships(relationships)
+        added_relationships = {}
+        for db_map, row_dict in relationships_to_add.items():
+            items = list(row_dict.values())
+            rows = list(row_dict.keys())
+            added, error_log = db_map.add_wide_relationships(*items)
+            self._parent._parent.object_tree_model.add_relationships(db_map, added)
+            self._parent._parent.relationship_tree_model.add_relationships(db_map, added)
+            added_ids = [x.id for x in added]
             self.error_log.extend(error_log)
-            return dict(zip(rows, [x.id for x in relationships]))
-        except SpineDBAPIError as e:
-            self.error_log.append(e.msg)
-            return {}
+            added_relationships.update(dict(zip(rows, added_ids)))
+        return added_relationships
 
     def items_to_add(self, indexes, relationships_on_the_fly):
         """A dictionary of rows (int) to items (dict) to add to the db.
@@ -1829,22 +1863,25 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         items_to_add = dict()
         # Get column numbers
         header_index = self._parent.horizontal_header_labels().index
+        db_column = header_index('database')
         relationship_id_column = header_index('relationship_id')
         parameter_id_column = header_index('parameter_id')
         parameter_name_column = header_index('parameter_name')
         value_column = header_index('value')
-        for row in {ind.row() for ind in indexes}:
+        unique_rows = {ind.row() for ind in indexes}
+        for row in unique_rows:
+            db_name = self.index(row, db_column).data(Qt.DisplayRole)
+            db_map = self._parent.db_name_to_map[db_name]
             parameter_id = self.index(row, parameter_id_column).data(Qt.DisplayRole)
             if parameter_id is None:
                 continue
-            try:
-                relationship_id = relationships_on_the_fly[row]
-                self._main_data[row][relationship_id_column] = relationship_id
-            except KeyError:
+            relationship_id = relationships_on_the_fly.get(row, None)
+            if not relationship_id:
                 continue
+            self._main_data[row][relationship_id_column] = relationship_id
             value = self.index(row, value_column).data(Qt.DisplayRole)
             item = {"relationship_id": relationship_id, "parameter_definition_id": parameter_id, "value": value}
-            items_to_add[row] = item
+            items_to_add.setdefault(db_map, {})[row] = item
         return items_to_add
 
 
@@ -2435,6 +2472,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
         """Move rows from empty row model to the a new sub_model.
         Called when the empty row model succesfully inserts new data in the db.
         """
+        db_column = self.header.index('database')
         object_class_id_column = self.header.index("object_class_id")
         parameter_definition_id_column = self.header.index('parameter_id')
         object_id_column = self.header.index("object_id")
@@ -2442,11 +2480,14 @@ class ObjectParameterValueModel(ObjectParameterModel):
         for row in rows:
             row_data = self.empty_row_model._main_data[row]
             object_class_id = row_data[object_class_id_column]
-            model_data_dict.setdefault(object_class_id, list()).append(row_data)
+            db_map = self.db_name_to_map[row_data[db_column]]
+            model_data_dict.setdefault((db_map, object_class_id), list()).append(row_data)
         for object_class_id, data in model_data_dict.items():
             source_model = SubParameterValueModel(self)
             source_model.reset_model(data)
-            model = ObjectParameterValueFilterProxyModel(self, parameter_definition_id_column, object_id_column)
+            model = ObjectParameterValueFilterProxyModel(
+                self, parameter_definition_id_column, object_id_column, db_column
+            )
             model.setSourceModel(source_model)
             self.sub_models.append((object_class_id, model))
         for row in reversed(rows):
@@ -2512,7 +2553,8 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         for row in rows:
             row_data = self.empty_row_model._main_data[row]
             object_class_id = row_data[object_class_id_column]
-            model_data_dict.setdefault(object_class_id, list()).append(row_data)
+            db_map = self.db_name_to_map[row_data[db_column]]
+            model_data_dict.setdefault((db_map, object_class_id), list()).append(row_data)
         for object_class_id, data in model_data_dict.items():
             source_model = SubParameterDefinitionModel(self)
             source_model.reset_model(data)
@@ -2566,6 +2608,7 @@ class RelationshipParameterModel(MinimalTableModel):
         super().__init__(parent)
         self._parent = parent
         self.db_maps = parent.db_maps
+        self.db_name_to_map = parent.db_name_to_map
         self.sub_models = []
         self.object_class_id_lists = {}
         self.empty_row_model = EmptyRowModel(self)
@@ -2997,6 +3040,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         """Move rows from empty row model to a new sub_model.
         Called when the empty row model succesfully inserts new data in the db.
         """
+        db_column = self.header.index("database")
         relationship_class_id_column = self.header.index("relationship_class_id")
         parameter_definition_id_column = self.header.index('parameter_id')
         object_id_list_column = self.header.index('object_id_list')
@@ -3004,12 +3048,13 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         for row in rows:
             row_data = self.empty_row_model._main_data[row]
             relationship_class_id = row_data[relationship_class_id_column]
-            model_data_dict.setdefault(relationship_class_id, list()).append(row_data)
+            db_map = self.db_name_to_map[row_data[db_column]]
+            model_data_dict.setdefault((db_map, relationship_class_id), list()).append(row_data)
         for relationship_class_id, data in model_data_dict.items():
             source_model = SubParameterValueModel(self)
             source_model.reset_model(data)
             model = RelationshipParameterValueFilterProxyModel(
-                self, parameter_definition_id_column, object_id_list_column
+                self, parameter_definition_id_column, object_id_list_column, db_column
             )
             model.setSourceModel(source_model)
             self.sub_models.append((relationship_class_id, model))
@@ -3151,7 +3196,8 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         for row in rows:
             row_data = self.empty_row_model._main_data[row]
             relationship_class_id = row_data[relationship_class_id_column]
-            model_data_dict.setdefault(relationship_class_id, list()).append(row_data)
+            db_map = self.db_name_to_map[row_data[db_column]]
+            model_data_dict.setdefault((db_map, relationship_class_id), list()).append(row_data)
         for relationship_class_id, data in model_data_dict.items():
             source_model = SubParameterDefinitionModel(self)
             source_model.reset_model(data)

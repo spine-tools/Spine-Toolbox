@@ -372,7 +372,7 @@ def strip_json_data(json_data, maxlen):
     """
     try:
         data = json.loads(json_data)
-    except json.JSONDecodeError:
+    except Exception:
         data = None
     if data is None:
         return ""

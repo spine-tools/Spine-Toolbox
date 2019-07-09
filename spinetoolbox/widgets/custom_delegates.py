@@ -172,7 +172,7 @@ class ParameterDelegate(QItemDelegate):
     """A custom delegate for the parameter models and views in TreeViewForm.
 
     Attributes:
-        parent (QMainWindow): tree or graph view form
+        parent (DataStoreForm): tree or graph view form
     """
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
@@ -209,7 +209,7 @@ class ObjectParameterValueDelegate(ParameterDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.
 
     Attributes:
-        parent (QMainWindow): tree or graph view form
+        parent (DataStoreForm): tree or graph view form
     """
 
     def __init__(self, parent):
@@ -254,6 +254,10 @@ class ObjectParameterValueDelegate(ParameterDelegate):
                 editor = JSONEditor(self._parent, parent)
                 editor.currentChanged.connect(self._handle_json_editor_current_changed)
                 editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
+        elif header[index.column()] == 'database':
+            editor = SearchBarEditor(self._parent, parent)
+            all_databases = list(self._parent.db_name_to_map.keys())
+            editor.set_data(index.data(Qt.EditRole), all_databases)
         else:
             editor = CustomLineEditor(parent)
         model = index.model()
@@ -265,7 +269,7 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
     """A delegate for the object parameter definition model and view in TreeViewForm.
 
     Attributes:
-        parent (QMainWindow): tree or graph view form
+        parent (DataStoreForm): tree or graph view form
     """
 
     def __init__(self, parent):
@@ -294,6 +298,10 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in self.db_map.wide_parameter_value_list_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'database':
+            editor = SearchBarEditor(self._parent, parent)
+            all_databases = list(self._parent.db_name_to_map.keys())
+            editor.set_data(index.data(Qt.EditRole), all_databases)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
@@ -306,7 +314,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
     """A delegate for the relationship parameter value model and view in TreeViewForm.
 
     Attributes:
-        parent (QMainWindow): tree or graph view form
+        parent (DataStoreForm): tree or graph view form
     """
 
     def __init__(self, parent):
@@ -360,6 +368,10 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
                 editor = JSONEditor(self._parent, parent)
                 editor.currentChanged.connect(self._handle_json_editor_current_changed)
                 editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
+        elif header[index.column()] == 'database':
+            editor = SearchBarEditor(self._parent, parent)
+            all_databases = list(self._parent.db_name_to_map.keys())
+            editor.set_data(index.data(Qt.EditRole), all_databases)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
@@ -372,7 +384,7 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
     """A delegate for the object parameter definition model and view in TreeViewForm.
 
     Attributes:
-        parent (QMainWindow): tree or graph view form
+        parent (DataStoreForm): tree or graph view form
     """
 
     def __init__(self, parent):
@@ -401,6 +413,10 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in self.db_map.wide_parameter_value_list_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
+        elif header[index.column()] == 'database':
+            editor = SearchBarEditor(self._parent, parent)
+            all_databases = list(self._parent.db_name_to_map.keys())
+            editor.set_data(index.data(Qt.EditRole), all_databases)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))

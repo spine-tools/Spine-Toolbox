@@ -84,7 +84,7 @@ class DataStoreForm(QMainWindow):
         self.db_map = self.db_maps[0]  # TODO: Remove when over
         self.db_name_to_map = dict(zip(db_names, self.db_maps))
         self.db_map_to_name = dict(zip(self.db_maps, db_names))
-        self.database = self.db_map.sa_url.database
+        self.database = self.db_map.sa_url.database  # TODO: Remove when over
         self.databases = [x.sa_url.database for x in self.db_maps]
         self.icon_mngr = IconManager()
         for db_map in self.db_maps:
