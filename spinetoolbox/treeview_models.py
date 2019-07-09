@@ -1351,9 +1351,7 @@ class SubParameterModel(MinimalTableModel):
 
     def batch_set_data(self, indexes, data):
         """Batch set data for indexes.
-        Try and update data in the database first,
-        and if successful set data in the model.
-        Subclasses need to implement `update_items_in_db`.
+        Try and update data in the database first, and if successful set data in the model.
         """
         self.error_log = []
         self.updated_count = 0
@@ -1365,19 +1363,23 @@ class SubParameterModel(MinimalTableModel):
         upd_ids = self.update_items_in_db(items_to_update)
         header = self._parent.horizontal_header_labels()
         id_column = header.index('id')
+        db_column = header.index('database')
         for k, index in enumerate(indexes):
-            if self._main_data[index.row()][id_column] not in upd_ids:
+            db_name = self._main_data[index.row()][db_column]
+            db_map = self._parent.db_name_to_map[db_name]
+            id_ = self._main_data[index.row()][id_column]
+            if (db_map, id_) not in upd_ids:
                 continue
             self._main_data[index.row()][index.column()] = data[k]
         return True
 
     def items_to_update(self, indexes, data):
-        """A list of items (dict) to update in the database. Reimplement in subclasses."""
-        return []
+        """A list of items (dict) to update in the database."""
+        raise NotImplementedError()
 
     def update_items_in_db(self, items_to_update):
-        """A list of ids of items updated in the database. Reimplement in subclasses."""
-        return []
+        """A list of ids of items updated in the database."""
+        raise NotImplementedError()
 
 
 class SubParameterValueModel(SubParameterModel):
@@ -1394,9 +1396,12 @@ class SubParameterValueModel(SubParameterModel):
         """A list of items (dict) for updating in the database."""
         items_to_update = dict()
         header = self._parent.horizontal_header_labels()
+        db_column = header.index('database')
         id_column = header.index('id')
         for k, index in enumerate(indexes):
             row = index.row()
+            db_name = index.sibling(row, db_column).data(Qt.EditRole)
+            db_map = self._parent.db_name_to_map[db_name]
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
             if not id_:
                 continue
@@ -1408,22 +1413,19 @@ class SubParameterValueModel(SubParameterModel):
                 # nothing to do really
                 continue
             item = {"id": id_, "value": value}
-            items_to_update.setdefault(id_, dict()).update(item)
-        return list(items_to_update.values())
+            items_to_update.setdefault(db_map, {}).setdefault(id_, {}).update(item)
+        return {db_map: list(item_d.values()) for db_map, item_d in items_to_update.items()}
 
     @busy_effect
     def update_items_in_db(self, items_to_update):
         """Try and update parameter values in database."""
-        if not items_to_update:
-            return []
-        try:
-            upd_items, error_log = self._parent.db_map.update_parameter_values(*items_to_update)
+        upd_ids = []
+        for db_map, items in items_to_update.items():
+            upd_items, error_log = db_map.update_parameter_values(*items)
             self.updated_count += upd_items.count()
             self.error_log += error_log
-            return [x.id for x in upd_items]
-        except SpineDBAPIError as e:
-            self.error_log.append(e.msg)
-            return []
+            upd_ids += [(db_map, x.id) for x in upd_items]
+        return upd_ids
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
@@ -1448,15 +1450,18 @@ class SubParameterDefinitionModel(SubParameterModel):
         """A list of items (dict) for updating in the database."""
         items_to_update = dict()
         header = self._parent.horizontal_header_labels()
+        db_column = header.index('database')
         id_column = header.index('id')
-        value_list_id_column = header.index('value_list_id')
         parameter_tag_id_list_column = header.index('parameter_tag_id_list')
-        parameter_value_list_dict = {x.name: x.id for x in self._parent.db_map.wide_parameter_value_list_list()}
-        parameter_tag_dict = {x.tag: x.id for x in self._parent.db_map.parameter_tag_list()}
+        value_list_id_column = header.index('value_list_id')
+        parameter_tag_dict = {}
+        parameter_value_list_dict = {}
         new_indexes = []
         new_data = []
-        for k, index in enumerate(indexes):
+        for index, value in zip(indexes, data):
             row = index.row()
+            db_name = index.sibling(row, db_column).data(Qt.EditRole)
+            db_map = self._parent.db_name_to_map[db_name]
             id_ = index.sibling(row, id_column).data(Qt.EditRole)
             if not id_:
                 continue
@@ -1464,9 +1469,12 @@ class SubParameterDefinitionModel(SubParameterModel):
             item = {"id": id_}
             # Handle changes in parameter tag list: update tag id list accordingly
             if field_name == "parameter_tag_list":
-                split_parameter_tag_list = data[k].split(",") if data[k] else []
+                split_parameter_tag_list = value.split(",") if value else []
+                parameter_tag_d = parameter_tag_dict.setdefault(
+                    db_map, {x.tag: x.id for x in db_map.parameter_tag_list()}
+                )
                 try:
-                    parameter_tag_id_list = ",".join(str(parameter_tag_dict[x]) for x in split_parameter_tag_list)
+                    parameter_tag_id_list = ",".join(str(parameter_tag_d[x]) for x in split_parameter_tag_list)
                     new_indexes.append(index.sibling(row, parameter_tag_id_list_column))
                     new_data.append(parameter_tag_id_list)
                     item.update({'parameter_tag_id_list': parameter_tag_id_list})
@@ -1474,45 +1482,46 @@ class SubParameterDefinitionModel(SubParameterModel):
                     self.error_log.append("Invalid parameter tag '{}'.".format(e))
             # Handle changes in value_list name: update value_list id accordingly
             elif field_name == "value_list_name":
-                value_list_name = data[k]
+                value_list_name = value
+                parameter_value_list_d = parameter_value_list_dict.setdefault(
+                    db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
+                )
                 try:
-                    value_list_id = parameter_value_list_dict[value_list_name]
+                    value_list_id = parameter_value_list_d[value_list_name]
                     new_indexes.append(index.sibling(row, value_list_id_column))
                     new_data.append(value_list_id)
                     item.update({'parameter_value_list_id': value_list_id})
                 except KeyError:
                     self.error_log.append("Invalid value list '{}'.".format(value_list_name))
             elif field_name == "parameter_name":
-                item.update({"name": data[k]})
+                item.update({"name": value})
             elif field_name == "default_value":
-                default_value = data[k]
+                default_value = value
                 if default_value != index.data(Qt.EditRole):
                     item.update({"default_value": default_value})
-            items_to_update.setdefault(id_, dict()).update(item)
+            items_to_update.setdefault(db_map, {}).setdefault(id_, {}).update(item)
         indexes.extend(new_indexes)
         data.extend(new_data)
-        return list(items_to_update.values())
+        return {db_map: list(item_d.values()) for db_map, item_d in items_to_update.items()}
 
     @busy_effect
     def update_items_in_db(self, items_to_update):
         """Try and update parameter definitions in database."""
-        if not items_to_update:
-            return []
-        try:
+        upd_ids = []
+        for db_map, items in items_to_update.items():
             tag_dict = dict()
-            for item in items_to_update:
+            for item in items:
                 parameter_tag_id_list = item.pop("parameter_tag_id_list", None)
                 if parameter_tag_id_list is None:
                     continue
                 tag_dict[item["id"]] = parameter_tag_id_list
-            upd_def_tag_list, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
-            upd_params, param_error_log = self._parent.db_map.update_parameters(*items_to_update)
+            upd_def_tag_list, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict)
+            upd_params, param_error_log = db_map.update_parameters(*items)
             self.updated_count += len(upd_def_tag_list) + upd_params.count()
             self.error_log += def_tag_error_log + param_error_log
-            return [x.parameter_definition_id for x in upd_def_tag_list] + [x.id for x in upd_params]
-        except SpineDBAPIError as e:
-            self.error_log.append(e.msg)
-            return []
+            upd_ids += [(db_map, x.parameter_definition_id) for x in upd_def_tag_list]
+            upd_ids += [(db_map, x.id) for x in upd_params]
+        return upd_ids
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
@@ -2028,6 +2037,7 @@ class ObjectParameterModel(MinimalTableModel):
         super().__init__(parent)
         self._parent = parent
         self.db_maps = parent.db_maps
+        self.db_name_to_map = parent.db_name_to_map
         self.sub_models = []
         self.empty_row_model = None
         self.fixed_columns = list()
