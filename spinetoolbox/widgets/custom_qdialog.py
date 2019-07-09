@@ -719,7 +719,8 @@ class EditObjectClassesDialog(EditItemsDialog):
             if not display_icon:
                 display_icon = self.default_display_icon
             pre_item = {'name': name, 'description': description, 'display_icon': display_icon}
-            for db_map, id_ in self.db_map_ids[i].items():
+            for db_map in db_maps:
+                id_ = self.db_map_ids[i][db_map]
                 item = pre_item.copy()
                 item['id'] = id_
                 object_class_d.setdefault(db_map, []).append(item)
@@ -781,7 +782,8 @@ class EditObjectsDialog(EditItemsDialog):
             if [name, description] == orig_row:
                 continue
             pre_item = {'name': name, 'description': description}
-            for db_map, id_ in self.db_map_ids[i].items():
+            for db_map in db_maps:
+                id_ = self.db_map_ids[i][db_map]
                 item = pre_item.copy()
                 item['id'] = id_
                 object_d.setdefault(db_map, []).append(item)
@@ -842,7 +844,8 @@ class EditRelationshipClassesDialog(EditItemsDialog):
             if [name] == orig_row:
                 continue
             pre_item = {'name': name}
-            for db_map, id_ in self.db_map_ids[i].items():
+            for db_map in db_maps:
+                id_ = self.db_map_ids[i][db_map]
                 item = pre_item.copy()
                 item['id'] = id_
                 rel_cls_d.setdefault(db_map, []).append(item)
@@ -931,7 +934,8 @@ class EditRelationshipsDialog(EditItemsDialog, GetObjectsMixin):
             if [*object_name_list, name] == orig_row:
                 continue
             pre_item = {'name': name}
-            for db_map, id_ in self.db_map_ids[i].items():
+            for db_map in db_maps:
+                id_ = self.db_map_ids[i][db_map]
                 # Find object_class_id_list
                 relationship_classes = self.rel_cls_dict[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
