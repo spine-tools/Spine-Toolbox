@@ -95,7 +95,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         stamps = self._model.value.indexes
         values = self._model.value.values
         self._plot_widget.canvas.axes.cla()
-        self._plot_widget.canvas.axes.plot(stamps, values)
+        self._plot_widget.canvas.axes.step(stamps, values, where='post')
         self._plot_widget.canvas.draw()
 
     def value(self):

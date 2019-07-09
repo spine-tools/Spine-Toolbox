@@ -17,11 +17,12 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget, QLineEdit, QTableView
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget, QLineEdit, QTableView, QMessageBox
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, QItemSelectionModel
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
+from plotting import plot_pivot_column, plot_pivot_selection, PlottingError
 from widgets.custom_qwidgets import FilterWidget
 from widgets.parameter_value_editor import ParameterValueEditor
 from models import MinimalTableModel
@@ -669,6 +670,13 @@ class FilterMenu(QMenu):
         self.hide()
 
 
+def _handle_plotting_failure(error):
+    errorBox = QMessageBox()
+    errorBox.setWindowTitle("Plotting failed")
+    errorBox.setText(error.message)
+    errorBox.exec()
+
+
 class PivotTableModelMenu(QMenu):
     def __init__(self, model, proxy_model, parent=None):
         super().__init__(parent)
@@ -685,6 +693,8 @@ class PivotTableModelMenu(QMenu):
         # actions
         self.open_value_editor_action = self.addAction('Open in editor...')
         self.addSeparator()
+        self.plot_action = self.addAction('Plot')
+        self.addSeparator()
         self.restore_values_action = self.addAction('Restore selected values')
         self.delete_values_action = self.addAction('Delete selected values')
         self.delete_index_action = self.addAction(self._DELETE_INDEX)
@@ -696,6 +706,7 @@ class PivotTableModelMenu(QMenu):
 
         # connect signals
         self.open_value_editor_action.triggered.connect(self.open_value_editor)
+        self.plot_action.triggered.connect(self.plot)
         self.restore_values_action.triggered.connect(self.restore_values)
         self.delete_values_action.triggered.connect(self.delete_values)
         self.delete_index_action.triggered.connect(self.delete_index_values)
@@ -788,16 +799,30 @@ class PivotTableModelMenu(QMenu):
             self._model.delete_tuple_index_values({self.relationship_tuple_key: delete_tuples})
 
     def open_value_editor(self):
+        """Opens the parameter value editor for the first selected cell."""
         value_editor = ParameterValueEditor(self._model, self._get_selected_indexes()[0], self.parent())
         value_editor.show()
 
+    def plot(self):
+        """Plots the selected cells in the pivot table."""
+        try:
+            plot_window = plot_pivot_selection(self._model, self._get_selected_indexes())
+        except PlottingError as error:
+            _handle_plotting_failure(error)
+            return
+        plot_window.setWindowTitle("Plot")
+        plot_window.show()
+
     def request_menu(self, QPos=None):
+        """Shows the context menu on the screen."""
         indexes = self._get_selected_indexes()
         self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
         self.delete_relationship_action.setEnabled(False)
 
         if len(indexes) > 1:
             # more than one index selected
+            self.open_value_editor_action.setEnabled(False)
+            self.plot_action.setEnabled(any(self._model.index_in_data(index) for index in indexes))
             if any(self._model.index_in_column_headers(i) for i in indexes) or any(
                 self._model.index_in_row_headers(i) for i in indexes
             ):
@@ -811,7 +836,9 @@ class PivotTableModelMenu(QMenu):
             # one selected, show names
             selected_data = self._model.data(indexes[0])
             selected_index = self._find_selected_indexes(indexes)
-            self.open_value_editor_action.setEnabled(self._model.index_in_data(indexes[0]))
+            index_in_data = self._model.index_in_data(indexes[0])
+            self.open_value_editor_action.setEnabled(index_in_data)
+            self.plot_action.setEnabled(index_in_data)
             if selected_index:
                 index_name = list(selected_index.keys())[0]
                 index_value = list(selected_index[index_name])[0]
@@ -832,6 +859,57 @@ class PivotTableModelMenu(QMenu):
         mPos = pPos + QPos
         self.move(mPos)
         self.show()
+
+
+class PivotTableHorizontalHeaderMenu(QMenu):
+    """
+    A context menu for the horizontal header of a pivot table.
+
+    Attributes:
+         model (PivotTableModel): a model
+         parent (QWidget): a parent widget
+    """
+
+    def __init__(self, model, parent=None):
+        super().__init__(parent)
+        self._model = model
+        self._model_index = None
+        self._plot_action = self.addAction("Plot single column")
+        self._plot_action.triggered.connect(self._plot_column)
+        self._set_as_Y_action = self.addAction("Use as Y")
+        self._set_as_Y_action.setCheckable(True)
+        self._set_as_Y_action.triggered.connect(self._set_y_flag)
+
+    @Slot(name="_plot_column")
+    def _plot_column(self):
+        """Plots a single column not the selection."""
+        try:
+            plot_window = plot_pivot_column(self._model, self._model_index.column())
+        except PlottingError as error:
+            _handle_plotting_failure(error)
+            return
+        plot_window.setWindowTitle("Plot")
+        plot_window.show()
+
+    @Slot("QPoint", name="request_menu")
+    def request_menu(self, pos):
+        """Shows the context menu on the sceern."""
+        self.move(self.parent().mapToGlobal(pos))
+        self._model_index = self.parent().indexAt(pos)
+        if self._model.index_in_top_left(self._model_index):
+            self._plot_action.setEnabled(False)
+            self._set_as_Y_action.setEnabled(False)
+            self._set_as_Y_action.setChecked(False)
+        else:
+            self._plot_action.setEnabled(True)
+            self._set_as_Y_action.setEnabled(True)
+            self._set_as_Y_action.setChecked(self._model_index.column() == self._model.plot_y_column)
+        self.show()
+
+    @Slot(name="_set_y_flag")
+    def _set_y_flag(self):
+        """Sets the Y flag for a column."""
+        self._model.set_plot_y_column(self._model_index.column(), self._set_as_Y_action.isChecked())
 
 
 class AutoFilterMenu(QMenu):

@@ -977,6 +977,7 @@ class PivotTableModel(QAbstractTableModel):
         self._data_header = [[]]
         self._num_headers_row = 0
         self._num_headers_column = 0
+        self._plot_y_column = None
 
     def set_data(
         self,
@@ -1018,6 +1019,7 @@ class PivotTableModel(QAbstractTableModel):
             used_index_values,
             index_real_names,
         )
+        self._plot_y_column = None
         self._update_header_data()
         self.endResetModel()
 
@@ -1074,6 +1076,9 @@ class PivotTableModel(QAbstractTableModel):
         row = self.model.row(max(0, index.row() - self._num_headers_row))
         col = self.model.column(max(0, index.column() - self._num_headers_column))
         return self.model._key_getter(row + col + self.model.frozen_value)
+
+    def get_col_key(self, column):
+        return self.model.column(max(0, column - self._num_headers_column))
 
     def paste_data(self, index, data, row_mask, col_mask):
         """paste data into pivot model"""
@@ -1151,6 +1156,11 @@ class PivotTableModel(QAbstractTableModel):
             headers = [self.model.pivot_rows]
         self._data_header = headers
 
+    def first_data_row(self):
+        """Returns the row index to the first data row."""
+        # Last row is an empty row, exclude it.
+        return self.rowCount() - self.dataRowCount() - 1
+
     def dataRowCount(self):
         """number of rows that contains actual data"""
         return len(self.model.rows)
@@ -1220,6 +1230,19 @@ class PivotTableModel(QAbstractTableModel):
             and index.column() < self._num_headers_column
             and index.row() < self.rowCount() - 1
         )
+
+    def set_plot_y_column(self, column, is_y):
+        """Sets or clears the Y flag on a column"""
+        if is_y:
+            self._plot_y_column = column
+        elif column == self._plot_y_column:
+            self._plot_y_column = None
+        self.headerDataChanged.emit(Qt.Horizontal, column, column)
+
+    @property
+    def plot_y_column(self):
+        """Returns the index of the column designated as Y values for plotting or None."""
+        return self._plot_y_column
 
     def set_index_key(self, index, value, direction):
         """edits/sets a index value in a index in row/column"""
@@ -1355,9 +1378,12 @@ class PivotTableModel(QAbstractTableModel):
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
+            if section == self._plot_y_column:
+                return "(Y)"
             return None
         if role == Qt.DisplayRole and orientation == Qt.Vertical:
             return None
+        return None
 
     def data_color(self, index):
         if self.index_in_data(index):

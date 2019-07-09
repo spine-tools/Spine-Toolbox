@@ -25,7 +25,7 @@ from PySide2.QtGui import QIcon, QGuiApplication
 from sqlalchemy.sql import literal_column
 from spinedb_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
-from widgets.custom_menus import FilterMenu, PivotTableModelMenu
+from widgets.custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from helpers import fix_name_ambiguity, tuple_itemgetter
 
 # TODO: connect to all add, delete relationship/object classes widgets to this.
@@ -118,9 +118,13 @@ class TabularViewForm(QMainWindow):
         self.ui.pivot_table.setModel(self.proxy_model)
         self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.pivot_table_menu = PivotTableModelMenu(self.model, self.proxy_model, self.ui.pivot_table)
+        table_header = self.ui.pivot_table.horizontalHeader()
+        table_header.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.model, self.ui.pivot_table)
 
         # connect signals
         self.ui.pivot_table.customContextMenuRequested.connect(self.pivot_table_menu.request_menu)
+        table_header.customContextMenuRequested.connect(self._pivot_table_horizontal_header_menu.request_menu)
         self.ui.list_index.afterDrop.connect(self.change_pivot)
         self.ui.list_column.afterDrop.connect(self.change_pivot)
         self.ui.list_frozen.afterDrop.connect(self.change_pivot)
