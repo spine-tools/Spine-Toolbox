@@ -285,7 +285,7 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
         force_default (bool): if True, defaults are non-editable
     """
 
-    def __init__(self, parent, db_maps=(), class_name=None, force_default=False):
+    def __init__(self, parent, class_name=None, force_default=False):
         super().__init__(parent)
         default_db_maps = db_maps if db_maps else self._parent.db_maps
         self.setWindowTitle("Add objects")
@@ -366,12 +366,11 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_maps (Iterable): DiffDatabaseMapping instances
         object_class_one_name (str): default object class name to put in first dimension
         force_default (bool): if True, defaults are non-editable
     """
 
-    def __init__(self, parent, db_maps=(), object_class_one_name=None, force_default=False):
+    def __init__(self, parent, object_class_one_name=None, force_default=False):
         super().__init__(parent)
         self.setWindowTitle("Add relationship classes")
         self.model = EmptyRowModel(self)
@@ -656,13 +655,13 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
 class EditOrRemoveItemsDialog(ManageItemsDialog):
     def __init__(self, parent):
         super().__init__(parent)
-        self.db_map_ids = list()
+        self.db_map_dicts = list()
 
     def all_databases(self, row):
         """Returns a list of db names available for a given row.
         Used by delegates.
         """
-        return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_ids[row]]
+        return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_dicts[row]]
 
 
 class EditObjectClassesDialog(EditOrRemoveItemsDialog):
@@ -685,7 +684,6 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog):
         self.default_display_icon = self._parent.icon_mngr.default_display_icon()
         model_data = list()
         for db_map_dict in db_map_dicts:
-            self.db_map_ids.append({db_map: x['id'] for db_map, x in db_map_dict.items()})
             db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
             item = list(db_map_dict.values())[0]
             name = item.get('name')
@@ -697,6 +695,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog):
             self.orig_data.append(row_data.copy())
             row_data.append(db_names)
             model_data.append(row_data)
+            self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
 
     @busy_effect
@@ -721,7 +720,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog):
                 display_icon = self.default_display_icon
             pre_item = {'name': name, 'description': description, 'display_icon': display_icon}
             for db_map in db_maps:
-                id_ = self.db_map_ids[i][db_map]
+                id_ = self.db_map_dicts[i][db_map]['id']
                 item = pre_item.copy()
                 item['id'] = id_
                 object_class_d.setdefault(db_map, []).append(item)
@@ -751,7 +750,6 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
         self.orig_data = list()
         model_data = list()
         for db_map_dict in db_map_dicts:
-            self.db_map_ids.append({db_map: x['id'] for db_map, x in db_map_dict.items()})
             db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
             item = list(db_map_dict.values())[0]
             name = item.get('name')
@@ -762,6 +760,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             self.orig_data.append(row_data.copy())
             row_data.append(db_names)
             model_data.append(row_data)
+            self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
 
     @busy_effect
@@ -784,7 +783,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
                 continue
             pre_item = {'name': name, 'description': description}
             for db_map in db_maps:
-                id_ = self.db_map_ids[i][db_map]
+                id_ = self.db_map_dicts[i][db_map]['id']
                 item = pre_item.copy()
                 item['id'] = id_
                 object_d.setdefault(db_map, []).append(item)
@@ -814,7 +813,6 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         self.orig_data = list()
         model_data = list()
         for db_map_dict in db_map_dicts:
-            self.db_map_ids.append({db_map: x['id'] for db_map, x in db_map_dict.items()})
             db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
             item = list(db_map_dict.values())[0]
             name = item.get('name')
@@ -824,6 +822,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             self.orig_data.append(row_data.copy())
             row_data.append(db_names)
             model_data.append(row_data)
+            self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
 
     @busy_effect
@@ -846,7 +845,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
                 continue
             pre_item = {'name': name}
             for db_map in db_maps:
-                id_ = self.db_map_ids[i][db_map]
+                id_ = self.db_map_dicts[i][db_map]['id']
                 item = pre_item.copy()
                 item['id'] = id_
                 rel_cls_d.setdefault(db_map, []).append(item)
@@ -883,7 +882,6 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
         model_data = list()
         db_maps = set()
         for db_map_dict in db_map_dicts:
-            self.db_map_ids.append({db_map: x['id'] for db_map, x in db_map_dict.items()})
             db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
             db_maps.update(db_map_dict.keys())
             item = list(db_map_dict.values())[0]
@@ -896,6 +894,7 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
             self.orig_data.append(row_data.copy())
             row_data.append(db_names)
             model_data.append(row_data)
+            self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
         self.obj_dict = {db_map: {(x.class_id, x.name): x.id for x in db_map.object_list()} for db_map in db_maps}
         self.rel_cls_dict = {
@@ -936,7 +935,7 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
                 continue
             pre_item = {'name': name}
             for db_map in db_maps:
-                id_ = self.db_map_ids[i][db_map]
+                id_ = self.db_map_dicts[i][db_map]['id']
                 # Find object_class_id_list
                 relationship_classes = self.rel_cls_dict[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
@@ -985,7 +984,6 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
         model_data = list()
         for item_type, db_map_dicts in kwargs.items():
             for db_map_dict in db_map_dicts:
-                self.db_map_ids.append({db_map: x['id'] for db_map, x in db_map_dict.items()})
                 db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
                 item = list(db_map_dict.values())[0]
                 name = item.get('name')
@@ -993,6 +991,7 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
                     continue
                 row_data = [item_type, name, db_names]
                 model_data.append(row_data)
+                self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
 
     @busy_effect
@@ -1008,8 +1007,8 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
             for db_map in db_maps:
-                id_ = self.db_map_ids[i][db_map]
-                item_d.setdefault(db_map, {}).setdefault(item_type, []).append(id_)
+                item = self.db_map_dicts[i][db_map]
+                item_d.setdefault(db_map, {}).setdefault(item_type, []).append(item)
         if not item_d:
             self._parent.msg_error.emit("Nothing to remove")
             return

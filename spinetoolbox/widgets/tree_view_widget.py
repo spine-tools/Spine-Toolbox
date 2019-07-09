@@ -896,10 +896,14 @@ class TreeViewForm(DataStoreForm):
         """Remove items from tree views."""
         removed = 0
         for db_map, item_type_ids in item_d.items():
-            object_class_ids = item_type_ids.get("object_class", ())
-            object_ids = item_type_ids.get("object", ())
-            relationship_class_ids = item_type_ids.get("relationship_class", ())
-            relationship_ids = item_type_ids.get("relationship", ())
+            object_classes = item_type_ids.get("object_class", ())
+            objects = item_type_ids.get("object", ())
+            relationship_classes = item_type_ids.get("relationship_class", ())
+            relationships = item_type_ids.get("relationship", ())
+            object_class_ids = {x['id'] for x in object_classes}
+            object_ids = {x['id'] for x in objects}
+            relationship_class_ids = {x['id'] for x in relationship_classes}
+            relationship_ids = {x['id'] for x in relationships}
             try:
                 db_map.remove_items(
                     object_class_ids=object_class_ids,
@@ -913,24 +917,24 @@ class TreeViewForm(DataStoreForm):
             if object_class_ids:
                 self.object_tree_model.remove_object_classes(db_map, object_class_ids)
                 self.relationship_tree_model.remove_object_classes(db_map, object_class_ids)
-                # self.object_parameter_definition_model.remove_object_classes(db_map, object_classes)
-                # self.object_parameter_value_model.remove_object_classes(db_map, object_classes)
-                # self.relationship_parameter_definition_model.remove_object_classes(db_map, object_classes)
-                # self.relationship_parameter_value_model.remove_object_classes(db_map,object_classes)
+                self.object_parameter_definition_model.remove_object_classes(db_map, object_classes)
+                self.object_parameter_value_model.remove_object_classes(db_map, object_classes)
+                self.relationship_parameter_definition_model.remove_object_classes(db_map, object_classes)
+                self.relationship_parameter_value_model.remove_object_classes(db_map, object_classes)
             if object_ids:
                 self.object_tree_model.remove_objects(db_map, object_ids)
                 self.relationship_tree_model.remove_objects(db_map, object_ids)
-                # self.object_parameter_value_model.remove_objects(db_map, objects)
-                # self.relationship_parameter_value_model.remove_objects(db_map, objects)
+                self.object_parameter_value_model.remove_objects(db_map, objects)
+                self.relationship_parameter_value_model.remove_objects(db_map, objects)
             if relationship_class_ids:
                 self.object_tree_model.remove_relationship_classes(db_map, relationship_class_ids)
                 self.relationship_tree_model.remove_relationship_classes(db_map, relationship_class_ids)
-                # self.relationship_parameter_definition_model.remove_relationship_classes(db_map, relationship_classes)
-                # self.relationship_parameter_value_model.remove_relationship_classes(db_map, relationship_classes)
+                self.relationship_parameter_definition_model.remove_relationship_classes(db_map, relationship_classes)
+                self.relationship_parameter_value_model.remove_relationship_classes(db_map, relationship_classes)
             if relationship_ids:
                 self.object_tree_model.remove_relationships(db_map, relationship_ids)
                 self.relationship_tree_model.remove_relationships(db_map, relationship_ids)
-                # self.relationship_parameter_value_model.remove_relationships(db_map, relationships)
+                self.relationship_parameter_value_model.remove_relationships(db_map, relationships)
             removed += len(object_class_ids) + len(object_ids) + len(relationship_class_ids) + len(relationship_ids)
         if not removed:
             return

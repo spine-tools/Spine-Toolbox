@@ -2276,10 +2276,10 @@ class ObjectParameterModel(MinimalTableModel):
                     continue
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
 
-    def remove_object_classes(self, object_classes):
+    def remove_object_classes(self, db_map, object_classes):
         """Remove object classes from model."""
         self.layoutAboutToBeChanged.emit()
-        object_class_ids = [x['id'] for x in object_classes]
+        object_class_ids = [(db_map, x['id']) for x in object_classes]
         for i, (object_class_id, _) in reversed(list(enumerate(self.sub_models))):
             if object_class_id in object_class_ids:
                 self.sub_models.pop(i)
@@ -2392,20 +2392,20 @@ class ObjectParameterValueModel(ObjectParameterModel):
                 if row_data[parameter_id_column] == parameter_id:
                     row_data[parameter_name_column] = new_name
 
-    def remove_objects(self, objects):
+    def remove_objects(self, db_map, objects):
         """Remove objects from model."""
         object_id_column = self.header.index("object_id")
-        object_dict = {}
+        object_ids = {}
         for object_ in objects:
-            object_dict.setdefault(object_['class_id'], set()).add(object_['id'])
+            object_ids.setdefault((db_map, object_['class_id']), set()).add(object_['id'])
         for object_class_id, model in self.sub_models:
-            if object_class_id not in object_dict:
+            if object_class_id not in object_ids:
                 continue
-            object_ids = object_dict[object_class_id]
+            class_object_ids = object_ids[object_class_id]
             source_model = model.sourceModel()
             for row in reversed(range(source_model.rowCount())):
                 object_id = source_model._main_data[row][object_id_column]
-                if object_id in object_ids:
+                if object_id in class_object_ids:
                     source_model.removeRows(row, 1)
 
     def remove_parameters(self, parameter_dict):
@@ -2879,10 +2879,10 @@ class RelationshipParameterModel(MinimalTableModel):
                     continue
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
 
-    def remove_object_classes(self, object_classes):
+    def remove_object_classes(self, db_map, object_classes):
         """Remove object classes from model."""
         self.layoutAboutToBeChanged.emit()
-        object_class_ids = {x['id'] for x in object_classes}
+        object_class_ids = {(db_map, x['id']) for x in object_classes}
         for i, (relationship_class_id, _) in reversed(list(enumerate(self.sub_models))):
             object_class_id_list = self.object_class_id_lists[relationship_class_id]
             if object_class_ids.intersection(object_class_id_list):
@@ -2892,7 +2892,7 @@ class RelationshipParameterModel(MinimalTableModel):
     def remove_relationship_classes(self, relationship_classes):
         """Remove relationship classes from model."""
         self.layoutAboutToBeChanged.emit()
-        relationship_class_ids = [x['id'] for x in relationship_classes]
+        relationship_class_ids = [(db_map, x['id']) for x in relationship_classes]
         for i, (relationship_class_id, _) in reversed(list(enumerate(self.sub_models))):
             if relationship_class_id in relationship_class_ids:
                 self.sub_models.pop(i)
@@ -3023,31 +3023,33 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                         object_name_list[i] = object_id_name[object_id]
                 row_data[object_name_list_column] = ",".join(object_name_list)
 
-    def remove_objects(self, objects):
+    def remove_objects(self, db_map, objects):
         """Remove objects from model."""
         object_id_list_column = self.header.index("object_id_list")
         object_ids = {x['id'] for x in objects}
-        for _, model in self.sub_models:
+        for relationship_class_id, model in self.sub_models:
+            if relationship_class_id[0] != db_map:
+                continue
             source_model = model.sourceModel()
             for row in reversed(range(source_model.rowCount())):
                 object_id_list = source_model._main_data[row][object_id_list_column]
                 if object_ids.intersection(int(x) for x in object_id_list.split(',')):
                     source_model.removeRows(row, 1)
 
-    def remove_relationships(self, relationships):
+    def remove_relationships(self, db_map, relationships):
         """Remove relationships from model."""
         relationship_id_column = self.header.index("relationship_id")
-        relationship_dict = {}
+        relationship_ids = {}
         for relationship in relationships:
-            relationship_dict.setdefault(relationship['class_id'], set()).add(relationship['id'])
+            relationship_ids.setdefault((db_map, relationship['class_id']), set()).add(relationship['id'])
         for relationship_class_id, model in self.sub_models:
-            if relationship_class_id not in relationship_dict:
+            if relationship_class_id not in relationship_ids:
                 continue
-            relationship_ids = relationship_dict[relationship_class_id]
+            class_relationship_ids = relationship_ids[relationship_class_id]
             source_model = model.sourceModel()
             for row in reversed(range(source_model.rowCount())):
                 relationship_id = source_model._main_data[row][relationship_id_column]
-                if relationship_id in relationship_ids:
+                if relationship_id in class_relationship_ids:
                     source_model.removeRows(row, 1)
 
     def rename_parameter(self, parameter_id, relationship_class_id, new_name):
