@@ -205,37 +205,39 @@ class ParameterTagToolBar(QToolBar):
     """A toolbar to add items using drag and drop actions.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        parent (DataStoreForm): tree or graph view form
     """
 
-    tag_button_toggled = Signal("int", "bool", name="tag_button_toggled")
+    tag_button_toggled = Signal("QVariant", "bool", name="tag_button_toggled")
     manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
 
-    def __init__(self, parent, db_map):
+    def __init__(self, parent):
         """Init class"""
         super().__init__("Parameter Tag Toolbar", parent=parent)
-        self.db_map = db_map
-        self.action_dict = {}
-        self.filter_action_tool_tip = "<html>Check these buttons to filter parameters according to their tags.</html>"
-        self.tag_button_group = QButtonGroup(self)
-        self.tag_button_group.setExclusive(False)
+        self._parent = parent
         label = QLabel("Parameter tag")
         self.addWidget(label)
+        self.tag_button_group = QButtonGroup(self)
+        self.tag_button_group.setExclusive(False)
         action = self.addAction("untagged")
         action.setCheckable(True)
-        action.setToolTip(self.filter_action_tool_tip)
-        self.action_dict[0] = action
         button = self.widgetForAction(action)
         self.tag_button_group.addButton(button, id=0)
-        for tag in self.db_map.parameter_tag_list():
-            action = self.addAction(tag.tag)
+        self.actions = [action]
+        self.db_map_ids = [[(db_map, 0) for db_map in self._parent.db_maps]]
+        tag_dict = {}
+        for db_map in self._parent.db_maps:
+            for parameter_tag in db_map.parameter_tag_list():
+                tag_dict.setdefault(parameter_tag.tag, []).append((db_map, parameter_tag.id))
+        for tag, ids in tag_dict.items():
+            action = self.addAction(tag)
             action.setCheckable(True)
-            action.setToolTip(self.filter_action_tool_tip)
-            self.action_dict[tag.id] = action
             button = self.widgetForAction(action)
-            self.tag_button_group.addButton(button, id=tag.id)
+            self.tag_button_group.addButton(button, id=len(self.db_map_ids))
+            self.actions.append(action)
+            self.db_map_ids.append(ids)
         self.tag_button_group.buttonToggled["int", "bool"].connect(
-            lambda id, checked: self.tag_button_toggled.emit(id, checked)
+            lambda id, checked: self.tag_button_toggled.emit(self.db_map_ids[id], checked)
         )
         empty = QWidget()
         empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
@@ -247,22 +249,29 @@ class ParameterTagToolBar(QToolBar):
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
 
-    def add_tag_actions(self, parameter_tags):
-        for tag in parameter_tags:
-            action = QAction(tag.tag)
-            self.insertAction(self.empty_action, action)
-            action.setCheckable(True)
-            action.setToolTip(self.filter_action_tool_tip)
-            self.action_dict[tag.id] = action
-            button = self.widgetForAction(action)
-            self.tag_button_group.addButton(button, id=tag.id)
+    def add_tag_actions(self, db_map, parameter_tags):
+        action_texts = [a.text() for a in self.actions]
+        for parameter_tag in parameter_tags:
+            if parameter_tag.tag in action_texts:
+                # Already a tag named after that, add db_map id information
+                i = action_texts.index(parameter_tag.tag)
+                self.db_map_ids[i].append((db_map, parameter_tag.id))
+            else:
+                action = QAction(parameter_tag.tag)
+                self.insertAction(self.empty_action, action)
+                action.setCheckable(True)
+                button = self.widgetForAction(action)
+                self.tag_button_group.addButton(button, id=len(self.db_map_ids))
+                self.actions.append(action)
+                self.db_map_ids.append([(db_map, parameter_tag.id)])
+                action_texts.append(action.text())
 
-    def remove_tag_actions(self, parameter_tag_ids):
+    def remove_tag_actions(self, db_map, parameter_tag_ids):
         for tag_id in parameter_tag_ids:
             action = self.action_dict[tag_id]
             self.removeAction(action)
 
-    def update_tag_actions(self, parameter_tags):
+    def update_tag_actions(self, db_map, parameter_tags):
         for tag in parameter_tags:
             action = self.action_dict[tag.id]
             action.setText(tag.tag)

@@ -42,6 +42,7 @@ from widgets.custom_delegates import (
     ManageRelationshipClassesDelegate,
     ManageRelationshipsDelegate,
     RemoveTreeItemsDelegate,
+    ManageParameterTagsDelegate,
 )
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect, format_string_list
@@ -287,7 +288,6 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
 
     def __init__(self, parent, class_name=None, force_default=False):
         super().__init__(parent)
-        default_db_maps = db_maps if db_maps else self._parent.db_maps
         self.setWindowTitle("Add objects")
         self.model = EmptyRowModel(self)
         self.model.force_default = force_default
@@ -706,7 +706,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog):
             name, description, display_icon, db_names = self.model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list if x in self._parent.db_name_to_map]
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -771,7 +771,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             name, description, db_names = self.model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list if x in self._parent.db_name_to_map]
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -833,7 +833,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             name, db_names = self.model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list if x in self._parent.db_name_to_map]
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -878,7 +878,6 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
             [x + ' name' for x in object_class_name_list] + ['relationship name', 'databases']
         )
         self.orig_data = list()
-        # self.orig_object_id_lists = list()
         model_data = list()
         db_maps = set()
         for db_map_dict in db_map_dicts:
@@ -923,7 +922,7 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
             db_names = row_data[db_column]
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list if x in self._parent.db_name_to_map]
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -1002,7 +1001,7 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
             item_type, _, db_names = self.model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list if x in self._parent.db_name_to_map]
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -1016,7 +1015,7 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
         super().accept()
 
 
-class ManageParameterTagsDialog(AddItemsDialog):  # TODO: inherit from ManageItemsDialog maybe?
+class ManageParameterTagsDialog(ManageItemsDialog):
     """A dialog to query user's preferences for managing parameter tags.
 
     Attributes:
@@ -1028,73 +1027,87 @@ class ManageParameterTagsDialog(AddItemsDialog):  # TODO: inherit from ManageIte
         self.setWindowTitle("Manage parameter tags")
         self.model = HybridTableModel(self)
         self.table_view.setModel(self.model)
-        self.table_view.setItemDelegate(LineEditDelegate(parent))
+        self.table_view.setItemDelegate(ManageParameterTagsDelegate(self))
         self.connect_signals()
-        self.remove_row_icon = QIcon(":/icons/minus.svg")
         self.orig_data = list()
-        self.removed_id_list = list()
-        self.id_list = list()
         model_data = list()
-        for parameter_tag in self._parent.db_map.parameter_tag_list():
-            try:
-                self.id_list.append(parameter_tag.id)
-            except KeyError:
-                continue
+        tag_dict = {}
+        for db_map in self._parent.db_maps:
+            for parameter_tag in db_map.parameter_tag_list():
+                tag_dict.setdefault(parameter_tag.tag, {})[db_map] = parameter_tag
+        self.db_map_dicts = list(tag_dict.values())
+        for db_map_dict in self.db_map_dicts:
+            parameter_tag = list(db_map_dict.values())[0]
             tag = parameter_tag.tag
             description = parameter_tag.description
+            db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
             row_data = [tag, description]
             self.orig_data.append(row_data.copy())
+            row_data.append(db_names)
             model_data.append(row_data)
-        self.model.set_horizontal_header_labels(['parameter tag', 'description'])
+        self.model.set_horizontal_header_labels(['parameter tag', 'description', 'databases'])
+        db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps])
+        self.model.new_item_model.set_default_row(**{'databases': db_names})
         self.model.reset_model(model_data)
 
-    @Slot(name="_handle_model_reset")
-    def _handle_model_reset(self):
-        """Call parent method, and then create remove row buttons for initial rows."""
-        super()._handle_model_reset()
-        column = self.model.columnCount() - 1
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, column)
-            button = self.create_remove_row_button(index)
-            self.table_view.setIndexWidget(index, button)
-
-    def remove_clicked_row(self, button):
-        column = self.model.columnCount() - 1
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, column)
-            if button == self.table_view.indexWidget(index):
-                self.model.removeRows(row, 1)
-                try:
-                    self.removed_id_list.append(self.id_list.pop(row))
-                except IndexError:
-                    pass
-                break
+    def all_databases(self, row):
+        """Returns a list of db names available for a given row.
+        Used by delegates.
+        """
+        return [self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps]
 
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
         # update
-        items_to_update = list()
+        items_to_update = {}
+        items_to_remove = {}
         for i in range(self.model.existing_item_model.rowCount()):
-            id = self.id_list[i]
-            tag, description = self.model.existing_item_model.row_data(i)
+            tag, description, db_names = self.model.existing_item_model.row_data(i)
+            update = [tag, description] != self.orig_data[i]
+            db_name_list = db_names.split(",")
+            try:
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+            except KeyError as e:
+                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                return
             if not tag:
                 self._parent.msg_error.emit("Tag missing at row {}".format(i + 1))
                 return
-            orig_tag, orig_description = self.orig_data[i]
-            if tag == orig_tag and description == orig_description:
-                continue
-            kwargs = {'id': id, 'tag': tag, 'description': description}
-            items_to_update.append(kwargs)
+            for db_map, parameter_tag in self.db_map_dicts[i].items():
+                if db_map not in db_maps:
+                    # Remove
+                    items_to_remove.setdefault(db_map, []).append(parameter_tag.id)
+                elif update:
+                    # Update
+                    item = {'id': parameter_tag.id, 'tag': tag, 'description': description}
+                    items_to_update.setdefault(db_map, []).append(item)
         # insert
-        items_to_add = list()
+        items_to_add = {}
         for i in range(self.model.new_item_model.rowCount() - 1):  # last row will always be empty
-            tag, description = self.model.new_item_model.row_data(i)
+            tag, description, db_names = self.model.new_item_model.row_data(i)
+            db_name_list = db_names.split(",")
+            try:
+                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+            except KeyError as e:
+                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                return
             if not tag:
                 self._parent.msg_error.emit("Tag missing at row {0}".format(i + 1))
                 return
-            kwargs = {'tag': tag, 'description': description}
-            items_to_add.append(kwargs)
+            for db_map in db_maps:
+                item = {'tag': tag, 'description': description}
+                items_to_add.setdefault(db_map, []).append(item)
+        if items_to_remove:
+            self._parent.remove_parameter_tags(items_to_remove)
+        if items_to_update:
+            self._parent.update_parameter_tags(items_to_update)
+        if items_to_add:
+            self._parent.add_parameter_tags(items_to_add)
+        super().accept()
+        return
+
+        # TODO: Remove when done
         error_log = list()
         try:
             if items_to_update:

@@ -81,11 +81,11 @@ class DataStoreForm(QMainWindow):
         self.err_msg = QErrorMessage(self)
         # DB
         db_names, self.db_maps = zip(*db_maps.items())
-        self.db_map = self.db_maps[0]  # TODO: Remove when over
         self.db_name_to_map = dict(zip(db_names, self.db_maps))
         self.db_map_to_name = dict(zip(self.db_maps, db_names))
-        self.database = self.db_map.sa_url.database  # TODO: Remove when over
         self.databases = [x.sa_url.database for x in self.db_maps]
+        self.db_map = self.db_maps[0]  # TODO: Remove when done with issue 320
+        self.database = self.db_map.sa_url.database  # TODO: Remove when done with issue 320
         self.icon_mngr = IconManager()
         for db_map in self.db_maps:
             self.icon_mngr.setup_object_pixmaps(db_map.object_class_list())
@@ -96,9 +96,9 @@ class DataStoreForm(QMainWindow):
         self.selected_relationship_class_ids = set()
         self.selected_object_id_lists = dict()
         # Parameter tag stuff
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_maps[0])
+        self.parameter_tag_toolbar = ParameterTagToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
-        self.selected_parameter_tag_ids = set()
+        self.selected_parameter_tag_ids = dict()
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
         # Models
@@ -223,34 +223,48 @@ class DataStoreForm(QMainWindow):
         if visible:
             self.relationship_parameter_definition_model.update_filter()
 
-    @Slot("int", "bool", name="_handle_tag_button_toggled")
-    def _handle_tag_button_toggled(self, id, checked):
+    @Slot("QVariant", "bool", name="_handle_tag_button_toggled")
+    def _handle_tag_button_toggled(self, db_map_ids, checked):
         """Called when a parameter tag button is toggled.
         Compute selected parameter definiton ids per object class ids.
         Then update set of selected object class ids. Finally, update filter.
         """
-        if checked:
-            self.selected_parameter_tag_ids.add(id)
+        for db_map, id_ in db_map_ids:
+            if checked:
+                self.selected_parameter_tag_ids.setdefault(db_map, set()).add(id_)
+            else:
+                self.selected_parameter_tag_ids[db_map].remove(id_)
+        if not any(v for v in self.selected_parameter_tag_ids.values()):
+            # No tags selected: set empty dict so them all pass
+            self.selected_obj_parameter_definition_ids = {}
+            self.selected_rel_parameter_definition_ids = {}
         else:
-            self.selected_parameter_tag_ids.remove(id)
-        parameter_definition_id_list = set()
-        for item in self.db_map.wide_parameter_tag_definition_list():
-            tag_id = item.parameter_tag_id if item.parameter_tag_id else 0
-            if tag_id not in self.selected_parameter_tag_ids:
-                continue
-            parameter_definition_id_list.update({int(x) for x in item.parameter_definition_id_list.split(",")})
-        self.selected_obj_parameter_definition_ids = {
-            x.object_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
-            for x in self.db_map.wide_object_parameter_definition_list(
-                parameter_definition_id_list=parameter_definition_id_list
-            )
-        }
-        self.selected_rel_parameter_definition_ids = {
-            x.relationship_class_id: {int(y) for y in x.parameter_definition_id_list.split(",")}
-            for x in self.db_map.wide_relationship_parameter_definition_list(
-                parameter_definition_id_list=parameter_definition_id_list
-            )
-        }
+            # At least one tag selected: set non-empty dict so not all them pass
+            self.selected_obj_parameter_definition_ids = {None: None}
+            self.selected_rel_parameter_definition_ids = {None: None}
+            for db_map, tag_ids in self.selected_parameter_tag_ids.items():
+                parameter_definition_id_list = set()
+                for item in db_map.wide_parameter_tag_definition_list():
+                    tag_id = item.parameter_tag_id if item.parameter_tag_id else 0
+                    if tag_id not in tag_ids:
+                        continue
+                    parameter_definition_id_list.update({int(x) for x in item.parameter_definition_id_list.split(",")})
+                self.selected_obj_parameter_definition_ids.update(
+                    {
+                        (db_map, x.object_class_id): {int(y) for y in x.parameter_definition_id_list.split(",")}
+                        for x in db_map.wide_object_parameter_definition_list(
+                            parameter_definition_id_list=parameter_definition_id_list
+                        )
+                    }
+                )
+                self.selected_rel_parameter_definition_ids.update(
+                    {
+                        (db_map, x.relationship_class_id): {int(y) for y in x.parameter_definition_id_list.split(",")}
+                        for x in db_map.wide_relationship_parameter_definition_list(
+                            parameter_definition_id_list=parameter_definition_id_list
+                        )
+                    }
+                )
         self.do_update_filter()
 
     @Slot("bool", name="_handle_commit_available")
@@ -291,9 +305,9 @@ class DataStoreForm(QMainWindow):
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
             return
+        self.init_models()
         msg = "All changes since last commit rolled back successfully."
         self.msg.emit(msg)
-        self.init_models()
 
     @Slot("bool", name="refresh_session")
     def refresh_session(self, checked=False):
@@ -738,11 +752,21 @@ class DataStoreForm(QMainWindow):
         dialog.show()
 
     @busy_effect
-    def add_parameter_tags(self, parameter_tags):
+    def add_parameter_tags(self, parameter_tag_d):
         """Add parameter tags."""
-        self.parameter_tag_toolbar.add_tag_actions(parameter_tags)
+        added_tags = set()
+        for db_map, items in parameter_tag_d.items():
+            added, error_log = db_map.add_parameter_tags(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
+            added_tags.update(x.tag for x in added)
+            if not added.count():
+                continue
+            self.parameter_tag_toolbar.add_tag_actions(db_map, added)
+        if not added_tags:
+            return False
         self.commit_available.emit(True)
-        msg = "Successfully added parameter tags '{}'.".format([x.tag for x in parameter_tags])
+        msg = "Successfully added new parameter tag(s) '{}'.".format("', '".join(added_tags))
         self.msg.emit(msg)
         return True
 
