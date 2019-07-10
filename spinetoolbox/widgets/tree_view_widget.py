@@ -69,6 +69,8 @@ class TreeViewForm(DataStoreForm):
         self.object_tree_model = ObjectTreeModel(self)
         self.relationship_tree_model = RelationshipTreeModel(self)
         self.selected_rel_tree_indexes = {}
+        self.ui.treeView_object.setModel(self.object_tree_model)
+        self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         # Context menus
         self.object_tree_context_menu = None
         self.relationship_tree_context_menu = None
@@ -87,9 +89,8 @@ class TreeViewForm(DataStoreForm):
         self.do_clear_other_selections = True
         self.restore_dock_widgets()
         self.restore_ui()
-        # init models and views
+        # init models
         self.init_models()
-        self.init_views()
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.connect_signals()
@@ -480,23 +481,15 @@ class TreeViewForm(DataStoreForm):
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
-        self.object_tree_model.build_tree()
+        super().init_object_tree_model()
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
 
     def init_relationship_tree_model(self):
         """Initialize relationship tree model."""
         self.relationship_tree_model.build_tree()
-
-    def init_views(self):
-        """Initialize model views."""
-        super().init_views()
-        self.init_relationship_tree_view()
-
-    def init_relationship_tree_view(self):
-        """Init object tree view."""
-        self.ui.treeView_relationship.setModel(self.relationship_tree_model)
-        for i in range(self.object_tree_model.rowCount()):
-            self.ui.treeView_relationship.expand(self.relationship_tree_model.index(i, 0))
+        self.ui.treeView_relationship.expand(
+            self.relationship_tree_model.indexFromItem(self.relationship_tree_model.root_item)
+        )
         self.ui.treeView_relationship.resizeColumnToContents(0)
 
     @Slot("QModelIndex", name="find_next_leaf")

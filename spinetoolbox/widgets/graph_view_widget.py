@@ -129,10 +129,6 @@ class GraphViewForm(DataStoreForm):
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
 
-    def init_object_tree_model(self):
-        """Initialize object tree model."""
-        self.object_tree_model.build_tree()
-
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
         self.object_parameter_value_model.has_empty_row = not self.read_only

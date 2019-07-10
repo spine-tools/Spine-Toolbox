@@ -95,23 +95,37 @@ class DataStoreForm(QMainWindow):
         self.selected_object_ids = dict()
         self.selected_relationship_class_ids = set()
         self.selected_object_id_lists = dict()
-        # Parameter value models
-        self.object_parameter_value_model = ObjectParameterValueModel(self)
-        self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
-        # Parameter definition models
-        self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
-        self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(self)
-        # Other
-        self.parameter_value_list_model = ParameterValueListModel(self)
-        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
-        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
-        self.visible_rows = int(max_screen_height / self.default_row_height)
         # Parameter tag stuff
         self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_maps[0])
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         self.selected_parameter_tag_ids = set()
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
+        # Models
+        self.object_parameter_value_model = ObjectParameterValueModel(self)
+        self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
+        self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
+        self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(self)
+        self.parameter_value_list_model = ParameterValueListModel(self)
+        # Setup views
+        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
+        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
+        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
+        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_model)
+        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
+        self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
+        max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
+        self.visible_rows = int(max_screen_height / self.default_row_height)
+        for view in (
+            self.ui.tableView_object_parameter_value,
+            self.ui.tableView_relationship_parameter_value,
+            self.ui.tableView_object_parameter_definition,
+            self.ui.tableView_relationship_parameter_definition,
+        ):
+            view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
+            view.verticalHeader().setDefaultSectionSize(self.default_row_height)
+            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+            view.horizontalHeader().setSectionsMovable(True)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -294,53 +308,22 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_definition_models()
         self.init_parameter_value_list_model()
 
+    def init_object_tree_model(self):
+        """Initialize object tree model."""
+        self.object_tree_model.build_tree()
+        self.ui.treeView_object.expand(self.object_tree_model.indexFromItem(self.object_tree_model.root_item))
+        self.ui.treeView_object.resizeColumnToContents(0)
+
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
         self.object_parameter_value_model.reset_model()
-        self.relationship_parameter_value_model.reset_model()
-
-    def init_parameter_definition_models(self):
-        """Initialize parameter (definition) models from source database."""
-        self.object_parameter_definition_model.reset_model()
-        self.relationship_parameter_definition_model.reset_model()
-
-    def init_parameter_value_list_model(self):
-        """Initialize parameter value_list models from source database."""
-        self.parameter_value_list_model.build_tree()
-
-    def init_views(self):
-        """Initialize model views."""
-        self.init_object_tree_view()
-        self.init_object_parameter_value_view()
-        self.init_relationship_parameter_value_view()
-        self.init_object_parameter_definition_view()
-        self.init_relationship_parameter_definition_view()
-        self.init_parameter_value_list_view()
-
-    def init_object_tree_view(self):
-        """Init object tree view."""
-        self.ui.treeView_object.setModel(self.object_tree_model)
-        for i in range(self.object_tree_model.rowCount()):
-            self.ui.treeView_object.expand(self.object_tree_model.index(i, 0))
-        self.ui.treeView_object.resizeColumnToContents(0)
-
-    def init_object_parameter_value_view(self):
-        """Init object parameter value view."""
-        self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         h = self.object_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
         self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
-        self.ui.tableView_object_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_object_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
-        self.ui.tableView_object_parameter_value.horizontalHeader().setSectionsMovable(True)
-
-    def init_relationship_parameter_value_view(self):
-        """Init relationship parameter value view."""
-        self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
+        self.relationship_parameter_value_model.reset_model()
         h = self.relationship_parameter_value_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
@@ -349,49 +332,29 @@ class DataStoreForm(QMainWindow):
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_id'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_id_list'))
         self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_relationship_parameter_value.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().setSectionsMovable(True)
 
-    def init_object_parameter_definition_view(self):
-        """Init object parameter definition view."""
-        self.ui.tableView_object_parameter_definition.setModel(self.object_parameter_definition_model)
+    def init_parameter_definition_models(self):
+        """Initialize parameter (definition) models from source database."""
+        self.object_parameter_definition_model.reset_model()
         h = self.object_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
-        self.ui.tableView_object_parameter_definition.verticalHeader().setDefaultSectionSize(self.default_row_height)
-        self.ui.tableView_object_parameter_definition.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
-        self.ui.tableView_object_parameter_definition.horizontalHeader().setSectionsMovable(True)
-
-    def init_relationship_parameter_definition_view(self):
-        """Init relationship parameter definition view."""
-        self.ui.tableView_relationship_parameter_definition.setModel(self.relationship_parameter_definition_model)
+        self.relationship_parameter_definition_model.reset_model()
         h = self.relationship_parameter_definition_model.horizontal_header_labels().index
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
         self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().setSectionResizeMode(
-            QHeaderView.Interactive
-        )
-        self.ui.tableView_relationship_parameter_definition.verticalHeader().setDefaultSectionSize(
-            self.default_row_height
-        )
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().setResizeContentsPrecision(
-            self.visible_rows
-        )
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().setSectionsMovable(True)
 
-    def init_parameter_value_list_view(self):
-        self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
+    def init_parameter_value_list_model(self):
+        """Initialize parameter value_list models from source database."""
+        self.parameter_value_list_model.build_tree()
         for i in range(self.parameter_value_list_model.rowCount()):
             index = self.parameter_value_list_model.index(i, 0)
             self.ui.treeView_parameter_value_list.expand(index)
