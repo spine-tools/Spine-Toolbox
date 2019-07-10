@@ -31,6 +31,7 @@ from PySide2.QtWidgets import (
     QComboBox,
     QSpinBox,
     QStyle,
+    QCheckBox,
 )
 from PySide2.QtCore import Slot, Qt, QSize
 from PySide2.QtGui import QIcon
@@ -1040,20 +1041,32 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             parameter_tag = list(db_map_dict.values())[0]
             tag = parameter_tag.tag
             description = parameter_tag.description
+            remove = None
             db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
             row_data = [tag, description]
             self.orig_data.append(row_data.copy())
-            row_data.append(db_names)
+            row_data.extend([db_names, remove])
             model_data.append(row_data)
-        self.model.set_horizontal_header_labels(['parameter tag', 'description', 'databases'])
+        self.model.set_horizontal_header_labels(['parameter tag', 'description', 'databases', 'remove'])
         db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps])
         self.model.new_item_model.set_default_row(**{'databases': db_names})
         self.model.reset_model(model_data)
+        self.create_check_boxes(0, self.model.rowCount() - 1)
+
+    def create_check_boxes(self, start, stop):
+        """Create check boxes in remove column."""
+        column = self.model.header.index('remove')
+        for row in range(start, stop):
+            index = self.model.index(row, column)
+            check_box = QCheckBox(self)
+            self.table_view.setIndexWidget(index, check_box)
 
     def all_databases(self, row):
         """Returns a list of db names available for a given row.
         Used by delegates.
         """
+        if row < self.model.existing_item_model.rowCount():
+            return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_dicts[row]]
         return [self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps]
 
     @busy_effect
@@ -1063,25 +1076,25 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         items_to_update = {}
         items_to_remove = {}
         for i in range(self.model.existing_item_model.rowCount()):
-            tag, description, db_names = self.model.existing_item_model.row_data(i)
-            update = [tag, description] != self.orig_data[i]
+            tag, description, db_names, _ = self.model.existing_item_model.row_data(i)
             db_name_list = db_names.split(",")
-            if db_name_list == ['']:
-                db_name_list = []
             try:
                 db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
+            # Remove
+            check_box = self.table_view.indexWidget(self.model.index(i, self.model.header.index('remove')))
+            if check_box.isChecked():
+                for db_map, parameter_tag in self.db_map_dicts[i].items():
+                    items_to_remove.setdefault(db_map, []).append(parameter_tag.id)
+                continue
             if not tag:
                 self._parent.msg_error.emit("Tag missing at row {}".format(i + 1))
                 return
-            for db_map, parameter_tag in self.db_map_dicts[i].items():
-                if db_map not in db_maps:
-                    # Remove
-                    items_to_remove.setdefault(db_map, []).append(parameter_tag.id)
-                elif update:
-                    # Update
+            # Update
+            if [tag, description] != self.orig_data[i]:
+                for db_map, parameter_tag in self.db_map_dicts[i].items():
                     item = {'id': parameter_tag.id, 'tag': tag, 'description': description}
                     items_to_update.setdefault(db_map, []).append(item)
         # Insert

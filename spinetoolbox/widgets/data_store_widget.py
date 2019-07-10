@@ -321,6 +321,7 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_value_models()
         self.init_parameter_definition_models()
         self.init_parameter_value_list_model()
+        self.init_parameter_tag_toolbar()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
@@ -374,6 +375,10 @@ class DataStoreForm(QMainWindow):
             self.ui.treeView_parameter_value_list.expand(index)
         self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
         self.ui.treeView_parameter_value_list.header().hide()
+
+    def init_parameter_tag_toolbar(self):
+        """Initialize parameter tag toolbar."""
+        self.parameter_tag_toolbar.init_toolbar()
 
     def setup_delegates(self):
         """Set delegates for tables."""

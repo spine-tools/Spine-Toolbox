@@ -219,7 +219,25 @@ class ParameterTagToolBar(QToolBar):
         self.addWidget(label)
         self.tag_button_group = QButtonGroup(self)
         self.tag_button_group.setExclusive(False)
-        action = self.addAction("untagged")
+        self.actions = []
+        self.db_map_ids = []
+        empty = QWidget()
+        empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
+        self.empty_action = self.addWidget(empty)
+        button = QPushButton("Manage tags...")
+        self.addWidget(button)
+        # noinspection PyUnresolvedReferences
+        button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
+        self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
+        self.setObjectName("ParameterTagToolbar")
+
+    def init_toolbar(self):
+        for button in self.tag_button_group.buttons():
+            self.tag_button_group.removeButton(button)
+        for action in self.actions:
+            self.removeAction(action)
+        action = QAction("untagged")
+        self.insertAction(self.empty_action, action)
         action.setCheckable(True)
         button = self.widgetForAction(action)
         self.tag_button_group.addButton(button, id=0)
@@ -230,7 +248,8 @@ class ParameterTagToolBar(QToolBar):
             for parameter_tag in db_map.parameter_tag_list():
                 tag_dict.setdefault(parameter_tag.tag, {})[db_map] = parameter_tag.id
         for tag, db_map_dict in tag_dict.items():
-            action = self.addAction(tag)
+            action = QAction(tag)
+            self.insertAction(self.empty_action, action)
             action.setCheckable(True)
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=len(self.db_map_ids))
@@ -239,15 +258,6 @@ class ParameterTagToolBar(QToolBar):
         self.tag_button_group.buttonToggled["int", "bool"].connect(
             lambda id, checked: self.tag_button_toggled.emit(self.db_map_ids[id], checked)
         )
-        empty = QWidget()
-        empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
-        self.empty_action = self.addWidget(empty)
-        button = QPushButton("Manage tags...")
-        self.addWidget(button)
-        # noinspection PyUnresolvedReferences
-        button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
-        self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
-        self.setObjectName("ParameterTagToolbar")
 
     def add_tag_actions(self, db_map, parameter_tags):
         action_texts = [a.text() for a in self.actions]
@@ -272,7 +282,7 @@ class ParameterTagToolBar(QToolBar):
             self.db_map_ids[i].remove((db_map, tag_id))
             if not self.db_map_ids[i]:
                 self.db_map_ids.pop(i)
-                self.removeAction(self.actions[i])
+                self.removeAction(self.actions.pop(i))
 
     def update_tag_actions(self, db_map, parameter_tags):
         for parameter_tag in parameter_tags:

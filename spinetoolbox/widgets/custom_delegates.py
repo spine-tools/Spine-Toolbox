@@ -631,6 +631,8 @@ class ManageParameterTagsDelegate(ManageItemsDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
+        if header[index.column()] == 'remove':
+            return None
         if header[index.column()] == 'databases':
             editor = CheckListEditor(parent)
             all_databases = self._parent.all_databases(index.row())
