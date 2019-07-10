@@ -1172,44 +1172,59 @@ class TreeViewForm(DataStoreForm):
 
     @busy_effect
     def remove_parameter_value_lists(self):
-        """Remove selection parameter value_lists.
+        """Remove selection of parameter value_lists.
         """
-        indexes = self.ui.treeView_parameter_value_list.selectionModel().selectedIndexes()
-        parented_indexes = {}
-        toplevel_indexes = []
+        indexes = self.ui.treeView_parameter_value_list.selectedIndexes()
+        value_indexes = {}
+        list_indexes = {}
         for index in indexes:
             parent = index.parent()
-            if parent.isValid():
-                parented_indexes.setdefault(parent, list()).append(index)
-            else:
-                toplevel_indexes.append(index)
-        # Remove top level indexes from parented indexes, since they will be fully removed anyways
-        for index in toplevel_indexes:
-            parented_indexes.pop(index, None)
+            if not parent.isValid():
+                continue
+            if parent.internalPointer().level == 1:
+                value_indexes.setdefault(parent, list()).append(index)
+            elif parent.internalPointer().level == 0:
+                list_indexes.setdefault(parent, list()).append(index)
+        # Remove list indexes from value indexes, since they will be fully removed anyways
+        for indexes in list_indexes.values():
+            for index in indexes:
+                value_indexes.pop(index, None)
         # Get items to update
         model = self.parameter_value_list_model
-        to_update = list()
-        for parent, indexes in parented_indexes.items():
-            id = parent.internalPointer().id
+        item_d = dict()
+        for parent, indexes in value_indexes.items():
+            db_name = parent.parent().data(Qt.DisplayRole)
+            db_map = self.db_name_to_map[db_name]
+            id_ = parent.internalPointer().id
             removed_rows = [ind.row() for ind in indexes]
             all_rows = range(model.rowCount(parent) - 1)
-            value_list = [model.index(row, 0, parent).data(Qt.EditRole) for row in all_rows if row not in removed_rows]
-            to_update.append(dict(id=id, value_list=value_list))
+            remaining_rows = [row for row in all_rows if row not in removed_rows]
+            value_list = [model.index(row, 0, parent).data(Qt.EditRole) for row in remaining_rows]
+            item_d.setdefault(db_map, {}).setdefault("to_upd", []).append(dict(id=id_, value_list=value_list))
         # Get ids to remove
-        removed_ids = [ind.internalPointer().id for ind in toplevel_indexes]
-        try:
-            # NOTE: this below should never fail with SpineIntegrityError,
-            # since we're removing from items that were already there
-            self.db_map.update_wide_parameter_value_lists(*to_update)
-            self.db_map.remove_items(parameter_value_list_ids=removed_ids)
-            self.commit_available.emit(True)
-            for row in sorted([ind.row() for ind in toplevel_indexes], reverse=True):
-                self.parameter_value_list_model.removeRow(row)
-            for parent, indexes in parented_indexes.items():
-                for row in sorted([ind.row() for ind in indexes], reverse=True):
-                    self.parameter_value_list_model.removeRow(row, parent)
-            self.object_parameter_definition_model.clear_parameter_value_lists(removed_ids)
-            self.relationship_parameter_definition_model.clear_parameter_value_lists(removed_ids)
-            self.msg.emit("Successfully removed parameter value list(s).")
-        except SpineDBAPIError as e:
-            self._tree_view_form.msg_error.emit(e.msg)
+        for parent, indexes in list_indexes.items():
+            db_name = parent.data(Qt.DisplayRole)
+            db_map = self.db_name_to_map[db_name]
+            item_d.setdefault(db_map, {}).setdefault("to_rm", set()).update(ind.internalPointer().id for ind in indexes)
+        for db_map, d in item_d.items():
+            to_update = d.get("to_upd", None)
+            to_remove = d.get("to_rm", None)
+            try:
+                if to_update:
+                    # NOTE: SpineIntegrityError can never happen here... right???
+                    db_map.update_wide_parameter_value_lists(*to_update)
+                if to_remove:
+                    db_map.remove_items(parameter_value_list_ids=to_remove)
+            except SpineDBAPIError as e:
+                self._tree_view_form.msg_error.emit(e.msg)
+                return
+        for parent, indexes in list_indexes.items():
+            for row in sorted([ind.row() for ind in indexes], reverse=True):
+                self.parameter_value_list_model.removeRow(row, parent)
+        for parent, indexes in value_indexes.items():
+            for row in sorted([ind.row() for ind in indexes], reverse=True):
+                self.parameter_value_list_model.removeRow(row, parent)
+        # self.object_parameter_definition_model.clear_parameter_value_lists(removed_ids)
+        # self.relationship_parameter_definition_model.clear_parameter_value_lists(removed_ids)
+        self.commit_available.emit(True)
+        self.msg.emit("Successfully removed parameter value list(s).")
