@@ -94,9 +94,7 @@ class TreeViewForm(DataStoreForm):
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.connect_signals()
-        self.setWindowTitle(
-            "Data store tree view    -- {} --".format(", ".join([self.db_map_to_name[x] for x in self.db_maps]))
-        )
+        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join(self.db_names)))
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 

@@ -80,12 +80,9 @@ class DataStoreForm(QMainWindow):
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB
-        db_names, self.db_maps = zip(*db_maps.items())
-        self.db_name_to_map = dict(zip(db_names, self.db_maps))
-        self.db_map_to_name = dict(zip(self.db_maps, db_names))
-        self.databases = [x.sa_url.database for x in self.db_maps]
-        self.db_map = self.db_maps[0]  # TODO: Remove when done with issue 320
-        self.database = self.db_map.sa_url.database  # TODO: Remove when done with issue 320
+        self.db_names, self.db_maps = zip(*db_maps.items())
+        self.db_name_to_map = dict(zip(self.db_names, self.db_maps))
+        self.db_map_to_name = dict(zip(self.db_maps, self.db_names))
         self.icon_mngr = IconManager()
         for db_map in self.db_maps:
             self.icon_mngr.setup_object_pixmaps(db_map.object_class_list())
@@ -275,10 +272,10 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_commit_session_dialog")
     def show_commit_session_dialog(self, checked=False):
         """Query user for a commit message and commit changes to source database."""
-        if not self.db_map.has_pending_changes():
+        if not any(db_map.has_pending_changes() for db_map in self.db_maps):
             self.msg.emit("Nothing to commit yet.")
             return
-        dialog = CommitDialog(self, self.database)
+        dialog = CommitDialog(self)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
@@ -683,7 +680,7 @@ class DataStoreForm(QMainWindow):
         if not updated_names:
             return False
         self.commit_available.emit(True)
-        msg = "Successfully relationship class(es) '{}'.".format("', '".join(updated_names))
+        msg = "Successfully updated relationship class(es) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
         return True
 
@@ -707,49 +704,51 @@ class DataStoreForm(QMainWindow):
         if not updated_names:
             return False
         self.commit_available.emit(True)
-        msg = "Successfully relationship(s) '{}'.".format("', '".join(updated_names))
+        msg = "Successfully updated relationship(s) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
         return True
 
     def update_relationships_in_models(self, db_map, updated):
         self.object_tree_model.update_relationships(db_map, updated)
 
-    def add_parameter_value_lists(self, *to_add):
-        if not any(to_add):
-            return False
-        parents = []
-        for item in to_add:
-            parents.append(item.pop("parent"))
-        try:
-            value_lists, error_log = self.db_map.add_wide_parameter_value_lists(*to_add)
-            if value_lists.count():
-                self.commit_available.emit(True)
-                self.msg.emit("Successfully added new parameter value list(s).")
-            for k, value_list in enumerate(value_lists):
-                parents[k].internalPointer().id = value_list.id
+    def add_parameter_value_lists(self, parameter_value_list_d):
+        added_names = set()
+        for db_map, items in parameter_value_list_d.items():
+            parents = []
+            for item in items:
+                parents.append(item.pop("parent"))
+            added, error_log = db_map.add_wide_parameter_value_lists(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
-            return True
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            if not added.count():
+                continue
+            for k, item in enumerate(added):
+                parents[k].internalPointer().id = item.id
+            added_names.update(x.name for x in added)
+        if not added_names:
             return False
+        self.commit_available.emit(True)
+        msg = "Successfully added new parameter value list(es) '{}'.".format("', '".join(added_names))
+        self.msg.emit(msg)
+        return True
 
-    def update_parameter_value_lists(self, *to_update):
-        if not any(to_update):
-            return False
-        try:
-            value_lists, error_log = self.db_map.update_wide_parameter_value_lists(*to_update)
-            if value_lists.count():
-                self.object_parameter_definition_model.rename_parameter_value_lists(value_lists)
-                self.relationship_parameter_definition_model.rename_parameter_value_lists(value_lists)
-                self.commit_available.emit(True)
-                self.msg.emit("Successfully updated parameter value list(s).")
+    def update_parameter_value_lists(self, parameter_value_list_d):
+        updated_names = set()
+        for db_map, items in parameter_value_list_d.items():
+            updated, error_log = db_map.update_wide_parameter_value_lists(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
-            return True
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            if not updated.count():
+                continue
+            self.object_parameter_definition_model.rename_parameter_value_lists(db_map, updated)
+            self.relationship_parameter_definition_model.rename_parameter_value_lists(db_map, updated)
+            updated_names.update(x.name for x in updated)
+        if not updated_names:
             return False
+        self.commit_available.emit(True)
+        msg = "Successfully updated parameter value list(s) '{}'.".format("', '".join(updated_names))
+        self.msg.emit(msg)
+        return True
 
     @Slot("bool", name="show_manage_parameter_tags_form")
     def show_manage_parameter_tags_form(self, checked=False):
@@ -944,7 +943,7 @@ class DataStoreForm(QMainWindow):
         else:
             qsettings.setValue("windowMaximized", False)
         qsettings.endGroup()
-        if self.db_map.has_pending_changes():
+        if any(db_map.has_pending_changes() for db_map in self.db_maps):
             self.show_commit_session_prompt()
         if event:
             event.accept()

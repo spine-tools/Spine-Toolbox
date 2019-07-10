@@ -2599,16 +2599,18 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
             [Qt.DisplayRole],
         )
 
-    def rename_parameter_value_lists(self, value_lists):
+    def rename_parameter_value_lists(self, db_map, value_lists):
         """Rename parameter value_lists in model."""
         value_list_id_column = self.header.index("value_list_id")
         value_list_name_column = self.header.index("value_list_name")
-        value_list_dict = {x.id: x.name for x in value_lists}
-        for _, model in self.sub_models:
+        parameter_value_list_dict = {x.id: x.name for x in value_lists}
+        for class_id, model in self.sub_models:
+            if class_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 value_list_id = row_data[value_list_id_column]
-                if value_list_id in value_list_dict:
-                    row_data[value_list_name_column] = value_list_dict[value_list_id]
+                if value_list_id in parameter_value_list_dict:
+                    row_data[value_list_name_column] = parameter_value_list_dict[value_list_id]
         self.dataChanged.emit(
             self.index(0, value_list_name_column),
             self.index(self.rowCount() - 1, value_list_name_column),
@@ -3245,12 +3247,14 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
             [Qt.DisplayRole],
         )
 
-    def rename_parameter_value_lists(self, value_lists):
+    def rename_parameter_value_lists(self, db_map, value_lists):
         """Rename parameter value_lists in model."""
         value_list_id_column = self.header.index("value_list_id")
         value_list_name_column = self.header.index("value_list_name")
         parameter_value_list_dict = {x.id: x.name for x in value_lists}
-        for _, model in self.sub_models:
+        for class_id, model in self.sub_models:
+            if class_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 value_list_id = row_data[value_list_id_column]
                 if value_list_id in parameter_value_list_dict:
@@ -3457,16 +3461,18 @@ class TreeNode:
 
     Attributes
         parent (TreeNode): the parent node
-        row (int): the row, needed in ParameterValueListModel.parent()
+        row (int): the row, needed by ParameterValueListModel.parent()
         text (str, NoneType): the text to show
+        level (int, NoneType): the level in the tree
         id (int, NoneType): the id from the db table
     """
 
-    def __init__(self, parent, row, text=None, id=None):
+    def __init__(self, parent, row, text=None, level=None, id=None):
         self.parent = parent
         self.row = row
         self.child_nodes = list()
         self.text = text
+        self.level = level
         self.id = id
 
 
@@ -3477,7 +3483,6 @@ class ParameterValueListModel(QAbstractItemModel):
         """Initialize class"""
         super().__init__(parent)
         self._parent = parent
-        self.db_map = parent.db_map
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         gray_color = QGuiApplication.palette().text().color()
@@ -3492,18 +3497,23 @@ class ParameterValueListModel(QAbstractItemModel):
         """Initialize the internal data structure of TreeNode instances."""
         self.beginResetModel()
         self._root_nodes = list()
-        i = 0
-        for wide_value_list in self.db_map.wide_parameter_value_list_list():
-            root_node = TreeNode(None, i, text=wide_value_list.name, id=wide_value_list.id)
-            i += 1
-            self._root_nodes.append(root_node)
-            j = 0
-            for value in wide_value_list.value_list.split(","):
-                child_node = TreeNode(root_node, j, text=value)
-                j += 1
-                root_node.child_nodes.append(child_node)
-            root_node.child_nodes.append(TreeNode(root_node, j, text=self.empty_value))
-        self._root_nodes.append(TreeNode(None, i, text=self.empty_list))
+        k = 0
+        for db_map in self._parent.db_maps:
+            db_node = TreeNode(None, k, text=self._parent.db_map_to_name[db_map], level=0)
+            k += 1
+            self._root_nodes.append(db_node)
+            i = 0
+            for wide_value_list in db_map.wide_parameter_value_list_list():
+                list_node = TreeNode(db_node, i, text=wide_value_list.name, id=wide_value_list.id, level=1)
+                i += 1
+                db_node.child_nodes.append(list_node)
+                j = 0
+                for value in wide_value_list.value_list.split(","):
+                    child_node = TreeNode(list_node, j, text=value, level=2)
+                    j += 1
+                    list_node.child_nodes.append(child_node)
+                list_node.child_nodes.append(TreeNode(list_node, j, text=self.empty_value, level=2))
+            db_node.child_nodes.append(TreeNode(db_node, i, text=self.empty_list, level=1))
         self.endResetModel()
 
     def index(self, row, column, parent=QModelIndex()):
@@ -3548,16 +3558,20 @@ class ParameterValueListModel(QAbstractItemModel):
         """
         if not index.isValid():
             return None
-        if role == Qt.FontRole and not index.parent().isValid():
-            # Bold top-level items
+        if role == Qt.FontRole and index.internalPointer().level == 1:
+            # Bold list items
             return self.bold_font
-        if role == Qt.ForegroundRole and index.row() == self.rowCount(index.parent()) - 1:
-            # Paint gray last item in each level
+        if role == Qt.ForegroundRole and index.parent().isValid() and index.row() == self.rowCount(index.parent()) - 1:
+            # Paint gray last item in each inner level
             return self.gray_brush
         if role in (Qt.DisplayRole, Qt.EditRole):
             text = index.internalPointer().text
             # Deserialize value (so we don't see e.g. quotes around strings)
-            if role == Qt.DisplayRole and index.parent().isValid() and index.row() != self.rowCount(index.parent()) - 1:
+            if (
+                role == Qt.DisplayRole
+                and index.internalPointer().level == 2
+                and index.row() != self.rowCount(index.parent()) - 1
+            ):
                 text = json.loads(text)
             return text
         return None
@@ -3565,6 +3579,8 @@ class ParameterValueListModel(QAbstractItemModel):
     def flags(self, index):
         """Returns the item flags for the given index.
         """
+        if index.internalPointer().level == 0:
+            return Qt.ItemIsEnabled | Qt.ItemIsSelectable
         return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -3577,8 +3593,8 @@ class ParameterValueListModel(QAbstractItemModel):
         if role != Qt.EditRole:
             return False
         node = index.internalPointer()
-        if index.parent().isValid():
-            # list values are stored as json (list *names*, as normal python types)
+        if node.level == 2:
+            # values are stored as json (list *names*, as normal python types)
             value = json.dumps(value)
         if value == node.text:
             return False
@@ -3592,11 +3608,11 @@ class ParameterValueListModel(QAbstractItemModel):
         """
         row = self.rowCount(parent)
         self.beginInsertRows(parent, row, row + count - 1)
-        if not parent.isValid():
-            self._root_nodes.append(TreeNode(None, row, text=self.empty_list))
-        else:
-            root_node = parent.internalPointer()
-            root_node.child_nodes.append(TreeNode(root_node, row, text=self.empty_value))
+        parent_node = parent.internalPointer()
+        if parent_node.level == 0:
+            parent_node.child_nodes.append(TreeNode(parent_node, row, text=self.empty_list, level=1))
+        elif parent_node.level == 1:
+            parent_node.child_nodes.append(TreeNode(parent_node, row, text=self.empty_value, level=2))
         self.endInsertRows()
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
@@ -3610,56 +3626,62 @@ class ParameterValueListModel(QAbstractItemModel):
         parent = self.parent(top_left)
         if parent != self.parent(bottom_right):
             return
-        self.append_empty_rows(bottom_right, parent)
+        self.append_empty_rows(bottom_right)
         to_add, to_update = self.items_to_add_and_update(top_left.row(), bottom_right.row(), parent)
-        self._parent.add_parameter_value_lists(*to_add)
-        self._parent.update_parameter_value_lists(*to_update)
+        self._parent.add_parameter_value_lists(to_add)
+        self._parent.update_parameter_value_lists(to_update)
 
-    def append_empty_rows(self, index, parent):
+    def append_empty_rows(self, index):
         """Append emtpy rows if index is the last children, so the user can continue editing the model.
-        The argument `parent` is given for convenience.
         """
+        parent = index.parent()
+        if not parent.isValid():
+            return
         if self.rowCount(parent) == index.row() + 1:
             self.appendRows(1, parent)
-            if not parent.isValid():
+            if index.internalPointer().level == 1:
                 self.appendRows(1, index)
 
     def items_to_add_and_update(self, first, last, parent):
         """Return list of items to add and update in the db.
         """
-        to_add = list()
-        to_update = list()
-        if not parent.isValid():
+        to_add = dict()
+        to_update = dict()
+        if parent.internalPointer().level == 0:
             # The changes correspond to list *names*.
             # We need to check them all
+            db_name = parent.internalPointer().text
+            db_map = self._parent.db_name_to_map[db_name]
             for row in range(first, last + 1):
                 index = self.index(row, 0, parent)
                 node = index.internalPointer()
-                id = node.id
+                id_ = node.id
                 name = node.text
-                if id:
+                if id_:
                     # Update
-                    to_update.append(dict(id=id, name=name))
+                    to_update.setdefault(db_map, []).append(dict(id=id_, name=name))
                 else:
                     # Add
                     value_list = [
                         self.index(i, 0, index).internalPointer().text for i in range(self.rowCount(index) - 1)
                     ]
                     if value_list:
-                        to_add.append(dict(parent=index, name=name, value_list=value_list))
-        else:
+                        to_add.setdefault(db_map, []).append(dict(parent=index, name=name, value_list=value_list))
+        elif parent.internalPointer().level == 1:
             # The changes correspond to list *values*, so it's enough to check the parent
+            db_name = parent.parent().internalPointer().text
+            db_map = self._parent.db_name_to_map[db_name]
             value_list = [
                 str(self.index(i, 0, parent).internalPointer().text) for i in range(self.rowCount(parent) - 1)
             ]
-            id = parent.internalPointer().id
-            if id:
+            id_ = parent.internalPointer().id
+            if id_:
                 # Update
-                to_update.append(dict(id=id, value_list=value_list))
+                to_update.setdefault(db_map, []).append(dict(id=id_, value_list=value_list))
             else:
                 # Add
                 name = parent.internalPointer().text
-                to_add.append(dict(parent=parent, name=name, value_list=value_list))
+                to_add.setdefault(db_map, []).append(dict(parent=parent, name=name, value_list=value_list))
         return to_add, to_update
 
     def batch_set_data(self, indexes, values):

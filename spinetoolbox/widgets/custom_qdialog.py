@@ -1071,7 +1071,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
 
     @busy_effect
     def accept(self):
-        """Collect info from dialog and try to update items."""
+        """Collect info from dialog and try to update, remove, add items."""
         # Update and remove
         items_to_update = {}
         items_to_remove = {}
@@ -1086,7 +1086,8 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             # Remove
             check_box = self.table_view.indexWidget(self.model.index(i, self.model.header.index('remove')))
             if check_box.isChecked():
-                for db_map, parameter_tag in self.db_map_dicts[i].items():
+                for db_map in db_maps:
+                    parameter_tag = self.db_map_dicts[i][db_map]
                     items_to_remove.setdefault(db_map, []).append(parameter_tag.id)
                 continue
             if not tag:
@@ -1094,7 +1095,8 @@ class ManageParameterTagsDialog(ManageItemsDialog):
                 return
             # Update
             if [tag, description] != self.orig_data[i]:
-                for db_map, parameter_tag in self.db_map_dicts[i].items():
+                for db_map, parameter_tag in db_maps:
+                    parameter_tag = self.db_map_dicts[i][db_map]
                     item = {'id': parameter_tag.id, 'tag': tag, 'description': description}
                     items_to_update.setdefault(db_map, []).append(item)
         # Insert
@@ -1121,27 +1123,6 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         if items_to_add:
             self._parent.add_parameter_tags(items_to_add)
         super().accept()
-        return
-
-        # TODO: Remove when done
-        error_log = list()
-        try:
-            if items_to_update:
-                parameter_tags, upd_error_log = self._parent.db_map.update_parameter_tags(*items_to_update)
-                error_log += upd_error_log
-                self._parent.update_parameter_tags(parameter_tags)
-            if self.removed_id_list:
-                self._parent.db_map.remove_items(parameter_tag_ids=self.removed_id_list)
-                self._parent.remove_parameter_tags(self.removed_id_list)
-            if items_to_add:
-                parameter_tags, add_error_log = self._parent.db_map.add_parameter_tags(*items_to_add)
-                error_log += add_error_log
-                self._parent.add_parameter_tags(parameter_tags)
-            if error_log:
-                self._parent.msg_error.emit(format_string_list(error_log))
-            super().accept()
-        except SpineDBAPIError as e:
-            self._parent.msg_error.emit(e.msg)
 
 
 class CommitDialog(QDialog):
@@ -1152,11 +1133,11 @@ class CommitDialog(QDialog):
         database (str): database name
     """
 
-    def __init__(self, parent, database):
+    def __init__(self, parent):
         """Initialize class"""
         super().__init__(parent)
         self.commit_msg = None
-        self.setWindowTitle('Commit changes to {}'.format(database))
+        self.setWindowTitle('Commit changes to {}'.format(", ".join(parent.db_names)))
         form = QVBoxLayout(self)
         form.setContentsMargins(0, 0, 0, 0)
         inner_layout = QVBoxLayout()
