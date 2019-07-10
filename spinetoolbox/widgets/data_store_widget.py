@@ -771,28 +771,46 @@ class DataStoreForm(QMainWindow):
         return True
 
     @busy_effect
-    def update_parameter_tags(self, parameter_tags):
+    def update_parameter_tags(self, parameter_tag_d):
         """Update parameter tags."""
         # TODO: update parameter value tables??
-        self.object_parameter_definition_model.rename_parameter_tags(parameter_tags)
-        self.relationship_parameter_definition_model.rename_parameter_tags(parameter_tags)
-        self.parameter_tag_toolbar.update_tag_actions(parameter_tags)
+        updated_tags = set()
+        for db_map, items in parameter_tag_d.items():
+            updated, error_log = db_map.update_parameter_tags(*items)
+            if error_log:
+                self.msg_error.emit(format_string_list(error_log))
+            if not updated.count():
+                continue
+            self.object_parameter_definition_model.rename_parameter_tags(db_map, updated)
+            self.relationship_parameter_definition_model.rename_parameter_tags(db_map, updated)
+            self.parameter_tag_toolbar.update_tag_actions(db_map, updated)
+            updated_tags.update(x.tag for x in updated)
+        if not updated_tags:
+            return False
         self.commit_available.emit(True)
-        msg = "Successfully updated parameter tags '{}'.".format([x.tag for x in parameter_tags])
+        msg = "Successfully updated parameter tag(s) '{}'.".format("', '".join(updated_tags))
         self.msg.emit(msg)
         return True
 
     @busy_effect
-    def remove_parameter_tags(self, parameter_tag_ids):
+    def remove_parameter_tags(self, parameter_tag_d):
         """Remove parameter tags."""
         # TODO: remove from parameter value tables??
-        if not parameter_tag_ids:
+        removed = 0
+        for db_map, ids in parameter_tag_d.items():
+            try:
+                db_map.remove_items(parameter_tag_ids=ids)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+            self.object_parameter_definition_model.remove_parameter_tags(db_map, ids)
+            self.relationship_parameter_definition_model.remove_parameter_tags(db_map, ids)
+            self.parameter_tag_toolbar.remove_tag_actions(db_map, ids)
+            removed += len(ids)
+        if not removed:
             return False
-        self.object_parameter_definition_model.remove_parameter_tags(parameter_tag_ids)
-        self.relationship_parameter_definition_model.remove_parameter_tags(parameter_tag_ids)
-        self.parameter_tag_toolbar.remove_tag_actions(parameter_tag_ids)
         self.commit_available.emit(True)
-        msg = "Successfully removed parameter tags."
+        msg = "Successfully removed {} parameter tag(s).".format(removed)
         self.msg.emit(msg)
         return True
 

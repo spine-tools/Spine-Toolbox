@@ -1059,13 +1059,15 @@ class ManageParameterTagsDialog(ManageItemsDialog):
     @busy_effect
     def accept(self):
         """Collect info from dialog and try to update items."""
-        # update
+        # Update and remove
         items_to_update = {}
         items_to_remove = {}
         for i in range(self.model.existing_item_model.rowCount()):
             tag, description, db_names = self.model.existing_item_model.row_data(i)
             update = [tag, description] != self.orig_data[i]
             db_name_list = db_names.split(",")
+            if db_name_list == ['']:
+                db_name_list = []
             try:
                 db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
             except KeyError as e:
@@ -1082,18 +1084,19 @@ class ManageParameterTagsDialog(ManageItemsDialog):
                     # Update
                     item = {'id': parameter_tag.id, 'tag': tag, 'description': description}
                     items_to_update.setdefault(db_map, []).append(item)
-        # insert
+        # Insert
         items_to_add = {}
+        offset = self.model.existing_item_model.rowCount()
         for i in range(self.model.new_item_model.rowCount() - 1):  # last row will always be empty
             tag, description, db_names = self.model.new_item_model.row_data(i)
             db_name_list = db_names.split(",")
             try:
                 db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
             except KeyError as e:
-                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
+                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, offset + i + 1))
                 return
             if not tag:
-                self._parent.msg_error.emit("Tag missing at row {0}".format(i + 1))
+                self._parent.msg_error.emit("Tag missing at row {0}".format(offset + i + 1))
                 return
             for db_map in db_maps:
                 item = {'tag': tag, 'description': description}

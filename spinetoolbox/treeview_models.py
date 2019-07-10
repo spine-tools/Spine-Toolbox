@@ -2315,27 +2315,29 @@ class ObjectParameterModel(MinimalTableModel):
             for row_data in model.sourceModel()._main_data:
                 row_data[object_class_name_column] = object_class_name
 
-    def rename_parameter_tags(self, parameter_tags):
+    def rename_parameter_tags(self, db_map, parameter_tags):
         """Rename parameter tags in model."""
         parameter_tag_list_column = self.header.index("parameter_tag_list")
         parameter_tag_id_list_column = self.header.index("parameter_tag_id_list")
         parameter_tag_dict = {x.id: x.tag for x in parameter_tags}
-        for _, model in self.sub_models:
+        for object_class_id, model in self.sub_models:
+            if object_class_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 parameter_tag_id_list = row_data[parameter_tag_id_list_column]
                 parameter_tag_list = row_data[parameter_tag_list_column]
                 if not parameter_tag_id_list:
                     continue
                 split_parameter_tag_id_list = [int(x) for x in parameter_tag_id_list.split(",")]
-                split_parameter_tag_list = parameter_tag_list.split(",")
-                found = False
-                for k, tag_id in enumerate(split_parameter_tag_id_list):
-                    if tag_id in parameter_tag_dict:
-                        new_tag = parameter_tag_dict[tag_id]
-                        split_parameter_tag_list[k] = new_tag
-                        found = True
-                if not found:
+                matches = [
+                    (k, tag_id) for k, tag_id in enumerate(split_parameter_tag_id_list) if tag_id in parameter_tag_dict
+                ]
+                if not matches:
                     continue
+                split_parameter_tag_list = parameter_tag_list.split(",")
+                for k, tag_id in matches:
+                    new_tag = parameter_tag_dict[tag_id]
+                    split_parameter_tag_list[k] = new_tag
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
 
     def remove_object_classes(self, db_map, object_classes):
@@ -2347,25 +2349,25 @@ class ObjectParameterModel(MinimalTableModel):
                 self.sub_models.pop(i)
         self.layoutChanged.emit()
 
-    def remove_parameter_tags(self, parameter_tag_ids):
+    def remove_parameter_tags(self, db_map, parameter_tag_ids):
         """Remove parameter tags from model."""
         parameter_tag_list_column = self.header.index("parameter_tag_list")
         parameter_tag_id_list_column = self.header.index("parameter_tag_id_list")
-        for _, model in self.sub_models:
+        for object_class_id, model in self.sub_models:
+            if object_class_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 parameter_tag_id_list = row_data[parameter_tag_id_list_column]
                 parameter_tag_list = row_data[parameter_tag_list_column]
                 if not parameter_tag_id_list:
                     continue
                 split_parameter_tag_id_list = [int(x) for x in parameter_tag_id_list.split(",")]
-                split_parameter_tag_list = parameter_tag_list.split(",")
-                found = False
-                for k, tag_id in enumerate(split_parameter_tag_id_list):
-                    if tag_id in parameter_tag_ids:
-                        del split_parameter_tag_list[k]
-                        found = True
-                if not found:
+                matches = [k for k, tag_id in enumerate(split_parameter_tag_id_list) if tag_id in parameter_tag_ids]
+                if not matches:
                     continue
+                split_parameter_tag_list = parameter_tag_list.split(",")
+                for k in sorted(matches, reverse=True):
+                    del split_parameter_tag_list[k]
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
 
 
@@ -2925,27 +2927,29 @@ class RelationshipParameterModel(MinimalTableModel):
             for row_data in model.sourceModel()._main_data:
                 row_data[relationship_class_name_column] = relationship_class_name
 
-    def rename_parameter_tags(self, parameter_tags):
+    def rename_parameter_tags(self, db_map, parameter_tags):
         """Rename parameter tags in model."""
         parameter_tag_list_column = self.header.index("parameter_tag_list")
         parameter_tag_id_list_column = self.header.index("parameter_tag_id_list")
         parameter_tag_dict = {x.id: x.tag for x in parameter_tags}
-        for _, model in self.sub_models:
+        for rel_cls_id, model in self.sub_models:
+            if rel_cls_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 parameter_tag_id_list = row_data[parameter_tag_id_list_column]
                 parameter_tag_list = row_data[parameter_tag_list_column]
                 if not parameter_tag_id_list:
                     continue
                 split_parameter_tag_id_list = [int(x) for x in parameter_tag_id_list.split(",")]
-                split_parameter_tag_list = parameter_tag_list.split(",")
-                found = False
-                for k, tag_id in enumerate(split_parameter_tag_id_list):
-                    if tag_id in parameter_tag_dict:
-                        new_tag = parameter_tag_dict[tag_id]
-                        split_parameter_tag_list[k] = new_tag
-                        found = True
-                if not found:
+                matches = [
+                    (k, tag_id) for k, tag_id in enumerate(split_parameter_tag_id_list) if tag_id in parameter_tag_dict
+                ]
+                if not matches:
                     continue
+                split_parameter_tag_list = parameter_tag_list.split(",")
+                for k, tag_id in matches:
+                    new_tag = parameter_tag_dict[tag_id]
+                    split_parameter_tag_list[k] = new_tag
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
 
     def remove_object_classes(self, db_map, object_classes):
@@ -2967,25 +2971,25 @@ class RelationshipParameterModel(MinimalTableModel):
                 self.sub_models.pop(i)
         self.layoutChanged.emit()
 
-    def remove_parameter_tags(self, parameter_tag_ids):
+    def remove_parameter_tags(self, db_map, parameter_tag_ids):
         """Remove parameter tags from model."""
         parameter_tag_list_column = self.header.index("parameter_tag_list")
         parameter_tag_id_list_column = self.header.index("parameter_tag_id_list")
-        for _, model in self.sub_models:
+        for rel_cls_id, model in self.sub_models:
+            if rel_cls_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 parameter_tag_id_list = row_data[parameter_tag_id_list_column]
                 parameter_tag_list = row_data[parameter_tag_list_column]
                 if not parameter_tag_id_list:
                     continue
                 split_parameter_tag_id_list = [int(x) for x in parameter_tag_id_list.split(",")]
-                split_parameter_tag_list = parameter_tag_list.split(",")
-                found = False
-                for k, tag_id in enumerate(split_parameter_tag_id_list):
-                    if tag_id in parameter_tag_ids:
-                        del split_parameter_tag_list[k]
-                        found = True
-                if not found:
+                matches = [k for k, tag_id in enumerate(split_parameter_tag_id_list) if tag_id in parameter_tag_ids]
+                if not matches:
                     continue
+                split_parameter_tag_list = parameter_tag_list.split(",")
+                for k in sorted(matches, reverse=True):
+                    del split_parameter_tag_list[k]
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
 
 

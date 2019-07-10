@@ -228,14 +228,14 @@ class ParameterTagToolBar(QToolBar):
         tag_dict = {}
         for db_map in self._parent.db_maps:
             for parameter_tag in db_map.parameter_tag_list():
-                tag_dict.setdefault(parameter_tag.tag, []).append((db_map, parameter_tag.id))
-        for tag, ids in tag_dict.items():
+                tag_dict.setdefault(parameter_tag.tag, {})[db_map] = parameter_tag.id
+        for tag, db_map_dict in tag_dict.items():
             action = self.addAction(tag)
             action.setCheckable(True)
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=len(self.db_map_ids))
             self.actions.append(action)
-            self.db_map_ids.append(ids)
+            self.db_map_ids.append([(db_map, id_) for db_map, id_ in db_map_dict.items()])
         self.tag_button_group.buttonToggled["int", "bool"].connect(
             lambda id, checked: self.tag_button_toggled.emit(self.db_map_ids[id], checked)
         )
@@ -268,10 +268,14 @@ class ParameterTagToolBar(QToolBar):
 
     def remove_tag_actions(self, db_map, parameter_tag_ids):
         for tag_id in parameter_tag_ids:
-            action = self.action_dict[tag_id]
-            self.removeAction(action)
+            i = next(k for k, x in enumerate(self.db_map_ids) if (db_map, tag_id) in x)
+            self.db_map_ids[i].remove((db_map, tag_id))
+            if not self.db_map_ids[i]:
+                self.db_map_ids.pop(i)
+                self.removeAction(self.actions[i])
 
     def update_tag_actions(self, db_map, parameter_tags):
-        for tag in parameter_tags:
-            action = self.action_dict[tag.id]
-            action.setText(tag.tag)
+        for parameter_tag in parameter_tags:
+            i = next(k for k, x in enumerate(self.db_map_ids) if (db_map, parameter_tag.id) in x)
+            action = self.actions[i]
+            action.setText(parameter_tag.tag)
