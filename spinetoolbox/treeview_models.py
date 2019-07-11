@@ -2318,6 +2318,7 @@ class ObjectParameterModel(MinimalTableModel):
             object_class_name = object_class_id_name[object_class_id]
             for row_data in model.sourceModel()._main_data:
                 row_data[object_class_name_column] = object_class_name
+        self._emit_data_changed_for_column(object_class_name_column)
 
     def rename_parameter_tags(self, db_map, parameter_tags):
         """Rename parameter tags in model."""
@@ -2343,6 +2344,7 @@ class ObjectParameterModel(MinimalTableModel):
                     new_tag = parameter_tag_dict[tag_id]
                     split_parameter_tag_list[k] = new_tag
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
+        self._emit_data_changed_for_column(parameter_tag_list_column)
 
     def remove_object_classes(self, db_map, object_classes):
         """Remove object classes from model."""
@@ -2373,6 +2375,14 @@ class ObjectParameterModel(MinimalTableModel):
                 for k in sorted(matches, reverse=True):
                     del split_parameter_tag_list[k]
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
+        self._emit_data_changed_for_column(parameter_tag_list_column)
+
+    def _emit_data_changed_for_column(self, column):
+        """Emits data changed for an entire column.
+        Used by `rename_` and some `remove_` methods where it's too difficult to find out the exact
+        rows that changed, especially because of filter status.
+        """
+        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
 
 
 class ObjectParameterValueModel(ObjectParameterModel):
@@ -2449,17 +2459,21 @@ class ObjectParameterValueModel(ObjectParameterModel):
                 object_id = row_data[object_id_column]
                 if object_id in object_id_name:
                     row_data[object_name_column] = object_id_name[object_id]
+        self._emit_data_changed_for_column(object_name_column)
 
-    def rename_parameter(self, parameter_id, object_class_id, new_name):
+    def rename_parameter(self, db_map, parameter):
         """Rename single parameter in model."""
         parameter_id_column = self.header.index("parameter_id")
         parameter_name_column = self.header.index("parameter_name")
-        for model_object_class_id, model in self.sub_models:
-            if model_object_class_id != object_class_id:
+        for object_class_id, model in self.sub_models:
+            if object_class_id != (db_map, parameter["object_class_id"]):
                 continue
-            for row_data in model.sourceModel()._main_data:
-                if row_data[parameter_id_column] == parameter_id:
-                    row_data[parameter_name_column] = new_name
+            model = model.sourceModel()
+            for row, row_data in enumerate(model._main_data):
+                if row_data[parameter_id_column] == parameter["id"]:
+                    row_data[parameter_name_column] = parameter["name"]
+                    index = model.index(row, parameter_name_column)
+        self._emit_data_changed_for_column(parameter_name_column)
 
     def remove_objects(self, db_map, objects):
         """Remove objects from model."""
@@ -2610,11 +2624,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
                 if value_list_id in value_list_ids:
                     row_data[value_list_id_column] = None
                     row_data[value_list_name_column] = None
-        self.dataChanged.emit(
-            self.index(0, value_list_name_column),
-            self.index(self.rowCount() - 1, value_list_name_column),
-            [Qt.DisplayRole],
-        )
+        self._emit_data_changed_for_column(value_list_name_column)
 
     def rename_parameter_value_lists(self, db_map, value_lists):
         """Rename parameter value_lists in model."""
@@ -2628,11 +2638,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
                 value_list_id = row_data[value_list_id_column]
                 if value_list_id in parameter_value_list_dict:
                     row_data[value_list_name_column] = parameter_value_list_dict[value_list_id]
-        self.dataChanged.emit(
-            self.index(0, value_list_name_column),
-            self.index(self.rowCount() - 1, value_list_name_column),
-            [Qt.DisplayRole],
-        )
+        self._emit_data_changed_for_column(value_list_name_column)
 
 
 class RelationshipParameterModel(MinimalTableModel):
@@ -2934,6 +2940,7 @@ class RelationshipParameterModel(MinimalTableModel):
                 for k, new_name in obj_cls_name_d.items():
                     object_class_name_list[k] = new_name
                 row_data[object_class_name_list_column] = ",".join(object_class_name_list)
+        self._emit_data_changed_for_column(object_class_name_list_column)
 
     def rename_relationship_classes(self, db_map, relationship_classes):
         """Rename relationship classes in model."""
@@ -2945,6 +2952,7 @@ class RelationshipParameterModel(MinimalTableModel):
             relationship_class_name = relationship_class_id_name[relationship_class_id]
             for row_data in model.sourceModel()._main_data:
                 row_data[relationship_class_name_column] = relationship_class_name
+        self._emit_data_changed_for_column(relationship_class_name_column)
 
     def rename_parameter_tags(self, db_map, parameter_tags):
         """Rename parameter tags in model."""
@@ -2970,6 +2978,7 @@ class RelationshipParameterModel(MinimalTableModel):
                     new_tag = parameter_tag_dict[tag_id]
                     split_parameter_tag_list[k] = new_tag
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
+        self._emit_data_changed_for_column(parameter_tag_list_column)
 
     def remove_object_classes(self, db_map, object_classes):
         """Remove object classes from model."""
@@ -3010,6 +3019,14 @@ class RelationshipParameterModel(MinimalTableModel):
                 for k in sorted(matches, reverse=True):
                     del split_parameter_tag_list[k]
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
+        self._emit_data_changed_for_column(parameter_tag_list_column)
+
+    def _emit_data_changed_for_column(self, column):
+        """Emits data changed for an entire column.
+        Used by `rename_` and some `remove_` methods where it's too difficult to find out the exact
+        rows that changed, especially because of filter status.
+        """
+        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
 
 
 class RelationshipParameterValueModel(RelationshipParameterModel):
@@ -3119,6 +3136,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                     if object_id in object_id_name:
                         object_name_list[i] = object_id_name[object_id]
                 row_data[object_name_list_column] = ",".join(object_name_list)
+        self._emit_data_changed_for_column(object_name_list_column)
 
     def remove_objects(self, db_map, objects):
         """Remove objects from model."""
@@ -3153,16 +3171,17 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                     source_model.removeRows(row, 1)
         self.layoutChanged.emit()
 
-    def rename_parameter(self, parameter_id, relationship_class_id, new_name):
+    def rename_parameter(self, db_map, parameter):
         """Rename single parameter in model."""
         parameter_id_column = self.header.index("parameter_id")
         parameter_name_column = self.header.index("parameter_name")
-        for model_relationship_class_id, model in self.sub_models:
-            if model_relationship_class_id != relationship_class_id:
+        for rel_cls_id, model in self.sub_models:
+            if rel_cls_id != (db_map, parameter["relationship_class_id"]):
                 continue
             for row_data in model.sourceModel()._main_data:
-                if row_data[parameter_id_column] == parameter_id:
-                    row_data[parameter_name_column] = new_name
+                if row_data[parameter_id_column] == parameter["id"]:
+                    row_data[parameter_name_column] = parameter["name"]
+        self._emit_data_changed_for_column(parameter_name_column)
 
     def remove_parameters(self, db_map, parameters):
         """Remove parameters from model."""
@@ -3275,11 +3294,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
                 if value_list_id in value_list_ids:
                     row_data[value_list_id_column] = None
                     row_data[value_list_name_column] = None
-        self.dataChanged.emit(
-            self.index(0, value_list_name_column),
-            self.index(self.rowCount() - 1, value_list_name_column),
-            [Qt.DisplayRole],
-        )
+        self._emit_data_changed_for_column(value_list_name_column)
 
     def rename_parameter_value_lists(self, db_map, value_lists):
         """Rename parameter value_lists in model."""
@@ -3293,11 +3308,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
                 value_list_id = row_data[value_list_id_column]
                 if value_list_id in parameter_value_list_dict:
                     row_data[value_list_name_column] = parameter_value_list_dict[value_list_id]
-        self.dataChanged.emit(
-            self.index(0, value_list_name_column),
-            self.index(self.rowCount() - 1, value_list_name_column),
-            [Qt.DisplayRole],
-        )
+        self._emit_data_changed_for_column(value_list_name_column)
 
 
 class ObjectParameterDefinitionFilterProxyModel(QSortFilterProxyModel):

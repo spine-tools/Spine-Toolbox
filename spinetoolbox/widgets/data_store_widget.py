@@ -910,17 +910,22 @@ class DataStoreForm(QMainWindow):
         if new_value is None:
             return False
         header = index.model().horizontal_header_labels()
-        if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name':
+        db_column = header.index('database')
+        db_name = index.sibling(index.row(), db_column).data(Qt.DisplayRole)
+        db_map = self.db_name_to_map.get(db_name)
+        if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name' and db_map:
             parameter_id_column = header.index('id')
             parameter_id = index.sibling(index.row(), parameter_id_column).data(Qt.DisplayRole)
             if 'object_class_id' in header:
                 object_class_id_column = header.index('object_class_id')
                 object_class_id = index.sibling(index.row(), object_class_id_column).data(Qt.DisplayRole)
-                self.object_parameter_value_model.rename_parameter(parameter_id, object_class_id, new_value)
+                parameter = dict(id=parameter_id, object_class_id=object_class_id, name=new_value)
+                self.object_parameter_value_model.rename_parameter(db_map, parameter)
             elif 'relationship_class_id' in header:
                 relationship_class_id_column = header.index('relationship_class_id')
                 relationship_class_id = index.sibling(index.row(), relationship_class_id_column).data(Qt.DisplayRole)
-                self.relationship_parameter_value_model.rename_parameter(parameter_id, relationship_class_id, new_value)
+                parameter = dict(id=parameter_id, relationship_class_id=relationship_class_id, name=new_value)
+                self.relationship_parameter_value_model.rename_parameter(db_map, parameter)
         return True
 
     def show_commit_session_prompt(self):
