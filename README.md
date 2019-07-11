@@ -128,6 +128,14 @@ be opened from Spine Toolbox menu Help->User Guide (F2).
 
 ## Troubleshooting
 
+### Installation on Linux
+If Python runs into errors while installing on Linux systems, running the 
+following commands in a terminal may help:
+```shell
+sudo apt install libpq-dev
+sudo apt-get install unixodbc-dev
+```
+
 ### Problems in starting the application
 
 If there are problems in starting Spine Toolbox, the chances are that the required 

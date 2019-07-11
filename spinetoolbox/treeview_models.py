@@ -16,13 +16,12 @@ Classes for handling models in tree and graph views.
 :date:   28.6.2019
 """
 
-import os
 import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
-from helpers import busy_effect, format_string_list, strip_json_data
 from spinedb_api import SpineDBAPIError
-from models import MinimalTableModel, EmptyRowModel, HybridTableModel
+from helpers import busy_effect, format_string_list, strip_json_data
+from models import MinimalTableModel, EmptyRowModel
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -155,7 +154,8 @@ class ObjectTreeModel(QStandardItemModel):
                 )
         return super().data(index, role)
 
-    def backward_sweep(self, index, call=None):
+    @staticmethod
+    def backward_sweep(index, call=None):
         """Sweep the tree from the given index towards the root, and apply `call` on each."""
         current = index
         while True:
@@ -166,7 +166,6 @@ class ObjectTreeModel(QStandardItemModel):
             if not next_.isValid():
                 break
             current = next_
-            continue
 
     def forward_sweep(self, index, call=None):
         """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
@@ -212,7 +211,7 @@ class ObjectTreeModel(QStandardItemModel):
             if object_class_id in self._fetched['object_class']:
                 return super().hasChildren(parent)
             return True
-        elif parent_type == 'object':
+        if parent_type == 'object':
             if self.flat:
                 # The flat model doesn't go beyond the 'object' level
                 return False
@@ -221,7 +220,7 @@ class ObjectTreeModel(QStandardItemModel):
             if object_id in self._fetched['object']:
                 return super().hasChildren(parent)
             return True
-        elif parent_type == 'relationship_class':
+        if parent_type == 'relationship_class':
             if self.flat:
                 # The flat model doesn't go beyond the 'object' level
                 return False
@@ -230,7 +229,7 @@ class ObjectTreeModel(QStandardItemModel):
             if (object_id, relationship_class_id) in self._fetched['relationship_class']:
                 return super().hasChildren(parent)
             return True
-        elif parent_type == 'relationship':
+        if parent_type == 'relationship':
             return False
         return super().hasChildren(parent)
 
@@ -313,7 +312,8 @@ class ObjectTreeModel(QStandardItemModel):
         object_class_item.setData(self.bold_font, Qt.FontRole)
         return object_class_item
 
-    def new_object_item(self, object_):
+    @staticmethod
+    def new_object_item(object_):
         """Returns new object item."""
         object_item = QStandardItem(object_.name)
         object_item.setData('object', Qt.UserRole)
@@ -330,7 +330,8 @@ class ObjectTreeModel(QStandardItemModel):
         relationship_class_item.setData(self.bold_font, Qt.FontRole)
         return relationship_class_item
 
-    def new_relationship_item(self, wide_relationship):
+    @staticmethod
+    def new_relationship_item(wide_relationship):
         """Returns new relationship item."""
         relationship_item = QStandardItem(wide_relationship.object_name_list)
         relationship_item.setData('relationship', Qt.UserRole)
@@ -390,9 +391,9 @@ class ObjectTreeModel(QStandardItemModel):
             visited_object = visited_item.data(Qt.UserRole + 1)
             visited_object_class_id = visited_object['class_id']
             relationship_class_list = list()
-            for object_class_id_list, relationship_classes in relationship_class_dict.items():
+            for object_class_id_list, classes in relationship_class_dict.items():
                 if visited_object_class_id in [int(x) for x in object_class_id_list.split(',')]:
-                    relationship_class_list.extend(relationship_classes)
+                    relationship_class_list.extend(classes)
             if not relationship_class_list:
                 continue
             # If not fetched, just continue
@@ -469,9 +470,9 @@ class ObjectTreeModel(QStandardItemModel):
                 object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
                 object_name_list = relationship['object_name_list'].split(",")
                 found = False
-                for i, id in enumerate(object_id_list):
+                for i, identifier in enumerate(object_id_list):
                     try:
-                        updated_item = updated_items_dict[id]
+                        updated_item = updated_items_dict[identifier]
                         object_name_list[i] = updated_item.name
                         found = True
                     except KeyError:
@@ -693,7 +694,7 @@ class RelationshipTreeModel(QStandardItemModel):
             if relationship_class_id in self._fetched_relationship_class_id:
                 return super().hasChildren(parent)
             return True
-        elif parent_type == 'relationship':
+        if parent_type == 'relationship':
             return False
         return super().hasChildren(parent)
 
@@ -746,7 +747,8 @@ class RelationshipTreeModel(QStandardItemModel):
         relationship_class_item.setData(self.bold_font, Qt.FontRole)
         return relationship_class_item
 
-    def new_relationship_item(self, wide_relationship):
+    @staticmethod
+    def new_relationship_item(wide_relationship):
         """Returns new relationship item."""
         relationship_item = QStandardItem(wide_relationship.object_name_list)
         relationship_item.setData(wide_relationship._asdict(), Qt.UserRole + 1)
@@ -802,10 +804,10 @@ class RelationshipTreeModel(QStandardItemModel):
                 object_id_list = [int(x) for x in relationship['object_id_list'].split(",")]
                 object_name_list = relationship['object_name_list'].split(",")
                 found = False
-                for i, id in enumerate(object_id_list):
+                for k, identifier in enumerate(object_id_list):
                     try:
-                        updated_item = updated_items_dict[id]
-                        object_name_list[i] = updated_item.name
+                        updated_item = updated_items_dict[identifier]
+                        object_name_list[k] = updated_item.name
                         found = True
                     except KeyError:
                         continue
@@ -973,11 +975,11 @@ class SubParameterModel(MinimalTableModel):
             self._main_data[index.row()][index.column()] = data[k]
         return True
 
-    def items_to_update(self, indexes, data):
+    def items_to_update(self, indexes, data):  # pylint: disable=no-self-use
         """A list of items (dict) to update in the database. Reimplement in subclasses."""
         return []
 
-    def update_items_in_db(self, items_to_update):
+    def update_items_in_db(self, items_to_update):  # pylint: disable=no-self-use
         """A list of ids of items updated in the database. Reimplement in subclasses."""
         return []
 
@@ -1424,7 +1426,6 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         header_index = self._parent.horizontal_header_labels().index
         relationship_id_column = header_index('relationship_id')
         parameter_id_column = header_index('parameter_id')
-        parameter_name_column = header_index('parameter_name')
         value_column = header_index('value')
         for row in {ind.row() for ind in indexes}:
             parameter_id = self.index(row, parameter_id_column).data(Qt.DisplayRole)
@@ -1472,7 +1473,7 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
                 if parameter.name in name_tag_dict:
                     tag_dict[parameter.id] = name_tag_dict[parameter.name]
                 self._main_data[self.added_rows[i]][id_column] = parameter.id
-            upd_def_tag_list, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
+            _, def_tag_error_log = self._parent.db_map.set_parameter_definition_tags(tag_dict)
             self.error_log.extend(def_tag_error_log)
         except SpineDBAPIError as e:
             self.error_log.append(e.msg)
@@ -1919,8 +1920,9 @@ class ObjectParameterValueModel(ObjectParameterModel):
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyObjectParameterValueModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.object_class_name_column = None
 
-    def reset_model(self):
+    def reset_model(self, main_data=None):
         """Reset model data. Each sub-model is filled with parameter value data
         for a different object class."""
         self.beginResetModel()
@@ -2049,8 +2051,9 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyObjectParameterDefinitionModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.object_class_name_column = None
 
-    def reset_model(self):
+    def reset_model(self, main_data=None):
         """Reset model data. Each sub-model is filled with parameter definition data
         for a different object class."""
         self.beginResetModel()
@@ -2525,8 +2528,10 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyRelationshipParameterValueModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.relationship_class_name_column = None
+        self.object_class_name_list_column = None
 
-    def reset_model(self):
+    def reset_model(self, main_data=None):
         """Reset model data. Each sub-model is filled with parameter value data
         for a different relationship class."""
         self.beginResetModel()
@@ -2674,8 +2679,10 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         super().__init__(tree_view_form)
         self.empty_row_model = EmptyRelationshipParameterDefinitionModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.relationship_class_name_column = None
+        self.object_class_name_list_column = None
 
-    def reset_model(self):
+    def reset_model(self, main_data=None):
         """Reset model data. Each sub-model is filled with parameter definition data
         for a different relationship class."""
         self.beginResetModel()
@@ -2838,7 +2845,7 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
         self.object_ids = set()
         self.object_id_column = object_id_column
 
-    def update_filter(self, parameter_definition_ids, object_ids):
+    def update_filter(self, parameter_definition_ids, object_ids):  # pylint: disable=arguments-differ
         """Update filter."""
         if parameter_definition_ids == self.parameter_definition_ids and object_ids == self.object_ids:
             return
@@ -2927,7 +2934,7 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
         self.object_id_lists = set()
         self.object_id_list_column = object_id_list_column
 
-    def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):
+    def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):  # pylint: disable=arguments-differ
         """Update filter."""
         if (
             parameter_definition_ids == self.parameter_definition_ids
@@ -2948,7 +2955,7 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
         if self.object_id_lists:
             return object_id_list in self.object_id_lists
         if self.object_ids:
-            return len(self.object_ids.intersection(int(x) for x in object_id_list.split(","))) > 0
+            return bool(self.object_ids.intersection(int(x) for x in object_id_list.split(",")))
         return True
 
 
@@ -2962,12 +2969,12 @@ class TreeNode:
         id (int, NoneType): the id from the db table
     """
 
-    def __init__(self, parent, row, text=None, id=None):
+    def __init__(self, parent, row, text=None, identifier=None):
         self.parent = parent
         self.row = row
         self.child_nodes = list()
         self.text = text
-        self.id = id
+        self.id = identifier
 
 
 class ParameterValueListModel(QAbstractItemModel):
@@ -2994,7 +3001,7 @@ class ParameterValueListModel(QAbstractItemModel):
         self._root_nodes = list()
         i = 0
         for wide_value_list in self.db_map.wide_parameter_value_list_list():
-            root_node = TreeNode(None, i, text=wide_value_list.name, id=wide_value_list.id)
+            root_node = TreeNode(None, i, text=wide_value_list.name, identifier=wide_value_list.id)
             i += 1
             self._root_nodes.append(root_node)
             j = 0
@@ -3135,27 +3142,25 @@ class ParameterValueListModel(QAbstractItemModel):
             for row in range(first, last + 1):
                 index = self.index(row, 0, parent)
                 node = index.internalPointer()
-                id = node.id
-                name = node.text
-                if id:
+                if node.id:
                     # Update
-                    to_update.append(dict(id=id, name=name))
+                    to_update.append(dict(id=node.id, name=node.text))
                 else:
                     # Add
                     value_list = [
                         self.index(i, 0, index).internalPointer().text for i in range(self.rowCount(index) - 1)
                     ]
                     if value_list:
-                        to_add.append(dict(parent=index, name=name, value_list=value_list))
+                        to_add.append(dict(parent=index, name=node.text, value_list=value_list))
         else:
             # The changes correspond to list *values*, so it's enough to check the parent
             value_list = [
                 str(self.index(i, 0, parent).internalPointer().text) for i in range(self.rowCount(parent) - 1)
             ]
-            id = parent.internalPointer().id
-            if id:
+            identifier = parent.internalPointer().id
+            if identifier:
                 # Update
-                to_update.append(dict(id=id, value_list=value_list))
+                to_update.append(dict(id=identifier, value_list=value_list))
             else:
                 # Add
                 name = parent.internalPointer().text
@@ -3213,17 +3218,17 @@ class LazyLoadingArrayModel(EmptyRowModel):
         self.set_horizontal_header_labels("json")
         self._wrong_data = False
 
-    def reset_model(self, arr):
+    def reset_model(self, data):
         """Store given array into the `_orig_data` attribute.
         Initialize first `_stride` rows of the model.
         """
-        if arr is None:
-            arr = []
-        self._orig_data = arr
+        if data is None:
+            data = []
+        self._orig_data = data
         if not isinstance(self._orig_data, list):
             return
         data = list()
-        for i in range(self._stride):
+        for _ in range(self._stride):
             try:
                 data.append([self._orig_data.pop(0)])
             except IndexError:
@@ -3232,13 +3237,13 @@ class LazyLoadingArrayModel(EmptyRowModel):
 
     def canFetchMore(self, parent):
         if isinstance(self._orig_data, list):
-            return len(self._orig_data) > 0
+            return self._orig_data
         return False
 
     def fetchMore(self, parent):
         """Pop data from the _orig_data attribute and add it to the model."""
         data = list()
-        for i in range(self._stride):
+        for _ in range(self._stride):
             try:
                 data.append([self._orig_data.pop(0)])
             except IndexError:

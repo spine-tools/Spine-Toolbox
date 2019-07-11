@@ -16,46 +16,50 @@ Spine Toolbox grid view
 :date:   1.11.2018
 """
 
+import bisect
+import operator
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel, QAbstractListModel
 from PySide2.QtGui import QColor, QFont
 from helpers import tuple_itemgetter
-import operator
-import bisect
 
 
 class PivotModel:
-    _model_is_updating = False  # flag if model is being reset/updated
-    _data = {}  # dictionary of unpivoted data
-    _edit_data = {}  # dictionary of edited data, values are original data
-    _deleted_data = {}  # dictionary of deleted data, values are original data
-    _data_frozen = {}  # data filtered with frozen_value
-    # _data_frozen_index_values = set() # valid frozen_value values for current pivot_frozen
-    _index_types = ()  # type of the indexes in _data
-    index_names = ()  # names of the indexes in _data, can not contain duplicates
-    index_real_names = ()  # real names of indexes, can contain duplicates
-    pivot_rows = ()  # current selected rows indexes
-    pivot_columns = ()  # current selected columns indexes
-    pivot_frozen = ()  # current filtered frozen indexes
-    frozen_value = ()  # current selected value of index_frozen
-    _key_getter = lambda *x: ()  # operator.itemgetter placeholder used translate pivot to keys in _data
-    _row_data_header = []  # header values for row data
-    _column_data_header = []  # header valus for column data
-    _row_data_header_set = set()  # set of _row_data_header
-    _column_data_header_set = set()  # set of _column_data_header
-    _invalid_row = {}  # set of rows that have invalid indexes
-    _invalid_column = {}  # set of columns that have invalid indexes
-    _invalid_data = {}  # dictionary of invalid data
-    _added_index_entries = {}  # added index entries
-    _added_tuple_index_entries = {}  # added tuple index entries
-    _deleted_tuple_index_entries = {}  # deleted tuple index entries
-    _deleted_index_entries = {}  # deleted index_entries
-    _used_index_values = {}
-    _unique_name_2_name = {}
-
-    # dict with index name as key and set/range of valid values for that index
-    # if set/range is empty or index doesn't exist in valid_index_values
-    # then all values are valid
-    _valid_index_values = {}
+    def __init__(self):
+        self._index_ind = {}
+        self._index_type = {}
+        self.index_entries = {}
+        self.tuple_index_entries = {}
+        self._model_is_updating = False  # flag if model is being reset/updated
+        self._data = {}  # dictionary of unpivoted data
+        self._edit_data = {}  # dictionary of edited data, values are original data
+        self._deleted_data = {}  # dictionary of deleted data, values are original data
+        self._data_frozen = {}  # data filtered with frozen_value
+        self._data_frozen_index_values = set()  # valid frozen_value values for current pivot_frozen
+        self._index_types = ()  # type of the indexes in _data
+        self.index_names = ()  # names of the indexes in _data, can not contain duplicates
+        self.index_real_names = ()  # real names of indexes, can contain duplicates
+        self.pivot_rows = ()  # current selected rows indexes
+        self.pivot_columns = ()  # current selected columns indexes
+        self.pivot_frozen = ()  # current filtered frozen indexes
+        self.frozen_value = ()  # current selected value of index_frozen
+        self._key_getter = lambda *x: ()  # operator.itemgetter placeholder used translate pivot to keys in _data
+        self._row_data_header = []  # header values for row data
+        self._column_data_header = []  # header valus for column data
+        self._row_data_header_set = set()  # set of _row_data_header
+        self._column_data_header_set = set()  # set of _column_data_header
+        self._invalid_row = {}  # set of rows that have invalid indexes
+        self._invalid_column = {}  # set of columns that have invalid indexes
+        self._invalid_data = {}  # dictionary of invalid data
+        self._added_index_entries = {}  # added index entries
+        self._added_tuple_index_entries = {}  # added tuple index entries
+        self._deleted_tuple_index_entries = {}  # deleted tuple index entries
+        self._deleted_index_entries = {}  # deleted index_entries
+        self._used_index_values = {}
+        self._unique_name_2_name = {}
+        # dict with index name as key and set/range of valid values for that index
+        # if set/range is empty or index doesn't exist in valid_index_values
+        # then all values are valid
+        self._valid_index_values = {}
 
     def clear_track_data(self):
         """clears data that is tracked"""
@@ -173,7 +177,8 @@ class PivotModel:
         self.set_pivot(rows, columns, frozen, frozen_value)
         self._model_is_updating = False
 
-    def _is_invalid_pivot(self, rows, columns, frozen, frozen_value, index_names):
+    @staticmethod
+    def _is_invalid_pivot(rows, columns, frozen, frozen_value, index_names):
         """checks if given pivot is valid for index_names,
         returns str with error message if invalid else None"""
         error = None
@@ -205,7 +210,7 @@ class PivotModel:
         return tuple_itemgetter(operator.itemgetter(*keys), len(keys))
 
     def _get_unique_index_values(self, index, filter_index, filter_value):
-        """Finds unique index values for index names in index 
+        """Finds unique index values for index names in index
         filtered by index names in filter_index with values in filter_value"""
         if index:
             index_getter = self._index_key_getter(index)
@@ -303,7 +308,8 @@ class PivotModel:
         # self.frozen_value = tuple(value)
         self.set_pivot(self.pivot_rows, self.pivot_columns, self.pivot_frozen, value)
 
-    def _index_entries_without_data(self, pivot_index, pivot_set, filter_index, filter_value, tuple_index_entries):
+    @staticmethod
+    def _index_entries_without_data(pivot_index, pivot_set, filter_index, filter_value, tuple_index_entries):
         """find values in tuple_index_entries that are not present in pivot_set for index in pivot index
         filtered by filter_index and filter_value"""
         # new unique values for pivot_index
@@ -512,7 +518,7 @@ class PivotModel:
         elif key in self._edit_data:
             # data was edited
             value = self._edit_data[key]
-            if value == None:
+            if value is None:
                 # no previous data, delete
                 self._delete_data(key)
             else:
@@ -523,25 +529,19 @@ class PivotModel:
         if self.pivot_rows:
             if self._row_data_header:
                 return self._row_data_header[row]
-            else:
-                return tuple(None for _ in self.pivot_rows)
-        else:
-            if row == 0:
-                return ()
-            else:
-                raise IndexError('index out of range for current row pivot')
+            return tuple(None for _ in self.pivot_rows)
+        if row == 0:
+            return ()
+        raise IndexError('index out of range for current row pivot')
 
     def column(self, col):
         if self.pivot_columns:
             if self._column_data_header:
                 return self._column_data_header[col]
-            else:
-                return tuple(None for _ in self.pivot_columns)
-        else:
-            if col == 0:
-                return ()
-            else:
-                raise IndexError('index out of range for current column pivot')
+            return tuple(None for _ in self.pivot_columns)
+        if col == 0:
+            return ()
+        raise IndexError('index out of range for current column pivot')
 
     @property
     def rows(self):
@@ -579,7 +579,7 @@ class PivotModel:
         delete_values = set()
         delete_values_row = set()
         delete_values_column = set()
-        for tk in self.tuple_index_entries.keys():
+        for tk in self.tuple_index_entries:
             for names, indexes in delete_tuples.items():
                 if set(names) == set(tk):
                     # reorder to same index order
@@ -690,7 +690,7 @@ class PivotModel:
             for u in k_unique:
                 delete_values[self.index_names.index(u)] = deleted_entries
         # delete from tuple indexes
-        for tk in self.tuple_index_entries.keys():
+        for tk in self.tuple_index_entries:
             # real names
             tk_real = [self._unique_name_2_name[t] for t in tk]
             for k, indexes in delete_indexes.items():
@@ -856,7 +856,7 @@ class PivotModel:
                 self._add_index_value(r[i], name)
 
         # update tuple entities
-        for k in self.tuple_index_entries.keys():
+        for k in self.tuple_index_entries:
             if set(k).issubset(index_name + self.pivot_frozen) and not set(self.pivot_frozen).issuperset(k):
                 names = [n for n in index_name + self.pivot_frozen]
                 valid = [(i, names.index(kn)) for i, kn in enumerate(k) if kn in names]
@@ -1181,7 +1181,7 @@ class PivotTableModel(QAbstractTableModel):
         """Roles for data"""
         if index.row() < self._num_headers_row and index.column() < self._num_headers_column:
             return super(PivotTableModel, self).flags(index)
-        elif (
+        if (
             self.model.pivot_rows
             and self.model.pivot_columns
             and index.row() == self._num_headers_row - 1
@@ -1189,9 +1189,7 @@ class PivotTableModel(QAbstractTableModel):
         ):
             # empty line between column headers and data
             return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-        else:
-            return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        return super(PivotTableModel, self).flags(index)
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def index_in_top_left(self, index):
         """check if index is in top left corner, where pivot names are displayed"""
@@ -1307,7 +1305,7 @@ class PivotTableModel(QAbstractTableModel):
                     [[value]], [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
                 )
                 return True
-            elif index.row() == self.rowCount() - 1 and index.column() < self._num_headers_column:
+            if index.row() == self.rowCount() - 1 and index.column() < self._num_headers_column:
                 # add new row if there are any indexes on the row
                 if self.model.pivot_rows:
                     return self.set_index_key(index, value, "row")
@@ -1328,7 +1326,7 @@ class PivotTableModel(QAbstractTableModel):
         return False
 
     def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.DisplayRole or role == Qt.EditRole:
+        if role in (Qt.DisplayRole, Qt.EditRole):
             if self.index_in_data(index):
                 # get values
                 data = self.model.get_pivoted_data(
@@ -1336,15 +1334,14 @@ class PivotTableModel(QAbstractTableModel):
                 )
                 if not data:
                     return ''
-                else:
-                    data = data[0][0]
+                data = data[0][0]
                 return '' if data is None else str(data)
-            elif self.index_in_column_headers(index):
+            if self.index_in_column_headers(index):
                 # draw column header values
                 if not self.model.pivot_rows:
                     # when special case when no pivot_index, no empty line padding
                     return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
-                elif index.row() < self._num_headers_row - 1:
+                if index.row() < self._num_headers_row - 1:
                     return self.model._column_data_header[index.column() - self._num_headers_column][index.row()]
             elif self.index_in_row_headers(index):
                 # draw index values
@@ -1369,9 +1366,8 @@ class PivotTableModel(QAbstractTableModel):
                     value = self.model._edit_data[key]
                     if value:
                         return 'Original data: {}'.format(value)
-                    else:
-                        return 'New data'
-                elif key in self.model._deleted_data:
+                    return 'New data'
+                if key in self.model._deleted_data:
                     return 'Deleted data: {}'.format(self.model._deleted_data[key])
         else:
             return None
@@ -1403,9 +1399,8 @@ class PivotTableModel(QAbstractTableModel):
                 if self.model._edit_data[key] is None:
                     # new data color green
                     return QColor(Qt.green)
-                else:
-                    # edited data color yellow
-                    return QColor(Qt.yellow)
+                # edited data color yellow
+                return QColor(Qt.yellow)
 
         elif self.index_in_column_headers(index):
             # color new indexes or invalid indexes "columns"
@@ -1419,7 +1414,7 @@ class PivotTableModel(QAbstractTableModel):
             ):
                 # color invalid columns
                 return QColor(Qt.red)
-            elif index_entry in self.model._added_index_entries[index_name]:
+            if index_entry in self.model._added_index_entries[index_name]:
                 # color added indexes
                 return QColor(Qt.green)
         elif self.index_in_row_headers(index):
@@ -1432,7 +1427,7 @@ class PivotTableModel(QAbstractTableModel):
             ):
                 # invalid index or duplicate key
                 return QColor(Qt.red)
-            elif index_entry in self.model._added_index_entries[index_name]:
+            if index_entry in self.model._added_index_entries[index_name]:
                 # color added indexes
                 return QColor(Qt.green)
 
@@ -1497,14 +1492,12 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         if source_row < self.sourceModel()._num_headers_row or source_row == self.sourceModel().rowCount() - 1:
             # always display headers
             return True
-        elif source_row in self.sourceModel().model._invalid_row:
+        if source_row in self.sourceModel().model._invalid_row:
             return True
-        else:
-            if self.sourceModel().model.pivot_rows:
-                index = self.sourceModel().model._row_data_header[source_row - self.sourceModel()._num_headers_row]
-                return self.accept_index(index, self.sourceModel().model.pivot_rows)
-            else:
-                return True
+        if self.sourceModel().model.pivot_rows:
+            index = self.sourceModel().model._row_data_header[source_row - self.sourceModel()._num_headers_row]
+            return self.accept_index(index, self.sourceModel().model.pivot_rows)
+        return True
 
     def filterAcceptsColumn(self, source_column, source_parent):
         """Returns true if the item in the column indicated by the given source_column
@@ -1516,16 +1509,12 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         ):
             # always display headers
             return True
-        elif source_column in self.sourceModel().model._invalid_column:
+        if source_column in self.sourceModel().model._invalid_column:
             return True
-        else:
-            if self.sourceModel().model.pivot_columns:
-                index = self.sourceModel().model._column_data_header[
-                    source_column - self.sourceModel()._num_headers_column
-                ]
-                return self.accept_index(index, self.sourceModel().model.pivot_columns)
-            else:
-                return True
+        if self.sourceModel().model.pivot_columns:
+            index = self.sourceModel().model._column_data_header[source_column - self.sourceModel()._num_headers_column]
+            return self.accept_index(index, self.sourceModel().model.pivot_columns)
+        return True
 
 
 class FilterCheckboxListModel(QAbstractListModel):
@@ -1571,18 +1560,15 @@ class FilterCheckboxListModel(QAbstractListModel):
     def _is_all_selected(self):
         if self._is_filtered:
             return len(self._selected_filtered) == len(self._filter_index)
-        else:
-            return len(self._selected) == len(self._data_set) and self._empty_selected
+        return len(self._selected) == len(self._data_set) and self._empty_selected
 
     def rowCount(self, parent=QModelIndex()):
         if self._is_filtered:
             if self._filter_index:
                 return len(self._filter_index) + self._index_offset
-            else:
-                # no filtered values
-                return 0
-        else:
-            return len(self._data) + self._index_offset
+            # no filtered values
+            return 0
+        return len(self._data) + self._index_offset
 
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
@@ -1602,13 +1588,11 @@ class FilterCheckboxListModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             if index.row() > 1:
                 return self._data[i]
-            else:
-                return action_rows[index.row()]
-        elif role == Qt.CheckStateRole:
+            return action_rows[index.row()]
+        if role == Qt.CheckStateRole:
             if index.row() < 2:
                 return action_state[index.row()]
-            else:
-                return self._data[i] in selected
+            return self._data[i] in selected
 
     def click_index(self, index):
         if index.row() == 0:
@@ -1683,8 +1667,7 @@ class FilterCheckboxListModel(QAbstractListModel):
     def get_not_selected(self):
         if self._all_selected:
             return set()
-        else:
-            return self._data_set.difference(self._selected)
+        return self._data_set.difference(self._selected)
 
     def set_filter(self, search_for):
         if search_for and (isinstance(search_for, str) and not search_for.isspace()):

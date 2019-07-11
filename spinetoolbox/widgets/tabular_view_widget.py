@@ -26,12 +26,12 @@ from sqlalchemy.sql import literal_column
 from spinedb_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
 from widgets.custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
-from helpers import fix_name_ambiguity, tuple_itemgetter
-
-# TODO: connect to all add, delete relationship/object classes widgets to this.
 from widgets.custom_qdialog import CommitDialog
+from helpers import fix_name_ambiguity, tuple_itemgetter
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
+
+# TODO: connect to all add, delete relationship/object classes widgets to this.
 
 # TODO: How about moving these constants to config.py?
 ParameterValue = namedtuple('ParameterValue', ['id', 'has_value'])
@@ -94,6 +94,7 @@ class TabularViewForm(QMainWindow):
         self.object_classes = []
         self.objects = []
         self.parameters = []
+        self.parameter_values = {}
         self.relationship_tuple_key = ()
         self.original_index_names = {}
         self.filter_buttons = []
@@ -225,8 +226,8 @@ class TabularViewForm(QMainWindow):
 
     def update_class_list(self):
         """update list_select_class with all object classes and relationship classes"""
-        oc = sorted(set([OBJECT_CLASS + ': ' + oc.name for oc in self.object_classes.values()]))
-        rc = sorted(set([RELATIONSHIP_CLASS + ': ' + oc.name for oc in self.relationship_classes.values()]))
+        oc = sorted(set(OBJECT_CLASS + ': ' + oc.name for oc in self.object_classes.values()))
+        rc = sorted(set(RELATIONSHIP_CLASS + ': ' + oc.name for oc in self.relationship_classes.values()))
         self.ui.list_select_class.addItems(oc + rc)
         self.ui.list_select_class.setCurrentItem(self.ui.list_select_class.item(0))
 
@@ -265,13 +266,13 @@ class TabularViewForm(QMainWindow):
             return True
         if self.model.model._deleted_data:
             return True
-        if any(len(v) > 0 for k, v in self.model.model._added_index_entries.items() if k not in [JSON_TIME_NAME]):
+        if any(bool(v) for k, v in self.model.model._added_index_entries.items() if k not in [JSON_TIME_NAME]):
             return True
-        if any(len(v) > 0 for k, v in self.model.model._deleted_index_entries.items() if k not in [JSON_TIME_NAME]):
+        if any(bool(v) for k, v in self.model.model._deleted_index_entries.items() if k not in [JSON_TIME_NAME]):
             return True
-        if any(len(v) > 0 for k, v in self.model.model._added_tuple_index_entries.items()):
+        if any(bool(v) for v in self.model.model._added_tuple_index_entries.values()):
             return True
-        if any(len(v) > 0 for k, v in self.model.model._deleted_tuple_index_entries.items()):
+        if any(bool(v) for v in self.model.model._deleted_tuple_index_entries.values()):
             return True
         return False
 
@@ -302,8 +303,8 @@ class TabularViewForm(QMainWindow):
         if not self.model.model._edit_data and not self.model.model._deleted_data:
             return {}, set()
         # extract edited keys without time index
-        edited_keys = set(k[:-1] for k in self.model.model._edit_data.keys())
-        edited_keys.update(set(k[:-1] for k in self.model.model._deleted_data.keys()))
+        edited_keys = set(k[:-1] for k in self.model.model._edit_data)
+        edited_keys.update(set(k[:-1] for k in self.model.model._deleted_data))
         # find data for edited keys.
         edited_data = {k: [] for k in edited_keys}
         for k in self.model.model._data:
@@ -467,7 +468,7 @@ class TabularViewForm(QMainWindow):
                     db_edited = True
         elif self.current_class_type == OBJECT_CLASS:
             # find removed and new objects, only keep indexes in data
-            delete_objects = set(index[0] for index in self.model.model._deleted_data.keys())
+            delete_objects = set(index[0] for index in self.model.model._deleted_data)
             add_objects = set(index[0] for index, value in self.model.model._edit_data.items() if value is None)
             if delete_objects:
                 delete_ids = set(self.objects[name].id for name in delete_objects)
@@ -819,7 +820,7 @@ class TabularViewForm(QMainWindow):
         if commit_at_exit == 0:
             # Don't commit session and don't show message box
             return
-        elif commit_at_exit == 1:  # Default
+        if commit_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)
