@@ -996,29 +996,12 @@ class ObjectItem(QGraphicsPixmapItem):
         self.label_item.setTextInteractionFlags(Qt.NoTextInteraction)
         name = self.label_item.toPlainText()
         if self.is_template:
-            try:
-                kwargs = dict(class_id=self.object_class_id, name=name)
-                object_, _ = self._graph_view_form.db_map.add_objects(kwargs, strict=True)
-                self._graph_view_form.add_objects(object_)
-                self.object_name = name
-                self.object_id = object_.first().id
-                if self.template_id_dim:
-                    self.add_into_relationship()
-                self.remove_template()
-            except (SpineDBAPIError, SpineIntegrityError) as e:
-                self._graph_view_form.msg_error.emit(e.msg)
-            finally:
-                self.label_item.set_text(self.object_name)
+            # Add
+            self._graph_view_form.add_object(self, name)
         else:
-            try:
-                kwargs = dict(id=self.object_id, name=name)
-                object_, _ = self._graph_view_form.db_map.update_objects(kwargs, strict=True)
-                self._graph_view_form.update_objects(object_)
-                self.object_name = name
-            except (SpineDBAPIError, SpineIntegrityError) as e:
-                self._graph_view_form.msg_error.emit(e.msg)
-            finally:
-                self.label_item.set_text(self.object_name)
+            # Update
+            self._graph_view_form.update_object(self, name)
+        self.label_item.set_text(self.object_name)
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1133,9 +1116,9 @@ class ObjectItem(QGraphicsPixmapItem):
         items = self.scene().items()
         template_buddies = [x for x in items if isinstance(x, ObjectItem) and template_id in x.template_id_dim]
         if [x for x in template_buddies if x.is_template and x != self]:
-            # There are more templates left, so everything is fine
+            # There are more templates left in the relationship, just chill
             return True
-        # Here, the only template left in the relationship is this item
+        # The only template left in the relationship is this one, try and add the relationship
         return self._graph_view_form.add_relationship(template_id, template_buddies)
 
     def move_related_items_by(self, pos_diff):
@@ -1202,7 +1185,7 @@ class ArcItem(QGraphicsLineItem):
         token_color=QColor(),
         token_object_extent=0,
         token_object_label_color=QColor(),
-        token_object_name_tuple_list=None,
+        token_object_name_tuple_list=(),
     ):
         """Init class."""
         super().__init__()
@@ -1379,6 +1362,8 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self.arc_item = arc_item
         x = 0
         for j, name_tuple in enumerate(object_name_tuples):
+            if not name_tuple:
+                continue
             object_item = SimpleObjectItem(self, 0.875 * object_extent, object_label_color, *name_tuple)
             if j % 2 == 0:
                 y = 0

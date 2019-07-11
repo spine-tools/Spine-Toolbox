@@ -435,7 +435,6 @@ class GraphViewForm(DataStoreForm):
             self.dst_ind_list.append(dst_ind)
             # NOTE: These arcs correspond to template arcs.
             relationship_class_id = item.relationship_class_id
-            object_class_name_list = item.object_class_name_list
             self.arc_object_id_lists.append("")  # TODO: is this one filled when creating the relationship?
             self.arc_relationship_class_ids.append(relationship_class_id)
             # Label don't matter
@@ -806,6 +805,25 @@ class GraphViewForm(DataStoreForm):
             object_item.moveBy(x - center.x(), y - center.y())
             object_item.move_related_items_by(QPointF(x, y) - center)
 
+    def add_object(self, object_item, name):
+        """Try and add object given an object item and a name."""
+        item = dict(class_id=object_item.object_class_id, name=name)
+        object_d = {self.db_map: (item,)}
+        if self.add_objects(object_d):
+            object_item.object_name = name
+            object_ = self.db_map.query(self.db_map.object_sq).filter_by(name=name).one()
+            object_item.object_id = object_.id
+            if object_item.template_id_dim:
+                object_item.add_into_relationship()
+            object_item.remove_template()
+
+    def update_object(self, object_item, name):
+        """Try and update object given an object item and a name."""
+        item = dict(id=object_item.object_id, name=name)
+        object_d = {self.db_map: (item,)}
+        if self.update_objects(object_d):
+            object_item.object_name = name
+
     @busy_effect
     def add_relationship(self, template_id, object_items):
         """Try and add relationship given a template id and a list of object items."""
@@ -819,7 +837,7 @@ class GraphViewForm(DataStoreForm):
             if not object_name:
                 logging.debug("can't find name %s", object_name)
                 return False
-            object_ = self.db_map.object_list().filter_by(name=object_name).one_or_none()
+            object_ = self.db_map.query(self.db_map.object_sq).filter_by(name=object_name).one_or_none()
             if not object_:
                 logging.debug("can't find object %s", object_name)
                 return False
@@ -830,9 +848,9 @@ class GraphViewForm(DataStoreForm):
             return False
         name = self.relationship_class_dict[template_id]["name"] + "_" + "__".join(object_name_list)
         class_id = self.relationship_class_dict[template_id]["id"]
-        wide_kwargs = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
+        item = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
         try:
-            wide_relationships, _ = self.db_map.add_wide_relationships(wide_kwargs, strict=True)
+            wide_relationships, _ = self.db_map.add_wide_relationships(item, strict=True)
             for item in object_items:
                 del item.template_id_dim[template_id]
             items = self.ui.graphicsView.scene().items()
@@ -849,20 +867,16 @@ class GraphViewForm(DataStoreForm):
             self.msg_error.emit(e.msg)
             return False
 
-    def add_object_classes(self, object_classes):
-        """Insert new object classes."""
-        super().add_object_classes(object_classes)
-        for object_class in object_classes:
+    def add_object_classses_to_models(self, db_map, added):
+        super().add_object_classses_to_models(db_map, added)
+        for object_class in added:
             self.object_class_list_model.add_object_class(object_class)
 
-    def add_relationship_classes(self, relationship_classes):
+    def add_relationship_classes_to_models(self, db_map, added):
         """Insert new relationship classes."""
-        for wide_relationship_class in relationship_classes:
-            self.relationship_class_list_model.add_relationship_class(wide_relationship_class)
-        self.commit_available.emit(True)
-        relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
-        msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
-        self.msg.emit(msg)
+        super().add_relationship_classes_to_models(db_map, added)
+        for relationship_class in added:
+            self.relationship_class_list_model.add_relationship_class(relationship_class)
 
     def show_graph_view_context_menu(self, global_pos):
         """Show context menu for graphics view."""

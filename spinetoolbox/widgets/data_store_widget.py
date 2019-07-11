@@ -551,7 +551,7 @@ class DataStoreForm(QMainWindow):
             if not added.count():
                 continue
             self.icon_mngr.setup_object_pixmaps(added)
-            self.object_tree_model.add_object_classes(db_map, added)
+            self.add_object_classses_to_models(db_map, added)
             added_names.update(x.name for x in added)
         if not added_names:
             return False
@@ -570,6 +570,9 @@ class DataStoreForm(QMainWindow):
                 if is_selected(obj_cls_index):
                     self.selected_obj_tree_indexes['object_class'][obj_cls_index] = None
         return True
+
+    def add_object_classses_to_models(self, db_map, added):
+        self.object_tree_model.add_object_classes(db_map, added)
 
     def add_objects(self, object_d):
         """Insert new objects."""
