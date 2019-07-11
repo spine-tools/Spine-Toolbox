@@ -34,7 +34,7 @@ class PivotModel:
         self._edit_data = {}  # dictionary of edited data, values are original data
         self._deleted_data = {}  # dictionary of deleted data, values are original data
         self._data_frozen = {}  # data filtered with frozen_value
-        self._data_frozen_index_values = set() # valid frozen_value values for current pivot_frozen
+        self._data_frozen_index_values = set()  # valid frozen_value values for current pivot_frozen
         self._index_types = ()  # type of the indexes in _data
         self.index_names = ()  # names of the indexes in _data, can not contain duplicates
         self.index_real_names = ()  # real names of indexes, can contain duplicates
@@ -1486,9 +1486,7 @@ class PivotTableSortFilterProxy(QSortFilterProxyModel):
         if source_column in self.sourceModel().model._invalid_column:
             return True
         if self.sourceModel().model.pivot_columns:
-            index = self.sourceModel().model._column_data_header[
-                source_column - self.sourceModel()._num_headers_column
-            ]
+            index = self.sourceModel().model._column_data_header[source_column - self.sourceModel()._num_headers_column]
             return self.accept_index(index, self.sourceModel().model.pivot_columns)
         return True
 

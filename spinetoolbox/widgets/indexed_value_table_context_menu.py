@@ -55,6 +55,7 @@ def handle_table_context_menu(click_pos, table_view, model, parent_widget):
 
 def _remove_rows(selected_rows, model):
     """Packs consecutive rows into a single removeRows call."""
+
     class RowPack:
         def __init__(self, first_row, count):
             self.first_row = first_row

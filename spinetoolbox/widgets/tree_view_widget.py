@@ -665,7 +665,7 @@ class TreeViewForm(DataStoreForm):
         self.do_update_filter()
 
     def update_selected_object_class_ids(self):
-        """Update set of selected object class id, by combining selectiong from tree
+        """Update set of selected object class id, by combining selections from tree
         and parameter tag.
         """
         self.selected_object_class_ids = set(

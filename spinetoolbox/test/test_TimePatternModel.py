@@ -67,7 +67,7 @@ class TestTimePatternModel(unittest.TestCase):
         numpy.testing.assert_equal(model.value.values, np.array([7.0]))
 
     def test_remove_rows_from_the_middle(self):
-        model = TimePatternModel(TimePattern(['a', 'b', 'c'],[-5.0, 3.0, 7.0]))
+        model = TimePatternModel(TimePattern(['a', 'b', 'c'], [-5.0, 3.0, 7.0]))
         self.assertTrue(model.removeRows(1, 1))
         self.assertEqual(len(model.value), 2)
         self.assertEqual(model.value.indexes, ['a', 'c'])
