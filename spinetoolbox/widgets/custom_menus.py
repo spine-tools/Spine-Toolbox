@@ -730,7 +730,7 @@ class PivotTableModelMenu(QMenu):
         for i in indexes:
             index_name = None
             if self._model.index_in_column_headers(i):
-                value = self.pivot_table_model.data(i)
+                value = self._model.data(i)
                 if value:
                     index_name = self._model.model.pivot_columns[i.row()]
             elif self._model.index_in_row_headers(i):
