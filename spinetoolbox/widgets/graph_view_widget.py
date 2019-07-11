@@ -23,15 +23,14 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QToolButton, QApplication, QGraphicsScene, QGraphicsRectItem, QAction, QWidgetAction
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QSize
-from PySide2.QtGui import QFontMetrics, QIcon, QPalette
-from ui.graph_view_form import Ui_MainWindow
+from PySide2.QtGui import QIcon, QPalette
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
+from ui.graph_view_form import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
-from treeview_models import ObjectTreeModel
 from widgets.custom_qwidgets import ZoomWidget
 from widgets.parameter_value_editor import ParameterValueEditor
-from treeview_models import ObjectClassListModel, RelationshipClassListModel
+from treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
 
@@ -364,8 +363,7 @@ class GraphViewForm(DataStoreForm):
             object_id_list = relationship.object_id_list
             split_object_id_list = [int(x) for x in object_id_list.split(",")]
             split_object_name_list = relationship.object_name_list.split(",")
-            for i in range(len(split_object_id_list)):
-                src_object_id = split_object_id_list[i]
+            for i, src_object_id in enumerate(split_object_id_list):
                 try:
                     dst_object_id = split_object_id_list[i + 1]
                 except IndexError:
@@ -479,9 +477,9 @@ class GraphViewForm(DataStoreForm):
             mask = np.mod(range(N - n), 2 * n) < n
             s1 = pairs[mask]
             s2 = pairs[~mask]
-            if len(s1) > 0:
+            if s1:
                 sets.append(s1)
-            if len(s2) > 0:
+            if s2:
                 sets.append(s2)
         return sets
 
@@ -710,7 +708,7 @@ class GraphViewForm(DataStoreForm):
             scene = self.new_scene()
         self.extend_scene_bg()
         scene_pos = self.ui.graphicsView.mapToScene(pos)
-        data = eval(text)
+        data = eval(text)  # pylint: disable=eval-used
         if data["type"] == "object_class":
             class_id = data["id"]
             class_name = data["name"]
@@ -768,10 +766,9 @@ class GraphViewForm(DataStoreForm):
         if d is None:
             return [], []
         x, y = self.vertex_coordinates(d)
-        for i in range(len(object_name_list)):
+        for i, object_name in enumerate(object_name_list):
             x_ = x[i]
             y_ = y[i]
-            object_name = object_name_list[i]
             object_class_name = object_class_name_list[i]
             try:
                 object_class_id = object_class_id_list[i]
@@ -781,8 +778,7 @@ class GraphViewForm(DataStoreForm):
                 self, object_name, object_class_id, object_class_name, x_, y_, extent, label_color=label_color
             )
             object_items.append(object_item)
-        for i in range(len(object_items)):
-            src_item = object_items[i]
+        for i, src_item in enumerate(object_items):
             try:
                 dst_item = object_items[i + 1]
             except IndexError:
@@ -825,16 +821,16 @@ class GraphViewForm(DataStoreForm):
             item = object_items[ind]
             object_name = item.object_name
             if not object_name:
-                logging.debug("can't find name {}".format(object_name))
+                logging.debug("can't find name %s", object_name)
                 return False
             object_ = self.db_map.object_list().filter_by(name=object_name).one_or_none()
             if not object_:
-                logging.debug("can't find object {}".format(object_name))
+                logging.debug("can't find object %s", object_name)
                 return False
             object_id_list.append(object_.id)
             object_name_list.append(object_name)
         if len(object_id_list) < 2:
-            logging.debug("too short {}".format(len(object_id_list)))
+            logging.debug("too short %s", len(object_id_list))
             return False
         name = self.relationship_class_dict[template_id]["name"] + "_" + "__".join(object_name_list)
         class_id = self.relationship_class_dict[template_id]["id"]
@@ -850,7 +846,7 @@ class GraphViewForm(DataStoreForm):
                 item.template_id = None
                 item.object_id_list = ",".join([str(x) for x in object_id_list])
             self.commit_available.emit(True)
-            msg = "Successfully added new relationship '{}'.".format(wide_relationship.one().name)
+            msg = "Successfully added new relationship '{}'.".format(wide_relationships.one().name)
             self.msg.emit(msg)
             return True
         except (SpineIntegrityError, SpineDBAPIError) as e:
@@ -863,12 +859,12 @@ class GraphViewForm(DataStoreForm):
         for object_class in object_classes:
             self.object_class_list_model.add_object_class(object_class)
 
-    def add_relationship_classes(self, wide_relationship_classes):
+    def add_relationship_classes(self, relationship_classes):
         """Insert new relationship classes."""
-        for wide_relationship_class in wide_relationship_classes:
+        for wide_relationship_class in relationship_classes:
             self.relationship_class_list_model.add_relationship_class(wide_relationship_class)
         self.commit_available.emit(True)
-        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
+        relationship_class_name_list = "', '".join([x.name for x in relationship_classes])
         msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
         self.msg.emit(msg)
 
