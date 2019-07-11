@@ -219,8 +219,13 @@ class ObjectParameterValueDelegate(ParameterDelegate):
         header = index.model().horizontal_header_labels()
         h = header.index
         db_name = index.sibling(index.row(), h('database')).data(Qt.DisplayRole)
-        db_map = self._parent.db_name_to_map[db_name]
-        if header[index.column()] == 'object_class_name':
+        db_map = self._parent.db_name_to_map.get(db_name)
+        if header[index.column()] == 'database':
+            editor = SearchBarEditor(self._parent, parent)
+            editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
+        elif not db_map:
+            editor = CustomLineEditor(parent)
+        elif header[index.column()] == 'object_class_name':
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
@@ -255,10 +260,6 @@ class ObjectParameterValueDelegate(ParameterDelegate):
                 editor = JSONEditor(self._parent, parent)
                 editor.currentChanged.connect(self._handle_json_editor_current_changed)
                 editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
-        elif header[index.column()] == 'database':
-            editor = SearchBarEditor(self._parent, parent)
-            all_databases = list(self._parent.db_name_to_map.keys())
-            editor.set_data(index.data(Qt.EditRole), all_databases)
         else:
             editor = CustomLineEditor(parent)
         model = index.model()
@@ -280,8 +281,13 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         db_name = index.sibling(index.row(), header.index('database')).data(Qt.DisplayRole)
-        db_map = self._parent.db_name_to_map[db_name]
-        if header[index.column()] == 'object_class_name':
+        db_map = self._parent.db_name_to_map.get(db_name)
+        if header[index.column()] == 'database':
+            editor = SearchBarEditor(self._parent, parent)
+            editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
+        elif not db_map:
+            editor = CustomLineEditor(parent)
+        elif header[index.column()] == 'object_class_name':
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
@@ -301,10 +307,6 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.wide_parameter_value_list_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
-        elif header[index.column()] == 'database':
-            editor = SearchBarEditor(self._parent, parent)
-            all_databases = list(self._parent.db_name_to_map.keys())
-            editor.set_data(index.data(Qt.EditRole), all_databases)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
@@ -328,8 +330,13 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
         header = index.model().horizontal_header_labels()
         h = header.index
         db_name = index.sibling(index.row(), h('database')).data(Qt.DisplayRole)
-        db_map = self._parent.db_name_to_map[db_name]
-        if header[index.column()] == 'relationship_class_name':
+        db_map = self._parent.db_name_to_map.get(db_name)
+        if header[index.column()] == 'database':
+            editor = SearchBarEditor(self._parent, parent)
+            editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
+        elif not db_map:
+            editor = CustomLineEditor(parent)
+        elif header[index.column()] == 'relationship_class_name':
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
@@ -375,7 +382,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
                 editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
         elif header[index.column()] == 'database':
             editor = SearchBarEditor(self._parent, parent)
-            all_databases = list(self._parent.db_name_to_map.keys())
+            all_databases = self._parent.db_names
             editor.set_data(index.data(Qt.EditRole), all_databases)
         else:
             editor = CustomLineEditor(parent)
@@ -399,8 +406,13 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         db_name = index.sibling(index.row(), header.index('database')).data(Qt.DisplayRole)
-        db_map = self._parent.db_name_to_map[db_name]
-        if header[index.column()] == 'relationship_class_name':
+        db_map = self._parent.db_name_to_map.get(db_name)
+        if header[index.column()] == 'database':
+            editor = SearchBarEditor(self._parent, parent)
+            editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
+        elif not db_map:
+            editor = CustomLineEditor(parent)
+        elif header[index.column()] == 'relationship_class_name':
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
@@ -422,7 +434,7 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'database':
             editor = SearchBarEditor(self._parent, parent)
-            all_databases = list(self._parent.db_name_to_map.keys())
+            all_databases = self._parent.db_names
             editor.set_data(index.data(Qt.EditRole), all_databases)
         else:
             editor = CustomLineEditor(parent)

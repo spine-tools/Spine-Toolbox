@@ -1619,7 +1619,9 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map[db_name]
+            db_map = self._parent.db_name_to_map.get(db_name)
+            if not db_map:
+                continue
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             object_name = self.index(row, object_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
@@ -1741,7 +1743,9 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map[db_name]
+            db_map = self._parent.db_name_to_map.get(db_name)
+            if not db_map:
+                continue
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             object_name_list = self.index(row, object_name_list_column).data(Qt.DisplayRole)
@@ -1869,7 +1873,9 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map[db_name]
+            db_map = self._parent.db_name_to_map.get(db_name)
+            if not db_map:
+                continue
             parameter_id = self.index(row, parameter_id_column).data(Qt.DisplayRole)
             if parameter_id is None:
                 continue
@@ -1944,7 +1950,9 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
         parameter_value_list_dict = {}
         for row in {ind.row() for ind in indexes}:
             db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map[db_name]
+            db_map = self._parent.db_name_to_map.get(db_name)
+            if not db_map:
+                continue
             object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
             parameter_tag_list = self.index(row, parameter_tag_list_column).data(Qt.DisplayRole)
@@ -2018,7 +2026,9 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
             db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map[db_name]
+            db_map = self._parent.db_name_to_map.get(db_name)
+            if not db_map:
+                continue
             relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
             object_class_name_list = self.index(row, object_class_name_list_column).data(Qt.DisplayRole)
             parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
