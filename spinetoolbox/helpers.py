@@ -383,7 +383,8 @@ def strip_json_data(json_data, maxlen):
 
 
 def get_db_map(url, upgrade=False):
-    """Return a DiffDatabaseMapping instance to work with.
+    """Returns a DiffDatabaseMapping instance from url.
+    If the db is not the latest version, asks the user if they want to upgrade it.
     """
     try:
         db_map = do_get_db_map(url, upgrade)
@@ -412,8 +413,21 @@ def get_db_map(url, upgrade=False):
 
 @busy_effect
 def do_get_db_map(url, upgrade):
-    """Separate method so 'busy_effect' don't overlay any message box."""
+    """Returns a DiffDatabaseMapping instance from url.
+    Called by `get_db_map`.
+    """
     return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
+
+
+def int_list_to_row_count_tuples(int_list):
+    """Breaks a list of integers into a list of tuples (row, count) corresponding
+    to chunks of successive elements.
+    """
+    sorted_list = sorted(set(int_list))
+    break_points = [k + 1 for k in range(len(sorted_list) - 1) if sorted_list[k] + 1 != sorted_list[k + 1]]
+    break_points = [0] + break_points + [len(sorted_list)]
+    ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
+    return [(sorted_list[start], stop - start) for start, stop in ranges]
 
 
 class IconManager:

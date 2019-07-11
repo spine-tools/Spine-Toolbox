@@ -2463,6 +2463,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
 
     def remove_objects(self, db_map, objects):
         """Remove objects from model."""
+        self.layoutAboutToBeChanged.emit()
         object_id_column = self.header.index("object_id")
         object_ids = {}
         for object_ in objects:
@@ -2476,24 +2477,31 @@ class ObjectParameterValueModel(ObjectParameterModel):
                 object_id = source_model._main_data[row][object_id_column]
                 if object_id in class_object_ids:
                     source_model.removeRows(row, 1)
+        self.layoutChanged.emit()
 
-    def remove_parameters(self, parameter_dict):
+    def remove_parameters(self, db_map, parameters):
         """Remove parameters from model."""
+        self.layoutAboutToBeChanged.emit()
         parameter_id_column = self.header.index("parameter_id")
+        parameter_ids = {}
+        for parameter in parameters:
+            parameter_ids.setdefault((db_map, parameter['object_class_id']), set()).add(parameter['id'])
         for object_class_id, model in self.sub_models:
-            if object_class_id not in parameter_dict:
+            if object_class_id not in parameter_ids:
                 continue
-            parameter_ids = parameter_dict[object_class_id]
+            class_parameter_ids = parameter_ids[object_class_id]
             source_model = model.sourceModel()
             for row in reversed(range(source_model.rowCount())):
                 parameter_id = source_model._main_data[row][parameter_id_column]
-                if parameter_id in parameter_ids:
+                if parameter_id in class_parameter_ids:
                     source_model.removeRows(row, 1)
+        self.layoutChanged.emit()
 
     def move_rows_to_sub_models(self, rows):
         """Move rows from empty row model to the a new sub_model.
         Called when the empty row model succesfully inserts new data in the db.
         """
+        self.layoutAboutToBeChanged.emit()
         db_column = self.header.index('database')
         object_class_id_column = self.header.index("object_class_id")
         parameter_definition_id_column = self.header.index('parameter_id')
@@ -2514,7 +2522,7 @@ class ObjectParameterValueModel(ObjectParameterModel):
             self.sub_models.append((object_class_id, model))
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
-        self.invalidate_filter()
+        self.layoutChanged.emit()
 
 
 class ObjectParameterDefinitionModel(ObjectParameterModel):
@@ -2570,6 +2578,7 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         """Move rows from empty row model to a new sub_model.
         Called when the empty row model succesfully inserts new data in the db.
         """
+        self.layoutAboutToBeChanged.emit()
         db_column = self.header.index("database")
         object_class_id_column = self.header.index("object_class_id")
         parameter_definition_id_column = self.header.index('id')
@@ -2587,13 +2596,15 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
             self.sub_models.append((object_class_id, model))
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
-        self.invalidate_filter()
+        self.layoutChanged.emit()
 
-    def clear_parameter_value_lists(self, value_list_ids):
+    def clear_parameter_value_lists(self, db_map, value_list_ids):
         """Clear parameter value_lists from model."""
         value_list_id_column = self.header.index("value_list_id")
         value_list_name_column = self.header.index("value_list_name")
-        for _, model in self.sub_models:
+        for class_id, model in self.sub_models:
+            if class_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 value_list_id = row_data[value_list_id_column]
                 if value_list_id in value_list_ids:
@@ -3070,6 +3081,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         """Move rows from empty row model to a new sub_model.
         Called when the empty row model succesfully inserts new data in the db.
         """
+        self.layoutAboutToBeChanged.emit()
         db_column = self.header.index("database")
         relationship_class_id_column = self.header.index("relationship_class_id")
         parameter_definition_id_column = self.header.index('parameter_id')
@@ -3090,7 +3102,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
             self.sub_models.append((relationship_class_id, model))
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
-        self.invalidate_filter()
+        self.layoutChanged.emit()
 
     def rename_objects(self, db_map, objects):
         """Rename objects in model."""
@@ -3110,6 +3122,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
 
     def remove_objects(self, db_map, objects):
         """Remove objects from model."""
+        self.layoutAboutToBeChanged.emit()
         object_id_list_column = self.header.index("object_id_list")
         object_ids = {x['id'] for x in objects}
         for relationship_class_id, model in self.sub_models:
@@ -3120,9 +3133,11 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                 object_id_list = source_model._main_data[row][object_id_list_column]
                 if object_ids.intersection(int(x) for x in object_id_list.split(',')):
                     source_model.removeRows(row, 1)
+        self.layoutChanged.emit()
 
     def remove_relationships(self, db_map, relationships):
         """Remove relationships from model."""
+        self.layoutAboutToBeChanged.emit()
         relationship_id_column = self.header.index("relationship_id")
         relationship_ids = {}
         for relationship in relationships:
@@ -3136,6 +3151,7 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                 relationship_id = source_model._main_data[row][relationship_id_column]
                 if relationship_id in class_relationship_ids:
                     source_model.removeRows(row, 1)
+        self.layoutChanged.emit()
 
     def rename_parameter(self, parameter_id, relationship_class_id, new_name):
         """Rename single parameter in model."""
@@ -3148,18 +3164,23 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
                 if row_data[parameter_id_column] == parameter_id:
                     row_data[parameter_name_column] = new_name
 
-    def remove_parameters(self, parameter_dict):
+    def remove_parameters(self, db_map, parameters):
         """Remove parameters from model."""
+        self.layoutAboutToBeChanged.emit()
         parameter_id_column = self.header.index("parameter_id")
+        parameter_ids = {}
+        for parameter in parameters:
+            parameter_ids.setdefault((db_map, parameter['relationship_class_id']), set()).add(parameter['id'])
         for relationship_class_id, model in self.sub_models:
-            if relationship_class_id not in parameter_dict:
+            if relationship_class_id not in parameter_ids:
                 continue
-            parameter_ids = parameter_dict[relationship_class_id]
+            class_parameter_ids = parameter_ids[relationship_class_id]
             source_model = model.sourceModel()
             for row in reversed(range(source_model.rowCount())):
                 parameter_id = source_model._main_data[row][parameter_id_column]
-                if parameter_id in parameter_ids:
+                if parameter_id in class_parameter_ids:
                     source_model.removeRows(row, 1)
+        self.layoutChanged.emit()
 
 
 class RelationshipParameterDefinitionModel(RelationshipParameterModel):
@@ -3222,6 +3243,7 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         """Move rows from empty row model to a new sub_model.
         Called when the empty row model succesfully inserts new data in the db.
         """
+        self.layoutAboutToBeChanged.emit()
         db_column = self.header.index("database")
         relationship_class_id_column = self.header.index("relationship_class_id")
         parameter_definition_id_column = self.header.index('id')
@@ -3239,13 +3261,15 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
             self.sub_models.append((relationship_class_id, model))
         for row in reversed(rows):
             self.empty_row_model.removeRows(row, 1)
-        self.invalidate_filter()
+        self.layoutChanged.emit()
 
-    def clear_parameter_value_lists(self, value_list_ids):
+    def clear_parameter_value_lists(self, db_map, value_list_ids):
         """Clear parameter value_lists from model."""
         value_list_id_column = self.header.index("value_list_id")
         value_list_name_column = self.header.index("value_list_name")
-        for _, model in self.sub_models:
+        for class_id, model in self.sub_models:
+            if class_id[0] != db_map:
+                continue
             for row_data in model.sourceModel()._main_data:
                 value_list_id = row_data[value_list_id_column]
                 if value_list_id in value_list_ids:

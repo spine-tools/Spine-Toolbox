@@ -37,7 +37,7 @@ from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect
+from helpers import busy_effect, int_list_to_row_count_tuples
 from plotting import plot_selection, PlottingError
 
 
@@ -525,7 +525,8 @@ class TreeViewForm(DataStoreForm):
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
-        self.set_default_parameter_rows(selected.indexes()[-1])
+        index = selected.indexes()[-1] if selected.indexes() else None
+        self.set_default_parameter_rows(index)
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_obj_tree_indexes[item_type].pop(index)
@@ -548,7 +549,8 @@ class TreeViewForm(DataStoreForm):
     def _handle_relationship_tree_selection_changed(self, selected, deselected):
         """Called when the relationship tree selection changes.
         Set default rows and apply filters on parameter models."""
-        self.set_default_parameter_rows(selected.indexes()[-1])
+        index = selected.indexes()[-1] if selected.indexes() else None
+        self.set_default_parameter_rows(index)
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_rel_tree_indexes[item_type].pop(index)
@@ -1008,119 +1010,160 @@ class TreeViewForm(DataStoreForm):
 
     @busy_effect
     def remove_object_parameter_values(self):
-        """Remove selection rows from object parameter value table."""
+        """Remove selected rows from object parameter value table."""
         selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        row_dict = dict()
+        top_bottom = list()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_dict[top] = bottom - top + 1
+            top_bottom.append((top, bottom))
         model = self.object_parameter_value_model
+        db_column = model.horizontal_header_labels().index("database")
+        db_map_rows = dict()
+        for top, bottom in top_bottom:
+            for row in range(top, bottom + 1):
+                db_name = model.index(row, db_column).data()
+                db_map = self.db_name_to_map.get(db_name)
+                if not db_map:
+                    continue
+                db_map_rows.setdefault(db_map, set()).add(row)
         id_column = model.horizontal_header_labels().index("id")
-        parameter_value_ids = set()
-        for row, count in row_dict.items():
-            parameter_value_ids.update(model.index(i, id_column).data() for i in range(row, row + count))
-        try:
-            self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            for row in reversed(sorted(row_dict)):
-                count = row_dict[row]
-                self.object_parameter_value_model.removeRows(row, count)
+        removed = 0
+        for db_map, rows in db_map_rows.items():
+            ids = {model.index(i, id_column).data() for i in rows}
+            try:
+                db_map.remove_items(parameter_value_ids=ids)
+                for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
+                    model.removeRows(row, count)
+                removed += len(rows)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+        if removed:
             self.commit_available.emit(True)
-            self.msg.emit("Successfully removed parameter values.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            self.msg.emit("Successfully removed {} parameter value(s).".format(removed))
 
     @busy_effect
     def remove_relationship_parameter_values(self):
-        """Remove selection rows from relationship parameter value table."""
+        """Remove selected rows from relationship parameter value table."""
         selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
-        row_dict = dict()
+        top_bottom = list()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_dict[top] = bottom - top + 1
+            top_bottom.append((top, bottom))
         model = self.relationship_parameter_value_model
+        db_column = model.horizontal_header_labels().index("database")
+        db_map_rows = dict()
+        for top, bottom in top_bottom:
+            for row in range(top, bottom + 1):
+                db_name = model.index(row, db_column).data()
+                db_map = self.db_name_to_map.get(db_name)
+                if not db_map:
+                    continue
+                db_map_rows.setdefault(db_map, set()).add(row)
         id_column = model.horizontal_header_labels().index("id")
-        parameter_value_ids = set()
-        for row, count in row_dict.items():
-            parameter_value_ids.update(model.index(i, id_column).data() for i in range(row, row + count))
-        try:
-            self.db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            for row in reversed(sorted(row_dict)):
-                count = row_dict[row]
-                self.relationship_parameter_value_model.removeRows(row, count)
+        removed = 0
+        for db_map, rows in db_map_rows.items():
+            ids = {model.index(i, id_column).data() for i in rows}
+            try:
+                db_map.remove_items(parameter_value_ids=ids)
+                for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
+                    model.removeRows(row, count)
+                removed += len(rows)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+        if removed:
             self.commit_available.emit(True)
-            self.msg.emit("Successfully removed parameter values.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            self.msg.emit("Successfully removed {} parameter value(s).".format(removed))
 
     @busy_effect
     def remove_object_parameter_definitions(self):
-        """Remove selection rows from object parameter definition table."""
+        """Remove selected rows from object parameter definition table."""
         selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        row_dict = dict()
+        top_bottom = list()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_dict[top] = bottom - top + 1
+            top_bottom.append((top, bottom))
         model = self.object_parameter_definition_model
-        parameter_definition_ids = set()
-        parameter_dict = dict()
-        header = model.horizontal_header_labels()
-        object_class_id_column = header.index("object_class_id")
-        id_column = header.index("id")
-        for row, count in row_dict.items():
-            for i in range(row, row + count):
-                object_class_id = model.index(i, object_class_id_column).data(Qt.DisplayRole)
-                id_ = model.index(i, id_column).data(Qt.DisplayRole)
-                parameter_definition_ids.add(id_)
-                parameter_dict.setdefault(object_class_id, set()).add(id_)
-        try:
-            self.db_map.remove_items(parameter_definition_ids=parameter_definition_ids)
-            for row in reversed(sorted(row_dict)):
-                count = row_dict[row]
-                self.object_parameter_definition_model.removeRows(row, count)
-            self.object_parameter_value_model.remove_parameters(parameter_dict)
+        db_column = model.horizontal_header_labels().index("database")
+        db_map_rows = dict()
+        for top, bottom in top_bottom:
+            for row in range(top, bottom + 1):
+                db_name = model.index(row, db_column).data()
+                db_map = self.db_name_to_map.get(db_name)
+                if not db_map:
+                    continue
+                db_map_rows.setdefault(db_map, set()).add(row)
+        id_column = model.horizontal_header_labels().index("id")
+        obj_cls_id_column = model.horizontal_header_labels().index("object_class_id")
+        removed = 0
+        for db_map, rows in db_map_rows.items():
+            parameters = [
+                {"object_class_id": model.index(i, obj_cls_id_column).data(), "id": model.index(i, id_column).data()}
+                for i in rows
+            ]
+            try:
+                db_map.remove_items(parameter_value_ids={x['id'] for x in parameters})
+                for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
+                    model.removeRows(row, count)
+                self.object_parameter_value_model.remove_parameters(db_map, parameters)
+                removed += len(rows)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+        if removed:
             self.commit_available.emit(True)
-            self.msg.emit("Successfully removed parameter definitions.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            self.msg.emit("Successfully removed {} parameter definition(s).".format(removed))
 
     @busy_effect
     def remove_relationship_parameter_definitions(self):
-        """Remove selection rows from relationship parameter definition table."""
+        """Remove selected rows from relationship parameter definition table."""
         selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
-        row_dict = dict()
+        top_bottom = list()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            row_dict[top] = bottom - top + 1
+            top_bottom.append((top, bottom))
         model = self.relationship_parameter_definition_model
-        parameter_definition_ids = set()
-        parameter_dict = dict()
-        header = model.horizontal_header_labels()
-        relationship_class_id_column = header.index("relationship_class_id")
-        id_column = header.index("id")
-        for row, count in row_dict.items():
-            for i in range(row, row + count):
-                relationship_class_id = model.index(i, relationship_class_id_column).data(Qt.DisplayRole)
-                id_ = model.index(i, id_column).data(Qt.DisplayRole)
-                parameter_definition_ids.add(id_)
-                parameter_dict.setdefault(relationship_class_id, set()).add(id_)
-        try:
-            self.db_map.remove_items(parameter_definition_ids=parameter_definition_ids)
-            for row in reversed(sorted(row_dict)):
-                count = row_dict[row]
-                self.relationship_parameter_definition_model.removeRows(row, count)
-            self.relationship_parameter_value_model.remove_parameters(parameter_dict)
+        db_column = model.horizontal_header_labels().index("database")
+        db_map_rows = dict()
+        for top, bottom in top_bottom:
+            for row in range(top, bottom + 1):
+                db_name = model.index(row, db_column).data()
+                db_map = self.db_name_to_map.get(db_name)
+                if not db_map:
+                    continue
+                db_map_rows.setdefault(db_map, set()).add(row)
+        id_column = model.horizontal_header_labels().index("id")
+        rel_cls_id_column = model.horizontal_header_labels().index("relationship_class_id")
+        removed = 0
+        for db_map, rows in db_map_rows.items():
+            parameters = [
+                {
+                    "relationship_class_id": model.index(i, rel_cls_id_column).data(),
+                    "id": model.index(i, id_column).data(),
+                }
+                for i in rows
+            ]
+            try:
+                db_map.remove_items(parameter_value_ids={x['id'] for x in parameters})
+                for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
+                    model.removeRows(row, count)
+                self.relationship_parameter_value_model.remove_parameters(db_map, parameters)
+                removed += len(rows)
+            except SpineDBAPIError as e:
+                self.msg_error.emit(e.msg)
+                continue
+        if removed:
             self.commit_available.emit(True)
-            self.msg.emit("Successfully removed parameter definitions.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+            self.msg.emit("Successfully removed {} parameter definition(s).".format(removed))
 
     @busy_effect
     def remove_parameter_value_lists(self):
@@ -1167,6 +1210,8 @@ class TreeViewForm(DataStoreForm):
                     db_map.update_wide_parameter_value_lists(*to_update)
                 if to_remove:
                     db_map.remove_items(parameter_value_list_ids=to_remove)
+                self.object_parameter_definition_model.clear_parameter_value_lists(db_map, to_remove)
+                self.relationship_parameter_definition_model.clear_parameter_value_lists(db_map, to_remove)
             except SpineDBAPIError as e:
                 self._tree_view_form.msg_error.emit(e.msg)
                 return
@@ -1176,7 +1221,5 @@ class TreeViewForm(DataStoreForm):
         for parent, indexes in value_indexes.items():
             for row in sorted([ind.row() for ind in indexes], reverse=True):
                 self.parameter_value_list_model.removeRow(row, parent)
-        # self.object_parameter_definition_model.clear_parameter_value_lists(removed_ids)
-        # self.relationship_parameter_definition_model.clear_parameter_value_lists(removed_ids)
         self.commit_available.emit(True)
         self.msg.emit("Successfully removed parameter value list(s).")
