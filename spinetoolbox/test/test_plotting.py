@@ -160,6 +160,16 @@ class TestPlotting(unittest.TestCase):
         selected_indexes.append(model.index(2, 1))
         self.assertRaises(PlottingError, plot_selection, model, selected_indexes)
 
+    def test_plot_single_plain_number(self):
+        """Test that a selection containing a single plain number gets plotted."""
+        model = _MockTreeGraphViewModel()
+        selected_indexes = list()
+        selected_indexes.append(model.index(0, 1))
+        plot_widget = plot_selection(model, selected_indexes)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3]))
+
 
 if __name__ == '__main__':
     unittest.main()

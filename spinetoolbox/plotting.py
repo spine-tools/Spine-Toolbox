@@ -260,7 +260,7 @@ def plot_selection(model, indexes):
             if isinstance(values[0], TimeSeries):
                 first_column_value_type = TimeSeries
             else:
-                first_column_value_type = type(values[0][1])
+                first_column_value_type = type(values[1][0])
         elif values:
             if isinstance(values[0], TimeSeries) and not isinstance(first_column_value_type, TimeSeries):
                 raise PlottingError("Cannot plot a mixture of time series and other data")
