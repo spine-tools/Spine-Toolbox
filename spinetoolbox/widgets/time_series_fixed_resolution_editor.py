@@ -120,7 +120,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._plot_widget.canvas.axes.cla()
         stamps = self._model.indexes
         values = self._model.values
-        self._plot_widget.canvas.axes.plot(stamps, values)
+        self._plot_widget.canvas.axes.step(stamps, values, where='post')
         self._plot_widget.canvas.draw()
 
     def value(self):
