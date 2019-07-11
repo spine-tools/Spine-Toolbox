@@ -482,7 +482,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             elif src_item_type in ["Data Connection", "Data Store", "Data Interface"] and dst_item_type in [
                 "Data Connection",
                 "Data Store",
-                "Data Interface"
+                "Data Interface",
             ]:
                 self._toolbox.msg.emit("Link established")
             elif src_item_type == "Data Store" and dst_item_type == "View":

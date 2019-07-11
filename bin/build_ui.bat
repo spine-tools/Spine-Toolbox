@@ -49,6 +49,16 @@ CALL pyside2-uic ../spinetoolbox/ui/add_view.ui -o ../spinetoolbox/ui/add_view.p
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\add_view.py.o > ..\spinetoolbox\ui\add_view.py
 del ..\spinetoolbox\ui\add_view.py.o
 
+ECHO building duration_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/duration_editor.ui -o ../spinetoolbox/ui/duration_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\duration_editor.py.o > ..\spinetoolbox\ui\duration_editor.py
+del ..\spinetoolbox\ui\duration_editor.py.o
+
+ECHO building datetime_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/datetime_editor.ui -o ../spinetoolbox/ui/datetime_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\datetime_editor.py.o > ..\spinetoolbox\ui\datetime_editor.py
+del ..\spinetoolbox\ui\datetime_editor.py.o
+
 ECHO building graph_view_form.py
 CALL pyside2-uic ../spinetoolbox/ui/graph_view_form.ui -o ../spinetoolbox/ui/graph_view_form.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\graph_view_form.py.o > ..\spinetoolbox\ui\graph_view_form.py
@@ -58,6 +68,16 @@ ECHO building mainwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwindow.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\mainwindow.py.o > ..\spinetoolbox\ui\mainwindow.py
 del ..\spinetoolbox\ui\mainwindow.py.o
+
+ECHO building parameter_value_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/parameter_value_editor.ui -o ../spinetoolbox/ui/parameter_value_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\parameter_value_editor.py.o > ..\spinetoolbox\ui\parameter_value_editor.py
+del ..\spinetoolbox\ui\parameter_value_editor.py.o
+
+ECHO building plain_parameter_value_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/plain_parameter_value_editor.ui -o ../spinetoolbox/ui/plain_parameter_value_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\plain_parameter_value_editor.py.o > ..\spinetoolbox\ui\plain_parameter_value_editor.py
+del ..\spinetoolbox\ui\plain_parameter_value_editor.py.o
 
 ECHO building project_form.py
 CALL pyside2-uic ../spinetoolbox/ui/project_form.ui -o ../spinetoolbox/ui/project_form.py.o
@@ -78,6 +98,21 @@ ECHO building tabular_view_form.py
 CALL pyside2-uic ../spinetoolbox/ui/tabular_view_form.ui -o ../spinetoolbox/ui/tabular_view_form.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\tabular_view_form.py.o > ..\spinetoolbox\ui\tabular_view_form.py
 del ..\spinetoolbox\ui\tabular_view_form.py.o
+
+ECHO building time_pattern_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/time_pattern_editor.ui -o ../spinetoolbox/ui/time_pattern_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\time_pattern_editor.py.o > ..\spinetoolbox\ui\time_pattern_editor.py
+del ..\spinetoolbox\ui\time_pattern_editor.py.o
+
+ECHO building time_series_fixed_resolution_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/time_series_fixed_resolution_editor.ui -o ../spinetoolbox/ui/time_series_fixed_resolution_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\time_series_fixed_resolution_editor.py.o > ..\spinetoolbox\ui\time_series_fixed_resolution_editor.py
+del ..\spinetoolbox\ui\time_series_fixed_resolution_editor.py.o
+
+ECHO building time_series_variable_resolution_editor.py
+CALL pyside2-uic ../spinetoolbox/ui/time_series_variable_resolution_editor.ui -o ../spinetoolbox/ui/time_series_variable_resolution_editor.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\time_series_variable_resolution_editor.py.o > ..\spinetoolbox\ui\time_series_variable_resolution_editor.py
+del ..\spinetoolbox\ui\time_series_variable_resolution_editor.py.o
 
 ECHO building tool_configuration_assistant.py
 CALL pyside2-uic ../spinetoolbox/ui/tool_configuration_assistant.ui -o ../spinetoolbox/ui/tool_configuration_assistant.py.o
@@ -109,12 +144,19 @@ CALL append_license_xml ..\spinetoolbox\ui\add_data_interface.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_data_store.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_tool.ui
 CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
+CALL append_license_xml ..\spinetoolbox\ui\duration_editor.ui
+CALL append_license_xml ..\spinetoolbox\ui\datetime_editor.ui
 CALL append_license_xml ..\spinetoolbox\ui\graph_view_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
+CALL append_license_xml ..\spinetoolbox\ui\parameter_value_editor.ui
+CALL append_license_xml ..\spinetoolbox\ui\plain_parameter_value_editor.ui
 CALL append_license_xml ..\spinetoolbox\ui\project_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\settings.ui
 CALL append_license_xml ..\spinetoolbox\ui\spine_datapackage_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\tabular_view_form.ui
+CALL append_license_xml ..\spinetoolbox\ui\time_pattern_editor.ui
+CALL append_license_xml ..\spinetoolbox\ui\time_series_fixed_resolution_editor.ui
+CALL append_license_xml ..\spinetoolbox\ui\time_series_variable_resolution_editor.ui
 CALL append_license_xml ..\spinetoolbox\ui\tool_configuration_assistant.ui
 CALL append_license_xml ..\spinetoolbox\ui\tool_template_form.ui
 CALL append_license_xml ..\spinetoolbox\ui\tree_view_form.ui
@@ -126,12 +168,19 @@ CALL append_license_py ..\spinetoolbox\ui\add_data_interface.py
 CALL append_license_py ..\spinetoolbox\ui\add_data_store.py
 CALL append_license_py ..\spinetoolbox\ui\add_tool.py
 CALL append_license_py ..\spinetoolbox\ui\add_view.py
+CALL append_license_py ..\spinetoolbox\ui\duration_editor.py
+CALL append_license_py ..\spinetoolbox\ui\datetime_editor.py
 CALL append_license_py ..\spinetoolbox\ui\graph_view_form.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
+CALL append_license_py ..\spinetoolbox\ui\parameter_value_editor.py
+CALL append_license_py ..\spinetoolbox\ui\plain_parameter_value_editor.py
 CALL append_license_py ..\spinetoolbox\ui\project_form.py
 CALL append_license_py ..\spinetoolbox\ui\settings.py
 CALL append_license_py ..\spinetoolbox\ui\spine_datapackage_form.py
 CALL append_license_py ..\spinetoolbox\ui\tabular_view_form.py
+CALL append_license_py ..\spinetoolbox\ui\time_pattern_editor.py
+CALL append_license_py ..\spinetoolbox\ui\time_series_fixed_resolution_editor.py
+CALL append_license_py ..\spinetoolbox\ui\time_series_variable_resolution_editor.py
 CALL append_license_py ..\spinetoolbox\ui\tool_configuration_assistant.py
 CALL append_license_py ..\spinetoolbox\ui\tool_template_form.py
 CALL append_license_py ..\spinetoolbox\ui\tree_view_form.py

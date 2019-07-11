@@ -16,13 +16,12 @@ Classes for handling models in tree and graph views.
 :date:   28.6.2019
 """
 
-import os
 import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
-from helpers import busy_effect, format_string_list, strip_json_data
 from spinedb_api import SpineDBAPIError
-from models import MinimalTableModel, EmptyRowModel, HybridTableModel
+from helpers import busy_effect, format_string_list, strip_json_data
+from models import MinimalTableModel, EmptyRowModel
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -157,7 +156,8 @@ class ObjectTreeModel(QStandardItemModel):
                 return self._parent.icon_mngr.relationship_icon(index.parent().data(Qt.ToolTipRole))
         return super().data(index, role)
 
-    def backward_sweep(self, index, call=None):
+    @staticmethod
+    def backward_sweep(index, call=None):
         """Sweep the tree from the given index towards the root, and apply `call` on each."""
         current = index
         while True:
@@ -168,7 +168,6 @@ class ObjectTreeModel(QStandardItemModel):
             if not next_.isValid():
                 break
             current = next_
-            continue
 
     def forward_sweep(self, index, call=None):
         """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
@@ -1866,7 +1865,6 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         db_column = header_index('database')
         relationship_id_column = header_index('relationship_id')
         parameter_id_column = header_index('parameter_id')
-        parameter_name_column = header_index('parameter_name')
         value_column = header_index('value')
         unique_rows = {ind.row() for ind in indexes}
         for row in unique_rows:
@@ -2381,8 +2379,9 @@ class ObjectParameterValueModel(ObjectParameterModel):
         super().__init__(parent)
         self.empty_row_model = EmptyObjectParameterValueModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.object_class_name_column = None
 
-    def reset_model(self):
+    def reset_model(self, main_data=None):
         """Reset model data. Each sub-model is filled with parameter value data
         for a different object class."""
         self.beginResetModel()
@@ -2522,8 +2521,9 @@ class ObjectParameterDefinitionModel(ObjectParameterModel):
         super().__init__(parent)
         self.empty_row_model = EmptyObjectParameterDefinitionModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.object_class_name_column = None
 
-    def reset_model(self):
+    def reset_model(self, main_data=None):
         """Reset model data. Each sub-model is filled with parameter definition data
         for a different object class."""
         self.beginResetModel()
@@ -3005,8 +3005,10 @@ class RelationshipParameterValueModel(RelationshipParameterModel):
         super().__init__(parent)
         self.empty_row_model = EmptyRelationshipParameterValueModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.relationship_class_name_column = None
+        self.object_class_name_list_column = None
 
-    def reset_model(self):
+    def reset_model(self, main_data=None):
         """Reset model data. Each sub-model is filled with parameter value data
         for a different relationship class."""
         self.beginResetModel()
@@ -3164,8 +3166,10 @@ class RelationshipParameterDefinitionModel(RelationshipParameterModel):
         super().__init__(parent)
         self.empty_row_model = EmptyRelationshipParameterDefinitionModel(self)
         self.empty_row_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.relationship_class_name_column = None
+        self.object_class_name_list_column = None
 
-    def reset_model(self):
+    def reset_model(self, main_data=None):
         """Reset model data. Each sub-model is filled with parameter definition data
         for a different relationship class."""
         self.beginResetModel()
@@ -3338,7 +3342,7 @@ class ObjectParameterValueFilterProxyModel(ObjectParameterDefinitionFilterProxyM
         self.object_id_column = object_id_column
         self.db_column = db_column
 
-    def update_filter(self, parameter_definition_ids, object_ids):
+    def update_filter(self, parameter_definition_ids, object_ids):  # pylint: disable=arguments-differ
         """Update filter."""
         if parameter_definition_ids == self.parameter_definition_ids and object_ids == self.object_ids:
             return
@@ -3430,7 +3434,7 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
         self.object_id_list_column = object_id_list_column
         self.db_column = db_column
 
-    def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):
+    def update_filter(self, parameter_definition_ids, object_ids, object_id_lists):  # pylint: disable=arguments-differ
         """Update filter."""
         if (
             parameter_definition_ids == self.parameter_definition_ids
@@ -3452,7 +3456,7 @@ class RelationshipParameterValueFilterProxyModel(RelationshipParameterDefinition
         if self.object_id_lists:
             return (db, object_id_list) in self.object_id_lists
         if self.object_ids:
-            return len(self.object_ids.intersection((db, int(x)) for x in object_id_list.split(","))) > 0
+            return bool(self.object_ids.intersection((db, int(x)) for x in object_id_list.split(",")))
         return True
 
 
@@ -3467,13 +3471,13 @@ class TreeNode:
         id (int, NoneType): the id from the db table
     """
 
-    def __init__(self, parent, row, text=None, level=None, id=None):
+    def __init__(self, parent, row, text=None, level=None, identififer=None):
         self.parent = parent
         self.row = row
         self.child_nodes = list()
         self.text = text
         self.level = level
-        self.id = id
+        self.id = identifier
 
 
 class ParameterValueListModel(QAbstractItemModel):
@@ -3504,7 +3508,7 @@ class ParameterValueListModel(QAbstractItemModel):
             self._root_nodes.append(db_node)
             i = 0
             for wide_value_list in db_map.wide_parameter_value_list_list():
-                list_node = TreeNode(db_node, i, text=wide_value_list.name, id=wide_value_list.id, level=1)
+                list_node = TreeNode(db_node, i, text=wide_value_list.name, identifier=wide_value_list.id, level=1)
                 i += 1
                 db_node.child_nodes.append(list_node)
                 j = 0
@@ -3655,18 +3659,16 @@ class ParameterValueListModel(QAbstractItemModel):
             for row in range(first, last + 1):
                 index = self.index(row, 0, parent)
                 node = index.internalPointer()
-                id_ = node.id
-                name = node.text
-                if id_:
+                if node.id:
                     # Update
-                    to_update.setdefault(db_map, []).append(dict(id=id_, name=name))
+                    to_update.setdefault(db_map, []).append(dict(id=node.id, name=node.text))
                 else:
                     # Add
                     value_list = [
                         self.index(i, 0, index).internalPointer().text for i in range(self.rowCount(index) - 1)
                     ]
                     if value_list:
-                        to_add.setdefault(db_map, []).append(dict(parent=index, name=name, value_list=value_list))
+                        to_add.setdefault(db_map, []).append(dict(parent=index, name=node.text, value_list=value_list))
         elif parent.internalPointer().level == 1:
             # The changes correspond to list *values*, so it's enough to check the parent
             db_name = parent.parent().internalPointer().text
@@ -3735,17 +3737,17 @@ class LazyLoadingArrayModel(EmptyRowModel):
         self.set_horizontal_header_labels("json")
         self._wrong_data = False
 
-    def reset_model(self, arr):
+    def reset_model(self, data):
         """Store given array into the `_orig_data` attribute.
         Initialize first `_stride` rows of the model.
         """
-        if arr is None:
-            arr = []
-        self._orig_data = arr
+        if data is None:
+            data = []
+        self._orig_data = data
         if not isinstance(self._orig_data, list):
             return
         data = list()
-        for i in range(self._stride):
+        for _ in range(self._stride):
             try:
                 data.append([self._orig_data.pop(0)])
             except IndexError:
@@ -3754,13 +3756,13 @@ class LazyLoadingArrayModel(EmptyRowModel):
 
     def canFetchMore(self, parent):
         if isinstance(self._orig_data, list):
-            return len(self._orig_data) > 0
+            return self._orig_data
         return False
 
     def fetchMore(self, parent):
         """Pop data from the _orig_data attribute and add it to the model."""
         data = list()
-        for i in range(self._stride):
+        for _ in range(self._stride):
             try:
                 data.append([self._orig_data.pop(0)])
             except IndexError:

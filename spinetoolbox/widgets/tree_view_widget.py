@@ -18,23 +18,23 @@ Contains the TreeViewForm class.
 
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
-import logging
-from PySide2.QtWidgets import QFileDialog, QApplication, QDockWidget, QTreeView, QTableView
+from PySide2.QtWidgets import QFileDialog, QDockWidget, QTreeView, QTableView
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QIcon
+from spinedb_api import copy_database, SpineDBAPIError
 from ui.tree_view_form import Ui_MainWindow
-from spinedb_api import SpineDBAPIError
 from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import (
+    EditableParameterValueContextMenu,
     ObjectTreeContextMenu,
     RelationshipTreeContextMenu,
     ParameterContextMenu,
     ParameterValueListContextMenu,
 )
 from widgets.custom_qdialog import RemoveTreeItemsDialog
+from widgets.parameter_value_editor import ParameterValueEditor
 from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
-from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect
 
@@ -74,8 +74,6 @@ class TreeViewForm(DataStoreForm):
         # Context menus
         self.object_tree_context_menu = None
         self.relationship_tree_context_menu = None
-        self.object_parameter_value_context_menu = None
-        self.relationship_parameter_value_context_menu = None
         self.object_parameter_context_menu = None
         self.relationship_parameter_context_menu = None
         self.parameter_value_list_context_menu = None
@@ -106,7 +104,7 @@ class TreeViewForm(DataStoreForm):
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
-        qApp.focusChanged.connect(self.update_paste_action)  # qApp comes with PySide2.QtWidgets.QApplication
+        qApp.focusChanged.connect(self.update_paste_action)  # pylint: disable=undefined-variable
         # Action availability
         self.object_class_selection_available.connect(self.ui.actionEdit_object_classes.setEnabled)
         self.object_selection_available.connect(self.ui.actionEdit_objects.setEnabled)
@@ -419,22 +417,20 @@ class TreeViewForm(DataStoreForm):
         elif file_path.lower().endswith('xlsx'):
             error_log = []
             try:
-                insert_log, error_log = import_xlsx_to_db(self.db_map, file_path)
+                _, error_log = import_xlsx_to_db(self.db_map, file_path)
                 self.msg.emit("Excel file successfully imported.")
                 self.commit_available.emit(True)
-                # logging.debug(insert_log)
                 self.init_models()
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import Excel file: {}".format(e.msg))
             finally:
-                if not len(error_log) == 0:
+                if error_log:
                     msg = (
                         "Something went wrong in importing an Excel file "
                         "into the current session. Here is the error log:\n\n{0}".format([e.msg for e in error_log])
                     )
                     # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
                     self.msg_error.emit(msg)
-                    # logging.debug(error_log)
 
     @Slot("bool", name="show_export_file_dialog")
     def show_export_file_dialog(self, checked=False):
@@ -536,13 +532,13 @@ class TreeViewForm(DataStoreForm):
             item_type = index.data(Qt.UserRole)
             self.selected_obj_tree_indexes.setdefault(item_type, {})[index] = None
         self.object_tree_selection_available.emit(any(v for v in self.selected_obj_tree_indexes.values()))
-        self.object_class_selection_available.emit(len(self.selected_obj_tree_indexes.get('object_class', {})) > 0)
-        self.object_selection_available.emit(len(self.selected_obj_tree_indexes.get('object', {})) > 0)
+        self.object_class_selection_available.emit(bool(self.selected_obj_tree_indexes.get('object_class', {})))
+        self.object_selection_available.emit(bool(self.selected_obj_tree_indexes.get('object', {})))
         if self.do_clear_other_selections:
             self.relationship_class_selection_available.emit(
-                len(self.selected_obj_tree_indexes.get('relationship_class', {})) > 0
+                bool(self.selected_obj_tree_indexes.get('relationship_class', {}))
             )
-            self.relationship_selection_available.emit(len(self.selected_obj_tree_indexes.get('relationship', {})) > 0)
+            self.relationship_selection_available.emit(bool(self.selected_obj_tree_indexes.get('relationship', {})))
             self.clear_other_selections(self.ui.treeView_object)
             self.update_filter()
 
@@ -561,9 +557,9 @@ class TreeViewForm(DataStoreForm):
         self.relationship_tree_selection_available.emit(any(v for v in self.selected_rel_tree_indexes.values()))
         if self.do_clear_other_selections:
             self.relationship_class_selection_available.emit(
-                len(self.selected_rel_tree_indexes.get('relationship_class', {})) > 0
+                bool(self.selected_rel_tree_indexes.get('relationship_class', {}))
             )
-            self.relationship_selection_available.emit(len(self.selected_rel_tree_indexes.get('relationship', {})) > 0)
+            self.relationship_selection_available.emit(bool(self.selected_rel_tree_indexes.get('relationship', {})))
             self.clear_other_selections(self.ui.treeView_relationship)
             self.update_filter()
 
@@ -887,16 +883,24 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_object_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
-        self.object_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
-        option = self.object_parameter_value_context_menu.get_action()
-        if option == "Remove selection":
+        flags = self.object_parameter_value_model.flags(index)
+        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
+        is_value = self.object_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
+        if editable and is_value:
+            menu = EditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            menu = ParameterContextMenu(self, global_pos, index)
+        option = menu.get_action()
+        if option == "Open in editor...":
+            editor = ParameterValueEditor(self.object_parameter_value_model, index, self)
+            editor.show()
+        elif option == "Remove selection":
             self.remove_object_parameter_values()
         elif option == "Copy":
             self.ui.tableView_object_parameter_value.copy()
         elif option == "Paste":
             self.ui.tableView_object_parameter_value.paste()
-        self.object_parameter_value_context_menu.deleteLater()
-        self.object_parameter_value_context_menu = None
+        menu.deleteLater()
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
@@ -907,16 +911,24 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
         global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
-        self.relationship_parameter_value_context_menu = ParameterContextMenu(self, global_pos, index)
-        option = self.relationship_parameter_value_context_menu.get_action()
-        if option == "Remove selection":
+        flags = self.relationship_parameter_value_model.flags(index)
+        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
+        is_value = self.relationship_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
+        if editable and is_value:
+            menu = EditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            menu = ParameterContextMenu(self, global_pos, index)
+        option = menu.get_action()
+        if option == "Open in editor...":
+            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, self)
+            editor.show()
+        elif option == "Remove selection":
             self.remove_relationship_parameter_values()
         elif option == "Copy":
             self.ui.tableView_relationship_parameter_value.copy()
         elif option == "Paste":
             self.ui.tableView_relationship_parameter_value.paste()
-        self.relationship_parameter_value_context_menu.deleteLater()
-        self.relationship_parameter_value_context_menu = None
+        menu.deleteLater()
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
     def show_object_parameter_context_menu(self, pos):

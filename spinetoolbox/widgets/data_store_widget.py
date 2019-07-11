@@ -19,8 +19,8 @@ Contains the DataStoreForm class, parent class of TreeViewForm and GraphViewForm
 from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QMessageBox, QCheckBox, QErrorMessage
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
-from config import MAINWINDOW_SS, STATUSBAR_SS
 from spinedb_api import SpineDBAPIError
+from config import MAINWINDOW_SS, STATUSBAR_SS
 from widgets.custom_delegates import (
     ObjectParameterValueDelegate,
     ObjectParameterDefinitionDelegate,
@@ -47,7 +47,6 @@ from treeview_models import (
     RelationshipParameterValueModel,
     ParameterValueListModel,
 )
-from spinedb_api import copy_database
 from helpers import busy_effect, format_string_list, IconManager
 
 
@@ -223,7 +222,7 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", "bool", name="_handle_tag_button_toggled")
     def _handle_tag_button_toggled(self, db_map_ids, checked):
         """Called when a parameter tag button is toggled.
-        Compute selected parameter definiton ids per object class ids.
+        Compute selected parameter definition ids per object class ids.
         Then update set of selected object class ids. Finally, update filter.
         """
         for db_map, id_ in db_map_ids:
@@ -403,14 +402,12 @@ class DataStoreForm(QMainWindow):
         tag_object_class_ids = set(self.selected_obj_parameter_definition_ids.keys())
         if not tag_object_class_ids:
             return tree_object_class_ids
-        elif not tree_object_class_ids:
+        if not tree_object_class_ids:
             return tag_object_class_ids
-        else:
-            intersection = tree_object_class_ids.intersection(tag_object_class_ids)
-            if intersection:
-                return intersection
-            else:
-                return {None}
+        intersection = tree_object_class_ids.intersection(tag_object_class_ids)
+        if intersection:
+            return intersection
+        return {None}
 
     def all_selected_relationship_class_ids(self):
         """Return relationship class ids selected in relationship tree *and* parameter tag toolbar."""
@@ -418,14 +415,12 @@ class DataStoreForm(QMainWindow):
         tag_relationship_class_ids = set(self.selected_rel_parameter_definition_ids.keys())
         if not tag_relationship_class_ids:
             return tree_relationship_class_ids
-        elif not tree_relationship_class_ids:
+        if not tree_relationship_class_ids:
             return tag_relationship_class_ids
-        else:
-            intersection = tree_relationship_class_ids.intersection(tag_relationship_class_ids)
-            if intersection:
-                return intersection
-            else:
-                return {None}
+        intersection = tree_relationship_class_ids.intersection(tag_relationship_class_ids)
+        if intersection:
+            return intersection
+        return {None}
 
     def set_default_parameter_rows(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
@@ -897,7 +892,7 @@ class DataStoreForm(QMainWindow):
         return True
 
     @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
-    def set_parameter_value_data(self, index, new_value):
+    def set_parameter_value_data(self, index, new_value):  # pylint: disable=no-self-use
         """Update (object or relationship) parameter value with newly edited data."""
         if new_value is None:
             return False
@@ -932,7 +927,7 @@ class DataStoreForm(QMainWindow):
         if commit_at_exit == 0:
             # Don't commit session and don't show message box
             return
-        elif commit_at_exit == 1:  # Default
+        if commit_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)
@@ -959,7 +954,6 @@ class DataStoreForm(QMainWindow):
             self.show_commit_session_dialog()
         else:
             qsettings.setValue("appSettings/commitAtExit", "1")
-        return
 
     def restore_ui(self):
         """Restore UI state from previous session."""

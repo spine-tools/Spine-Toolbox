@@ -886,11 +886,11 @@ class MinimalTableModel(QAbstractTableModel):
             return Qt.NoItemFlags
         return self.default_flags
 
-    def rowCount(self, *args, **kwargs):
+    def rowCount(self, parent=QModelIndex()):
         """Number of rows in the model."""
         return len(self._main_data)
 
-    def columnCount(self, *args, **kwargs):
+    def columnCount(self, parent=QModelIndex()):
         """Number of columns in the model."""
         try:
             return len(self._main_data[0])
