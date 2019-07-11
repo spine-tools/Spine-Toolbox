@@ -146,7 +146,7 @@ def _collect_pivot_single_column_values(model, column, rows):
         data_index = model.index(row, column)
         if not model.index_in_data(data_index):
             continue
-        data = model.data(data_index)
+        data = model.data(data_index, role=Qt.EditRole)
         if data:
             value = from_database(data)
             if isinstance(value, (float, int)):
