@@ -257,14 +257,14 @@ def plot_selection(model, indexes):
     for column, rows in selections.items():
         values, labels = collect_column_values(model, column, rows)
         if first_column_value_type is None and values:
-            if isinstance(values[0], TimeSeries):
+            if isinstance(values[0], TimeSries):
                 first_column_value_type = TimeSeries
             else:
                 first_column_value_type = type(values[0][1])
         elif values:
             if isinstance(values[0], TimeSeries) and not isinstance(first_column_value_type, TimeSeries):
                 raise PlottingError("Cannot plot a mixture of time series and other data")
-            elif not isinstance(values[0][1], first_column_value_type):
+            if not isinstance(values[0][1], first_column_value_type):
                 raise PlottingError("Cannot plot a mixture of time series and other data")
         _add_plot_to_widget(values, labels, plot_widget)
     plot_lines = plot_widget.canvas.axes.get_lines()

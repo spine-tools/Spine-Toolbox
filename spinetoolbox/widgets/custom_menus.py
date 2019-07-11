@@ -17,11 +17,11 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget, QLineEdit, QTableView, QMessageBox
+from operator import itemgetter
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QLineEdit, QTableView, QMessageBox
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, QItemSelectionModel
 from helpers import fix_name_ambiguity, tuple_itemgetter
-from operator import itemgetter
 from plotting import plot_pivot_column, plot_selection, PlottingError
 from widgets.custom_qwidgets import FilterWidget
 from widgets.parameter_value_editor import ParameterValueEditor
@@ -130,7 +130,7 @@ class ProjectItemContextMenu(CustomContextMenu):
         elif d.item_type == "Data Interface":
             self.add_action("Open directory...")
         else:
-            logging.error("Unknown item type:{0}".format(d.item_type))
+            logging.error("Unknown item type: %s", d.item_type)
             return
         self.addSeparator()
         self.add_action("Rename")
@@ -592,7 +592,7 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
 
     def __init__(self, parent, tool):
         super().__init__(parent)
-        enabled = True if tool.tool_template() else False
+        enabled = bool(tool.tool_template())
         self.add_action("Edit Tool template", tool.edit_tool_template, enabled=enabled)
         self.add_action("Edit main program file...", tool.open_tool_main_program_file, enabled=enabled)
         self.add_action("Open main program directory...", tool.open_tool_main_directory, enabled=enabled)
@@ -770,16 +770,16 @@ class PivotTableModelMenu(QMenu):
             indexes = [self._proxy.mapToSource(i) for i in indexes]
         return indexes
 
-    def delete_invalid_row(self):
+    def delete_invalid_row(self):  # pylint: disable=no-self-use
         return
 
-    def delete_invalid_col(self):
+    def delete_invalid_col(self):  # pylint: disable=no-self-use
         return
 
-    def insert_row(self):
+    def insert_row(self):  # pylint: disable=no-self-use
         return
 
-    def insert_col(self):
+    def insert_col(self):  # pylint: disable=no-self-use
         return
 
     def delete_values(self):
@@ -842,7 +842,6 @@ class PivotTableModelMenu(QMenu):
 
         elif len(indexes) == 1:
             # one selected, show names
-            selected_data = self._model.data(indexes[0])
             selected_index = self._find_selected_indexes(indexes)
             index_in_data = self._model.index_in_data(indexes[0])
             self.open_value_editor_action.setEnabled(index_in_data)
@@ -956,8 +955,6 @@ class AutoFilterMenu(QMenu):
         self.view.clicked.connect(self._handle_view_clicked)
         self.view.leaveEvent = self._view_leave_event
         self.view.keyPressEvent = self._view_key_press_event
-        # sort_asc_action = self.addAction("Sort ascending")
-        # sort_desc_action = self.addAction("Sort descending")
         text_filter_action = QWidgetAction(self)
         text_filter_action.setDefaultWidget(self.text_filter)
         view_action = QWidgetAction(self)
@@ -965,12 +962,11 @@ class AutoFilterMenu(QMenu):
         self.addAction(text_filter_action)
         self.addAction(view_action)
         ok_action = self.addAction("Ok")
+        # pylint: disable=unnecessary-lambda
         self.text_filter.textEdited.connect(lambda x: self.proxy_model.setFilterRegExp(x))
-        # sort_asc_action.triggered.connect(lambda x: self.asc_sort_triggered.emit())
-        # sort_desc_action.triggered.connect(lambda x: self.desc_sort_triggered.emit())
         ok_action.triggered.connect(self._handle_ok_action_triggered)
 
-    def _model_flags(self, index):
+    def _model_flags(self, index):  # pylint: disable=no-self-use
         """Return no item flags."""
         return ~Qt.ItemIsEditable
 
@@ -980,10 +976,9 @@ class AutoFilterMenu(QMenu):
             checked = self.model._main_data[index.row()][0]
             if checked is None:
                 return Qt.PartiallyChecked
-            elif checked is True:
+            if checked is True:
                 return Qt.Checked
-            else:
-                return Qt.Unchecked
+            return Qt.Unchecked
         return MinimalTableModel.data(self.model, index, role)
 
     def _proxy_model_filter_accepts_row(self, source_row, source_parent):
