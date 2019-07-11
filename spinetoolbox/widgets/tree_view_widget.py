@@ -21,8 +21,8 @@ import time  # just to measure loading time and sqlalchemy ORM performance
 from PySide2.QtWidgets import QFileDialog, QDockWidget, QTreeView, QTableView
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QIcon
+from spinedb_api import copy_database, SpineDBAPIError
 from ui.tree_view_form import Ui_MainWindow
-from spinedb_api import SpineDBAPIError
 from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import (
     EditableParameterValueContextMenu,
@@ -34,7 +34,6 @@ from widgets.custom_menus import (
 from widgets.parameter_value_editor import ParameterValueEditor
 from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
-from spinedb_api import copy_database
 from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect
 
@@ -103,7 +102,7 @@ class TreeViewForm(DataStoreForm):
     def connect_signals(self):
         """Connect signals to slots."""
         super().connect_signals()
-        qApp.focusChanged.connect(self.update_paste_action)  # qApp comes with PySide2.QtWidgets.QApplication
+        qApp.focusChanged.connect(self.update_paste_action)  # pylint: disable=undefined-variable
         # Action availability
         self.object_class_selection_available.connect(self.ui.actionEdit_object_classes.setEnabled)
         self.object_selection_available.connect(self.ui.actionEdit_objects.setEnabled)
@@ -418,22 +417,20 @@ class TreeViewForm(DataStoreForm):
         elif file_path.lower().endswith('xlsx'):
             error_log = []
             try:
-                insert_log, error_log = import_xlsx_to_db(self.db_map, file_path)
+                _, error_log = import_xlsx_to_db(self.db_map, file_path)
                 self.msg.emit("Excel file successfully imported.")
                 self.commit_available.emit(True)
-                # logging.debug(insert_log)
                 self.init_models()
             except SpineDBAPIError as e:
                 self.msg_error.emit("Unable to import Excel file: {}".format(e.msg))
             finally:
-                if not len(error_log) == 0:
+                if error_log:
                     msg = (
                         "Something went wrong in importing an Excel file "
                         "into the current session. Here is the error log:\n\n{0}".format([e.msg for e in error_log])
                     )
                     # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
                     self.msg_error.emit(msg)
-                    # logging.debug(error_log)
 
     @Slot("bool", name="show_export_file_dialog")
     def show_export_file_dialog(self, checked=False):
@@ -546,13 +543,13 @@ class TreeViewForm(DataStoreForm):
             item_type = index.data(Qt.UserRole)
             self.selected_obj_tree_indexes.setdefault(item_type, {})[index] = None
         self.object_tree_selection_available.emit(any(v for v in self.selected_obj_tree_indexes.values()))
-        self.object_class_selection_available.emit(len(self.selected_obj_tree_indexes.get('object_class', {})) > 0)
-        self.object_selection_available.emit(len(self.selected_obj_tree_indexes.get('object', {})) > 0)
+        self.object_class_selection_available.emit(bool(self.selected_obj_tree_indexes.get('object_class', {})))
+        self.object_selection_available.emit(bool(self.selected_obj_tree_indexes.get('object', {})))
         if self.do_clear_selections:
             self.relationship_class_selection_available.emit(
-                len(self.selected_obj_tree_indexes.get('relationship_class', {})) > 0
+                bool(self.selected_obj_tree_indexes.get('relationship_class', {}))
             )
-            self.relationship_selection_available.emit(len(self.selected_obj_tree_indexes.get('relationship', {})) > 0)
+            self.relationship_selection_available.emit(bool(self.selected_obj_tree_indexes.get('relationship', {})))
             self.clear_selections(self.ui.treeView_object)
             self.update_filter()
 
@@ -571,9 +568,9 @@ class TreeViewForm(DataStoreForm):
         self.relationship_tree_selection_available.emit(any(v for v in self.selected_rel_tree_indexes.values()))
         if self.do_clear_selections:
             self.relationship_class_selection_available.emit(
-                len(self.selected_rel_tree_indexes.get('relationship_class', {})) > 0
+                bool(self.selected_rel_tree_indexes.get('relationship_class', {}))
             )
-            self.relationship_selection_available.emit(len(self.selected_rel_tree_indexes.get('relationship', {})) > 0)
+            self.relationship_selection_available.emit(bool(self.selected_rel_tree_indexes.get('relationship', {})))
             self.clear_selections(self.ui.treeView_relationship)
             self.update_filter()
 
@@ -1210,11 +1207,11 @@ class TreeViewForm(DataStoreForm):
         model = self.parameter_value_list_model
         to_update = list()
         for parent, indexes in parented_indexes.items():
-            id = parent.internalPointer().id
+            identifier = parent.internalPointer().id
             removed_rows = [ind.row() for ind in indexes]
             all_rows = range(model.rowCount(parent) - 1)
             value_list = [model.index(row, 0, parent).data(Qt.EditRole) for row in all_rows if row not in removed_rows]
-            to_update.append(dict(id=id, value_list=value_list))
+            to_update.append(dict(id=identifier, value_list=value_list))
         # Get ids to remove
         removed_ids = [ind.internalPointer().id for ind in toplevel_indexes]
         try:
