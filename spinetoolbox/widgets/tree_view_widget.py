@@ -528,7 +528,7 @@ class TreeViewForm(DataStoreForm):
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
-        self.set_default_parameter_rows(self.ui.treeView_object.selectionModel().selection())
+        self.set_default_parameter_rows(selected.indexes()[-1])
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_obj_tree_indexes[item_type].pop(index)
@@ -551,7 +551,7 @@ class TreeViewForm(DataStoreForm):
     def _handle_relationship_tree_selection_changed(self, selected, deselected):
         """Called when the relationship tree selection changes.
         Set default rows and apply filters on parameter models."""
-        self.set_default_parameter_rows(self.ui.treeView_relationship.selectionModel().selection())
+        self.set_default_parameter_rows(selected.indexes()[-1])
         for index in deselected.indexes():
             item_type = index.data(Qt.UserRole)
             self.selected_rel_tree_indexes[item_type].pop(index)
@@ -566,85 +566,6 @@ class TreeViewForm(DataStoreForm):
             self.relationship_selection_available.emit(len(self.selected_rel_tree_indexes.get('relationship', {})) > 0)
             self.clear_other_selections(self.ui.treeView_relationship)
             self.update_filter()
-
-    def set_default_parameter_rows(self, selection):
-        """Set default rows for parameter models according to selection in object or relationship tree."""
-        if selection.isEmpty():
-            return
-        index = selection.indexes()[-1]
-        item_type = index.data(Qt.UserRole)
-        if item_type == 'root':
-            default_row = dict()
-            for model in (
-                self.object_parameter_definition_model,
-                self.object_parameter_value_model,
-                self.relationship_parameter_definition_model,
-                self.relationship_parameter_value_model,
-            ):
-                model = model.empty_row_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-        else:
-            db_map_dict = index.data(Qt.UserRole + 1)
-            db_map = list(db_map_dict.keys())[0]
-            db_name = self.db_map_to_name[db_map]
-            item = db_map_dict[db_map]
-            if item_type == 'object_class':
-                default_row = dict(object_class_id=item['id'], object_class_name=item['name'], database=db_name)
-                for model in (self.object_parameter_definition_model, self.object_parameter_value_model):
-                    model = model.empty_row_model
-                    model.set_default_row(**default_row)
-                    model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-            elif item_type == 'object':
-                parent_index = index.parent()
-                parent_db_map_dict = parent_index.data(Qt.UserRole + 1)
-                parent_item = parent_db_map_dict[db_map]
-                default_row = dict(
-                    object_class_id=parent_item['id'], object_class_name=parent_item['name'], database=db_name
-                )
-                model = self.object_parameter_definition_model.empty_row_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-                default_row.update(dict(object_id=item['id'], object_name=item['name']))
-                model = self.object_parameter_value_model.empty_row_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-            elif item_type == 'relationship_class':
-                default_row = dict(
-                    relationship_class_id=item['id'],
-                    relationship_class_name=item['name'],
-                    object_class_id_list=item['object_class_id_list'],
-                    object_class_name_list=item['object_class_name_list'],
-                    database=db_name,
-                )
-                for model in (self.relationship_parameter_definition_model, self.relationship_parameter_value_model):
-                    model = model.empty_row_model
-                    model.set_default_row(**default_row)
-                    model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-            elif item_type == 'relationship':
-                parent_index = index.parent()
-                parent_db_map_dict = parent_index.data(Qt.UserRole + 1)
-                parent_item = parent_db_map_dict[db_map]
-                default_row = dict(
-                    relationship_class_id=parent_item['id'],
-                    relationship_class_name=parent_item['name'],
-                    object_class_id_list=parent_item['object_class_id_list'],
-                    object_class_name_list=parent_item['object_class_name_list'],
-                    database=db_name,
-                )
-                model = self.relationship_parameter_definition_model.empty_row_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
-                default_row.update(
-                    dict(
-                        relationship_id=item['id'],
-                        object_id_list=item['object_id_list'],
-                        object_name_list=item['object_name_list'],
-                    )
-                )
-                model = self.relationship_parameter_value_model.empty_row_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
 
     def update_filter(self):
         """Update filters on parameter models according to selected and deselected object tree indexes."""
