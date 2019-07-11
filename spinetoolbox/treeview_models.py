@@ -3471,7 +3471,7 @@ class TreeNode:
         id (int, NoneType): the id from the db table
     """
 
-    def __init__(self, parent, row, text=None, level=None, identififer=None):
+    def __init__(self, parent, row, text=None, level=None, identifier=None):
         self.parent = parent
         self.row = row
         self.child_nodes = list()
