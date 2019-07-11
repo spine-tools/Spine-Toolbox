@@ -39,16 +39,17 @@ class GraphViewForm(DataStoreForm):
     """A widget to show the graph view.
 
     Attributes:
-        owner (View or Data Store): View or DataStore instance
-        db_map (DiffDatabaseMapping): The object relational database mapping
-        database (str): The database name
+        project (SpineToolboxProject): The project instance that owns this form
         read_only (bool): Whether or not the form should be editable
+        db_maps: named DiffDatabaseMapping instances
     """
 
-    def __init__(self, owner, db_map, read_only=False):
+    def __init__(self, project, read_only=False, **db_maps):
         """Initialize class."""
         tic = time.clock()
-        super().__init__(owner, Ui_MainWindow(), db_map)
+        super().__init__(project, Ui_MainWindow(), **db_maps)
+        self.db_map = self.db_maps[0]
+        self.db_name = self.db_names[0]
         self.ui.graphicsView._graph_view_form = self
         self.read_only = read_only
         self._has_graph = False
@@ -63,6 +64,7 @@ class GraphViewForm(DataStoreForm):
         self.arc_color.setAlphaF(0.8)
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self, flat=True)
+        self.ui.treeView_object.setModel(self.object_tree_model)
         # Data for ObjectItems
         self.object_ids = list()
         self.object_names = list()
@@ -85,6 +87,8 @@ class GraphViewForm(DataStoreForm):
         # Item palette models
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
+        self.ui.listView_object_class.setModel(self.object_class_list_model)
+        self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         # Context menus
         self.object_item_context_menu = None
         self.graph_view_context_menu = None
@@ -104,7 +108,6 @@ class GraphViewForm(DataStoreForm):
         self.restore_dock_widgets()
         # Initialize stuff
         self.init_models()
-        self.init_views()
         self.setup_delegates()
         self.create_add_more_actions()
         self.add_toggle_view_actions()
@@ -113,7 +116,7 @@ class GraphViewForm(DataStoreForm):
         self.settings_group = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
         self.init_commit_rollback_actions()
-        title = self.database + " (read only) " if read_only else self.database
+        title = self.db_name + " (read only) " if read_only else self.db_name
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
@@ -140,11 +143,6 @@ class GraphViewForm(DataStoreForm):
         self.object_parameter_definition_model.has_empty_row = not self.read_only
         self.relationship_parameter_definition_model.has_empty_row = not self.read_only
         super().init_parameter_definition_models()
-
-    def init_views(self):
-        super().init_views()
-        self.ui.listView_object_class.setModel(self.object_class_list_model)
-        self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
 
     def setup_zoom_action(self):
         """Setup zoom action in view menu."""
@@ -324,8 +322,8 @@ class GraphViewForm(DataStoreForm):
         is_root_selected = self.ui.treeView_object.selectionModel().isSelected(index)
         for i in range(root_item.rowCount()):
             object_class_item = root_item.child(i, 0)
-            object_class_id = object_class_item.data(Qt.UserRole + 1)['id']
-            object_class_name = object_class_item.data(Qt.UserRole + 1)['name']
+            object_class_id = object_class_item.data(Qt.UserRole + 1)[self.db_map]['id']
+            object_class_name = object_class_item.data(Qt.UserRole + 1)[self.db_map]['name']
             index = self.object_tree_model.indexFromItem(object_class_item)
             is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
             # Fetch object class if needed
@@ -333,8 +331,8 @@ class GraphViewForm(DataStoreForm):
                 self.object_tree_model.fetchMore(index)
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
-                object_id = object_item.data(Qt.UserRole + 1)["id"]
-                object_name = object_item.data(Qt.UserRole + 1)["name"]
+                object_id = object_item.data(Qt.UserRole + 1)[self.db_map]["id"]
+                object_name = object_item.data(Qt.UserRole + 1)[self.db_map]["name"]
                 if object_name in rejected_object_names:
                     continue
                 index = self.object_tree_model.indexFromItem(object_item)
@@ -473,9 +471,9 @@ class GraphViewForm(DataStoreForm):
             mask = np.mod(range(N - n), 2 * n) < n
             s1 = pairs[mask]
             s2 = pairs[~mask]
-            if s1:
+            if s1.any():
                 sets.append(s1)
-            if s2:
+            if s2.any():
                 sets.append(s2)
         return sets
 

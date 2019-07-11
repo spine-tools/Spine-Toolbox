@@ -27,8 +27,6 @@ from models import MinimalTableModel, EmptyRowModel
 class ObjectClassListModel(QStandardItemModel):
     """A class to list object classes in the GraphViewForm."""
 
-    # TODO: go from db_map to db_maps
-
     def __init__(self, graph_view_form):
         """Initialize class"""
         super().__init__(graph_view_form)
@@ -75,8 +73,6 @@ class ObjectClassListModel(QStandardItemModel):
 
 class RelationshipClassListModel(QStandardItemModel):
     """A class to list relationship classes in the GraphViewForm."""
-
-    # TODO: go from db_map to db_maps
 
     def __init__(self, graph_view_form):
         """Initialize class"""
@@ -251,11 +247,11 @@ class ObjectTreeModel(QStandardItemModel):
                 self.add_relationships_classes_to_object(db_map, relationship_classes, object_item)
             fetched.add(parent)
         elif parent_type == 'relationship_class':
-            grand_parent_db_map_dict = parent.parent().data(Qt.UserRole + 1)
+            grampa_db_map_dict = parent.parent().data(Qt.UserRole + 1)
             parent_db_map_dict = parent.data(Qt.UserRole + 1)
             rel_cls_item = self.itemFromIndex(parent)
             for db_map, relationship_class in parent_db_map_dict.items():
-                object_ = grand_parent_db_map_dict[db_map]  # TODO: is KeyError possible here?
+                object_ = grampa_db_map_dict[db_map]
                 relationships = db_map.wide_relationship_list(
                     class_id=relationship_class['id'], object_id=object_['id']
                 )
@@ -3766,7 +3762,7 @@ class LazyLoadingArrayModel(EmptyRowModel):
 
     def canFetchMore(self, parent):
         if isinstance(self._orig_data, list):
-            return self._orig_data
+            return bool(self._orig_data)
         return False
 
     def fetchMore(self, parent):

@@ -44,7 +44,6 @@ class TreeViewForm(DataStoreForm):
 
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
-        ui: UI definition of the form that is initialized
         db_maps: named DiffDatabaseMapping instances
     """
 
@@ -60,10 +59,10 @@ class TreeViewForm(DataStoreForm):
     rel_parameter_value_selection_available = Signal("bool", name="rel_parameter_value_selection_available")
     parameter_value_list_selection_available = Signal("bool", name="parameter_value_list_selection_available")
 
-    def __init__(self, data_store, **db_maps):
+    def __init__(self, project, **db_maps):
         """Initialize class."""
         tic = time.process_time()
-        super().__init__(data_store, Ui_MainWindow(), **db_maps)
+        super().__init__(project, Ui_MainWindow(), **db_maps)
         self.takeCentralWidget()
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self)
