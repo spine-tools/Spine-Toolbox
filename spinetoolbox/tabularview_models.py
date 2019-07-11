@@ -22,12 +22,12 @@ from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFi
 from PySide2.QtGui import QColor, QFont
 from spinedb_api import (
     from_database,
-    type_from_database,
     relativedelta_to_duration,
     ParameterValueFormatError,
     DateTime,
     Duration,
     TimePattern,
+    TimeSeries,
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
 )
@@ -958,7 +958,7 @@ class PivotModel:
         if not index:
             # index value cannot be empty/None
             return False
-        if not isinstance(index, self._index_type[index_name]):
+        if not isinstance(index, type(self._index_type[index_name])):
             # index is not correct type
             return False
         if index_name in self._valid_index_values and self._valid_index_values[index_name]:
@@ -1349,18 +1349,16 @@ class PivotTableModel(QAbstractTableModel):
                 if role == Qt.EditRole:
                     return str(data)
                 try:
-                    value_type = type_from_database(data)
+                    value = from_database(data)
                 except ParameterValueFormatError:
                     return "Error"
-                if value_type in (TimeSeriesFixedResolution, TimeSeriesVariableResolution):
+                if isinstance(value, TimeSeries):
                     return "Time series"
-                if value_type == DateTime:
-                    value = from_database(data)
+                if isinstance(value, DateTime):
                     return str(value.value)
-                if value_type == Duration:
-                    value = from_database(data)
+                if isinstance(value, Duration):
                     return relativedelta_to_duration(value.value)
-                if value_type == TimePattern:
+                if isinstance(value, TimePattern):
                     return "Time pattern"
                 return str(data)
             if self.index_in_column_headers(index):
@@ -1386,16 +1384,24 @@ class PivotTableModel(QAbstractTableModel):
         elif role == Qt.BackgroundColorRole:
             return self.data_color(index)
         elif role == Qt.ToolTipRole:
-            # display tooltip for edited data
             if self.index_in_data(index):
-                key = self.get_key(index)
-                if key in self.model._edit_data:
-                    value = self.model._edit_data[key]
-                    if value:
-                        return 'Original data: {}'.format(value)
-                    return 'New data'
-                if key in self.model._deleted_data:
-                    return 'Deleted data: {}'.format(self.model._deleted_data[key])
+                data = self.model.get_pivoted_data(
+                    [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
+                )
+                if not data or data[0][0] is None:
+                    return None
+                data = data[0][0]
+                try:
+                    value = from_database(data)
+                except ParameterValueFormatError as error:
+                    return str(error)
+                if isinstance(value, TimeSeriesFixedResolution):
+                    resolution = [relativedelta_to_duration(r) for r in value.resolution]
+                    resolution = ', '.join(resolution)
+                    return "Start: {}, resolution: {}, length: {}".format(value.start, resolution, len(value))
+                if isinstance(value, TimeSeriesVariableResolution):
+                    return "Start: {}, resolution: variable, length: {}".format(value.indexes[0], len(value))
+                return None
         else:
             return None
 
