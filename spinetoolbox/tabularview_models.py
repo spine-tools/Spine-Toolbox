@@ -20,6 +20,17 @@ import bisect
 import operator
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel, QAbstractListModel
 from PySide2.QtGui import QColor, QFont
+from spinedb_api import (
+    from_database,
+    type_from_database,
+    relativedelta_to_duration,
+    ParameterValueFormatError,
+    DateTime,
+    Duration,
+    TimePattern,
+    TimeSeriesFixedResolution,
+    TimeSeriesVariableResolution,
+)
 from helpers import tuple_itemgetter
 
 
@@ -1332,10 +1343,26 @@ class PivotTableModel(QAbstractTableModel):
                 data = self.model.get_pivoted_data(
                     [index.row() - self._num_headers_row], [index.column() - self._num_headers_column]
                 )
-                if not data:
+                if not data or data[0][0] is None:
                     return ''
                 data = data[0][0]
-                return '' if data is None else str(data)
+                if role == Qt.EditRole:
+                    return str(data)
+                try:
+                    value_type = type_from_database(data)
+                except ParameterValueFormatError:
+                    return "Error"
+                if value_type in (TimeSeriesFixedResolution, TimeSeriesVariableResolution):
+                    return "Time series"
+                if value_type == DateTime:
+                    value = from_database(data)
+                    return str(value.value)
+                if value_type == Duration:
+                    value = from_database(data)
+                    return relativedelta_to_duration(value.value)
+                if value_type == TimePattern:
+                    return "Time pattern"
+                return str(data)
             if self.index_in_column_headers(index):
                 # draw column header values
                 if not self.model.pivot_rows:
