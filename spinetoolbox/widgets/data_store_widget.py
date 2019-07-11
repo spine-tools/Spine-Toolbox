@@ -804,7 +804,7 @@ class DataStoreForm(QMainWindow):
         if not added_names:
             return False
         self.commit_available.emit(True)
-        msg = "Successfully added new parameter value list(es) '{}'.".format("', '".join(added_names))
+        msg = "Successfully added new parameter value list(s) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
 
