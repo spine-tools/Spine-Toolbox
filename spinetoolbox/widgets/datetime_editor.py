@@ -29,6 +29,7 @@ class DatetimeEditor(QWidget):
     Attributes:
         parent (QWidget): a parent widget
     """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._value = DateTime("2000-01-01")

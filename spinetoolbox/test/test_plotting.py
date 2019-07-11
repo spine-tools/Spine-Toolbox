@@ -61,10 +61,7 @@ class _MockTreeGraphViewModel(QAbstractTableModel):
                 "label3",
                 '{"type": "time_series", "index": {"start": "2019-07-11T09:00", "resolution": "3 days"}, "data": [0.5, 2.3]}',
             ],
-            [
-                "label4",
-                '{"type": "time_series", "data": [["2019-07-11T09:00", -5.0], ["2019-07-17T10:35", -3.3]]}',
-            ],
+            ["label4", '{"type": "time_series", "data": [["2019-07-11T09:00", -5.0], ["2019-07-17T10:35", -3.3]]}'],
         ]
 
     def rowCount(self, parent=QModelIndex()):
@@ -161,7 +158,7 @@ class TestPlotting(unittest.TestCase):
         selected_indexes = list()
         selected_indexes.append(model.index(1, 1))
         selected_indexes.append(model.index(2, 1))
-        self.assertRaises(PlottingError, plot_selection,model, selected_indexes)
+        self.assertRaises(PlottingError, plot_selection, model, selected_indexes)
 
 
 if __name__ == '__main__':

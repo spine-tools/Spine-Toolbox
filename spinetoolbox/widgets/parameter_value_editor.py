@@ -40,6 +40,7 @@ from widgets.time_series_variable_resolution_editor import TimeSeriesVariableRes
 
 class _Editor(Enum):
     """Indexes for the specialized editors corresponding to the selector combo box and editor stack."""
+
     PLAIN_VALUE = 0
     TIME_SERIES_FIXED_RESOLUTION = 1
     TIME_SERIES_VARIABLE_RESOLUTION = 2
@@ -63,6 +64,7 @@ class ParameterValueEditor(QDialog):
         parent_index (QModelIndex): an index to a parameter value in parent_model
         parent_widget (QWidget): a parent widget
     """
+
     def __init__(self, parent_model, parent_index, parent_widget=None):
         super().__init__(parent_widget)
         self._parent_model = parent_model

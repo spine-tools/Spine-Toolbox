@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QApplication
 from spinedb_api import DateTime
 from widgets.datetime_editor import DatetimeEditor
 
+
 class TestDatetimeEditor(unittest.TestCase):
     @classmethod
     def setUpClass(cls):

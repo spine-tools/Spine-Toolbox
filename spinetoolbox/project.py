@@ -241,8 +241,13 @@ class SpineToolboxProject(MetaObject):
             data_interfaces = item_dict["Data Interfaces"]
         except KeyError:
             data_interfaces = dict()
-        n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + \
-            len(views.keys()) + len(data_interfaces.keys())
+        n = (
+            len(data_stores.keys())
+            + len(data_connections.keys())
+            + len(tools.keys())
+            + len(views.keys())
+            + len(data_interfaces.keys())
+        )
         self._toolbox.msg.emit("Loading project items...")
         if n == 0:
             self._toolbox.msg_warning.emit("Project has no items")

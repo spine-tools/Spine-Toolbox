@@ -30,6 +30,7 @@ class _ValueModel:
     Attributes:
         value (float, bool): a parameter value
     """
+
     def __init__(self, value):
         self._value = value
 
@@ -60,6 +61,7 @@ class PlainParameterValueEditor(QWidget):
     Attributes:
         parent_widget (QWidget): a parent widget
     """
+
     def __init__(self, parent_widget=None):
         super().__init__(parent_widget)
         self._ui = Ui_PlainParameterValueEditor()
