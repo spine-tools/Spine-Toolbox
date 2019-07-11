@@ -17,9 +17,72 @@ Unit tests for the plotting module.
 """
 
 import unittest
+from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
-from plotting import plot_pivot_column, plot_pivot_selection
+from plotting import plot_pivot_column, plot_selection, PlottingError
 from tabularview_models import PivotTableModel
+
+
+def _make_pivot_model():
+    """Returns a prefilled PivotTableModel."""
+    model = PivotTableModel()
+    data = [
+        ['1', 'int_col', '-3'],
+        ['2', 'int_col', '-1'],
+        ['3', 'int_col', '2'],
+        ['1', 'float_col', '1.1'],
+        ['2', 'float_col', '1.2'],
+        ['3', 'float_col', '1.3'],
+        ['1', 'time_series_col', '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}'],
+        [
+            '2',
+            'time_series_col',
+            '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
+        ],
+        ['3', 'time_series_col', '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}'],
+    ]
+    index_names = ['rows', 'col_types']
+    index_real_names = ['real_id', 'real_col_types']
+    index_types = [str, str]
+    model.set_data(data, index_names, index_types, index_real_names=index_real_names)
+    model.set_pivot(['rows'], ['col_types'], [], ())
+    return model
+
+
+class _MockTreeGraphViewModel(QAbstractTableModel):
+    """A mock model for testing purposes."""
+
+    def __init__(self):
+        super().__init__()
+        self._table = [
+            ["label1", "-2.3"],
+            ["label2", "-0.5"],
+            [
+                "label3",
+                '{"type": "time_series", "index": {"start": "2019-07-11T09:00", "resolution": "3 days"}, "data": [0.5, 2.3]}',
+            ],
+            [
+                "label4",
+                '{"type": "time_series", "data": [["2019-07-11T09:00", -5.0], ["2019-07-17T10:35", -3.3]]}',
+            ],
+        ]
+
+    def rowCount(self, parent=QModelIndex()):
+        return 4
+
+    def columnCount(self, parent=QModelIndex()):
+        return 2
+
+    def data(self, index, role=Qt.DisplayRole):
+        if role not in (Qt.DisplayRole, Qt.EditRole):
+            return None
+        return self._table[index.row()][index.column()]
+
+    def setData(self, index, value, role=Qt.EditRole):
+        if role != Qt.EditRole:
+            return False
+        self._table[index.row()][index.column()] = value
+        return True
 
 
 class TestPlotting(unittest.TestCase):
@@ -28,51 +91,23 @@ class TestPlotting(unittest.TestCase):
         if not QApplication.instance():
             QApplication()
 
-    def setUp(self):
-        self._model = PivotTableModel()
-        data = [
-            ['1', 'int_col', '-3'],
-            ['2', 'int_col', '-1'],
-            ['3', 'int_col', '2'],
-            ['1', 'float_col', '1.1'],
-            ['2', 'float_col', '1.2'],
-            ['3', 'float_col', '1.3'],
-            [
-                '1',
-                'time_series_col',
-                '{"type": "time_series", "data": {"2019-07-10T13:00": 2.3, "2019-07-10T13:20": 5.0}}',
-            ],
-            [
-                '2',
-                'time_series_col',
-                '{"type": "time_series", "index": {"start": "2019-07-10T13:00", "resolution": "20 minutes"}, "data": [3.3, 4.0]}',
-            ],
-            [
-                '3',
-                'time_series_col',
-                '{"type": "time_series", "data": {"2019-07-10T13:00": 4.3, "2019-07-10T13:20": 3.0}}',
-            ],
-        ]
-        index_names = ['rows', 'col_types']
-        index_real_names = ['real_id', 'real_col_types']
-        index_types = [str, str]
-        self._model.set_data(data, index_names, index_types, index_real_names=index_real_names)
-        self._model.set_pivot(['rows'], ['col_types'], [], ())
-
     def test_plot_pivot_column_float_type(self):
-        plot_widget = plot_pivot_column(self._model, 1)
+        model = _make_pivot_model()
+        plot_widget = plot_pivot_column(model, 1)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
 
     def test_plot_pivot_column_int_type(self):
-        plot_widget = plot_pivot_column(self._model, 2)
+        model = _make_pivot_model()
+        plot_widget = plot_pivot_column(model, 2)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_pivot_column_time_series_type(self):
-        plot_widget = plot_pivot_column(self._model, 3)
+        model = _make_pivot_model()
+        plot_widget = plot_pivot_column(model, 3)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 3)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [2.3, 5.0]))
@@ -80,23 +115,53 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[2].get_ydata(orig=True) == [4.3, 3.0]))
 
     def test_plot_pivot_selection(self):
+        model = _make_pivot_model()
         selected_indexes = list()
         for row in range(2, 5):
             for column in range(1, 3):
-                selected_indexes.append(self._model.index(row, column))
-        plot_widget = plot_pivot_selection(self._model, selected_indexes)
+                selected_indexes.append(model.index(row, column))
+        plot_widget = plot_selection(model, selected_indexes)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
         self.assertTrue(all(lines[1].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_pivot_column_with_y_column(self):
-        self._model.set_plot_y_column(1, True)
-        plot_widget = plot_pivot_column(self._model, 2)
+        model = _make_pivot_model()
+        model.set_plot_y_column(1, True)
+        plot_widget = plot_pivot_column(model, 2)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.1, 1.2, 1.3]))
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
+
+    def test_plot_tree_view_selection_of_floats(self):
+        model = _MockTreeGraphViewModel()
+        selected_indexes = list()
+        selected_indexes.append(model.index(0, 1))
+        selected_indexes.append(model.index(1, 1))
+        plot_widget = plot_selection(model, selected_indexes)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3, -0.5]))
+
+    def test_plot_tree_view_selection_of_time_series(self):
+        model = _MockTreeGraphViewModel()
+        selected_indexes = list()
+        selected_indexes.append(model.index(2, 1))
+        selected_indexes.append(model.index(3, 1))
+        plot_widget = plot_selection(model, selected_indexes)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 2)
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [0.5, 2.3]))
+        self.assertTrue(all(lines[1].get_ydata(orig=True) == [-5.0, -3.3]))
+
+    def test_plot_tree_view_selection_raises_with_mixed_data(self):
+        model = _MockTreeGraphViewModel()
+        selected_indexes = list()
+        selected_indexes.append(model.index(1, 1))
+        selected_indexes.append(model.index(2, 1))
+        self.assertRaises(PlottingError, plot_selection,model, selected_indexes)
 
 
 if __name__ == '__main__':

@@ -34,6 +34,8 @@ from widgets.parameter_value_editor import ParameterValueEditor
 from treeview_models import ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
+from plotting import plot_selection, PlottingError
+from widgets.report_plotting_failure import report_plotting_failure
 
 
 class GraphViewForm(DataStoreForm):
@@ -978,6 +980,15 @@ class GraphViewForm(DataStoreForm):
         if option == "Open in editor...":
             editor = ParameterValueEditor(self.object_parameter_value_model, index, self)
             editor.show()
+        elif option == "Plot":
+            selection = self.ui.tableView_object_parameter_value.selectedIndexes()
+            try:
+                plot_widget = plot_selection(self.object_parameter_value_model, selection)
+            except PlottingError as error:
+                report_plotting_failure(error)
+                return
+            plot_widget.setWindowTitle("Plot")
+            plot_widget.show()
         menu.deleteLater()
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
@@ -995,6 +1006,15 @@ class GraphViewForm(DataStoreForm):
         if option == "Open in editor...":
             editor = ParameterValueEditor(self.relationship_parameter_value_model, index, self)
             editor.show()
+        elif option == "Plot":
+            selection = self.ui.tableView_relationship_parameter_value.selectedIndexes()
+            try:
+                plot_widget = plot_selection(self.relationship_parameter_value_model, selection)
+            except PlottingError as error:
+                report_plotting_failure(error)
+                return
+            plot_widget.setWindowTitle("Plot")
+            plot_widget.show()
         menu.deleteLater()
 
     @busy_effect

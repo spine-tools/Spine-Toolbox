@@ -22,10 +22,19 @@ from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, QItemSelectionModel
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
-from plotting import plot_pivot_column, plot_pivot_selection, PlottingError
+from plotting import plot_pivot_column, plot_selection, PlottingError
 from widgets.custom_qwidgets import FilterWidget
 from widgets.parameter_value_editor import ParameterValueEditor
+from widgets.report_plotting_failure import report_plotting_failure
 from models import MinimalTableModel
+
+
+def handle_plotting_failure(error):
+    """Reports a PlottingError exception to the user."""
+    errorBox = QMessageBox()
+    errorBox.setWindowTitle("Plotting failed")
+    errorBox.setText(error.message)
+    errorBox.exec()
 
 
 class CustomContextMenu(QMenu):
@@ -385,7 +394,8 @@ class ParameterContextMenu(CustomContextMenu):
 
 
 class SimpleEditableParameterValueContextMenu(CustomContextMenu):
-    """Context menu class for object (relationship) parameter value items in tree views.
+    """
+    Context menu class for object (relationship) parameter value items in graph views.
 
     Attributes:
         parent (QWidget): Parent for menu widget (TreeViewForm)
@@ -399,6 +409,8 @@ class SimpleEditableParameterValueContextMenu(CustomContextMenu):
         if not index.isValid():
             return
         self.add_action("Open in editor...")
+        self.addSeparator()
+        self.add_action("Plot")
         self.exec_(position)
 
 
@@ -420,6 +432,9 @@ class EditableParameterValueContextMenu(CustomContextMenu):
         paste_icon = self._parent.ui.actionPaste.icon()
         remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
         self.add_action("Open in editor...")
+        self.addSeparator()
+        self.add_action("Plot")
+        self.addSeparator()
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()
@@ -670,13 +685,6 @@ class FilterMenu(QMenu):
         self.hide()
 
 
-def _handle_plotting_failure(error):
-    errorBox = QMessageBox()
-    errorBox.setWindowTitle("Plotting failed")
-    errorBox.setText(error.message)
-    errorBox.exec()
-
-
 class PivotTableModelMenu(QMenu):
     def __init__(self, model, proxy_model, parent=None):
         super().__init__(parent)
@@ -806,9 +814,9 @@ class PivotTableModelMenu(QMenu):
     def plot(self):
         """Plots the selected cells in the pivot table."""
         try:
-            plot_window = plot_pivot_selection(self._model, self._get_selected_indexes())
+            plot_window = plot_selection(self._model, self._get_selected_indexes())
         except PlottingError as error:
-            _handle_plotting_failure(error)
+            report_plotting_failure(error)
             return
         plot_window.setWindowTitle("Plot")
         plot_window.show()
@@ -886,7 +894,7 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         try:
             plot_window = plot_pivot_column(self._model, self._model_index.column())
         except PlottingError as error:
-            _handle_plotting_failure(error)
+            report_plotting_failure(error)
             return
         plot_window.setWindowTitle("Plot")
         plot_window.show()
