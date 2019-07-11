@@ -33,10 +33,12 @@ from widgets.custom_menus import (
 )
 from widgets.custom_qdialog import RemoveTreeItemsDialog
 from widgets.parameter_value_editor import ParameterValueEditor
+from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect
+from plotting import plot_selection, PlottingError
 
 
 class TreeViewForm(DataStoreForm):
@@ -893,6 +895,15 @@ class TreeViewForm(DataStoreForm):
         if option == "Open in editor...":
             editor = ParameterValueEditor(self.object_parameter_value_model, index, self)
             editor.show()
+        elif option == "Plot":
+            selection = self.ui.tableView_object_parameter_value.selectedIndexes()
+            try:
+                plot_widget = plot_selection(self.object_parameter_value_model, selection)
+            except PlottingError as error:
+                report_plotting_failure(error)
+                return
+            plot_widget.setWindowTitle("Plot")
+            plot_widget.show()
         elif option == "Remove selection":
             self.remove_object_parameter_values()
         elif option == "Copy":
@@ -921,6 +932,15 @@ class TreeViewForm(DataStoreForm):
         if option == "Open in editor...":
             editor = ParameterValueEditor(self.relationship_parameter_value_model, index, self)
             editor.show()
+        elif option == "Plot":
+            selection = self.ui.tableView_relationship_parameter_value.selectedIndexes()
+            try:
+                plot_widget = plot_selection(self.relationship_parameter_value_model, selection)
+            except PlottingError as error:
+                report_plotting_failure(error)
+                return
+            plot_widget.setWindowTitle("Plot")
+            plot_widget.show()
         elif option == "Remove selection":
             self.remove_relationship_parameter_values()
         elif option == "Copy":
