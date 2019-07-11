@@ -123,9 +123,9 @@ class TestPlotting(unittest.TestCase):
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
         self.assertTrue(all(lines[1].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
-    def test_plot_pivot_column_with_y_column(self):
+    def test_plot_pivot_column_with_x_column(self):
         model = _make_pivot_model()
-        model.set_plot_y_column(1, True)
+        model.set_plot_x_column(1, True)
         plot_widget = plot_pivot_column(model, 2)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)

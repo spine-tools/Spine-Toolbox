@@ -883,9 +883,9 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         self._model_index = None
         self._plot_action = self.addAction("Plot single column")
         self._plot_action.triggered.connect(self._plot_column)
-        self._set_as_Y_action = self.addAction("Use as Y")
-        self._set_as_Y_action.setCheckable(True)
-        self._set_as_Y_action.triggered.connect(self._set_y_flag)
+        self._set_as_X_action = self.addAction("Use as X")
+        self._set_as_X_action.setCheckable(True)
+        self._set_as_X_action.triggered.connect(self._set_x_flag)
 
     @Slot(name="_plot_column")
     def _plot_column(self):
@@ -905,18 +905,18 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         self._model_index = self.parent().indexAt(pos)
         if self._model.index_in_top_left(self._model_index):
             self._plot_action.setEnabled(False)
-            self._set_as_Y_action.setEnabled(False)
-            self._set_as_Y_action.setChecked(False)
+            self._set_as_X_action.setEnabled(False)
+            self._set_as_X_action.setChecked(False)
         else:
             self._plot_action.setEnabled(True)
-            self._set_as_Y_action.setEnabled(True)
-            self._set_as_Y_action.setChecked(self._model_index.column() == self._model.plot_y_column)
+            self._set_as_X_action.setEnabled(True)
+            self._set_as_X_action.setChecked(self._model_index.column() == self._model.plot_x_column)
         self.show()
 
-    @Slot(name="_set_y_flag")
-    def _set_y_flag(self):
-        """Sets the Y flag for a column."""
-        self._model.set_plot_y_column(self._model_index.column(), self._set_as_Y_action.isChecked())
+    @Slot(name="_set_x_flag")
+    def _set_x_flag(self):
+        """Sets the X flag for a column."""
+        self._model.set_plot_x_column(self._model_index.column(), self._set_as_X_action.isChecked())
 
 
 class AutoFilterMenu(QMenu):

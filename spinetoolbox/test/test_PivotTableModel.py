@@ -30,12 +30,12 @@ class TestPivotTableModel(unittest.TestCase):
         self._model.set_data(data, index_names, index_types, index_real_names=index_real_names)
         self._model.set_pivot(['rows'], ['cols'], [], ())
 
-    def test_y_flag(self):
-        self.assertIsNone(self._model.plot_y_column)
-        self._model.set_plot_y_column(1, True)
-        self.assertEqual(self._model.plot_y_column, 1)
-        self._model.set_plot_y_column(1, False)
-        self.assertIsNone(self._model.plot_y_column)
+    def test_x_flag(self):
+        self.assertIsNone(self._model.plot_x_column)
+        self._model.set_plot_x_column(1, True)
+        self.assertEqual(self._model.plot_x_column, 1)
+        self._model.set_plot_x_column(1, False)
+        self.assertIsNone(self._model.plot_x_column)
 
     def test_get_col_key(self):
         self.assertEqual(self._model.get_col_key(1), ('col1',))

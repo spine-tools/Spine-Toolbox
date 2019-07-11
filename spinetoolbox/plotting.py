@@ -184,8 +184,8 @@ def _collect_column_values(model, column, rows):
     """
     values, labels = _collect_single_column_values(model, column, rows)
     if values and isinstance(values[0], float):
-        y_values = np.arange(1.0, float(len(values) + 1.0))
-        return (y_values, values), labels
+        x_values = np.arange(1.0, float(len(values) + 1.0))
+        return (x_values, values), labels
     return values, labels
 
 
@@ -210,11 +210,11 @@ def _collect_pivot_column_values(model, column, rows):
     values, labels = _collect_pivot_single_column_values(model, column, rows)
     if values and isinstance(values[0], float):
         # Collect the y values as well
-        if model.plot_y_column is not None and column != model.plot_y_column:
-            y_values, _ = _collect_pivot_single_column_values(model, model.plot_y_column, rows)
+        if model.plot_x_column is not None and column != model.plot_x_column:
+            x_values, _ = _collect_pivot_single_column_values(model, model.plot_x_column, rows)
         else:
-            y_values = np.arange(1.0, float(len(values) + 1.0))
-        return (y_values, values), labels
+            x_values = np.arange(1.0, float(len(values) + 1.0))
+        return (x_values, values), labels
     return values, labels
 
 
@@ -257,7 +257,7 @@ def plot_selection(model, indexes):
     for column, rows in selections.items():
         values, labels = collect_column_values(model, column, rows)
         if first_column_value_type is None and values:
-            if isinstance(values[0], TimeSries):
+            if isinstance(values[0], TimeSeries):
                 first_column_value_type = TimeSeries
             else:
                 first_column_value_type = type(values[0][1])
