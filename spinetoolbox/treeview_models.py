@@ -20,8 +20,9 @@ import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
 from spinedb_api import SpineDBAPIError
-from helpers import busy_effect, format_string_list, strip_json_data
+from helpers import busy_effect, format_string_list
 from models import MinimalTableModel, EmptyRowModel
+from parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -1424,10 +1425,11 @@ class SubParameterValueModel(SubParameterModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
-        if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 256)
-        if role == Qt.DisplayRole and self._parent.header[index.column()] == 'value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 16)
+        if self._parent.header[index.column()] == 'value':
+            if role == Qt.ToolTipRole:
+                return format_for_ToolTipRole(super().data(index, Qt.EditRole))
+            if role == Qt.DisplayRole:
+                return format_for_DisplayRole(super().data(index, Qt.EditRole))
         return super().data(index, role)
 
 
@@ -1518,10 +1520,11 @@ class SubParameterDefinitionModel(SubParameterModel):
 
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
-        if role == Qt.ToolTipRole and self._parent.header[index.column()] == 'default_value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 256)
-        if role == Qt.DisplayRole and self._parent.header[index.column()] == 'default_value':
-            return strip_json_data(super().data(index, Qt.DisplayRole), 16)
+        if self._parent.header[index.column()] == 'default_value':
+            if role == Qt.ToolTipRole:
+                return format_for_ToolTipRole(super().data(index, Qt.EditRole))
+            if role == Qt.DisplayRole:
+                return format_for_DisplayRole(super().data(index, Qt.EditRole))
         return super().data(index, role)
 
 

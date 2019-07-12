@@ -367,21 +367,6 @@ def format_string_list(str_list):
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def strip_json_data(json_data, maxlen):
-    """Return a string representation of `json_data`, stripped to `maxlen` characters.
-    """
-    try:
-        data = json.loads(json_data)
-    except Exception:
-        data = None
-    if data is None:
-        return ""
-    stripped_data = str(data)
-    if len(stripped_data) > 2 * maxlen:
-        stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
-    return stripped_data
-
-
 def get_db_map(url, upgrade=False):
     """Returns a DiffDatabaseMapping instance from url.
     If the db is not the latest version, asks the user if they want to upgrade it.

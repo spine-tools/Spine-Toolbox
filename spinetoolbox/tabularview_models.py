@@ -20,18 +20,8 @@ import bisect
 import operator
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel, QAbstractListModel
 from PySide2.QtGui import QColor, QFont
-from spinedb_api import (
-    from_database,
-    relativedelta_to_duration,
-    ParameterValueFormatError,
-    DateTime,
-    Duration,
-    TimePattern,
-    TimeSeries,
-    TimeSeriesFixedResolution,
-    TimeSeriesVariableResolution,
-)
 from helpers import tuple_itemgetter
+from parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
 
 
 class PivotModel:
@@ -1347,20 +1337,8 @@ class PivotTableModel(QAbstractTableModel):
                     return ''
                 data = data[0][0]
                 if role == Qt.EditRole:
-                    return str(data)
-                try:
-                    value = from_database(data)
-                except ParameterValueFormatError:
-                    return "Error"
-                if isinstance(value, TimeSeries):
-                    return "Time series"
-                if isinstance(value, DateTime):
-                    return str(value.value)
-                if isinstance(value, Duration):
-                    return relativedelta_to_duration(value.value)
-                if isinstance(value, TimePattern):
-                    return "Time pattern"
-                return str(data)
+                    return format_for_EditRole(data)
+                return format_for_DisplayRole(data)
             if self.index_in_column_headers(index):
                 # draw column header values
                 if not self.model.pivot_rows:
@@ -1391,17 +1369,7 @@ class PivotTableModel(QAbstractTableModel):
                 if not data or data[0][0] is None:
                     return None
                 data = data[0][0]
-                try:
-                    value = from_database(data)
-                except ParameterValueFormatError as error:
-                    return str(error)
-                if isinstance(value, TimeSeriesFixedResolution):
-                    resolution = [relativedelta_to_duration(r) for r in value.resolution]
-                    resolution = ', '.join(resolution)
-                    return "Start: {}, resolution: {}, length: {}".format(value.start, resolution, len(value))
-                if isinstance(value, TimeSeriesVariableResolution):
-                    return "Start: {}, resolution: variable, length: {}".format(value.indexes[0], len(value))
-                return None
+                return format_for_ToolTipRole(data)
         else:
             return None
 
