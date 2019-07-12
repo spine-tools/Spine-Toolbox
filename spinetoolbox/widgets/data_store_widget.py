@@ -368,8 +368,11 @@ class DataStoreForm(QMainWindow):
         """Initialize parameter value_list models from source database."""
         self.parameter_value_list_model.build_tree()
         for i in range(self.parameter_value_list_model.rowCount()):
-            index = self.parameter_value_list_model.index(i, 0)
-            self.ui.treeView_parameter_value_list.expand(index)
+            db_index = self.parameter_value_list_model.index(i, 0)
+            self.ui.treeView_parameter_value_list.expand(db_index)
+            for j in range(self.parameter_value_list_model.rowCount(db_index)):
+                list_index = self.parameter_value_list_model.index(j, 0, db_index)
+                self.ui.treeView_parameter_value_list.expand(list_index)
         self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
         self.ui.treeView_parameter_value_list.header().hide()
 

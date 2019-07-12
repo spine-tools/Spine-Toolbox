@@ -1426,10 +1426,12 @@ class SubParameterValueModel(SubParameterModel):
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
         if self._parent.header[index.column()] == 'value':
-            if role == Qt.ToolTipRole:
-                return format_for_ToolTipRole(super().data(index, Qt.EditRole))
-            if role == Qt.DisplayRole:
-                return format_for_DisplayRole(super().data(index, Qt.EditRole))
+            data = super().data(index, Qt.EditRole)
+            if data is not None:
+                if role == Qt.ToolTipRole:
+                    return format_for_ToolTipRole(data)
+                if role == Qt.DisplayRole:
+                    return format_for_DisplayRole(data)
         return super().data(index, role)
 
 
@@ -3546,8 +3548,8 @@ class ParameterValueListModel(QAbstractItemModel):
         self.beginResetModel()
         self._root_nodes = list()
         k = 0
-        for db_map in self._parent.db_maps:
-            db_node = TreeNode(None, k, text=self._parent.db_map_to_name[db_map], level=0)
+        for db_map, db_name in self._parent.db_map_to_name.items():
+            db_node = TreeNode(None, k, text="root ({})".format(db_name), level=0)
             k += 1
             self._root_nodes.append(db_node)
             i = 0
@@ -3612,6 +3614,9 @@ class ParameterValueListModel(QAbstractItemModel):
         if role == Qt.ForegroundRole and index.parent().isValid() and index.row() == self.rowCount(index.parent()) - 1:
             # Paint gray last item in each inner level
             return self.gray_brush
+        if role == Qt.DecorationRole:
+            if index.internalPointer().level == 0:
+                return QIcon(":/symbols/Spine_symbol.png")
         if role in (Qt.DisplayRole, Qt.EditRole):
             text = index.internalPointer().text
             # Deserialize value (so we don't see e.g. quotes around strings)

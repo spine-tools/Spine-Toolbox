@@ -20,11 +20,16 @@
     <file>folder-link.svg</file>
     <file>minus.svg</file>
     <file>plus.svg</file>
+    <file>qt_extended_48x48.png</file>
     <file>project_item_icons/stop-circle-regular.svg</file>
     <file>project_item_icons/play-circle-regular.svg</file>
     <file>project_item_icons/play-circle-solid.svg</file>
     <file>project_item_icons/tree.svg</file>
-    <file>menu_icons/trash-alt.svg</file>
+    <file>project_item_icons/map-solid.svg</file>
+    <file>project_item_icons/binoculars.svg</file>
+    <file>project_item_icons/database.svg</file>
+    <file>project_item_icons/file-alt.svg</file>
+    <file>project_item_icons/hammer.svg</file>
     <file>menu_icons/info-circle.svg</file>
     <file>menu_icons/save_regular.svg</file>
     <file>menu_icons/save_solid.svg</file>
@@ -33,16 +38,9 @@
     <file>menu_icons/window-close.svg</file>
     <file>menu_icons/cog.svg</file>
     <file>menu_icons/question-circle.svg</file>
-    <file>qt_extended_48x48.png</file>
-    <file>project_item_icons/map-solid.svg</file>
-    <file>project_item_icons/binoculars.svg</file>
-    <file>project_item_icons/database.svg</file>
-    <file>project_item_icons/file-alt.svg</file>
-    <file>project_item_icons/hammer.svg</file>
     <file>menu_icons/angle-double-left.svg</file>
     <file>menu_icons/angle-double-right.svg</file>
     <file>menu_icons/check.svg</file>
-    <file>menu_icons/cog.svg</file>
     <file>menu_icons/cog_minus.svg</file>
     <file>menu_icons/copy.svg</file>
     <file>menu_icons/cube_minus.svg</file>
@@ -52,20 +50,13 @@
     <file>menu_icons/cubes_pen.svg</file>
     <file>menu_icons/cubes_plus.svg</file>
     <file>menu_icons/ellipsis-h.svg</file>
-    <file>menu_icons/file.svg</file>
     <file>menu_icons/file-export.svg</file>
     <file>menu_icons/file-import.svg</file>
     <file>menu_icons/folder-open-regular.svg</file>
     <file>menu_icons/folder-open-solid.svg</file>
-    <file>menu_icons/hands-helping.svg</file>
-    <file>menu_icons/info-circle.svg</file>
     <file>menu_icons/paste.svg</file>
-    <file>menu_icons/question-circle.svg</file>
-    <file>menu_icons/save_regular.svg</file>
-    <file>menu_icons/save_solid.svg</file>
     <file>menu_icons/sync.svg</file>
     <file>menu_icons/trash-alt.svg</file>
     <file>menu_icons/undo.svg</file>
-    <file>menu_icons/window-close.svg</file>
   </qresource>
 </RCC>

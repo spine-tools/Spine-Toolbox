@@ -432,7 +432,7 @@ class DataStore(ProjectItem):
             return
         if self.tree_view_form:
             # If the url hasn't changed, just raise the current form
-            if self.tree_view_form.db_map.db_url == url:
+            if self.tree_view_form.db_maps[0].db_url == url:
                 if self.tree_view_form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
                     self.tree_view_form.setWindowState(
