@@ -948,7 +948,7 @@ class PivotModel:
         if not index:
             # index value cannot be empty/None
             return False
-        if not isinstance(index, type(self._index_type[index_name])):
+        if not isinstance(index, self._index_type[index_name]):
             # index is not correct type
             return False
         if index_name in self._valid_index_values and self._valid_index_values[index_name]:
