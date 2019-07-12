@@ -3549,7 +3549,7 @@ class ParameterValueListModel(QAbstractItemModel):
         self._root_nodes = list()
         k = 0
         for db_map, db_name in self._parent.db_map_to_name.items():
-            db_node = TreeNode(None, k, text="root ({})".format(db_name), level=0)
+            db_node = TreeNode(None, k, text="root ({})".format(db_name), identifier=db_map, level=0)
             k += 1
             self._root_nodes.append(db_node)
             i = 0
@@ -3620,12 +3620,8 @@ class ParameterValueListModel(QAbstractItemModel):
         if role in (Qt.DisplayRole, Qt.EditRole):
             text = index.internalPointer().text
             # Deserialize value (so we don't see e.g. quotes around strings)
-            if (
-                role == Qt.DisplayRole
-                and index.internalPointer().level == 2
-                and index.row() != self.rowCount(index.parent()) - 1
-            ):
-                text = json.loads(text)
+            if index.internalPointer().level == 2 and index.row() != self.rowCount(index.parent()) - 1:
+                text = format_for_DisplayRole(text)
             return text
         return None
 
@@ -3703,8 +3699,7 @@ class ParameterValueListModel(QAbstractItemModel):
         if parent.internalPointer().level == 0:
             # The changes correspond to list *names*.
             # We need to check them all
-            db_name = parent.internalPointer().text
-            db_map = self._parent.db_name_to_map[db_name]
+            db_map = parent.internalPointer().id
             for row in range(first, last + 1):
                 index = self.index(row, 0, parent)
                 node = index.internalPointer()
@@ -3720,8 +3715,7 @@ class ParameterValueListModel(QAbstractItemModel):
                         to_add.setdefault(db_map, []).append(dict(parent=index, name=node.text, value_list=value_list))
         elif parent.internalPointer().level == 1:
             # The changes correspond to list *values*, so it's enough to check the parent
-            db_name = parent.parent().internalPointer().text
-            db_map = self._parent.db_name_to_map[db_name]
+            db_map = parent.parent().internalPointer().id
             value_list = [
                 str(self.index(i, 0, parent).internalPointer().text) for i in range(self.rowCount(parent) - 1)
             ]
