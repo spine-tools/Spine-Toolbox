@@ -210,7 +210,7 @@ class ObjectTreeModel(QStandardItemModel):
         if self.flat and parent_type in ('object', 'relationship_class'):
             return False
         fetched = self._fetched[parent_type]
-        if parent in fetched:
+        if not self.canFetchMore(parent):
             return super().hasChildren(parent)
         return True
 
@@ -221,8 +221,9 @@ class ObjectTreeModel(QStandardItemModel):
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'root':
             return True
+        db_map_dict = parent.data(Qt.UserRole + 1)
         fetched = self._fetched[parent_type]
-        return parent not in fetched
+        return any((db_map, item['id']) not in fetched for db_map, item in db_map_dict.items())
 
     @busy_effect
     def fetchMore(self, parent):
@@ -239,14 +240,14 @@ class ObjectTreeModel(QStandardItemModel):
             object_class_item = self.itemFromIndex(parent)
             for db_map, object_class in parent_db_map_dict.items():
                 self.add_objects_to_class(db_map, db_map.object_list(class_id=object_class['id']), object_class_item)
-            fetched.add(parent)
+                fetched.add((db_map, object_class['id']))
         elif parent_type == 'object':
             parent_db_map_dict = parent.data(Qt.UserRole + 1)
             object_item = self.itemFromIndex(parent)
             for db_map, object_ in parent_db_map_dict.items():
                 relationship_classes = db_map.wide_relationship_class_list(object_class_id=object_['class_id'])
                 self.add_relationships_classes_to_object(db_map, relationship_classes, object_item)
-            fetched.add(parent)
+                fetched.add((db_map, object_['id']))
         elif parent_type == 'relationship_class':
             grampa_db_map_dict = parent.parent().data(Qt.UserRole + 1)
             parent_db_map_dict = parent.data(Qt.UserRole + 1)
@@ -257,7 +258,7 @@ class ObjectTreeModel(QStandardItemModel):
                     class_id=relationship_class['id'], object_id=object_['id']
                 )
                 self.add_relationships_to_class(db_map, relationships, rel_cls_item)
-            fetched.add(parent)
+                fetched.add((db_map, relationship_class['id']))
         self.dataChanged.emit(parent, parent)
 
     def build_tree(self, flat=False):
@@ -734,56 +735,60 @@ class ObjectTreeModel(QStandardItemModel):
         for row in sorted(removed_rows, reverse=True):
             object_class_item = self.root_item.child(row, 0)
             db_map_dict = object_class_item.data(Qt.UserRole + 1)
-            del db_map_dict[db_map]
+            db_map_dict.pop(db_map, None)
             if not db_map_dict:
                 self.root_item.removeRow(row)
             else:
                 db_item = self.root_item.child(row, 1)
                 databases = db_item.data(Qt.DisplayRole).split(",")
-                databases.remove(self._parent.db_map_to_name[db_map])
-                db_item.setData(",".join(databases), Qt.DisplayRole)
+                if self._parent.db_map_to_name[db_map] in databases:
+                    databases.remove(self._parent.db_map_to_name[db_map])
+                    db_item.setData(",".join(databases), Qt.DisplayRole)
                 self.remove_object_rows(db_map, range(object_class_item.rowCount()), object_class_item)
 
     def remove_object_rows(self, db_map, removed_rows, object_class_item):
         for row in sorted(removed_rows, reverse=True):
             object_item = object_class_item.child(row, 0)
             db_map_dict = object_item.data(Qt.UserRole + 1)
-            del db_map_dict[db_map]
+            db_map_dict.pop(db_map, None)
             if not db_map_dict:
                 object_class_item.removeRow(row)
             else:
                 db_item = object_class_item.child(row, 1)
                 databases = db_item.data(Qt.DisplayRole).split(",")
-                databases.remove(self._parent.db_map_to_name[db_map])
-                db_item.setData(",".join(databases), Qt.DisplayRole)
+                if self._parent.db_map_to_name[db_map] in databases:
+                    databases.remove(self._parent.db_map_to_name[db_map])
+                    db_item.setData(",".join(databases), Qt.DisplayRole)
                 self.remove_relationship_class_rows(db_map, range(object_item.rowCount()), object_item)
 
     def remove_relationship_class_rows(self, db_map, removed_rows, object_item):
         for row in sorted(removed_rows, reverse=True):
             rel_cls_item = object_item.child(row, 0)
             db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
-            del db_map_dict[db_map]
+            db_map_dict.pop(db_map, None)
             if not db_map_dict:
                 object_item.removeRow(row)
             else:
                 db_item = object_item.child(row, 1)
                 databases = db_item.data(Qt.DisplayRole).split(",")
-                databases.remove(self._parent.db_map_to_name[db_map])
-                db_item.setData(",".join(databases), Qt.DisplayRole)
+                if self._parent.db_map_to_name[db_map] in databases:
+                    databases.remove(self._parent.db_map_to_name[db_map])
+                    db_item.setData(",".join(databases), Qt.DisplayRole)
                 self.remove_relationship_rows(db_map, range(rel_cls_item.rowCount()), rel_cls_item)
 
     def remove_relationship_rows(self, db_map, removed_rows, rel_cls_item):
         for row in sorted(removed_rows, reverse=True):
             relationship_item = rel_cls_item.child(row, 0)
             db_map_dict = relationship_item.data(Qt.UserRole + 1)
-            del db_map_dict[db_map]
+            db_map_dict.pop(db_map)
             if not db_map_dict:
                 rel_cls_item.removeRow(row)
             else:
                 db_item = rel_cls_item.child(row, 1)
                 databases = db_item.data(Qt.DisplayRole).split(",")
-                databases.remove(self._parent.db_map_to_name[db_map])
-                db_item.setData(",".join(databases), Qt.DisplayRole)
+                if self._parent.db_map_to_name[db_map] in databases:
+                    databases.remove(self._parent.db_map_to_name[db_map])
+                    db_item.setData(",".join(databases), Qt.DisplayRole)
 
     def remove_object_classes(self, db_map, removed_ids):
         """Remove object classes and their childs."""
@@ -852,7 +857,7 @@ class ObjectTreeModel(QStandardItemModel):
         if not removed_ids:
             return
         items = self.findItems('*', Qt.MatchWildcard | Qt.MatchRecursive, column=0)
-        removed_relationship_row_d = {}
+        removed_relationship_class_row_d = {}
         for visited_item in items:
             visited_type = visited_item.data(Qt.UserRole)
             if visited_type != 'relationship_class':
@@ -864,7 +869,7 @@ class ObjectTreeModel(QStandardItemModel):
                 continue
             if visited['id'] in removed_ids:
                 visited_index = self.indexFromItem(visited_item)
-                removed_relationship_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
+                removed_relationship_class_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
         for object_index, rows in removed_relationship_class_row_d.items():
             object_item = self.itemFromIndex(object_index)
             self.remove_relationship_class_rows(db_map, rows, object_item)
@@ -957,7 +962,7 @@ class RelationshipTreeModel(QStandardItemModel):
             return super().hasChildren(parent)
         if parent_type == 'relationship':
             return False
-        if parent in self._fetched:
+        if not self.canFetchMore(parent):
             return super().hasChildren(parent)
         return True
 
@@ -968,7 +973,8 @@ class RelationshipTreeModel(QStandardItemModel):
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'root':
             return True
-        return parent not in self._fetched
+        db_map_dict = parent.data(Qt.UserRole + 1)
+        return any((db_map, item['id']) not in self._fetched for db_map, item in db_map_dict.items())
 
     @busy_effect
     def fetchMore(self, parent):
@@ -985,7 +991,7 @@ class RelationshipTreeModel(QStandardItemModel):
             for db_map, relationship_class in parent_db_map_dict.items():
                 relationships = db_map.wide_relationship_list(class_id=relationship_class['id'])
                 self.add_relationships_to_class(db_map, relationships, rel_cls_item)
-            self._fetched.add(parent)
+                self._fetched.add((db_map, relationship_class['id']))
         self.dataChanged.emit(parent, parent)
 
     def build_tree(self):
@@ -1206,28 +1212,30 @@ class RelationshipTreeModel(QStandardItemModel):
         for row in sorted(removed_rows, reverse=True):
             rel_cls_item = self.root_item.child(row, 0)
             db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
-            del db_map_dict[db_map]
+            db_map_dict.pop(db_map, None)
             if not db_map_dict:
                 self.root_item.removeRow(row)
             else:
                 db_item = self.root_item.child(row, 1)
                 databases = db_item.data(Qt.DisplayRole).split(",")
-                databases.remove(self._parent.db_map_to_name[db_map])
-                db_item.setData(",".join(databases), Qt.DisplayRole)
+                if self._parent.db_map_to_name[db_map] in databases:
+                    databases.remove(self._parent.db_map_to_name[db_map])
+                    db_item.setData(",".join(databases), Qt.DisplayRole)
                 self.remove_relationship_rows(db_map, range(rel_cls_item.rowCount()), rel_cls_item)
 
     def remove_relationship_rows(self, db_map, removed_rows, rel_cls_item):
         for row in sorted(removed_rows, reverse=True):
             relationship_item = rel_cls_item.child(row, 0)
             db_map_dict = relationship_item.data(Qt.UserRole + 1)
-            del db_map_dict[db_map]
+            db_map_dict.pop(db_map, None)
             if not db_map_dict:
                 rel_cls_item.removeRow(row)
             else:
                 db_item = rel_cls_item.child(row, 1)
                 databases = db_item.data(Qt.DisplayRole).split(",")
-                databases.remove(self._parent.db_map_to_name[db_map])
-                db_item.setData(",".join(databases), Qt.DisplayRole)
+                if self._parent.db_map_to_name[db_map] in databases:
+                    databases.remove(self._parent.db_map_to_name[db_map])
+                    db_item.setData(",".join(databases), Qt.DisplayRole)
 
     def remove_object_classes(self, db_map, removed_ids):
         """Remove object classes and their childs."""
@@ -2995,7 +3003,7 @@ class RelationshipParameterModel(MinimalTableModel):
                 self.sub_models.pop(i)
         self.layoutChanged.emit()
 
-    def remove_relationship_classes(self, relationship_classes):
+    def remove_relationship_classes(self, db_map, relationship_classes):
         """Remove relationship classes from model."""
         self.layoutAboutToBeChanged.emit()
         relationship_class_ids = [(db_map, x['id']) for x in relationship_classes]
