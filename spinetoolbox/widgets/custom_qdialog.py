@@ -1130,14 +1130,14 @@ class CommitDialog(QDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
-        database (str): database name
+        db_names (Iterable): database names
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, *db_names):
         """Initialize class"""
         super().__init__(parent)
         self.commit_msg = None
-        self.setWindowTitle('Commit changes to {}'.format(", ".join(parent.db_names)))
+        self.setWindowTitle('Commit changes to {}'.format(", ".join(db_names)))
         form = QVBoxLayout(self)
         form.setContentsMargins(0, 0, 0, 0)
         inner_layout = QVBoxLayout()

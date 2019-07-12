@@ -274,7 +274,7 @@ class DataStoreForm(QMainWindow):
         if not any(db_map.has_pending_changes() for db_map in self.db_maps):
             self.msg.emit("Nothing to commit yet.")
             return
-        dialog = CommitDialog(self)
+        dialog = CommitDialog(self, *self.db_names)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
