@@ -16,6 +16,7 @@ Common plotting functions for time series parameter value editors.
 :date:   15.7.2019
 """
 
+
 def plot_time_series(plot_widget, x, y):
     plot_widget.canvas.axes.cla()
     plot_widget.canvas.axes.step(x, y, where='post')

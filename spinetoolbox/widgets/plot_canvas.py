@@ -35,8 +35,8 @@ class PlotCanvas(FigureCanvasQTAgg):
     """A widget for plotting with matplotlib"""
 
     def __init__(self, parent=None):
-        width = 5  #inches
-        height = 4  #inches
+        width = 5  # inches
+        height = 4  # inches
         fig = Figure(figsize=(width, height), tight_layout=True)
         self.axes = fig.add_subplot(111)
         super().__init__(fig)

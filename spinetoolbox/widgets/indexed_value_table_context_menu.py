@@ -57,13 +57,17 @@ def handle_table_context_menu(click_pos, table_view, model, parent_widget):
     if action_text == INSERT_SINGLE_BEFORE:
         model.insertRows(first_row, 1)
     elif action_text == INSERT_MULTI_BEFORE:
-        row_count, accepted = QInputDialog.getInt(parent_widget, "Enter number of rows", "Number of rows to insert", minValue=1)
+        row_count, accepted = QInputDialog.getInt(
+            parent_widget, "Enter number of rows", "Number of rows to insert", minValue=1
+        )
         if accepted:
             model.insertRows(first_row, row_count)
     elif action_text == INSERT_SINGLE_AFTER:
         model.insertRows(first_row + 1, 1)
     elif action_text == INSERT_MULTI_AFTER:
-        row_count, accepted = QInputDialog.getInt(parent_widget, "Enter number of rows", "Number of rows to insert", minValue=1)
+        row_count, accepted = QInputDialog.getInt(
+            parent_widget, "Enter number of rows", "Number of rows to insert", minValue=1
+        )
         if accepted:
             model.insertRows(first_row + 1, row_count)
     elif action_text == REMOVE:
