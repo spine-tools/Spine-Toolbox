@@ -16,9 +16,8 @@ An editor widget for editing a time pattern type (relationship) parameter values
 :date:   28.6.2019
 """
 
-import numpy as np
 from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QMenu, QWidget
+from PySide2.QtWidgets import QWidget
 from spinedb_api import TimePattern
 from ui.time_pattern_editor import Ui_TimePatternEditor
 from time_pattern_model import TimePatternModel

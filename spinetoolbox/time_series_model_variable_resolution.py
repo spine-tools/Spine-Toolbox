@@ -51,7 +51,6 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
 
     def flags(self, index):
         """Returns the flags for given model index."""
-        """Returns flags at index."""
         if not index.isValid():
             return Qt.NoItemFlags
         return Qt.ItemIsSelectable | Qt.ItemIsEnabled | Qt.ItemIsEditable

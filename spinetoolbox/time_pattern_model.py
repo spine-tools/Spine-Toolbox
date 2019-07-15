@@ -56,7 +56,7 @@ class TimePatternModel(IndexedValueTableModel):
         old_indexes = self._value.indexes
         old_values = self._value.values
         new_indexes = list(old_indexes)
-        for i in range(count):
+        for _ in range(count):
             new_indexes.insert(row, "")
         if row == len(old_values):
             new_values = np.append(old_values, np.zeros(count))
