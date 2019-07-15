@@ -71,6 +71,7 @@ class ParameterValueEditor(QDialog):
         self._parent_index = parent_index
         self._ui = Ui_ParameterValueEditor()
         self._ui.setupUi(self)
+        self.setWindowFlag(Qt.WindowMinMaxButtonsHint)
         self._ui.close_button.clicked.connect(self.close)
         self._time_pattern_editor = TimePatternEditor()
         self._plain_value_editor = PlainParameterValueEditor()
