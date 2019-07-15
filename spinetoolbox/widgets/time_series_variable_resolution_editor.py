@@ -16,8 +16,6 @@ Contains logic for the variable resolution time series editor widget.
 :date:   31.5.2019
 """
 
-import dateutil.parser
-import numpy as np
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution
@@ -25,11 +23,7 @@ from time_series_model_variable_resolution import TimeSeriesModelVariableResolut
 from ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
-
-
-def _text_to_datetime(text):
-    """Converts a string to a numpy.datetime64 object."""
-    return np.datetime64(dateutil.parser.parse(text))
+from widgets.time_series_editor_plotting import plot_time_series
 
 
 class TimeSeriesVariableResolutionEditor(QWidget):
@@ -42,12 +36,13 @@ class TimeSeriesVariableResolutionEditor(QWidget):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        stamps = np.array([np.datetime64("2000-01-01T00:00:00"), np.datetime64("2000-01-01T01:00:00")])
-        zeros = np.zeros(len(stamps))
+        stamps = ["2000-01-01T00:00:00", "2000-01-01T01:00:00"]
+        zeros = len(stamps) * [0.0]
         initial_value = TimeSeriesVariableResolution(stamps, zeros, False, False)
         self._model = TimeSeriesModelVariableResolution(initial_value)
         self._model.dataChanged.connect(self._update_plot)
         self._model.modelReset.connect(self._update_plot)
+        self._model.rowsInserted.connect(self._update_plot)
         self._model.rowsRemoved.connect(self._update_plot)
         self._ui = Ui_TimeSeriesVariableResolutionEditor()
         self._ui.setupUi(self)
@@ -56,28 +51,11 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
-        self._ui.ignore_year_check_box.toggled.connect(self._change_ignore_year)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
-        self._ui.repeat_check_box.toggled.connect(self._change_repeat)
+        self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
+        self._ui.repeat_check_box.toggled.connect(self._model.set_repeat)
         self._update_plot()
-
-    @Slot(bool, name="_change_ignore_year")
-    def _change_ignore_year(self, ignore_year):
-        """Updates the attributes model."""
-        self._model.ignore_year = ignore_year
-
-    @Slot(bool, name="_change_repeat")
-    def _change_repeat(self, repeat):
-        """Updates the attributes model."""
-        self._model.repeat = repeat
-
-    def _reset_attributes_model(self, ignore_year, repeat):
-        """Resets the attributes model."""
-        self._attributes_model.ignore_year = ignore_year
-        self._attributes_model.repeat = repeat
-        self._ui.ignore_year_check_box.setChecked(ignore_year)
-        self._ui.repeat_check_box.setChecked(repeat)
 
     @Slot("QPoint", name="_show_table_context_menu")
     def _show_table_context_menu(self, pos):
@@ -92,11 +70,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
     @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updates the plot widget."""
-        stamps = self._model.value.indexes
-        values = self._model.value.values
-        self._plot_widget.canvas.axes.cla()
-        self._plot_widget.canvas.axes.step(stamps, values, where='post')
-        self._plot_widget.canvas.draw()
+        plot_time_series(self._plot_widget, self._model.indexes, self._model.values)
 
     def value(self):
         """Return the time series currently being edited."""

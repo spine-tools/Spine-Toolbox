@@ -17,7 +17,6 @@ Contains logic for the fixed step time series editor widget.
 """
 
 from datetime import datetime
-import numpy as np
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import (
@@ -30,6 +29,7 @@ from time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
+from widgets.time_series_editor_plotting import plot_time_series
 
 
 def _resolution_to_text(resolution):
@@ -60,11 +60,12 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         super().__init__(parent)
         start = datetime(year=2000, month=1, day=1)
         resolution = [duration_to_relativedelta("1 hour")]
-        values = np.zeros(2)
+        values = 2 * [0.0]
         initial_value = TimeSeriesFixedResolution(start, resolution, values, False, False)
         self._model = TimeSeriesModelFixedResolution(initial_value)
         self._model.dataChanged.connect(self._update_plot)
         self._model.modelReset.connect(self._update_plot)
+        self._model.rowsInserted.connect(self._update_plot)
         self._model.rowsRemoved.connect(self._update_plot)
         self._ui = Ui_TimeSeriesFixedResolutionEditor()
         self._ui.setupUi(self)
@@ -117,11 +118,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updated the plot."""
-        self._plot_widget.canvas.axes.cla()
-        stamps = self._model.indexes
-        values = self._model.values
-        self._plot_widget.canvas.axes.step(stamps, values, where='post')
-        self._plot_widget.canvas.draw()
+        plot_time_series(self._plot_widget, self._model.indexes, self._model.values)
 
     def value(self):
         """Returns the parameter value currently being edited."""

@@ -22,7 +22,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_ParameterValueEditor(object):
     def setupUi(self, ParameterValueEditor):
         ParameterValueEditor.setObjectName("ParameterValueEditor")
-        ParameterValueEditor.resize(400, 300)
+        ParameterValueEditor.resize(700, 400)
         self.verticalLayout = QtWidgets.QVBoxLayout(ParameterValueEditor)
         self.verticalLayout.setObjectName("verticalLayout")
         self.parameter_type_selector_layout = QtWidgets.QHBoxLayout()
