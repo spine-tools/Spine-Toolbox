@@ -16,7 +16,7 @@ Offers a convenience function for time pattern and time series editor widgets.
 :date:   5.7.2019
 """
 
-from PySide2.QtWidgets import QMenu
+from PySide2.QtWidgets import QInputDialog, QMenu
 
 
 def handle_table_context_menu(click_pos, table_view, model, parent_widget):
@@ -29,14 +29,23 @@ def handle_table_context_menu(click_pos, table_view, model, parent_widget):
         model (TimePatternModel, TimeSeriesModelFixedResolution, TimeSeriesModelVariableResolution): a model
         parent_widget (QWidget: context menu's parent widget
     """
+    INSERT_SINGLE_AFTER = "Insert row after"
+    INSERT_MULTI_AFTER = "Insert multiple rows after"
+    INSERT_SINGLE_BEFORE = "Insert row before"
+    INSERT_MULTI_BEFORE = "Insert multiple rows before"
+    REMOVE = "Remove rows"
     column = table_view.columnAt(click_pos.x())
     row = table_view.rowAt(click_pos.y())
     if column < 0 or row < 0:
         return
     menu = QMenu(parent_widget)
-    menu.addAction("Insert row before")
-    menu.addAction("Insert row after")
-    menu.addAction("Remove rows")
+    menu.addAction(INSERT_SINGLE_BEFORE)
+    menu.addAction(INSERT_MULTI_BEFORE)
+    menu.addSeparator()
+    menu.addAction(INSERT_SINGLE_AFTER)
+    menu.addAction(INSERT_MULTI_AFTER)
+    menu.addSeparator()
+    menu.addAction(REMOVE)
     global_pos = table_view.mapToGlobal(click_pos)
     action = menu.exec_(global_pos)
     if action is None:
@@ -45,11 +54,19 @@ def handle_table_context_menu(click_pos, table_view, model, parent_widget):
     selected_indexes = table_view.selectedIndexes()
     selected_rows = sorted([index.row() for index in selected_indexes])
     first_row = selected_rows[0]
-    if action_text == "Insert row before":
+    if action_text == INSERT_SINGLE_BEFORE:
         model.insertRows(first_row, 1)
-    elif action_text == "Insert row after":
+    elif action_text == INSERT_MULTI_BEFORE:
+        row_count, accepted = QInputDialog.getInt(parent_widget, "Enter number of rows", "Number of rows to insert", minValue=1)
+        if accepted:
+            model.insertRows(first_row, row_count)
+    elif action_text == INSERT_SINGLE_AFTER:
         model.insertRows(first_row + 1, 1)
-    elif action_text == "Remove rows":
+    elif action_text == INSERT_MULTI_AFTER:
+        row_count, accepted = QInputDialog.getInt(parent_widget, "Enter number of rows", "Number of rows to insert", minValue=1)
+        if accepted:
+            model.insertRows(first_row + 1, row_count)
+    elif action_text == REMOVE:
         _remove_rows(selected_rows, model)
 
 

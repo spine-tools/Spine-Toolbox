@@ -45,6 +45,7 @@ def _resolution_to_text(resolution):
 
 
 def _text_to_resolution(text):
+    """Converts a comma-separated string of durations into a resolution array."""
     return [token.strip() for token in text.split(',')]
 
 
@@ -96,6 +97,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
 
     @Slot("QPoint", name="_show_table_context_menu")
     def _show_table_context_menu(self, pos):
+        """Shows the table's context menu."""
         handle_table_context_menu(pos, self._ui.time_series_table, self._model, self)
 
     def set_value(self, value):
