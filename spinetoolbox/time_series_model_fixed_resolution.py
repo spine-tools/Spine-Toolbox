@@ -82,8 +82,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         if row == len(old_values):
             new_values = np.append(old_values, np.zeros(count))
         else:
-            insert_indexes = range(row, row + count - 1) if count > 1 else row
-            new_values = np.insert(old_values, insert_indexes, np.zeros(count))
+            new_values = np.insert(old_values, row, np.zeros(count))
         self._value = TimeSeriesFixedResolution(
             self._value.start, self._value.resolution, new_values, self._value.ignore_year, self._value.repeat
         )

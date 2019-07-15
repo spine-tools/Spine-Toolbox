@@ -110,8 +110,7 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
                 for i in range(count):
                     new_indexes[row + i] = base_time_stamp + (i + 1) * time_step
                 new_indexes[row + count :] = old_indexes[row:]
-            insert_indexes = range(row, row + count - 1) if count > 1 else row
-            new_values = np.insert(old_values, insert_indexes, np.zeros(count))
+            new_values = np.insert(old_values, row, np.zeros(count))
         self._value = TimeSeriesVariableResolution(new_indexes, new_values, self._value.ignore_year, self._value.repeat)
         self.endInsertRows()
         return True

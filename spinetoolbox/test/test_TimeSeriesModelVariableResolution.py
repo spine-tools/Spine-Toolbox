@@ -60,7 +60,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             ),
         )
 
-    def test_insertRows_in_the_middle(self):
+    def test_insertRows_single_row_in_the_middle(self):
         model = TimeSeriesModelVariableResolution(
             TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False)
         )
@@ -69,6 +69,21 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             model.value,
             TimeSeriesVariableResolution(
                 ["2019-07-05T12:00", "2019-07-13T12:00", "2019-07-21T12:00"], [-5.0, 0.0, 7.0], True, False
+            ),
+        )
+
+    def test_insertRows_multiple_rows_in_the_middle(self):
+        model = TimeSeriesModelVariableResolution(
+            TimeSeriesVariableResolution(["2019-07-05T12:00", "2019-07-21T12:00"], [-5.0, 7.0], True, False)
+        )
+        self.assertTrue(model.insertRows(1, 3))
+        self.assertEqual(
+            model.value,
+            TimeSeriesVariableResolution(
+                ["2019-07-05T12:00", "2019-07-09T12:00", "2019-07-13T12:00", "2019-07-17T12:00", "2019-07-21T12:00"],
+                [-5.0, 0.0, 0.0, 0.0, 7.0],
+                True,
+                False,
             ),
         )
 

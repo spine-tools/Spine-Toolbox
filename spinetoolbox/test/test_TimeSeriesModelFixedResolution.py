@@ -72,7 +72,7 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00", "2019-07-05T16:00"], dtype="datetime64")
         )
 
-    def test_insertRows_in_the_middle(self):
+    def test_insertRows_single_row_in_the_middle(self):
         model = TimeSeriesModelFixedResolution(
             TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 7.0], True, False)
         )
@@ -82,6 +82,23 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         )
         np.testing.assert_equal(
             model.indexes, np.array(["2019-07-05T12:00", "2019-07-05T14:00", "2019-07-05T16:00"], dtype="datetime64")
+        )
+
+    def test_insertRows_multiple_rows_in_the_middle(self):
+        model = TimeSeriesModelFixedResolution(
+            TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 7.0], True, False)
+        )
+        self.assertTrue(model.insertRows(1, 3))
+        self.assertEqual(
+            model.value,
+            TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [-5.0, 0.0, 0.0, 0.0, 7.0], True, False),
+        )
+        np.testing.assert_equal(
+            model.indexes,
+            np.array(
+                ["2019-07-05T12:00", "2019-07-05T14:00", "2019-07-05T16:00", "2019-07-05T18:00", "2019-07-05T20:00"],
+                dtype="datetime64",
+            ),
         )
 
     def test_insertRows_in_the_end(self):

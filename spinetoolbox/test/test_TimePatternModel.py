@@ -45,12 +45,19 @@ class TestTimePatternModel(unittest.TestCase):
         self.assertEqual(model.value.indexes, ['', 'a', 'b'])
         numpy.testing.assert_equal(model.value.values, np.array([0.0, -5.0, 7.0]))
 
-    def test_insert_rows_in_the_middle(self):
+    def test_insert_single_row_in_the_middle(self):
         model = TimePatternModel(TimePattern(['a', 'b'], [-5.0, 7.0]))
         self.assertTrue(model.insertRows(1, 1))
         self.assertEqual(len(model.value), 3)
         self.assertEqual(model.value.indexes, ['a', '', 'b'])
         numpy.testing.assert_equal(model.value.values, np.array([-5.0, 0.0, 7.0]))
+
+    def test_insert_multiple_rows_in_the_middle(self):
+        model = TimePatternModel(TimePattern(['a', 'b'], [-5.0, 7.0]))
+        self.assertTrue(model.insertRows(1, 3))
+        self.assertEqual(len(model.value), 5)
+        self.assertEqual(model.value.indexes, ['a', '', '', '', 'b'])
+        numpy.testing.assert_equal(model.value.values, np.array([-5.0, 0.0, 0.0, 0.0, 7.0]))
 
     def test_insert_rows_in_the_end(self):
         model = TimePatternModel(TimePattern(['a', 'b'], [-5.0, 7.0]))
