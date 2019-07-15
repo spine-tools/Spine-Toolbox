@@ -38,7 +38,7 @@ from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect, int_list_to_row_count_tuples
-from plotting import plot_selection, PlottingError
+from plotting import plot_selection, PlottingError, tree_graph_view_parameter_value_name
 
 
 class TreeViewForm(DataStoreForm):
@@ -895,7 +895,8 @@ class TreeViewForm(DataStoreForm):
             menu = ParameterContextMenu(self, global_pos, index)
         option = menu.get_action()
         if option == "Open in editor...":
-            editor = ParameterValueEditor(self.object_parameter_value_model, index, self)
+            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_object_parameter_value)
+            editor = ParameterValueEditor(self.object_parameter_value_model, index, value_name, self)
             editor.show()
         elif option == "Plot":
             selection = self.ui.tableView_object_parameter_value.selectedIndexes()
@@ -932,7 +933,13 @@ class TreeViewForm(DataStoreForm):
             menu = ParameterContextMenu(self, global_pos, index)
         option = menu.get_action()
         if option == "Open in editor...":
-            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, self)
+            tokens = list()
+            for column in range(index.column()):
+                if not self.ui.tableView_relationship_parameter_value.isColumnHidden(column):
+                    token = self.relationship_parameter_value_model.index(index.row(), column).data()
+                    tokens.append(token)
+            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_relationship_parameter_value)
+            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, value_name, self)
             editor.show()
         elif option == "Plot":
             selection = self.ui.tableView_relationship_parameter_value.selectedIndexes()

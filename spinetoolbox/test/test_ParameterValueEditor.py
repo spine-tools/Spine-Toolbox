@@ -71,7 +71,7 @@ class TestParameterValueEditor(unittest.TestCase):
         editor = ParameterValueEditor(model, model_index)
         # Reset model data to check that the value is written back from the editor
         model.setData(model_index, None)
-        editor.close()
+        editor.accept()
         editor.deleteLater()
         self.assertEqual(model.data(model_index), to_database(value))
 

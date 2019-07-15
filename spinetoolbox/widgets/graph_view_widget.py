@@ -33,7 +33,7 @@ from widgets.parameter_value_editor import ParameterValueEditor
 from treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
-from plotting import plot_selection, PlottingError
+from plotting import plot_selection, PlottingError, tree_graph_view_parameter_value_name
 from widgets.report_plotting_failure import report_plotting_failure
 
 
@@ -982,7 +982,8 @@ class GraphViewForm(DataStoreForm):
             return
         option = menu.get_action()
         if option == "Open in editor...":
-            editor = ParameterValueEditor(self.object_parameter_value_model, index, self)
+            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_object_parameter_value)
+            editor = ParameterValueEditor(self.object_parameter_value_model, index, value_name, self)
             editor.show()
         elif option == "Plot":
             selection = self.ui.tableView_object_parameter_value.selectedIndexes()
@@ -1008,7 +1009,8 @@ class GraphViewForm(DataStoreForm):
             return
         option = menu.get_action()
         if option == "Open in editor...":
-            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, self)
+            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_relationship_parameter_value)
+            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, value_name, self)
             editor.show()
         elif option == "Plot":
             selection = self.ui.tableView_relationship_parameter_value.selectedIndexes()

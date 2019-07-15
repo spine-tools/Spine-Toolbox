@@ -63,15 +63,17 @@ class ParameterValueEditor(QDialog):
     Attributes:
         parent_model (ObjectParameterValueModel, RelationshipParameterValueModel): a parent model
         parent_index (QModelIndex): an index to a parameter value in parent_model
+        value_name (str): name of the value
         parent_widget (QWidget): a parent widget
     """
 
-    def __init__(self, parent_model, parent_index, parent_widget=None):
+    def __init__(self, parent_model, parent_index, value_name="", parent_widget=None):
         super().__init__(parent_widget)
         self._parent_model = parent_model
         self._parent_index = parent_index
         self._ui = Ui_ParameterValueEditor()
         self._ui.setupUi(self)
+        self.setWindowTitle(value_name + " - Edit value")
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint)
         self._ui.ok_button.clicked.connect(self.accept)
         self._ui.cancle_button.clicked.connect(self.reject)
