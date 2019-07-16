@@ -29,7 +29,7 @@ from time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
-from widgets.parameter_value_editor import plot_time_series
+from widgets.parameter_value_editor_common import plot_time_series, datetime_to_QDateTime, QDateTime_to_datetime
 
 
 def _resolution_to_text(resolution):
@@ -72,12 +72,12 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.setupUi(self)
         self._plot_widget = PlotWidget()
         self._ui.splitter.insertWidget(1, self._plot_widget)
-        self._ui.start_time_edit.setText(str(initial_value.start))
+        self._ui.start_time_edit.setDateTime(datetime_to_QDateTime(initial_value.start))
         self._ui.resolution_edit.setText(_resolution_to_text(initial_value.resolution))
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
-        self._ui.start_time_edit.editingFinished.connect(self._start_time_changed)
+        self._ui.start_time_edit.dateTimeChanged.connect(self._start_time_changed)
         self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
@@ -103,19 +103,15 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     def set_value(self, value):
         """Sets the parameter value for editing in this widget."""
         self._model.reset(value)
-        self._ui.start_time_edit.setText(str(self._model.value.start))
+        self._ui.start_time_edit.setDateTime(datetime_to_QDateTime(self._model.value.start))
         self._ui.resolution_edit.setText(_resolution_to_text(self._model.value.resolution))
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
 
-    @Slot(name='_start_time_changed')
-    def _start_time_changed(self):
+    @Slot("QDateTime", name='_start_time_changed')
+    def _start_time_changed(self, new_datetime):
         """Updates the models due to start time change."""
-        start_text = self._ui.start_time_edit.text()
-        try:
-            self._model.set_start(start_text)
-        except ValueError:
-            self._ui.start_time_edit.setText(str(self._model.value.start))
+        self._model.set_start(QDateTime_to_datetime(new_datetime))
 
     @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):

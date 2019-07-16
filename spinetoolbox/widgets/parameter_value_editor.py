@@ -39,13 +39,6 @@ from widgets.time_series_fixed_resolution_editor import TimeSeriesFixedResolutio
 from widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
 
 
-def plot_time_series(plot_widget, x, y):
-    plot_widget.canvas.axes.cla()
-    plot_widget.canvas.axes.step(x, y, where='post')
-    plot_widget.canvas.axes.get_xaxis().set_tick_params(labelrotation=45.0)
-    plot_widget.canvas.draw()
-
-
 class _Editor(Enum):
     """Indexes for the specialized editors corresponding to the selector combo box and editor stack."""
 
