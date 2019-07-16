@@ -30,11 +30,11 @@ from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_qwidgets import ZoomWidget
 from widgets.parameter_value_editor import ParameterValueEditor
+from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
 from plotting import plot_selection, PlottingError, tree_graph_view_parameter_value_name
-from widgets.report_plotting_failure import report_plotting_failure
 
 
 class GraphViewForm(DataStoreForm):
@@ -1030,10 +1030,10 @@ class GraphViewForm(DataStoreForm):
         object_ids = set(x['id'] for x in removed_objects)
         try:
             self.db_map.remove_items(object_ids=object_ids)
-            self.object_tree_model.remove_objects(object_ids)
+            self.object_tree_model.remove_objects(self.db_map, object_ids)
             # Parameter models
-            self.object_parameter_value_model.remove_objects(removed_objects)
-            self.relationship_parameter_value_model.remove_objects(removed_objects)
+            self.object_parameter_value_model.remove_objects(self.db_map, removed_objects)
+            self.relationship_parameter_value_model.remove_objects(self.db_map, removed_objects)
             self.commit_available.emit(True)
             for item in self.object_item_selection:
                 item.wipe_out()
