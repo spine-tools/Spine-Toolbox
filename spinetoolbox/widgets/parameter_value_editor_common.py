@@ -19,6 +19,7 @@ Common functions for parameter value editor widgets.
 from datetime import datetime
 from PySide2.QtCore import QDate, QDateTime, QTime
 
+
 def plot_time_series(plot_widget, x, y):
     """Plots a time series on plot_widget."""
     plot_widget.canvas.axes.cla()
@@ -31,7 +32,14 @@ def QDateTime_to_datetime(dt):
     """Converts a QDateTime object to Python's datetime.datetime type."""
     date = dt.date()
     time = dt.time()
-    return datetime(year=date.year(), month=date.month(), day=date.day(), hour=time.hour(), minute=time.minute(), second=time.second())
+    return datetime(
+        year=date.year(),
+        month=date.month(),
+        day=date.day(),
+        hour=time.hour(),
+        minute=time.minute(),
+        second=time.second(),
+    )
 
 
 def datetime_to_QDateTime(dt):

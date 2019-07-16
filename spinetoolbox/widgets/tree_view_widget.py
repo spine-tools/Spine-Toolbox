@@ -876,7 +876,9 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_value, "value", self.remove_object_parameter_values)
+        self._show_parameter_context_menu(
+            pos, self.ui.tableView_object_parameter_value, "value", self.remove_object_parameter_values
+        )
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
@@ -885,7 +887,9 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_value, "value", self.remove_relationship_parameter_values)
+        self._show_parameter_context_menu(
+            pos, self.ui.tableView_relationship_parameter_value, "value", self.remove_relationship_parameter_values
+        )
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
     def show_object_parameter_context_menu(self, pos):
@@ -894,7 +898,12 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_definition, "default_value", self.remove_object_parameter_definitions)
+        self._show_parameter_context_menu(
+            pos,
+            self.ui.tableView_object_parameter_definition,
+            "default_value",
+            self.remove_object_parameter_definitions,
+        )
 
     @Slot("QPoint", name="show_relationship_parameter_context_menu")
     def show_relationship_parameter_context_menu(self, pos):
@@ -903,7 +912,12 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_definition, "default_value", self.remove_relationship_parameter_definitions)
+        self._show_parameter_context_menu(
+            pos,
+            self.ui.tableView_relationship_parameter_definition,
+            "default_value",
+            self.remove_relationship_parameter_definitions,
+        )
 
     def _show_parameter_context_menu(self, position, table_view, value_column_header, remove_selection):
         """
@@ -1018,12 +1032,18 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     def remove_object_parameter_definitions(self):
         """Remove selected rows from object parameter definition table."""
-        self._remove_parameter_definitions(self.ui.tableView_object_parameter_definition, self.object_parameter_value_model, "object_class_id")
+        self._remove_parameter_definitions(
+            self.ui.tableView_object_parameter_definition, self.object_parameter_value_model, "object_class_id"
+        )
 
     @busy_effect
     def remove_relationship_parameter_definitions(self):
         """Remove selected rows from relationship parameter definition table."""
-        self._remove_parameter_definitions(self.ui.tableView_relationship_parameter_definition, self.relationship_parameter_value_model, "relationship_class_id")
+        self._remove_parameter_definitions(
+            self.ui.tableView_relationship_parameter_definition,
+            self.relationship_parameter_value_model,
+            "relationship_class_id",
+        )
 
     def _remove_parameter_definitions(self, table_view, value_model, class_id_header):
         """
@@ -1056,10 +1076,7 @@ class TreeViewForm(DataStoreForm):
         removed = 0
         for db_map, rows in db_map_rows.items():
             parameters = [
-                {
-                    class_id_header: model.index(i, cls_id_column).data(),
-                    "id": model.index(i, id_column).data(),
-                }
+                {class_id_header: model.index(i, cls_id_column).data(), "id": model.index(i, id_column).data()}
                 for i in rows
             ]
             try:

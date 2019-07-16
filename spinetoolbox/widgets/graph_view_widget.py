@@ -977,27 +977,19 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
-        self._show_table_context_menu(
-            pos, self.ui.tableView_object_parameter_value, 'value'
-        )
+        self._show_table_context_menu(pos, self.ui.tableView_object_parameter_value, 'value')
 
     @Slot("QPoint", name="show_object_parameter_definition_context_menu")
     def show_object_parameter_definition_context_menu(self, pos):
-        self._show_table_context_menu(
-            pos, self.ui.tableView_object_parameter_definition, 'default_value'
-        )
+        self._show_table_context_menu(pos, self.ui.tableView_object_parameter_definition, 'default_value')
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
-        self._show_table_context_menu(
-            pos, self.ui.tableView_relationship_parameter_value, 'value'
-        )
+        self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_value, 'value')
 
     @Slot("QPoint", name="show_relationship_parameter_definition_context_menu")
     def show_relationship_parameter_definition_context_menu(self, pos):
-        self._show_table_context_menu(
-            pos, self.ui.tableView_relationship_parameter_definition, 'default_value'
-        )
+        self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_definition, 'default_value')
 
     def _show_table_context_menu(self, position, table_view, column_name):
         index = table_view.indexAt(position)
