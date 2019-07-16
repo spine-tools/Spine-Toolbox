@@ -279,5 +279,7 @@ def tree_graph_view_parameter_value_name(index, table_view):
     tokens = list()
     for column in range(index.column()):
         if not table_view.isColumnHidden(column):
-            tokens.append(index.model().index(index.row(), column).data())
+            token = index.model().index(index.row(), column).data()
+            if token is not None:
+                tokens.append(token)
     return ", ".join(tokens)

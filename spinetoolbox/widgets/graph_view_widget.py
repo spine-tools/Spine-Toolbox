@@ -195,8 +195,14 @@ class GraphViewForm(DataStoreForm):
         self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
             self.show_object_parameter_value_context_menu
         )
+        self.ui.tableView_object_parameter_definition.customContextMenuRequested.connect(
+            self.show_object_parameter_definition_context_menu
+        )
         self.ui.tableView_relationship_parameter_value.customContextMenuRequested.connect(
             self.show_relationship_parameter_value_context_menu
+        )
+        self.ui.tableView_relationship_parameter_definition.customContextMenuRequested.connect(
+            self.show_relationship_parameter_definition_context_menu
         )
         # Dock Widgets menu action
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
@@ -971,51 +977,47 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
-        index = self.ui.tableView_object_parameter_value.indexAt(pos)
-        global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
-        flags = self.object_parameter_value_model.flags(index)
-        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
-        is_value = self.object_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
-        if editable and is_value:
-            menu = SimpleEditableParameterValueContextMenu(self, global_pos, index)
-        else:
-            return
-        option = menu.get_action()
-        if option == "Open in editor...":
-            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_object_parameter_value)
-            editor = ParameterValueEditor(self.object_parameter_value_model, index, value_name, self)
-            editor.show()
-        elif option == "Plot":
-            selection = self.ui.tableView_object_parameter_value.selectedIndexes()
-            try:
-                plot_widget = plot_selection(self.object_parameter_value_model, selection)
-            except PlottingError as error:
-                report_plotting_failure(error)
-                return
-            plot_widget.setWindowTitle("Plot")
-            plot_widget.show()
-        menu.deleteLater()
+        self._show_table_context_menu(
+            pos, self.ui.tableView_object_parameter_value, self.object_parameter_value_model, 'value'
+        )
+
+    @Slot("QPoint", name="show_object_parameter_definition_context_menu")
+    def show_object_parameter_definition_context_menu(self, pos):
+        self._show_table_context_menu(
+            pos, self.ui.tableView_object_parameter_definition, self.object_parameter_definition_model, 'default_value'
+        )
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
-        index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
-        global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
-        flags = self.relationship_parameter_value_model.flags(index)
+        self._show_table_context_menu(
+            pos, self.ui.tableView_relationship_parameter_value, self.relationship_parameter_value_model, 'value'
+        )
+
+    @Slot("QPoint", name="show_relationship_parameter_definition_context_menu")
+    def show_relationship_parameter_definition_context_menu(self, pos):
+        self._show_table_context_menu(
+            pos, self.ui.tableView_relationship_parameter_definition, self.relationship_parameter_definition_model, 'default_value'
+        )
+
+    def _show_table_context_menu(self, position, table_view, model, column_name):
+        index = table_view.indexAt(position)
+        global_pos = table_view.viewport().mapToGlobal(position)
+        flags = model.flags(index)
         editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
-        is_value = self.relationship_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
+        is_value = model.headerData(index.column(), Qt.Horizontal) == column_name
         if editable and is_value:
             menu = SimpleEditableParameterValueContextMenu(self, global_pos, index)
         else:
             return
         option = menu.get_action()
         if option == "Open in editor...":
-            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_relationship_parameter_value)
-            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, value_name, self)
+            value_name = tree_graph_view_parameter_value_name(index, table_view)
+            editor = ParameterValueEditor(model, index, value_name, self)
             editor.show()
         elif option == "Plot":
-            selection = self.ui.tableView_relationship_parameter_value.selectedIndexes()
+            selection = table_view.selectedIndexes()
             try:
-                plot_widget = plot_selection(self.relationship_parameter_value_model, selection)
+                plot_widget = plot_selection(model, selection)
             except PlottingError as error:
                 report_plotting_failure(error)
                 return

@@ -72,12 +72,6 @@ class TreeViewForm(DataStoreForm):
         self.selected_rel_tree_indexes = {}
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
-        # Context menus
-        self.object_tree_context_menu = None
-        self.relationship_tree_context_menu = None
-        self.object_parameter_context_menu = None
-        self.relationship_parameter_context_menu = None
-        self.parameter_value_list_context_menu = None
         # Others
         self.widget_with_selection = None
         self.paste_to_widget = None
@@ -637,8 +631,8 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.treeView_object.indexAt(pos)
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
-        self.object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)
-        option = self.object_tree_context_menu.get_action()
+        object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)
+        option = object_tree_context_menu.get_action()
         if option == "Copy text":
             self.ui.treeView_object.copy()
         elif option == "Add object classes":
@@ -667,8 +661,7 @@ class TreeViewForm(DataStoreForm):
             self.fully_collapse_selection()
         else:  # No option selected
             pass
-        self.object_tree_context_menu.deleteLater()
-        self.object_tree_context_menu = None
+        object_tree_context_menu.deleteLater()
 
     @Slot("QPoint", name="show_relationship_tree_context_menu")
     def show_relationship_tree_context_menu(self, pos):
@@ -679,8 +672,8 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.treeView_relationship.indexAt(pos)
         global_pos = self.ui.treeView_relationship.viewport().mapToGlobal(pos)
-        self.relationship_tree_context_menu = RelationshipTreeContextMenu(self, global_pos, index)
-        option = self.relationship_tree_context_menu.get_action()
+        relationship_tree_context_menu = RelationshipTreeContextMenu(self, global_pos, index)
+        option = relationship_tree_context_menu.get_action()
         if option == "Copy text":
             self.ui.treeView_relationship.copy()
         elif option == "Add relationship classes":
@@ -695,8 +688,7 @@ class TreeViewForm(DataStoreForm):
             self.show_remove_relationship_tree_items_form()
         else:  # No option selected
             pass
-        self.relationship_tree_context_menu.deleteLater()
-        self.relationship_tree_context_menu = None
+        relationship_tree_context_menu.deleteLater()
 
     def fully_expand_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
@@ -933,11 +925,6 @@ class TreeViewForm(DataStoreForm):
             menu = ParameterContextMenu(self, global_pos, index)
         option = menu.get_action()
         if option == "Open in editor...":
-            tokens = list()
-            for column in range(index.column()):
-                if not self.ui.tableView_relationship_parameter_value.isColumnHidden(column):
-                    token = self.relationship_parameter_value_model.index(index.row(), column).data()
-                    tokens.append(token)
             value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_relationship_parameter_value)
             editor = ParameterValueEditor(self.relationship_parameter_value_model, index, value_name, self)
             editor.show()
@@ -967,16 +954,32 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_object_parameter_definition.indexAt(pos)
         global_pos = self.ui.tableView_object_parameter_definition.viewport().mapToGlobal(pos)
-        self.object_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
-        option = self.object_parameter_context_menu.get_action()
-        if option == "Remove selection":
+        is_default_value = self.object_parameter_definition_model.headerData(index.column(), Qt.Horizontal) == 'default_value'
+        if is_default_value:
+            object_parameter_context_menu = EditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            object_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
+        option = object_parameter_context_menu.get_action()
+        if option == "Open in editor...":
+            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_object_parameter_definition)
+            editor = ParameterValueEditor(self.object_parameter_definition_model, index, value_name, self)
+            editor.show()
+        elif option == "Plot":
+            selection = self.ui.tableView_object_parameter_definition.selectedIndexes()
+            try:
+                plot_widget = plot_selection(self.object_parameter_definition_model, selection)
+            except PlottingError as error:
+                report_plotting_failure(error)
+                return
+            plot_widget.setWindowTitle("Plot")
+            plot_widget.show()
+        elif option == "Remove selection":
             self.remove_object_parameter_definitions()
         elif option == "Copy":
             self.ui.tableView_object_parameter_definition.copy()
         elif option == "Paste":
             self.ui.tableView_object_parameter_definition.paste()
-        self.object_parameter_context_menu.deleteLater()
-        self.object_parameter_context_menu = None
+        object_parameter_context_menu.deleteLater()
 
     @Slot("QPoint", name="show_relationship_parameter_context_menu")
     def show_relationship_parameter_context_menu(self, pos):
@@ -987,16 +990,32 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.tableView_relationship_parameter_definition.indexAt(pos)
         global_pos = self.ui.tableView_relationship_parameter_definition.viewport().mapToGlobal(pos)
-        self.relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
-        option = self.relationship_parameter_context_menu.get_action()
-        if option == "Remove selection":
+        is_default_value = self.relationship_parameter_definition_model.headerData(index.column(), Qt.Horizontal) == 'default_value'
+        if is_default_value:
+            relationship_parameter_context_menu = EditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
+        option = relationship_parameter_context_menu.get_action()
+        if option == "Open in editor...":
+            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_relationship_parameter_definition)
+            editor = ParameterValueEditor(self.relationship_parameter_definition_model, index, value_name, self)
+            editor.show()
+        elif option == "Plot":
+            selection = self.ui.tableView_relationship_parameter_definition.selectedIndexes()
+            try:
+                plot_widget = plot_selection(self.relationship_parameter_definition_model, selection)
+            except PlottingError as error:
+                report_plotting_failure(error)
+                return
+            plot_widget.setWindowTitle("Plot")
+            plot_widget.show()
+        elif option == "Remove selection":
             self.remove_relationship_parameter_definitions()
         elif option == "Copy":
             self.ui.tableView_relationship_parameter_definition.copy()
         elif option == "Paste":
             self.ui.tableView_relationship_parameter_definition.paste()
-        self.relationship_parameter_context_menu.deleteLater()
-        self.relationship_parameter_context_menu = None
+        relationship_parameter_context_menu.deleteLater()
 
     @Slot("QPoint", name="show_parameter_value_list_context_menu")
     def show_parameter_value_list_context_menu(self, pos):
@@ -1007,13 +1026,14 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.treeView_parameter_value_list.indexAt(pos)
         global_pos = self.ui.treeView_parameter_value_list.viewport().mapToGlobal(pos)
-        self.parameter_value_list_context_menu = ParameterValueListContextMenu(self, global_pos, index)
-        self.parameter_value_list_context_menu.deleteLater()
-        option = self.parameter_value_list_context_menu.get_action()
+        parameter_value_list_context_menu = ParameterValueListContextMenu(self, global_pos, index)
+        parameter_value_list_context_menu.deleteLater()
+        option = parameter_value_list_context_menu.get_action()
         if option == "Copy":
             self.ui.treeView_parameter_value_list.copy()
         elif option == "Remove selection":
             self.remove_parameter_value_lists()
+        parameter_value_list_context_menu.deleteLater()
 
     @busy_effect
     def remove_object_parameter_values(self):
