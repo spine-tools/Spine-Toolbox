@@ -978,30 +978,31 @@ class GraphViewForm(DataStoreForm):
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
         self._show_table_context_menu(
-            pos, self.ui.tableView_object_parameter_value, self.object_parameter_value_model, 'value'
+            pos, self.ui.tableView_object_parameter_value, 'value'
         )
 
     @Slot("QPoint", name="show_object_parameter_definition_context_menu")
     def show_object_parameter_definition_context_menu(self, pos):
         self._show_table_context_menu(
-            pos, self.ui.tableView_object_parameter_definition, self.object_parameter_definition_model, 'default_value'
+            pos, self.ui.tableView_object_parameter_definition, 'default_value'
         )
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
         self._show_table_context_menu(
-            pos, self.ui.tableView_relationship_parameter_value, self.relationship_parameter_value_model, 'value'
+            pos, self.ui.tableView_relationship_parameter_value, 'value'
         )
 
     @Slot("QPoint", name="show_relationship_parameter_definition_context_menu")
     def show_relationship_parameter_definition_context_menu(self, pos):
         self._show_table_context_menu(
-            pos, self.ui.tableView_relationship_parameter_definition, self.relationship_parameter_definition_model, 'default_value'
+            pos, self.ui.tableView_relationship_parameter_definition, 'default_value'
         )
 
-    def _show_table_context_menu(self, position, table_view, model, column_name):
+    def _show_table_context_menu(self, position, table_view, column_name):
         index = table_view.indexAt(position)
         global_pos = table_view.viewport().mapToGlobal(position)
+        model = table_view.model()
         flags = model.flags(index)
         editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
         is_value = model.headerData(index.column(), Qt.Horizontal) == column_name

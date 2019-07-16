@@ -876,36 +876,7 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        index = self.ui.tableView_object_parameter_value.indexAt(pos)
-        global_pos = self.ui.tableView_object_parameter_value.viewport().mapToGlobal(pos)
-        flags = self.object_parameter_value_model.flags(index)
-        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
-        is_value = self.object_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
-        if editable and is_value:
-            menu = EditableParameterValueContextMenu(self, global_pos, index)
-        else:
-            menu = ParameterContextMenu(self, global_pos, index)
-        option = menu.get_action()
-        if option == "Open in editor...":
-            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_object_parameter_value)
-            editor = ParameterValueEditor(self.object_parameter_value_model, index, value_name, self)
-            editor.show()
-        elif option == "Plot":
-            selection = self.ui.tableView_object_parameter_value.selectedIndexes()
-            try:
-                plot_widget = plot_selection(self.object_parameter_value_model, selection)
-            except PlottingError as error:
-                report_plotting_failure(error)
-                return
-            plot_widget.setWindowTitle("Plot")
-            plot_widget.show()
-        elif option == "Remove selection":
-            self.remove_object_parameter_values()
-        elif option == "Copy":
-            self.ui.tableView_object_parameter_value.copy()
-        elif option == "Paste":
-            self.ui.tableView_object_parameter_value.paste()
-        menu.deleteLater()
+        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_value, "value", self.remove_object_parameter_values)
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
@@ -914,36 +885,7 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        index = self.ui.tableView_relationship_parameter_value.indexAt(pos)
-        global_pos = self.ui.tableView_relationship_parameter_value.viewport().mapToGlobal(pos)
-        flags = self.relationship_parameter_value_model.flags(index)
-        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
-        is_value = self.relationship_parameter_value_model.headerData(index.column(), Qt.Horizontal) == 'value'
-        if editable and is_value:
-            menu = EditableParameterValueContextMenu(self, global_pos, index)
-        else:
-            menu = ParameterContextMenu(self, global_pos, index)
-        option = menu.get_action()
-        if option == "Open in editor...":
-            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_relationship_parameter_value)
-            editor = ParameterValueEditor(self.relationship_parameter_value_model, index, value_name, self)
-            editor.show()
-        elif option == "Plot":
-            selection = self.ui.tableView_relationship_parameter_value.selectedIndexes()
-            try:
-                plot_widget = plot_selection(self.relationship_parameter_value_model, selection)
-            except PlottingError as error:
-                report_plotting_failure(error)
-                return
-            plot_widget.setWindowTitle("Plot")
-            plot_widget.show()
-        elif option == "Remove selection":
-            self.remove_relationship_parameter_values()
-        elif option == "Copy":
-            self.ui.tableView_relationship_parameter_value.copy()
-        elif option == "Paste":
-            self.ui.tableView_relationship_parameter_value.paste()
-        menu.deleteLater()
+        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_value, "value", self.remove_relationship_parameter_values)
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
     def show_object_parameter_context_menu(self, pos):
@@ -952,34 +894,7 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        index = self.ui.tableView_object_parameter_definition.indexAt(pos)
-        global_pos = self.ui.tableView_object_parameter_definition.viewport().mapToGlobal(pos)
-        is_default_value = self.object_parameter_definition_model.headerData(index.column(), Qt.Horizontal) == 'default_value'
-        if is_default_value:
-            object_parameter_context_menu = EditableParameterValueContextMenu(self, global_pos, index)
-        else:
-            object_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
-        option = object_parameter_context_menu.get_action()
-        if option == "Open in editor...":
-            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_object_parameter_definition)
-            editor = ParameterValueEditor(self.object_parameter_definition_model, index, value_name, self)
-            editor.show()
-        elif option == "Plot":
-            selection = self.ui.tableView_object_parameter_definition.selectedIndexes()
-            try:
-                plot_widget = plot_selection(self.object_parameter_definition_model, selection)
-            except PlottingError as error:
-                report_plotting_failure(error)
-                return
-            plot_widget.setWindowTitle("Plot")
-            plot_widget.show()
-        elif option == "Remove selection":
-            self.remove_object_parameter_definitions()
-        elif option == "Copy":
-            self.ui.tableView_object_parameter_definition.copy()
-        elif option == "Paste":
-            self.ui.tableView_object_parameter_definition.paste()
-        object_parameter_context_menu.deleteLater()
+        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_definition, "default_value", self.remove_object_parameter_definitions)
 
     @Slot("QPoint", name="show_relationship_parameter_context_menu")
     def show_relationship_parameter_context_menu(self, pos):
@@ -988,38 +903,53 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        index = self.ui.tableView_relationship_parameter_definition.indexAt(pos)
-        global_pos = self.ui.tableView_relationship_parameter_definition.viewport().mapToGlobal(pos)
-        is_default_value = self.relationship_parameter_definition_model.headerData(index.column(), Qt.Horizontal) == 'default_value'
-        if is_default_value:
-            relationship_parameter_context_menu = EditableParameterValueContextMenu(self, global_pos, index)
+        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_definition, "default_value", self.remove_relationship_parameter_definitions)
+
+    def _show_parameter_context_menu(self, position, table_view, value_column_header, remove_selection):
+        """
+        Show a context menu for parameter tables.
+
+        Args:
+            position (QPoint): local mouse position in the table view
+            table_view (QTableView): the table view where the context menu was triggered
+            value_column_header (str): column header for editable/plottable values
+        """
+        index = table_view.indexAt(position)
+        global_pos = table_view.mapToGlobal(position)
+        model = table_view.model()
+        flags = model.flags(index)
+        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
+        is_value = model.headerData(index.column(), Qt.Horizontal) == value_column_header
+        if editable and is_value:
+            menu = EditableParameterValueContextMenu(self, global_pos, index)
         else:
-            relationship_parameter_context_menu = ParameterContextMenu(self, global_pos, index)
-        option = relationship_parameter_context_menu.get_action()
+            menu = ParameterContextMenu(self, global_pos, index)
+        option = menu.get_action()
         if option == "Open in editor...":
-            value_name = tree_graph_view_parameter_value_name(index, self.ui.tableView_relationship_parameter_definition)
-            editor = ParameterValueEditor(self.relationship_parameter_definition_model, index, value_name, self)
+            value_name = tree_graph_view_parameter_value_name(index, table_view)
+            editor = ParameterValueEditor(model, index, value_name, self)
             editor.show()
         elif option == "Plot":
-            selection = self.ui.tableView_relationship_parameter_definition.selectedIndexes()
+            selection = table_view.selectedIndexes()
             try:
-                plot_widget = plot_selection(self.relationship_parameter_definition_model, selection)
+                plot_widget = plot_selection(model, selection)
             except PlottingError as error:
                 report_plotting_failure(error)
                 return
             plot_widget.setWindowTitle("Plot")
             plot_widget.show()
         elif option == "Remove selection":
-            self.remove_relationship_parameter_definitions()
+            remove_selection()
         elif option == "Copy":
-            self.ui.tableView_relationship_parameter_definition.copy()
+            table_view.copy()
         elif option == "Paste":
-            self.ui.tableView_relationship_parameter_definition.paste()
-        relationship_parameter_context_menu.deleteLater()
+            table_view.paste()
+        menu.deleteLater()
 
     @Slot("QPoint", name="show_parameter_value_list_context_menu")
     def show_parameter_value_list_context_menu(self, pos):
-        """Context menu for relationship parameter table view.
+        """
+        Context menu for relationship parameter table view.
 
         Args:
             pos (QPoint): Mouse position
@@ -1038,50 +968,28 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     def remove_object_parameter_values(self):
         """Remove selected rows from object parameter value table."""
-        selection = self.ui.tableView_object_parameter_value.selectionModel().selection()
-        top_bottom = list()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            top_bottom.append((top, bottom))
-        model = self.object_parameter_value_model
-        db_column = model.horizontal_header_labels().index("database")
-        db_map_rows = dict()
-        for top, bottom in top_bottom:
-            for row in range(top, bottom + 1):
-                db_name = model.index(row, db_column).data()
-                db_map = self.db_name_to_map.get(db_name)
-                if not db_map:
-                    continue
-                db_map_rows.setdefault(db_map, set()).add(row)
-        id_column = model.horizontal_header_labels().index("id")
-        removed = 0
-        for db_map, rows in db_map_rows.items():
-            ids = {model.index(i, id_column).data() for i in rows}
-            try:
-                db_map.remove_items(parameter_value_ids=ids)
-                for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
-                    model.removeRows(row, count)
-                removed += len(rows)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-        if removed:
-            self.commit_available.emit(True)
-            self.msg.emit("Successfully removed {} parameter value(s).".format(removed))
+        self._remove_parameter_values(self.ui.tableView_object_parameter_value)
 
     @busy_effect
     def remove_relationship_parameter_values(self):
         """Remove selected rows from relationship parameter value table."""
-        selection = self.ui.tableView_relationship_parameter_value.selectionModel().selection()
+        self._remove_parameter_values(self.ui.tableView_relationship_parameter_value)
+
+    def _remove_parameter_values(self, table_view):
+        """
+        Remove selected rows from parameter value table.
+
+        Args:
+            table_view (QTableView): a table view from which to remove
+        """
+        selection = table_view.selectionModel().selection()
         top_bottom = list()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
             top_bottom.append((top, bottom))
-        model = self.relationship_parameter_value_model
+        model = table_view.model()
         db_column = model.horizontal_header_labels().index("database")
         db_map_rows = dict()
         for top, bottom in top_bottom:
@@ -1110,55 +1018,30 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     def remove_object_parameter_definitions(self):
         """Remove selected rows from object parameter definition table."""
-        selection = self.ui.tableView_object_parameter_definition.selectionModel().selection()
-        top_bottom = list()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            top_bottom.append((top, bottom))
-        model = self.object_parameter_definition_model
-        db_column = model.horizontal_header_labels().index("database")
-        db_map_rows = dict()
-        for top, bottom in top_bottom:
-            for row in range(top, bottom + 1):
-                db_name = model.index(row, db_column).data()
-                db_map = self.db_name_to_map.get(db_name)
-                if not db_map:
-                    continue
-                db_map_rows.setdefault(db_map, set()).add(row)
-        id_column = model.horizontal_header_labels().index("id")
-        obj_cls_id_column = model.horizontal_header_labels().index("object_class_id")
-        removed = 0
-        for db_map, rows in db_map_rows.items():
-            parameters = [
-                {"object_class_id": model.index(i, obj_cls_id_column).data(), "id": model.index(i, id_column).data()}
-                for i in rows
-            ]
-            try:
-                db_map.remove_items(parameter_value_ids={x['id'] for x in parameters})
-                for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
-                    model.removeRows(row, count)
-                self.object_parameter_value_model.remove_parameters(db_map, parameters)
-                removed += len(rows)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-        if removed:
-            self.commit_available.emit(True)
-            self.msg.emit("Successfully removed {} parameter definition(s).".format(removed))
+        self._remove_parameter_definitions(self.ui.tableView_object_parameter_definition, self.object_parameter_value_model, "object_class_id")
 
     @busy_effect
     def remove_relationship_parameter_definitions(self):
         """Remove selected rows from relationship parameter definition table."""
-        selection = self.ui.tableView_relationship_parameter_definition.selectionModel().selection()
+        self._remove_parameter_definitions(self.ui.tableView_relationship_parameter_definition, self.relationship_parameter_value_model, "relationship_class_id")
+
+    def _remove_parameter_definitions(self, table_view, value_model, class_id_header):
+        """
+        Remove selected rows from parameter table.
+
+        Args:
+            table_view (QTableView): the table widget from which to remove
+            value_model (QAbstractTableModel): a value model corresponding to the definition model of table_view
+            class_id_header (str): header of the class id column
+        """
+        selection = table_view.selectionModel().selection()
         top_bottom = list()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
             top_bottom.append((top, bottom))
-        model = self.relationship_parameter_definition_model
+        model = table_view.model()
         db_column = model.horizontal_header_labels().index("database")
         db_map_rows = dict()
         for top, bottom in top_bottom:
@@ -1169,12 +1052,12 @@ class TreeViewForm(DataStoreForm):
                     continue
                 db_map_rows.setdefault(db_map, set()).add(row)
         id_column = model.horizontal_header_labels().index("id")
-        rel_cls_id_column = model.horizontal_header_labels().index("relationship_class_id")
+        cls_id_column = model.horizontal_header_labels().index(class_id_header)
         removed = 0
         for db_map, rows in db_map_rows.items():
             parameters = [
                 {
-                    "relationship_class_id": model.index(i, rel_cls_id_column).data(),
+                    class_id_header: model.index(i, cls_id_column).data(),
                     "id": model.index(i, id_column).data(),
                 }
                 for i in rows
@@ -1183,14 +1066,14 @@ class TreeViewForm(DataStoreForm):
                 db_map.remove_items(parameter_value_ids={x['id'] for x in parameters})
                 for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
                     model.removeRows(row, count)
-                self.relationship_parameter_value_model.remove_parameters(db_map, parameters)
+                value_model.remove_parameters(db_map, parameters)
                 removed += len(rows)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
         if removed:
             self.commit_available.emit(True)
-            self.msg.emit("Successfully removed {} parameter definition(s).".format(removed))
+            self.msg.emit("Successfully removed {} parameter definitions(s).".format(removed))
 
     @busy_effect
     def remove_parameter_value_lists(self):
