@@ -29,7 +29,7 @@ from time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
-from widgets.time_series_editor_plotting import plot_time_series
+from widgets.parameter_value_editor import plot_time_series
 
 
 def _resolution_to_text(resolution):

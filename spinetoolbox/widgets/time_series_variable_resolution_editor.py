@@ -23,7 +23,7 @@ from time_series_model_variable_resolution import TimeSeriesModelVariableResolut
 from ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
-from widgets.time_series_editor_plotting import plot_time_series
+from widgets.parameter_value_editor import plot_time_series
 
 
 class TimeSeriesVariableResolutionEditor(QWidget):
