@@ -16,10 +16,25 @@ An editor widget for editing datetime database (relationship) parameter values.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Slot
-from PySide2.QtWidgets import QWidget
+from datetime import datetime
+from PySide2.QtCore import QDate, QDateTime, QTime, Slot
+from PySide2.QtWidgets import QCalendarWidget, QWidget
 from spinedb_api import DateTime
 from ui.datetime_editor import Ui_DatetimeEditor
+
+
+def _QDateTime_to_datetime(dt):
+    """Converts a QDateTime object to Python's datetime.datetime type."""
+    date = dt.date()
+    time = dt.time()
+    return datetime(year=date.year(), month=date.month(), day=date.day(), hour=time.hour(), minute=time.minute(), second=time.second())
+
+
+def _datetime_to_QDateTime(dt):
+    """Converts Python's datetime.datetime object to QDateTime."""
+    date = QDate(dt.year, dt.month, dt.day)
+    time = QTime(dt.hour, dt.minute, dt.second)
+    return QDateTime(date, time)
 
 
 class DatetimeEditor(QWidget):
@@ -35,23 +50,19 @@ class DatetimeEditor(QWidget):
         self._value = DateTime("2000-01-01")
         self._ui = Ui_DatetimeEditor()
         self._ui.setupUi(self)
-        self._ui.datetime_edit.editingFinished.connect(self._change_datetime)
-        self._ui.datetime_edit.setText(str(self._value.value))
+        self._ui.datetime_edit.setDateTime(_datetime_to_QDateTime(self._value.value))
+        self._ui.datetime_edit.dateTimeChanged.connect(self._change_datetime)
 
-    @Slot(name="_change_datetime")
-    def _change_datetime(self):
+    @Slot("QDateTime", name="_change_datetime")
+    def _change_datetime(self, new_datetime):
         """Updates the internal DateTime value"""
-        new_value = self._ui.datetime_edit.text()
-        try:
-            self._value = new_value
-        except ValueError:
-            self._ui.datetime_edit.setText(str(self._value))
-            return
+        new_value = DateTime(_QDateTime_to_datetime(new_datetime))
+        self._value = new_value
 
     def set_value(self, value):
         """Sets the value to be edited."""
         self._value = value
-        self._ui.datetime_edit.setText(str(value.value))
+        self._ui.datetime_edit.setDateTime(_datetime_to_QDateTime(value.value))
 
     def value(self):
         """Returns the editor's current value."""
