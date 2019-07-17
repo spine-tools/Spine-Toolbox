@@ -39,7 +39,12 @@ from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import datapackage_to_spine
 from helpers import busy_effect, int_list_to_row_count_tuples
-from plotting import plot_selection, PlottingError, tree_graph_view_parameter_value_name
+from plotting import (
+    plot_selection,
+    PlottingError,
+    tree_graph_view_parameter_value_name,
+    GraphAndTreeViewPlottingSupport,
+)
 
 
 class TreeViewForm(DataStoreForm):
@@ -949,7 +954,8 @@ class TreeViewForm(DataStoreForm):
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:
-                plot_widget = plot_selection(model, selection)
+                support = GraphAndTreeViewPlottingSupport(table_view)
+                plot_widget = plot_selection(model, selection, support)
             except PlottingError as error:
                 report_plotting_failure(error)
                 return

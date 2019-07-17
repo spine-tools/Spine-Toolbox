@@ -111,9 +111,6 @@ class ToolTemplate(MetaObject):
                 if p in REQUIRED_KEYS:
                     ui.msg_error.emit("Required keyword '{0}' missing".format(p))
                     return None
-                else:
-                    # logging.info("Optional keyword '{0}' missing".format(p))
-                    pass
             # Check that some values are lists
             if p in LIST_REQUIRED_KEYS:
                 try:
@@ -228,8 +225,7 @@ class GAMSTool(ToolTemplate):
         if kwargs is not None:
             # Return an executable model instance
             return GAMSTool(toolbox=toolbox, path=path, **kwargs)
-        else:
-            return None
+        return None
 
 
 class JuliaTool(ToolTemplate):
@@ -308,8 +304,7 @@ class JuliaTool(ToolTemplate):
         if kwargs is not None:
             # Return an executable model instance
             return JuliaTool(toolbox=toolbox, path=path, **kwargs)
-        else:
-            return None
+        return None
 
 
 class PythonTool(ToolTemplate):
@@ -388,8 +383,7 @@ class PythonTool(ToolTemplate):
         if kwargs is not None:
             # Return an executable model instance
             return PythonTool(toolbox=toolbox, path=path, **kwargs)
-        else:
-            return None
+        return None
 
 
 class ExecutableTool(ToolTemplate):
@@ -461,5 +455,4 @@ class ExecutableTool(ToolTemplate):
         if kwargs is not None:
             # Return an executable model instance
             return ExecutableTool(toolbox=toolbox, path=path, **kwargs)
-        else:
-            return None
+        return None

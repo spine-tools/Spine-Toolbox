@@ -20,7 +20,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, QModelIndex, SIGNAL, QTimeLine
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QTimeLine
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -190,7 +190,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
-        self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())
+        self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # Debug QActions
         self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
@@ -372,8 +372,7 @@ class ToolboxUI(QMainWindow):
         )
         if not answer[1]:  # answer[str, bool]
             return
-        else:
-            name = answer[0]
+        name = answer[0]
         # Check if name is valid and copy project tree under a new name
         if not self._project.rename_project(name):
             return
@@ -614,7 +613,7 @@ class ToolboxUI(QMainWindow):
         # Load tool definition
         tool_template = self._project.load_tool_template_from_file(def_file)
         if not tool_template:
-            self.msg_error.emit("Adding Tool template failed".format(def_file))
+            self.msg_error.emit("Adding Tool template failed")
             return
         if self.tool_template_model.find_tool_template(tool_template.name):
             # Tool template already added to project
@@ -1303,13 +1302,11 @@ class ToolboxUI(QMainWindow):
         if option == "Remove connection":
             self.ui.graphicsView.remove_link(link.model_index)
             return
-        elif option == "Take connection":
+        if option == "Take connection":
             self.ui.graphicsView.take_link(link.model_index)
             return
-        elif option == "Send to bottom":
+        if option == "Send to bottom":
             link.send_to_bottom()
-        else:  # No option selected
-            pass
         self.link_context_menu.deleteLater()
         self.link_context_menu = None
 
@@ -1537,8 +1534,7 @@ class ToolboxUI(QMainWindow):
                     show_prompt = "0"  # 0 as in False
                 self._qsettings.setValue("appSettings/showExitPrompt", show_prompt)
                 return True
-            else:
-                return False
+            return False
         return True
 
     def show_save_project_prompt(self):
@@ -1547,7 +1543,7 @@ class ToolboxUI(QMainWindow):
         if save_at_exit == 0:
             # Don't save project and don't show message box
             return
-        elif save_at_exit == 1:  # Default
+        if save_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox()
             msg.setIcon(QMessageBox.Question)

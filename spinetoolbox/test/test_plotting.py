@@ -17,9 +17,16 @@ Unit tests for the plotting module.
 """
 
 import unittest
+from unittest.mock import Mock
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
-from plotting import plot_pivot_column, plot_selection, PlottingError
+from plotting import (
+    plot_pivot_column,
+    plot_selection,
+    PlottingError,
+    GraphAndTreeViewPlottingSupport,
+    PivotTablePlottingSupport,
+)
 from tabularview_models import PivotTableModel
 
 
@@ -75,11 +82,20 @@ class _MockTreeGraphViewModel(QAbstractTableModel):
             return None
         return self._table[index.row()][index.column()]
 
+    def headerData(self, column):
+        return "value"
+
     def setData(self, index, value, role=Qt.EditRole):
         if role != Qt.EditRole:
             return False
         self._table[index.row()][index.column()] = value
         return True
+
+
+def mock_graph_tree_view_plotting_support():
+    mock_table_view = Mock()
+    mock_table_view.isColumnHidden.return_value = False
+    return GraphAndTreeViewPlottingSupport(mock_table_view)
 
 
 class TestPlotting(unittest.TestCase):
@@ -90,21 +106,24 @@ class TestPlotting(unittest.TestCase):
 
     def test_plot_pivot_column_float_type(self):
         model = _make_pivot_model()
-        plot_widget = plot_pivot_column(model, 1)
+        support = PivotTablePlottingSupport()
+        plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
 
     def test_plot_pivot_column_int_type(self):
         model = _make_pivot_model()
-        plot_widget = plot_pivot_column(model, 2)
+        support = PivotTablePlottingSupport()
+        plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-3.0, -1.0, 2.0]))
 
     def test_plot_pivot_column_time_series_type(self):
         model = _make_pivot_model()
-        plot_widget = plot_pivot_column(model, 3)
+        support = PivotTablePlottingSupport()
+        plot_widget = plot_pivot_column(model, 3, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 3)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [2.3, 5.0]))
@@ -117,7 +136,8 @@ class TestPlotting(unittest.TestCase):
         for row in range(2, 5):
             for column in range(1, 3):
                 selected_indexes.append(model.index(row, column))
-        plot_widget = plot_selection(model, selected_indexes)
+        support = PivotTablePlottingSupport()
+        plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [1.1, 1.2, 1.3]))
@@ -126,7 +146,8 @@ class TestPlotting(unittest.TestCase):
     def test_plot_pivot_column_with_x_column(self):
         model = _make_pivot_model()
         model.set_plot_x_column(1, True)
-        plot_widget = plot_pivot_column(model, 2)
+        support = PivotTablePlottingSupport()
+        plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_xdata(orig=True) == [1.1, 1.2, 1.3]))
@@ -137,7 +158,8 @@ class TestPlotting(unittest.TestCase):
         selected_indexes = list()
         selected_indexes.append(model.index(0, 1))
         selected_indexes.append(model.index(1, 1))
-        plot_widget = plot_selection(model, selected_indexes)
+        support = mock_graph_tree_view_plotting_support()
+        plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3, -0.5]))
@@ -147,7 +169,8 @@ class TestPlotting(unittest.TestCase):
         selected_indexes = list()
         selected_indexes.append(model.index(2, 1))
         selected_indexes.append(model.index(3, 1))
-        plot_widget = plot_selection(model, selected_indexes)
+        support = mock_graph_tree_view_plotting_support()
+        plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [0.5, 2.3]))
@@ -158,14 +181,16 @@ class TestPlotting(unittest.TestCase):
         selected_indexes = list()
         selected_indexes.append(model.index(1, 1))
         selected_indexes.append(model.index(2, 1))
-        self.assertRaises(PlottingError, plot_selection, model, selected_indexes)
+        support = mock_graph_tree_view_plotting_support()
+        self.assertRaises(PlottingError, plot_selection, model, selected_indexes, support)
 
     def test_plot_single_plain_number(self):
         """Test that a selection containing a single plain number gets plotted."""
         model = _MockTreeGraphViewModel()
         selected_indexes = list()
         selected_indexes.append(model.index(0, 1))
-        plot_widget = plot_selection(model, selected_indexes)
+        support = mock_graph_tree_view_plotting_support()
+        plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3]))
