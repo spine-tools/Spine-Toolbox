@@ -221,9 +221,18 @@ class ObjectTreeModel(QStandardItemModel):
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'root':
             return True
-        db_map_dict = parent.data(Qt.UserRole + 1)
         fetched = self._fetched[parent_type]
-        return any((db_map, item['id']) not in fetched for db_map, item in db_map_dict.items())
+        parent_db_map_dict = parent.data(Qt.UserRole + 1)
+        if parent_type in ('object_class', 'object'):
+            return any((db_map, item['id']) not in fetched for db_map, item in parent_db_map_dict.items())
+        if parent_type == 'relationship_class':
+            grampa_db_map_dict = parent.parent().data(Qt.UserRole + 1)
+            for db_map, rel_cls in parent_db_map_dict.items():
+                obj = grampa_db_map_dict[db_map]
+                if (db_map, (obj['id'], rel_cls['id'])) not in fetched:
+                    return True
+            return False
+        return False
 
     @busy_effect
     def fetchMore(self, parent):
@@ -233,16 +242,14 @@ class ObjectTreeModel(QStandardItemModel):
         parent_type = parent.data(Qt.UserRole)
         if parent_type == 'root':
             return False
-        parent_type = parent.data(Qt.UserRole)
         fetched = self._fetched[parent_type]
+        parent_db_map_dict = parent.data(Qt.UserRole + 1)
         if parent_type == 'object_class':
-            parent_db_map_dict = parent.data(Qt.UserRole + 1)
             object_class_item = self.itemFromIndex(parent)
             for db_map, object_class in parent_db_map_dict.items():
                 self.add_objects_to_class(db_map, db_map.object_list(class_id=object_class['id']), object_class_item)
                 fetched.add((db_map, object_class['id']))
         elif parent_type == 'object':
-            parent_db_map_dict = parent.data(Qt.UserRole + 1)
             object_item = self.itemFromIndex(parent)
             for db_map, object_ in parent_db_map_dict.items():
                 relationship_classes = db_map.wide_relationship_class_list(object_class_id=object_['class_id'])
@@ -250,7 +257,6 @@ class ObjectTreeModel(QStandardItemModel):
                 fetched.add((db_map, object_['id']))
         elif parent_type == 'relationship_class':
             grampa_db_map_dict = parent.parent().data(Qt.UserRole + 1)
-            parent_db_map_dict = parent.data(Qt.UserRole + 1)
             rel_cls_item = self.itemFromIndex(parent)
             for db_map, relationship_class in parent_db_map_dict.items():
                 object_ = grampa_db_map_dict[db_map]
@@ -258,7 +264,7 @@ class ObjectTreeModel(QStandardItemModel):
                     class_id=relationship_class['id'], object_id=object_['id']
                 )
                 self.add_relationships_to_class(db_map, relationships, rel_cls_item)
-                fetched.add((db_map, relationship_class['id']))
+                fetched.add((db_map, (object_['id'], relationship_class['id'])))
         self.dataChanged.emit(parent, parent)
 
     def build_tree(self, flat=False):
