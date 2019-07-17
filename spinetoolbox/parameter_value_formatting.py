@@ -16,6 +16,7 @@ Functions for textual display of parameter values in table views.
 :date:   12.7.2019
 """
 
+from collections import Iterable
 from spinedb_api import (
     from_database,
     relativedelta_to_duration,
@@ -40,6 +41,8 @@ def format_for_DisplayRole(value_in_database):
     if isinstance(value, DateTime):
         return str(value.value)
     if isinstance(value, Duration):
+        if isinstance(value.value, Iterable):
+            return ", ".join(relativedelta_to_duration(delta) for delta in value.value)
         return relativedelta_to_duration(value.value)
     if isinstance(value, TimePattern):
         return "Time pattern"

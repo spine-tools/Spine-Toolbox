@@ -69,6 +69,12 @@ class TestParameterValueFormatting(unittest.TestCase):
         formatted = format_for_DisplayRole(value_in_database)
         self.assertEqual(formatted, "3Y")
 
+    def test_variable_duration_in_display_role(self):
+        value = Duration(["2Y", "3Y"])
+        value_in_database = to_database(value)
+        formatted = format_for_DisplayRole(value_in_database)
+        self.assertEqual(formatted, "2Y, 3Y")
+
     def test_duration_in_edit_role(self):
         value = Duration("2M")
         value_in_database = to_database(value)
