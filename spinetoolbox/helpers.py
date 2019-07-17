@@ -148,8 +148,7 @@ def project_dir(qsettings):
     proj_dir = qsettings.value("appSettings/projectsDir", defaultValue="")
     if not proj_dir:
         return DEFAULT_PROJECT_DIR
-    else:
-        return proj_dir
+    return proj_dir
 
 
 def get_datetime(show):
@@ -161,8 +160,7 @@ def get_datetime(show):
     if show:
         t = datetime.datetime.now()
         return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
-    else:
-        return ""
+    return ""
 
 
 def create_dir(base_path, folder='', verbosity=False):
@@ -466,7 +464,8 @@ class IconManager:
         pixmap = self.create_object_pixmap(display_icon)
         return QIcon(pixmap)
 
-    def icon_color_code(self, display_icon):
+    @staticmethod
+    def icon_color_code(display_icon):
         """Take a display icon integer and return an equivalent tuple of icon and color code."""
         if not isinstance(display_icon, int) or display_icon < 0:
             return int("f1b2", 16), 0
@@ -477,7 +476,8 @@ class IconManager:
             color_code = 0
         return icon_code, color_code
 
-    def display_icon(self, icon_code, color_code):
+    @staticmethod
+    def display_icon(icon_code, color_code):
         """Take tuple of icon and color codes, and return equivalent integer."""
         return icon_code + (color_code << 16)
 

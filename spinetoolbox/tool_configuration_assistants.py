@@ -16,10 +16,10 @@ Classes for tool configuration assistants.
 :date:   10.1.2019
 """
 
-import qsubprocess
 from PySide2.QtCore import QObject, Signal
-from config import JULIA_EXECUTABLE, APPLICATION_PATH
+from config import JULIA_EXECUTABLE
 from helpers import busy_effect
+import qsubprocess
 
 
 class SpineModelConfigurationAssistant(QObject):

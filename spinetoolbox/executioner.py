@@ -18,7 +18,6 @@ Contains classes for handling project item execution.
 
 import logging
 import os
-import copy
 import fnmatch
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
@@ -167,7 +166,7 @@ class DirectedGraphHandler:
         g = self.dag_with_node(node_name)
         edges_to_remove = list()
         for edge in g.edges():
-            if edge[0] == node_name or edge[1] == node_name:
+            if node_name in (edge[0], edge[1]):
                 edges_to_remove.append(edge)
         g.remove_edges_from(edges_to_remove)
         # Now remove the node itself
@@ -183,7 +182,7 @@ class DirectedGraphHandler:
                     h.add_edge(node, node)
                 self.add_dag(h)
         g.remove_nodes_from(nodes_to_remove)
-        if len(g.nodes()) == 0:
+        if not g.nodes():
             self.remove_dag(g)
 
     def rename_node(self, old_name, new_name):
@@ -199,7 +198,6 @@ class DirectedGraphHandler:
         g = self.dag_with_node(old_name)
         mapping = {old_name: new_name}  # old_name->new_name
         nx.relabel_nodes(g, mapping, copy=False)  # copy=False modifies g in place
-        return
 
     def dag_with_node(self, node_name):
         """Returns directed graph that contains given node.
@@ -213,7 +211,7 @@ class DirectedGraphHandler:
         for dag in self.dags():
             if dag.has_node(node_name):
                 return dag
-        logging.error("Graph containing node {0} not found. Something is wrong.".format(node_name))
+        logging.error("Graph containing node %s not found. Something is wrong.", node_name)
         return None
 
     def dag_with_edge(self, src_node, dst_node):
@@ -229,7 +227,7 @@ class DirectedGraphHandler:
         for dag in self.dags():
             if dag.has_edge(src_node, dst_node):
                 return dag
-        logging.error("Graph containing edge {0}->{1} not found. Something is wrong.".format(src_node, dst_node))
+        logging.error("Graph containing edge %s->%s not found. Something is wrong.", src_node, dst_node)
         return None
 
     def calc_exec_order(self, g):
@@ -249,7 +247,7 @@ class DirectedGraphHandler:
         if not nx.is_directed_acyclic_graph(g):
             return exec_order
         sources = self.source_nodes(g)  # Project items that have no inbound connections
-        if len(sources) == 0:
+        if not sources:
             # Should not happen if nx.is_directed_acyclic_graph() works
             logging.error("This graph has no source nodes. Execution failed.")
             return exec_order
@@ -427,7 +425,7 @@ class ExecutionInstance(QObject):
             # Item execution failed due to e.g. Tool did not find input files or something
             self.graph_execution_finished_signal.emit(-1)
             return
-        elif item_finish_state == -2:
+        if item_finish_state == -2:
             # User pressed Stop button
             self.graph_execution_finished_signal.emit(-2)
             return
@@ -539,7 +537,7 @@ class ExecutionInstance(QObject):
             for oracle_url in self.ds_refs["oracle"]:
                 _, file_candidate = os.path.split(oracle_url)
                 if file_candidate == filename:
-                    logging.debug("Found path for {0} from ds refs: {1}".format(filename, oracle_url))
+                    logging.debug("Found path for % from ds refs: %s", filename, oracle_url)
                     return oracle_url
         except KeyError:
             pass

@@ -16,7 +16,6 @@ Functions for textual display of parameter values in table views.
 :date:   12.7.2019
 """
 
-from collections import Iterable
 from spinedb_api import (
     from_database,
     relativedelta_to_duration,

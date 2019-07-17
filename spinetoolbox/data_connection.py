@@ -24,10 +24,9 @@ from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, Q
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
 from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
-from helpers import create_dir
+from helpers import busy_effect, create_dir
 from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 from graphics_items import DataConnectionIcon
-from helpers import busy_effect
 
 
 class DataConnection(ProjectItem):
@@ -110,7 +109,6 @@ class DataConnection(ProjectItem):
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-        pass
 
     def get_icon(self):
         """Returns the item representing this data connection in the scene."""

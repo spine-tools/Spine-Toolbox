@@ -16,6 +16,7 @@ Classes for drawing graphics items on QGraphicsScene.
 :date:   4.4.2018
 """
 
+from math import atan2, degrees, sin, cos, pi
 import os
 from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import (
@@ -35,8 +36,6 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QFontMetrics
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from math import atan2, degrees, sin, cos, pi
-from spinedb_api import SpineDBAPIError, SpineIntegrityError
 
 
 class ConnectorButton(QGraphicsRectItem):
@@ -242,14 +241,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.graphicsEffect().setEnabled(False)
         event.accept()
 
-    def mousePressEvent(self, event):
-        """Update UI to show details of this item.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        super().mousePressEvent(event)
-
     def mouseMoveEvent(self, event):
         """Moves icon(s) while the mouse button is pressed.
         Update links that are connected to selected icons.
@@ -262,14 +253,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         links = set(y for x in selected_icons for y in self._toolbox.connection_model.connected_links(x.name()))
         for link in links:
             link.update_geometry()
-
-    def mouseReleaseEvent(self, event):
-        """Mouse button is released.
-
-        Args:
-            event (QGraphicsSceneMouseEvent): Event
-        """
-        super().mouseReleaseEvent(event)
 
     def contextMenuEvent(self, event):
         """Show item context menu.
@@ -772,6 +755,8 @@ class LinkDrawer(QGraphicsPathItem):
         self.outer_rect = None
         self.inner_angle = None
         self.outer_angle = None
+        self.inner_shift = None
+        self.outer_shift = None
         self.setBrush(QBrush(QColor(255, 0, 255, 204)))
         self.setPen(QPen(Qt.black, 0.5))
         self.setZValue(2)  # TODO: is this better than stackBefore?
@@ -1416,7 +1401,7 @@ class SimpleObjectItem(QGraphicsPixmapItem):
         self.text_item = QGraphicsTextItem(self)
         self.text_item.setTextWidth(extent)
         font = QApplication.font()
-        point_size = font.setPointSize(extent / 8)
+        font.setPointSize(extent / 8)
         factor = max(0.75, extent / QFontMetrics(font).width(object_name))
         if factor < 1:
             font.setPointSizeF(font.pointSize() * factor)

@@ -19,7 +19,6 @@ Classes for handling models in tree and graph views.
 import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
-from spinedb_api import SpineDBAPIError
 from helpers import busy_effect, format_string_list
 from models import MinimalTableModel, EmptyRowModel
 from parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
@@ -209,7 +208,6 @@ class ObjectTreeModel(QStandardItemModel):
             return False
         if self.flat and parent_type in ('object', 'relationship_class'):
             return False
-        fetched = self._fetched[parent_type]
         if not self.canFetchMore(parent):
             return super().hasChildren(parent)
         return True
@@ -547,9 +545,9 @@ class ObjectTreeModel(QStandardItemModel):
                     rel_cls = db_map_dict[db_map]
                     obj_cls_name_list = rel_cls['object_class_name_list'].split(',')
                     obj_cls_id_list = [int(x) for x in rel_cls['object_class_id_list'].split(',')]
-                    for k, id_ in enumerate(obj_cls_id_list):
+                    for l, id_ in enumerate(obj_cls_id_list):
                         if id_ == object_class_id:
-                            obj_cls_name_list[k] = upd_object_class.name
+                            obj_cls_name_list[l] = upd_object_class.name
                     rel_cls['object_class_name_list'] = ",".join(obj_cls_name_list)
                     rel_cls_item.setData(",".join(obj_cls_name_list), Qt.ToolTipRole)
         self.remove_object_class_rows(db_map, removed_rows)
@@ -616,9 +614,9 @@ class ObjectTreeModel(QStandardItemModel):
                         relationship = db_map_dict[db_map]
                         object_name_list = relationship['object_name_list'].split(',')
                         object_id_list = [int(x) for x in relationship['object_id_list'].split(',')]
-                        for k, id_ in enumerate(object_id_list):
+                        for m, id_ in enumerate(object_id_list):
                             if id_ == object_id:
-                                object_name_list[k] = upd_object.name
+                                object_name_list[m] = upd_object.name
                         relationship['object_name_list'] = ",".join(object_name_list)
                         relationship_item.setData(",".join(object_name_list), Qt.DisplayRole)
             self.remove_object_rows(db_map, removed_rows, object_class_item)
@@ -1278,7 +1276,7 @@ class RelationshipTreeModel(QStandardItemModel):
                 removed_relationship_row_d.setdefault(visited_index.parent(), []).append(visited_index.row())
         for rel_cls_index, rows in removed_relationship_row_d.items():
             rel_cls_item = self.itemFromIndex(rel_cls_index)
-            self.remove_relationship_rows(db_map, rows, object_item)
+            self.remove_relationship_rows(db_map, rows, rel_cls_item)
 
     def remove_relationship_classes(self, db_map, removed_ids):
         """Remove relationship classes and their childs."""
@@ -2482,10 +2480,9 @@ class ObjectParameterValueModel(ObjectParameterModel):
             if object_class_id != (db_map, parameter["object_class_id"]):
                 continue
             model = model.sourceModel()
-            for row, row_data in enumerate(model._main_data):
+            for _, row_data in enumerate(model._main_data):
                 if row_data[parameter_id_column] == parameter["id"]:
                     row_data[parameter_name_column] = parameter["name"]
-                    index = model.index(row, parameter_name_column)
         self._emit_data_changed_for_column(parameter_name_column)
 
     def remove_objects(self, db_map, objects):

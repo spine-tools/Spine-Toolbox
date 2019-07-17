@@ -54,10 +54,9 @@ class ProjectItemModel(QAbstractItemModel):
         """
         if not parent.isValid():  # Number of category items (children of root)
             return self.root().child_count()
-        elif parent.internalPointer().is_category:  # Number of project items in the category
+        if parent.internalPointer().is_category:  # Number of project items in the category
             return parent.internalPointer().child_count()
-        else:
-            return 0
+        return 0
 
     def columnCount(self, parent=QModelIndex()):
         """Returns model column count."""
@@ -71,8 +70,7 @@ class ProjectItemModel(QAbstractItemModel):
         """
         if not index.internalPointer().is_category:
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
-        else:
-            return Qt.ItemIsEnabled  # | Qt.ItemIsSelectable
+        return Qt.ItemIsEnabled  # | Qt.ItemIsSelectable
 
     def parent(self, index=QModelIndex()):
         """Returns index of the parent of given index.
@@ -111,8 +109,7 @@ class ProjectItemModel(QAbstractItemModel):
         child = parent_item.child(row)
         if not child:
             return QModelIndex()
-        else:
-            return self.createIndex(row, column, child)
+        return self.createIndex(row, column, child)
 
     def data(self, index, role=None):
         """Returns data in the given index according to requested role.
@@ -129,8 +126,7 @@ class ProjectItemModel(QAbstractItemModel):
         project_item = index.internalPointer()
         if role == Qt.DisplayRole:
             return project_item.name
-        else:
-            return None
+        return None
 
     def project_item(self, index):
         """Returns project item at given index.
@@ -320,12 +316,11 @@ class ProjectItemModel(QAbstractItemModel):
             for category in self.root().children():
                 items += category.children()
             return items
-        else:
-            category_item = self.find_category(category_name)
-            if not category_item:
-                logging.error("Category item '%s' not found", category_name)
-                return list()
-            return category_item.internalPointer().children()
+        category_item = self.find_category(category_name)
+        if not category_item:
+            logging.error("Category item '%s' not found", category_name)
+            return list()
+        return category_item.internalPointer().children()
 
     def n_items(self):
         """Returns the number of all project items in the model excluding category items and root.
@@ -360,21 +355,20 @@ class ProjectItemModel(QAbstractItemModel):
         if category == "Data Stores":
             # Return number of data stores
             return n_data_stores - 1
-        elif category == "Data Connections":
+        if category == "Data Connections":
             # Return number of data stores + data connections - 1
             return n_data_stores + n_data_connections - 1
-        elif category == "Tools":
+        if category == "Tools":
             # Return number of data stores + data connections + tools - 1
             return n_data_stores + n_data_connections + n_tools - 1
-        elif category == "Views":
+        if category == "Views":
             # Return number of data stores + data connections + tools + views - 1
             return n_data_stores + n_data_connections + n_tools + n_views - 1
-        elif category == "Data Interfaces":
+        if category == "Data Interfaces":
             # Return total number of items - 1
             return self.n_items() - 1
-        else:
-            logging.error("Unknown category: %s", category)
-            return 0
+        logging.error("Unknown category: %s", category)
+        return 0
 
     def short_name_reserved(self, short_name):
         """Checks if the directory name derived from the name of the given item is in use.
@@ -400,7 +394,7 @@ class ToolTemplateModel(QAbstractListModel):
         self._tools = list()
         self._toolbox = toolbox
 
-    def rowCount(self, parent=None, *args, **kwargs):
+    def rowCount(self, parent=None):
         """Must be reimplemented when subclassing. Returns
         the number of Tools in the model.
 
@@ -428,11 +422,10 @@ class ToolTemplateModel(QAbstractListModel):
         if role == Qt.DisplayRole:
             toolname = self._tools[row].name
             return toolname
-        elif role == Qt.ToolTipRole:
+        if role == Qt.ToolTipRole:
             if row >= self.rowCount():
                 return ""
-            else:
-                return self._tools[row].def_file_path
+            return self._tools[row].def_file_path
 
     def flags(self, index):
         """Returns enabled flags for the given index.
@@ -442,7 +435,7 @@ class ToolTemplateModel(QAbstractListModel):
         """
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
-    def insertRow(self, tool, row=None, parent=QModelIndex(), *args, **kwargs):
+    def insertRow(self, tool, row=None, parent=QModelIndex()):
         """Insert row (tool) into model.
 
         Args:
@@ -459,7 +452,7 @@ class ToolTemplateModel(QAbstractListModel):
         self._tools.insert(row, tool)
         self.endInsertRows()
 
-    def removeRow(self, row, parent=QModelIndex(), *args, **kwargs):
+    def removeRow(self, row, parent=QModelIndex()):
         """Remove row (tool) from model.
 
         Args:
@@ -596,15 +589,13 @@ class ConnectionModel(QAbstractTableModel):
         if role == Qt.DisplayRole:
             if not self.connections[index.row()][index.column()]:
                 return "False"  # If there is no Link return "False"
-            else:
-                return "True"  # If a link is present return "True"
-        elif role == Qt.ToolTipRole:
+            return "True"  # If a link is present return "True"
+        if role == Qt.ToolTipRole:
             header = self.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
             return header + " (Feedback)"
-        elif role == Qt.UserRole:
+        if role == Qt.UserRole:
             return self.connections[index.row()][index.column()]
-        else:
-            return None
+        return None
 
     def setData(self, index, value, role=Qt.EditRole):
         """Set data of single cell in table. Toggles the checkbox state at index.

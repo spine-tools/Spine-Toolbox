@@ -325,12 +325,11 @@ class ToolInstance(QObject):
                 self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.tool_process.program()))
                 self.instance_finished_signal.emit(ret)
                 return
-            else:
-                try:
-                    return_msg = self.tool_template.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-                except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+            try:
+                return_msg = self.tool_template.return_codes[ret]
+                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+            except KeyError:
+                self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
             self._toolbox.msg.emit("\tTool template execution finished")
         self.tool_process.deleteLater()
