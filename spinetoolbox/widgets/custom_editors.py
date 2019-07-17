@@ -61,13 +61,10 @@ class CustomLineEditor(QLineEdit):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def set_data(self, data):
         if data is not None:
             self.setText(str(data))
-        if type(data) is int:
+        if isinstance(data, int):
             self.setValidator(QIntValidator(self))
 
     def data(self):
@@ -88,16 +85,13 @@ class CustomComboEditor(QComboBox):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def set_data(self, current_text, items):
         self.addItems(items)
         if current_text and current_text in items:
             self.setCurrentText(current_text)
         else:
             self.setCurrentIndex(-1)
-        self.activated.connect(lambda: self.data_committed.emit())
+        self.activated.connect(lambda: self.data_committed.emit())  # pylint: disable=unnecessary-lambda
         self.showPopup()
 
     def data(self):
@@ -126,7 +120,7 @@ class CustomLineEditDelegate(QItemDelegate):
         """
         editor = CustomLineEditor(parent)
         editor.set_data(index.data())
-        editor.textEdited.connect(lambda s: self.text_edited.emit(s))
+        editor.textEdited.connect(lambda s: self.text_edited.emit(s))  # pylint: disable=unnecessary-lambda
         return editor
 
     def eventFilter(self, editor, event):
@@ -180,12 +174,12 @@ class SearchBarEditor(QTableView):
         delegate.text_edited.connect(self._handle_delegate_text_edited)
         self.setItemDelegateForRow(0, delegate)
 
-    def set_data(self, current, all):
+    def set_data(self, current, all_data):
         """Populate model and initialize first index."""
         if self._is_json:
-            all = [json.loads(x) for x in all]
+            all_data = [json.loads(x) for x in all_data]
         item_list = [QStandardItem(current)]
-        for name in all:
+        for name in all_data:
             qitem = QStandardItem(name)
             item_list.append(qitem)
             qitem.setFlags(~Qt.ItemIsEditable)
@@ -349,9 +343,6 @@ class MultiSearchBarEditor(QTableView):
         self.verticalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
 
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
-
     def set_data(self, header, currents, alls):
         self.model.setHorizontalHeaderLabels(header)
         self.alls = alls
@@ -451,7 +442,7 @@ class CheckListEditor(QTableView):
             else:
                 qitem.setCheckState(Qt.Unchecked)
             qitem.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsUserCheckable)
-            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)
+            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)  # pylint: disable=undefined-variable
             self.model.appendRow(qitem)
         self.selectionModel().select(self.model.index(0, 0), QItemSelectionModel.Select)
 
@@ -569,7 +560,7 @@ class JSONEditor(QTabWidget):
         Check if the focus is still on this widget (which would mean it was a tab change)
         otherwise emit signal so this is closed.
         """
-        if qApp.focusWidget() != self.focusWidget():
+        if qApp.focusWidget() != self.focusWidget():  # pylint: disable=undefined-variable
             self.data_committed.emit()
 
     @Slot("int", name="_handle_current_changed")
@@ -655,20 +646,17 @@ class JSONEditor(QTabWidget):
             if not text:  # empty string is not valid JSON
                 text = 'null'
             return text
-        elif index == 1:
+        if index == 1:
             return json.dumps(self.model.all_data())
 
 
 class IconPainterDelegate(QItemDelegate):
     """A delegate to highlight decorations in a QListWidget."""
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def paint(self, painter, option, index):
         """Highlight selected items."""
         if option.state & QStyle.State_Selected:
-            painter.fillRect(option.rect, qApp.palette().highlight())
+            painter.fillRect(option.rect, qApp.palette().highlight())  # pylint: disable=undefined-variable
         super().paint(painter, option, index)
 
 

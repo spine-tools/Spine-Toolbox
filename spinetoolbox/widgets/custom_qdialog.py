@@ -30,12 +30,10 @@ from PySide2.QtWidgets import (
     QLabel,
     QComboBox,
     QSpinBox,
-    QStyle,
     QCheckBox,
 )
-from PySide2.QtCore import Slot, Qt, QSize
+from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QIcon
-from spinedb_api import SpineDBAPIError
 from models import EmptyRowModel, MinimalTableModel, HybridTableModel
 from widgets.custom_delegates import (
     ManageObjectClassesDelegate,
@@ -46,7 +44,7 @@ from widgets.custom_delegates import (
     ManageParameterTagsDelegate,
 )
 from widgets.custom_qtableview import CopyPasteTableView
-from helpers import busy_effect, format_string_list
+from helpers import busy_effect
 
 
 class ManageItemsDialog(QDialog):
@@ -137,9 +135,6 @@ class GetObjectClassesMixin:
     """Provides a method to retrieve object classes for AddObjectsDialog and AddRelationshipClassesDialog.
     """
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-
     def object_class_name_list(self, row):
         """Return a list of object class names present in all databases selected for given row.
         Used by `ManageObjectsDelegate`.
@@ -162,9 +157,6 @@ class GetObjectClassesMixin:
 class GetObjectsMixin:
     """Provides a method to retrieve objects for AddRelationshipsDialog and EditRelationshipsDialog.
     """
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
 
     def object_name_list(self, row, column):
         """Return a list of object names present in all databases selected for given row.
@@ -216,7 +208,6 @@ class AddObjectClassesDialog(AddItemsDialog):
         self.table_view.setModel(self.model)
         self.combo_box = QComboBox(self)
         self.layout().insertWidget(0, self.combo_box)
-        model = self._parent.object_tree_model
         self.obj_cls_dict = {
             db_map: {x.name: x.display_order for x in db_map.object_class_list()} for db_map in self._parent.db_maps
         }
@@ -427,7 +418,6 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
     def remove_column(self):
         self.number_of_dimensions -= 1
         column = self.number_of_dimensions
-        column_size = self.table_view.horizontalHeader().sectionSize(column)
         self.model.header.pop(column)
         self.model.removeColumns(column, 1)
 
@@ -451,7 +441,7 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
                 icon = self._parent.icon_mngr.object_icon(object_class_name)
                 self.model.setData(index, icon, Qt.DecorationRole)
             else:
-                col_data = lambda j: self.model.index(row, j).data()
+                col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
                 obj_cls_names = [col_data(j) for j in range(self.number_of_dimensions) if col_data(j)]
                 if len(obj_cls_names) == 1:
                     relationship_class_name = obj_cls_names[0] + "__"
@@ -597,7 +587,7 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
         number_of_dimensions = self.model.columnCount() - 2
         for row in range(top, bottom + 1):
             if header.index('relationship name') not in range(left, right + 1):
-                col_data = lambda j: self.model.index(row, j).data()
+                col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
                 obj_names = [col_data(j) for j in range(number_of_dimensions) if col_data(j)]
                 if len(obj_names) == 1:
                     relationship_name = obj_names[0] + "__"
@@ -911,8 +901,6 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
         relationship_d = dict()
         name_column = self.model.horizontal_header_labels().index("relationship name")
         db_column = self.model.horizontal_header_labels().index("databases")
-        obj_dict = {}
-        rel_cls_dict = {}
         for i in range(self.model.rowCount()):
             row_data = self.model.row_data(i)
             object_name_list = [row_data[column] for column in range(name_column)]

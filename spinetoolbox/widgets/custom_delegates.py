@@ -38,9 +38,6 @@ class IconColorDialogDelegate(QStyledItemDelegate):
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def createEditor(self, parent, option, index):
         """Return QColorDialog."""
         # TODO: Find out how to make IconColorEditor movable
@@ -69,9 +66,6 @@ class LineEditDelegate(QItemDelegate):
     """
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return CustomLineEditor. Set up a validator depending on datatype."""
@@ -151,7 +145,6 @@ class CheckBoxDelegate(QItemDelegate):
 
     def setModelData(self, editor, model, index):
         """Do nothing. Model data is updated by handling the `data_committed` signal."""
-        pass
 
     def get_checkbox_rect(self, option):
         checkbox_style_option = QStyleOptionButton()
@@ -192,7 +185,7 @@ class ParameterDelegate(QItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
-        if type(editor) in (SearchBarEditor, CheckListEditor, MultiSearchBarEditor, JSONEditor):
+        if isinstance(editor, (SearchBarEditor, CheckListEditor, MultiSearchBarEditor, JSONEditor)):
             size = option.rect.size()
             if index.data(Qt.DecorationRole):
                 size.setWidth(size.width() - 22)  # FIXME
@@ -210,9 +203,6 @@ class ObjectParameterValueDelegate(ParameterDelegate):
     Attributes:
         parent (DataStoreForm): tree or graph view form
     """
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -274,9 +264,6 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         parent (DataStoreForm): tree or graph view form
     """
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
@@ -321,9 +308,6 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
     Attributes:
         parent (DataStoreForm): tree or graph view form
     """
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -399,9 +383,6 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
         parent (DataStoreForm): tree or graph view form
     """
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
@@ -467,7 +448,7 @@ class ManageItemsDelegate(QItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
-        if type(editor) in (SearchBarEditor, CheckListEditor):
+        if isinstance(editor, (SearchBarEditor, CheckListEditor)):
             size = option.rect.size()
             if index.data(Qt.DecorationRole):
                 size.setWidth(size.width() - 22)  # FIXME
@@ -522,9 +503,6 @@ class ManageObjectsDelegate(ManageItemsDelegate):
         parent (DataStoreForm): tree or graph view form
     """
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
@@ -552,15 +530,11 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
         parent (DataStoreForm): tree or graph view form
     """
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'relationship class name':
             editor = CustomLineEditor(parent)
-            data = index.data(Qt.EditRole)
             editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'databases':
             editor = CheckListEditor(parent)
@@ -582,9 +556,6 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
     Attributes:
         parent (DataStoreForm): tree or graph view form
     """
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -614,9 +585,6 @@ class RemoveTreeItemsDelegate(ManageItemsDelegate):
         parent (DataStoreForm): tree or graph view form
     """
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
@@ -636,9 +604,6 @@ class ManageParameterTagsDelegate(ManageItemsDelegate):
     Attributes:
         parent (DataStoreForm): tree or graph view form
     """
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
     def createEditor(self, parent, option, index):
         """Return editor."""
@@ -685,15 +650,14 @@ class ForeignKeysDelegate(QItemDelegate):
             model = index.model()
             editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
             return editor
-        elif header[index.column()] == 'reference resource':
+        if header[index.column()] == 'reference resource':
             return CustomComboEditor(parent)
-        elif header[index.column()] == 'reference fields':
+        if header[index.column()] == 'reference fields':
             editor = CheckListEditor(self._parent, parent)
             model = index.model()
             editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_field_name_list_editor(e, i, m))
             return editor
-        else:
-            return None
+        return None
 
     def setEditorData(self, editor, index):
         """Set editor data."""

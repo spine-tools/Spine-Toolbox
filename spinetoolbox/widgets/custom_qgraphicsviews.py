@@ -206,57 +206,37 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.dst_item_name = None  # Name of destination project item when drawing links
         self.show()
 
-    def mousePressEvent(self, e):
+    def mousePressEvent(self, event):
         """Manage drawing of links. Handle the case where a link is being
         drawn and the user doesn't hit a connector button.
 
         Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
+            event (QGraphicsSceneMouseEvent): Mouse event
         """
         was_drawing = self.link_drawer.drawing if self.link_drawer else None
         # This below will trigger connector button if any
-        super().mousePressEvent(e)
+        super().mousePressEvent(event)
         if was_drawing:
             self.link_drawer.hide()
             # If `drawing` is still `True` here, it means we didn't hit a connector
             if self.link_drawer.drawing:
                 self.link_drawer.drawing = False
-                if e.button() != Qt.LeftButton:
+                if event.button() != Qt.LeftButton:
                     return
                 self._toolbox.msg_warning.emit(
                     "Unable to make connection. Try landing " "the connection onto a connector button."
                 )
 
-    def mouseReleaseEvent(self, event):
-        """Mouse release event.
+    def mouseMoveEvent(self, event):
+        """Update line end position.
 
         Args:
             event (QGraphicsSceneMouseEvent): Mouse event
         """
-        super().mouseReleaseEvent(event)
-
-    def mouseMoveEvent(self, e):
-        """Update line end position.
-
-        Args:
-            e (QGraphicsSceneMouseEvent): Mouse event
-        """
         if self.link_drawer and self.link_drawer.drawing:
-            self.link_drawer.dst = self.mapToScene(e.pos())
+            self.link_drawer.dst = self.mapToScene(event.pos())
             self.link_drawer.update_geometry()
-        super().mouseMoveEvent(e)
-
-    def wheelEvent(self, event):
-        """Zoom in/out."""
-        super().wheelEvent(event)
-
-    def showEvent(self, event):
-        """Calls super method. Not in use."""
-        super().showEvent(event)
-
-    def resizeEvent(self, event):
-        """Calls super method. Not in use."""
-        super().resizeEvent(event)
+        super().mouseMoveEvent(event)
 
     def set_ui(self, toolbox):
         """Set a new scene into the Design View when app is started."""
@@ -454,11 +434,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
         else:
             src_index = self._project_item_model.find_item(self.src_item_name)
             if not src_index:
-                logging.error("Item {0} not found".format(self.src_item_name))
+                logging.error("Item %s not found", self.src_item_name)
                 return
             dst_index = self._project_item_model.find_item(self.dst_item_name)
             if not dst_index:
-                logging.error("Item {0} not found".format(self.dst_item_name))
+                logging.error("Item %s not found", self.dst_item_name)
                 return
             src_item_type = self._project_item_model.project_item(src_index).item_type
             dst_item_type = self._project_item_model.project_item(dst_index).item_type
@@ -509,22 +489,6 @@ class GraphQGraphicsView(CustomQGraphicsView):
         """Init GraphQGraphicsView."""
         super().__init__(parent=parent)
         self._graph_view_form = None
-
-    def mousePressEvent(self, event):
-        """Call superclass method."""
-        super().mousePressEvent(event)
-
-    def mouseReleaseEvent(self, event):
-        """Reestablish scroll hand drag mode."""
-        super().mouseReleaseEvent(event)
-
-    def mouseMoveEvent(self, event):
-        """Register mouse position to recenter the scene after zoom."""
-        super().mouseMoveEvent(event)
-
-    def wheelEvent(self, event):
-        """Zoom in/out."""
-        super().wheelEvent(event)
 
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method

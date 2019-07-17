@@ -17,11 +17,10 @@ Custom QGraphicsScene used in the Design View.
 """
 
 from PySide2.QtWidgets import QGraphicsScene
-from PySide2.QtCore import Signal, Slot, QRectF, QItemSelectionModel
+from PySide2.QtCore import Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon, DataInterfaceIcon
+from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon, DataInterfaceIcon, ProjectItemIcon
 from widgets.toolbars import DraggableWidget
-from graphics_items import ProjectItemIcon
 
 
 class CustomQGraphicsScene(QGraphicsScene):
@@ -38,7 +37,7 @@ class CustomQGraphicsScene(QGraphicsScene):
         self.sync_selection = True
         # Set background attributes
         grid = self._toolbox.qsettings().value("appSettings/bgGrid", defaultValue="false")
-        self.bg_grid = False if grid == "false" else True
+        self.bg_grid = grid != "false"
         bg_color = self._toolbox.qsettings().value("appSettings/bgColor", defaultValue="false")
         self.bg_color = QColor("#f5f5f5") if bg_color == "false" else bg_color
         self.connect_signals()

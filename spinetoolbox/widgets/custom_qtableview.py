@@ -16,7 +16,6 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 :date:   18.5.2018
 """
 
-import time
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
 from PySide2.QtGui import QKeySequence
@@ -79,7 +78,7 @@ class CopyPasteTableView(QTableView):
         QApplication.clipboard().setText(content)
         return True
 
-    def canPaste(self):
+    def canPaste(self):  # pylint: disable=no-self-use
         return True
 
     def paste(self):
@@ -102,7 +101,6 @@ class CopyPasteTableView(QTableView):
         selection = self.selectionModel().selection()
         if selection.isEmpty():
             return False
-        first = selection.first()
         indexes = list()
         values = list()
         is_row_hidden = self.verticalHeader().isSectionHidden
@@ -139,7 +137,7 @@ class CopyPasteTableView(QTableView):
         rows = []
         rows_append = rows.append
         is_row_hidden = self.verticalHeader().isSectionHidden
-        for x in range(len(data)):
+        for _ in range(len(data)):
             while is_row_hidden(row):
                 row += 1
             rows_append(row)
@@ -150,7 +148,7 @@ class CopyPasteTableView(QTableView):
         columns_append = columns.append
         h = self.horizontalHeader()
         is_visual_column_hidden = lambda x: h.isSectionHidden(h.logicalIndex(x))
-        for x in range(len(data[0])):
+        for _ in range(len(data[0])):
             while is_visual_column_hidden(visual_column):
                 visual_column += 1
             columns_append(h.logicalIndex(visual_column))
@@ -269,9 +267,8 @@ class FrozenTableView(QTableView):
         index = self.selectedIndexes()
         if not index:
             return tuple(None for _ in range(self.model.columnCount()))
-        else:
-            index = self.selectedIndexes()[0]
-            return self.model.row(index)
+        index = self.selectedIndexes()[0]
+        return self.model.row(index)
 
     def set_data(self, headers, values):
         self.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating

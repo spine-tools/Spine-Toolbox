@@ -16,9 +16,9 @@ Classes for custom line edits.
 :date:   11.10.2018
 """
 
+import os
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtWidgets import QLineEdit
-import os
 
 
 class CustomQLineEdit(QLineEdit):
@@ -29,9 +29,6 @@ class CustomQLineEdit(QLineEdit):
     """
 
     file_dropped = Signal("QString", name="file_dropped")
-
-    def __init__(self, parent):
-        super().__init__(parent)
 
     def dragEnterEvent(self, event):
         """Accept a single file drop from the filesystem."""
