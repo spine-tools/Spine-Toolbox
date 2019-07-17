@@ -32,6 +32,7 @@ from widgets.custom_menus import (
     ParameterValueListContextMenu,
 )
 from widgets.custom_qdialog import RemoveTreeItemsDialog
+from widgets.double_click_handler import overwrite_table_double_click_handlers
 from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, RelationshipTreeModel
@@ -42,7 +43,8 @@ from plotting import plot_selection, PlottingError, tree_graph_view_parameter_va
 
 
 class TreeViewForm(DataStoreForm):
-    """A widget to show and edit Spine objects in a data store.
+    """
+    A widget to show and edit Spine objects in a data store.
 
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
@@ -88,6 +90,7 @@ class TreeViewForm(DataStoreForm):
         self.add_toggle_view_actions()
         self.connect_signals()
         self.setWindowTitle("Data store tree view    -- {} --".format(", ".join(self.db_names)))
+        overwrite_table_double_click_handlers(self)
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
@@ -941,7 +944,7 @@ class TreeViewForm(DataStoreForm):
         option = menu.get_action()
         if option == "Open in editor...":
             value_name = tree_graph_view_parameter_value_name(index, table_view)
-            editor = ParameterValueEditor(model, index, value_name, self)
+            editor = ParameterValueEditor(index, value_name, parent_widget=self)
             editor.show()
         elif option == "Plot":
             selection = table_view.selectedIndexes()

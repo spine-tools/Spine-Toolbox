@@ -61,15 +61,15 @@ class ParameterValueEditor(QDialog):
     written back to the parent model.
 
     Attributes:
-        parent_model (ObjectParameterValueModel, RelationshipParameterValueModel): a parent model
         parent_index (QModelIndex): an index to a parameter value in parent_model
         value_name (str): name of the value
+        value: parameter value or None if it should be loaded from parent_index
         parent_widget (QWidget): a parent widget
     """
 
-    def __init__(self, parent_model, parent_index, value_name="", parent_widget=None):
+    def __init__(self, parent_index, value_name="", value=None, parent_widget=None):
         super().__init__(parent_widget)
-        self._parent_model = parent_model
+        self._parent_model = parent_index.model()
         self._parent_index = parent_index
         self._ui = Ui_ParameterValueEditor()
         self._ui.setupUi(self)
@@ -90,11 +90,12 @@ class ParameterValueEditor(QDialog):
         self._ui.editor_stack.addWidget(self._datetime_editor)
         self._ui.editor_stack.addWidget(self._duration_editor)
         self._ui.parameter_type_selector.activated.connect(self._change_parameter_type)
-        try:
-            value = from_database(parent_model.data(parent_index, Qt.EditRole))
-        except ParameterValueFormatError as error:
-            self._warn_and_select_default_view("Failed to load value: {}".format(error))
-            return
+        if value is None:
+            try:
+                value = from_database(self._parent_model.data(parent_index, Qt.EditRole))
+            except ParameterValueFormatError as error:
+                self._warn_and_select_default_view("Failed to load value: {}".format(error))
+                return
         self._select_editor(value)
 
     @Slot(name="accept")

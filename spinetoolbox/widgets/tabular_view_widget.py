@@ -27,6 +27,7 @@ from spinedb_api import SpineDBAPIError
 from ui.tabular_view_form import Ui_MainWindow
 from widgets.custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from widgets.custom_qdialog import CommitDialog
+from widgets.double_click_handler import OpenEditorOrDefaultDelegateForPivotTable
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
@@ -137,6 +138,11 @@ class TabularViewForm(QMainWindow):
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuSession.aboutToShow.connect(self.set_session_menu_enable)
+
+        # handle double clicks in pivot table
+        self.ui.pivot_table.mouseDoubleClickEvent = OpenEditorOrDefaultDelegateForPivotTable(
+            self, self.ui.pivot_table, self.model
+        )
 
         # load db data
         self.load_class_data()

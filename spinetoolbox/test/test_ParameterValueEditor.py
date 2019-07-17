@@ -16,8 +16,8 @@ Unit tests for the ParameterValueEditor widget.
 :date:   3.7.2019
 """
 
-import dateutil.parser
 import unittest
+import dateutil.parser
 import numpy as np
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
@@ -68,7 +68,7 @@ class TestParameterValueEditor(unittest.TestCase):
         model = _MockParentModel()
         model_index = model.index(1, 1)
         model.setData(model_index, to_database(value))
-        editor = ParameterValueEditor(model, model_index)
+        editor = ParameterValueEditor(model_index)
         # Reset model data to check that the value is written back from the editor
         model.setData(model_index, None)
         editor.accept()
