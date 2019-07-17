@@ -17,7 +17,7 @@ A model for fixed resolution time series, used by the parameter value editors.
 """
 
 import numpy as np
-from PySide2.QtCore import QModelIndex, Qt, Slot
+from PySide2.QtCore import QModelIndex, Qt, Slot, QLocale
 from spinedb_api import TimeSeriesFixedResolution
 from indexed_value_table_model import IndexedValueTableModel
 
@@ -34,6 +34,7 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         super().__init__(series, "Time stamp", "Values")
         # Cache the time steps so they need not be recalculated every single time they are needed.
         self._index_cache = self._value.indexes
+        self.locale = QLocale()
 
     def data(self, index, role=Qt.DisplayRole):
         """
@@ -140,9 +141,31 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
         """
         if not index.isValid() or role != Qt.EditRole:
             return False
+        if index.column() != 1:
+            return False
         self._value.values[index.row()] = value
         self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
+
+    def batch_set_data(self, indexes, values):
+        """
+        Sets data for several indexes at once. Called by `paste` methods of `CopyPasteTableView`
+        """
+        rows = []
+        for index, value in zip(indexes, values):
+            if index.column() != 1:
+                continue
+            new_value, ok = self.locale.toFloat(value)
+            if not ok:
+                msg = "could not convert string to float: '{}'".format(value)
+                raise ValueError(msg)
+            self._value.values[index.row()] = new_value
+            rows.append(index.row())
+        if not rows:
+            return
+        top = min(rows)
+        bottom = max(rows)
+        self.dataChanged.emit(self.index(top, 1), self.index(bottom, 1), [Qt.EditRole])
 
     @Slot(bool, name="set_ignore_year")
     def set_ignore_year(self, ignore_year):

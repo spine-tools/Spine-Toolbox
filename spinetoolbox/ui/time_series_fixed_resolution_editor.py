@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/time_series_fixed_resolution_editor.ui',
-# licensing of '../spinetoolbox/ui/time_series_fixed_resolution_editor.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/time_series_fixed_resolution_editor.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/time_series_fixed_resolution_editor.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -76,7 +76,7 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem2)
         self.left_layout.addLayout(self.horizontalLayout_2)
-        self.time_series_table = QtWidgets.QTableView(self.verticalLayoutWidget)
+        self.time_series_table = CopyPasteTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName("time_series_table")
         self.left_layout.addWidget(self.time_series_table)
         self.verticalLayout.addWidget(self.splitter)
@@ -94,3 +94,4 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Ignore year", None, -1))
         self.repeat_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Repeat", None, -1))
 
+from widgets.custom_qtableview import CopyPasteTableView

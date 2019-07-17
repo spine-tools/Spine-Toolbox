@@ -16,11 +16,10 @@ Class for a custom QTableView that allows copy-paste, and maybe some other featu
 :date:   18.5.2018
 """
 
-from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
+from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView, QMenu, QLineEdit, QWidgetAction
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QSortFilterProxyModel
 from PySide2.QtGui import QKeySequence
-from widgets.custom_menus import AutoFilterMenu
-from models import TableModel
+from models import TableModel, MinimalTableModel
 
 
 class CopyPasteTableView(QTableView):
@@ -180,6 +179,167 @@ class CopyPasteTableView(QTableView):
                     values.append(value)
         self.model().batch_set_data(indexes, values)
         return True
+
+
+class AutoFilterMenu(QMenu):
+    """A widget to show the auto filter 'menu'.
+
+    Attributes:
+        parent (QTableView): the parent widget.
+    """
+
+    asc_sort_triggered = Signal(name="asc_sort_triggered")
+    desc_sort_triggered = Signal(name="desc_sort_triggered")
+    filter_triggered = Signal(name="filter_triggered")
+
+    def __init__(self, parent):
+        """Initialize class."""
+        super().__init__(parent)
+        self.row_is_accepted = []
+        self.unchecked_values = dict()
+        self.model = MinimalTableModel(self)
+        self.model.data = self._model_data
+        self.model.flags = self._model_flags
+        self.proxy_model = QSortFilterProxyModel(self)
+        self.proxy_model.setFilterKeyColumn(1)
+        self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
+        self.text_filter = QLineEdit(self)
+        self.text_filter.setPlaceholderText("Search...")
+        self.text_filter.setClearButtonEnabled(True)
+        self.view = QTableView(self)
+        self.view.setModel(self.proxy_model)
+        self.view.verticalHeader().hide()
+        self.view.horizontalHeader().hide()
+        self.view.setShowGrid(False)
+        self.view.setMouseTracking(True)
+        self.view.entered.connect(self._handle_view_entered)
+        self.view.clicked.connect(self._handle_view_clicked)
+        self.view.leaveEvent = self._view_leave_event
+        self.view.keyPressEvent = self._view_key_press_event
+        text_filter_action = QWidgetAction(self)
+        text_filter_action.setDefaultWidget(self.text_filter)
+        view_action = QWidgetAction(self)
+        view_action.setDefaultWidget(self.view)
+        self.addAction(text_filter_action)
+        self.addAction(view_action)
+        ok_action = self.addAction("Ok")
+        # pylint: disable=unnecessary-lambda
+        self.text_filter.textEdited.connect(lambda x: self.proxy_model.setFilterRegExp(x))
+        ok_action.triggered.connect(self._handle_ok_action_triggered)
+
+    def _model_flags(self, index):  # pylint: disable=no-self-use
+        """Return no item flags."""
+        return ~Qt.ItemIsEditable
+
+    def _model_data(self, index, role=Qt.DisplayRole):
+        """Read checked state from first column."""
+        if role == Qt.CheckStateRole:
+            checked = self.model._main_data[index.row()][0]
+            if checked is None:
+                return Qt.PartiallyChecked
+            if checked is True:
+                return Qt.Checked
+            return Qt.Unchecked
+        return MinimalTableModel.data(self.model, index, role)
+
+    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
+        """Overridden method to always accept first row.
+        """
+        if source_row == 0:
+            return True
+        result = QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
+        self.row_is_accepted[source_row] = result
+        return result
+
+    @Slot("QModelIndex", name="_handle_view_entered")
+    def _handle_view_entered(self, index):
+        """Highlight current row."""
+        self.view.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+
+    def _view_key_press_event(self, event):
+        QTableView.keyPressEvent(self.view, event)
+        if event.key() == Qt.Key_Space:
+            index = self.view.currentIndex()
+            self.toggle_checked_state(index)
+
+    @Slot("QModelIndex", name="_handle_view_clicked")
+    def _handle_view_clicked(self, index):
+        self.toggle_checked_state(index)
+
+    def toggle_checked_state(self, checked_index):
+        """Toggle checked state."""
+        index = self.proxy_model.index(checked_index.row(), 0)
+        checked = index.data(Qt.EditRole)
+        row_count = self.proxy_model.rowCount()
+        if index.row() == 0:
+            # All row
+            all_checked = checked in (None, False)
+            for row in range(0, row_count):
+                self.proxy_model.setData(self.proxy_model.index(row, 0), all_checked)
+            self.proxy_model.dataChanged.emit(self.proxy_model.index(0, 1), self.proxy_model.index(row_count - 1, 1))
+        else:
+            # Data row
+            self.proxy_model.setData(index, not checked)
+            self.proxy_model.dataChanged.emit(checked_index, checked_index)
+            self.set_data_for_all_index()
+
+    def _view_leave_event(self, event):
+        """Clear selection."""
+        self.view.selectionModel().clearSelection()
+        event.accept()
+
+    def set_data_for_all_index(self):
+        """Set data for 'all' index based on data from all other indexes."""
+        all_index = self.proxy_model.index(0, 0)
+        true_count = 0
+        row_count = self.proxy_model.rowCount()
+        for row in range(1, row_count):
+            if self.proxy_model.index(row, 0).data():
+                true_count += 1
+        if true_count == row_count - 1:
+            self.proxy_model.setData(all_index, True)
+        elif true_count == 0:
+            self.proxy_model.setData(all_index, False)
+        else:
+            self.proxy_model.setData(all_index, None)
+        index = self.proxy_model.index(0, 1)
+        self.proxy_model.dataChanged.emit(index, index)
+
+    @Slot("bool", name="_handle_ok_action_triggered")
+    def _handle_ok_action_triggered(self, checked=False):
+        """Called when user presses Ok."""
+        self.unchecked_values = dict()
+        for row in range(1, self.model.rowCount()):
+            checked, value, object_class_id_set = self.model._main_data[row]
+            if not self.row_is_accepted[row] or not checked:
+                for object_class_id in object_class_id_set:
+                    self.unchecked_values.setdefault(object_class_id, set()).add(value)
+        self.filter_triggered.emit()
+
+    def set_values(self, values):
+        """Set values to show in the 'menu'."""
+        self.row_is_accepted = [True for _ in range(len(values) + 1)]
+        self.model.reset_model([[None, "(Select All)", ""]] + values)
+        self.set_data_for_all_index()
+        self.view.horizontalHeader().hideSection(0)  # Column 0 holds the checked state
+        self.view.horizontalHeader().hideSection(2)  # Column 2 holds the (cls_id_set)
+        self.proxy_model.setFilterRegExp("")
+
+    def popup(self, pos, width=0, at_action=None):
+        super().popup(pos, at_action)
+        self.text_filter.clear()
+        self.text_filter.setFocus()
+        self.view.horizontalHeader().setMinimumSectionSize(0)
+        self.view.resizeColumnToContents(1)
+        table_width = self.view.horizontalHeader().sectionSize(1) + 2
+        width = max(table_width, width)
+        self.view.horizontalHeader().setMinimumSectionSize(width)
+        parent_section_height = self.parent().verticalHeader().defaultSectionSize()
+        self.view.verticalHeader().setDefaultSectionSize(parent_section_height)
+        # if self.view.verticalScrollBar().isVisible():
+        #    width += qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        self.setFixedWidth(width)
 
 
 class AutoFilterCopyPasteTableView(CopyPasteTableView):

@@ -161,7 +161,10 @@ class TimeSeriesModelVariableResolution(IndexedValueTableModel):
         """
         if not index.isValid() or role != Qt.EditRole:
             return False
-        self._value.values[index.row()] = value
+        if index.column() == 0:
+            self._value.indexes[index.row()] = value
+        else:
+            self._value.values[index.row()] = value
         self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
 

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -144,7 +144,7 @@
         </layout>
        </item>
        <item>
-        <widget class="QTableView" name="time_series_table"/>
+        <widget class="CopyPasteTableView" name="time_series_table"/>
        </item>
       </layout>
      </widget>
@@ -152,6 +152,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>CopyPasteTableView</class>
+   <extends>QTableView</extends>
+   <header>widgets/custom_qtableview.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
