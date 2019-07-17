@@ -22,7 +22,7 @@ from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QLineEdit, QTableVi
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, QItemSelectionModel
 from helpers import fix_name_ambiguity, tuple_itemgetter
-from plotting import plot_pivot_column, plot_selection, PlottingError
+from plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingSupport
 from widgets.custom_qwidgets import FilterWidget
 from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.report_plotting_failure import report_plotting_failure
@@ -816,7 +816,8 @@ class PivotTableModelMenu(QMenu):
     def plot(self):
         """Plots the selected cells in the pivot table."""
         try:
-            plot_window = plot_selection(self._model, self._get_selected_indexes())
+            support = PivotTablePlottingSupport()
+            plot_window = plot_selection(self._model, self._get_selected_indexes(), support)
         except PlottingError as error:
             report_plotting_failure(error)
             return
@@ -893,7 +894,8 @@ class PivotTableHorizontalHeaderMenu(QMenu):
     def _plot_column(self):
         """Plots a single column not the selection."""
         try:
-            plot_window = plot_pivot_column(self._model, self._model_index.column())
+            support = PivotTablePlottingSupport()
+            plot_window = plot_pivot_column(self._model, self._model_index.column(), support)
         except PlottingError as error:
             report_plotting_failure(error)
             return

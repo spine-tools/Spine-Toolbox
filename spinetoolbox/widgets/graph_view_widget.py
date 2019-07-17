@@ -35,7 +35,12 @@ from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
-from plotting import plot_selection, PlottingError, tree_graph_view_parameter_value_name
+from plotting import (
+    plot_selection,
+    PlottingError,
+    tree_graph_view_parameter_value_name,
+    GraphAndTreeViewPlottingSupport,
+)
 
 
 class GraphViewForm(DataStoreForm):
@@ -1012,7 +1017,8 @@ class GraphViewForm(DataStoreForm):
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:
-                plot_widget = plot_selection(model, selection)
+                support = GraphAndTreeViewPlottingSupport(table_view)
+                plot_widget = plot_selection(model, selection, support)
             except PlottingError as error:
                 report_plotting_failure(error)
                 return
