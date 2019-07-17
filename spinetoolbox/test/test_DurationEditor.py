@@ -33,10 +33,15 @@ class TestDurationEditor(unittest.TestCase):
         value = editor.value()
         self.assertEqual(value, Duration("1h"))
 
-    def test_value_access(self):
+    def test_value_access_single_duration(self):
         editor = DurationEditor()
         editor.set_value(Duration("3 months"))
         self.assertEqual(editor.value(), Duration("3M"))
+
+    def test_value_access_variable_duration(self):
+        editor = DurationEditor()
+        editor.set_value(Duration(["3 months", "6 months"]))
+        self.assertEqual(editor.value(), Duration(["3M", "6M"]))
 
 
 if __name__ == '__main__':
