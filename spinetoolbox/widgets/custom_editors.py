@@ -59,8 +59,6 @@ class CustomLineEditor(QLineEdit):
         parent (QWidget): the widget that wants to edit the data
     """
 
-    data_committed = Signal(name="data_committed")
-
     def set_data(self, data):
         if data is not None:
             self.setText(str(data))
@@ -326,8 +324,6 @@ class SearchBarDelegate(QItemDelegate):
 class MultiSearchBarEditor(QTableView):
     """A table view made of several Google-like search bars."""
 
-    data_committed = Signal(name="data_committed")
-
     def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
@@ -393,8 +389,6 @@ class MultiSearchBarEditor(QTableView):
 
 class CheckListEditor(QTableView):
     """A check list editor."""
-
-    data_committed = Signal(name="data_committed")
 
     def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
@@ -663,8 +657,6 @@ class IconPainterDelegate(QItemDelegate):
 class IconColorEditor(QDialog):
     """An editor to let the user select an icon and a color for an object class.
     """
-
-    data_committed = Signal(name="data_committed")  # NOTE: never emited, only to keep consistency
 
     def __init__(self, parent, icon_mngr):
         """Init class."""

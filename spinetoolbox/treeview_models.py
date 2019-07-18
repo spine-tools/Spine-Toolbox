@@ -1438,12 +1438,10 @@ class SubParameterValueModel(SubParameterModel):
     def data(self, index, role=Qt.DisplayRole):
         """Limit the display of json array data."""
         if self._parent.header[index.column()] == 'value':
-            data = super().data(index, Qt.EditRole)
-            if data is not None:
-                if role == Qt.ToolTipRole:
-                    return format_for_ToolTipRole(data)
-                if role == Qt.DisplayRole:
-                    return format_for_DisplayRole(data)
+            if role == Qt.ToolTipRole:
+                return format_for_ToolTipRole(super().data(index, Qt.EditRole))
+            if role == Qt.DisplayRole:
+                return format_for_DisplayRole(super().data(index, Qt.EditRole))
         return super().data(index, role)
 
 

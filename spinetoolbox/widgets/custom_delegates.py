@@ -18,6 +18,7 @@ Custom item delegates.
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyledItemDelegate
 from PySide2.QtGui import QIcon
+from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.custom_editors import (
     CustomComboEditor,
     CustomLineEditor,
@@ -27,6 +28,7 @@ from widgets.custom_editors import (
     JSONEditor,
     IconColorEditor,
 )
+from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 
 
 class IconColorDialogDelegate(QStyledItemDelegate):
@@ -169,6 +171,7 @@ class ParameterDelegate(QItemDelegate):
     """
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
+    parameter_value_editor_requested = Signal("QModelIndex", "QVariant", name="parameter_value_editor_requested")
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -196,6 +199,29 @@ class ParameterDelegate(QItemDelegate):
     def _handle_json_editor_current_changed(self, index):
         self.json_editor_tab_index = index
 
+    def create_parameter_value_editor(self, parent, index):
+        """Returns a `CustomLineEditor` if the data from index is not of special type.
+        Otherwise, emit the signal to request a standalone ParameterValueEditor
+        from parent widget.
+        """
+        try:
+            value = from_database(index.data(role=Qt.EditRole))
+        except ParameterValueFormatError:
+            value = None
+        if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)):
+            self.parameter_value_editor_requested.emit(index, value)
+            return None
+        editor = CustomLineEditor(parent)
+        editor.set_data(index.data(Qt.EditRole))
+        return editor
+
+    def connect_editor_signals(self, editor, index):
+        """Connect editor signals if necessary.
+        """
+        if isinstance(editor, SearchBarEditor):
+            model = index.model()
+            editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+
 
 class ObjectParameterValueDelegate(ParameterDelegate):
     """A delegate for the object parameter value model and view in TreeViewForm.
@@ -215,6 +241,7 @@ class ObjectParameterValueDelegate(ParameterDelegate):
             editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
         elif not db_map:
             editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'object_class_name':
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.object_class_list()]
@@ -247,13 +274,11 @@ class ObjectParameterValueDelegate(ParameterDelegate):
                 value_list = parameter_value_list.value_list.split(",")
                 editor.set_data(index.data(Qt.DisplayRole), value_list)
             else:
-                editor = JSONEditor(self._parent, parent)
-                editor.currentChanged.connect(self._handle_json_editor_current_changed)
-                editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
+                editor = self.create_parameter_value_editor(parent, index)
         else:
             editor = CustomLineEditor(parent)
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+            editor.set_data(index.data(Qt.EditRole))
+        self.connect_editor_signals(editor, index)
         return editor
 
 
@@ -274,14 +299,13 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
             editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
         elif not db_map:
             editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'object_class_name':
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.object_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'default_value':
-            editor = JSONEditor(self._parent, parent)
-            editor.currentChanged.connect(self._handle_json_editor_current_changed)
-            editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
+            editor = self.create_parameter_value_editor(parent, index)
         elif header[index.column()] == 'parameter_tag_list':
             editor = CheckListEditor(self._parent, parent)
             all_parameter_tag_list = [x.tag for x in db_map.parameter_tag_list()]
@@ -297,8 +321,7 @@ class ObjectParameterDefinitionDelegate(ParameterDelegate):
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        self.connect_editor_signals(editor, index)
         return editor
 
 
@@ -320,6 +343,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
             editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
         elif not db_map:
             editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'relationship_class_name':
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.wide_relationship_class_list()]
@@ -328,6 +352,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
             object_class_id_list = index.sibling(index.row(), h('object_class_id_list')).data(Qt.DisplayRole)
             if not object_class_id_list:
                 editor = CustomLineEditor(parent)
+                editor.set_data(index.data(Qt.EditRole))
             else:
                 editor = MultiSearchBarEditor(self._parent, parent)
                 object_class_ids = [int(x) for x in object_class_id_list.split(',')]
@@ -371,8 +396,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        self.connect_editor_signals(editor, index)
         return editor
 
 
@@ -393,6 +417,7 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
             editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
         elif not db_map:
             editor = CustomLineEditor(parent)
+            editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'relationship_class_name':
             editor = SearchBarEditor(self._parent, parent)
             name_list = [x.name for x in db_map.wide_relationship_class_list()]
@@ -420,8 +445,7 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        self.connect_editor_signals(editor, index)
         return editor
 
 
@@ -455,6 +479,13 @@ class ManageItemsDelegate(QItemDelegate):
             editor.set_base_size(size)
             editor.update_geometry()
 
+    def connect_editor_signals(self, editor, index):
+        """Connect editor signals if necessary.
+        """
+        if isinstance(editor, SearchBarEditor):
+            model = index.model()
+            editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+
 
 class ManageObjectClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectClassesDialog.
@@ -481,8 +512,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        self.connect_editor_signals(editor, index)
         return editor
 
     def paint(self, painter, option, index):
@@ -518,8 +548,7 @@ class ManageObjectsDelegate(ManageItemsDelegate):
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        self.connect_editor_signals(editor, index)
         return editor
 
 
@@ -545,8 +574,7 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
             editor = SearchBarEditor(parent)
             object_class_name_list = self._parent.object_class_name_list(index.row())
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        self.connect_editor_signals(editor, index)
         return editor
 
 
@@ -573,8 +601,7 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
             editor = SearchBarEditor(parent)
             object_name_list = self._parent.object_name_list(index.row(), index.column())
             editor.set_data(index.data(Qt.EditRole), object_name_list)
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        self.connect_editor_signals(editor, index)
         return editor
 
 
@@ -593,8 +620,7 @@ class RemoveTreeItemsDelegate(ManageItemsDelegate):
             all_databases = self._parent.all_databases(index.row())
             databases = index.data(Qt.DisplayRole).split(",")
             editor.set_data(all_databases, databases)
-            model = index.model()
-            editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+            self.connect_editor_signals(editor, index)
             return editor
 
 
@@ -618,8 +644,7 @@ class ManageParameterTagsDelegate(ManageItemsDelegate):
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
-        model = index.model()
-        editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
+        self.connect_editor_signals(editor, index)
         return editor
 
 

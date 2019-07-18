@@ -29,8 +29,6 @@ from ui.graph_view_form import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_qwidgets import ZoomWidget
-from widgets.double_click_handler import overwrite_table_double_click_handlers
-from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
@@ -126,7 +124,6 @@ class GraphViewForm(DataStoreForm):
         self.init_commit_rollback_actions()
         title = self.db_name + " (read only) " if read_only else self.db_name
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
-        overwrite_table_double_click_handlers(self)
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
@@ -1011,9 +1008,7 @@ class GraphViewForm(DataStoreForm):
             return
         option = menu.get_action()
         if option == "Open in editor...":
-            value_name = tree_graph_view_parameter_value_name(index, table_view)
-            editor = ParameterValueEditor(index, value_name, parent_widget=self)
-            editor.show()
+            self.show_parameter_value_editor(index, table_view)
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:

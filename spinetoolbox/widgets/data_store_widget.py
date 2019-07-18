@@ -48,6 +48,8 @@ from treeview_models import (
     ParameterValueListModel,
 )
 from helpers import busy_effect, format_string_list, IconManager
+from widgets.parameter_value_editor import ParameterValueEditor
+from plotting import tree_graph_view_parameter_value_name
 
 
 class DataStoreForm(QMainWindow):
@@ -147,17 +149,20 @@ class DataStoreForm(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         # Object tree
         self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
-        # Parameter tables delegate commit data
-        self.ui.tableView_object_parameter_definition.itemDelegate().data_committed.connect(
-            self.set_parameter_definition_data
-        )
-        self.ui.tableView_object_parameter_value.itemDelegate().data_committed.connect(self.set_parameter_value_data)
-        self.ui.tableView_relationship_parameter_definition.itemDelegate().data_committed.connect(
-            self.set_parameter_definition_data
-        )
-        self.ui.tableView_relationship_parameter_value.itemDelegate().data_committed.connect(
-            self.set_parameter_value_data
-        )
+        # Parameter tables delegates
+        for table_view in (
+            self.ui.tableView_object_parameter_definition,
+            self.ui.tableView_relationship_parameter_definition,
+        ):
+            table_view.itemDelegate().data_committed.connect(self.set_parameter_definition_data)
+            table_view.itemDelegate().parameter_value_editor_requested.connect(
+                lambda index, value: self.show_parameter_value_editor(index, table_view, value=value)
+            )
+        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
+            table_view.itemDelegate().data_committed.connect(self.set_parameter_value_data)
+            table_view.itemDelegate().parameter_value_editor_requested.connect(
+                lambda index, value: self.show_parameter_value_editor(index, table_view, value=value)
+            )
         # Parameter tags
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
@@ -896,6 +901,13 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully removed {} parameter tag(s).".format(removed)
         self.msg.emit(msg)
         return True
+
+    def show_parameter_value_editor(self, index, table_view, value=None):
+        """Shows the parameter value editor for the given index of given table view.
+        """
+        value_name = tree_graph_view_parameter_value_name(index, table_view)
+        editor = ParameterValueEditor(index, value_name=value_name, value=value, parent_widget=self)
+        editor.show()
 
     @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
     def set_parameter_value_data(self, index, new_value):  # pylint: disable=no-self-use

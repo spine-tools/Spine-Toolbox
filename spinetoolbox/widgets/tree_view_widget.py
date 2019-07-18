@@ -32,8 +32,6 @@ from widgets.custom_menus import (
     ParameterValueListContextMenu,
 )
 from widgets.custom_qdialog import RemoveTreeItemsDialog
-from widgets.double_click_handler import overwrite_table_double_click_handlers
-from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
@@ -95,7 +93,6 @@ class TreeViewForm(DataStoreForm):
         self.add_toggle_view_actions()
         self.connect_signals()
         self.setWindowTitle("Data store tree view    -- {} --".format(", ".join(self.db_names)))
-        overwrite_table_double_click_handlers(self)
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
@@ -948,9 +945,7 @@ class TreeViewForm(DataStoreForm):
             menu = ParameterContextMenu(self, global_pos, index)
         option = menu.get_action()
         if option == "Open in editor...":
-            value_name = tree_graph_view_parameter_value_name(index, table_view)
-            editor = ParameterValueEditor(index, value_name, parent_widget=self)
-            editor.show()
+            self.show_parameter_value_editor(index, table_view)
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:

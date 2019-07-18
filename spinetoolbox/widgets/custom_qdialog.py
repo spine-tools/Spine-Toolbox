@@ -227,7 +227,7 @@ class AddObjectClassesDialog(AddItemsDialog):
         )
         self.combo_box.addItems(insert_at_position_list)
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to add items."""
         object_class_d = dict()
@@ -320,7 +320,7 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
                 icon = self._parent.icon_mngr.object_icon(object_class_name)
                 self.model.setData(index, icon, Qt.DecorationRole)
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to add items."""
         object_d = dict()
@@ -449,7 +449,7 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
                     relationship_class_name = "__".join(obj_cls_names)
                 self.model.setData(self.model.index(row, self.number_of_dimensions), relationship_class_name)
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to add items."""
         rel_cls_d = dict()
@@ -595,7 +595,7 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
                     relationship_name = "__".join(obj_names)
                 self.model.setData(self.model.index(row, number_of_dimensions), relationship_name)
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to add items."""
         relationship_d = dict()
@@ -689,7 +689,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog):
             self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update items."""
         object_class_d = dict()
@@ -754,7 +754,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update items."""
         object_d = dict()
@@ -816,7 +816,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update items."""
         rel_cls_d = dict()
@@ -895,7 +895,7 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
             for db_map in db_maps
         }
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update items."""
         relationship_d = dict()
@@ -982,7 +982,7 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
                 self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to remove items."""
         item_d = dict()
@@ -1057,7 +1057,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_dicts[row]]
         return [self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps]
 
-    @busy_effect
+    @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update, remove, add items."""
         # Update and remove

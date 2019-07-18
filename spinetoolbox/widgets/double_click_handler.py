@@ -21,6 +21,13 @@ from PySide2.QtWidgets import QTableView
 from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 from widgets.parameter_value_editor import ParameterValueEditor
 
+# NOTE: Both `overwrite_table_double_click_handlers` and `OpenEditorOrDefaultDelegate`
+# are not used at the moment. The reason is I want to show the `ParameterValueEditor`
+# not only on double click, but everytime the cell is *edited* (edit triggers include double click *and* key press).
+# So now I've hooked the `ParameterValueEditor` to the `edit` slot of the concerned tables.
+# It's not too big of a change, so we can fall back to this if I'm wrong.
+# Otherwise, if you believe I'm right we can just remove this.
+
 
 def overwrite_table_double_click_handlers(form):
     """
