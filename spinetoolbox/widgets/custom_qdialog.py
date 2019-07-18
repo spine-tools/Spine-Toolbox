@@ -92,7 +92,6 @@ class ManageItemsDialog(QDialog):
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         """Reimplement in subclasses to handle changes in model data."""
-        raise NotImplementedError()
 
     @Slot("QModelIndex", "QVariant", name='set_model_data')
     def set_model_data(self, index, data):

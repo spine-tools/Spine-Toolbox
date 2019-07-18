@@ -511,7 +511,7 @@ class ObjectTreeModel(QStandardItemModel):
         existing_rows = [
             [self.root_item.child(i, 0), self.root_item.child(i, 1)] for i in range(self.root_item.rowCount())
         ]
-        existing_row_d = {row[0].text(): row for row in existing_rows}
+        existing_row_d = {row[0].text(): (i, row) for i, row in enumerate(existing_rows)}
         removed_rows = []
         for i in range(self.root_item.rowCount()):
             object_class_item = self.root_item.child(i)
@@ -523,10 +523,11 @@ class ObjectTreeModel(QStandardItemModel):
             upd_object_class = object_class_d.pop(object_class_id, None)
             if not upd_object_class:
                 continue
-            if upd_object_class.name in existing_row_d:
-                # Already in model
+            existing_i, existing_row = existing_row_d.get(upd_object_class.name, [None, None])
+            if i != existing_i:
+                # Already another item with that name, in a different position
                 removed_rows.append(i)
-                object_class_item, db_item = existing_row_d[upd_object_class.name]
+                object_class_item, db_item = existing_row
                 db_map_dict = object_class_item.data(Qt.UserRole + 1)
                 db_map_dict[db_map] = upd_object_class._asdict()
                 databases = db_item.data(Qt.DisplayRole)
@@ -579,7 +580,7 @@ class ObjectTreeModel(QStandardItemModel):
                 [object_class_item.child(j, 0), object_class_item.child(j, 1)]
                 for j in range(object_class_item.rowCount())
             ]
-            existing_row_d = {row[0].text(): row for row in existing_rows}
+            existing_row_d = {row[0].text(): (j, row) for j, row in enumerate(existing_rows)}
             removed_rows = []
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
@@ -591,10 +592,11 @@ class ObjectTreeModel(QStandardItemModel):
                 upd_object = class_object_dict.pop(object_id, None)
                 if not upd_object:
                     continue
-                if upd_object.name in existing_row_d:
-                    # Already in model
+                existing_j, existing_row = existing_row_d.get(upd_object.name, [None, None])
+                if j != existing_j:
+                    # Already another item with that name, in a different position
                     removed_rows.append(j)
-                    object_item, db_item = existing_row_d[upd_object.name]
+                    object_item, db_item = existing_row
                     db_map_dict = object_item.data(Qt.UserRole + 1)
                     db_map_dict[db_map] = upd_object._asdict()
                     databases = db_item.data(Qt.DisplayRole)
@@ -648,7 +650,9 @@ class ObjectTreeModel(QStandardItemModel):
                 existing_rows = [
                     [object_item.child(k, 0), object_item.child(k, 1)] for k in range(object_item.rowCount())
                 ]
-                existing_row_d = {(row[0].text(), row[0].data(Qt.ToolTipRole)): row for row in existing_rows}
+                existing_row_d = {
+                    (row[0].text(), row[0].data(Qt.ToolTipRole)): (i, row) for i, row in enumerate(existing_rows)
+                }
                 removed_rows = []
                 for k in range(object_item.rowCount()):
                     rel_cls_item = object_item.child(k, 0)
@@ -661,10 +665,11 @@ class ObjectTreeModel(QStandardItemModel):
                         continue
                     upd_rel_cls = class_rel_cls_dict[rel_cls_id]
                     upd_rel_cls_key = (upd_rel_cls.name, upd_rel_cls.object_class_name_list)
-                    if upd_rel_cls_key in existing_row_d:
-                        # Already in model
+                    existing_k, existing_row = existing_row_d.get(upd_rel_cls_key, [None, None])
+                    if k != existing_k:
+                        # Already another item with that name, in a different position
                         removed_rows.append(k)
-                        rel_cls_item, db_item = existing_row_d[upd_rel_cls_key]
+                        rel_cls_item, db_item = existing_row
                         db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
                         db_map_dict[db_map] = upd_rel_cls._asdict()
                         databases = db_item.data(Qt.DisplayRole)
@@ -705,7 +710,7 @@ class ObjectTreeModel(QStandardItemModel):
                     existing_rows = [
                         [rel_cls_item.child(k, 0), rel_cls_item.child(k, 1)] for k in range(rel_cls_item.rowCount())
                     ]
-                    existing_row_d = {row[0].text(): row for row in existing_rows}
+                    existing_row_d = {row[0].text(): (i, row) for i, row in enumerate(existing_rows)}
                     removed_rows = []
                     for l in range(rel_cls_item.rowCount()):
                         relationship_item = rel_cls_item.child(l, 0)
@@ -721,17 +726,21 @@ class ObjectTreeModel(QStandardItemModel):
                             # Object id list changed, we don't know if the item belongs here anymore
                             removed_rows.append(j)
                             relationships_to_add.add(upd_relationship)
-                        elif upd_relationship.object_name_list in existing_row_d:
-                            # Already in model
-                            removed_rows.append(j)
-                            relationship_item, db_item = existing_row_d[upd_relationship.object_name_list]
-                            db_map_dict = relationship_item.data(Qt.UserRole + 1)
-                            db_map_dict[db_map] = upd_relationship._asdict()
-                            databases = db_item.data(Qt.DisplayRole)
-                            databases += "," + self._parent.db_map_to_name[db_map]
-                            db_item.setData(databases, Qt.DisplayRole)
                         else:
-                            db_map_dict[db_map] = upd_relationship._asdict()
+                            existing_l, existing_row = existing_row_d.get(
+                                upd_relationship.object_name_list, [None, None]
+                            )
+                            if l != existing_l:
+                                # Already another item with that name, in a different position
+                                removed_rows.append(l)
+                                relationship_item, db_item = existing_row
+                                db_map_dict = relationship_item.data(Qt.UserRole + 1)
+                                db_map_dict[db_map] = upd_relationship._asdict()
+                                databases = db_item.data(Qt.DisplayRole)
+                                databases += "," + self._parent.db_map_to_name[db_map]
+                                db_item.setData(databases, Qt.DisplayRole)
+                            else:
+                                db_map_dict[db_map] = upd_relationship._asdict()
                     self.remove_relationship_rows(db_map, removed_rows, rel_cls_item)
         self.add_relationships(db_map, relationships_to_add)
 
@@ -1135,7 +1144,7 @@ class RelationshipTreeModel(QStandardItemModel):
         existing_rows = [
             [self.root_item.child(j, 0), self.root_item.child(j, 1)] for j in range(self.root_item.rowCount())
         ]
-        existing_row_d = {(row[0].text(), row[0].data(Qt.ToolTipRole)): row for row in existing_rows}
+        existing_row_d = {(row[0].text(), row[0].data(Qt.ToolTipRole)): (i, row) for i, row in enumerate(existing_rows)}
         removed_rows = []
         for i in range(self.root_item.rowCount()):
             rel_cls_item = self.root_item.child(i)
@@ -1148,10 +1157,11 @@ class RelationshipTreeModel(QStandardItemModel):
             if not upd_rel_cls:
                 continue
             rel_cls_key = (upd_rel_cls.name, upd_rel_cls.object_class_name_list)
-            if rel_cls_key in existing_row_d:
-                # Already in model
+            existing_i, existing_row = existing_row_d.get(rel_cls_key, [None, None])
+            if existing_i != i:
+                # Already there
                 removed_rows.append(i)
-                rel_cls_item, db_item = existing_row_d[rel_cls_key]
+                rel_cls_item, db_item = existing_row
                 db_map_dict = rel_cls_item.data(Qt.UserRole + 1)
                 db_map_dict[db_map] = upd_rel_cls._asdict()
                 databases = db_item.data(Qt.DisplayRole)
@@ -1186,7 +1196,7 @@ class RelationshipTreeModel(QStandardItemModel):
             existing_rows = [
                 [rel_cls_item.child(j, 0), rel_cls_item.child(j, 1)] for j in range(rel_cls_item.rowCount())
             ]
-            existing_row_d = {row[0].text(): row for row in existing_rows}
+            existing_row_d = {row[0].text(): (i, row) for i, row in enumerate(existing_rows)}
             removed_rows = []
             for j in range(rel_cls_item.rowCount()):
                 relationship_item = rel_cls_item.child(j)
@@ -1198,10 +1208,11 @@ class RelationshipTreeModel(QStandardItemModel):
                 upd_relationship = class_relationship_dict.pop(relationship_id, None)
                 if not upd_relationship:
                     continue
-                if upd_relationship.object_name_list in existing_row_d:
-                    # Already in model
+                existing_j, existing_row = existing_row_d.get(upd_relationship.object_name_list, [None, None])
+                if existing_j != j:
+                    # Already there
                     removed_rows.append(j)
-                    relationship_item, db_item = existing_row_d[upd_relationship.object_name_list]
+                    relationship_item, db_item = existing_row
                     db_map_dict = relationship_item.data(Qt.UserRole + 1)
                     db_map_dict[db_map] = upd_relationship._asdict()
                     databases = db_item.data(Qt.DisplayRole)
