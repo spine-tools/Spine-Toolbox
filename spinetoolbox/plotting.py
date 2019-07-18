@@ -52,13 +52,7 @@ def _add_plot_to_widget(values, labels, plot_widget):
         return
     if isinstance(values[0], TimeSeries):
         for value, label in zip(values, labels):
-            plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post')
-            if isinstance(value.indexes[0], np.datetime64):
-                # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
-                left, _ = plot_widget.canvas.axes.get_xlim()
-                if left < 1.0:
-                    # 1.0 corresponds to 0001-01-01T00:00
-                    plot_widget.canvas.axes.set_xlim(left=1.0)
+            add_time_series_plot(plot_widget, value, label)
     else:
         plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
 
@@ -215,6 +209,17 @@ def plot_selection(model, indexes, support):
     elif len(plot_lines) == 1:
         plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
     return plot_widget
+
+
+def add_time_series_plot(plot_widget, value, label=None):
+    """Adds a time series step plot on plot_widget."""
+    plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post')
+    # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
+    left, _ = plot_widget.canvas.axes.get_xlim()
+    if left < 1.0:
+        # 1.0 corresponds to 0001-01-01T00:00
+        plot_widget.canvas.axes.set_xlim(left=1.0)
+    plot_widget.canvas.axes.get_xaxis().set_tick_params(labelrotation=45.0)
 
 
 def tree_graph_view_parameter_value_name(index, table_view):

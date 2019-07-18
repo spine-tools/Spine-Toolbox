@@ -25,11 +25,11 @@ from spinedb_api import (
     relativedelta_to_duration,
     TimeSeriesFixedResolution,
 )
+from plotting import add_time_series_plot
 from time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
-from widgets.parameter_value_editor_common import plot_time_series, datetime_to_QDateTime, QDateTime_to_datetime
 
 
 def _resolution_to_text(resolution):
@@ -147,7 +147,9 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updated the plot."""
-        plot_time_series(self._plot_widget, self._model.indexes, self._model.values)
+        self._plot_widget.canvas.axes.cla()
+        add_time_series_plot(self._plot_widget, self._model)
+        self._plot_widget.canvas.draw()
 
     def value(self):
         """Returns the parameter value currently being edited."""

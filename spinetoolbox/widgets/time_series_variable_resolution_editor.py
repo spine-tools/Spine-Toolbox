@@ -19,11 +19,11 @@ Contains logic for the variable resolution time series editor widget.
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution
+from plotting import add_time_series_plot
 from time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
-from widgets.parameter_value_editor_common import plot_time_series
 
 
 class TimeSeriesVariableResolutionEditor(QWidget):
@@ -71,7 +71,9 @@ class TimeSeriesVariableResolutionEditor(QWidget):
     @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):
         """Updates the plot widget."""
-        plot_time_series(self._plot_widget, self._model.indexes, self._model.values)
+        self._plot_widget.canvas.axes.cla()
+        add_time_series_plot(self._plot_widget, self._model)
+        self._plot_widget.canvas.draw()
 
     def value(self):
         """Return the time series currently being edited."""
