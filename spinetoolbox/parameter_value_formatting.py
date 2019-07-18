@@ -43,6 +43,8 @@ def format_for_DisplayRole(value_in_database):
         return ", ".join(relativedelta_to_duration(delta) for delta in value.value)
     if isinstance(value, TimePattern):
         return "Time pattern"
+    if isinstance(value, list):
+        return str(value)
     return value
 
 
