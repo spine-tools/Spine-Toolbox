@@ -76,7 +76,7 @@ class ParameterValueEditor(QDialog):
         self.setWindowTitle(value_name + " - Edit value")
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint)
         self._ui.ok_button.clicked.connect(self.accept)
-        self._ui.cancle_button.clicked.connect(self.reject)
+        self._ui.cancel_button.clicked.connect(self.reject)
         self._time_pattern_editor = TimePatternEditor()
         self._plain_value_editor = PlainParameterValueEditor()
         self._time_series_fixed_resolution_editor = TimeSeriesFixedResolutionEditor()

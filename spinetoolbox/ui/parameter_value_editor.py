@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/parameter_value_editor.ui',
-# licensing of '../spinetoolbox/ui/parameter_value_editor.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/parameter_value_editor.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/parameter_value_editor.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -54,10 +54,10 @@ class Ui_ParameterValueEditor(object):
         self.ok_button.setDefault(True)
         self.ok_button.setObjectName("ok_button")
         self.close_button_layout.addWidget(self.ok_button)
-        self.cancle_button = QtWidgets.QPushButton(ParameterValueEditor)
-        self.cancle_button.setAutoDefault(True)
-        self.cancle_button.setObjectName("cancle_button")
-        self.close_button_layout.addWidget(self.cancle_button)
+        self.cancel_button = QtWidgets.QPushButton(ParameterValueEditor)
+        self.cancel_button.setAutoDefault(True)
+        self.cancel_button.setObjectName("cancel_button")
+        self.close_button_layout.addWidget(self.cancel_button)
         self.verticalLayout.addLayout(self.close_button_layout)
 
         self.retranslateUi(ParameterValueEditor)
@@ -74,5 +74,5 @@ class Ui_ParameterValueEditor(object):
         self.parameter_type_selector.setItemText(4, QtWidgets.QApplication.translate("ParameterValueEditor", "Datetime", None, -1))
         self.parameter_type_selector.setItemText(5, QtWidgets.QApplication.translate("ParameterValueEditor", "Duration", None, -1))
         self.ok_button.setText(QtWidgets.QApplication.translate("ParameterValueEditor", "OK", None, -1))
-        self.cancle_button.setText(QtWidgets.QApplication.translate("ParameterValueEditor", "Cancel", None, -1))
+        self.cancel_button.setText(QtWidgets.QApplication.translate("ParameterValueEditor", "Cancel", None, -1))
 
