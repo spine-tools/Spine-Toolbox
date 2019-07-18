@@ -1119,8 +1119,7 @@ class TreeViewForm(DataStoreForm):
         model = self.parameter_value_list_model
         item_d = dict()
         for parent, indexes in value_indexes.items():
-            db_name = parent.parent().data(Qt.DisplayRole)
-            db_map = self.db_name_to_map[db_name]
+            db_map = parent.parent().internalPointer().id
             id_ = parent.internalPointer().id
             removed_rows = [ind.row() for ind in indexes]
             all_rows = range(model.rowCount(parent) - 1)
@@ -1129,8 +1128,7 @@ class TreeViewForm(DataStoreForm):
             item_d.setdefault(db_map, {}).setdefault("to_upd", []).append(dict(id=id_, value_list=value_list))
         # Get ids to remove
         for parent, indexes in list_indexes.items():
-            db_name = parent.data(Qt.DisplayRole)
-            db_map = self.db_name_to_map[db_name]
+            db_map = parent.internalPointer().id
             item_d.setdefault(db_map, {}).setdefault("to_rm", set()).update(ind.internalPointer().id for ind in indexes)
         for db_map, d in item_d.items():
             to_update = d.get("to_upd", None)
