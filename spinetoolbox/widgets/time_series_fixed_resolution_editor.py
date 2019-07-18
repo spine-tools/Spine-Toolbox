@@ -17,8 +17,8 @@ Contains logic for the fixed step time series editor widget.
 """
 
 from datetime import datetime
-from PySide2.QtCore import Qt, Slot
-from PySide2.QtWidgets import QWidget
+from PySide2.QtCore import QDate, QPoint, Qt, Slot
+from PySide2.QtWidgets import QCalendarWidget, QWidget
 from spinedb_api import (
     duration_to_relativedelta,
     ParameterValueFormatError,
@@ -72,17 +72,22 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.setupUi(self)
         self._plot_widget = PlotWidget()
         self._ui.splitter.insertWidget(1, self._plot_widget)
-        self._ui.start_time_edit.setDateTime(datetime_to_QDateTime(initial_value.start))
+        self._ui.start_time_edit.setText(str(initial_value.start))
+        self._ui.start_time_edit.editingFinished.connect(self._start_time_changed)
+        self._ui.calendar_button.clicked.connect(self._show_calendar)
         self._ui.resolution_edit.setText(_resolution_to_text(initial_value.resolution))
+        self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
         self._ui.time_series_table.setModel(self._model)
         self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
-        self._ui.start_time_edit.dateTimeChanged.connect(self._start_time_changed)
-        self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
         self._ui.repeat_check_box.toggled.connect(self._model.set_repeat)
+        self._calendar = QCalendarWidget(self)
+        self._calendar.setMinimumDate(QDate(100, 1, 1))
+        self._calendar.setWindowFlags(Qt.Popup)
+        self._calendar.activated.connect(self._select_date)
         self._update_plot()
 
     @Slot(name='_resolution_changed')
@@ -100,18 +105,44 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         """Shows the table's context menu."""
         handle_table_context_menu(pos, self._ui.time_series_table, self._model, self)
 
+    @Slot("QDate", name='_select_date')
+    def _select_date(self, selected_date):
+        self._calendar.hide()
+        time = self._model.value.start.time()
+        new_date = datetime(year=selected_date.year(), month=selected_date.month(), day=selected_date.day())
+        new_datetime = datetime.combine(new_date, time)
+        self._ui.start_time_edit.setText(str(new_datetime))
+        self._model.set_start(new_datetime)
+
     def set_value(self, value):
         """Sets the parameter value for editing in this widget."""
         self._model.reset(value)
-        self._ui.start_time_edit.setDateTime(datetime_to_QDateTime(self._model.value.start))
+        self._ui.start_time_edit.setText(str(self._model.value.start))
         self._ui.resolution_edit.setText(_resolution_to_text(self._model.value.resolution))
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
 
-    @Slot("QDateTime", name='_start_time_changed')
-    def _start_time_changed(self, new_datetime):
-        """Updates the models due to start time change."""
-        self._model.set_start(QDateTime_to_datetime(new_datetime))
+    @Slot(name='_show_calendar')
+    def _show_calendar(self):
+        start = self._model.value.start
+        if start.year >= 100:
+            self._calendar.setSelectedDate(QDate(start.year, start.month, start.day))
+        else:
+            self._calendar.setSelectedDate(QDate.currentDate())
+        button_position = self._ui.calendar_button.mapToGlobal(QPoint(0, 0))
+        calendar_x = button_position.x()
+        calendar_y = button_position.y() + self._ui.calendar_button.height()
+        self._calendar.move(calendar_x, calendar_y)
+        self._calendar.show()
+
+    @Slot(name='_start_time_changed')
+    def _start_time_changed(self):
+        """Updates the model due to start time change."""
+        text = self._ui.start_time_edit.text()
+        try:
+            self._model.set_start(text)
+        except ParameterValueFormatError:
+            self._ui.start_time_edit.setText(str(self._model.value.start))
 
     @Slot("QModelIndex", "QModelIndex", "list", name="_update_plot")
     def _update_plot(self, topLeft=None, bottomRight=None, roles=None):

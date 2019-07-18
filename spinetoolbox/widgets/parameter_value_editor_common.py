@@ -24,6 +24,10 @@ def plot_time_series(plot_widget, x, y):
     """Plots a time series on plot_widget."""
     plot_widget.canvas.axes.cla()
     plot_widget.canvas.axes.step(x, y, where='post')
+    left_x, _ = plot_widget.canvas.axes.get_xlim()
+    if left_x < 1.0:
+        # Force the x axis to start from 0001-01-01 otherwise showing the plot will raise an exception.
+        plot_widget.canvas.axes.set_xlim(left=1.0)
     plot_widget.canvas.axes.get_xaxis().set_tick_params(labelrotation=45.0)
     plot_widget.canvas.draw()
 

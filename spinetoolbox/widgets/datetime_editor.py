@@ -16,7 +16,7 @@ An editor widget for editing datetime database (relationship) parameter values.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Slot
+from PySide2.QtCore import QDate, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import DateTime
 from widgets.parameter_value_editor_common import datetime_to_QDateTime, QDateTime_to_datetime
@@ -36,6 +36,7 @@ class DatetimeEditor(QWidget):
         self._value = DateTime("2000-01-01")
         self._ui = Ui_DatetimeEditor()
         self._ui.setupUi(self)
+        self._ui.datetime_edit.setMinimumDate(QDate(1, 1, 1))
         self._ui.datetime_edit.setDateTime(datetime_to_QDateTime(self._value.value))
         self._ui.datetime_edit.dateTimeChanged.connect(self._change_datetime)
 

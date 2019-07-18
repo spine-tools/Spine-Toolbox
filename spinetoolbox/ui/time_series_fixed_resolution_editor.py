@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/time_series_fixed_resolution_editor.ui',
-# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/time_series_fixed_resolution_editor.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/time_series_fixed_resolution_editor.ui',
+# licensing of '../spinetoolbox/ui/time_series_fixed_resolution_editor.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -22,7 +22,6 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_TimeSeriesFixedResolutionEditor(object):
     def setupUi(self, TimeSeriesFixedResolutionEditor):
         TimeSeriesFixedResolutionEditor.setObjectName("TimeSeriesFixedResolutionEditor")
-        TimeSeriesFixedResolutionEditor.resize(400, 300)
         self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesFixedResolutionEditor)
         self.verticalLayout.setObjectName("verticalLayout")
         self.splitter = QtWidgets.QSplitter(TimeSeriesFixedResolutionEditor)
@@ -40,10 +39,15 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.LabelRole, self.start_time_label)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout()
         self.verticalLayout_2.setObjectName("verticalLayout_2")
-        self.start_time_edit = QtWidgets.QDateTimeEdit(self.verticalLayoutWidget)
-        self.start_time_edit.setCalendarPopup(True)
+        self.horizontalLayout = QtWidgets.QHBoxLayout()
+        self.horizontalLayout.setObjectName("horizontalLayout")
+        self.start_time_edit = QtWidgets.QLineEdit(self.verticalLayoutWidget)
         self.start_time_edit.setObjectName("start_time_edit")
-        self.verticalLayout_2.addWidget(self.start_time_edit)
+        self.horizontalLayout.addWidget(self.start_time_edit)
+        self.calendar_button = QtWidgets.QPushButton(self.verticalLayoutWidget)
+        self.calendar_button.setObjectName("calendar_button")
+        self.horizontalLayout.addWidget(self.calendar_button)
+        self.verticalLayout_2.addLayout(self.horizontalLayout)
         self.start_time_format_label = QtWidgets.QLabel(self.verticalLayoutWidget)
         self.start_time_format_label.setObjectName("start_time_format_label")
         self.verticalLayout_2.addWidget(self.start_time_format_label)
@@ -63,18 +67,14 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         self.left_layout.addLayout(self.formLayout)
         self.horizontalLayout_2 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_2.setObjectName("horizontalLayout_2")
-        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem)
         self.ignore_year_check_box = QtWidgets.QCheckBox(self.verticalLayoutWidget)
         self.ignore_year_check_box.setObjectName("ignore_year_check_box")
         self.horizontalLayout_2.addWidget(self.ignore_year_check_box)
-        spacerItem1 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem1)
         self.repeat_check_box = QtWidgets.QCheckBox(self.verticalLayoutWidget)
         self.repeat_check_box.setObjectName("repeat_check_box")
         self.horizontalLayout_2.addWidget(self.repeat_check_box)
-        spacerItem2 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_2.addItem(spacerItem2)
+        spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_2.addItem(spacerItem)
         self.left_layout.addLayout(self.horizontalLayout_2)
         self.time_series_table = CopyPasteTableView(self.verticalLayoutWidget)
         self.time_series_table.setObjectName("time_series_table")
@@ -87,7 +87,7 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
     def retranslateUi(self, TimeSeriesFixedResolutionEditor):
         TimeSeriesFixedResolutionEditor.setWindowTitle(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Form", None, -1))
         self.start_time_label.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Start time", None, -1))
-        self.start_time_edit.setDisplayFormat(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "yyyy-MM-ddTHH:mm:ss", None, -1))
+        self.calendar_button.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Calendar", None, -1))
         self.start_time_format_label.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Format: YYYY-MM-DDThh:mm:ss", None, -1))
         self.resolution_label.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Resolution", None, -1))
         self.resolution_format_label.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Available units: s, m, h, D, M, Y", None, -1))

@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -14,14 +14,6 @@
 <ui version="4.0">
  <class>TimeSeriesFixedResolutionEditor</class>
  <widget class="QWidget" name="TimeSeriesFixedResolutionEditor">
-  <property name="geometry">
-   <rect>
-    <x>0</x>
-    <y>0</y>
-    <width>400</width>
-    <height>300</height>
-   </rect>
-  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -45,14 +37,18 @@
          <item row="0" column="1">
           <layout class="QVBoxLayout" name="verticalLayout_2">
            <item>
-            <widget class="QDateTimeEdit" name="start_time_edit">
-             <property name="displayFormat">
-              <string>yyyy-MM-ddTHH:mm:ss</string>
-             </property>
-             <property name="calendarPopup">
-              <bool>true</bool>
-             </property>
-            </widget>
+            <layout class="QHBoxLayout" name="horizontalLayout">
+             <item>
+              <widget class="QLineEdit" name="start_time_edit"/>
+             </item>
+             <item>
+              <widget class="QPushButton" name="calendar_button">
+               <property name="text">
+                <string>Calendar</string>
+               </property>
+              </widget>
+             </item>
+            </layout>
            </item>
            <item>
             <widget class="QLabel" name="start_time_format_label">
@@ -89,37 +85,11 @@
        <item>
         <layout class="QHBoxLayout" name="horizontalLayout_2">
          <item>
-          <spacer name="horizontalSpacer_2">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
-         </item>
-         <item>
           <widget class="QCheckBox" name="ignore_year_check_box">
            <property name="text">
             <string>Ignore year</string>
            </property>
           </widget>
-         </item>
-         <item>
-          <spacer name="horizontalSpacer_4">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-           <property name="sizeHint" stdset="0">
-            <size>
-             <width>40</width>
-             <height>20</height>
-            </size>
-           </property>
-          </spacer>
          </item>
          <item>
           <widget class="QCheckBox" name="repeat_check_box">
