@@ -12,6 +12,12 @@
 """
 Functions for plotting on PlotWidget.
 
+Currently plotting from the table views found in Graph, Tree and Tabular views are supported.
+
+The main entrance points to plotting are:
+- plot_selection() which plots selected cells on a table view returning a PlotWidget object
+- plot_pivot_column() which is a specialized method for plotting entire columns of a pivot table
+
 :author: A. Soininen(VTT)
 :date:   9.7.2019
 """
@@ -47,6 +53,12 @@ def _add_plot_to_widget(values, labels, plot_widget):
     if isinstance(values[0], TimeSeries):
         for value, label in zip(values, labels):
             plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post')
+            if isinstance(value.indexes[0], np.datetime64):
+                # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
+                left, _ = plot_widget.canvas.axes.get_xlim()
+                if left < 1.0:
+                    # 1.0 corresponds to 0001-01-01T00:00
+                    plot_widget.canvas.axes.set_xlim(left=1.0)
     else:
         plot_widget.canvas.axes.plot(values[0], values[1], label=labels[0])
 
