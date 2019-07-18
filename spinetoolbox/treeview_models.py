@@ -1436,7 +1436,7 @@ class SubParameterValueModel(SubParameterModel):
         return upd_ids
 
     def data(self, index, role=Qt.DisplayRole):
-        """Limit the display of json array data."""
+        """Limit the display of JSON data."""
         if self._parent.header[index.column()] == 'value':
             if role == Qt.ToolTipRole:
                 return format_for_ToolTipRole(super().data(index, Qt.EditRole))
@@ -1531,7 +1531,7 @@ class SubParameterDefinitionModel(SubParameterModel):
         return upd_ids
 
     def data(self, index, role=Qt.DisplayRole):
-        """Limit the display of json array data."""
+        """Limit the display of JSON data."""
         if self._parent.header[index.column()] == 'default_value':
             if role == Qt.ToolTipRole:
                 return format_for_ToolTipRole(super().data(index, Qt.EditRole))

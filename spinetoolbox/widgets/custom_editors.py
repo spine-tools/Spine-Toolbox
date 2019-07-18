@@ -720,8 +720,6 @@ class IconColorEditor(QDialog):
         self.color_dialog.setCurrentColor(QColor(color_code))
 
     def data(self):
-        if not self.result():
-            return None
         icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return self.icon_mngr.display_icon(icon_code, color_code)

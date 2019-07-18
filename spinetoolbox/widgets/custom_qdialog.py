@@ -43,6 +43,7 @@ from widgets.custom_delegates import (
     RemoveTreeItemsDelegate,
     ManageParameterTagsDelegate,
 )
+from widgets.custom_editors import IconColorEditor
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import busy_effect
 
@@ -73,7 +74,7 @@ class ManageItemsDialog(QDialog):
         """Connect signals to slots."""
         self.button_box.accepted.connect(self.accept)
         self.button_box.rejected.connect(self.reject)
-        self.table_view.itemDelegate().data_committed.connect(self._handle_data_committed)
+        self.table_view.itemDelegate().data_committed.connect(self.set_model_data)
         self.model.dataChanged.connect(self._handle_model_data_changed)
         self.model.modelReset.connect(self._handle_model_reset)
 
@@ -91,9 +92,10 @@ class ManageItemsDialog(QDialog):
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
     def _handle_model_data_changed(self, top_left, bottom_right, roles):
         """Reimplement in subclasses to handle changes in model data."""
+        raise NotImplementedError()
 
-    @Slot("QModelIndex", "QVariant", name='_handle_data_committed')
-    def _handle_data_committed(self, index, data):
+    @Slot("QModelIndex", "QVariant", name='set_model_data')
+    def set_model_data(self, index, data):
         """Update model data."""
         if data is None:
             return
@@ -194,7 +196,22 @@ class GetObjectsMixin:
         return object_name_list
 
 
-class AddObjectClassesDialog(AddItemsDialog):
+class ShowIconColorEditorMixin:
+    """Provides methods to show an `IconColorEditor` upon request.
+    """
+
+    def create_object_pixmap(self, display_icon):
+        return self._parent.icon_mngr.create_object_pixmap(display_icon)
+
+    @busy_effect
+    def show_icon_color_editor(self, index):
+        editor = IconColorEditor(self, self._parent.icon_mngr)
+        editor.set_data(index.data(Qt.DisplayRole))
+        editor.accepted.connect(lambda index=index, editor=editor: self.set_model_data(index, editor.data()))
+        editor.show()
+
+
+class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
     """A dialog to query user's preferences for new object classes.
 
     Attributes:
@@ -226,6 +243,12 @@ class AddObjectClassesDialog(AddItemsDialog):
             ["Insert new classes after '{}'".format(name) for name in self.object_class_names]
         )
         self.combo_box.addItems(insert_at_position_list)
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.itemDelegate().icon_color_editor_requested.connect(
+            lambda index: self.show_icon_color_editor(index)
+        )
 
     @Slot(name="accept")
     def accept(self):
@@ -655,7 +678,7 @@ class EditOrRemoveItemsDialog(ManageItemsDialog):
         return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_dicts[row]]
 
 
-class EditObjectClassesDialog(EditOrRemoveItemsDialog):
+class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin):
     """A dialog to query user's preferences for updating object classes.
 
     Attributes:
@@ -688,6 +711,12 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog):
             model_data.append(row_data)
             self.db_map_dicts.append(db_map_dict)
         self.model.reset_model(model_data)
+
+    def connect_signals(self):
+        super().connect_signals()
+        self.table_view.itemDelegate().icon_color_editor_requested.connect(
+            lambda index: self.show_icon_color_editor(index)
+        )
 
     @Slot(name="accept")
     def accept(self):

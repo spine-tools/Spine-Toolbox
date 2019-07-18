@@ -25,39 +25,8 @@ from widgets.custom_editors import (
     SearchBarEditor,
     MultiSearchBarEditor,
     CheckListEditor,
-    JSONEditor,
-    IconColorEditor,
 )
 from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
-
-
-class IconColorDialogDelegate(QStyledItemDelegate):
-    """A delegate that opens a color picker dialog.
-
-    Attributes:
-        parent (DataStoreForm): tree view form.
-    """
-
-    data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-
-    def createEditor(self, parent, option, index):
-        """Return QColorDialog."""
-        # TODO: Find out how to make IconColorEditor movable
-        return IconColorEditor(parent, self.parent().icon_mngr)
-
-    def setEditorData(self, editor, index):
-        """Set current color from index data."""
-        editor.set_data(index.data(Qt.DisplayRole))
-
-    def setModelData(self, editor, model, index):
-        """Emit signal with current color."""
-        self.data_committed.emit(index, editor.data())
-
-    def paint(self, painter, option, index):
-        """Get a pixmap from the index data and paint it in the middle of the cell."""
-        pixmap = self.parent().icon_mngr.create_object_pixmap(index.data(Qt.DisplayRole))
-        icon = QIcon(pixmap)
-        icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
 
 
 class LineEditDelegate(QItemDelegate):
@@ -176,7 +145,6 @@ class ParameterDelegate(QItemDelegate):
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
-        self.json_editor_tab_index = 0
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -188,20 +156,16 @@ class ParameterDelegate(QItemDelegate):
 
     def updateEditorGeometry(self, editor, option, index):
         super().updateEditorGeometry(editor, option, index)
-        if isinstance(editor, (SearchBarEditor, CheckListEditor, MultiSearchBarEditor, JSONEditor)):
+        if isinstance(editor, (SearchBarEditor, CheckListEditor, MultiSearchBarEditor)):
             size = option.rect.size()
             if index.data(Qt.DecorationRole):
                 size.setWidth(size.width() - 22)  # FIXME
             editor.set_base_size(size)
             editor.update_geometry()
 
-    @Slot("int", name="_handle_json_editor_current_changed")
-    def _handle_json_editor_current_changed(self, index):
-        self.json_editor_tab_index = index
-
     def create_parameter_value_editor(self, parent, index):
         """Returns a `CustomLineEditor` if the data from index is not of special type.
-        Otherwise, emit the signal to request a standalone ParameterValueEditor
+        Otherwise, emit the signal to request a standalone `ParameterValueEditor`
         from parent widget.
         """
         try:
@@ -386,9 +350,7 @@ class RelationshipParameterValueDelegate(ParameterDelegate):
                 value_list = parameter_value_list.value_list.split(",")
                 editor.set_data(index.data(Qt.DisplayRole), value_list)
             else:
-                editor = JSONEditor(self._parent, parent)
-                editor.currentChanged.connect(self._handle_json_editor_current_changed)
-                editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
+                editor = self.create_parameter_value_editor(parent, index)
         elif header[index.column()] == 'database':
             editor = SearchBarEditor(self._parent, parent)
             all_databases = self._parent.db_names
@@ -423,9 +385,7 @@ class RelationshipParameterDefinitionDelegate(ParameterDelegate):
             name_list = [x.name for x in db_map.wide_relationship_class_list()]
             editor.set_data(index.data(Qt.EditRole), name_list)
         elif header[index.column()] == 'default_value':
-            editor = JSONEditor(self._parent, parent)
-            editor.currentChanged.connect(self._handle_json_editor_current_changed)
-            editor.set_data(index.data(Qt.EditRole), self.json_editor_tab_index)
+            editor = self.create_parameter_value_editor(parent, index)
         elif header[index.column()] == 'parameter_tag_list':
             editor = CheckListEditor(self._parent, parent)
             all_parameter_tag_list = [x.tag for x in db_map.parameter_tag_list()]
@@ -453,7 +413,7 @@ class ManageItemsDelegate(QItemDelegate):
     """A custom delegate for the model in {Add/Edit}ItemDialogs.
 
     Attributes:
-        parent (DataStoreForm): tree or graph view form
+        parent (ManageItemsDialog): parent dialog
     """
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
@@ -491,8 +451,10 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectClassesDialog.
 
     Attributes:
-        parent (DataStoreForm): tree or graph view form
+        parent (ManageItemsDialog): parent dialog
     """
+
+    icon_color_editor_requested = Signal("QModelIndex", name="icon_color_editor_requested")
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -502,8 +464,8 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'display icon':
-            editor = IconColorEditor(parent, self.icon_mngr)
-            editor.set_data(index.data(Qt.DisplayRole))
+            self.icon_color_editor_requested.emit(index)
+            editor = None
         elif header[index.column()] == 'databases':
             editor = CheckListEditor(parent)
             all_databases = self._parent.all_databases(index.row())
@@ -519,7 +481,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'display icon':
-            pixmap = self.icon_mngr.create_object_pixmap(index.data(Qt.DisplayRole))
+            pixmap = self._parent.create_object_pixmap(index.data(Qt.DisplayRole))
             icon = QIcon(pixmap)
             icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
         else:
@@ -530,7 +492,7 @@ class ManageObjectsDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectsDialog.
 
     Attributes:
-        parent (DataStoreForm): tree or graph view form
+        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
@@ -556,7 +518,7 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}RelationshipClassesDialog.
 
     Attributes:
-        parent (DataStoreForm): tree or graph view form
+        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
@@ -582,7 +544,7 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}RelationshipsDialog.
 
     Attributes:
-        parent (DataStoreForm): tree or graph view form
+        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
@@ -609,7 +571,7 @@ class RemoveTreeItemsDelegate(ManageItemsDelegate):
     """A delegate for the model and view in RemoveTreeItemsDialog.
 
     Attributes:
-        parent (DataStoreForm): tree or graph view form
+        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
@@ -628,7 +590,7 @@ class ManageParameterTagsDelegate(ManageItemsDelegate):
     """A delegate for the model and view in ManageParameterTagsDialog.
 
     Attributes:
-        parent (DataStoreForm): tree or graph view form
+        parent (ManageItemsDialog): parent dialog
     """
 
     def createEditor(self, parent, option, index):
