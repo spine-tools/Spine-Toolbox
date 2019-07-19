@@ -147,7 +147,7 @@ class TabularViewForm(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuSession.aboutToShow.connect(self.set_session_menu_enable)
 
-        # overrida `edit` virtual function in `pivot_table`
+        # override `edit` virtual function in `pivot_table`
         self.ui.pivot_table.edit = self.pivot_table_edit
 
         # load db data
@@ -178,7 +178,7 @@ class TabularViewForm(QMainWindow):
                 value = from_database(index.data(role=Qt.EditRole))
             except ParameterValueFormatError:
                 value = None
-            if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries, NoneType)):
+            if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
                 # Close the normal editor and show the `ParameterValueEditor` instead
                 self.ui.pivot_table.closePersistentEditor(index)
                 editor = ParameterValueEditor(index, value=value, parent_widget=self)
