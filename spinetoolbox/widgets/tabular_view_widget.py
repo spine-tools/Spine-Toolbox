@@ -19,16 +19,24 @@ Contains TabularViewForm class and some related constants.
 import json
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import QMainWindow, QDialog, QPushButton, QMessageBox, QCheckBox
+from PySide2.QtWidgets import QMainWindow, QDialog, QPushButton, QMessageBox, QCheckBox, QTableView
 from PySide2.QtCore import Qt, QSettings
 from PySide2.QtGui import QIcon, QGuiApplication
 from sqlalchemy.sql import literal_column
-from spinedb_api import SpineDBAPIError
+from spinedb_api import (
+    SpineDBAPIError,
+    from_database,
+    DateTime,
+    Duration,
+    ParameterValueFormatError,
+    TimePattern,
+    TimeSeries,
+)
 from ui.tabular_view_form import Ui_MainWindow
 from widgets.custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from widgets.custom_qdialog import CommitDialog
-from widgets.double_click_handler import OpenEditorOrDefaultDelegateForPivotTable
-from helpers import fix_name_ambiguity, tuple_itemgetter
+from widgets.parameter_value_editor import ParameterValueEditor
+from helpers import fix_name_ambiguity, tuple_itemgetter, busy_effect
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
 
@@ -133,16 +141,14 @@ class TabularViewForm(QMainWindow):
         self.model.index_entries_changed.connect(self.table_index_entries_changed)
         self.ui.table_frozen.selectionModel().selectionChanged.connect(self.change_frozen_value)
         self.ui.comboBox_value_type.currentTextChanged.connect(self.select_data)
-        self.ui.list_select_class.itemClicked.connect(self.change_class)
+        self.ui.list_select_class.currentItemChanged.connect(self.change_class)
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuSession.aboutToShow.connect(self.set_session_menu_enable)
 
-        # handle double clicks in pivot table
-        self.ui.pivot_table.mouseDoubleClickEvent = OpenEditorOrDefaultDelegateForPivotTable(
-            self, self.ui.pivot_table, self.model
-        )
+        # overrida `edit` virtual function in `pivot_table`
+        self.ui.pivot_table.edit = self.pivot_table_edit
 
         # load db data
         self.load_class_data()
@@ -157,6 +163,27 @@ class TabularViewForm(QMainWindow):
 
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+
+    @busy_effect
+    def pivot_table_edit(self, index, trigger, event):
+        """Starts editing the item at index from pivot_table.
+        If the index contains some 'complex' parameter value,
+        we open the parameter value editor window instead.
+        """
+        # pylint: disable=bad-super-call
+        if not super(QTableView, self.ui.pivot_table).edit(index, trigger, event):
+            return False
+        if self.model.index_in_data(index):
+            try:
+                value = from_database(index.data(role=Qt.EditRole))
+            except ParameterValueFormatError:
+                value = None
+            if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries, NoneType)):
+                # Close the normal editor and show the `ParameterValueEditor` instead
+                self.ui.pivot_table.closePersistentEditor(index)
+                editor = ParameterValueEditor(index, value=value, parent_widget=self)
+                editor.show()
+        return True
 
     def set_session_menu_enable(self):
         """Checks if session can commit or rollback and updates session menu actions"""
