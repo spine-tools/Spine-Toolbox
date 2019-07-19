@@ -17,6 +17,7 @@ Currently plotting from the table views found in Graph, Tree and Tabular views a
 The main entrance points to plotting are:
 - plot_selection() which plots selected cells on a table view returning a PlotWidget object
 - plot_pivot_column() which is a specialized method for plotting entire columns of a pivot table
+- add_time_series_plot() which adds a time series plot to an existing PlotWidget
 
 :author: A. Soininen(VTT)
 :date:   9.7.2019
@@ -212,18 +213,34 @@ def plot_selection(model, indexes, support):
 
 
 def add_time_series_plot(plot_widget, value, label=None):
-    """Adds a time series step plot on plot_widget."""
+    """
+    Adds a time series step plot to a plot widget.
+
+    Args:
+        plot_widget (PlotWidget): a plot widget to modify
+        value (TimeSeries): the time series to plot
+        label (str): a label for the time series
+    """
     plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post')
     # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
     left, _ = plot_widget.canvas.axes.get_xlim()
     if left < 1.0:
         # 1.0 corresponds to 0001-01-01T00:00
         plot_widget.canvas.axes.set_xlim(left=1.0)
-    plot_widget.canvas.axes.get_xaxis().set_tick_params(labelrotation=45.0)
+    plot_widget.canvas.figure.autofmt_xdate()
 
 
 def tree_graph_view_parameter_value_name(index, table_view):
-    """Returns a label for Tree or Graph view table cell."""
+    """
+    Returns a label for Tree or Graph view table cell.
+
+    Args:
+        index (QModelIndex): an index to the table model
+        table_view (QTableView): a table view widget corresponding to index
+
+    Returns:
+        a unique name for the parameter value as a string
+    """
     tokens = list()
     for column in range(index.column()):
         if not table_view.isColumnHidden(column):

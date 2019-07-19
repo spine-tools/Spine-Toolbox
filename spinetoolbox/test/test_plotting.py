@@ -20,7 +20,9 @@ import unittest
 from unittest.mock import Mock
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
+from spinedb_api import TimeSeriesVariableResolution
 from plotting import (
+    add_time_series_plot,
     plot_pivot_column,
     plot_selection,
     PlottingError,
@@ -28,6 +30,7 @@ from plotting import (
     PivotTablePlottingSupport,
 )
 from tabularview_models import PivotTableModel
+from widgets.plot_widget import PlotWidget
 
 
 def _make_pivot_model():
@@ -194,6 +197,14 @@ class TestPlotting(unittest.TestCase):
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
         self.assertTrue(all(lines[0].get_ydata(orig=True) == [-2.3]))
+
+    def test_add_time_series_plot(self):
+        plot_widget = PlotWidget()
+        time_series = TimeSeriesVariableResolution(["1917-12-06", "2017-12-06"], [0.0, 100.0], False, False)
+        add_time_series_plot(plot_widget, time_series)
+        lines = plot_widget.canvas.axes.get_lines()
+        self.assertEqual(len(lines), 1)
+        self.assertTrue(all(lines[0].get_ydata(orig=True) == [0.0, 100.0]))
 
 
 if __name__ == '__main__':
