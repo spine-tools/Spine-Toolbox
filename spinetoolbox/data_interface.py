@@ -79,7 +79,7 @@ class DataInterface(ProjectItem):
         """Saves selections and disconnects signals."""
         self.save_selections()
         if not super().disconnect_signals():
-            logging.error("Item {0} deactivation failed.", self.name)
+            logging.error("Item %s deactivation failed.", self.name)
             return False
         return True
 

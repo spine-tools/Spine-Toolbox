@@ -45,7 +45,7 @@ class ImportDialog(QDialog):
 
         # DB mapping
         if parent is not None:
-            self._db_map = parent.db_map
+            self._db_map = parent.db_maps[0]
 
         # state
         self._mapped_data = None

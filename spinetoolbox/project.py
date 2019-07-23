@@ -19,15 +19,16 @@ Spine Toolbox project class.
 import os
 import logging
 import json
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
-from helpers import project_dir, create_dir, copy_dir
+from helpers import project_dir, create_dir, copy_dir, get_db_map, busy_effect
 from data_store import DataStore
 from data_connection import DataConnection
 from tool import Tool
 from view import View
 from data_interface import DataInterface
+from widgets.tree_view_widget import TreeViewForm
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 from executioner import DirectedGraphHandler, ExecutionInstance
@@ -241,8 +242,13 @@ class SpineToolboxProject(MetaObject):
             data_interfaces = item_dict["Data Interfaces"]
         except KeyError:
             data_interfaces = dict()
-        n = len(data_stores.keys()) + len(data_connections.keys()) + len(tools.keys()) + \
-            len(views.keys()) + len(data_interfaces.keys())
+        n = (
+            len(data_stores.keys())
+            + len(data_connections.keys())
+            + len(tools.keys())
+            + len(views.keys())
+            + len(data_interfaces.keys())
+        )
         self._toolbox.msg.emit("Loading project items...")
         if n == 0:
             self._toolbox.msg_warning.emit("Project has no items")
@@ -378,13 +384,12 @@ class SpineToolboxProject(MetaObject):
             return JuliaTool.load(self._toolbox, path, definition)
         if _tooltype == "python":
             return PythonTool.load(self._toolbox, path, definition)
-        elif _tooltype == "gams":
+        if _tooltype == "gams":
             return GAMSTool.load(self._toolbox, path, definition)
-        elif _tooltype == "executable":
+        if _tooltype == "executable":
             return ExecutableTool.load(self._toolbox, path, definition)
-        else:
-            self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
-            return None
+        self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
+        return None
 
     def add_data_store(self, name, description, url, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Store to project item model.
@@ -535,15 +540,15 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
-        if len(self.dag_handler.dags()) == 0:
+        if not self.dag_handler.dags():
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
         # Get selected item
         selected_indexes = self._toolbox.ui.treeView_project.selectedIndexes()
-        if len(selected_indexes) == 0:
+        if not selected_indexes:
             self._toolbox.msg_warning.emit("Please select a project item and try again")
             return
-        elif len(selected_indexes) == 1:
+        if len(selected_indexes) == 1:
             selected_item = self._toolbox.project_item_model.project_item(selected_indexes[0])
         else:
             # More than one item selected. Make sure they part of the same graph or abort
@@ -592,7 +597,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().setValue(
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
-        if len(self.dag_handler.dags()) == 0:
+        if not self.dag_handler.dags():
             self._toolbox.msg.emit_warning("Project has no items to execute")
             return
         self._n_graphs = len(self.dag_handler.dags())
@@ -604,7 +609,7 @@ class SpineToolboxProject(MetaObject):
                 continue
             self._ordered_dags[i] = bfs_ordered_nodes
             i += 1
-        if len(self._ordered_dags.keys()) < 1:
+        if not self._ordered_dags.keys():
             self._toolbox.msg_error.emit(
                 "There are no valid Directed Acyclic " "Graphs to execute. Please modify connections."
             )
@@ -674,7 +679,7 @@ class SpineToolboxProject(MetaObject):
 
     def handle_invalid_graphs(self):
         """Prints messages to Event Log if there are invalid DAGs (e.g. contain self-loops) in the project."""
-        if len(self._invalid_graphs) > 0:
+        if self._invalid_graphs:
             for g in self._invalid_graphs:
                 # Some graphs in the project are not DAGs. Report to user that these will not be executed.
                 self._toolbox.msg.emit("")
@@ -689,11 +694,10 @@ class SpineToolboxProject(MetaObject):
                 self._toolbox.msg.emit("---------------------------------------")
                 self._executed_graph_index += 1
         self._invalid_graphs.clear()
-        return
 
     def export_graphs(self):
         """Export all valid directed acyclic graphs in project to GraphML files."""
-        if len(self.dag_handler.dags()) == 0:
+        if not self.dag_handler.dags():
             self._toolbox.msg.emit_warning("Project has no graphs to export")
             return
         i = 0
@@ -705,4 +709,17 @@ class SpineToolboxProject(MetaObject):
             else:
                 self._toolbox.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
             i += 1
-        return
+
+    @busy_effect
+    def open_tree_view(self):
+        """Open all selected data stores in tree view.
+        """
+        indexes = self._toolbox.ui.treeView_project.selectedIndexes()
+        proj_items = [self._toolbox.project_item_model.project_item(ind) for ind in indexes]
+        data_stores = [item for item in proj_items if item.item_type == "Data Store"]
+        if not data_stores:
+            self._toolbox.msg_error.emit("No Data Store selected. Please select one or more Data Store items.")
+            return
+        db_maps = {ds.name: get_db_map(ds.make_url()) for ds in data_stores}
+        tree_view_form = TreeViewForm(self, **db_maps)
+        tree_view_form.show()

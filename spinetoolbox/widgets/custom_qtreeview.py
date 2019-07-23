@@ -158,7 +158,7 @@ class DataTreeView(QTreeView):
             return
         if not self.drag_start_pos:
             return
-        if len(self.drag_indexes) == 0:
+        if not self.drag_indexes:
             return
         if (event.pos() - self.drag_start_pos).manhattanLength() < QApplication.startDragDistance():
             return

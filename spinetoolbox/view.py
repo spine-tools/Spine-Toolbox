@@ -20,12 +20,11 @@ import logging
 import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
-from project_item import ProjectItem
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
+from project_item import ProjectItem
 from widgets.graph_view_widget import GraphViewForm
 from graphics_items import ViewIcon
 from helpers import busy_effect, create_dir
-from sqlalchemy.engine.url import make_url
 
 
 class View(ProjectItem):

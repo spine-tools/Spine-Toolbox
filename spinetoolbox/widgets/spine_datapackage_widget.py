@@ -17,6 +17,8 @@ in Data Connection item.
 :date:   7.7.2018
 """
 
+from collections import Counter
+import logging
 import os
 from PySide2.QtWidgets import QMainWindow, QMessageBox, QErrorMessage, QAction, QToolButton, QFileDialog, QProgressBar
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QItemSelectionModel, QModelIndex, QSize, QThreadPool

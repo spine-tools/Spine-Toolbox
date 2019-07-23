@@ -23,31 +23,39 @@ from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QToolButton, QApplication, QGraphicsScene, QGraphicsRectItem, QAction, QWidgetAction
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QSize
-from PySide2.QtGui import QFontMetrics, QIcon, QPalette
-from ui.graph_view_form import Ui_MainWindow
+from PySide2.QtGui import QIcon, QPalette
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
+from ui.graph_view_form import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
-from widgets.custom_menus import ObjectItemContextMenu, GraphViewContextMenu
+from widgets.custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_qwidgets import ZoomWidget
-from models import ObjectClassListModel, RelationshipClassListModel
+from widgets.report_plotting_failure import report_plotting_failure
+from treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
+from plotting import (
+    plot_selection,
+    PlottingError,
+    tree_graph_view_parameter_value_name,
+    GraphAndTreeViewPlottingSupport,
+)
 
 
 class GraphViewForm(DataStoreForm):
     """A widget to show the graph view.
 
     Attributes:
-        owner (View or Data Store): View or DataStore instance
-        db_map (DiffDatabaseMapping): The object relational database mapping
-        database (str): The database name
+        project (SpineToolboxProject): The project instance that owns this form
         read_only (bool): Whether or not the form should be editable
+        db_maps: named DiffDatabaseMapping instances
     """
 
-    def __init__(self, owner, db_map, database, read_only=False):
+    def __init__(self, project, read_only=False, **db_maps):
         """Initialize class."""
         tic = time.clock()
-        super().__init__(owner, db_map, database, Ui_MainWindow())
+        super().__init__(project, Ui_MainWindow(), **db_maps)
+        self.db_map = self.db_maps[0]
+        self.db_name = self.db_names[0]
         self.ui.graphicsView._graph_view_form = self
         self.read_only = read_only
         self._has_graph = False
@@ -60,8 +68,9 @@ class GraphViewForm(DataStoreForm):
         self.arc_token_color.setAlphaF(0.8)
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.arc_color.setAlphaF(0.8)
-        # Set flat object tree
-        self.object_tree_model.is_flat = True
+        # Object tree model
+        self.object_tree_model = ObjectTreeModel(self, flat=True)
+        self.ui.treeView_object.setModel(self.object_tree_model)
         # Data for ObjectItems
         self.object_ids = list()
         self.object_names = list()
@@ -84,6 +93,8 @@ class GraphViewForm(DataStoreForm):
         # Item palette models
         self.object_class_list_model = ObjectClassListModel(self)
         self.relationship_class_list_model = RelationshipClassListModel(self)
+        self.ui.listView_object_class.setModel(self.object_class_list_model)
+        self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         # Context menus
         self.object_item_context_menu = None
         self.graph_view_context_menu = None
@@ -103,7 +114,6 @@ class GraphViewForm(DataStoreForm):
         self.restore_dock_widgets()
         # Initialize stuff
         self.init_models()
-        self.init_views()
         self.setup_delegates()
         self.create_add_more_actions()
         self.add_toggle_view_actions()
@@ -112,7 +122,7 @@ class GraphViewForm(DataStoreForm):
         self.settings_group = "graphViewWidget" if not self.read_only else "graphViewWidgetReadOnly"
         self.restore_ui()
         self.init_commit_rollback_actions()
-        title = database + " (read only) " if read_only else database
+        title = self.db_name + " (read only) " if read_only else self.db_name
         self.setWindowTitle("Data store graph view    -- {} --".format(title))
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
@@ -128,10 +138,6 @@ class GraphViewForm(DataStoreForm):
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
 
-    def init_object_tree_model(self):
-        """Initialize object tree model."""
-        self.object_tree_model.build_tree(self.database)
-
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
         self.object_parameter_value_model.has_empty_row = not self.read_only
@@ -143,11 +149,6 @@ class GraphViewForm(DataStoreForm):
         self.object_parameter_definition_model.has_empty_row = not self.read_only
         self.relationship_parameter_definition_model.has_empty_row = not self.read_only
         super().init_parameter_definition_models()
-
-    def init_views(self):
-        super().init_views()
-        self.ui.listView_object_class.setModel(self.object_class_list_model)
-        self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
 
     def setup_zoom_action(self):
         """Setup zoom action in view menu."""
@@ -195,6 +196,18 @@ class GraphViewForm(DataStoreForm):
         self.ui.actionGraph_show_hidden.triggered.connect(self.show_hidden_items)
         self.ui.actionGraph_prune_selected.triggered.connect(self.prune_selected_items)
         self.ui.actionGraph_reinstate_pruned.triggered.connect(self.reinstate_pruned_items)
+        self.ui.tableView_object_parameter_value.customContextMenuRequested.connect(
+            self.show_object_parameter_value_context_menu
+        )
+        self.ui.tableView_object_parameter_definition.customContextMenuRequested.connect(
+            self.show_object_parameter_definition_context_menu
+        )
+        self.ui.tableView_relationship_parameter_value.customContextMenuRequested.connect(
+            self.show_relationship_parameter_value_context_menu
+        )
+        self.ui.tableView_relationship_parameter_definition.customContextMenuRequested.connect(
+            self.show_relationship_parameter_definition_context_menu
+        )
         # Dock Widgets menu action
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         self.ui.menuGraph.aboutToShow.connect(self._handle_menu_about_to_show)
@@ -321,8 +334,8 @@ class GraphViewForm(DataStoreForm):
         is_root_selected = self.ui.treeView_object.selectionModel().isSelected(index)
         for i in range(root_item.rowCount()):
             object_class_item = root_item.child(i, 0)
-            object_class_id = object_class_item.data(Qt.UserRole + 1)['id']
-            object_class_name = object_class_item.data(Qt.UserRole + 1)['name']
+            object_class_id = object_class_item.data(Qt.UserRole + 1)[self.db_map]['id']
+            object_class_name = object_class_item.data(Qt.UserRole + 1)[self.db_map]['name']
             index = self.object_tree_model.indexFromItem(object_class_item)
             is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
             # Fetch object class if needed
@@ -330,8 +343,8 @@ class GraphViewForm(DataStoreForm):
                 self.object_tree_model.fetchMore(index)
             for j in range(object_class_item.rowCount()):
                 object_item = object_class_item.child(j, 0)
-                object_id = object_item.data(Qt.UserRole + 1)["id"]
-                object_name = object_item.data(Qt.UserRole + 1)["name"]
+                object_id = object_item.data(Qt.UserRole + 1)[self.db_map]["id"]
+                object_name = object_item.data(Qt.UserRole + 1)[self.db_map]["name"]
                 if object_name in rejected_object_names:
                     continue
                 index = self.object_tree_model.indexFromItem(object_item)
@@ -356,8 +369,7 @@ class GraphViewForm(DataStoreForm):
             object_id_list = relationship.object_id_list
             split_object_id_list = [int(x) for x in object_id_list.split(",")]
             split_object_name_list = relationship.object_name_list.split(",")
-            for i in range(len(split_object_id_list)):
-                src_object_id = split_object_id_list[i]
+            for i, src_object_id in enumerate(split_object_id_list):
                 try:
                     dst_object_id = split_object_id_list[i + 1]
                 except IndexError:
@@ -433,7 +445,6 @@ class GraphViewForm(DataStoreForm):
             self.dst_ind_list.append(dst_ind)
             # NOTE: These arcs correspond to template arcs.
             relationship_class_id = item.relationship_class_id
-            object_class_name_list = item.object_class_name_list
             self.arc_object_id_lists.append("")  # TODO: is this one filled when creating the relationship?
             self.arc_relationship_class_ids.append(relationship_class_id)
             # Label don't matter
@@ -471,9 +482,9 @@ class GraphViewForm(DataStoreForm):
             mask = np.mod(range(N - n), 2 * n) < n
             s1 = pairs[mask]
             s2 = pairs[~mask]
-            if len(s1) > 0:
+            if s1.any():
                 sets.append(s1)
-            if len(s2) > 0:
+            if s2.any():
                 sets.append(s2)
         return sets
 
@@ -702,7 +713,7 @@ class GraphViewForm(DataStoreForm):
             scene = self.new_scene()
         self.extend_scene_bg()
         scene_pos = self.ui.graphicsView.mapToScene(pos)
-        data = eval(text)
+        data = eval(text)  # pylint: disable=eval-used
         if data["type"] == "object_class":
             class_id = data["id"]
             class_name = data["name"]
@@ -760,10 +771,9 @@ class GraphViewForm(DataStoreForm):
         if d is None:
             return [], []
         x, y = self.vertex_coordinates(d)
-        for i in range(len(object_name_list)):
+        for i, object_name in enumerate(object_name_list):
             x_ = x[i]
             y_ = y[i]
-            object_name = object_name_list[i]
             object_class_name = object_class_name_list[i]
             try:
                 object_class_id = object_class_id_list[i]
@@ -773,8 +783,7 @@ class GraphViewForm(DataStoreForm):
                 self, object_name, object_class_id, object_class_name, x_, y_, extent, label_color=label_color
             )
             object_items.append(object_item)
-        for i in range(len(object_items)):
-            src_item = object_items[i]
+        for i, src_item in enumerate(object_items):
             try:
                 dst_item = object_items[i + 1]
             except IndexError:
@@ -806,6 +815,25 @@ class GraphViewForm(DataStoreForm):
             object_item.moveBy(x - center.x(), y - center.y())
             object_item.move_related_items_by(QPointF(x, y) - center)
 
+    def add_object(self, object_item, name):
+        """Try and add object given an object item and a name."""
+        item = dict(class_id=object_item.object_class_id, name=name)
+        object_d = {self.db_map: (item,)}
+        if self.add_objects(object_d):
+            object_item.object_name = name
+            object_ = self.db_map.query(self.db_map.object_sq).filter_by(name=name).one()
+            object_item.object_id = object_.id
+            if object_item.template_id_dim:
+                object_item.add_into_relationship()
+            object_item.remove_template()
+
+    def update_object(self, object_item, name):
+        """Try and update object given an object item and a name."""
+        item = dict(id=object_item.object_id, name=name)
+        object_d = {self.db_map: (item,)}
+        if self.update_objects(object_d):
+            object_item.object_name = name
+
     @busy_effect
     def add_relationship(self, template_id, object_items):
         """Try and add relationship given a template id and a list of object items."""
@@ -817,22 +845,22 @@ class GraphViewForm(DataStoreForm):
             item = object_items[ind]
             object_name = item.object_name
             if not object_name:
-                logging.debug("can't find name {}".format(object_name))
+                logging.debug("can't find name %s", object_name)
                 return False
-            object_ = self.db_map.object_list().filter_by(name=object_name).one_or_none()
+            object_ = self.db_map.query(self.db_map.object_sq).filter_by(name=object_name).one_or_none()
             if not object_:
-                logging.debug("can't find object {}".format(object_name))
+                logging.debug("can't find object %s", object_name)
                 return False
             object_id_list.append(object_.id)
             object_name_list.append(object_name)
         if len(object_id_list) < 2:
-            logging.debug("too short {}".format(len(object_id_list)))
+            logging.debug("too short %s", len(object_id_list))
             return False
         name = self.relationship_class_dict[template_id]["name"] + "_" + "__".join(object_name_list)
         class_id = self.relationship_class_dict[template_id]["id"]
-        wide_kwargs = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
+        item = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
         try:
-            wide_relationships, _ = self.db_map.add_wide_relationships(wide_kwargs, strict=True)
+            wide_relationships, _ = self.db_map.add_wide_relationships(item, strict=True)
             for item in object_items:
                 del item.template_id_dim[template_id]
             items = self.ui.graphicsView.scene().items()
@@ -842,27 +870,23 @@ class GraphViewForm(DataStoreForm):
                 item.template_id = None
                 item.object_id_list = ",".join([str(x) for x in object_id_list])
             self.commit_available.emit(True)
-            msg = "Successfully added new relationship '{}'.".format(wide_relationship.one().name)
+            msg = "Successfully added new relationship '{}'.".format(wide_relationships.one().name)
             self.msg.emit(msg)
             return True
         except (SpineIntegrityError, SpineDBAPIError) as e:
             self.msg_error.emit(e.msg)
             return False
 
-    def add_object_classes(self, object_classes):
-        """Insert new object classes."""
-        super().add_object_classes(object_classes)
-        for object_class in object_classes:
+    def add_object_classses_to_models(self, db_map, added):
+        super().add_object_classses_to_models(db_map, added)
+        for object_class in added:
             self.object_class_list_model.add_object_class(object_class)
 
-    def add_relationship_classes(self, wide_relationship_classes):
+    def add_relationship_classes_to_models(self, db_map, added):
         """Insert new relationship classes."""
-        for wide_relationship_class in wide_relationship_classes:
-            self.relationship_class_list_model.add_relationship_class(wide_relationship_class)
-        self.commit_available.emit(True)
-        relationship_class_name_list = "', '".join([x.name for x in wide_relationship_classes])
-        msg = "Successfully added new relationship class(es) '{}'.".format(relationship_class_name_list)
-        self.msg.emit(msg)
+        super().add_relationship_classes_to_models(db_map, added)
+        for relationship_class in added:
+            self.relationship_class_list_model.add_relationship_class(relationship_class)
 
     def show_graph_view_context_menu(self, global_pos):
         """Show context menu for graphics view."""
@@ -955,6 +979,48 @@ class GraphViewForm(DataStoreForm):
         self.object_item_context_menu.deleteLater()
         self.object_item_context_menu = None
 
+    @Slot("QPoint", name="show_object_parameter_value_context_menu")
+    def show_object_parameter_value_context_menu(self, pos):
+        self._show_table_context_menu(pos, self.ui.tableView_object_parameter_value, 'value')
+
+    @Slot("QPoint", name="show_object_parameter_definition_context_menu")
+    def show_object_parameter_definition_context_menu(self, pos):
+        self._show_table_context_menu(pos, self.ui.tableView_object_parameter_definition, 'default_value')
+
+    @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
+    def show_relationship_parameter_value_context_menu(self, pos):
+        self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_value, 'value')
+
+    @Slot("QPoint", name="show_relationship_parameter_definition_context_menu")
+    def show_relationship_parameter_definition_context_menu(self, pos):
+        self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_definition, 'default_value')
+
+    def _show_table_context_menu(self, position, table_view, column_name):
+        index = table_view.indexAt(position)
+        global_pos = table_view.viewport().mapToGlobal(position)
+        model = table_view.model()
+        flags = model.flags(index)
+        editable = (flags & Qt.ItemIsEditable) == Qt.ItemIsEditable
+        is_value = model.headerData(index.column(), Qt.Horizontal) == column_name
+        if editable and is_value:
+            menu = SimpleEditableParameterValueContextMenu(self, global_pos, index)
+        else:
+            return
+        option = menu.get_action()
+        if option == "Open in editor...":
+            self.show_parameter_value_editor(index, table_view)
+        elif option == "Plot":
+            selection = table_view.selectedIndexes()
+            try:
+                support = GraphAndTreeViewPlottingSupport(table_view)
+                plot_widget = plot_selection(model, selection, support)
+            except PlottingError as error:
+                report_plotting_failure(error)
+                return
+            plot_widget.setWindowTitle("Plot")
+            plot_widget.show()
+        menu.deleteLater()
+
     @busy_effect
     @Slot("bool", name="remove_graph_items")
     def remove_graph_items(self, checked=False):
@@ -967,10 +1033,10 @@ class GraphViewForm(DataStoreForm):
         object_ids = set(x['id'] for x in removed_objects)
         try:
             self.db_map.remove_items(object_ids=object_ids)
-            self.object_tree_model.remove_items("object", object_ids)
+            self.object_tree_model.remove_objects(self.db_map, object_ids)
             # Parameter models
-            self.object_parameter_value_model.remove_objects(removed_objects)
-            self.relationship_parameter_value_model.remove_objects(removed_objects)
+            self.object_parameter_value_model.remove_objects(self.db_map, removed_objects)
+            self.relationship_parameter_value_model.remove_objects(self.db_map, removed_objects)
             self.commit_available.emit(True)
             for item in self.object_item_selection:
                 item.wipe_out()

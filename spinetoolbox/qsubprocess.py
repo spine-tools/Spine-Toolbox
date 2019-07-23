@@ -16,8 +16,8 @@ Module to handle running tools in a QProcess.
 :date:   1.2.2018
 """
 
-from PySide2.QtCore import QObject, QProcess, Slot, Signal
 import logging
+from PySide2.QtCore import QObject, QProcess, Slot, Signal
 
 
 class QSubProcess(QObject):
@@ -193,9 +193,9 @@ class QSubProcess(QObject):
         self.process_failed = True
         try:
             self._process.terminate()
-        except Exception as ex:
+        except Exception as ex:  # pylint: disable=broad-except
             self._toolbox.msg_error.emit("[{0}] exception when terminating process".format(ex))
-            logging.exception("Exception in closing QProcess: {}".format(ex))
+            logging.exception("Exception in closing QProcess: %s", ex)
         finally:
             # Delete QProcess
             self._process.deleteLater()

@@ -19,19 +19,28 @@ Contains TabularViewForm class and some related constants.
 import json
 import operator
 from collections import namedtuple
-from PySide2.QtWidgets import QMainWindow, QDialog, QPushButton, QMessageBox, QCheckBox
+from PySide2.QtWidgets import QMainWindow, QDialog, QPushButton, QMessageBox, QCheckBox, QTableView
 from PySide2.QtCore import Qt, QSettings
 from PySide2.QtGui import QIcon, QGuiApplication
 from sqlalchemy.sql import literal_column
-from spinedb_api import SpineDBAPIError
+from spinedb_api import (
+    SpineDBAPIError,
+    from_database,
+    DateTime,
+    Duration,
+    ParameterValueFormatError,
+    TimePattern,
+    TimeSeries,
+)
 from ui.tabular_view_form import Ui_MainWindow
-from widgets.custom_menus import FilterMenu, PivotTableModelMenu
-from helpers import fix_name_ambiguity, tuple_itemgetter
-
-# TODO: connect to all add, delete relationship/object classes widgets to this.
+from widgets.custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
 from widgets.custom_qdialog import CommitDialog
+from widgets.parameter_value_editor import ParameterValueEditor
+from helpers import fix_name_ambiguity, tuple_itemgetter, busy_effect
 from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
+
+# TODO: connect to all add, delete relationship/object classes widgets to this.
 
 # TODO: How about moving these constants to config.py?
 ParameterValue = namedtuple('ParameterValue', ['id', 'has_value'])
@@ -94,6 +103,7 @@ class TabularViewForm(QMainWindow):
         self.object_classes = []
         self.objects = []
         self.parameters = []
+        self.parameter_values = {}
         self.relationship_tuple_key = ()
         self.original_index_names = {}
         self.filter_buttons = []
@@ -118,20 +128,27 @@ class TabularViewForm(QMainWindow):
         self.ui.pivot_table.setModel(self.proxy_model)
         self.ui.pivot_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self.pivot_table_menu = PivotTableModelMenu(self.model, self.proxy_model, self.ui.pivot_table)
+        table_header = self.ui.pivot_table.horizontalHeader()
+        table_header.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._pivot_table_horizontal_header_menu = PivotTableHorizontalHeaderMenu(self.model, self.ui.pivot_table)
 
         # connect signals
         self.ui.pivot_table.customContextMenuRequested.connect(self.pivot_table_menu.request_menu)
+        table_header.customContextMenuRequested.connect(self._pivot_table_horizontal_header_menu.request_menu)
         self.ui.list_index.afterDrop.connect(self.change_pivot)
         self.ui.list_column.afterDrop.connect(self.change_pivot)
         self.ui.list_frozen.afterDrop.connect(self.change_pivot)
         self.model.index_entries_changed.connect(self.table_index_entries_changed)
         self.ui.table_frozen.selectionModel().selectionChanged.connect(self.change_frozen_value)
         self.ui.comboBox_value_type.currentTextChanged.connect(self.select_data)
-        self.ui.list_select_class.itemClicked.connect(self.change_class)
+        self.ui.list_select_class.currentItemChanged.connect(self.change_class)
         self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionClose.triggered.connect(self.close)
         self.ui.menuSession.aboutToShow.connect(self.set_session_menu_enable)
+
+        # override `edit` virtual function in `pivot_table`
+        self.ui.pivot_table.edit = self.pivot_table_edit
 
         # load db data
         self.load_class_data()
@@ -146,6 +163,27 @@ class TabularViewForm(QMainWindow):
 
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
+
+    @busy_effect
+    def pivot_table_edit(self, index, trigger, event):
+        """Starts editing the item at index from pivot_table.
+        If the index contains some 'complex' parameter value,
+        we open the parameter value editor window instead.
+        """
+        # pylint: disable=bad-super-call
+        if not super(QTableView, self.ui.pivot_table).edit(index, trigger, event):
+            return False
+        if self.model.index_in_data(index):
+            try:
+                value = from_database(index.data(role=Qt.EditRole))
+            except ParameterValueFormatError:
+                value = None
+            if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)) or value is None:
+                # Close the normal editor and show the `ParameterValueEditor` instead
+                self.ui.pivot_table.closePersistentEditor(index)
+                editor = ParameterValueEditor(index, value=value, parent_widget=self)
+                editor.show()
+        return True
 
     def set_session_menu_enable(self):
         """Checks if session can commit or rollback and updates session menu actions"""
@@ -221,8 +259,8 @@ class TabularViewForm(QMainWindow):
 
     def update_class_list(self):
         """update list_select_class with all object classes and relationship classes"""
-        oc = sorted(set([OBJECT_CLASS + ': ' + oc.name for oc in self.object_classes.values()]))
-        rc = sorted(set([RELATIONSHIP_CLASS + ': ' + oc.name for oc in self.relationship_classes.values()]))
+        oc = sorted(set(OBJECT_CLASS + ': ' + oc.name for oc in self.object_classes.values()))
+        rc = sorted(set(RELATIONSHIP_CLASS + ': ' + oc.name for oc in self.relationship_classes.values()))
         self.ui.list_select_class.addItems(oc + rc)
         self.ui.list_select_class.setCurrentItem(self.ui.list_select_class.item(0))
 
@@ -261,13 +299,13 @@ class TabularViewForm(QMainWindow):
             return True
         if self.model.model._deleted_data:
             return True
-        if any(len(v) > 0 for k, v in self.model.model._added_index_entries.items() if k not in [JSON_TIME_NAME]):
+        if any(bool(v) for k, v in self.model.model._added_index_entries.items() if k not in [JSON_TIME_NAME]):
             return True
-        if any(len(v) > 0 for k, v in self.model.model._deleted_index_entries.items() if k not in [JSON_TIME_NAME]):
+        if any(bool(v) for k, v in self.model.model._deleted_index_entries.items() if k not in [JSON_TIME_NAME]):
             return True
-        if any(len(v) > 0 for k, v in self.model.model._added_tuple_index_entries.items()):
+        if any(bool(v) for v in self.model.model._added_tuple_index_entries.values()):
             return True
-        if any(len(v) > 0 for k, v in self.model.model._deleted_tuple_index_entries.items()):
+        if any(bool(v) for v in self.model.model._deleted_tuple_index_entries.values()):
             return True
         return False
 
@@ -298,8 +336,8 @@ class TabularViewForm(QMainWindow):
         if not self.model.model._edit_data and not self.model.model._deleted_data:
             return {}, set()
         # extract edited keys without time index
-        edited_keys = set(k[:-1] for k in self.model.model._edit_data.keys())
-        edited_keys.update(set(k[:-1] for k in self.model.model._deleted_data.keys()))
+        edited_keys = set(k[:-1] for k in self.model.model._edit_data)
+        edited_keys.update(set(k[:-1] for k in self.model.model._deleted_data))
         # find data for edited keys.
         edited_data = {k: [] for k in edited_keys}
         for k in self.model.model._data:
@@ -463,7 +501,7 @@ class TabularViewForm(QMainWindow):
                     db_edited = True
         elif self.current_class_type == OBJECT_CLASS:
             # find removed and new objects, only keep indexes in data
-            delete_objects = set(index[0] for index in self.model.model._deleted_data.keys())
+            delete_objects = set(index[0] for index in self.model.model._deleted_data)
             add_objects = set(index[0] for index, value in self.model.model._edit_data.items() if value is None)
             if delete_objects:
                 delete_ids = set(self.objects[name].id for name in delete_objects)
@@ -815,7 +853,7 @@ class TabularViewForm(QMainWindow):
         if commit_at_exit == 0:
             # Don't commit session and don't show message box
             return
-        elif commit_at_exit == 1:  # Default
+        if commit_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)

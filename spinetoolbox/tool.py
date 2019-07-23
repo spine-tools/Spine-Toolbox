@@ -19,12 +19,11 @@ Tool class.
 import logging
 import os
 import shutil
-import getpass
 import sys
-from project_item import ProjectItem
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
+from project_item import ProjectItem
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 from graphics_items import ToolIcon
@@ -274,7 +273,7 @@ class Tool(ProjectItem):
         for i in range(self.input_file_model.rowCount()):
             req_file_path = self.input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Check if this a directory or a file
-            path, filename = os.path.split(req_file_path)
+            _, filename = os.path.split(req_file_path)
             if not filename:
                 # It's a directory
                 n_dir += 1
@@ -391,7 +390,7 @@ class Tool(ProjectItem):
                     self._toolbox.msg_error.emit("\tFile <b>{0}</b> does not exist".format(src_path))
                     continue
                 # Get file name that matched the search pattern
-                src_dir, dst_fname = os.path.split(src_path)
+                _, dst_fname = os.path.split(src_path)
                 # Check if the search pattern included subdirectories (e.g. 'input/*.csv')
                 # This means that /input/ directory should be created to work (or source) directory
                 # before copying the files
@@ -749,7 +748,7 @@ class Tool(ProjectItem):
         for i in range(self.input_file_model.rowCount()):
             req_file_path = self.input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Just get the filename if there is a path attached to the file
-            path, filename = os.path.split(req_file_path)
+            _, filename = os.path.split(req_file_path)
             if not filename:
                 # It's a directory
                 continue
@@ -757,8 +756,7 @@ class Tool(ProjectItem):
             if not found_file:
                 self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
                 return None
-            else:
-                file_paths[req_file_path] = found_file
+            file_paths[req_file_path] = found_file
         return file_paths
 
     def find_optional_input_files(self):
@@ -772,7 +770,7 @@ class Tool(ProjectItem):
         for i in range(self.opt_input_file_model.rowCount()):
             file_path = self.opt_input_file_model.item(i, 0).data(Qt.DisplayRole)
             # Just get the filename if there is a path attached to the file
-            path, pattern = os.path.split(file_path)  # Filename may be a pattern (contains wildcards * or ?)
+            _, pattern = os.path.split(file_path)  # Filename may be a pattern (contains wildcards * or ?)
             if not pattern:
                 # It's a directory -> skip
                 continue

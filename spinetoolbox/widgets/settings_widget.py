@@ -17,7 +17,7 @@ Widget for controlling user settings.
 """
 
 import os
-from PySide2.QtWidgets import QWidget, QStyle, QFileDialog, QMessageBox, QColorDialog
+from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QPixmap
 import ui.settings
@@ -99,7 +99,7 @@ class SettingsWidget(QWidget):
             QMessageBox.warning(self, "Invalid GAMS Program", msg)
             return
         # Check that selected file at least starts with string 'gams'
-        path, selected_file = os.path.split(answer[0])
+        _, selected_file = os.path.split(answer[0])
         if not selected_file.lower().startswith("gams"):
             msg = "Selected file <b>{0}</b> may not be a valid GAMS program".format(selected_file)
             # noinspection PyCallByClass, PyArgumentList
@@ -130,7 +130,7 @@ class SettingsWidget(QWidget):
             QMessageBox.warning(self, "Invalid Julia Interpreter", msg)
             return
         # Check that selected file at least starts with string 'julia'
-        path, selected_file = os.path.split(answer[0])
+        _, selected_file = os.path.split(answer[0])
         if not selected_file.lower().startswith("julia"):
             msg = "Selected file <b>{0}</b> is not a valid Julia interpreter".format(selected_file)
             # noinspection PyCallByClass, PyArgumentList
@@ -163,7 +163,7 @@ class SettingsWidget(QWidget):
             QMessageBox.warning(self, "Invalid Python Interpreter", msg)
             return
         # Check that selected file at least starts with string 'python'
-        path, selected_file = os.path.split(answer[0])
+        _, selected_file = os.path.split(answer[0])
         if not selected_file.lower().startswith("python"):
             msg = "Selected file <b>{0}</b> is not a valid Python interpreter".format(selected_file)
             # noinspection PyCallByClass, PyArgumentList
