@@ -28,9 +28,10 @@ from PySide2.QtWidgets import (
     QErrorMessage,
     QSplitter,
 )
-from PySide2.QtCore import Signal, QModelIndex, QAbstractItemModel, Qt, QItemSelectionModel, QPoint
+from PySide2.QtCore import Signal, QModelIndex, Qt, QItemSelectionModel, QPoint
 from PySide2.QtGui import QColor
 from spine_io.widgets.mapping_widget import MappingWidget, DataMappingListModel
+from models import MinimalTableModel
 
 
 class ImportPreviewWidget(QWidget):
@@ -231,9 +232,11 @@ class ImportPreviewWidget(QWidget):
         if data:
             if not header:
                 header = list(range(len(data[0])))
-            self.table.set_data(data, header)
+            self.table.reset_model(main_data=data)
+            self.table.set_horizontal_header_labels(header)
         else:
-            self.table.set_data([], [])
+            self.table.reset_model()
+            self.table.set_horizontal_header_labels([])
         self.previewDataUpdated.emit()
 
     def close_connection(self):
@@ -243,70 +246,23 @@ class ImportPreviewWidget(QWidget):
         self.connector.close_connection()
 
 
-class TableModel(QAbstractItemModel):
-    def __init__(self, headers=None, data=None):
-        if headers is None:
-            headers = []
-        if data is None:
-            data = []
-        super(TableModel, self).__init__()
-        self._data = data
-        self._headers = headers
+class MappingPreviewModel(MinimalTableModel):
+    """Table model that shows different backgroundcolor depending on mapping
+    """
 
-    def parent(self, child=QModelIndex()):
-        return QModelIndex()
-
-    def index(self, row, column, parent=QModelIndex()):
-        return self.createIndex(row, column, parent)
-
-    def set_data(self, data, headers):
-        if data and len(data[0]) != len(headers):
-            raise ValueError("'data[0]' must be same length as 'headers'")
-        self.beginResetModel()
-        self._data = data
-        self._headers = headers
-        self.endResetModel()
-        top_left = self.index(0, 0)
-        bottom_right = self.index(self.rowCount(), self.columnCount())
-        self.dataChanged.emit(top_left, bottom_right)
-
-    def rowCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        return len(self._data)
-
-    def columnCount(self, parent=QModelIndex()):
-        if parent.isValid():
-            return 0
-        return len(self._headers)
-
-    def headerData(self, section, orientation, role):
-        if role == Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
-                return self._headers[section]
-            return section
-
-    def row(self, index):
-        if index.isValid():
-            return self._data[index.row()]
-
-    def data(self, index, role):
-        if role == Qt.DisplayRole:
-            return self._data[index.row()][index.column()]
-
-
-class MappingPreviewModel(TableModel):
-    def __init__(self, headers=None, data=None):
-        if headers is None:
-            headers = []
-        if data is None:
-            data = []
-        super(MappingPreviewModel, self).__init__(headers, data)
+    def __init__(self, parent=None):
+        super(MappingPreviewModel, self).__init__(parent)
+        self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self._mapping = None
         self._data_changed_signal = None
 
     def set_mapping(self, mapping):
-        if not self._data_changed_signal is None and self._mapping:
+        """Set mapping to display colors from
+        
+        Arguments:
+            mapping {MappingTableModel} -- mapping model
+        """
+        if self._data_changed_signal is not None and self._mapping:
             self._mapping.dataChanged.disconnect(self.update_colors)
             self._data_changed_signal = None
         self._mapping = mapping
@@ -317,53 +273,73 @@ class MappingPreviewModel(TableModel):
     def update_colors(self):
         self.dataChanged.emit(QModelIndex, QModelIndex, [Qt.BackgroundColorRole])
 
-    def data(self, index, role):
+    def data(self, index, role=Qt.DisplayRole):
         if role == Qt.BackgroundColorRole and self._mapping:
-            mapping = self._mapping._model
-            if mapping.parameters is not None:
-                # parameter colors
-                if mapping.is_pivoted():
-                    # parameter values color
-                    last_row = mapping.last_pivot_row()
-                    if (
-                        last_row is not None
-                        and index.row() > last_row
-                        and index.column() not in self.mapping_column_ref_int_list()
-                    ):
-                        return QColor(1, 133, 113)
-                elif self.index_in_mapping(mapping.parameters.value, index):
-                    return QColor(1, 133, 113)
-                if mapping.parameters.extra_dimensions:
-                    # parameter extra dimensions color
-                    for ed in mapping.parameters.extra_dimensions:
-                        if self.index_in_mapping(ed, index):
-                            return QColor(128, 205, 193)
-                if self.index_in_mapping(mapping.parameters.name, index):
-                    # parameter name colors
-                    return QColor(128, 205, 193)
-            if self.index_in_mapping(mapping.name, index):
-                # class name color
-                return QColor(166, 97, 26)
-            objects = []
-            classes = []
-            if isinstance(mapping, ObjectClassMapping):
-                objects = [mapping.object]
-            else:
-                if mapping.objects:
-                    objects = mapping.objects
-                if mapping.object_classes:
-                    classes = mapping.object_classes
-            for o in objects:
-                # object colors
-                if self.index_in_mapping(o, index):
-                    return QColor(223, 194, 125)
-            for c in classes:
-                # object colors
-                if self.index_in_mapping(c, index):
-                    return QColor(166, 97, 26)
+            return self.data_color(index)
         return super(MappingPreviewModel, self).data(index, role)
 
+    def data_color(self, index):
+        """returns background color for index depending on mapping
+        
+        Arguments:
+            index {PySide2.QtCore.QModelIndex} -- index
+        
+        Returns:
+            [QColor] -- QColor of index
+        """
+        mapping = self._mapping._model
+        if mapping.parameters is not None:
+            # parameter colors
+            if mapping.is_pivoted():
+                # parameter values color
+                last_row = mapping.last_pivot_row()
+                if (
+                    last_row is not None
+                    and index.row() > last_row
+                    and index.column() not in self.mapping_column_ref_int_list()
+                ):
+                    return QColor(1, 133, 113)
+            elif self.index_in_mapping(mapping.parameters.value, index):
+                return QColor(1, 133, 113)
+            if mapping.parameters.extra_dimensions:
+                # parameter extra dimensions color
+                for ed in mapping.parameters.extra_dimensions:
+                    if self.index_in_mapping(ed, index):
+                        return QColor(128, 205, 193)
+            if self.index_in_mapping(mapping.parameters.name, index):
+                # parameter name colors
+                return QColor(128, 205, 193)
+        if self.index_in_mapping(mapping.name, index):
+            # class name color
+            return QColor(166, 97, 26)
+        objects = []
+        classes = []
+        if isinstance(mapping, ObjectClassMapping):
+            objects = [mapping.object]
+        else:
+            if mapping.objects:
+                objects = mapping.objects
+            if mapping.object_classes:
+                classes = mapping.object_classes
+        for o in objects:
+            # object colors
+            if self.index_in_mapping(o, index):
+                return QColor(223, 194, 125)
+        for c in classes:
+            # object colors
+            if self.index_in_mapping(c, index):
+                return QColor(166, 97, 26)
+
     def index_in_mapping(self, mapping, index):
+        """Checks if index is in mapping
+        
+        Arguments:
+            mapping {Mapping} -- mapping
+            index {QModelIndex} -- index
+        
+        Returns:
+            [bool] -- returns True if mapping is in index
+        """
         if not isinstance(mapping, Mapping):
             return False
         if mapping.map_type == "column":
@@ -387,6 +363,11 @@ class MappingPreviewModel(TableModel):
         return False
 
     def mapping_column_ref_int_list(self):
+        """Returns a list of column indexes that are not pivoted
+        
+        Returns:
+            [List[int]] -- list of ints
+        """
         if not self._mapping:
             return []
         non_pivoted_columns = self._mapping._model.non_pivoted_columns()
@@ -396,8 +377,8 @@ class MappingPreviewModel(TableModel):
         int_non_piv_cols = []
         for pc in set(non_pivoted_columns + skip_cols):
             if isinstance(pc, str):
-                if pc in self._headers:
-                    pc = self._headers.index(pc)
+                if pc in self.horizontal_header_labels():
+                    pc = self.horizontal_header_labels().index(pc)
                 else:
                     continue
             int_non_piv_cols.append(pc)
