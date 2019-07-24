@@ -33,9 +33,10 @@ from PySide2.QtWidgets import (
     QSplitter,
 )
 from PySide2.QtCore import Qt, QAbstractTableModel, Signal, QAbstractListModel, QModelIndex
+from spinedb_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
 from widgets.custom_menus import FilterMenu
 from widgets.custom_delegates import ComboBoxDelegate
-from spinedb_api import RelationshipClassMapping, ObjectClassMapping, Mapping, ParameterMapping
+
 
 MAPPING_CHOICES = ("Constant", "Column", "Row", "Header", "None")
 
@@ -61,8 +62,7 @@ class MappingTableModel(QAbstractTableModel):
             return 0
         if isinstance(self._model, ObjectClassMapping):
             return 1
-        else:
-            return len(self._model.objects)
+        return len(self._model.objects)
 
     @property
     def import_objects(self):
@@ -81,7 +81,7 @@ class MappingTableModel(QAbstractTableModel):
             raise TypeError(
                 f"mapping must be of type: RelationshipClassMapping, ObjectClassMapping instead got {type(mapping)}"
             )
-        if type(mapping) == type(self._model):
+        if isinstance(mapping, type(self._model)):
             return
         self.beginResetModel()
         self._model = mapping
@@ -165,7 +165,7 @@ class MappingTableModel(QAbstractTableModel):
         display_name = []
         mappings = []
         mappings.append(self._model.name)
-        if type(self._model) == RelationshipClassMapping:
+        if isinstance(self._model, RelationshipClassMapping):
             display_name.append("Relationship class names:")
             if self._model.object_classes:
                 display_name.extend([f"Object class {i+1} names:" for i, oc in enumerate(self._model.object_classes)])
@@ -193,9 +193,9 @@ class MappingTableModel(QAbstractTableModel):
             mapping_type = "Pivoted"
         elif mapping is None:
             mapping_type = "None"
-        elif type(mapping) == str:
+        elif isinstance(mapping, str):
             mapping_type = "Constant"
-        elif type(mapping) == Mapping:
+        elif isinstance(mapping, Mapping):
             if mapping.map_type == "column":
                 mapping_type = "Column"
             elif mapping.map_type == "column_name":
@@ -209,9 +209,9 @@ class MappingTableModel(QAbstractTableModel):
             mapping_value = "Pivoted values"
         elif mapping is None:
             mapping_value = ""
-        elif type(mapping) == str:
+        elif isinstance(mapping, str):
             mapping_value = mapping
-        elif type(mapping) == Mapping:
+        elif isinstance(mapping, Mapping):
             if mapping.map_type == "row":
                 if mapping.value_reference == -1:
                     mapping_value = "Headers"
@@ -225,13 +225,13 @@ class MappingTableModel(QAbstractTableModel):
 
     def get_map_append_display(self, mapping, name):
         append_str = ""
-        if type(mapping) == Mapping:
+        if isinstance(mapping, Mapping):
             append_str = mapping.append_str
         return append_str
 
     def get_map_prepend_display(self, mapping, name):
         prepend_str = ""
-        if type(mapping) == Mapping:
+        if isinstance(mapping, Mapping):
             prepend_str = mapping.prepend_str
         return prepend_str
 
@@ -283,12 +283,12 @@ class MappingTableModel(QAbstractTableModel):
             else:
                 return non_editable
 
-        if type(mapping) == str:
+        if isinstance(mapping, str):
             if index.column() <= 2:
                 return editable
             else:
                 return non_editable
-        elif type(mapping) == Mapping and mapping.map_type == "row" and mapping.value_reference == -1:
+        elif isinstance(mapping, Mapping) and mapping.map_type == "row" and mapping.value_reference == -1:
             if index.column() == 2:
                 return non_editable
             else:
@@ -337,7 +337,7 @@ class MappingTableModel(QAbstractTableModel):
             mapping = value
         else:
             # update mapping value
-            if type(mapping) == str:
+            if isinstance(mapping, str):
                 if value == "":
                     mapping = None
                 else:
@@ -363,7 +363,7 @@ class MappingTableModel(QAbstractTableModel):
     def set_append_str(self, name, value):
         mapping = self.get_mapping_from_name(name)
         if mapping:
-            if type(mapping) == Mapping:
+            if isinstance(mapping, Mapping):
                 if value == "":
                     value = None
                 mapping.append_str = value
@@ -373,7 +373,7 @@ class MappingTableModel(QAbstractTableModel):
     def set_prepend_str(self, name, value):
         mapping = self.get_mapping_from_name(name)
         if mapping:
-            if type(mapping) == Mapping:
+            if isinstance(mapping, Mapping):
                 if value == "":
                     value = None
                 mapping.prepend_str = value
@@ -433,7 +433,7 @@ class MappingTableModel(QAbstractTableModel):
         return True
 
     def set_skip_columns(self, columns=None):
-        if columns == None:
+        if columns is None:
             columns = []
         self._model.skip_columns = list(set(columns))
         self.dataChanged.emit(0, 0, [])
@@ -534,7 +534,7 @@ class MappingWidget(QWidget):
         """
         deletes selected mapping
         """
-        if self._model != None:
+        if self._model is not None:
             # get selected mapping in list
             indexes = self._ui_list.selectedIndexes()
             if indexes:
@@ -671,12 +671,13 @@ class MappingOptionWidget(QWidget):
             self._model.set_skip_columns(skip_cols)
 
     def set_model(self, model):
-        if self._model_reset_signal and self._model:
-            self._model.modelReset.disconnect(self.update_ui)
-            self._model_reset_signal = None
-        if self._model_data_signal and self._model:
-            self._model.dataChanged.disconnect(self.update_ui)
-            self._model_data_signal = None
+        if self._model:
+            if self._model_reset_signal:
+                self._model.modelReset.disconnect(self.update_ui)
+                self._model_reset_signal = None
+            if self._model_data_signal:
+                self._model.dataChanged.disconnect(self.update_ui)
+                self._model_data_signal = None
         self._model = model
         if self._model:
             self._model_reset_signal = self._model.modelReset.connect(self.update_ui)
