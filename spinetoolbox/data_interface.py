@@ -20,10 +20,13 @@ import logging
 import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-from PySide2.QtWidgets import QFileDialog, QFileIconProvider
+from PySide2.QtWidgets import QFileDialog, QFileIconProvider, QMainWindow
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir
+from spine_io.importers.csv_reader import CSVConnector
+from spine_io.connection_manager import ConnectionManager
+from spine_io.widgets.import_preview_widget import ImportPreviewWidget
 
 
 class DataInterface(ProjectItem):
@@ -33,13 +36,15 @@ class DataInterface(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Project item name
         description (str): Project item description
+        filepath (str): Path to file
+        settings (dict): dict with mapping settings
         x (int): Initial icon scene X coordinate
         y (int): Initial icon scene Y coordinate
     """
 
     data_interface_refresh_signal = Signal(name="data_interface_refresh_signal")
 
-    def __init__(self, toolbox, name, description, x, y):
+    def __init__(self, toolbox, name, description, filepath, settings, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
@@ -54,12 +59,16 @@ class DataInterface(ProjectItem):
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
         # Variables for saving selections when item is (de)activated
-        self.import_file_path = ""
+        self.import_file_path = filepath
+        self._toolbox.ui.lineEdit_import_file_path.setText(filepath)
+        self.settings = settings
         self.file_model = QStandardItemModel()
         self._graphics_item = DataInterfaceIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
         # Note: data_interface_refresh_signal is not shared with other proj. items so there's no need to disconnect it
         self.data_interface_refresh_signal.connect(self.refresh)
         self._sigs = self.make_signal_handler_dict()
+        # connector class
+        self._preview_widget = None
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -116,6 +125,7 @@ class DataInterface(ProjectItem):
     def select_import_file(self, checked=False):
         """Opens script path selection dialog."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+
         answer = QFileDialog.getOpenFileName(self._toolbox, "Select file to import", self.data_dir)
         file_path = answer[0]
         if not file_path:  # Cancel button clicked
@@ -131,6 +141,33 @@ class DataInterface(ProjectItem):
             self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
             return
         self._toolbox.msg.emit("Opening Import editor for file: {0}".format(importee))
+
+        if self._preview_widget:
+            if self._preview_widget.windowState() & Qt.WindowMinimized:
+                # Remove minimized status and restore window with the previous state (maximized/normal state)
+                self._preview_widget.setWindowState(
+                    self._preview_widget.windowState() & ~Qt.WindowMinimized | Qt.WindowActive
+                )
+                self._preview_widget.activateWindow()
+            else:
+                self._preview_widget.raise_()
+            return
+
+        self._preview_widget = MappingPreviewWindow(importee, self.settings)
+        self._preview_widget.settings_updated.connect(self.save_settings)
+        self._preview_widget.connection_failed.connect(self._connection_failed)
+        self._preview_widget.start_ui()
+
+    def _connection_failed(self, msg):
+        self._toolbox.msg.emit(msg)
+        self._preview_widget.close()
+        self._preview_widget = None
+
+    def save_settings(self, settings):
+        self.settings = settings
+
+    def _preview_destroyed(self):
+        self._preview_widget = None
 
     def update_file_model(self, items):
         """Add given list of items to the file model. If None or
@@ -173,3 +210,30 @@ class DataInterface(ProjectItem):
     def stop_execution(self):
         """Stops executing this Data Interface."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
+
+
+class MappingPreviewWindow(QMainWindow):
+    settings_updated = Signal(dict)
+    connection_failed = Signal(str)
+
+    def __init__(self, filepath, settings):
+        super().__init__(flags=Qt.Window)
+
+        self._connection_manager = ConnectionManager(CSVConnector)
+        self._connection_manager._source = filepath
+        self._preview_widget = ImportPreviewWidget(self._connection_manager, self)
+        self.setCentralWidget(self._preview_widget)
+
+        self._preview_widget.rejected.connect(self.close)
+        self._preview_widget.accepted.connect(self.ok_pressed)
+
+        self._connection_manager.connectionReady.connect(self.show)
+        self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
+
+    def ok_pressed(self):
+        settings = self._preview_widget.get_settings_dict()
+        self.settings_updated.emit(settings)
+        self.close()
+
+    def start_ui(self):
+        self._connection_manager.init_connection()

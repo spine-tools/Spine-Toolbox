@@ -215,7 +215,8 @@ class SpineToolboxProject(MetaObject):
                     pass
                 elif item.item_type == "Data Interface":
                     # TODO: Save Data Interface mapping script path here
-                    pass
+                    item_dict[category][name]["mappings"] = item.settings
+                    item_dict[category][name]["import_file_path"] = item.import_file_path
                 else:
                     logging.error("Unrecognized item type: %s", item.item_type)
         # Save project to file
@@ -332,7 +333,10 @@ class SpineToolboxProject(MetaObject):
                 x = 0
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            self.add_data_interface(name, desc, x, y, verbosity=False)
+            mappings = data_interfaces[name].get("mappings", {})
+            filepath = data_interfaces[name].get("import_file_path","")
+            self.add_data_interface(name, desc, filepath, mappings, x, y, verbosity=False)
+
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -491,7 +495,7 @@ class SpineToolboxProject(MetaObject):
         if set_selected:
             self.set_item_selected(view)
 
-    def add_data_interface(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
+    def add_data_interface(self, name, description, import_file_path="", mappings=None, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Interface to project item model.
 
         Args:
@@ -502,8 +506,10 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
+        if mappings is None:
+            mappings = {}
         category = "Data Interfaces"
-        data_interface = DataInterface(self._toolbox, name, description, x, y)
+        data_interface = DataInterface(self._toolbox, name, description, import_file_path, mappings, x, y)
         di_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(data_interface, di_category)
         # Append connection model

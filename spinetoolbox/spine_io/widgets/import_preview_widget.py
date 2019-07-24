@@ -35,6 +35,7 @@ from models import MinimalTableModel
 
 
 class ImportPreviewWidget(QWidget):
+    accepted = Signal()
     rejected = Signal()
     mappedDataReady = Signal(dict, list)
     previewDataUpdated = Signal()
@@ -124,6 +125,7 @@ class ImportPreviewWidget(QWidget):
         self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.ok_pressed)
         self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.close_connection)
         self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.rejected.emit)
+        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.accepted.emit)
 
     def set_loading_status(self, status):
         """
@@ -238,6 +240,29 @@ class ImportPreviewWidget(QWidget):
             self.table.reset_model()
             self.table.set_horizontal_header_labels([])
         self.previewDataUpdated.emit()
+
+    def use_settings(self, settings):
+        # TODO load settings
+        pass
+
+    def get_settings_dict(self):
+        """Returns a dictionary with type of connector, connector options for tables, mappings for tables, selected tables.
+        
+        Returns:
+            [Dict] -- dict with settings
+        """
+        table_mappings = {
+            t: [m.to_dict() for m in self.table_mappings[t].get_mappings()] for t in self.selected_source_tables
+        }
+
+        settings = {
+            "table_mappings": table_mappings,
+            "table_options": self.connector.table_options,
+            "selected_tables": list(self.selected_source_tables),
+            "source": self.connector.source,
+            "source_type": self.connector.source_type,
+        }
+        return settings
 
     def close_connection(self):
         """

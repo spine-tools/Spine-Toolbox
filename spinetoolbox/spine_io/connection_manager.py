@@ -73,6 +73,18 @@ class ConnectionManager(QObject):
         self._option_widget = OptionWidget(self._connection.OPTIONS)
         self._option_widget.optionsChanged.connect(self._new_options)
 
+    @property
+    def table_options(self):
+        return self._table_options
+
+    @property
+    def source(self):
+        return self._source
+
+    @property
+    def source_type(self):
+        return self._connection.__name__
+
     def set_table(self, table):
         """Sets the current table of the data source.
         
@@ -197,12 +209,12 @@ class ConnectionManager(QObject):
         """Close and delete thread and worker
         """
         self.closeConnection.emit()
-        if self._thread:
-            self._thread.quit()
-            self._thread.wait()
         if self._worker:
             self._worker.deleteLater()
             self._worker = None
+        if self._thread:
+            self._thread.quit()
+            self._thread.wait()
 
 
 class ConnectionWorker(QObject):
