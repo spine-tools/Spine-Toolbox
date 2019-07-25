@@ -20,7 +20,7 @@ import logging
 import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-from PySide2.QtWidgets import QFileDialog, QFileIconProvider, QMainWindow
+from PySide2.QtWidgets import QFileDialog, QFileIconProvider, QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir
@@ -156,6 +156,7 @@ class DataInterface(ProjectItem):
         self._preview_widget = MappingPreviewWindow(importee, self.settings)
         self._preview_widget.settings_updated.connect(self.save_settings)
         self._preview_widget.connection_failed.connect(self._connection_failed)
+        self._preview_widget.destroyed.connect(self._preview_destroyed)
         self._preview_widget.start_ui()
 
     def _connection_failed(self, msg):
@@ -164,6 +165,7 @@ class DataInterface(ProjectItem):
         self._preview_widget = None
 
     def save_settings(self, settings):
+        print(settings)
         self.settings = settings
 
     def _preview_destroyed(self):
@@ -205,6 +207,23 @@ class DataInterface(ProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Data Interface <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
+
+        if self.settings.get("source", ""):
+            connector = CSVConnector()
+            connector.connect_to_source(self.settings["source"])
+            data, errors = connector.get_mapped_data(
+                self.settings["table_mappings"], self.settings["table_options"], max_rows=-1
+            )
+            self._toolbox.msg.emit(
+                "<b>{0}:</b> Read {1} data with {2} errors".format(
+                    self.name, sum(len(d) for d in data.values()), len(errors)
+                )
+            )
+            # TODO: data should be saved into a spine database:
+            # import_num, import_errors = spinedb_api.import_data(db_map, **data)
+            if errors:
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)
+
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
@@ -218,21 +237,35 @@ class MappingPreviewWindow(QMainWindow):
 
     def __init__(self, filepath, settings):
         super().__init__(flags=Qt.Window)
+        self.setAttribute(Qt.WA_DeleteOnClose)
 
         self._connection_manager = ConnectionManager(CSVConnector)
         self._connection_manager._source = filepath
         self._preview_widget = ImportPreviewWidget(self._connection_manager, self)
-        self.setCentralWidget(self._preview_widget)
+        self._preview_widget.use_settings(settings)
 
-        self._preview_widget.rejected.connect(self.close)
-        self._preview_widget.accepted.connect(self.ok_pressed)
+        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Abort | QDialogButtonBox.Cancel)
+        self._dialog_buttons.button(QDialogButtonBox.Ok).setText("Save and close")
+        self._dialog_buttons.button(QDialogButtonBox.Abort).setText("Save")
+        self._qw = QWidget()
+        self._qw.setLayout(QVBoxLayout())
+        self._qw.layout().addWidget(self._preview_widget)
+        self._qw.layout().addWidget(self._dialog_buttons)
+        self.setCentralWidget(self._qw)
+
+        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.save_and_close_clicked)
+        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
+        self._dialog_buttons.button(QDialogButtonBox.Abort).clicked.connect(self.saved_clicked)
 
         self._connection_manager.connectionReady.connect(self.show)
         self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
 
-    def ok_pressed(self):
+    def saved_clicked(self):
         settings = self._preview_widget.get_settings_dict()
         self.settings_updated.emit(settings)
+
+    def save_and_close_clicked(self):
+        self.saved_clicked()
         self.close()
 
     def start_ui(self):

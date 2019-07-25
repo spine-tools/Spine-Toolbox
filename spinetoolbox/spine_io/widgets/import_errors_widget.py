@@ -23,10 +23,6 @@ from PySide2.QtCore import Signal
 class ImportErrorWidget(QWidget):
     """Widget to display errors while importing and ask user for action."""
 
-    importWithErrors = Signal()
-    goBack = Signal()
-    rejected = Signal()
-
     def __init__(self, parent=None):
         super(ImportErrorWidget, self).__init__(parent)
 
@@ -39,20 +35,11 @@ class ImportErrorWidget(QWidget):
         self._ui_num_imports = QLabel()
         self._ui_error_list = QListWidget()
 
-        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Abort | QDialogButtonBox.Cancel)
-        self._dialog_buttons.button(QDialogButtonBox.Abort).setText("Back")
-
         # layout
         self.setLayout(QVBoxLayout())
         self.layout().addWidget(self._ui_num_imports)
         self.layout().addWidget(self._ui_num_errors)
         self.layout().addWidget(self._ui_error_list)
-        self.layout().addWidget(self._dialog_buttons)
-
-        # ok button
-        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.importWithErrors.emit)
-        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.rejected.emit)
-        self._dialog_buttons.button(QDialogButtonBox.Abort).clicked.connect(self.goBack.emit)
 
     def set_import_state(self, num_imported, errors):
         """Sets state of error widget.

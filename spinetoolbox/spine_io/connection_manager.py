@@ -72,6 +72,11 @@ class ConnectionManager(QObject):
         self._connection = connection
         self._option_widget = OptionWidget(self._connection.OPTIONS)
         self._option_widget.optionsChanged.connect(self._new_options)
+        self._is_connected = False
+
+    @property
+    def is_connected(self):
+        return self._is_connected
 
     @property
     def table_options(self):
@@ -109,8 +114,9 @@ class ConnectionManager(QObject):
         startTableGet: a signal that the worker in another thread is listening
                        to know when to run get a list of table names.
         """
-        self.fetchingData.emit()
-        self.startTableGet.emit()
+        if self.is_connected:
+            self.fetchingData.emit()
+            self.startTableGet.emit()
 
     def request_data(self, table=None, max_rows=-1):
         """Request data from emits dataReady to with data
@@ -119,9 +125,10 @@ class ConnectionManager(QObject):
             table {str} -- which table to get data from (default: {None})
             max_rows {int} -- how many rows to read (default: {-1})
         """
-        options = self._option_widget.get_options()
-        self.fetchingData.emit()
-        self.startDataGet.emit(table, options, max_rows)
+        if self.is_connected:
+            options = self._option_widget.get_options()
+            self.fetchingData.emit()
+            self.startDataGet.emit(table, options, max_rows)
 
     def request_mapped_data(self, table_mappings, max_rows=-1):
         """Get mapped data from csv file
@@ -132,15 +139,16 @@ class ConnectionManager(QObject):
         Keyword Arguments:
             max_rows {int} -- number of rows to read, if -1 read all rows (default: {-1})
         """
-        options = {}
-        self._table_options[self._current_table] = self._option_widget.get_options()
-        for table_name in table_mappings:
-            if table_name in self._table_options:
-                options[table_name] = self._table_options[table_name]
-            else:
-                options[table_name] = {}
-        self.fetchingData.emit()
-        self.startMappedDataGet.emit(table_mappings, options, max_rows)
+        if self.is_connected:
+            options = {}
+            self._table_options[self._current_table] = self._option_widget.get_options()
+            for table_name in table_mappings:
+                if table_name in self._table_options:
+                    options[table_name] = self._table_options[table_name]
+                else:
+                    options[table_name] = {}
+            self.fetchingData.emit()
+            self.startMappedDataGet.emit(table_mappings, options, max_rows)
 
     def connection_ui(self):
         """
@@ -163,9 +171,9 @@ class ConnectionManager(QObject):
         # create new thread and worker
         self._thread = QThread()
         self._worker = ConnectionWorker(self._source, self._connection)
-        # self._worker.moveToThread(self._thread)
+        self._worker.moveToThread(self._thread)
         # connect worker signals
-        self._worker.connectionReady.connect(self.connectionReady.emit)
+        self._worker.connectionReady.connect(self._handle_connection_ready)
         self._worker.tablesReady.connect(self._handle_tables_ready)
         self._worker.dataReady.connect(self.dataReady.emit)
         self._worker.mappedDataReady.connect(self.mappedDataReady.emit)
@@ -181,6 +189,10 @@ class ConnectionManager(QObject):
         self._thread.started.connect(self._worker.init_connection)
         self._thread.start()
 
+    def _handle_connection_ready(self):
+        self._is_connected = True
+        self.connectionReady.emit()
+
     def _handle_tables_ready(self, table_options):
         if isinstance(table_options, list):
             table_options = {name: {} for name in table_options}
@@ -191,13 +203,23 @@ class ConnectionManager(QObject):
         self.tablesReady.emit(tables)
         # update options if a sheet is selected
         if self._current_table and self._current_table in self._table_options:
-            self._option_widget.set_options(self._table_options[self.current_sheet])
+            self._option_widget.set_options(self._table_options[self._current_table])
 
     def _new_options(self):
         if self._current_table:
             options = self._option_widget.get_options()
             self._table_options.update({self._current_table: options})
         self.request_data(self._current_table, 100)
+
+    def set_table_options(self, options):
+        """Sets connection manager options for current connector
+        
+        Arguments:
+            options {dict} -- Dict with option settings
+        """
+        self._table_options.update(options)
+        if self._current_table:
+            self._option_widget.set_options(options=self._table_options.get(self._current_table, {}))
 
     def option_widget(self):
         """
@@ -208,6 +230,7 @@ class ConnectionManager(QObject):
     def close_connection(self):
         """Close and delete thread and worker
         """
+        self._is_connected = False
         self.closeConnection.emit()
         if self._worker:
             self._worker.deleteLater()

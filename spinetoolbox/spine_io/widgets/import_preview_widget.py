@@ -16,7 +16,7 @@ Contains ImportPreviewWidget class.
 :date:   1.6.2019
 """
 
-from spinedb_api import ObjectClassMapping, Mapping
+from spinedb_api import ObjectClassMapping, Mapping, dict_to_map
 from PySide2.QtWidgets import (
     QWidget,
     QListWidget,
@@ -35,8 +35,7 @@ from models import MinimalTableModel
 
 
 class ImportPreviewWidget(QWidget):
-    accepted = Signal()
-    rejected = Signal()
+    tableChecked = Signal()
     mappedDataReady = Signal(dict, list)
     previewDataUpdated = Signal()
 
@@ -60,8 +59,6 @@ class ImportPreviewWidget(QWidget):
         self._ui_mapper = MappingWidget()
         self._ui_preview_menu = MappingTableMenu(self._ui_table)
 
-        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-
         # layout
         self.setLayout(QVBoxLayout())
         main_splitter = QSplitter()
@@ -84,7 +81,6 @@ class ImportPreviewWidget(QWidget):
         mapping_layout.addWidget(self._ui_mapper)
         list_layout.addWidget(self._ui_list)
         preview_layout.addWidget(self.connector.option_widget())
-        self.layout().addWidget(self._dialog_buttons)
         preview_layout.addWidget(self._ui_table)
 
         # connect signals
@@ -121,11 +117,14 @@ class ImportPreviewWidget(QWidget):
         # preview new preview data
         self.previewDataUpdated.connect(lambda: self._ui_mapper.set_data_source_column_num(self.table.columnCount()))
 
-        # ok button
-        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.ok_pressed)
-        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.close_connection)
-        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.rejected.emit)
-        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.accepted.emit)
+    @property
+    def checked_tables(self):
+        checked_items = []
+        for i in range(self._ui_list.count()):
+            item = self._ui_list.item(i)
+            if item.checkState() == Qt.Checked:
+                checked_items.append(item.text())
+        return checked_items
 
     def set_loading_status(self, status):
         """
@@ -161,21 +160,12 @@ class ImportPreviewWidget(QWidget):
             self.selected_source_tables.add(name)
         else:
             self.selected_source_tables.discard(name)
-        self.update_ok_state()
+        self.tableChecked.emit()
 
     def handle_connector_error(self, error_message):
         self._ui_error.showMessage(error_message)
 
-    def update_ok_state(self):
-        """
-        Set enable state of OK button.
-        """
-        if self.selected_source_tables:
-            self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(True)
-        else:
-            self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(False)
-
-    def ok_pressed(self):
+    def request_mapped_data(self):
         tables_mappings = {t: self.table_mappings[t].get_mappings() for t in self.selected_source_tables}
         self.connector.request_mapped_data(tables_mappings, max_rows=-1)
 
@@ -206,6 +196,7 @@ class ImportPreviewWidget(QWidget):
 
         # current selected table
         selected = self._ui_list.selectedItems()
+        self.selected_source_tables = set(tables.keys()).difference(self.selected_source_tables)
 
         # empty tables list and add new tables
         self._ui_list.blockSignals(True)
@@ -224,11 +215,16 @@ class ImportPreviewWidget(QWidget):
         self._ui_list.currentItemChanged.connect(self.select_table)
         self._ui_list.blockSignals(False)
 
-        # reselect table if existing
+        # reselect table if existing otherwise select first table
         if selected and selected[0].text() in tables:
             table = selected[0].text()
             self._ui_list.setCurrentRow(tables.index(table), QItemSelectionModel.SelectCurrent)
-        self.update_ok_state()
+        elif tables:
+            # select first item
+            self._ui_list.setCurrentRow(0, QItemSelectionModel.SelectCurrent)
+        if self._ui_list.selectedItems():
+            self.select_table(self._ui_list.selectedItems()[0])
+        self.tableChecked.emit()
 
     def update_preview_data(self, data, header):
         if data:
@@ -242,8 +238,14 @@ class ImportPreviewWidget(QWidget):
         self.previewDataUpdated.emit()
 
     def use_settings(self, settings):
-        # TODO load settings
-        pass
+        self.table_mappings = {
+            table: DataMappingListModel([dict_to_map(m) for m in mappings])
+            for table, mappings in settings.get("table_mappings", {}).items()
+        }
+        self.connector.set_table_options(settings.get("table_options", {}))
+        self.selected_source_tables.update(set(settings.get("selected_tables", [])))
+        if self._ui_list.selectedItems():
+            self.select_table(self._ui_list.selectedItems()[0])
 
     def get_settings_dict(self):
         """Returns a dictionary with type of connector, connector options for tables, mappings for tables, selected tables.
@@ -252,7 +254,7 @@ class ImportPreviewWidget(QWidget):
             [Dict] -- dict with settings
         """
         table_mappings = {
-            t: [m.to_dict() for m in self.table_mappings[t].get_mappings()] for t in self.selected_source_tables
+            t: [m.to_dict() for m in mappings.get_mappings()] for t, mappings in self.table_mappings.items()
         }
 
         settings = {

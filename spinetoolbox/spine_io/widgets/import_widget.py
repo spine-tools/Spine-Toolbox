@@ -54,23 +54,28 @@ class ImportDialog(QDialog):
         self.connector_list = {c.DISPLAY_NAME: c for c in self.connector_list}
         self._selected_connector = None
         self.active_connector = None
+        self._current_view = "connector"
 
         # create widgets
         self._import_preview = None
         self._ui_list = QListWidget()
         self._error_widget = ImportErrorWidget()
         self._error_widget.hide()
-        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Abort | QDialogButtonBox.Cancel)
+        self._dialog_buttons.button(QDialogButtonBox.Abort).setText("Back")
+
+        self._layout = QVBoxLayout()
 
         # layout
         self.select_widget = QWidget()
         self.select_widget.setLayout(QVBoxLayout())
         self.select_widget.layout().addWidget(self._ui_list)
-        self.select_widget.layout().addWidget(self._dialog_buttons)
 
         self.setLayout(QVBoxLayout())
-        self.layout().addWidget(self.select_widget)
-        self.layout().addWidget(self._error_widget)
+        self.layout().addLayout(self._layout)
+        self.layout().addWidget(self._dialog_buttons)
+        self._layout.addWidget(self._error_widget)
+        self._layout.addWidget(self.select_widget)
 
         # set list items
         self._ui_list.blockSignals(True)
@@ -81,17 +86,14 @@ class ImportDialog(QDialog):
         # connect signals
         self._ui_list.currentItemChanged.connect(self.connector_selected)
         self._ui_list.activated.connect(self.launch_import_preview)
-        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.launch_import_preview)
-        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.reject)
-
-        self._error_widget.rejected.connect(self.reject_import)
-        self._error_widget.rejected.connect(self.reject)
-        self._error_widget.importWithErrors.connect(self.accept)
-        self._error_widget.goBack.connect(self.reject_import)
-        self._error_widget.goBack.connect(self.set_preview_as_main_widget)
+        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.ok_clicked)
+        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.cancel_clicked)
+        self._dialog_buttons.button(QDialogButtonBox.Abort).clicked.connect(self.back_clicked)
 
         # init ok button
         self.set_ok_button_availability()
+
+        self._dialog_buttons.button(QDialogButtonBox.Abort).hide()
 
     @property
     def mapped_data(self):
@@ -109,10 +111,18 @@ class ImportDialog(QDialog):
         self.set_ok_button_availability()
 
     def set_ok_button_availability(self):
-        if self._selected_connector:
-            self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(True)
+        if self._current_view == "connector":
+            if self._selected_connector:
+                self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(True)
+            else:
+                self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(False)
+        elif self._current_view == "preview":
+            if self._import_preview.checked_tables:
+                self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(True)
+            else:
+                self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(False)
         else:
-            self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(False)
+            self._dialog_buttons.button(QDialogButtonBox.Ok).setEnabled(True)
 
     @busy_effect
     def import_data(self, data, errors):
@@ -120,11 +130,11 @@ class ImportDialog(QDialog):
         try:
             import_num, import_errors = spinedb_api.import_data(self._db_map, **data)
         except spinedb_api.SpineIntegrityError as err:
-            self.reject_import()
+            self._db_map.rollback_session()
             self._error_widget.set_import_state(0, [err.msg])
             self.set_error_widget_as_main_widget()
         except spinedb_api.SpineDBAPIError as err:
-            self.reject_import()
+            self._db_map.rollback_session()
             self._error_widget.set_import_state(0, ["Unable to import Data: %s", err.msg])
             self.set_error_widget_as_main_widget()
         else:
@@ -139,6 +149,22 @@ class ImportDialog(QDialog):
         if self.import_data(data, errors):
             self.accept()
 
+    def ok_clicked(self):
+        if self._current_view == "connector":
+            self.launch_import_preview()
+        elif self._current_view == "preview":
+            self._import_preview.request_mapped_data()
+        elif self._current_view == "error":
+            self.accept()
+
+    def cancel_clicked(self):
+        self._db_map.rollback_session()
+        self.reject()
+
+    def back_clicked(self):
+        self._db_map.rollback_session()
+        self.set_preview_as_main_widget()
+
     def launch_import_preview(self):
         if self._selected_connector:
             # create instance of connector
@@ -148,10 +174,10 @@ class ImportDialog(QDialog):
                 # Create instance of ImportPreviewWidget and configure
                 self._import_preview = ImportPreviewWidget(self.active_connector, self)
                 self._import_preview.set_loading_status(True)
-                self._import_preview.rejected.connect(self.reject)
+                self._import_preview.tableChecked.connect(self.set_ok_button_availability)
                 # Connect data_ready method to the widget
                 self._import_preview.mappedDataReady.connect(self.data_ready)
-                self.layout().addWidget(self._import_preview)
+                self._layout.addWidget(self._import_preview)
                 self.active_connector.connectionFailed.connect(self._handle_failed_connection)
                 self.active_connector.init_connection()
                 # show preview widget
@@ -192,17 +218,20 @@ class ImportDialog(QDialog):
         self.layout().addWidget(temp_widget)
 
     def set_preview_as_main_widget(self):
+        self._current_view = "preview"
         self.select_widget.hide()
         self._error_widget.hide()
         self._import_preview.show()
-
-    def reject_import(self):
-        self._db_map.rollback_session()
+        self._dialog_buttons.button(QDialogButtonBox.Abort).hide()
+        self.set_ok_button_availability()
 
     def set_error_widget_as_main_widget(self):
+        self._current_view = "error"
         self.select_widget.hide()
         self._error_widget.show()
         self._import_preview.hide()
+        self._dialog_buttons.button(QDialogButtonBox.Abort).show()
+        self.set_ok_button_availability()
 
 
 if __name__ == '__main__':
