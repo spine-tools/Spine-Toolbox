@@ -21,6 +21,8 @@ import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileDialog, QFileIconProvider, QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout
+from spinedb_api import DiffDatabaseMapping, import_data
+
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir
@@ -165,7 +167,6 @@ class DataInterface(ProjectItem):
         self._preview_widget = None
 
     def save_settings(self, settings):
-        print(settings)
         self.settings = settings
 
     def _preview_destroyed(self):
@@ -208,7 +209,13 @@ class DataInterface(ProjectItem):
         self._toolbox.msg.emit("Executing Data Interface <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
 
-        if self.settings.get("source", ""):
+        inst = self._toolbox.project().execution_instance
+
+        # TODO: Right now it's getting incoming database reference and inserting into that.
+        # However it's unclear what this should do really. Push? then it would need the reference of what it's pointing to.
+        dbs = inst.ds_refs.get("sqlite", [])
+
+        if self.settings.get("source", "") and dbs:
             connector = CSVConnector()
             connector.connect_to_source(self.settings["source"])
             data, errors = connector.get_mapped_data(
@@ -219,10 +226,29 @@ class DataInterface(ProjectItem):
                     self.name, sum(len(d) for d in data.values()), len(errors)
                 )
             )
-            # TODO: data should be saved into a spine database:
-            # import_num, import_errors = spinedb_api.import_data(db_map, **data)
             if errors:
+                # TODO how are errors displayed? there can be quite many of these. Maybe create a log file in project item folder that you can open and view
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)
+                return
+            for db in dbs:
+                db_map = DiffDatabaseMapping("sqlite:///" + db, username="Mapper")
+                import_num, import_errors = import_data(db_map, **data)
+                if import_errors:
+                    # TODO how are errors displayed? there can be quite many of these. Maybe create a log file in project item folder that you can open and view
+                    db_map.rollback_session()
+                    self._toolbox.msg.emit(
+                        "<b>{0}:</b> {1} errors when importing to {2}, rolling back".format(
+                            self.name, len(import_errors), db
+                        )
+                    )
+                    self._toolbox.msg.emit("<b>{0}:</b> {1}".format(self.name, [er.msg for er in import_errors]))
+                    continue
+                db_map.commit_session("imported with mapper")
+                self._toolbox.msg.emit(
+                    "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
+                        self.name, import_num, len(import_errors), db
+                    )
+                )
 
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
