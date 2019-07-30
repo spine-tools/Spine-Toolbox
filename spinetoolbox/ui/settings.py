@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/settings.ui',
-# licensing of '../spinetoolbox/ui/settings.ui' applies.
+# Form implementation generated from reading ui file '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui',
+# licensing of '/home/manuelma/Codes/spine/toolbox/bin/../spinetoolbox/ui/settings.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -49,7 +49,7 @@ class Ui_SettingsForm(object):
         self.scrollArea.setWidgetResizable(True)
         self.scrollArea.setObjectName("scrollArea")
         self.scrollAreaWidgetContents = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, 0, 417, 540))
+        self.scrollAreaWidgetContents.setGeometry(QtCore.QRect(0, -71, 417, 540))
         self.scrollAreaWidgetContents.setAutoFillBackground(True)
         self.scrollAreaWidgetContents.setObjectName("scrollAreaWidgetContents")
         self.verticalLayout_5 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents)
@@ -382,7 +382,7 @@ class Ui_SettingsForm(object):
         self.lineEdit_gams_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using GAMS in system path", None, -1))
         self.toolButton_browse_gams.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick GAMS by browsing and selecting a GAMS executable (gams.exe on Windows)</p></body></html>", None, -1))
         self.groupBox_julia.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Julia", None, -1))
-        self.label_5.setText(QtWidgets.QApplication.translate("SettingsForm", "Julia interpreter", None, -1))
+        self.label_5.setText(QtWidgets.QApplication.translate("SettingsForm", "Julia executable", None, -1))
         self.toolButton_browse_julia.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick Julia interpreter by using a file browser</p></body></html>", None, -1))
         self.lineEdit_julia_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Julia interpreter. Leave blank to use Julia defined in your system path.</p></body></html>", None, -1))
         self.lineEdit_julia_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using Julia executable in system path", None, -1))

@@ -1084,7 +1084,7 @@ class TreeViewForm(DataStoreForm):
                 for i in rows
             ]
             try:
-                db_map.remove_items(parameter_value_ids={x['id'] for x in parameters})
+                db_map.remove_items(parameter_definition_ids={x['id'] for x in parameters})
                 for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
                     model.removeRows(row, count)
                 value_model.remove_parameters(db_map, parameters)

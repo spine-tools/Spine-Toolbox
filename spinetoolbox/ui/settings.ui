@@ -106,7 +106,7 @@
         <property name="geometry">
          <rect>
           <x>0</x>
-          <y>0</y>
+          <y>-71</y>
           <width>417</width>
           <height>540</height>
          </rect>
@@ -420,7 +420,7 @@
                </font>
               </property>
               <property name="text">
-               <string>Julia interpreter</string>
+               <string>Julia executable</string>
               </property>
              </widget>
             </item>
