@@ -156,6 +156,22 @@ widgets.data\_store\_widget module
    :undoc-members:
    :show-inheritance:
 
+widgets.datetime\_editor module
+-------------------------------
+
+.. automodule:: widgets.datetime_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.duration\_editor module
+-------------------------------
+
+.. automodule:: widgets.duration_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 widgets.graph\_view\_widget module
 ----------------------------------
 
@@ -164,10 +180,50 @@ widgets.graph\_view\_widget module
    :undoc-members:
    :show-inheritance:
 
+widgets.indexed\_value\_table\_context\_menu module
+---------------------------------------------------
+
+.. automodule:: widgets.indexed_value_table_context_menu
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 widgets.julia\_repl\_widget module
 ----------------------------------
 
 .. automodule:: widgets.julia_repl_widget
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.parameter\_value\_editor module
+---------------------------------------
+
+.. automodule:: widgets.parameter_value_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.plain\_parameter\_value\_editor module
+----------------------------------------------
+
+.. automodule:: widgets.plain_parameter_value_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.plot\_canvas module
+---------------------------
+
+.. automodule:: widgets.plot_canvas
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.plot\_widget module
+---------------------------
+
+.. automodule:: widgets.plot_widget
    :members:
    :undoc-members:
    :show-inheritance:
@@ -184,6 +240,14 @@ widgets.python\_repl\_widget module
 -----------------------------------
 
 .. automodule:: widgets.python_repl_widget
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.report\_plotting\_failure module
+----------------------------------------
+
+.. automodule:: widgets.report_plotting_failure
    :members:
    :undoc-members:
    :show-inheritance:
@@ -208,6 +272,30 @@ widgets.tabular\_view\_widget module
 ------------------------------------
 
 .. automodule:: widgets.tabular_view_widget
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.time\_pattern\_editor module
+------------------------------------
+
+.. automodule:: widgets.time_pattern_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.time\_series\_fixed\_resolution\_editor module
+------------------------------------------------------
+
+.. automodule:: widgets.time_series_fixed_resolution_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+widgets.time\_series\_variable\_resolution\_editor module
+---------------------------------------------------------
+
+.. automodule:: widgets.time_series_variable_resolution_editor
    :members:
    :undoc-members:
    :show-inheritance:
