@@ -152,31 +152,34 @@ class View(ProjectItem):
     @Slot(bool, name="open_graph_view_btn_clicked")
     def open_graph_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Graph view' button."""
-        index = self._toolbox.ui.treeView_view.currentIndex()
-        if not index.isValid():
+        selected_indexes  = self._toolbox.ui.treeView_view.selectionModel().selectedRows()
+        if not selected_indexes:
             # If only one reference available select it automatically
             if len(self._references) == 1:
-                index = self._toolbox.ui.treeView_view.model().index(0, 0)
-                self._toolbox.ui.treeView_view.setCurrentIndex(index)
+                selected_indexes = [self._toolbox.ui.treeView_view.model().index(0, 0)]
+                self._toolbox.ui.treeView_view.setCurrentIndex(selected_indexes[0])
             else:
                 self._toolbox.msg_warning.emit("Please select a reference to view")
                 return
-        self.open_graph_view(index)
+        self.open_graph_view(selected_indexes)
 
     @busy_effect
-    def open_graph_view(self, index):
+    def open_graph_view(self, indexes):
         """Open reference in Graph view form.
 
         Args:
             index (QModelIndex): Index of the selected reference in View properties
         """
-        url = self._references[index.row()]
-        try:
-            db_map = DiffDatabaseMapping(url, url.username)
-        except (SpineDBAPIError, SpineDBVersionError) as e:
-            self._toolbox.msg_error.emit(e.msg)
-            return
-        graph_view_form = GraphViewForm(self, {url.database: db_map}, read_only=True)
+        db_maps = dict()
+        for index in indexes:
+            url = self._references[index.row()]
+            try:
+                db_map = DiffDatabaseMapping(url, url.username)
+            except (SpineDBAPIError, SpineDBVersionError) as e:
+                self._toolbox.msg_error.emit(e.msg)
+                return
+            db_maps[url.database] = db_map
+        graph_view_form = GraphViewForm(self, db_maps, read_only=True)
         graph_view_form.show()
         graph_view_form.destroyed.connect(lambda: self.graph_view_form_refs.pop(url))
         self.graph_view_form_refs[url] = graph_view_form

@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -357,7 +357,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>5</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -440,8 +440,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>338</height>
+              <width>336</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -1250,8 +1250,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>338</height>
+              <width>336</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1657,8 +1657,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>338</height>
+              <width>336</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1980,8 +1980,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>338</height>
+              <width>336</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -1997,6 +1997,9 @@
                </property>
                <property name="acceptDrops">
                 <bool>true</bool>
+               </property>
+               <property name="selectionMode">
+                <enum>QAbstractItemView::MultiSelection</enum>
                </property>
                <property name="rootIsDecorated">
                 <bool>false</bool>
@@ -2175,8 +2178,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>370</width>
-              <height>338</height>
+              <width>333</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_21">
@@ -2663,11 +2666,11 @@
            <property name="cornerButtonEnabled">
             <bool>false</bool>
            </property>
-           <attribute name="horizontalHeaderHighlightSections">
-            <bool>false</bool>
-           </attribute>
            <attribute name="horizontalHeaderMinimumSectionSize">
             <number>35</number>
+           </attribute>
+           <attribute name="horizontalHeaderHighlightSections">
+            <bool>false</bool>
            </attribute>
            <attribute name="horizontalHeaderStretchLastSection">
             <bool>false</bool>

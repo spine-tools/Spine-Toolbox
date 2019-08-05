@@ -63,7 +63,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 26))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -190,7 +190,7 @@ class Ui_MainWindow(object):
         self.scrollArea_5.setWidgetResizable(True)
         self.scrollArea_5.setObjectName("scrollArea_5")
         self.scrollAreaWidgetContents_7 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_7.setGeometry(QtCore.QRect(0, 0, 375, 338))
+        self.scrollAreaWidgetContents_7.setGeometry(QtCore.QRect(0, 0, 336, 364))
         self.scrollAreaWidgetContents_7.setObjectName("scrollAreaWidgetContents_7")
         self.verticalLayout_25 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_7)
         self.verticalLayout_25.setObjectName("verticalLayout_25")
@@ -537,7 +537,7 @@ class Ui_MainWindow(object):
         self.scrollArea_2.setWidgetResizable(True)
         self.scrollArea_2.setObjectName("scrollArea_2")
         self.scrollAreaWidgetContents_2 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 375, 338))
+        self.scrollAreaWidgetContents_2.setGeometry(QtCore.QRect(0, 0, 336, 364))
         self.scrollAreaWidgetContents_2.setObjectName("scrollAreaWidgetContents_2")
         self.verticalLayout_16 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_2)
         self.verticalLayout_16.setObjectName("verticalLayout_16")
@@ -707,7 +707,7 @@ class Ui_MainWindow(object):
         self.scrollArea_3.setWidgetResizable(True)
         self.scrollArea_3.setObjectName("scrollArea_3")
         self.scrollAreaWidgetContents_3 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 375, 338))
+        self.scrollAreaWidgetContents_3.setGeometry(QtCore.QRect(0, 0, 336, 364))
         self.scrollAreaWidgetContents_3.setObjectName("scrollAreaWidgetContents_3")
         self.verticalLayout_17 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_3)
         self.verticalLayout_17.setObjectName("verticalLayout_17")
@@ -836,7 +836,7 @@ class Ui_MainWindow(object):
         self.scrollArea_4.setWidgetResizable(True)
         self.scrollArea_4.setObjectName("scrollArea_4")
         self.scrollAreaWidgetContents_4 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 375, 338))
+        self.scrollAreaWidgetContents_4.setGeometry(QtCore.QRect(0, 0, 336, 364))
         self.scrollAreaWidgetContents_4.setObjectName("scrollAreaWidgetContents_4")
         self.verticalLayout_18 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_4)
         self.verticalLayout_18.setObjectName("verticalLayout_18")
@@ -846,6 +846,7 @@ class Ui_MainWindow(object):
         self.treeView_view.setFont(font)
         self.treeView_view.setContextMenuPolicy(QtCore.Qt.CustomContextMenu)
         self.treeView_view.setAcceptDrops(True)
+        self.treeView_view.setSelectionMode(QtWidgets.QAbstractItemView.MultiSelection)
         self.treeView_view.setRootIsDecorated(False)
         self.treeView_view.setObjectName("treeView_view")
         self.verticalLayout_18.addWidget(self.treeView_view)
@@ -914,7 +915,7 @@ class Ui_MainWindow(object):
         self.scrollArea_6.setWidgetResizable(True)
         self.scrollArea_6.setObjectName("scrollArea_6")
         self.scrollAreaWidgetContents_5 = QtWidgets.QWidget()
-        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 370, 338))
+        self.scrollAreaWidgetContents_5.setGeometry(QtCore.QRect(0, 0, 333, 364))
         self.scrollAreaWidgetContents_5.setObjectName("scrollAreaWidgetContents_5")
         self.verticalLayout_21 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_5)
         self.verticalLayout_21.setObjectName("verticalLayout_21")
@@ -1265,7 +1266,7 @@ class Ui_MainWindow(object):
         self.menubar.addAction(self.menuHelp.menuAction())
 
         self.retranslateUi(MainWindow)
-        self.tabWidget_item_properties.setCurrentIndex(5)
+        self.tabWidget_item_properties.setCurrentIndex(3)
         self.tabWidget.setCurrentIndex(0)
         QtCore.QMetaObject.connectSlotsByName(MainWindow)
         MainWindow.setTabOrder(self.tabWidget, self.treeView_project)
@@ -1448,8 +1449,8 @@ class Ui_MainWindow(object):
         self.actionExport_project_to_GraphML.setText(QtWidgets.QApplication.translate("MainWindow", "Export project to GraphML", None, -1))
         self.actionAdd_Data_Interface.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1))
 
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc
