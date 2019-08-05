@@ -26,8 +26,8 @@ from plotting import (
     plot_pivot_column,
     plot_selection,
     PlottingError,
-    GraphAndTreeViewPlottingSupport,
-    PivotTablePlottingSupport,
+    GraphAndTreeViewPlottingHints,
+    PivotTablePlottingHints,
 )
 from tabularview_models import PivotTableModel
 from widgets.plot_widget import PlotWidget
@@ -98,7 +98,7 @@ class _MockTreeGraphViewModel(QAbstractTableModel):
 def mock_graph_tree_view_plotting_support():
     mock_table_view = Mock()
     mock_table_view.isColumnHidden.return_value = False
-    return GraphAndTreeViewPlottingSupport(mock_table_view)
+    return GraphAndTreeViewPlottingHints(mock_table_view)
 
 
 class TestPlotting(unittest.TestCase):
@@ -109,7 +109,7 @@ class TestPlotting(unittest.TestCase):
 
     def test_plot_pivot_column_float_type(self):
         model = _make_pivot_model()
-        support = PivotTablePlottingSupport()
+        support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 1, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
@@ -117,7 +117,7 @@ class TestPlotting(unittest.TestCase):
 
     def test_plot_pivot_column_int_type(self):
         model = _make_pivot_model()
-        support = PivotTablePlottingSupport()
+        support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)
@@ -125,7 +125,7 @@ class TestPlotting(unittest.TestCase):
 
     def test_plot_pivot_column_time_series_type(self):
         model = _make_pivot_model()
-        support = PivotTablePlottingSupport()
+        support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 3, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 3)
@@ -139,7 +139,7 @@ class TestPlotting(unittest.TestCase):
         for row in range(2, 5):
             for column in range(1, 3):
                 selected_indexes.append(model.index(row, column))
-        support = PivotTablePlottingSupport()
+        support = PivotTablePlottingHints()
         plot_widget = plot_selection(model, selected_indexes, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 2)
@@ -149,7 +149,7 @@ class TestPlotting(unittest.TestCase):
     def test_plot_pivot_column_with_x_column(self):
         model = _make_pivot_model()
         model.set_plot_x_column(1, True)
-        support = PivotTablePlottingSupport()
+        support = PivotTablePlottingHints()
         plot_widget = plot_pivot_column(model, 2, support)
         lines = plot_widget.canvas.axes.get_lines()
         self.assertEqual(len(lines), 1)

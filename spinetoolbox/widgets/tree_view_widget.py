@@ -40,7 +40,7 @@ from helpers import busy_effect, int_list_to_row_count_tuples
 from plotting import (
     plot_selection,
     PlottingError,
-    GraphAndTreeViewPlottingSupport,
+    GraphAndTreeViewPlottingHints,
 )
 
 
@@ -948,8 +948,8 @@ class TreeViewForm(DataStoreForm):
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:
-                support = GraphAndTreeViewPlottingSupport(table_view)
-                plot_widget = plot_selection(model, selection, support)
+                hints = GraphAndTreeViewPlottingHints(table_view)
+                plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
                 report_plotting_failure(error)
                 return
