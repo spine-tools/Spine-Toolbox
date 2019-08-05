@@ -169,7 +169,7 @@ class ObjectTreeModel(QStandardItemModel):
         """Sweep the tree from the given index towards the leaves, and apply `call` on each."""
         if call:
             call(index)
-        if not self.hasChildren(index):
+        if self.canFetchMore(index) or not self.hasChildren(index):
             return
         current = index
         back_to_parent = False  # True if moving back to the parent index

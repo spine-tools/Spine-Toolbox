@@ -690,10 +690,12 @@ class TreeViewForm(DataStoreForm):
             pass
         relationship_tree_context_menu.deleteLater()
 
+    @busy_effect
     def fully_expand_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
             self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.expand)
 
+    @busy_effect
     def fully_collapse_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
             self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.collapse)
