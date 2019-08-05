@@ -814,13 +814,18 @@ class PivotTableModelMenu(QMenu):
 
     def plot(self):
         """Plots the selected cells in the pivot table."""
+        selected_indexes = self._get_selected_indexes()
+        support = PivotTablePlottingSupport()
         try:
-            support = PivotTablePlottingSupport()
-            plot_window = plot_selection(self._model, self._get_selected_indexes(), support)
+            plot_window = plot_selection(self._model, selected_indexes, support)
         except PlottingError as error:
             report_plotting_failure(error)
             return
-        plot_window.setWindowTitle("Plot")
+        plotted_column_names = set()
+        for index in selected_indexes:
+            label = support.column_label(self._model, index.column())
+            plotted_column_names.add(label)
+        plot_window.setWindowTitle("Plot    -- {} --".format(", ".join(plotted_column_names)))
         plot_window.show()
 
     def request_menu(self, QPos=None):
@@ -898,12 +903,14 @@ class PivotTableHorizontalHeaderMenu(QMenu):
         except PlottingError as error:
             report_plotting_failure(error)
             return
-        plot_window.setWindowTitle("Plot")
+        plot_window.setWindowTitle(
+            "Plot    -- {} --".format(support.column_label(self._model, self._model_index.column()))
+        )
         plot_window.show()
 
     @Slot("QPoint", name="request_menu")
     def request_menu(self, pos):
-        """Shows the context menu on the sceern."""
+        """Shows the context menu on the screen."""
         self.move(self.parent().mapToGlobal(pos))
         self._model_index = self.parent().indexAt(pos)
         if self._model.index_in_top_left(self._model_index):

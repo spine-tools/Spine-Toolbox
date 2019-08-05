@@ -36,7 +36,6 @@ from helpers import busy_effect, fix_name_ambiguity
 from plotting import (
     plot_selection,
     PlottingError,
-    tree_graph_view_parameter_value_name,
     GraphAndTreeViewPlottingSupport,
 )
 
@@ -1017,7 +1016,19 @@ class GraphViewForm(DataStoreForm):
             except PlottingError as error:
                 report_plotting_failure(error)
                 return
-            plot_widget.setWindowTitle("Plot")
+            if (
+                table_view is self.ui.tableView_object_parameter_value
+                or table_view is self.ui.tableView_object_parameter_definition
+            ):
+                plot_window_title = "Object parameter plot    -- {} --".format(column_name)
+            elif (
+                table_view is self.ui.tableView_relationship_parameter_value
+                or table_view is self.ui.tableView_relationship_parameter_definition
+            ):
+                plot_window_title = "Relationship parameter plot    -- {} --".format(column_name)
+            else:
+                plot_window_title = "Plot"
+            plot_widget.setWindowTitle(plot_window_title)
             plot_widget.show()
         menu.deleteLater()
 

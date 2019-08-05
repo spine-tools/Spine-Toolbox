@@ -25,7 +25,7 @@ The main entrance points to plotting are:
 
 import numpy as np
 from PySide2.QtCore import Qt
-from spinedb_api import from_database, TimeSeries
+from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
 from widgets.plot_widget import PlotWidget
 
 
@@ -111,7 +111,10 @@ def _collect_single_column_values(model, column, rows, support):
             continue
         data = model.data(data_index, role=Qt.EditRole)
         if data:
-            value = from_database(data)
+            try:
+                value = from_database(data)
+            except ParameterValueFormatError:
+                value = None
             if isinstance(value, (float, int)):
                 values.append(float(value))
             elif isinstance(value, TimeSeries):
@@ -173,6 +176,8 @@ def plot_pivot_column(model, column, support):
     _add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
+    plot_lines = plot_widget.canvas.axes.get_lines()
+    plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
     return plot_widget
 
 
