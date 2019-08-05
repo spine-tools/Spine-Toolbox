@@ -160,7 +160,7 @@ class TestTreeViewForm(unittest.TestCase):
             mock_db_map.add_wide_relationships.return_value = qry(), []
             mock_db_map.add_parameter_definitions.return_value = qry(), []
             mock_db_map.add_parameter_values.return_value = qry(), []
-            self.tree_view_form = TreeViewForm(mock_project, mock_db=mock_db_map)
+            self.tree_view_form = TreeViewForm(mock_project, {"mock_db": mock_db_map})
             self.fish_class = None
             self.dog_class = None
             self.nemo_object = None

@@ -176,7 +176,7 @@ class View(ProjectItem):
         except (SpineDBAPIError, SpineDBVersionError) as e:
             self._toolbox.msg_error.emit(e.msg)
             return
-        graph_view_form = GraphViewForm(self, db_map, url.database, read_only=True)
+        graph_view_form = GraphViewForm(self, {url.database: db_map}, read_only=True)
         graph_view_form.show()
         graph_view_form.destroyed.connect(lambda: self.graph_view_form_refs.pop(url))
         self.graph_view_form_refs[url] = graph_view_form

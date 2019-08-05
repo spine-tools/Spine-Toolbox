@@ -49,7 +49,7 @@ class TestAddItemsDialog(unittest.TestCase):
         ) as mock_db_map:
             mock_project._toolbox._qsettings = QSettings("SpineProject", "Spine Toolbox")
             mock_project._toolbox._qsettings.setValue("appSettings/commitAtExit", "0")
-            self.tree_view_form = TreeViewForm(mock_project, mock_db=mock_db_map)
+            self.tree_view_form = TreeViewForm(mock_project, {"mock_db": mock_db_map})
 
     def tearDown(self):
         """Overridden method. Runs after each test.
