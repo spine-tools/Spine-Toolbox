@@ -310,9 +310,14 @@ class GraphAndTreeViewPlottingHints(PlottingHints):
         return model.headerData(column)
 
     def filter_columns(self, selections, model):
-        """Returns the value column only."""
-        last_column = max(selections.keys())
-        return {last_column: selections[last_column]}
+        """Returns the 'value' or 'default_value' column only."""
+        columns = selections.keys()
+        filtered = dict()
+        for column in columns:
+            header = model.headerData(column)
+            if header in ("value", "default_value"):
+                filtered[column] = selections[column]
+        return filtered
 
     def is_index_in_data(self, model, index):
         """Always returns True."""
@@ -343,8 +348,12 @@ class PivotTablePlottingHints(PlottingHints):
         x_column = model.plot_x_column
         if x_column is None:
             return selections
-        del selections[x_column]
-        return selections
+        filtered = dict()
+        columns = selections.keys()
+        for column in columns:
+            if column != x_column:
+                filtered[column] = selections[column]
+        return filtered
 
     def is_index_in_data(self, model, index):
         """Returns True if index is in the data portion of the table."""

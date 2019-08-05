@@ -33,11 +33,7 @@ from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
-from plotting import (
-    plot_selection,
-    PlottingError,
-    GraphAndTreeViewPlottingHints,
-)
+from plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
 class GraphViewForm(DataStoreForm):
