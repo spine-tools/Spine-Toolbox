@@ -3,5 +3,6 @@
 
 echo Building Spine Toolbox documentation
 sphinx-apidoc -f -o ../docs/source/ ../spinetoolbox/
-cd ../docs
+pushd ../docs
 make html
+popd
