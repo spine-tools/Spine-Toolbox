@@ -176,6 +176,7 @@ def plot_pivot_column(model, column, hints):
     _add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
+    plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
     plot_lines = plot_widget.canvas.axes.get_lines()
     plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
     return plot_widget
@@ -194,7 +195,7 @@ def plot_selection(model, indexes, hints):
         a PlotWidget object
     """
     plot_widget = PlotWidget()
-    selections = hints.filter_columns(_organize_selection_to_columns(indexes))
+    selections = hints.filter_columns(_organize_selection_to_columns(indexes), model)
     first_column_value_type = None
     for column, rows in selections.items():
         values, labels = _collect_column_values(model, column, rows, hints)
@@ -209,6 +210,7 @@ def plot_selection(model, indexes, hints):
             if not isinstance(values[0][1], first_column_value_type):
                 raise PlottingError("Cannot plot a mixture of time series and other data")
         _add_plot_to_widget(values, labels, plot_widget)
+    plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
     plot_lines = plot_widget.canvas.axes.get_lines()
     if len(plot_lines) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
@@ -271,7 +273,7 @@ class PlottingHints:
         """Returns a label for a column."""
         raise NotImplementedError()
 
-    def filter_columns(self, selections):
+    def filter_columns(self, selections, model):
         """Filters columns and returns the filtered selections."""
         raise NotImplementedError()
 
@@ -281,6 +283,10 @@ class PlottingHints:
 
     def special_x_values(self, model, column, rows):
         """Returns X values if available, otherwise returns None."""
+        raise NotImplementedError()
+
+    def x_label(self, model):
+        """Returns a label for the x axis."""
         raise NotImplementedError()
 
 
@@ -303,7 +309,7 @@ class GraphAndTreeViewPlottingHints(PlottingHints):
         """Returns the column header."""
         return model.headerData(column)
 
-    def filter_columns(self, selections):
+    def filter_columns(self, selections, model):
         """Returns the value column only."""
         last_column = max(selections.keys())
         return {last_column: selections[last_column]}
@@ -315,6 +321,10 @@ class GraphAndTreeViewPlottingHints(PlottingHints):
     def special_x_values(self, model, column, rows):
         """Always returns None."""
         return None
+
+    def x_label(self, model):
+        """Returns an empty string for the x axis label."""
+        return ""
 
 
 class PivotTablePlottingHints(PlottingHints):
@@ -328,8 +338,12 @@ class PivotTablePlottingHints(PlottingHints):
         """Returns a label for a table column."""
         return ", ".join(model.get_col_key(column))
 
-    def filter_columns(self, selections):
-        """Returns selections as-is."""
+    def filter_columns(self, selections, model):
+        """Filters the X column from selections."""
+        x_column = model.plot_x_column
+        if x_column is None:
+            return selections
+        del selections[x_column]
         return selections
 
     def is_index_in_data(self, model, index):
@@ -342,3 +356,10 @@ class PivotTablePlottingHints(PlottingHints):
             x_values, _ = _collect_single_column_values(model, model.plot_x_column, rows, self)
             return x_values
         return None
+
+    def x_label(self, model):
+        """Returns the label of the X column, if available."""
+        x_column = model.plot_x_column
+        if x_column is None:
+            return ""
+        return self.column_label(model, x_column)
