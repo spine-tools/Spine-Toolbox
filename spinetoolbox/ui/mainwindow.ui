@@ -1999,7 +1999,7 @@
                 <bool>true</bool>
                </property>
                <property name="selectionMode">
-                <enum>QAbstractItemView::MultiSelection</enum>
+                <enum>QAbstractItemView::ExtendedSelection</enum>
                </property>
                <property name="rootIsDecorated">
                 <bool>false</bool>
@@ -2012,7 +2012,7 @@
                 <number>6</number>
                </property>
                <item>
-                <widget class="QPushButton" name="pushButton_view_open_graph_view">
+                <widget class="QPushButton" name="pushButton_view_open_tree_view">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -2020,10 +2020,10 @@
                   </sizepolicy>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Graph view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tree view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Graph view</string>
+                  <string>Tree view</string>
                  </property>
                 </widget>
                </item>
@@ -2041,7 +2041,7 @@
                 </spacer>
                </item>
                <item>
-                <widget class="QPushButton" name="pushButton_view_open_tree_view">
+                <widget class="QPushButton" name="pushButton_view_open_graph_view">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -2049,10 +2049,10 @@
                   </sizepolicy>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tree view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Graph view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Tree view</string>
+                  <string>Graph view</string>
                  </property>
                 </widget>
                </item>
@@ -3082,7 +3082,6 @@
   <tabstop>toolButton_tool_open_dir</tabstop>
   <tabstop>scrollArea_4</tabstop>
   <tabstop>treeView_view</tabstop>
-  <tabstop>pushButton_view_open_graph_view</tabstop>
   <tabstop>toolButton_view_open_dir</tabstop>
   <tabstop>tableView_connections</tabstop>
   <tabstop>scrollArea_6</tabstop>
@@ -3090,7 +3089,6 @@
   <tabstop>toolButton_select_imported_file</tabstop>
   <tabstop>pushButton_import_editor</tabstop>
   <tabstop>toolButton_di_open_dir</tabstop>
-  <tabstop>tabWidget_item_properties</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>
