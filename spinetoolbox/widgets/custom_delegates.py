@@ -15,10 +15,10 @@ Custom item delegates.
 :author: M. Marin (KTH)
 :date:   1.9.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
-from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyledItemDelegate
+from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
+from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication
 from PySide2.QtGui import QIcon
-from widgets.parameter_value_editor import ParameterValueEditor
+from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 from widgets.custom_editors import (
     CustomComboEditor,
     CustomLineEditor,
@@ -26,7 +26,6 @@ from widgets.custom_editors import (
     MultiSearchBarEditor,
     CheckListEditor,
 )
-from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 
 
 class LineEditDelegate(QItemDelegate):
