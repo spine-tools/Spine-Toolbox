@@ -523,7 +523,7 @@ class ObjectTreeModel(QStandardItemModel):
             upd_object_class = object_class_d.pop(object_class_id, None)
             if not upd_object_class:
                 continue
-            existing_i, existing_row = existing_row_d.get(upd_object_class.name, [None, None])
+            existing_i, existing_row = existing_row_d.get(upd_object_class.name, (i, None))
             if i != existing_i:
                 # Already another item with that name, in a different position
                 removed_rows.append(i)
@@ -592,7 +592,7 @@ class ObjectTreeModel(QStandardItemModel):
                 upd_object = class_object_dict.pop(object_id, None)
                 if not upd_object:
                     continue
-                existing_j, existing_row = existing_row_d.get(upd_object.name, [None, None])
+                existing_j, existing_row = existing_row_d.get(upd_object.name, (j, None))
                 if j != existing_j:
                     # Already another item with that name, in a different position
                     removed_rows.append(j)
@@ -665,7 +665,7 @@ class ObjectTreeModel(QStandardItemModel):
                         continue
                     upd_rel_cls = class_rel_cls_dict[rel_cls_id]
                     upd_rel_cls_key = (upd_rel_cls.name, upd_rel_cls.object_class_name_list)
-                    existing_k, existing_row = existing_row_d.get(upd_rel_cls_key, [None, None])
+                    existing_k, existing_row = existing_row_d.get(upd_rel_cls_key, (k, None))
                     if k != existing_k:
                         # Already another item with that name, in a different position
                         removed_rows.append(k)
@@ -727,9 +727,7 @@ class ObjectTreeModel(QStandardItemModel):
                             removed_rows.append(j)
                             relationships_to_add.add(upd_relationship)
                         else:
-                            existing_l, existing_row = existing_row_d.get(
-                                upd_relationship.object_name_list, [None, None]
-                            )
+                            existing_l, existing_row = existing_row_d.get(upd_relationship.object_name_list, (l, None))
                             if l != existing_l:
                                 # Already another item with that name, in a different position
                                 removed_rows.append(l)
@@ -1157,7 +1155,7 @@ class RelationshipTreeModel(QStandardItemModel):
             if not upd_rel_cls:
                 continue
             rel_cls_key = (upd_rel_cls.name, upd_rel_cls.object_class_name_list)
-            existing_i, existing_row = existing_row_d.get(rel_cls_key, [None, None])
+            existing_i, existing_row = existing_row_d.get(rel_cls_key, (i, None))
             if existing_i != i:
                 # Already there
                 removed_rows.append(i)
@@ -1208,7 +1206,7 @@ class RelationshipTreeModel(QStandardItemModel):
                 upd_relationship = class_relationship_dict.pop(relationship_id, None)
                 if not upd_relationship:
                     continue
-                existing_j, existing_row = existing_row_d.get(upd_relationship.object_name_list, [None, None])
+                existing_j, existing_row = existing_row_d.get(upd_relationship.object_name_list, (j, None))
                 if existing_j != j:
                     # Already there
                     removed_rows.append(j)
@@ -1534,7 +1532,7 @@ class SubParameterDefinitionModel(SubParameterModel):
                     continue
                 tag_dict[item["id"]] = parameter_tag_id_list
             upd_def_tag_list, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict)
-            upd_params, param_error_log = db_map.update_parameters(*items)
+            upd_params, param_error_log = db_map.update_parameter_definitions(*items)
             self.updated_count += len(upd_def_tag_list) + upd_params.count()
             self.error_log += def_tag_error_log + param_error_log
             upd_ids += [(db_map, x.parameter_definition_id) for x in upd_def_tag_list]
