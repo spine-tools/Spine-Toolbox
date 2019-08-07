@@ -1202,8 +1202,6 @@ class TestTreeViewForm(unittest.TestCase):
         view.copy()
         clipboard_text = QApplication.clipboard().text()
         data = [line.split('\t') for line in clipboard_text.split('\n')]
-        for row, row_data in enumerate(data):
-            data[row] = [row_data[i] for i in sorted_index]
         self.assertEqual(data[0][0:2], ['fish', 'water'])
         self.assertEqual(data[1][0:2], ['dog', 'breed'])
         # Object parameter value
@@ -1216,9 +1214,9 @@ class TestTreeViewForm(unittest.TestCase):
         view.copy()
         clipboard_text = QApplication.clipboard().text()
         data = [line.split('\t') for line in clipboard_text.split('\n')]
-        self.assertEqual(data[0][0:5], ['fish', 'nemo', 'water', '1', '"salt"'])
-        self.assertEqual(data[1][0:5], ['dog', 'pluto', 'breed', '1', '"bloodhound"'])
-        self.assertEqual(data[2][0:5], ['dog', 'scooby', 'breed', '1', '"great dane"'])
+        self.assertEqual(data[0][0:4], ['fish', 'nemo', 'water', '"salt"'])
+        self.assertEqual(data[1][0:4], ['dog', 'pluto', 'breed', '"bloodhound"'])
+        self.assertEqual(data[2][0:4], ['dog', 'scooby', 'breed', '"great dane"'])
         # Relationship parameter definition
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
@@ -1241,9 +1239,9 @@ class TestTreeViewForm(unittest.TestCase):
         view.copy()
         clipboard_text = QApplication.clipboard().text()
         data = [line.split('\t') for line in clipboard_text.split('\n')]
-        self.assertEqual(data[0][0:5], ['fish__dog', 'nemo,pluto', 'relative_speed', '1', '-1'])
-        self.assertEqual(data[1][0:5], ['fish__dog', 'nemo,scooby', 'relative_speed', '1', '5'])
-        self.assertEqual(data[2][0:5], ['dog__fish', 'pluto,nemo', 'combined_mojo', '1', '100'])
+        self.assertEqual(data[0][0:4], ['fish__dog', 'nemo,pluto', 'relative_speed', '-1'])
+        self.assertEqual(data[1][0:4], ['fish__dog', 'nemo,scooby', 'relative_speed', '5'])
+        self.assertEqual(data[2][0:4], ['dog__fish', 'pluto,nemo', 'combined_mojo', '100'])
 
     def test_copy_from_object_tree(self):
         """Test that data is copied from object_tree into the clipboard."""
