@@ -21,8 +21,6 @@ import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileDialog, QFileIconProvider, QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout
-from spinedb_api import DiffDatabaseMapping, import_data
-
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir
@@ -61,8 +59,6 @@ class DataInterface(ProjectItem):
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
         # Variables for saving selections when item is (de)activated
-        self.import_file_path = filepath
-        self._toolbox.ui.lineEdit_import_file_path.setText(filepath)
         self.settings = settings
         self.file_model = QStandardItemModel()
         self._graphics_item = DataInterfaceIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
@@ -77,7 +73,6 @@ class DataInterface(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.toolButton_di_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.toolButton_select_imported_file.clicked] = self.select_import_file
         s[self._toolbox.ui.pushButton_import_editor.clicked] = self.open_import_editor
         return s
 
@@ -97,13 +92,11 @@ class DataInterface(ProjectItem):
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_di_name.setText(self.name)
-        self._toolbox.ui.lineEdit_import_file_path.setText(self.import_file_path)
         self._toolbox.ui.treeView_data_interface_files.setModel(self.file_model)
         self.refresh()
 
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
-        self.import_file_path = self._toolbox.ui.lineEdit_import_file_path.text()
         self._toolbox.ui.treeView_data_interface_files.setModel(None)
 
     def get_icon(self):
@@ -138,8 +131,10 @@ class DataInterface(ProjectItem):
     @Slot(bool, name="open_import_editor")
     def open_import_editor(self, checked=False):
         """Opens Import editor for the file selected into line edit."""
-        # importee = self._toolbox.ui.lineEdit_import_file_path.text()
         importee = self._toolbox.ui.treeView_data_interface_files.currentIndex().data()
+        if importee is None:
+            self._toolbox.msg_error.emit("Please select a file from the list first.")
+            return
         if not os.path.exists(importee):
             self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
             return
@@ -212,11 +207,7 @@ class DataInterface(ProjectItem):
 
         inst = self._toolbox.project().execution_instance
 
-        # TODO: Right now it's getting incoming database reference and inserting into that.
-        # However it's unclear what this should do really. Push? then it would need the reference of what it's pointing to.
-        dbs = inst.ds_refs.get("sqlite", [])
-
-        if self.settings.get("source", "") and dbs:
+        if self.settings.get("source", ""):
             connector = CSVConnector()
             connector.connect_to_source(self.settings["source"])
             data, errors = connector.get_mapped_data(
@@ -228,29 +219,13 @@ class DataInterface(ProjectItem):
                 )
             )
             if errors:
-                # TODO how are errors displayed? there can be quite many of these. Maybe create a log file in project item folder that you can open and view
+                # TODO how are errors displayed? there can be quite many of these.
+                # Maybe create a log file in project item folder that you can open and view
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)
                 return
-            for db in dbs:
-                db_map = DiffDatabaseMapping("sqlite:///" + db, username="Mapper")
-                import_num, import_errors = import_data(db_map, **data)
-                if import_errors:
-                    # TODO how are errors displayed? there can be quite many of these. Maybe create a log file in project item folder that you can open and view
-                    db_map.rollback_session()
-                    self._toolbox.msg.emit(
-                        "<b>{0}:</b> {1} errors when importing to {2}, rolling back".format(
-                            self.name, len(import_errors), db
-                        )
-                    )
-                    self._toolbox.msg.emit("<b>{0}:</b> {1}".format(self.name, [er.msg for er in import_errors]))
-                    continue
-                db_map.commit_session("imported with mapper")
-                self._toolbox.msg.emit(
-                    "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
-                        self.name, import_num, len(import_errors), db
-                    )
-                )
-
+            # Add data to a dict in the execution instance.
+            # If execution reaches a Data Store, the added data will be imported into the corresponding url
+            inst.add_di_data(self.name, data)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):

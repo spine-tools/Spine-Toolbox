@@ -621,7 +621,6 @@ class DataStore(ProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
         inst = self._toolbox.project().execution_instance
-        # Update execution instance for project items downstream
         url = self.make_url()
         if not url:
             # Invalid url, nothing else to do here
@@ -647,6 +646,32 @@ class DataStore(ProjectItem):
                 # IDEA: just add the entire url dictionary to some attribute in the `ExecutionInstance` object,
                 # then figure everything out in `ExecutionInstance.find_file`
                 pass
+            # Import data from data interface
+            try:
+                db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
+            except (SpineDBAPIError, SpineDBVersionError):
+                db_map = None
+            if db_map:
+                for di_name, data in inst.di_data.items():
+                    self._toolbox.msg_proc.emit("Importing data from {} into {}".format(di_name, url))
+                    import_num, import_errors = spinedb_api.import_data(db_map, **data)
+                    if import_errors:
+                        # TODO how are errors displayed? there can be quite many of these.
+                        # Maybe create a log file in project item folder that you can open and view
+                        db_map.rollback_session()
+                        self._toolbox.msg.emit(
+                            "<b>{0}:</b> {1} errors when importing to {2}, rolling back".format(
+                                self.name, len(import_errors), db
+                            )
+                        )
+                        self._toolbox.msg.emit("<b>{0}:</b> {1}".format(self.name, [er.msg for er in import_errors]))
+                    else:
+                        db_map.commit_session("imported with mapper")
+                        self._toolbox.msg.emit(
+                            "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
+                                self.name, import_num, len(import_errors), db_map.db_url
+                            )
+                        )
         self._toolbox.msg.emit("***")
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 

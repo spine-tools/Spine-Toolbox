@@ -936,29 +936,6 @@ class Ui_MainWindow(object):
         self.scrollAreaWidgetContents_5.setObjectName("scrollAreaWidgetContents_5")
         self.verticalLayout_21 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_5)
         self.verticalLayout_21.setObjectName("verticalLayout_21")
-        self.horizontalLayout_4 = QtWidgets.QHBoxLayout()
-        self.horizontalLayout_4.setObjectName("horizontalLayout_4")
-        self.lineEdit_import_file_path = QtWidgets.QLineEdit(self.scrollAreaWidgetContents_5)
-        self.lineEdit_import_file_path.setText("")
-        self.lineEdit_import_file_path.setClearButtonEnabled(True)
-        self.lineEdit_import_file_path.setObjectName("lineEdit_import_file_path")
-        self.horizontalLayout_4.addWidget(self.lineEdit_import_file_path)
-        self.toolButton_select_imported_file = QtWidgets.QToolButton(self.scrollAreaWidgetContents_5)
-        self.toolButton_select_imported_file.setEnabled(True)
-        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Fixed)
-        sizePolicy.setHorizontalStretch(0)
-        sizePolicy.setVerticalStretch(0)
-        sizePolicy.setHeightForWidth(self.toolButton_select_imported_file.sizePolicy().hasHeightForWidth())
-        self.toolButton_select_imported_file.setSizePolicy(sizePolicy)
-        self.toolButton_select_imported_file.setMinimumSize(QtCore.QSize(22, 22))
-        self.toolButton_select_imported_file.setMaximumSize(QtCore.QSize(22, 22))
-        self.toolButton_select_imported_file.setIcon(icon)
-        self.toolButton_select_imported_file.setObjectName("toolButton_select_imported_file")
-        self.horizontalLayout_4.addWidget(self.toolButton_select_imported_file)
-        self.verticalLayout_21.addLayout(self.horizontalLayout_4)
-        self.pushButton_import_editor = QtWidgets.QPushButton(self.scrollAreaWidgetContents_5)
-        self.pushButton_import_editor.setObjectName("pushButton_import_editor")
-        self.verticalLayout_21.addWidget(self.pushButton_import_editor)
         self.treeView_data_interface_files = QtWidgets.QTreeView(self.scrollAreaWidgetContents_5)
         self.treeView_data_interface_files.setIndentation(5)
         self.treeView_data_interface_files.setUniformRowHeights(True)
@@ -966,6 +943,9 @@ class Ui_MainWindow(object):
         self.verticalLayout_21.addWidget(self.treeView_data_interface_files)
         spacerItem14 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_21.addItem(spacerItem14)
+        self.pushButton_import_editor = QtWidgets.QPushButton(self.scrollAreaWidgetContents_5)
+        self.pushButton_import_editor.setObjectName("pushButton_import_editor")
+        self.verticalLayout_21.addWidget(self.pushButton_import_editor)
         self.line_6 = QtWidgets.QFrame(self.scrollAreaWidgetContents_5)
         self.line_6.setFrameShape(QtWidgets.QFrame.HLine)
         self.line_6.setFrameShadow(QtWidgets.QFrame.Sunken)
@@ -1330,10 +1310,7 @@ class Ui_MainWindow(object):
         MainWindow.setTabOrder(self.treeView_view, self.toolButton_view_open_dir)
         MainWindow.setTabOrder(self.toolButton_view_open_dir, self.tableView_connections)
         MainWindow.setTabOrder(self.tableView_connections, self.scrollArea_6)
-        MainWindow.setTabOrder(self.scrollArea_6, self.lineEdit_import_file_path)
-        MainWindow.setTabOrder(self.lineEdit_import_file_path, self.toolButton_select_imported_file)
-        MainWindow.setTabOrder(self.toolButton_select_imported_file, self.pushButton_import_editor)
-        MainWindow.setTabOrder(self.pushButton_import_editor, self.toolButton_di_open_dir)
+        MainWindow.setTabOrder(self.scrollArea_6, self.toolButton_di_open_dir)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Spine Toolbox", None, -1))
@@ -1404,9 +1381,6 @@ class Ui_MainWindow(object):
         self.toolButton_view_open_dir.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open this View\'s project directory in file browser</p></body></html>", None, -1))
         self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_view), QtWidgets.QApplication.translate("MainWindow", "View", None, -1))
         self.label_di_name.setText(QtWidgets.QApplication.translate("MainWindow", "Name", None, -1))
-        self.lineEdit_import_file_path.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Import file path</p></body></html>", None, -1))
-        self.lineEdit_import_file_path.setPlaceholderText(QtWidgets.QApplication.translate("MainWindow", "Select file to import", None, -1))
-        self.toolButton_select_imported_file.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Select file to import</p></body></html>", None, -1))
         self.pushButton_import_editor.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open selected file in Import Editor</p></body></html>", None, -1))
         self.pushButton_import_editor.setText(QtWidgets.QApplication.translate("MainWindow", "Import Editor", None, -1))
         self.toolButton_di_open_dir.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Open this Data Connection\'s project directory in file browser</p></body></html>", None, -1))
@@ -1468,8 +1442,8 @@ class Ui_MainWindow(object):
         self.actionExport_project_to_GraphML.setText(QtWidgets.QApplication.translate("MainWindow", "Export project to GraphML", None, -1))
         self.actionAdd_Data_Interface.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1))
 
-from widgets.custom_qlineedit import CustomQLineEdit
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qgraphicsviews import DesignQGraphicsView
 import resources_icons_rc

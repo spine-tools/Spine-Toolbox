@@ -465,6 +465,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 "Data Interface",
             ]:
                 self._toolbox.msg.emit("Link established")
+            elif src_item_type == "Tool" and dst_item_type == "View":
+                self._toolbox.msg_warning.emit(
+                    "Link established. You can visualize the ouput from Tool "
+                    "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
+                )
             elif src_item_type == "Data Store" and dst_item_type == "View":
                 self._toolbox.msg_warning.emit(
                     "Link established. You can visualize Data Store "

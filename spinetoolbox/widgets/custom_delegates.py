@@ -16,7 +16,14 @@ Custom item delegates.
 :date:   1.9.2018
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
-from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyledItemDelegate
+from PySide2.QtWidgets import (
+    QItemDelegate,
+    QStyleOptionButton,
+    QStyle,
+    QApplication,
+    QStyledItemDelegate,
+    QStyleOptionComboBox,
+)
 from PySide2.QtGui import QIcon
 from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 from widgets.custom_editors import (

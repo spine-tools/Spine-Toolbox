@@ -398,6 +398,7 @@ class ExecutionInstance(QObject):
         self.dc_refs = list()  # Data Connection reference list
         self.dc_files = list()  # Data Connection file list
         self.ds_refs = dict()  # DS refs. Key is dialect, value is a list of paths or urls depending on dialect
+        self.di_data = dict()  # Data Interface data. Key is DI name, value is data for import
         self.tool_output_files = list()  # Paths to result files from ToolInstance
 
     def start_execution(self):
@@ -461,6 +462,15 @@ class ExecutionInstance(QObject):
             self.ds_refs[dialect].append(ref)
         except KeyError:
             self.ds_refs[dialect] = [ref]
+
+    def add_di_data(self, di_name, data):
+        """Adds given data from data interface to a list.
+
+        Args:
+            di_name (str): Data interface name
+            data (dict): Data to import
+        """
+        self.di_data[di_name] = data
 
     def append_dc_refs(self, refs):
         """Adds given file paths (Data Connection file references) to a list.

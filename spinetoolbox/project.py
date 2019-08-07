@@ -216,7 +216,6 @@ class SpineToolboxProject(MetaObject):
                 elif item.item_type == "Data Interface":
                     # TODO: Save Data Interface mapping script path here
                     item_dict[category][name]["mappings"] = item.settings
-                    item_dict[category][name]["import_file_path"] = item.import_file_path
                 else:
                     logging.error("Unrecognized item type: %s", item.item_type)
         # Save project to file
@@ -334,7 +333,7 @@ class SpineToolboxProject(MetaObject):
                 y = 0
             # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
             mappings = data_interfaces[name].get("mappings", {})
-            filepath = data_interfaces[name].get("import_file_path","")
+            filepath = data_interfaces[name].get("import_file_path", "")
             self.add_data_interface(name, desc, filepath, mappings, x, y, verbosity=False)
 
         return True
@@ -495,7 +494,9 @@ class SpineToolboxProject(MetaObject):
         if set_selected:
             self.set_item_selected(view)
 
-    def add_data_interface(self, name, description, import_file_path="", mappings=None, x=0, y=0, set_selected=False, verbosity=True):
+    def add_data_interface(
+        self, name, description, import_file_path="", mappings=None, x=0, y=0, set_selected=False, verbosity=True
+    ):
         """Adds a Data Interface to project item model.
 
         Args:
