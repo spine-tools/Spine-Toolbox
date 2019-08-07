@@ -240,7 +240,7 @@ class DataStoreForm(QMainWindow):
             self.selected_obj_parameter_definition_ids = {}
             self.selected_rel_parameter_definition_ids = {}
         else:
-            # At least one tag selected: set non-empty dict so not all them pass
+            # At least one tag selected: set non-empty dict so not all of them pass
             self.selected_obj_parameter_definition_ids = {None: None}
             self.selected_rel_parameter_definition_ids = {None: None}
             for db_map, tag_ids in self.selected_parameter_tag_ids.items():
