@@ -138,7 +138,8 @@ class DataInterface(ProjectItem):
     @Slot(bool, name="open_import_editor")
     def open_import_editor(self, checked=False):
         """Opens Import editor for the file selected into line edit."""
-        importee = self._toolbox.ui.lineEdit_import_file_path.text()
+        # importee = self._toolbox.ui.lineEdit_import_file_path.text()
+        importee = self._toolbox.ui.treeView_data_interface_files.currentIndex().data()
         if not os.path.exists(importee):
             self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
             return

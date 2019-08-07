@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+<?xml version="1.0" encoding="UTF-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>21</height>
+     <height>28</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -357,7 +357,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>3</number>
+        <number>5</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -440,8 +440,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>364</height>
+              <width>402</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -1250,8 +1250,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>364</height>
+              <width>402</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1657,8 +1657,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>364</height>
+              <width>402</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1980,8 +1980,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>349</width>
-              <height>364</height>
+              <width>402</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2000,6 +2000,9 @@
                </property>
                <property name="selectionMode">
                 <enum>QAbstractItemView::ExtendedSelection</enum>
+               </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideLeft</enum>
                </property>
                <property name="rootIsDecorated">
                 <bool>false</bool>
@@ -2211,8 +2214,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>346</width>
-              <height>364</height>
+              <width>399</width>
+              <height>331</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_21">
@@ -2699,11 +2702,11 @@
            <property name="cornerButtonEnabled">
             <bool>false</bool>
            </property>
-           <attribute name="horizontalHeaderMinimumSectionSize">
-            <number>35</number>
-           </attribute>
            <attribute name="horizontalHeaderHighlightSections">
             <bool>false</bool>
+           </attribute>
+           <attribute name="horizontalHeaderMinimumSectionSize">
+            <number>35</number>
            </attribute>
            <attribute name="horizontalHeaderStretchLastSection">
             <bool>false</bool>

@@ -621,18 +621,6 @@ class DataStore(ProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
         inst = self._toolbox.project().execution_instance
-        # Update Data Store based on project items that are already executed
-        # Override reference if there's an sqlite Tool output file in the execution instance
-        # NOTE: Takes the first .sqlite file that is found
-        for output_file_path in inst.tool_output_files:
-            _, fn = os.path.split(output_file_path)
-            if fn.lower().endswith(".sqlite"):
-                self._toolbox.msg_warning.emit("Overriding database reference")
-                self.enable_sqlite()
-                url = dict(dialect="sqlite", database=output_file_path)
-                self.set_url(url)
-                self.load_url_into_selections()
-                self._toolbox.msg.emit("New URL:<i>{0}<i/>".format(url))
         # Update execution instance for project items downstream
         url = self.make_url()
         if not url:

@@ -20,6 +20,7 @@ import logging
 import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
+from sqlalchemy.engine.url import URL
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from project_item import ProjectItem
 from widgets.graph_view_widget import GraphViewForm
@@ -121,7 +122,7 @@ class View(ProjectItem):
                 self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
                 continue
             item = self._toolbox.project_item_model.project_item(found_index)
-            if item.item_type != "Data Store":
+            if item.item_type not in ("Data Store", "Tool"):
                 continue
             item_list.append(item)
         return item_list
@@ -132,10 +133,17 @@ class View(ProjectItem):
         input_items = self.find_input_items()
         self._references = list()
         for item in input_items:
-            url = item.make_url()
-            if not url:
-                continue
-            self._references.append(url)
+            if item.item_type == "Data Store":
+                url = item.make_url()
+                if not url:
+                    continue
+                self._references.append(url)
+            elif item.item_type == "Tool":
+                filepaths = []
+                for (dirpath, dirnames, filenames) in os.walk(item.output_dir):
+                    filepaths.extend([os.path.join(dirpath, fn) for fn in filenames])
+                self._references.extend([URL("sqlite", database=f) for f in filepaths if f.lower().endswith('.sqlite')])
+        # logging.debug("{0}".format(self._references))
         self.populate_reference_list(self._references)
 
     @Slot(bool, name="open_graph_view_btn_clicked")
