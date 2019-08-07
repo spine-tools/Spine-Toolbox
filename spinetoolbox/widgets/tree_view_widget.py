@@ -38,12 +38,7 @@ from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import datapackage_to_spine
 from spine_io.widgets.import_widget import ImportDialog
 from helpers import busy_effect, int_list_to_row_count_tuples
-from plotting import (
-    plot_selection,
-    PlottingError,
-    tree_graph_view_parameter_value_name,
-    GraphAndTreeViewPlottingSupport,
-)
+from plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
 class TreeViewForm(DataStoreForm):
@@ -705,10 +700,12 @@ class TreeViewForm(DataStoreForm):
             pass
         relationship_tree_context_menu.deleteLater()
 
+    @busy_effect
     def fully_expand_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
             self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.expand)
 
+    @busy_effect
     def fully_collapse_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
             self.object_tree_model.forward_sweep(index, call=self.ui.treeView_object.collapse)
@@ -959,12 +956,24 @@ class TreeViewForm(DataStoreForm):
         elif option == "Plot":
             selection = table_view.selectedIndexes()
             try:
-                support = GraphAndTreeViewPlottingSupport(table_view)
-                plot_widget = plot_selection(model, selection, support)
+                hints = GraphAndTreeViewPlottingHints(table_view)
+                plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
                 report_plotting_failure(error)
                 return
-            plot_widget.setWindowTitle("Plot")
+            if (
+                table_view is self.ui.tableView_object_parameter_value
+                or table_view is self.ui.tableView_object_parameter_definition
+            ):
+                plot_window_title = "Object parameter plot -- {} --".format(value_column_header)
+            elif (
+                table_view is self.ui.tableView_relationship_parameter_value
+                or table_view is self.ui.tableView_relationship_parameter_definition
+            ):
+                plot_window_title = "Relationship parameter plot    -- {} --".format(value_column_header)
+            else:
+                plot_window_title = "Plot"
+            plot_widget.setWindowTitle(plot_window_title)
             plot_widget.show()
         elif option == "Remove selection":
             remove_selection()
@@ -1094,7 +1103,7 @@ class TreeViewForm(DataStoreForm):
                 for i in rows
             ]
             try:
-                db_map.remove_items(parameter_value_ids={x['id'] for x in parameters})
+                db_map.remove_items(parameter_definition_ids={x['id'] for x in parameters})
                 for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
                     model.removeRows(row, count)
                 value_model.remove_parameters(db_map, parameters)

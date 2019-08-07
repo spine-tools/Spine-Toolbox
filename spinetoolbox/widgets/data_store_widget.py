@@ -39,6 +39,7 @@ from widgets.custom_qdialog import (
     ManageParameterTagsDialog,
     CommitDialog,
 )
+from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.toolbars import ParameterTagToolBar
 from treeview_models import (
     ObjectParameterDefinitionModel,
@@ -48,7 +49,6 @@ from treeview_models import (
     ParameterValueListModel,
 )
 from helpers import busy_effect, format_string_list, IconManager
-from widgets.parameter_value_editor import ParameterValueEditor
 from plotting import tree_graph_view_parameter_value_name
 
 
@@ -154,6 +154,7 @@ class DataStoreForm(QMainWindow):
             self.ui.tableView_object_parameter_definition,
             self.ui.tableView_relationship_parameter_definition,
         ):
+            # pylint: disable=cell-var-from-loop
             table_view.itemDelegate().data_committed.connect(self.set_parameter_definition_data)
             table_view.itemDelegate().parameter_value_editor_requested.connect(
                 lambda index, value: self.show_parameter_value_editor(index, table_view, value=value)

@@ -17,6 +17,7 @@ Currently plotting from the table views found in Graph, Tree and Tabular views a
 The main entrance points to plotting are:
 - plot_selection() which plots selected cells on a table view returning a PlotWidget object
 - plot_pivot_column() which is a specialized method for plotting entire columns of a pivot table
+- add_time_series_plot() which adds a time series plot to an existing PlotWidget
 
 :author: A. Soininen(VTT)
 :date:   9.7.2019
@@ -24,7 +25,7 @@ The main entrance points to plotting are:
 
 import numpy as np
 from PySide2.QtCore import Qt
-from spinedb_api import from_database, TimeSeries
+from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
 from widgets.plot_widget import PlotWidget
 
 
@@ -84,7 +85,7 @@ def _organize_selection_to_columns(indexes):
     return selections
 
 
-def _collect_single_column_values(model, column, rows, support):
+def _collect_single_column_values(model, column, rows, hints):
     """
     Collects selected parameter values from a single column in a PivotTableModel.
 
@@ -97,7 +98,7 @@ def _collect_single_column_values(model, column, rows, support):
         model (QAbstractTableModel): a table model
         column (int): a column index to the model
         rows (Sequence): row indexes to plot
-        support (PlottingSupport): a plot support object
+        hints (PlottingHints): a plot support object
 
     Returns:
         a tuple of values and label(s)
@@ -106,15 +107,18 @@ def _collect_single_column_values(model, column, rows, support):
     labels = list()
     for row in sorted(rows):
         data_index = model.index(row, column)
-        if not support.is_index_in_data(model, data_index):
+        if not hints.is_index_in_data(model, data_index):
             continue
         data = model.data(data_index, role=Qt.EditRole)
         if data:
-            value = from_database(data)
+            try:
+                value = from_database(data)
+            except ParameterValueFormatError:
+                value = None
             if isinstance(value, (float, int)):
                 values.append(float(value))
             elif isinstance(value, TimeSeries):
-                labels.append(support.cell_label(model, data_index))
+                labels.append(hints.cell_label(model, data_index))
                 values.append(value)
             else:
                 raise PlottingError("Cannot plot value on row {}".format(row))
@@ -122,11 +126,11 @@ def _collect_single_column_values(model, column, rows, support):
         return values, labels
     _raise_if_types_inconsistent(values)
     if isinstance(values[0], float):
-        labels.append(support.column_label(model, column))
+        labels.append(hints.column_label(model, column))
     return values, labels
 
 
-def _collect_column_values(model, column, rows, support):
+def _collect_column_values(model, column, rows, hints):
     """
     Collects selected parameter values from a single column in a PivotTableModel for plotting.
 
@@ -140,58 +144,61 @@ def _collect_column_values(model, column, rows, support):
         model (QAbstractTableModel): a table model
         column (int): a column index to the model
         rows (Sequence): row indexes to plot
-        support (PlottingSupport): a support object
+        hints (PlottingHints): a support object
 
     Returns:
         a tuple of values and label(s)
     """
-    values, labels = _collect_single_column_values(model, column, rows, support)
+    values, labels = _collect_single_column_values(model, column, rows, hints)
     if values and isinstance(values[0], float):
         # Collect the y values as well
-        x_values = support.special_x_values(model, column, rows)
+        x_values = hints.special_x_values(model, column, rows)
         if x_values is None:
             x_values = np.arange(1.0, float(len(values) + 1.0))
         return (x_values, values), labels
     return values, labels
 
 
-def plot_pivot_column(model, column, support):
+def plot_pivot_column(model, column, hints):
     """
     Returns a plot widget with a plot of an entire column in PivotTableModel.
 
     Args:
         model (PivotTableModel): a pivot table model
         column (int): a column index to the model
-        support (PlottingSupport): a plotting support object
+        hints (PlottingHints): a helper needed for e.g. plot labels
 
     Returns:
         a PlotWidget object
     """
     plot_widget = PlotWidget()
-    values, labels = _collect_column_values(model, column, range(model.first_data_row(), model.rowCount()), support)
+    values, labels = _collect_column_values(model, column, range(model.first_data_row(), model.rowCount()), hints)
     _add_plot_to_widget(values, labels, plot_widget)
     if len(plot_widget.canvas.axes.get_lines()) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
+    plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
+    plot_lines = plot_widget.canvas.axes.get_lines()
+    plot_widget.canvas.axes.set_title(plot_lines[0].get_label())
     return plot_widget
 
 
-def plot_selection(model, indexes, support):
+def plot_selection(model, indexes, hints):
     """
     Returns a plot widget with plots of the selected indexes.
 
     Args:
         model (QAbstractTableModel): a model
         indexes (Iterable): a list of QModelIndex objects for plotting
-        support (PlottingSupport): a helper object needed for plot labels and others
+        hints (PlottingHints): a helper needed for e.g. plot labels
 
     Returns:
         a PlotWidget object
     """
     plot_widget = PlotWidget()
-    selections = support.filter_columns(_organize_selection_to_columns(indexes))
+    selections = hints.filter_columns(_organize_selection_to_columns(indexes), model)
     first_column_value_type = None
     for column, rows in selections.items():
-        values, labels = _collect_column_values(model, column, rows, support)
+        values, labels = _collect_column_values(model, column, rows, hints)
         if first_column_value_type is None and values:
             if isinstance(values[0], TimeSeries):
                 first_column_value_type = TimeSeries
@@ -203,6 +210,7 @@ def plot_selection(model, indexes, support):
             if not isinstance(values[0][1], first_column_value_type):
                 raise PlottingError("Cannot plot a mixture of time series and other data")
         _add_plot_to_widget(values, labels, plot_widget)
+    plot_widget.canvas.axes.set_xlabel(hints.x_label(model))
     plot_lines = plot_widget.canvas.axes.get_lines()
     if len(plot_lines) > 1:
         plot_widget.canvas.axes.legend(loc="best", fontsize="small")
@@ -212,18 +220,34 @@ def plot_selection(model, indexes, support):
 
 
 def add_time_series_plot(plot_widget, value, label=None):
-    """Adds a time series step plot on plot_widget."""
+    """
+    Adds a time series step plot to a plot widget.
+
+    Args:
+        plot_widget (PlotWidget): a plot widget to modify
+        value (TimeSeries): the time series to plot
+        label (str): a label for the time series
+    """
     plot_widget.canvas.axes.step(value.indexes, value.values, label=label, where='post')
     # matplotlib cannot have time stamps before 0001-01-01T00:00 on the x axis
     left, _ = plot_widget.canvas.axes.get_xlim()
     if left < 1.0:
         # 1.0 corresponds to 0001-01-01T00:00
         plot_widget.canvas.axes.set_xlim(left=1.0)
-    plot_widget.canvas.axes.get_xaxis().set_tick_params(labelrotation=45.0)
+    plot_widget.canvas.figure.autofmt_xdate()
 
 
 def tree_graph_view_parameter_value_name(index, table_view):
-    """Returns a label for Tree or Graph view table cell."""
+    """
+    Returns a label for Tree or Graph view table cell.
+
+    Args:
+        index (QModelIndex): an index to the table model
+        table_view (QTableView): a table view widget corresponding to index
+
+    Returns:
+        a unique name for the parameter value as a string
+    """
     tokens = list()
     for column in range(index.column()):
         if not table_view.isColumnHidden(column):
@@ -233,12 +257,12 @@ def tree_graph_view_parameter_value_name(index, table_view):
     return ", ".join(tokens)
 
 
-class PlottingSupport:
+class PlottingHints:
     """
-    A base class for plotting support objects.
+    A base class for plotting hints.
 
     The functionality in this class allows the plotting functions to work
-    without explicit knowledge of the underlaying table model or widget.
+    without explicit knowledge of the underlying table model or widget.
     """
 
     def cell_label(self, model, index):
@@ -249,7 +273,7 @@ class PlottingSupport:
         """Returns a label for a column."""
         raise NotImplementedError()
 
-    def filter_columns(self, selections):
+    def filter_columns(self, selections, model):
         """Filters columns and returns the filtered selections."""
         raise NotImplementedError()
 
@@ -261,8 +285,12 @@ class PlottingSupport:
         """Returns X values if available, otherwise returns None."""
         raise NotImplementedError()
 
+    def x_label(self, model):
+        """Returns a label for the x axis."""
+        raise NotImplementedError()
 
-class GraphAndTreeViewPlottingSupport(PlottingSupport):
+
+class GraphAndTreeViewPlottingHints(PlottingHints):
     """
     Support for plotting data in Graph and Tree views.
 
@@ -281,10 +309,15 @@ class GraphAndTreeViewPlottingSupport(PlottingSupport):
         """Returns the column header."""
         return model.headerData(column)
 
-    def filter_columns(self, selections):
-        """Returns the value column only."""
-        last_column = max(selections.keys())
-        return {last_column: selections[last_column]}
+    def filter_columns(self, selections, model):
+        """Returns the 'value' or 'default_value' column only."""
+        columns = selections.keys()
+        filtered = dict()
+        for column in columns:
+            header = model.headerData(column)
+            if header in ("value", "default_value"):
+                filtered[column] = selections[column]
+        return filtered
 
     def is_index_in_data(self, model, index):
         """Always returns True."""
@@ -294,8 +327,12 @@ class GraphAndTreeViewPlottingSupport(PlottingSupport):
         """Always returns None."""
         return None
 
+    def x_label(self, model):
+        """Returns an empty string for the x axis label."""
+        return ""
 
-class PivotTablePlottingSupport(PlottingSupport):
+
+class PivotTablePlottingHints(PlottingHints):
     """Support for plotting data in Tabular view."""
 
     def cell_label(self, model, index):
@@ -306,9 +343,17 @@ class PivotTablePlottingSupport(PlottingSupport):
         """Returns a label for a table column."""
         return ", ".join(model.get_col_key(column))
 
-    def filter_columns(self, selections):
-        """Returns selections as-is."""
-        return selections
+    def filter_columns(self, selections, model):
+        """Filters the X column from selections."""
+        x_column = model.plot_x_column
+        if x_column is None:
+            return selections
+        filtered = dict()
+        columns = selections.keys()
+        for column in columns:
+            if column != x_column:
+                filtered[column] = selections[column]
+        return filtered
 
     def is_index_in_data(self, model, index):
         """Returns True if index is in the data portion of the table."""
@@ -320,3 +365,10 @@ class PivotTablePlottingSupport(PlottingSupport):
             x_values, _ = _collect_single_column_values(model, model.plot_x_column, rows, self)
             return x_values
         return None
+
+    def x_label(self, model):
+        """Returns the label of the X column, if available."""
+        x_column = model.plot_x_column
+        if x_column is None:
+            return ""
+        return self.column_label(model, x_column)

@@ -141,8 +141,7 @@ Setting up project
 #. Repeat the procedure to create a *connection* from "Spine model" to "output". It should look something
    like this:
 
-   .. image:: img/project_design_view.png
-      :align: center
+   .. todo:: Add image
 
 #. From the main menu, select **File -> Save project**.
 
@@ -162,7 +161,9 @@ Creating input database
 
    .. image:: img/case_study_a5_treeview_empty.png
       :align: center
+
    |
+
    .. note:: The *Data store tree view* is a dedicated interface within Spine Toolbox
       for visualizing and managing Spine databases.
 

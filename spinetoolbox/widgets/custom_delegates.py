@@ -16,9 +16,9 @@ Custom item delegates.
 :date:   1.9.2018
 """
 from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
-from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyledItemDelegate, QComboBox, QStyleOptionComboBox
+from PySide2.QtWidgets import QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyledItemDelegate
 from PySide2.QtGui import QIcon
-from widgets.parameter_value_editor import ParameterValueEditor
+from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 from widgets.custom_editors import (
     CustomComboEditor,
     CustomLineEditor,
@@ -26,7 +26,7 @@ from widgets.custom_editors import (
     MultiSearchBarEditor,
     CheckListEditor,
 )
-from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
+
 
 class ComboBoxDelegate(QItemDelegate):
     def __init__(self, parent, choices):
@@ -36,7 +36,7 @@ class ComboBoxDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         self.editor = QComboBox(parent)
         self.editor.addItems(self.items)
-        #self.editor.currentIndexChanged.connect(self.currentItemChanged)
+        # self.editor.currentIndexChanged.connect(self.currentItemChanged)
         return self.editor
 
     def paint(self, painter, option, index):
@@ -52,16 +52,17 @@ class ComboBoxDelegate(QItemDelegate):
         value = index.data(Qt.DisplayRole)
         num = self.items.index(value)
         editor.setCurrentIndex(num)
-    
+
     def setModelData(self, editor, model, index):
         value = editor.currentText()
         model.setData(index, value, Qt.EditRole)
-    
+
     def updateEditorGeometry(self, editor, option, index):
         editor.setGeometry(option.rect)
-    
-    def currentItemChanged(self): 
+
+    def currentItemChanged(self):
         self.commitData.emit(self.sender())
+
 
 class LineEditDelegate(QItemDelegate):
     """A delegate that places a fully functioning QLineEdit.

@@ -52,6 +52,22 @@ ui.add\_view module
    :undoc-members:
    :show-inheritance:
 
+ui.datetime\_editor module
+--------------------------
+
+.. automodule:: ui.datetime_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ui.duration\_editor module
+--------------------------
+
+.. automodule:: ui.duration_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 ui.graph\_view\_form module
 ---------------------------
 
@@ -64,6 +80,22 @@ ui.mainwindow module
 --------------------
 
 .. automodule:: ui.mainwindow
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ui.parameter\_value\_editor module
+----------------------------------
+
+.. automodule:: ui.parameter_value_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ui.plain\_parameter\_value\_editor module
+-----------------------------------------
+
+.. automodule:: ui.plain_parameter_value_editor
    :members:
    :undoc-members:
    :show-inheritance:
@@ -96,6 +128,30 @@ ui.tabular\_view\_form module
 -----------------------------
 
 .. automodule:: ui.tabular_view_form
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ui.time\_pattern\_editor module
+-------------------------------
+
+.. automodule:: ui.time_pattern_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ui.time\_series\_fixed\_resolution\_editor module
+-------------------------------------------------
+
+.. automodule:: ui.time_series_fixed_resolution_editor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+ui.time\_series\_variable\_resolution\_editor module
+----------------------------------------------------
+
+.. automodule:: ui.time_series_variable_resolution_editor
    :members:
    :undoc-members:
    :show-inheritance:

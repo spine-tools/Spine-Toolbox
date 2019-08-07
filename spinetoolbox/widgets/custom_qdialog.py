@@ -245,6 +245,7 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
 
     def connect_signals(self):
         super().connect_signals()
+        # pylint: disable=unnecessary-lambda
         self.table_view.itemDelegate().icon_color_editor_requested.connect(
             lambda index: self.show_icon_color_editor(index)
         )
@@ -713,6 +714,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
 
     def connect_signals(self):
         super().connect_signals()
+        # pylint: disable=unnecessary-lambda
         self.table_view.itemDelegate().icon_color_editor_requested.connect(
             lambda index: self.show_icon_color_editor(index)
         )
@@ -950,13 +952,15 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
             if [*object_name_list, name] == orig_row:
                 continue
             pre_item = {'name': name}
-            for db_map in db_maps:
+            for db_index, db_map in enumerate(db_maps):
                 id_ = self.db_map_dicts[i][db_map]['id']
                 # Find object_class_id_list
                 relationship_classes = self.rel_cls_dict[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
                     self._parent.msg_error.emit(
-                        "Invalid relationship class '{}' for db '{}' at row {}".format(self.class_name, db_name, i + 1)
+                        "Invalid relationship class '{}' for db '{}' at row {}".format(
+                            self.class_name, db_name_list[db_index], i + 1
+                        )
                     )
                     return
                 _, object_class_id_list = relationship_classes[self.class_name, self.object_class_name_list]
@@ -967,7 +971,9 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
                 for object_class_id, object_name in zip(object_class_id_list, object_name_list):
                     if (object_class_id, object_name) not in objects:
                         self._parent.msg_error.emit(
-                            "Invalid object '{}' for db '{}' at row {}".format(object_name, db_name, i + 1)
+                            "Invalid object '{}' for db '{}' at row {}".format(
+                                object_name, db_name_list[db_index], i + 1
+                            )
                         )
                         return
                     object_id = objects[object_class_id, object_name]

@@ -22,6 +22,7 @@ from PySide2.QtWidgets import QWidget
 from spinedb_api import DateTime
 from ui.datetime_editor import Ui_DatetimeEditor
 
+
 def _QDateTime_to_datetime(dt):
     """Converts a QDateTime object to Python's datetime.datetime type."""
     date = dt.date()
