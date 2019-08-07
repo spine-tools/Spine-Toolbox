@@ -1506,8 +1506,7 @@ class ToolboxUI(QMainWindow):
             if data_connection.spine_datapackage_form:
                 data_connection.spine_datapackage_form.close()
         for view in self.project_item_model.items("Views"):
-            for graph_view_form in view.graph_view_form_refs.values():
-                graph_view_form.close()
+            view.close_all_views()
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.

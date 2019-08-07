@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>26</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -357,7 +357,7 @@
         <string notr="true"/>
        </property>
        <property name="currentIndex">
-        <number>5</number>
+        <number>3</number>
        </property>
        <widget class="QWidget" name="tab_data_store">
         <attribute name="title">
@@ -440,8 +440,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>338</height>
+              <width>349</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -1250,8 +1250,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>338</height>
+              <width>349</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1657,8 +1657,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>338</height>
+              <width>349</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1980,8 +1980,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>375</width>
-              <height>338</height>
+              <width>349</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -1998,41 +1998,32 @@
                <property name="acceptDrops">
                 <bool>true</bool>
                </property>
+               <property name="selectionMode">
+                <enum>QAbstractItemView::ExtendedSelection</enum>
+               </property>
                <property name="rootIsDecorated">
                 <bool>false</bool>
                </property>
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="0,1">
+              <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="0,1,0,0,0">
                <property name="spacing">
                 <number>6</number>
                </property>
                <item>
-                <widget class="QPushButton" name="pushButton_open_network_map">
+                <widget class="QPushButton" name="pushButton_view_open_tree_view">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
                    <verstretch>0</verstretch>
                   </sizepolicy>
                  </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>75</width>
-                   <height>23</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>75</width>
-                   <height>23</height>
-                  </size>
-                 </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Graph view for selected db reference (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tree view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Graph view</string>
+                  <string>Tree view</string>
                  </property>
                 </widget>
                </item>
@@ -2048,6 +2039,51 @@
                   </size>
                  </property>
                 </spacer>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_view_open_graph_view">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Graph view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Graph view</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_9">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_view_open_tabular_view">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tabular view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Tabular view</string>
+                 </property>
+                </widget>
                </item>
               </layout>
              </item>
@@ -2175,8 +2211,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>370</width>
-              <height>338</height>
+              <width>346</width>
+              <height>364</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_21">
@@ -2663,11 +2699,11 @@
            <property name="cornerButtonEnabled">
             <bool>false</bool>
            </property>
-           <attribute name="horizontalHeaderHighlightSections">
-            <bool>false</bool>
-           </attribute>
            <attribute name="horizontalHeaderMinimumSectionSize">
             <number>35</number>
+           </attribute>
+           <attribute name="horizontalHeaderHighlightSections">
+            <bool>false</bool>
            </attribute>
            <attribute name="horizontalHeaderStretchLastSection">
             <bool>false</bool>
@@ -3046,7 +3082,6 @@
   <tabstop>toolButton_tool_open_dir</tabstop>
   <tabstop>scrollArea_4</tabstop>
   <tabstop>treeView_view</tabstop>
-  <tabstop>pushButton_open_network_map</tabstop>
   <tabstop>toolButton_view_open_dir</tabstop>
   <tabstop>tableView_connections</tabstop>
   <tabstop>scrollArea_6</tabstop>
@@ -3054,7 +3089,6 @@
   <tabstop>toolButton_select_imported_file</tabstop>
   <tabstop>pushButton_import_editor</tabstop>
   <tabstop>toolButton_di_open_dir</tabstop>
-  <tabstop>tabWidget_item_properties</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

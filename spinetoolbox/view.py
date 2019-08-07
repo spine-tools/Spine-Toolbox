@@ -23,12 +23,15 @@ from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDe
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from project_item import ProjectItem
 from widgets.graph_view_widget import GraphViewForm
+from widgets.tabular_view_widget import TabularViewForm
+from widgets.tree_view_widget import TreeViewForm
 from graphics_items import ViewIcon
-from helpers import busy_effect, create_dir
+from helpers import create_dir
 
 
 class View(ProjectItem):
-    """View class.
+    """
+    View class.
 
     Attributes:
         toolbox (ToolboxUI): QMainWindow instance
@@ -41,12 +44,13 @@ class View(ProjectItem):
     view_refresh_signal = Signal(name="view_refresh_signal")
 
     def __init__(self, toolbox, name, description, x, y):
-        """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "View"
-        self.graph_view_form_refs = {}
+        self._graph_views = {}
+        self._tabular_views = {}
+        self._tree_views = {}
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
         self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
@@ -68,8 +72,9 @@ class View(ProjectItem):
         This is to enable simpler connecting and disconnecting."""
         s = dict()
         s[self._toolbox.ui.toolButton_view_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.treeView_view.doubleClicked] = self.open_graph_view_dbl_clicked
-        s[self._toolbox.ui.pushButton_open_network_map.clicked] = self.open_graph_view_btn_clicked
+        s[self._toolbox.ui.pushButton_view_open_graph_view.clicked] = self.open_graph_view_btn_clicked
+        s[self._toolbox.ui.pushButton_view_open_tabular_view.clicked] = self.open_tabular_view_btn_clicked
+        s[self._toolbox.ui.pushButton_view_open_tree_view.clicked] = self.open_tree_view_btn_clicked
         return s
 
     def activate(self):
@@ -131,55 +136,55 @@ class View(ProjectItem):
             if not url:
                 continue
             self._references.append(url)
-        # logging.debug("{0}".format(self._references))
         self.populate_reference_list(self._references)
-
-    @Slot("QModelIndex", name="open_graph_view_dbl_clicked")
-    def open_graph_view_dbl_clicked(self, index):
-        """Slot for handling the signal emitted by double-clicking a reference.
-
-        Args:
-            index (QModelIndex): Double-clicked index
-        """
-        if not index:
-            logging.debug("dbl click with index=None")
-            return
-        if not index.isValid():
-            logging.debug("dbl click with index is not valid")
-            return
-        self.open_graph_view(index)
 
     @Slot(bool, name="open_graph_view_btn_clicked")
     def open_graph_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Graph view' button."""
-        index = self._toolbox.ui.treeView_view.currentIndex()
-        if not index.isValid():
-            # If only one reference available select it automatically
-            if len(self._references) == 1:
-                index = self._toolbox.ui.treeView_view.model().index(0, 0)
-                self._toolbox.ui.treeView_view.setCurrentIndex(index)
-            else:
-                self._toolbox.msg_warning.emit("Please select a reference to view")
-                return
-        self.open_graph_view(index)
+        self._open_view(self._graph_views, supports_multiple_databases=False)
 
-    @busy_effect
-    def open_graph_view(self, index):
-        """Open reference in Graph view form.
+    @Slot(bool, name="open_tabular_view_btn_clicked")
+    def open_tabular_view_btn_clicked(self, checked=False):
+        """Slot for handling the signal emitted by clicking on 'Tabular view' button."""
+        self._open_view(self._tabular_views, supports_multiple_databases=False)
+
+    @Slot(bool, name="open_tree_view_btn_clicked")
+    def open_tree_view_btn_clicked(self, checked=False):
+        """Slot for handling the signal emitted by clicking on 'Tree view' button."""
+        self._open_view(self._tree_views, supports_multiple_databases=True)
+
+    def _open_view(self, view_store, supports_multiple_databases):
+        """
+        Opens references in a view window.
 
         Args:
-            index (QModelIndex): Index of the selected reference in View properties
+            view_store (dict): a dictionary where to store the view window
+            supports_multiple_databases (bool): True if the view supports more than one database
         """
-        url = self._references[index.row()]
-        try:
-            db_map = DiffDatabaseMapping(url, url.username)
-        except (SpineDBAPIError, SpineDBVersionError) as e:
-            self._toolbox.msg_error.emit(e.msg)
+        indexes = self._selected_indexes()
+        db_maps, databases = self._database_maps(indexes)
+        # Mangle database paths to get a hashable string identifying the view window.
+        view_id = ";".join(sorted(databases))
+        if not supports_multiple_databases and len(db_maps) > 1:
+            # Currently, Graph and Tabular views do not support multiple databases.
+            # This if clause can be removed once that support has been implemented.
+            self._toolbox.msg_error.emit("Selected view does not support multiple databases.")
             return
-        graph_view_form = GraphViewForm(self, db_map, url.database, read_only=True)
-        graph_view_form.show()
-        graph_view_form.destroyed.connect(lambda: self.graph_view_form_refs.pop(url))
-        self.graph_view_form_refs[url] = graph_view_form
+        if self._restore_existing_view_window(view_id, view_store):
+            return
+        view_window = self._make_view_window(view_store, db_maps, databases)
+        view_window.show()
+        view_window.destroyed.connect(lambda: view_store.pop(view_id))
+        view_store[view_id] = view_window
+
+    def close_all_views(self):
+        """Closes all view windows."""
+        for view in self._graph_views.values():
+            view.close()
+        for view in self._tabular_views.values():
+            view.close()
+        for view in self._tree_views.values():
+            view.close()
 
     def populate_reference_list(self, items):
         """Add given list of items to the reference model. If None or
@@ -216,3 +221,46 @@ class View(ProjectItem):
     def stop_execution(self):
         """Stops executing this View."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
+
+    def _selected_indexes(self):
+        """Returns selected indexes."""
+        selection_model = self._toolbox.ui.treeView_view.selectionModel()
+        if not selection_model.hasSelection():
+            self._toolbox.ui.treeView_view.selectAll()
+        return self._toolbox.ui.treeView_view.selectionModel().selectedRows()
+
+    def _database_maps(self, indexes):
+        """Returns database maps and database paths for given indexes."""
+        db_maps = dict()
+        databases = list()
+        for index in indexes:
+            url = self._references[index.row()]
+            try:
+                db_map = DiffDatabaseMapping(url, url.username)
+            except (SpineDBAPIError, SpineDBVersionError) as e:
+                self._toolbox.msg_error.emit(e.msg)
+                return
+            database = url.database
+            db_maps[database] = db_map
+            databases.append(database)
+        return db_maps, databases
+
+    @staticmethod
+    def _restore_existing_view_window(view_id, view_store):
+        """Restores an existing view window and returns True if the operation was successful."""
+        if view_id not in view_store:
+            return False
+        view_window = view_store[view_id]
+        if view_window.windowState() & Qt.WindowMinimized:
+            view_window.setWindowState(view_window.windowState() & ~Qt.WindowMinimized | Qt.WindowActive)
+        view_window.activateWindow()
+        return True
+
+    def _make_view_window(self, view_store, db_maps, databases):
+        if view_store is self._graph_views:
+            return GraphViewForm(self, db_maps, read_only=True)
+        if view_store is self._tabular_views:
+            return TabularViewForm(self, db_maps[databases[0]], databases[0])
+        if view_store is self._tree_views:
+            return TreeViewForm(self._project, db_maps)
+        raise RuntimeError("view_store must be self._graph_views, self._tabular_views or self._tree_views")
