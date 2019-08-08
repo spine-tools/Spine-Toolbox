@@ -657,7 +657,6 @@ class DataStore(ProjectItem):
                 for di_name, data in inst.di_data.items():
                     self._toolbox.msg_proc.emit("Importing data from {} into {}".format(di_name, url))
                     import_num, import_errors = spinedb_api.import_data(db_map, **data)
-                    import_errors = ["quedo", "la", "caga"]
                     if import_errors:
                         db_map.rollback_session()
                         # Log errors in a time stamped file into the logs directory

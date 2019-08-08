@@ -255,9 +255,9 @@ class MappingPreviewWindow(QMainWindow):
         self._preview_widget = ImportPreviewWidget(self._connection_manager, self)
         self._preview_widget.use_settings(settings)
 
-        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Abort | QDialogButtonBox.Cancel)
+        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Apply | QDialogButtonBox.Cancel)
         self._dialog_buttons.button(QDialogButtonBox.Ok).setText("Save and close")
-        self._dialog_buttons.button(QDialogButtonBox.Abort).setText("Save")
+        self._dialog_buttons.button(QDialogButtonBox.Apply).setText("Save")
         self._qw = QWidget()
         self._qw.setLayout(QVBoxLayout())
         self._qw.layout().addWidget(self._preview_widget)
@@ -265,25 +265,25 @@ class MappingPreviewWindow(QMainWindow):
         self.setCentralWidget(self._qw)
 
         self.settings_group = "mappingPreviewWidget"
+        self.restore_ui()
 
-        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.save_and_close_clicked)
+        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.save_and_close)
         self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
-        self._dialog_buttons.button(QDialogButtonBox.Abort).clicked.connect(self.saved_clicked)
+        self._dialog_buttons.button(QDialogButtonBox.Apply).clicked.connect(self.save)
 
         self._connection_manager.connectionReady.connect(self.show)
         self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
 
-    def saved_clicked(self):
+    def save(self):
         settings = self._preview_widget.get_settings_dict()
         self.settings_updated.emit(settings)
 
-    def save_and_close_clicked(self):
-        self.saved_clicked()
+    def save_and_close(self):
+        self.save()
         self.close()
 
     def start_ui(self):
         self._connection_manager.init_connection()
-        self.restore_ui()
 
     def qsettings(self):
         return self._data_interface._toolbox._qsettings
