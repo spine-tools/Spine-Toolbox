@@ -29,14 +29,14 @@ from PySide2.QtWidgets import (
     QSplitter,
 )
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
-from spine_io.widgets.mapping_widget import MappingWidget, DataMappingListModel
+from spine_io.widgets.mapping_widget import MappingWidget, MappingListModel
 from spine_io.io_models import MappingPreviewModel
 
 
 class ImportPreviewWidget(QWidget):
     """
     A Widget for defining one or more Mappings associated to a data source (CSV file, Excel file, etc).
-    Currently it is being embeded in ImportDialog and MappingPreviewWindow.
+    Currently it's being embeded in ImportDialog and ImportPreviewWindow.
     """
 
     tableChecked = Signal()
@@ -188,7 +188,7 @@ class ImportPreviewWidget(QWidget):
                     # add table to selected if connector gave a mapping object
                     # for the table
                     self.selected_source_tables.add(t_name)
-                self.table_mappings[t_name] = DataMappingListModel([t_mapping])
+                self.table_mappings[t_name] = MappingListModel([t_mapping])
         for k in list(self.table_mappings.keys()):
             if k not in tables:
                 self.table_mappings.pop(k)
@@ -243,7 +243,7 @@ class ImportPreviewWidget(QWidget):
 
     def use_settings(self, settings):
         self.table_mappings = {
-            table: DataMappingListModel([dict_to_map(m) for m in mappings])
+            table: MappingListModel([dict_to_map(m) for m in mappings])
             for table, mappings in settings.get("table_mappings", {}).items()
         }
         self.connector.set_table_options(settings.get("table_options", {}))

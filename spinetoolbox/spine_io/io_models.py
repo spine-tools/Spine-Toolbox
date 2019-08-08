@@ -22,7 +22,8 @@ from models import MinimalTableModel
 
 
 class MappingPreviewModel(MinimalTableModel):
-    """Table model that shows different backgroundcolor depending on mapping
+    """A model for highlighting columns, rows, and so on, depending on Mapping specification.
+    Used by ImportPreviewWidget.
     """
 
     def __init__(self, parent=None):
@@ -35,7 +36,7 @@ class MappingPreviewModel(MinimalTableModel):
         """Set mapping to display colors from
 
         Arguments:
-            mapping {MappingTableModel} -- mapping model
+            mapping {MappingSpecModel} -- mapping model
         """
         if self._data_changed_signal is not None and self._mapping:
             self._mapping.dataChanged.disconnect(self.update_colors)
@@ -161,9 +162,13 @@ class MappingPreviewModel(MinimalTableModel):
         return int_non_piv_cols
 
 
-class MappingTableModel(QAbstractTableModel):
+class MappingSpecModel(QAbstractTableModel):
+    """
+    A model to hold a Mapping specification.
+    """
+
     def __init__(self, model, parent=None):
-        super(MappingTableModel, self).__init__(parent)
+        super(MappingSpecModel, self).__init__(parent)
         self._display_names = []
         self._mappings = []
         self._model = None
@@ -559,9 +564,13 @@ class MappingTableModel(QAbstractTableModel):
         self.dataChanged.emit(0, 0, [])
 
 
-class DataMappingListModel(QAbstractListModel):
+class MappingListModel(QAbstractListModel):
+    """
+    A model to hold a list of Mappings.
+    """
+
     def __init__(self, mapping_list, parent=None):
-        super(DataMappingListModel, self).__init__(parent)
+        super(MappingListModel, self).__init__(parent)
         self._qmappings = []
         self._names = []
         self._counter = 1
@@ -573,7 +582,7 @@ class DataMappingListModel(QAbstractListModel):
         self._qmappings = []
         for m in model:
             self._names.append("Mapping " + str(self._counter))
-            self._qmappings.append(MappingTableModel(m))
+            self._qmappings.append(MappingSpecModel(m))
             self._counter += 1
         self.endResetModel()
 
@@ -598,7 +607,7 @@ class DataMappingListModel(QAbstractListModel):
     def add_mapping(self):
         self.beginInsertRows(self.index(self.rowCount(), 0), self.rowCount(), self.rowCount())
         m = ObjectClassMapping()
-        self._qmappings.append(MappingTableModel(m))
+        self._qmappings.append(MappingSpecModel(m))
         self._names.append("Mapping " + str(self._counter))
         self._counter += 1
         self.endInsertRows()

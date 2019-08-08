@@ -36,7 +36,7 @@ from PySide2.QtCore import Qt, Signal
 from spinedb_api import RelationshipClassMapping
 from widgets.custom_menus import FilterMenu
 from widgets.custom_delegates import ComboBoxDelegate
-from spine_io.io_models import MappingTableModel, DataMappingListModel
+from spine_io.io_models import MappingSpecModel
 
 MAPPING_CHOICES = ("Constant", "Column", "Row", "Header", "None")
 
@@ -47,7 +47,7 @@ class MappingWidget(QWidget):
     Intended to be embeded in a ImportPreviewWidget.
     """
 
-    mappingChanged = Signal(MappingTableModel)
+    mappingChanged = Signal(MappingSpecModel)
     mappingDataChanged = Signal()
 
     def __init__(self, parent=None):

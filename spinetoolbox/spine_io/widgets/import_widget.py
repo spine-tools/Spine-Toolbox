@@ -43,9 +43,9 @@ class ImportDialog(QDialog):
     """
     A widget for importing data into a Spine db. Currently used by TreeViewForm.
     It embeds three widgets that alternate depending on user's actions:
-    - `select_widget` is a QWidget for selecting the source data type (CSV, Excel, etc.)
-    - `_import_preview` is an ImportPreviewWidget for defining the Mapping(s) to associate with the source data
-    - `_error_widget` is an ImportErrorWidget to show errors from import operations
+    - `select_widget` is a `QWidget` for selecting the source data type (CSV, Excel, etc.)
+    - `_import_preview` is an `ImportPreviewWidget` for defining Mappings to associate with the source data
+    - `_error_widget` is an `ImportErrorWidget` to show errors from import operations
     """
 
     def __init__(self, parent=None):
