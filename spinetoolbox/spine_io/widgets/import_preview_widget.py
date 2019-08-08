@@ -27,6 +27,7 @@ from PySide2.QtWidgets import (
     QListWidgetItem,
     QErrorMessage,
     QSplitter,
+    QGroupBox,
 )
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
 from spine_io.widgets.mapping_widget import MappingWidget
@@ -35,7 +36,7 @@ from spine_io.io_models import MappingPreviewModel, MappingListModel
 
 class ImportPreviewWidget(QWidget):
     """
-    A Widget for defining one or more Mappings associated to a data source (CSV file, Excel file, etc).
+    A Widget for defining one or more Mappings associated to a data Source (CSV file, Excel file, etc).
     Currently it's being embeded in ImportDialog and ImportPreviewWindow.
     """
 
@@ -57,8 +58,8 @@ class ImportPreviewWidget(QWidget):
 
         # create widgets
         self._ui_error = QErrorMessage()
-        self._ui_list = QListWidget()
-        self._ui_table = QTableView()
+        self._ui_list = QListWidget()  # List of data sources
+        self._ui_table = QTableView()  # Table of source data
         self._ui_table.setModel(self.table)
         self._ui_mapper = MappingWidget()
         self._ui_preview_menu = MappingTableMenu(self._ui_table)
@@ -68,24 +69,31 @@ class ImportPreviewWidget(QWidget):
         main_splitter = QSplitter()
         self.layout().addWidget(main_splitter)
 
-        # splitter for layout
-        list_layout = QVBoxLayout()
-        preview_layout = QVBoxLayout()
-        mapping_layout = QVBoxLayout()
-        list_widget = QWidget()
-        preview_widget = QWidget()
-        mapping_widget = QWidget()
-        list_widget.setLayout(list_layout)
-        preview_widget.setLayout(preview_layout)
-        mapping_widget.setLayout(mapping_layout)
-        main_splitter.addWidget(list_widget)
-        main_splitter.addWidget(preview_widget)
-        main_splitter.addWidget(mapping_widget)
+        source_groupbox = QGroupBox("Sources")
+        source_layout = QVBoxLayout()
+        source_splitter = QSplitter()
+        source_splitter.setOrientation(Qt.Vertical)
+        source_layout.addWidget(source_splitter)
+        top_source_splitter = QSplitter()
+        top_source_splitter.addWidget(self._ui_list)
+        top_source_splitter.addWidget(self.connector.option_widget())
+        top_src_widget = QWidget()
+        source_splitter.addWidget(top_source_splitter)
+        source_splitter.addWidget(self._ui_table)
+        source_groupbox.setLayout(source_layout)
 
+        mapping_groupbox = QGroupBox("Mapping")
+        mapping_layout = QVBoxLayout()
         mapping_layout.addWidget(self._ui_mapper)
-        list_layout.addWidget(self._ui_list)
-        preview_layout.addWidget(self.connector.option_widget())
-        preview_layout.addWidget(self._ui_table)
+        mapping_groupbox.setLayout(mapping_layout)
+
+        main_splitter.addWidget(source_groupbox)
+        main_splitter.addWidget(mapping_groupbox)
+
+        # Name splitters, so they are found by ImportPreviewWindow.findChildren()
+        main_splitter.setObjectName("ImportPreviewWidget_main_splitter")
+        source_splitter.setObjectName("ImportPreviewWidget_source_splitter")
+        top_source_splitter.setObjectName("ImportPreviewWidget_top_source_splitter")
 
         # connect signals
         self._ui_table.setContextMenuPolicy(Qt.CustomContextMenu)

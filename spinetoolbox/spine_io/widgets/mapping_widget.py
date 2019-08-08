@@ -69,6 +69,7 @@ class MappingWidget(QWidget):
         # layout
         self.setLayout(QVBoxLayout())
         splitter = QSplitter()
+        self.layout().addWidget(splitter)
 
         top_widget = QWidget()
         top_widget.setLayout(QVBoxLayout())
@@ -87,10 +88,8 @@ class MappingWidget(QWidget):
         splitter.addWidget(bottom_widget)
         splitter.setOrientation(Qt.Vertical)
 
-        self.layout().addWidget(splitter)
-        # self.layout().addWidget(self._ui_list)
-        # self.layout().addWidget(self._ui_options)
-        # self.layout().addWidget(self._ui_table)
+        # Name splitter, so it's found by ImportPreviewWindow.findChildren()
+        splitter.setObjectName("MappingWidget_splitter")
 
         # connect signals
         self._select_handle = None
@@ -194,7 +193,7 @@ class MappingOptionsWidget(QWidget):
         self._ui_dimension.setMinimum(1)
 
         # layout
-        groupbox = QGroupBox("Mapping:")
+        groupbox = QGroupBox("Options")
         self.setLayout(QVBoxLayout())
         layout = QGridLayout()
         layout.addWidget(QLabel("Class type:"), 0, 0)

@@ -139,8 +139,7 @@ class DataInterface(ProjectItem):
             else:
                 self._preview_widget.raise_()
             return
-
-        self._preview_widget = ImportPreviewWindow(self, importee, self.settings)
+        self._preview_widget = ImportPreviewWindow(importee, self.settings, self._toolbox._qsettings)
         self._preview_widget.settings_updated.connect(self.save_settings)
         self._preview_widget.connection_failed.connect(self._connection_failed)
         self._preview_widget.destroyed.connect(self._preview_destroyed)

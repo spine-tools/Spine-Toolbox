@@ -18,7 +18,7 @@ Contains DataInterface class.
 
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QGuiApplication
-from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout
+from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout, QSplitter
 from spine_io.importers.csv_reader import CSVConnector
 from spine_io.connection_manager import ConnectionManager
 from spine_io.widgets.import_preview_widget import ImportPreviewWidget
@@ -32,16 +32,17 @@ class ImportPreviewWindow(QMainWindow):
     settings_updated = Signal(dict)
     connection_failed = Signal(str)
 
-    def __init__(self, data_interface, filepath, settings):
+    connection_failed = Signal(str)
+
+    def __init__(self, filepath, settings, qsettings):
         super().__init__(flags=Qt.Window)
-        self._data_interface = data_interface
+        self._qsettings = qsettings
         self.setAttribute(Qt.WA_DeleteOnClose)
 
         self._connection_manager = ConnectionManager(CSVConnector)
         self._connection_manager._source = filepath
-        self._preview_widget = ImportPreviewWidget(self._connection_manager, self)
+        self._preview_widget = ImportPreviewWidget(self._connection_manager, parent=self)
         self._preview_widget.use_settings(settings)
-
         self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Apply | QDialogButtonBox.Cancel)
         self._dialog_buttons.button(QDialogButtonBox.Ok).setText("Save and close")
         self._dialog_buttons.button(QDialogButtonBox.Apply).setText("Save")
@@ -51,7 +52,7 @@ class ImportPreviewWindow(QMainWindow):
         self._qw.layout().addWidget(self._dialog_buttons)
         self.setCentralWidget(self._qw)
 
-        self.settings_group = "mappingPreviewWidget"
+        self.settings_group = "mappingPreviewWindow"
         self.restore_ui()
 
         self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.save_and_close)
@@ -72,18 +73,18 @@ class ImportPreviewWindow(QMainWindow):
     def start_ui(self):
         self._connection_manager.init_connection()
 
-    def qsettings(self):
-        return self._data_interface._toolbox._qsettings
-
     def restore_ui(self):
         """Restore UI state from previous session."""
-        qsettings = self.qsettings()
+        qsettings = self._qsettings
         qsettings.beginGroup(self.settings_group)
         window_size = qsettings.value("windowSize")
         window_pos = qsettings.value("windowPosition")
         window_state = qsettings.value("windowState")
         window_maximized = qsettings.value("windowMaximized", defaultValue='false')
         n_screens = qsettings.value("n_screens", defaultValue=1)
+        splitter_state = {}
+        for splitter in self.findChildren(QSplitter):
+            splitter_state[splitter] = qsettings.value(splitter.objectName() + "_splitterState")
         qsettings.endGroup()
         if window_size:
             self.resize(window_size)
@@ -93,6 +94,9 @@ class ImportPreviewWindow(QMainWindow):
             self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
         if window_maximized == 'true':
             self.setWindowState(Qt.WindowMaximized)
+        for splitter, state in splitter_state.items():
+            if state:
+                splitter.restoreState(state)
         # noinspection PyArgumentList
         if len(QGuiApplication.screens()) < int(n_screens):
             # There are less screens available now than on previous application startup
@@ -104,9 +108,12 @@ class ImportPreviewWindow(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
+
         # save qsettings
-        qsettings = self.qsettings()
+        qsettings = self._qsettings
         qsettings.beginGroup(self.settings_group)
+        for splitter in self.findChildren(QSplitter):
+            qsettings.setValue(splitter.objectName() + "_splitterState", splitter.saveState())
         qsettings.setValue("windowSize", self.size())
         qsettings.setValue("windowPosition", self.pos())
         qsettings.setValue("windowState", self.saveState(version=1))
