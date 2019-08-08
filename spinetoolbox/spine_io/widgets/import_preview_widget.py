@@ -29,8 +29,8 @@ from PySide2.QtWidgets import (
     QSplitter,
 )
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
-from spine_io.widgets.mapping_widget import MappingWidget, MappingListModel
-from spine_io.io_models import MappingPreviewModel
+from spine_io.widgets.mapping_widget import MappingWidget
+from spine_io.io_models import MappingPreviewModel, MappingListModel
 
 
 class ImportPreviewWidget(QWidget):
