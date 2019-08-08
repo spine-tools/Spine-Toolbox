@@ -82,7 +82,7 @@ class ImportPreviewWidget(QWidget):
         source_splitter.addWidget(self._ui_table)
         source_groupbox.setLayout(source_layout)
 
-        mapping_groupbox = QGroupBox("Mapping")
+        mapping_groupbox = QGroupBox("Mappings")
         mapping_layout = QVBoxLayout()
         mapping_layout.addWidget(self._ui_mapper)
         mapping_groupbox.setLayout(mapping_layout)
