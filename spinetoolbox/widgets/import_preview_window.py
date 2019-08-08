@@ -24,7 +24,7 @@ from spine_io.connection_manager import ConnectionManager
 from spine_io.widgets.import_preview_widget import ImportPreviewWidget
 
 
-class MappingPreviewWindow(QMainWindow):
+class ImportPreviewWindow(QMainWindow):
     """
     A QMainWindow to let users define Mappings for a Data Interface item.
     """

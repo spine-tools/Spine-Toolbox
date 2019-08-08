@@ -25,7 +25,7 @@ from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
 from spine_io.importers.csv_reader import CSVConnector
-from widgets.mapping_preview_window import MappingPreviewWindow
+from widgets.mapping_preview_window import ImportPreviewWindow
 
 
 class DataInterface(ProjectItem):
@@ -140,7 +140,7 @@ class DataInterface(ProjectItem):
                 self._preview_widget.raise_()
             return
 
-        self._preview_widget = MappingPreviewWindow(self, importee, self.settings)
+        self._preview_widget = ImportPreviewWindow(self, importee, self.settings)
         self._preview_widget.settings_updated.connect(self.save_settings)
         self._preview_widget.connection_failed.connect(self._connection_failed)
         self._preview_widget.destroyed.connect(self._preview_destroyed)
