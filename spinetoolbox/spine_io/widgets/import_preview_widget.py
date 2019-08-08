@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains ImportPreviewWidget class.
+Contains ImportPreviewWidget, and MappingTableMenu classes.
 
 :author: P. Vennström (VTT)
 :date:   1.6.2019
@@ -28,10 +28,9 @@ from PySide2.QtWidgets import (
     QErrorMessage,
     QSplitter,
 )
-from PySide2.QtCore import Signal, QModelIndex, Qt, QItemSelectionModel, QPoint
-from PySide2.QtGui import QColor
+from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
 from spine_io.widgets.mapping_widget import MappingWidget, DataMappingListModel
-from models import MinimalTableModel
+from spine_io.io_models import MappingPreviewModel
 
 
 class ImportPreviewWidget(QWidget):
@@ -271,146 +270,6 @@ class ImportPreviewWidget(QWidget):
         close connector connection
         """
         self.connector.close_connection()
-
-
-class MappingPreviewModel(MinimalTableModel):
-    """Table model that shows different backgroundcolor depending on mapping
-    """
-
-    def __init__(self, parent=None):
-        super(MappingPreviewModel, self).__init__(parent)
-        self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        self._mapping = None
-        self._data_changed_signal = None
-
-    def set_mapping(self, mapping):
-        """Set mapping to display colors from
-
-        Arguments:
-            mapping {MappingTableModel} -- mapping model
-        """
-        if self._data_changed_signal is not None and self._mapping:
-            self._mapping.dataChanged.disconnect(self.update_colors)
-            self._data_changed_signal = None
-        self._mapping = mapping
-        if self._mapping:
-            self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
-        self.update_colors()
-
-    def update_colors(self):
-        self.dataChanged.emit(QModelIndex, QModelIndex, [Qt.BackgroundColorRole])
-
-    def data(self, index, role=Qt.DisplayRole):
-        if role == Qt.BackgroundColorRole and self._mapping:
-            return self.data_color(index)
-        return super(MappingPreviewModel, self).data(index, role)
-
-    def data_color(self, index):
-        """returns background color for index depending on mapping
-
-        Arguments:
-            index {PySide2.QtCore.QModelIndex} -- index
-
-        Returns:
-            [QColor] -- QColor of index
-        """
-        mapping = self._mapping._model
-        if mapping.parameters is not None:
-            # parameter colors
-            if mapping.is_pivoted():
-                # parameter values color
-                last_row = mapping.last_pivot_row()
-                if (
-                    last_row is not None
-                    and index.row() > last_row
-                    and index.column() not in self.mapping_column_ref_int_list()
-                ):
-                    return QColor(1, 133, 113)
-            elif self.index_in_mapping(mapping.parameters.value, index):
-                return QColor(1, 133, 113)
-            if mapping.parameters.extra_dimensions:
-                # parameter extra dimensions color
-                for ed in mapping.parameters.extra_dimensions:
-                    if self.index_in_mapping(ed, index):
-                        return QColor(128, 205, 193)
-            if self.index_in_mapping(mapping.parameters.name, index):
-                # parameter name colors
-                return QColor(128, 205, 193)
-        if self.index_in_mapping(mapping.name, index):
-            # class name color
-            return QColor(166, 97, 26)
-        objects = []
-        classes = []
-        if isinstance(mapping, ObjectClassMapping):
-            objects = [mapping.object]
-        else:
-            if mapping.objects:
-                objects = mapping.objects
-            if mapping.object_classes:
-                classes = mapping.object_classes
-        for o in objects:
-            # object colors
-            if self.index_in_mapping(o, index):
-                return QColor(223, 194, 125)
-        for c in classes:
-            # object colors
-            if self.index_in_mapping(c, index):
-                return QColor(166, 97, 26)
-
-    def index_in_mapping(self, mapping, index):
-        """Checks if index is in mapping
-
-        Arguments:
-            mapping {Mapping} -- mapping
-            index {QModelIndex} -- index
-
-        Returns:
-            [bool] -- returns True if mapping is in index
-        """
-        if not isinstance(mapping, Mapping):
-            return False
-        if mapping.map_type == "column":
-            ref = mapping.value_reference
-            if isinstance(ref, str):
-                # find header reference
-                if ref in self._headers:
-                    ref = self._headers.index(ref)
-            if index.column() == ref:
-                if self._mapping._model.is_pivoted():
-                    # only rows below pivoted rows
-                    last_row = self._mapping._model.last_pivot_row()
-                    if last_row is not None and index.row() > last_row:
-                        return True
-                else:
-                    return True
-        if mapping.map_type == "row":
-            if index.row() == mapping.value_reference:
-                if index.column() not in self.mapping_column_ref_int_list():
-                    return True
-        return False
-
-    def mapping_column_ref_int_list(self):
-        """Returns a list of column indexes that are not pivoted
-
-        Returns:
-            [List[int]] -- list of ints
-        """
-        if not self._mapping:
-            return []
-        non_pivoted_columns = self._mapping._model.non_pivoted_columns()
-        skip_cols = self._mapping._model.skip_columns
-        if skip_cols is None:
-            skip_cols = []
-        int_non_piv_cols = []
-        for pc in set(non_pivoted_columns + skip_cols):
-            if isinstance(pc, str):
-                if pc in self.horizontal_header_labels():
-                    pc = self.horizontal_header_labels().index(pc)
-                else:
-                    continue
-            int_non_piv_cols.append(pc)
-
-        return int_non_piv_cols
 
 
 class MappingTableMenu(QMenu):
