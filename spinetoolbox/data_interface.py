@@ -19,14 +19,13 @@ Contains DataInterface class.
 import logging
 import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl, QFileInfo
-from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QGuiApplication
-from PySide2.QtWidgets import QFileDialog, QFileIconProvider, QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout
+from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
+from PySide2.QtWidgets import QFileIconProvider, QMainWindow
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
 from spine_io.importers.csv_reader import CSVConnector
-from spine_io.connection_manager import ConnectionManager
-from spine_io.widgets.import_preview_widget import ImportPreviewWidget
+from widgets.mapping_preview_window import MappingPreviewWindow
 
 
 class DataInterface(ProjectItem):
@@ -239,94 +238,3 @@ class DataInterface(ProjectItem):
     def stop_execution(self):
         """Stops executing this Data Interface."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
-
-
-class MappingPreviewWindow(QMainWindow):
-    settings_updated = Signal(dict)
-    connection_failed = Signal(str)
-
-    def __init__(self, data_interface, filepath, settings):
-        super().__init__(flags=Qt.Window)
-        self._data_interface = data_interface
-        self.setAttribute(Qt.WA_DeleteOnClose)
-
-        self._connection_manager = ConnectionManager(CSVConnector)
-        self._connection_manager._source = filepath
-        self._preview_widget = ImportPreviewWidget(self._connection_manager, self)
-        self._preview_widget.use_settings(settings)
-
-        self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Apply | QDialogButtonBox.Cancel)
-        self._dialog_buttons.button(QDialogButtonBox.Ok).setText("Save and close")
-        self._dialog_buttons.button(QDialogButtonBox.Apply).setText("Save")
-        self._qw = QWidget()
-        self._qw.setLayout(QVBoxLayout())
-        self._qw.layout().addWidget(self._preview_widget)
-        self._qw.layout().addWidget(self._dialog_buttons)
-        self.setCentralWidget(self._qw)
-
-        self.settings_group = "mappingPreviewWidget"
-        self.restore_ui()
-
-        self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.save_and_close)
-        self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.close)
-        self._dialog_buttons.button(QDialogButtonBox.Apply).clicked.connect(self.save)
-
-        self._connection_manager.connectionReady.connect(self.show)
-        self._connection_manager.connectionFailed.connect(self.connection_failed.emit)
-
-    def save(self):
-        settings = self._preview_widget.get_settings_dict()
-        self.settings_updated.emit(settings)
-
-    def save_and_close(self):
-        self.save()
-        self.close()
-
-    def start_ui(self):
-        self._connection_manager.init_connection()
-
-    def qsettings(self):
-        return self._data_interface._toolbox._qsettings
-
-    def restore_ui(self):
-        """Restore UI state from previous session."""
-        qsettings = self.qsettings()
-        qsettings.beginGroup(self.settings_group)
-        window_size = qsettings.value("windowSize")
-        window_pos = qsettings.value("windowPosition")
-        window_state = qsettings.value("windowState")
-        window_maximized = qsettings.value("windowMaximized", defaultValue='false')
-        n_screens = qsettings.value("n_screens", defaultValue=1)
-        qsettings.endGroup()
-        if window_size:
-            self.resize(window_size)
-        if window_pos:
-            self.move(window_pos)
-        if window_state:
-            self.restoreState(window_state, version=1)  # Toolbar and dockWidget positions
-        if window_maximized == 'true':
-            self.setWindowState(Qt.WindowMaximized)
-        # noinspection PyArgumentList
-        if len(QGuiApplication.screens()) < int(n_screens):
-            # There are less screens available now than on previous application startup
-            self.move(0, 0)  # Move this widget to primary screen position (0,0)
-
-    def closeEvent(self, event=None):
-        """Handle close window.
-
-        Args:
-            event (QEvent): Closing event if 'X' is clicked.
-        """
-        # save qsettings
-        qsettings = self.qsettings()
-        qsettings.beginGroup(self.settings_group)
-        qsettings.setValue("windowSize", self.size())
-        qsettings.setValue("windowPosition", self.pos())
-        qsettings.setValue("windowState", self.saveState(version=1))
-        if self.windowState() == Qt.WindowMaximized:
-            qsettings.setValue("windowMaximized", True)
-        else:
-            qsettings.setValue("windowMaximized", False)
-        qsettings.endGroup()
-        if event:
-            event.accept()
