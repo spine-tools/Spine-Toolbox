@@ -25,7 +25,7 @@ from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
 from spine_io.importers.csv_reader import CSVConnector
-from widgets.mapping_preview_window import ImportPreviewWindow
+from widgets.import_preview_window import ImportPreviewWindow
 
 
 class DataInterface(ProjectItem):
