@@ -249,7 +249,7 @@ class ImportPreviewWidget(QWidget):
 
     def get_settings_dict(self):
         """Returns a dictionary with type of connector, connector options for tables, mappings for tables, selected tables.
-        
+
         Returns:
             [Dict] -- dict with settings
         """
@@ -285,7 +285,7 @@ class MappingPreviewModel(MinimalTableModel):
 
     def set_mapping(self, mapping):
         """Set mapping to display colors from
-        
+
         Arguments:
             mapping {MappingTableModel} -- mapping model
         """
@@ -307,10 +307,10 @@ class MappingPreviewModel(MinimalTableModel):
 
     def data_color(self, index):
         """returns background color for index depending on mapping
-        
+
         Arguments:
             index {PySide2.QtCore.QModelIndex} -- index
-        
+
         Returns:
             [QColor] -- QColor of index
         """
@@ -359,11 +359,11 @@ class MappingPreviewModel(MinimalTableModel):
 
     def index_in_mapping(self, mapping, index):
         """Checks if index is in mapping
-        
+
         Arguments:
             mapping {Mapping} -- mapping
             index {QModelIndex} -- index
-        
+
         Returns:
             [bool] -- returns True if mapping is in index
         """
@@ -391,7 +391,7 @@ class MappingPreviewModel(MinimalTableModel):
 
     def mapping_column_ref_int_list(self):
         """Returns a list of column indexes that are not pivoted
-        
+
         Returns:
             [List[int]] -- list of ints
         """
@@ -449,17 +449,18 @@ class MappingTableMenu(QMenu):
         mapping_names = [
             self._model.data(self._model.createIndex(i, 0), Qt.DisplayRole) for i in range(self._model.rowCount())
         ]
-        for n in mapping_names:
-            m = self.addMenu(n)
-            col_map = m.addAction(f"Map to column")
-            col_header_map = m.addAction(f"Map to header")
-            row_map = m.addAction(f"Map to row")
-            header_map = m.addAction(f"Map to all headers")
 
-            col_map.triggered.connect(create_callback(name=n, map_type="column", value=col))
-            col_header_map.triggered.connect(create_callback(name=n, map_type="column_name", value=col))
-            row_map.triggered.connect(create_callback(name=n, map_type="row", value=row))
-            header_map.triggered.connect(create_callback(name=n, map_type="row", value=-1))
+        menus = [
+            ("Map column to...", "column", col),
+            ("Map header to...", "column_name", col),
+            ("Map row to...", "row", row),
+            ("Map all headers to...", "row", -1),
+        ]
+
+        for title, map_type, value in menus:
+            m = self.addMenu(title)
+            for name in mapping_names:
+                m.addAction(name).triggered.connect(create_callback(name=name, map_type=map_type, value=value))
 
         pPos = self.parent().mapToGlobal(QPoint(5, 20))
         mPos = pPos + QPos
