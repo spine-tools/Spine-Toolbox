@@ -25,7 +25,7 @@ from spine_io.io_api import SourceConnection
 
 def select_csv_file(parent=None):
     """
-    Launches QFileDialog with .txt filter
+    Launches QFileDialog with no filter
     """
     return QFileDialog.getOpenFileName(parent, "", "*.*")
 
@@ -46,7 +46,7 @@ class CSVConnector(SourceConnection):
         "skip": {'type': int, 'label': 'Skip rows', 'Minimum': 0, 'default': 0},
     }
 
-    # Modal widget that that returns source object and action (OK, CANCEL)
+    # Modal widget that returns source object and action (OK, CANCEL)
     SELECT_SOURCE_UI = select_csv_file
 
     def __init__(self):
@@ -55,7 +55,7 @@ class CSVConnector(SourceConnection):
 
     def connect_to_source(self, source):
         """saves filepath
-        
+
         Arguments:
             source {str} -- filepath
         """
@@ -67,7 +67,7 @@ class CSVConnector(SourceConnection):
 
     def get_tables(self):
         """Method that should return a list of table names, list(str)
-        
+
         Raises:
             NotImplementedError: [description]
         """
@@ -98,7 +98,7 @@ class CSVConnector(SourceConnection):
         return dialect, has_header, skip
 
     def file_iterator(self, options, max_rows):
-        """creates a iterator that reads max_rows number of rows from text file
+        """creates an iterator that reads max_rows number of rows from text file
 
         Arguments:
             options {dict} -- dict with options:

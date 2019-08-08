@@ -47,9 +47,9 @@ except ImportError as err:
     IMPORT_ERROR = err
 
 
-def select_csv_file(parent=None):
+def select_gdx_file(parent=None):
     """
-    Launches QFileDialog with .txt filter
+    Launches QFileDialog with .gdx filter
     """
     return QFileDialog.getOpenFileName(parent, "", "*.gdx")
 
@@ -65,8 +65,8 @@ class GdxConnector(SourceConnection):
     # dict with option specification for source.
     OPTIONS = {}
 
-    # Modal widget that that returns source object and action (OK, CANCEL)
-    SELECT_SOURCE_UI = select_csv_file
+    # Modal widget that returns source object and action (OK, CANCEL)
+    SELECT_SOURCE_UI = select_gdx_file
 
     def __init__(self):
         super(GdxConnector, self).__init__()
@@ -83,7 +83,7 @@ class GdxConnector(SourceConnection):
 
     def connect_to_source(self, source):
         """saves filepath
-        
+
         Arguments:
             source {str} -- filepath
         """
@@ -123,7 +123,7 @@ class GdxConnector(SourceConnection):
 
     def get_tables(self):
         """Method that should return a list of table names, list(str)
-        
+
         Raises:
             NotImplementedError: [description]
         """

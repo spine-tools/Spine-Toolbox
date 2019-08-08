@@ -23,9 +23,9 @@ from PySide2.QtWidgets import QInputDialog
 from spine_io.io_api import SourceConnection
 
 
-def select_csv_file(parent=None):
+def select_sa_conn_string(parent=None):
     """
-    Launches QFileDialog with .txt filter
+    Launches QInputDialog for entering connection string
     """
     return QInputDialog.getText(parent, "SqlAlchemy", "SqlAlchemy connection string:")
 
@@ -39,8 +39,8 @@ class SqlAlchemyConnector(SourceConnection):
     # dict with option specification for source.
     OPTIONS = {}
 
-    # Modal widget that that returns source object and action (OK, CANCEL)
-    SELECT_SOURCE_UI = select_csv_file
+    # Modal widget that returns source object and action (OK, CANCEL)
+    SELECT_SOURCE_UI = select_sa_conn_string
 
     def __init__(self):
         super(SqlAlchemyConnector, self).__init__()
@@ -52,7 +52,7 @@ class SqlAlchemyConnector(SourceConnection):
 
     def connect_to_source(self, source):
         """saves filepath
-        
+
         Arguments:
             source {str} -- filepath
         """
@@ -74,7 +74,7 @@ class SqlAlchemyConnector(SourceConnection):
 
     def get_tables(self):
         """Method that should return a list of table names, list(str)
-        
+
         Raises:
             NotImplementedError: [description]
         """

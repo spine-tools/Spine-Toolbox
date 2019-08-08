@@ -43,9 +43,9 @@ class ImportErrorWidget(QWidget):
 
     def set_import_state(self, num_imported, errors):
         """Sets state of error widget.
-        
+
         Arguments:
-            num_imported {int} -- number of successfull imported items
+            num_imported {int} -- number of successfully imported items
             errors {list} -- list of errors.
         """
         self._ui_num_errors.setText(f"Number of errors: {len(errors)}")

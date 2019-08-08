@@ -26,7 +26,7 @@ from spine_io.io_api import SourceConnection
 
 def select_excel_file(parent=None):
     """
-    Launches QFileDialog with .txt filter
+    Launches QFileDialog with .xlsx and friends filter
     """
     return QFileDialog.getOpenFileName(parent, "", "*.xlsx;*.xlsm;*.xltx;*.xltm")
 
@@ -58,7 +58,7 @@ class ExcelConnector(SourceConnection):
 
     def connect_to_source(self, source):
         """saves filepath
-        
+
         Arguments:
             source {str} -- filepath
         """
@@ -84,7 +84,7 @@ class ExcelConnector(SourceConnection):
 
     def get_tables(self):
         """Method that should return a list of table names, list(str)
-        
+
         Raises:
             NotImplementedError: [description]
         """
