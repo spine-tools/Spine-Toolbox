@@ -62,7 +62,7 @@ class DataInterface(ProjectItem):
         self.settings = settings
         self.file_model = QStandardItemModel()
         self._graphics_item = DataInterfaceIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        # Note: data_interface_refresh_signal is not shared with other proj. items so there's no need to disconnect it
+        # NOTE: data_interface_refresh_signal is not shared with other proj. items so there's no need to disconnect it
         self.data_interface_refresh_signal.connect(self.refresh)
         self._sigs = self.make_signal_handler_dict()
         # connector class
@@ -116,18 +116,6 @@ class DataInterface(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
-    @Slot(bool, name="select_import_file")
-    def select_import_file(self, checked=False):
-        """Opens script path selection dialog."""
-        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-
-        answer = QFileDialog.getOpenFileName(self._toolbox, "Select file to import", self.data_dir)
-        file_path = answer[0]
-        if not file_path:  # Cancel button clicked
-            return
-        # Update UI
-        self._toolbox.ui.lineEdit_import_file_path.setText(file_path)
-
     @Slot(bool, name="open_import_editor")
     def open_import_editor(self, checked=False):
         """Opens Import editor for the file selected into line edit."""
@@ -157,14 +145,17 @@ class DataInterface(ProjectItem):
         self._preview_widget.destroyed.connect(self._preview_destroyed)
         self._preview_widget.start_ui()
 
+    @Slot("QString", name="_connection_failed")
     def _connection_failed(self, msg):
         self._toolbox.msg.emit(msg)
         self._preview_widget.close()
         self._preview_widget = None
 
+    @Slot(dict, name="save_settings")
     def save_settings(self, settings):
         self.settings = settings
 
+    @Slot(name="_preview_destroyed")
     def _preview_destroyed(self):
         self._preview_widget = None
 
