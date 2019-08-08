@@ -34,6 +34,11 @@ from spine_io.io_models import MappingPreviewModel
 
 
 class ImportPreviewWidget(QWidget):
+    """
+    A Widget for defining one or more Mappings associated to a data source (CSV file, Excel file, etc).
+    Currently it is being embeded in ImportDialog and MappingPreviewWindow.
+    """
+
     tableChecked = Signal()
     mappedDataReady = Signal(dict, list)
     previewDataUpdated = Signal()
@@ -273,6 +278,11 @@ class ImportPreviewWidget(QWidget):
 
 
 class MappingTableMenu(QMenu):
+    """
+    A menu to let users define a Mapping from a data table.
+    Used to generate the context menu for ImportPreviewWidget._ui_table
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
         self._model = None

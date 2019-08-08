@@ -25,6 +25,10 @@ from spine_io.widgets.import_preview_widget import ImportPreviewWidget
 
 
 class MappingPreviewWindow(QMainWindow):
+    """
+    A QMainWindow to let users define Mappings for a Data Interface item.
+    """
+
     settings_updated = Signal(dict)
     connection_failed = Signal(str)
 

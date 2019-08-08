@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains MappingTableModel class.
+MappingWidget and MappingOptionsWidget class.
 
 :author: P. Vennström (VTT)
 :date:   1.6.2019
@@ -42,6 +42,11 @@ MAPPING_CHOICES = ("Constant", "Column", "Row", "Header", "None")
 
 
 class MappingWidget(QWidget):
+    """
+    A widget for managing Mappings (add, remove, edit, visualize, and so on).
+    Intended to be embeded in a ImportPreviewWidget.
+    """
+
     mappingChanged = Signal(MappingTableModel)
     mappingDataChanged = Signal()
 
@@ -56,7 +61,7 @@ class MappingWidget(QWidget):
         self._ui_remove_mapping = QPushButton("Remove")
         self._ui_list = QListView()
         self._ui_table = QTableView()
-        self._ui_options = MappingOptionWidget()
+        self._ui_options = MappingOptionsWidget()
         self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
 
         self._ui_table.setItemDelegateForColumn(1, ComboBoxDelegate(self, MAPPING_CHOICES))
@@ -160,7 +165,12 @@ class MappingWidget(QWidget):
         self.mappingChanged.emit(m)
 
 
-class MappingOptionWidget(QWidget):
+class MappingOptionsWidget(QWidget):
+    """
+    A widget for managing Mapping options (class type, dimensions, parameter type, ignore columns, and so on).
+    Intended to be embeded in a MappingWidget.
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
 

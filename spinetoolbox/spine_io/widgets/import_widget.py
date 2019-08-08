@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains ImportDialog class.
+ImportDialog class.
 
 :author: P. Vennström (VTT)
 :date:   1.6.2019
@@ -40,6 +40,14 @@ from spine_io.connection_manager import ConnectionManager
 
 
 class ImportDialog(QDialog):
+    """
+    A widget for importing data into a Spine db. Currently used by TreeViewForm.
+    It embeds three widgets that alternate depending on user's actions:
+    - `select_widget` is a QWidget for selecting the source data type (CSV, Excel, etc.)
+    - `_import_preview` is an ImportPreviewWidget for defining the Mapping(s) to associate with the source data
+    - `_error_widget` is an ImportErrorWidget to show errors from import operations
+    """
+
     def __init__(self, parent=None):
         super().__init__(parent)
 
@@ -189,7 +197,7 @@ class ImportDialog(QDialog):
 
     def _handle_failed_connection(self, msg):
         """Handle failed connection, show error message and select widget
-        
+
         Arguments:
             msg {str} -- str with message of reason for failed connection.
         """
