@@ -30,7 +30,7 @@ from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
-from helpers import create_dir, busy_effect, get_db_map
+from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp, format_string_list
 import qsubprocess
 
 
@@ -58,8 +58,10 @@ class DataStore(ProjectItem):
         self.tabular_view_form = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
             create_dir(self.data_dir)
+            create_dir(self.logs_dir)
         except OSError:
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
@@ -655,16 +657,26 @@ class DataStore(ProjectItem):
                 for di_name, data in inst.di_data.items():
                     self._toolbox.msg_proc.emit("Importing data from {} into {}".format(di_name, url))
                     import_num, import_errors = spinedb_api.import_data(db_map, **data)
+                    import_errors = ["quedo", "la", "caga"]
                     if import_errors:
-                        # TODO how are errors displayed? there can be quite many of these.
-                        # Maybe create a log file in project item folder that you can open and view
                         db_map.rollback_session()
-                        self._toolbox.msg.emit(
-                            "<b>{0}:</b> {1} errors when importing to {2}, rolling back".format(
-                                self.name, len(import_errors), db
-                            )
+                        # Log errors in a time stamped file into the logs directory
+                        timestamp = create_log_file_timestamp()
+                        logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.html"))
+                        with open(logfilepath, 'w') as f:
+                            f.write(format_string_list(import_errors))
+                        # Make error log file anchor with path as tooltip
+                        logfile_anchor = (
+                            "<a style='color:#BB99FF;' title='"
+                            + logfilepath
+                            + "' href='file:///"
+                            + logfilepath
+                            + "'>error log</a>"
                         )
-                        self._toolbox.msg.emit("<b>{0}:</b> {1}".format(self.name, [er.msg for er in import_errors]))
+                        self._toolbox.msg.emit(
+                            "There where import errors while executing <b>{0}</b>, rolling back: "
+                            "{1}".format(self.name, logfile_anchor)
+                        )
                     else:
                         db_map.commit_session("imported with mapper")
                         self._toolbox.msg.emit(

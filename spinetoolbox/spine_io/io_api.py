@@ -35,7 +35,7 @@ class SourceConnection:
 
     def connect_to_source(self, source):
         """Connects to source, ex: connecting to a database where source is a connection string.
-        
+
         Arguments:
             source {} -- object with information on source to be connected to, ex: filepath string for a csv connection
         """
@@ -48,7 +48,7 @@ class SourceConnection:
 
     def get_tables(self):
         """Method that should return a list of table names, list(str)
-        
+
         Raises:
             NotImplementedError: [description]
         """
@@ -90,8 +90,8 @@ class SourceConnection:
         for table, mapping in tables_mappings.items():
             opt = options.get(table, {})
             data, header, num_cols = self.get_data_iterator(table, opt, max_rows)
-            data, error = read_with_mapping(data, mapping, num_cols, header)
+            data, t_errors = read_with_mapping(data, mapping, num_cols, header)
             for key, value in data.items():
                 mapped_data[key].extend(value)
-            errors.extend(error)
+            errors.extend([(table, err) for err in t_errors])
         return mapped_data, errors

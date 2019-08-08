@@ -23,7 +23,7 @@ from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileDialog, QFileIconProvider, QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
-from helpers import create_dir
+from helpers import create_dir, create_log_file_timestamp
 from spine_io.importers.csv_reader import CSVConnector
 from spine_io.connection_manager import ConnectionManager
 from spine_io.widgets.import_preview_widget import ImportPreviewWidget
@@ -50,10 +50,12 @@ class DataInterface(ProjectItem):
         self._toolbox = toolbox
         self._project = self._toolbox.project()
         self.item_type = "Data Interface"
-        # Make directory for this item
+        # Make data directory and logs subdirectory for this item
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
             create_dir(self.data_dir)
+            create_dir(self.logs_dir)
         except OSError:
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
@@ -210,12 +212,27 @@ class DataInterface(ProjectItem):
                 )
             )
             if errors:
-                # TODO how are errors displayed? there can be quite many of these.
-                # Maybe create a log file in project item folder that you can open and view
+                # Log errors in a time stamped file into the logs directory
+                timestamp = create_log_file_timestamp()
+                logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.log"))
+                with open(logfilepath, 'w') as f:
+                    for err in errors:
+                        f.write("{}\n".format(err))
+                # Make error log file anchor with path as tooltip
+                logfile_anchor = (
+                    "<a style='color:#BB99FF;' title='"
+                    + logfilepath
+                    + "' href='file:///"
+                    + logfilepath
+                    + "'>error log</a>"
+                )
+                self._toolbox.msg_error.emit(
+                    "There where errors while executing <b>{0}</b>. {1}".format(self.name, logfile_anchor)
+                )
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)
                 return
-            # Add data to a dict in the execution instance.
-            # If execution reaches a Data Store, the added data will be imported into the corresponding url
+            # Add mapped data to a dict in the execution instance.
+            # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
             inst.add_di_data(self.name, data)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
