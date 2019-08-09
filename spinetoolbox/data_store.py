@@ -30,7 +30,7 @@ from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
-from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp, format_string_list
+from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
 import qsubprocess
 
 
@@ -672,9 +672,10 @@ class DataStore(ProjectItem):
                 if all_import_errors:
                     # Log errors in a time stamped file into the logs directory
                     timestamp = create_log_file_timestamp()
-                    logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.html"))
+                    logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.log"))
                     with open(logfilepath, 'w') as f:
-                        f.write(format_string_list(all_import_errors))
+                        for err in all_import_errors:
+                            f.write("{}\n".format(err.msg))
                     # Make error log file anchor with path as tooltip
                     logfile_anchor = (
                         "<a style='color:#BB99FF;' title='"

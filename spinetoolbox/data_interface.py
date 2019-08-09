@@ -63,7 +63,8 @@ class DataInterface(ProjectItem):
         # Variables for saving selections when item is (de)activated
         self.settings = settings
         self.file_model = QStandardItemModel()
-        self.checked_files = []  # List of checked file items
+        self.all_files = []  # All source files
+        self.unchecked_files = []  # Unchecked source files
         self._graphics_item = DataInterfaceIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
         # NOTE: data_interface_refresh_signal is not shared with other proj. items so there's no need to disconnect it
         self.data_interface_refresh_signal.connect(self.refresh)
@@ -74,9 +75,15 @@ class DataInterface(ProjectItem):
     @Slot(QStandardItem, name="_handle_file_model_item_changed")
     def _handle_file_model_item_changed(self, item):
         if item.checkState() == Qt.Checked:
-            self.checked_files.append(item.text())
+            self.unchecked_files.remove(item.text())
+            self._toolbox.msg.emit(
+                "<b>{0}:</b> Source file '{1}' will be processed at execution.".format(self.name, item.text())
+            )
         elif item.checkState() != Qt.Checked:
-            self.checked_files.remove(item.text())
+            self.unchecked_files.append(item.text())
+            self._toolbox.msg.emit(
+                "<b>{0}:</b> Source file '{1}' will *NOT* be processed at execution.".format(self.name, item.text())
+            )
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -142,8 +149,6 @@ class DataInterface(ProjectItem):
 
     def open_import_editor(self, index):
         """Opens Import editor for the given index."""
-        if not index.isValid():
-            return
         importee = index.data()
         if importee is None:
             self._toolbox.msg_error.emit("Please select a source file from the list.")
@@ -198,6 +203,7 @@ class DataInterface(ProjectItem):
     def update_file_model(self, items):
         """Add given list of items to the file model. If None or
         an empty list given, the model is cleared."""
+        self.all_files = items
         self.file_model.clear()
         self.file_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
         if items is not None:
@@ -205,7 +211,9 @@ class DataInterface(ProjectItem):
                 qitem = QStandardItem(item)
                 qitem.setEditable(False)
                 qitem.setCheckable(True)
-                if item in self.checked_files:
+                if item in self.unchecked_files:
+                    qitem.setCheckState(Qt.Unchecked)
+                else:
                     qitem.setCheckState(Qt.Checked)
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.file_model.appendRow(qitem)
@@ -238,9 +246,13 @@ class DataInterface(ProjectItem):
         all_data = []
         all_errors = []
 
-        for source in self.checked_files:
+        checked_files = [f for f in self.all_files if f not in self.unchecked_files]
+        for source in checked_files:
             settings = self.settings.get(source, None)
             if settings is None:
+                self._toolbox.msg_warning.emit(
+                    "<b>{0}:</b> There are no mappings defined for {1}, moving on...".format(self.name, source)
+                )
                 continue
             source_type = settings["source_type"]
             connector = eval("{}()".format(source_type))
