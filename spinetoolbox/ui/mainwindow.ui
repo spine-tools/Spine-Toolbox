@@ -2226,6 +2226,9 @@
                  <pointsize>10</pointsize>
                 </font>
                </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
+               </property>
                <property name="textElideMode">
                 <enum>Qt::ElideLeft</enum>
                </property>

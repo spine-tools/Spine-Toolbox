@@ -71,9 +71,12 @@ class CustomQGraphicsScene(QGraphicsScene):
             return
         selected_items = [item for item in self.selectedItems() if isinstance(item, ProjectItemIcon)]
         self._toolbox.ui.treeView_project.clearSelection()
-        for item in selected_items:
-            ind = self._toolbox.project_item_model.find_item(item.name())
+        selected_inds = [self._toolbox.project_item_model.find_item(item.name()) for item in selected_items]
+        for ind in selected_inds:
             self._toolbox.ui.treeView_project.selectionModel().select(ind, QItemSelectionModel.Select)
+        # Make last item selected the current index in project tree view
+        if bool(selected_inds):
+            self._toolbox.ui.treeView_project.setCurrentIndex(selected_inds[-1])
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.

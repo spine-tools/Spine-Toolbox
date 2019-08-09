@@ -278,6 +278,27 @@ class ViewPropertiesContextMenu(CustomContextMenu):
         self.exec_(position)
 
 
+class DiFilesContextMenu(CustomContextMenu):
+    """Context menu class for source files view in Data Interface properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            self.add_action("Open directory...")
+        else:
+            self.addSeparator()
+            self.add_action("Open import editor")
+            self.add_action("Open directory...")
+        self.exec_(position)
+
+
 class ObjectTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in tree view form.
 

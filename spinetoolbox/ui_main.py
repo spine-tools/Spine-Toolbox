@@ -45,6 +45,7 @@ from widgets.custom_menus import (
     DcDataContextMenu,
     ToolPropertiesContextMenu,
     ViewPropertiesContextMenu,
+    DiFilesContextMenu,
 )
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
@@ -122,6 +123,7 @@ class ToolboxUI(QMainWindow):
         self.dc_data_context_menu = None
         self.tool_prop_context_menu = None
         self.view_prop_context_menu = None
+        self.di_files_context_menu = None
         self.project_form = None
         self.add_data_store_form = None
         self.add_data_connection_form = None
@@ -209,6 +211,9 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_dc_data.customContextMenuRequested.connect(self.show_dc_data_properties_context_menu)
         self.ui.treeView_template.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
         self.ui.treeView_view.customContextMenuRequested.connect(self.show_view_properties_context_menu)
+        self.ui.treeView_data_interface_files.customContextMenuRequested.connect(
+            self.show_di_files_properties_context_menu
+        )
         # Main menu
         self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
@@ -472,22 +477,16 @@ class ToolboxUI(QMainWindow):
 
     def init_shared_widgets(self):
         """Initialize widgets that are shared among all ProjectItems of the same type."""
-        # NOTE: Trying out fontawesome
         # Data Stores
         self.ui.comboBox_dialect.addItems(list(SUPPORTED_DIALECTS.keys()))
         self.ui.comboBox_dialect.setCurrentIndex(-1)
-        # self.ui.toolButton_browse.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        # self.ui.toolButton_ds_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Data Connections
         self.ui.treeView_dc_references.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
-        # self.ui.toolButton_dc_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Tools (Tool template combobox is initialized in init_tool_template_model)
         self.ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
-        # self.ui.toolButton_tool_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Views
         self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
-        # self.ui.toolButton_view_open_dir.setIcon(self.style().standardIcon(QStyle.SP_DirOpenIcon))
         # Data Interfaces
         self.ui.treeView_data_interface_files.setStyleSheet(TREEVIEW_HEADER_SS)
 
@@ -1354,9 +1353,6 @@ class ToolboxUI(QMainWindow):
         option = self.dc_ref_context_menu.get_action()
         # Get selected Data Connection from project item model
         cur_index = self.ui.treeView_project.currentIndex()
-        if not cur_index.isValid():
-            self.msg_error.emit("FIXME: Could not find an index of a selected Data Connection.")
-            return
         dc = self.project_item_model.project_item(cur_index)
         if not dc:
             self.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(cur_index))
@@ -1390,9 +1386,6 @@ class ToolboxUI(QMainWindow):
         option = self.dc_data_context_menu.get_action()
         # Get selected Data Connection from project item model
         cur_index = self.ui.treeView_project.currentIndex()
-        if not cur_index.isValid():
-            self.msg_error.emit("FIXME: Could not find selected Data Connection index.")
-            return
         dc = self.project_item_model.project_item(cur_index)
         if not dc:
             self.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(cur_index))
@@ -1419,9 +1412,6 @@ class ToolboxUI(QMainWindow):
         """
         ind = self.ui.treeView_template.indexAt(pos)  # Index of selected QStandardItem in Tool properties tree view.
         cur_index = self.ui.treeView_project.currentIndex()  # Get selected Tool
-        if not cur_index.isValid():
-            self.msg_error.emit("FIXME: Could not find selected Tool index")
-            return
         tool = self.project_item_model.project_item(cur_index)
         if not tool.tool_template():
             return
@@ -1452,15 +1442,31 @@ class ToolboxUI(QMainWindow):
         """
         ind = self.ui.treeView_view.indexAt(pos)  # Index of selected item in View references tree view.
         cur_index = self.ui.treeView_project.currentIndex()  # Get selected View
-        if not cur_index.isValid():
-            self.msg_error.emit("FIXME: Could not find selected View index")
-            return
         view = self.project_item_model.project_item(cur_index)
         global_pos = self.ui.treeView_view.viewport().mapToGlobal(pos)
         self.view_prop_context_menu = ViewPropertiesContextMenu(self, global_pos, ind)
-        option = self.view_prop_context_menu.get_action()
+        option = self.di_files_context_menu.get_action()
         if option == "Open graph view":
             view.open_graph_view(ind)
+        return
+
+    @Slot("QPoint", name="show_di_files_properties_context_menu")
+    def show_di_files_properties_context_menu(self, pos):
+        """Create and show a context-menu in Data Interface properties source files view.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        ind = self.ui.treeView_data_interface_files.indexAt(pos)  # Index of selected item in DI references tree view.
+        cur_index = self.ui.treeView_project.currentIndex()  # Get selected DI
+        di = self.project_item_model.project_item(cur_index)
+        global_pos = self.ui.treeView_data_interface_files.viewport().mapToGlobal(pos)
+        self.di_files_context_menu = DiFilesContextMenu(self, global_pos, ind)
+        option = self.di_files_context_menu.get_action()
+        if option == "Open import editor":
+            di.open_import_editor(ind)
+        elif option == "Open directory...":
+            di.open_directory()
         return
 
     @Slot(name="remove_refs_with_del_key")
