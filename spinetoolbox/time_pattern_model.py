@@ -114,3 +114,26 @@ class TimePatternModel(IndexedValueTableModel):
             self._value.values[index.row()] = value
         self.dataChanged.emit(index, index, [Qt.EditRole])
         return True
+
+    def batch_set_data(self, indexes, values):
+        """
+        Sets data for several indexes at once.
+
+        Args:
+            indexes (Sequence): a sequence of model indexes
+            values (Sequence): a sequence of time periods/floats corresponding to the indexes
+        """
+        modified_rows = list()
+        modified_columns = list()
+        for index, value in zip(indexes, values):
+            row = index.row()
+            modified_rows.append(row)
+            column = index.column()
+            modified_columns.append(column)
+            if column == 0:
+                self._value.indexes[row] = value
+            else:
+                self._value.values[row] = value
+        left_top = self.index(min(modified_rows), min(modified_columns))
+        right_bottom = self.index(max(modified_rows), max(modified_columns))
+        self.dataChanged.emit(left_top, right_bottom, [Qt.EditRole])

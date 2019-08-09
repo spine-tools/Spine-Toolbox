@@ -22,6 +22,7 @@ from spinedb_api import TimeSeriesVariableResolution
 from plotting import add_time_series_plot
 from time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
+from widgets.custom_qtableview import IndexedValueTableView
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
 
@@ -48,9 +49,11 @@ class TimeSeriesVariableResolutionEditor(QWidget):
         self._ui.setupUi(self)
         self._plot_widget = PlotWidget()
         self._ui.splitter.insertWidget(1, self._plot_widget)
-        self._ui.time_series_table.setModel(self._model)
-        self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._time_series_table = IndexedValueTableView(self._ui.splitter)
+        self._ui.left_layout.addWidget(self._time_series_table)
+        self._time_series_table.setModel(self._model)
+        self._time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
@@ -60,7 +63,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
     @Slot("QPoint", name="_show_table_context_menu")
     def _show_table_context_menu(self, pos):
         """Shows the table's context menu."""
-        handle_table_context_menu(pos, self._ui.time_series_table, self._model, self)
+        handle_table_context_menu(pos, self._time_series_table, self._model, self)
 
     def set_value(self, value):
         """Sets the time series being edited."""
