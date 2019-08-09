@@ -27,21 +27,7 @@ from models import TableModel, MinimalTableModel
 
 
 class CopyPasteTableView(QTableView):
-    """Custom QTableView class with copy and paste methods.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
-
-    def __init__(self, parent):
-        """Initialize the class."""
-        super().__init__(parent=parent)
-        QApplication.clipboard().dataChanged.connect(self.clipboard_data_changed)
-        self.clipboard_text = QApplication.clipboard().text()
-
-    @Slot(name="clipboard_data_changed")
-    def clipboard_data_changed(self):
-        self.clipboard_text = QApplication.clipboard().text()
+    """Custom QTableView class with copy and paste methods."""
 
     def keyPressEvent(self, event):
         """Copy and paste to and from clipboard in Excel-like format."""
@@ -98,7 +84,7 @@ class CopyPasteTableView(QTableView):
     def paste_on_selection(self):
         """Paste clipboard data on selection, but not beyond.
         If data is smaller than selection, repeat data to fit selection."""
-        text = self.clipboard_text
+        text = QApplication.clipboard().text()
         if not text:
             return False
         data = [line.split('\t') for line in text.split('\n')]
@@ -128,7 +114,7 @@ class CopyPasteTableView(QTableView):
 
     def paste_normal(self):
         """Paste clipboard data, overwriting cells if needed"""
-        text = self.clipboard_text.strip()
+        text = QApplication.clipboard().text().strip()
         if not text:
             return False
         data = [line.split('\t') for line in text.split('\n')]
