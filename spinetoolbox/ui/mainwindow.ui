@@ -2226,6 +2226,9 @@
                  <pointsize>10</pointsize>
                 </font>
                </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideLeft</enum>
+               </property>
                <property name="indentation">
                 <number>5</number>
                </property>

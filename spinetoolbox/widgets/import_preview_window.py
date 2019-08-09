@@ -107,7 +107,6 @@ class ImportPreviewWindow(QMainWindow):
         Args:
             event (QEvent): Closing event if 'X' is clicked.
         """
-
         # save qsettings
         qsettings = self._qsettings
         qsettings.beginGroup(self.settings_group)

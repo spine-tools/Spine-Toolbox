@@ -20,7 +20,7 @@ import logging
 import os
 from PySide2.QtCore import Qt, Slot, Signal, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-from PySide2.QtWidgets import QFileIconProvider, QMainWindow
+from PySide2.QtWidgets import QFileIconProvider, QMainWindow, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
@@ -167,26 +167,56 @@ class DataInterface(ProjectItem):
                 preview_widget.raise_()
             return
         # Create a new form for the selected file
-        # Get connector from extension automatically. TODO: Allow user to select the connector manually
-        _filename, file_extension = os.path.splitext(importee)
-        if file_extension.lower().startswith(".xls"):
-            connector = ExcelConnector
-        elif file_extension.lower() == ".csv":
-            connector = CSVConnector
+        settings = self.settings.setdefault(importee, {})
+        # Try and get connector from settings
+        source_type = settings.get("source_type", None)
+        if source_type is not None:
+            connector = eval(source_type)
         else:
-            self._toolbox.msg_warning.emit(
-                "Unable to find a suitable connector for file <b>{}<b> automatically."
-                "Falling back to CSV connector...".format(importee)
-            )
-            connector = CSVConnector
-        # Get settings for selected file
-        settings = self.settings.get(importee, {})
+            # Ask user
+            connector = self.get_connector(importee)
+            if not connector:
+                # Aborted by the user
+                return
         self._toolbox.msg.emit("Opening Import editor for file: {0}".format(importee))
         preview_widget = self._preview_widget[importee] = ImportPreviewWindow(self, importee, connector, settings)
         preview_widget.settings_updated.connect(lambda s, importee=importee: self.save_settings(s, importee))
         preview_widget.connection_failed.connect(lambda m, importee=importee: self._connection_failed(m, importee))
         preview_widget.destroyed.connect(lambda o=None, importee=importee: self._preview_destroyed(importee))
         preview_widget.start_ui()
+
+    def get_connector(self, importee):
+        """Shows a QDialog to select a connector for the given source file.
+        Mimics similar routine in `spine_io.widgets.import_widget.ImportDialog`
+        """
+        connector_list = [CSVConnector, ExcelConnector]  # TODO: add others as needed
+        connector_names = [c.DISPLAY_NAME for c in connector_list]
+        dialog = QDialog(self._toolbox)
+        dialog.setLayout(QVBoxLayout())
+        connector_list_wg = QListWidget()
+        connector_list_wg.addItems(connector_names)
+        # Set current item in `connector_list_wg` based on file extension
+        _filename, file_extension = os.path.splitext(importee)
+        if file_extension.lower().startswith(".xls"):
+            row = connector_list.index(ExcelConnector)
+        elif file_extension.lower() == ".csv":
+            row = connector_list.index(CSVConnector)
+        else:
+            row = None
+        if row:
+            connector_list_wg.setCurrentRow(row)
+        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
+        button_box.button(QDialogButtonBox.Ok).clicked.connect(dialog.accept)
+        button_box.button(QDialogButtonBox.Cancel).clicked.connect(dialog.reject)
+        connector_list_wg.doubleClicked.connect(dialog.accept)
+        dialog.layout().addWidget(connector_list_wg)
+        dialog.layout().addWidget(button_box)
+        _dirname, filename = os.path.split(importee)
+        dialog.setWindowTitle("Select connector for '{}'".format(filename))
+        answer = dialog.exec_()
+        if answer:
+            row = connector_list_wg.currentIndex().row()
+            return connector_list[row]
 
     def _connection_failed(self, msg, importee):
         self._toolbox.msg.emit(msg)
@@ -195,7 +225,7 @@ class DataInterface(ProjectItem):
             preview_widget.close()
 
     def save_settings(self, settings, importee):
-        self.settings[importee] = settings
+        self.settings[importee].update(settings)
 
     def _preview_destroyed(self, importee):
         preview_widget = self._preview_widget.pop(importee, None)
@@ -255,7 +285,7 @@ class DataInterface(ProjectItem):
                 )
                 continue
             source_type = settings["source_type"]
-            connector = eval("{}()".format(source_type))
+            connector = eval(source_type)()
             connector.connect_to_source(source)
             data, errors = connector.get_mapped_data(settings["table_mappings"], settings["table_options"], max_rows=-1)
             self._toolbox.msg.emit(
