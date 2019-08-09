@@ -211,7 +211,7 @@ class ImportPreviewWidget(QWidget):
 
         # current selected table
         selected = self._ui_list.selectedItems()
-        self.selected_source_tables = set(tables.keys()).difference(self.selected_source_tables)
+        self.selected_source_tables = set(tables.keys()).intersection(self.selected_source_tables)
 
         # empty tables list and add new tables
         self._ui_list.blockSignals(True)
