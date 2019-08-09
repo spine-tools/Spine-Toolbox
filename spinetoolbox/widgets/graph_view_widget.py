@@ -41,14 +41,14 @@ class GraphViewForm(DataStoreForm):
 
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
+        db_maps (dict): named DiffDatabaseMapping instances
         read_only (bool): Whether or not the form should be editable
-        db_maps: named DiffDatabaseMapping instances
     """
 
-    def __init__(self, project, read_only=False, **db_maps):
+    def __init__(self, project, db_maps, read_only=False):
         """Initialize class."""
         tic = time.clock()
-        super().__init__(project, Ui_MainWindow(), **db_maps)
+        super().__init__(project, Ui_MainWindow(), db_maps)
         self.db_map = self.db_maps[0]
         self.db_name = self.db_names[0]
         self.ui.graphicsView._graph_view_form = self

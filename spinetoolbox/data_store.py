@@ -460,7 +460,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tree_view(self, db_map):
         """Open url in tree view form."""
-        self.tree_view_form = TreeViewForm(self._project, **{self.name: db_map})
+        self.tree_view_form = TreeViewForm(self._project, {self.name: db_map})
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -501,7 +501,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_graph_view(self, db_map):
         """Open url in graph view form."""
-        self.graph_view_form = GraphViewForm(self._project, read_only=False, **{self.name: db_map})
+        self.graph_view_form = GraphViewForm(self._project, {self.name: db_map}, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
