@@ -291,30 +291,30 @@ class MappingSpecModel(QAbstractTableModel):
         mappings = []
         mappings.append(self._model.name)
         if isinstance(self._model, RelationshipClassMapping):
-            display_name.append("Relationship class names:")
+            display_name.append("Relationship class names")
             if self._model.object_classes:
-                display_name.extend([f"Object class {i+1} names:" for i, oc in enumerate(self._model.object_classes)])
+                display_name.extend([f"Object class {i+1} names" for i, oc in enumerate(self._model.object_classes)])
                 mappings.extend([oc for oc in self._model.object_classes])
             if self._model.objects:
-                display_name.extend([f"Object {i+1} names:" for i, oc in enumerate(self._model.objects)])
+                display_name.extend([f"Object {i+1} names" for i, oc in enumerate(self._model.objects)])
                 mappings.extend([o for o in self._model.objects])
         else:
-            display_name.append("Object class names:")
-            display_name.append("Object names:")
+            display_name.append("Object class names")
+            display_name.append("Object names")
             mappings.append(self._model.object)
         if self._model.parameters:
-            display_name.append("Parameter names:")
+            display_name.append("Parameter names")
             mappings.append(self._model.parameters.name)
-            display_name.append("Parameter values:")
+            display_name.append("Parameter values")
             mappings.append(self._model.parameters.value)
             if self._model.parameters.extra_dimensions:
-                display_name.append("Parameter time index:")
+                display_name.append("Parameter time index")
                 mappings.append(self._model.parameters.extra_dimensions[0])
         self._display_names = display_name
         self._mappings = mappings
 
     def get_map_type_display(self, mapping, name):
-        if name == "Parameter values:" and self._model.is_pivoted():
+        if name == "Parameter values" and self._model.is_pivoted():
             mapping_type = "Pivoted"
         elif mapping is None:
             mapping_type = "None"
@@ -330,7 +330,7 @@ class MappingSpecModel(QAbstractTableModel):
         return mapping_type
 
     def get_map_value_display(self, mapping, name):
-        if name == "Parameter values:" and self._model.is_pivoted():
+        if name == "Parameter values" and self._model.is_pivoted():
             mapping_value = "Pivoted values"
         elif mapping is None:
             mapping_value = ""
@@ -387,7 +387,7 @@ class MappingSpecModel(QAbstractTableModel):
     def headerData(self, section, orientation, role):
         if role == Qt.DisplayRole:
             if orientation == Qt.Horizontal:
-                return ["Mapping", "Type", "Reference", "Prepend string", "Append string"][section]
+                return ["Target", "Source type", "Source ref.", "Prepend string", "Append string"][section]
 
     def flags(self, index):
         editable = Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
@@ -399,7 +399,7 @@ class MappingSpecModel(QAbstractTableModel):
         if self._model.is_pivoted():
             # special case when we have pivoted data, the values should be
             # columns under pivoted indexes
-            if self._display_names[index.row()] == "Parameter values:":
+            if self._display_names[index.row()] == "Parameter values":
                 return non_editable
 
         if mapping is None:
@@ -508,9 +508,9 @@ class MappingSpecModel(QAbstractTableModel):
     def get_mapping_from_name(self, name):
         if not self._model:
             return None
-        if name in ("Relationship class names:", "Object class names:"):
+        if name in ("Relationship class names", "Object class names"):
             mapping = self._model.name
-        elif name == "Object names:":
+        elif name == "Object names":
             mapping = self._model.object
         elif "Object class " in name:
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
@@ -520,20 +520,20 @@ class MappingSpecModel(QAbstractTableModel):
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
             if index:
                 mapping = self._model.objects[index[0]]
-        elif name == "Parameter names:":
+        elif name == "Parameter names":
             mapping = self._model.parameters.name
-        elif name == "Parameter values:":
+        elif name == "Parameter values":
             mapping = self._model.parameters.value
-        elif name == "Parameter time index:":
+        elif name == "Parameter time index":
             mapping = self._model.parameters.extra_dimensions[0]
         else:
             return None
         return mapping
 
     def set_mapping_from_name(self, name, mapping):
-        if name in ("Relationship class names:", "Object class names:"):
+        if name in ("Relationship class names", "Object class names"):
             self._model.name = mapping
-        elif name == "Object names:":
+        elif name == "Object names":
             self._model.object = mapping
         elif "Object class " in name:
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
@@ -543,11 +543,11 @@ class MappingSpecModel(QAbstractTableModel):
             index = [int(s) - 1 for s in name.split() if s.isdigit()]
             if index:
                 self._model.objects[index[0]] = mapping
-        elif name == "Parameter names:":
+        elif name == "Parameter names":
             self._model.parameters.name = mapping
-        elif name == "Parameter values:":
+        elif name == "Parameter values":
             self._model.parameters.value = mapping
-        elif name == "Parameter time index:":
+        elif name == "Parameter time index":
             self._model.parameters.extra_dimensions = [mapping]
         else:
             return False

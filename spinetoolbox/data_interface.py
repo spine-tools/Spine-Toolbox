@@ -151,7 +151,7 @@ class DataInterface(ProjectItem):
         """Opens Import editor for the given index."""
         importee = index.data()
         if importee is None:
-            self._toolbox.msg_error.emit("Please select a source file from the list.")
+            self._toolbox.msg_error.emit("Please select a source file from the list first.")
             return
         if not os.path.exists(importee):
             self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
