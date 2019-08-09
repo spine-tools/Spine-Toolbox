@@ -260,7 +260,8 @@ class ImportPreviewWidget(QWidget):
             self.select_table(self._ui_list.selectedItems()[0])
 
     def get_settings_dict(self):
-        """Returns a dictionary with type of connector, connector options for tables, mappings for tables, selected tables.
+        """Returns a dictionary with type of connector, connector options for tables,
+        mappings for tables, selected tables.
 
         Returns:
             [Dict] -- dict with settings

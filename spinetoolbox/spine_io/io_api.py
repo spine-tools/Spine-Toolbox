@@ -72,7 +72,7 @@ class SourceConnection:
 
     def get_mapped_data(self, tables_mappings, options, max_rows=-1):
         """
-        Reads all mappings in dict table_mappings, where key is name of table
+        Reads all mappings in dict tables_mappings, where key is name of table
         and value is the mappings for that table.
         emits mapped data when ready.
         """

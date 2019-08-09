@@ -133,17 +133,19 @@ class CSVConnector(SourceConnection):
             [type] -- [description]
         """
         csv_iter = self.file_iterator(options, max_rows)
+        # Iterate once to get num_cols
         try:
             first_row = next(csv_iter)
         except StopIteration:
             return iter([]), [], 0
+        num_cols = len(first_row)
 
         _dialect, has_header, _skip = self.parse_options(options)
-        num_cols = len(first_row)
         if has_header:
+            # Very good, we already have the first row
             header = first_row
         else:
-            # reset iterator
             header = []
+            # reset iterator
             csv_iter = self.file_iterator(options, max_rows)
         return csv_iter, header, num_cols

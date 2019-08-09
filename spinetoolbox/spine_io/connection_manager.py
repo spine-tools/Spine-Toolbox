@@ -22,6 +22,9 @@ from spine_io.widgets.options_widget import OptionsWidget
 
 class ConnectionManager(QObject):
     """Class to manage data connections in another thread.
+
+    Args:
+        connection (class): A class derived from `SourceConnection`, e.g. `CSVConnector`
     """
 
     startTableGet = Signal()
@@ -46,7 +49,7 @@ class ConnectionManager(QObject):
     # data from source is ready, should send list of data and headers
     dataReady = Signal(list, list)
 
-    # tables from source is ready, should send a list of str of availible tables
+    # tables from source is ready, should send a list of str of available tables
     tablesReady = Signal(dict)
 
     # mapped data read from data source
@@ -60,8 +63,8 @@ class ConnectionManager(QObject):
         self._current_table = None
         self._table_options = {}
         self._connection = connection
-        self._option_widget = OptionsWidget(self._connection.OPTIONS)
-        self._option_widget.optionsChanged.connect(self._new_options)
+        self._options_widget = OptionsWidget(self._connection.OPTIONS)
+        self._options_widget.optionsChanged.connect(self._new_options)
         self._is_connected = False
 
     @property
@@ -88,19 +91,19 @@ class ConnectionManager(QObject):
         """
         # save current options if a table is selected
         if self._current_table:
-            options = self._option_widget.get_options()
+            options = self._options_widget.get_options()
             self._table_options.update({self._current_table: options})
         # check if table has options
         self._current_table = table
         if table in self._table_options:
-            self._option_widget.set_options(self._table_options[table])
+            self._options_widget.set_options(self._table_options[table])
         else:
             # restore default values
-            self._option_widget.set_options()
+            self._options_widget.set_options()
 
     def request_tables(self):
         """Get tables tables from source, emits two singals,
-        fetchingData: ConnectionManager is buissy waiting for data
+        fetchingData: ConnectionManager is busy waiting for data
         startTableGet: a signal that the worker in another thread is listening
                        to know when to run get a list of table names.
         """
@@ -116,7 +119,7 @@ class ConnectionManager(QObject):
             max_rows {int} -- how many rows to read (default: {-1})
         """
         if self.is_connected:
-            options = self._option_widget.get_options()
+            options = self._options_widget.get_options()
             self.fetchingData.emit()
             self.startDataGet.emit(table, options, max_rows)
 
@@ -131,7 +134,7 @@ class ConnectionManager(QObject):
         """
         if self.is_connected:
             options = {}
-            self._table_options[self._current_table] = self._option_widget.get_options()
+            self._table_options[self._current_table] = self._options_widget.get_options()
             for table_name in table_mappings:
                 if table_name in self._table_options:
                     options[table_name] = self._table_options[table_name]
@@ -142,7 +145,7 @@ class ConnectionManager(QObject):
 
     def connection_ui(self):
         """
-        launches a modal ui that propts the user to select source.
+        launches a modal ui that prompts the user to select source.
 
         ex: fileselect if source is a file.
         """
@@ -154,7 +157,7 @@ class ConnectionManager(QObject):
 
     def init_connection(self):
         """Creates a Worker and a new thread to read source data.
-        If there is a existing thread close that one.
+        If there is an existing thread close that one.
         """
         # close existing thread
         self.close_connection()
@@ -193,11 +196,11 @@ class ConnectionManager(QObject):
         self.tablesReady.emit(tables)
         # update options if a sheet is selected
         if self._current_table and self._current_table in self._table_options:
-            self._option_widget.set_options(self._table_options[self._current_table])
+            self._options_widget.set_options(self._table_options[self._current_table])
 
     def _new_options(self):
         if self._current_table:
-            options = self._option_widget.get_options()
+            options = self._options_widget.get_options()
             self._table_options.update({self._current_table: options})
         self.request_data(self._current_table, 100)
 
@@ -209,13 +212,13 @@ class ConnectionManager(QObject):
         """
         self._table_options.update(options)
         if self._current_table:
-            self._option_widget.set_options(options=self._table_options.get(self._current_table, {}))
+            self._options_widget.set_options(options=self._table_options.get(self._current_table, {}))
 
     def option_widget(self):
         """
         Return a Qwidget with options for reading data from a table in source
         """
-        return self._option_widget
+        return self._options_widget
 
     def close_connection(self):
         """Close and delete thread and worker
@@ -231,7 +234,11 @@ class ConnectionManager(QObject):
 
 
 class ConnectionWorker(QObject):
-    """Class that wraps SourceConnection class with signals to be able to run in another QThread
+    """A class for delegating SourceConnection operations to another QThread.
+
+    Args:
+        source (str): path of the source file
+        connection (class): A class derived from `SourceConnection` for connecting to the source file
     """
 
     # Signal with error message if connection fails
