@@ -19,7 +19,6 @@ Contains DataInterface class.
 from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QGuiApplication
 from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout, QSplitter
-from spine_io.importers.csv_reader import CSVConnector
 from spine_io.connection_manager import ConnectionManager
 from spine_io.widgets.import_preview_widget import ImportPreviewWidget
 
@@ -32,14 +31,14 @@ class ImportPreviewWindow(QMainWindow):
     settings_updated = Signal(dict)
     connection_failed = Signal(str)
 
-    connection_failed = Signal(str)
-
-    def __init__(self, filepath, settings, qsettings):
+    def __init__(self, data_interface, filepath, connector, settings):
         super().__init__(flags=Qt.Window)
-        self._qsettings = qsettings
+        self._data_interface = data_interface
         self.setAttribute(Qt.WA_DeleteOnClose)
+        self.setWindowTitle("Data interface import preview    -- {} --".format(data_interface.name))
+        self._qsettings = data_interface._toolbox._qsettings
 
-        self._connection_manager = ConnectionManager(CSVConnector)
+        self._connection_manager = ConnectionManager(connector)
         self._connection_manager._source = filepath
         self._preview_widget = ImportPreviewWidget(self._connection_manager, parent=self)
         self._preview_widget.use_settings(settings)

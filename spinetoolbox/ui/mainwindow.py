@@ -937,7 +937,11 @@ class Ui_MainWindow(object):
         self.verticalLayout_21 = QtWidgets.QVBoxLayout(self.scrollAreaWidgetContents_5)
         self.verticalLayout_21.setObjectName("verticalLayout_21")
         self.treeView_data_interface_files = QtWidgets.QTreeView(self.scrollAreaWidgetContents_5)
+        font = QtGui.QFont()
+        font.setPointSize(10)
+        self.treeView_data_interface_files.setFont(font)
         self.treeView_data_interface_files.setIndentation(5)
+        self.treeView_data_interface_files.setRootIsDecorated(False)
         self.treeView_data_interface_files.setUniformRowHeights(True)
         self.treeView_data_interface_files.setObjectName("treeView_data_interface_files")
         self.verticalLayout_21.addWidget(self.treeView_data_interface_files)
@@ -1442,8 +1446,8 @@ class Ui_MainWindow(object):
         self.actionExport_project_to_GraphML.setText(QtWidgets.QApplication.translate("MainWindow", "Export project to GraphML", None, -1))
         self.actionAdd_Data_Interface.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsviews import DesignQGraphicsView
 from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

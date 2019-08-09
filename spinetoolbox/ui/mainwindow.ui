@@ -2221,8 +2221,16 @@
             <layout class="QVBoxLayout" name="verticalLayout_21">
              <item>
               <widget class="QTreeView" name="treeView_data_interface_files">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
                <property name="indentation">
                 <number>5</number>
+               </property>
+               <property name="rootIsDecorated">
+                <bool>false</bool>
                </property>
                <property name="uniformRowHeights">
                 <bool>true</bool>

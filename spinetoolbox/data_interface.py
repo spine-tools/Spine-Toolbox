@@ -25,6 +25,7 @@ from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
 from spine_io.importers.csv_reader import CSVConnector
+from spine_io.importers.excel_reader import ExcelConnector
 from widgets.import_preview_window import ImportPreviewWindow
 
 
@@ -120,15 +121,7 @@ class DataInterface(ProjectItem):
     @Slot(bool, name="open_import_editor")
     def open_import_editor(self, checked=False):
         """Opens Import editor for the file selected into line edit."""
-        importee = self._toolbox.ui.treeView_data_interface_files.currentIndex().data()
-        if importee is None:
-            self._toolbox.msg_error.emit("Please select a file from the list first.")
-            return
-        if not os.path.exists(importee):
-            self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
-            return
-        self._toolbox.msg.emit("Opening Import editor for file: {0}".format(importee))
-
+        # Raise current form if any
         if self._preview_widget:
             if self._preview_widget.windowState() & Qt.WindowMinimized:
                 # Remove minimized status and restore window with the previous state (maximized/normal state)
@@ -139,7 +132,30 @@ class DataInterface(ProjectItem):
             else:
                 self._preview_widget.raise_()
             return
-        self._preview_widget = ImportPreviewWindow(importee, self.settings, self._toolbox._qsettings)
+        if not self.file_model.rowCount():
+            self._toolbox.msg_error.emit(
+                "No source files! Please add source files by connecting a Data Connection item to this item."
+            )
+            return
+        # Create a new form for the first file in the file
+        importee = self.file_model.index(0, 0).data()
+        if not os.path.exists(importee):
+            self._toolbox.msg_error.emit("Invalid path: {0}".format(importee))
+            return
+        # Get connector from extension automatically. TODO: Allow user to select the connector manually
+        _filename, file_extension = os.path.splitext(importee)
+        if file_extension.lower().startswith(".xls"):
+            connector = ExcelConnector
+        elif file_extension.lower() == ".csv":
+            connector = CSVConnector
+        else:
+            self._toolbox.msg_warn.emit(
+                "Unable to find a suitable connector for file {} automatically."
+                "Falling back to CSV connector...".format(importee)
+            )
+            connector = CSVConnector
+        self._toolbox.msg.emit("Opening Import editor for file: {0}".format(importee))
+        self._preview_widget = ImportPreviewWindow(self, importee, connector, self.settings)
         self._preview_widget.settings_updated.connect(self.save_settings)
         self._preview_widget.connection_failed.connect(self._connection_failed)
         self._preview_widget.destroyed.connect(self._preview_destroyed)
@@ -163,12 +179,12 @@ class DataInterface(ProjectItem):
         """Add given list of items to the file model. If None or
         an empty list given, the model is cleared."""
         self.file_model.clear()
-        self.file_model.setHorizontalHeaderItem(0, QStandardItem("Files"))  # Add header
+        self.file_model.setHorizontalHeaderItem(0, QStandardItem("Source files"))  # Add header
         if items is not None:
             for item in items:
                 qitem = QStandardItem(item)
                 qitem.setEditable(False)
-                qitem.setCheckable(True)
+                # qitem.setCheckable(True)
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.file_model.appendRow(qitem)
 
