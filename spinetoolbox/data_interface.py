@@ -218,6 +218,16 @@ class DataInterface(ProjectItem):
             row = connector_list_wg.currentIndex().row()
             return connector_list[row]
 
+    def select_connector_type(self, index):
+        """Opens dialog to select connector type for the given index."""
+        importee = index.data()
+        connector = self.get_connector(importee)
+        if not connector:
+            # Aborted by the user
+            return
+        settings = self.settings.setdefault(importee, {})
+        settings["source_type"] = connector.__name__
+
     def _connection_failed(self, msg, importee):
         self._toolbox.msg.emit(msg)
         preview_widget = self._preview_widget.pop(importee, None)

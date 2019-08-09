@@ -293,8 +293,9 @@ class DiFilesContextMenu(CustomContextMenu):
         if not index.isValid():
             self.add_action("Open directory...")
         else:
-            self.addSeparator()
             self.add_action("Open import editor")
+            self.add_action("Select connector type")
+            self.addSeparator()
             self.add_action("Open directory...")
         self.exec_(position)
 

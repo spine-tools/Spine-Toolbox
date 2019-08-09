@@ -1465,6 +1465,8 @@ class ToolboxUI(QMainWindow):
         option = self.di_files_context_menu.get_action()
         if option == "Open import editor":
             di.open_import_editor(ind)
+        elif option == "Select connector type":
+            di.select_connector_type(ind)
         elif option == "Open directory...":
             di.open_directory()
         return
