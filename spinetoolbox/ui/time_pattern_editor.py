@@ -25,9 +25,6 @@ class Ui_TimePatternEditor(object):
         TimePatternEditor.resize(586, 443)
         self.verticalLayout = QtWidgets.QVBoxLayout(TimePatternEditor)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.pattern_edit_table = QtWidgets.QTableView(TimePatternEditor)
-        self.pattern_edit_table.setObjectName("pattern_edit_table")
-        self.verticalLayout.addWidget(self.pattern_edit_table)
 
         self.retranslateUi(TimePatternEditor)
         QtCore.QMetaObject.connectSlotsByName(TimePatternEditor)

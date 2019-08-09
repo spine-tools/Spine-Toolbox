@@ -22,6 +22,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_TimeSeriesFixedResolutionEditor(object):
     def setupUi(self, TimeSeriesFixedResolutionEditor):
         TimeSeriesFixedResolutionEditor.setObjectName("TimeSeriesFixedResolutionEditor")
+        TimeSeriesFixedResolutionEditor.resize(296, 341)
         self.verticalLayout = QtWidgets.QVBoxLayout(TimeSeriesFixedResolutionEditor)
         self.verticalLayout.setObjectName("verticalLayout")
         self.splitter = QtWidgets.QSplitter(TimeSeriesFixedResolutionEditor)
@@ -76,9 +77,6 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout_2.addItem(spacerItem)
         self.left_layout.addLayout(self.horizontalLayout_2)
-        self.time_series_table = CopyPasteTableView(self.verticalLayoutWidget)
-        self.time_series_table.setObjectName("time_series_table")
-        self.left_layout.addWidget(self.time_series_table)
         self.verticalLayout.addWidget(self.splitter)
 
         self.retranslateUi(TimeSeriesFixedResolutionEditor)
@@ -94,4 +92,3 @@ class Ui_TimeSeriesFixedResolutionEditor(object):
         self.ignore_year_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Ignore year", None, -1))
         self.repeat_check_box.setText(QtWidgets.QApplication.translate("TimeSeriesFixedResolutionEditor", "Repeat", None, -1))
 
-from widgets.custom_qtableview import CopyPasteTableView

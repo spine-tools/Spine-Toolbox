@@ -197,6 +197,16 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
         self.assertEqual(model.value, TimeSeriesFixedResolution("1975-07-07T06:33", "2h", [2.3, -5.0], True, False))
         np.testing.assert_equal(model.indexes, np.array(["1975-07-07T06:33", "1975-07-07T08:33"], dtype="datetime64"))
 
+    def test_batch_set_data(self):
+        model = TimeSeriesModelFixedResolution(
+            TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, -5.0, 7.0], True, False)
+        )
+        indexes = [model.index(0, 0), model.index(1, 1), model.index(2, 1)]
+        values = ["1999-01-01T12:00", 55.5, -55.5]
+        model.batch_set_data(indexes, values)
+        expected = TimeSeriesFixedResolution("2019-07-05T12:00", "2 hours", [2.3, 55.5, -55.5], True, False)
+        self.assertEqual(model.value, expected)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -149,18 +149,21 @@ class TimeSeriesModelFixedResolution(IndexedValueTableModel):
 
     def batch_set_data(self, indexes, values):
         """
-        Sets data for several indexes at once. Called by `paste` methods of `CopyPasteTableView`
+        Sets data for several indexes at once.
+
+        Only the values of the series are modified as the time stamps are immutable.
+
+        Args:
+            indexes (Sequence): a sequence of model indexes
+            values (Sequence): a sequence of floats corresponding to the indexes
         """
         rows = []
         for index, value in zip(indexes, values):
             if index.column() != 1:
                 continue
-            new_value, ok = self.locale.toFloat(value)
-            if not ok:
-                msg = "could not convert string to float: '{}'".format(value)
-                raise ValueError(msg)
-            self._value.values[index.row()] = new_value
-            rows.append(index.row())
+            row = index.row()
+            self._value.values[row] = value
+            rows.append(row)
         if not rows:
             return
         top = min(rows)
