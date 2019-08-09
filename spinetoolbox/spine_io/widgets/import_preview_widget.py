@@ -38,6 +38,9 @@ class ImportPreviewWidget(QWidget):
     """
     A Widget for defining one or more Mappings associated to a data Source (CSV file, Excel file, etc).
     Currently it's being embeded in ImportDialog and ImportPreviewWindow.
+
+    Args:
+        connector (ConnectionManager)
     """
 
     tableChecked = Signal()
@@ -274,7 +277,6 @@ class ImportPreviewWidget(QWidget):
             "table_mappings": table_mappings,
             "table_options": self.connector.table_options,
             "selected_tables": list(self.selected_source_tables),
-            "source": self.connector.source,
             "source_type": self.connector.source_type,
         }
         return settings

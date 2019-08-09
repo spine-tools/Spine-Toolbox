@@ -648,41 +648,45 @@ class DataStore(ProjectItem):
                 # IDEA: just add the entire url dictionary to some attribute in the `ExecutionInstance` object,
                 # then figure everything out in `ExecutionInstance.find_file`
                 pass
-            # Import data from data interface
+            # Import mapped data from Data Interfaces in the execution instance
             try:
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
             except (SpineDBAPIError, SpineDBVersionError):
                 db_map = None
             if db_map:
-                for di_name, data in inst.di_data.items():
+                all_import_errors = []
+                for di_name, all_data in inst.di_data.items():
                     self._toolbox.msg_proc.emit("Importing data from {} into {}".format(di_name, url))
-                    import_num, import_errors = spinedb_api.import_data(db_map, **data)
-                    if import_errors:
-                        db_map.rollback_session()
-                        # Log errors in a time stamped file into the logs directory
-                        timestamp = create_log_file_timestamp()
-                        logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.html"))
-                        with open(logfilepath, 'w') as f:
-                            f.write(format_string_list(import_errors))
-                        # Make error log file anchor with path as tooltip
-                        logfile_anchor = (
-                            "<a style='color:#BB99FF;' title='"
-                            + logfilepath
-                            + "' href='file:///"
-                            + logfilepath
-                            + "'>error log</a>"
-                        )
-                        self._toolbox.msg.emit(
-                            "There where import errors while executing <b>{0}</b>, rolling back: "
-                            "{1}".format(self.name, logfile_anchor)
-                        )
-                    else:
-                        db_map.commit_session("imported with mapper")
-                        self._toolbox.msg.emit(
-                            "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
-                                self.name, import_num, len(import_errors), db_map.db_url
+                    for data in all_data:
+                        import_num, import_errors = spinedb_api.import_data(db_map, **data)
+                        if import_errors:
+                            db_map.rollback_session()
+                            all_import_errors += import_errors
+                        else:
+                            db_map.commit_session("imported with mapper")
+                            self._toolbox.msg.emit(
+                                "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
+                                    self.name, import_num, len(import_errors), db_map.db_url
+                                )
                             )
-                        )
+                if all_import_errors:
+                    # Log errors in a time stamped file into the logs directory
+                    timestamp = create_log_file_timestamp()
+                    logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.html"))
+                    with open(logfilepath, 'w') as f:
+                        f.write(format_string_list(all_import_errors))
+                    # Make error log file anchor with path as tooltip
+                    logfile_anchor = (
+                        "<a style='color:#BB99FF;' title='"
+                        + logfilepath
+                        + "' href='file:///"
+                        + logfilepath
+                        + "'>error log</a>"
+                    )
+                    self._toolbox.msg.emit(
+                        "There where import errors while executing <b>{0}</b>, rolling back: "
+                        "{1}".format(self.name, logfile_anchor)
+                    )
         self._toolbox.msg.emit("***")
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
