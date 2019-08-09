@@ -622,6 +622,7 @@ class DataStore(ProjectItem):
         """Executes this Data Store."""
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("***")
         inst = self._toolbox.project().execution_instance
         url = self.make_url()
         if not url:
@@ -651,12 +652,16 @@ class DataStore(ProjectItem):
             # Import mapped data from Data Interfaces in the execution instance
             try:
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
-            except (SpineDBAPIError, SpineDBVersionError):
+            except (SpineDBAPIError, SpineDBVersionError) as err:
+                self._toolbox.msg_error.emit(
+                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted: "
+                    "{}".format(err)
+                )
                 db_map = None
             if db_map:
                 all_import_errors = []
                 for di_name, all_data in inst.di_data.items():
-                    self._toolbox.msg_proc.emit("Importing data from {} into {}".format(di_name, url))
+                    self._toolbox.msg_proc.emit("Importing data from <b>{}</b> into '{}'".format(di_name, url))
                     for data in all_data:
                         import_num, import_errors = spinedb_api.import_data(db_map, **data)
                         if import_errors:
