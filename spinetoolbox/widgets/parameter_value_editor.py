@@ -102,7 +102,14 @@ class ParameterValueEditor(QDialog):
     def accept(self):
         """Saves the parameter value shown in the currently selected editor widget back to the parent model."""
         editor = self._ui.editor_stack.currentWidget()
-        self._parent_model.setData(self._parent_index, to_database(editor.value()))
+        try:
+            self._parent_model.setData(self._parent_index, to_database(editor.value()))
+        except ParameterValueFormatError as error:
+            message_box = QMessageBox()
+            message_box.setWindowTitle("Parameter value error")
+            message_box.setText("Cannot set value: {}".format(error))
+            message_box.exec()
+            return
         self.close()
 
     @Slot(int, name="_change_parameter_type")
