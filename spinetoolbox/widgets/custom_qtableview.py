@@ -57,10 +57,14 @@ class CopyPasteTableView(QTableView):
                     if h_header.isSectionHidden(j):
                         continue
                     data = self.model().index(i, j).data(Qt.EditRole)
-                    if isinstance(data, float):
-                        str_data = format(data, "n")
+                    if data is not None:
+                        try:
+                            number = float(data)
+                            str_data = locale.str(number)
+                        except ValueError:
+                            str_data = str(data)
                     else:
-                        str_data = str(data) if data is not None else ""
+                        str_data = ""
                     row.append(str_data)
         rows = list()
         for key in sorted(row_dict):
@@ -107,6 +111,10 @@ class CopyPasteTableView(QTableView):
                     i = (row - rows[0]) % len(data)
                     j = (column - columns[0]) % len(data[i])
                     value = data[i][j]
+                    try:
+                        value = str(locale.atof(value))
+                    except ValueError:
+                        pass
                     indexes.append(index)
                     values.append(value)
         self.model().batch_set_data(indexes, values)
@@ -169,6 +177,10 @@ class CopyPasteTableView(QTableView):
                 index = model_index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
                     indexes.append(index)
+                    try:
+                        value = str(locale.atof(value))
+                    except ValueError:
+                        pass
                     values.append(value)
         self.model().batch_set_data(indexes, values)
         return True
