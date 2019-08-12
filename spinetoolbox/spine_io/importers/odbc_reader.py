@@ -18,8 +18,18 @@ Contains ODBCConnector class.
 
 import pyodbc
 from spine_io.io_api import FileImportTemplate
-from PySide2.QtWidgets import QWidget, QFormLayout, QLabel, QLineEdit, \
-    QCheckBox, QSpinBox, QGroupBox, QVBoxLayout, QInputDialog, QErrorMessage
+from PySide2.QtWidgets import (
+    QWidget,
+    QFormLayout,
+    QLabel,
+    QLineEdit,
+    QCheckBox,
+    QSpinBox,
+    QGroupBox,
+    QVBoxLayout,
+    QInputDialog,
+    QErrorMessage,
+)
 from PySide2.QtCore import QObject, Signal
 
 
@@ -37,10 +47,10 @@ class ODBCConnector(FileImportTemplate):
 
     def _new_options(self):
         self.refreshDataRequest.emit()
-    
+
     def set_table(self, table):
         pass
-        
+
     def source_selector(self, parent=None):
         value, ok = QInputDialog.getText(parent, "ODBC", "ODBC connection string:")
         if not ok and value == '':
@@ -53,7 +63,7 @@ class ODBCConnector(FileImportTemplate):
             error_dialog.showMessage(str(e))
             return False
         return True
-    
+
     def read_data(self, table, max_rows=100):
         """
         Return data read from data source table in table. If max_rows is 
@@ -61,11 +71,11 @@ class ODBCConnector(FileImportTemplate):
         """
         if not self._connection:
             return [], []
-        
+
         cursor = self._connection.cursor()
 
         data = [[row.table_name, row.table_type] for row in cursor.tables()]
-        
+
         return data, []
 
     def preview_data(self, table):
@@ -85,7 +95,7 @@ class ODBCConnector(FileImportTemplate):
         Return a Qwidget with options for reading data from a table in source
         """
         return self._option_widget
-    
+
     @property
     def tables(self):
         if not self._connection:
@@ -93,4 +103,3 @@ class ODBCConnector(FileImportTemplate):
         cursor = self._connection.cursor()
         tables = [row.table_name for row in cursor.tables() if row.table_type != "SYSTEM TABLE"]
         return tables
-

@@ -1537,7 +1537,7 @@ class FilterCheckboxListModel(QAbstractListModel):
         self._empty_str = '(Empty)'
         self._add_to_selection_str = 'Add current selection to filter'
         self._add_to_selection = False
-        
+
         if self._show_empty:
             self._index_offset = 2
         else:

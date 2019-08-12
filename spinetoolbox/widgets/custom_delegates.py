@@ -18,14 +18,7 @@ Custom item delegates.
 
 import sys
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
-from PySide2.QtWidgets import (
-    QComboBox,
-    QItemDelegate,
-    QStyleOptionButton,
-    QStyle,
-    QApplication,
-    QStyleOptionComboBox,
-)
+from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyleOptionComboBox
 from PySide2.QtGui import QIcon
 from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 from widgets.custom_editors import (
@@ -34,7 +27,7 @@ from widgets.custom_editors import (
     SearchBarEditor,
     MultiSearchBarEditor,
     CheckListEditor,
-    NumberParameterInlineEditor
+    NumberParameterInlineEditor,
 )
 
 

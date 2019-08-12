@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Class for a custom QTableView that allows copy-paste, and maybe some other feature we may think of.
+Custom QTableView classes that support copy-paste and the like.
 
 :author: M. Marin (KTH)
 :date:   18.5.2018
@@ -66,12 +66,11 @@ class CopyPasteTableView(QTableView):
                     else:
                         str_data = ""
                     row.append(str_data)
-        rows = list()
-        for key in sorted(row_dict):
-            row = row_dict[key]
-            rows.append("\t".join(row))
-        content = "\n".join(rows)
-        QApplication.clipboard().setText(content)
+        with io.StringIO() as output:
+            writer = csv.writer(output, delimiter='\t')
+            for key in sorted(row_dict):
+                writer.writerow(row_dict[key])
+            QApplication.clipboard().setText(output.getvalue())
         return True
 
     def canPaste(self):  # pylint: disable=no-self-use
@@ -81,9 +80,25 @@ class CopyPasteTableView(QTableView):
         """Paste data from clipboard."""
         selection = self.selectionModel().selection()
         if len(selection.indexes()) > 1:
-            self.paste_on_selection()
-        else:
-            self.paste_normal()
+            return self.paste_on_selection()
+        return self.paste_normal()
+
+    @staticmethod
+    def _read_pasted_text(text):
+        """
+        Parses a tab separated CSV text table.
+
+        Args:
+            text (str): a CSV formatted table
+        Returns:
+            a list of rows
+        """
+        with io.StringIO(text) as input_stream:
+            reader = csv.reader(input_stream, delimiter='\t')
+            rows = list()
+            for row in reader:
+                rows.append([locale.delocalize(element) for element in row])
+            return rows
 
     def paste_on_selection(self):
         """Paste clipboard data on selection, but not beyond.
@@ -91,7 +106,7 @@ class CopyPasteTableView(QTableView):
         text = QApplication.clipboard().text()
         if not text:
             return False
-        data = [line.split('\t') for line in text.split('\n')]
+        data = self._read_pasted_text(text)
         if not data:
             return False
         selection = self.selectionModel().selection()
@@ -111,10 +126,6 @@ class CopyPasteTableView(QTableView):
                     i = (row - rows[0]) % len(data)
                     j = (column - columns[0]) % len(data[i])
                     value = data[i][j]
-                    try:
-                        value = str(locale.atof(value))
-                    except ValueError:
-                        pass
                     indexes.append(index)
                     values.append(value)
         self.model().batch_set_data(indexes, values)
@@ -125,7 +136,7 @@ class CopyPasteTableView(QTableView):
         text = QApplication.clipboard().text().strip()
         if not text:
             return False
-        data = [line.split('\t') for line in text.split('\n')]
+        data = self._read_pasted_text(text)
         if not data:
             return False
         current = self.currentIndex()
@@ -177,10 +188,6 @@ class CopyPasteTableView(QTableView):
                 index = model_index(row, column)
                 if index.flags() & Qt.ItemIsEditable:
                     indexes.append(index)
-                    try:
-                        value = str(locale.atof(value))
-                    except ValueError:
-                        pass
                     values.append(value)
         self.model().batch_set_data(indexes, values)
         return True
