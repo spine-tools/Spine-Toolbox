@@ -105,6 +105,14 @@ class TestTimePatternModel(unittest.TestCase):
         self.assertEqual(model.value.indexes, ['a', 'b'])
         numpy.testing.assert_equal(model.value.values, [-5.0, 2.3])
 
+    def test_batch_set_data(self):
+        model = TimePatternModel(TimePattern(['a', 'b', 'c'], [-5.0, 3.0, 7.0]))
+        indexes = [model.index(0, 0), model.index(1, 1), model.index(2, 1)]
+        values = ['A', 55.5, -55.5]
+        model.batch_set_data(indexes, values)
+        expected = TimePattern(['A', 'b', 'c'], [-5.0, 55.5, -55.5])
+        self.assertEqual(model.value, expected)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -173,6 +173,20 @@ class TestTimeSeriesModelFixedStep(unittest.TestCase):
             TimeSeriesVariableResolution(["1991-01-01T13:30", "1992-01-01T13:30"], [-4.0, -5.0], True, False),
         )
 
+    def test_batch_set_data(self):
+        model = TimeSeriesModelVariableResolution(
+            TimeSeriesVariableResolution(
+                ["2019-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, -5.0, 7.0], True, False
+            )
+        )
+        indexes = [model.index(0, 0), model.index(1, 1), model.index(2, 1)]
+        values = ["2018-07-05T12:00", 55.5, -55.5]
+        model.batch_set_data(indexes, values)
+        expected = TimeSeriesVariableResolution(
+            ["2018-07-05T12:00", "2019-07-21T08:15", "2019-07-23T09:10"], [2.3, 55.5, -55.5], True, False
+        )
+        self.assertEqual(model.value, expected)
+
 
 if __name__ == '__main__':
     unittest.main()

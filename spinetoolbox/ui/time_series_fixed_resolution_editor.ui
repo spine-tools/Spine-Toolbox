@@ -14,6 +14,14 @@
 <ui version="4.0">
  <class>TimeSeriesFixedResolutionEditor</class>
  <widget class="QWidget" name="TimeSeriesFixedResolutionEditor">
+  <property name="geometry">
+   <rect>
+    <x>0</x>
+    <y>0</y>
+    <width>296</width>
+    <height>341</height>
+   </rect>
+  </property>
   <property name="windowTitle">
    <string>Form</string>
   </property>
@@ -113,22 +121,12 @@
          </item>
         </layout>
        </item>
-       <item>
-        <widget class="CopyPasteTableView" name="time_series_table"/>
-       </item>
       </layout>
      </widget>
     </widget>
    </item>
   </layout>
  </widget>
- <customwidgets>
-  <customwidget>
-   <class>CopyPasteTableView</class>
-   <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
-  </customwidget>
- </customwidgets>
  <resources/>
  <connections/>
 </ui>

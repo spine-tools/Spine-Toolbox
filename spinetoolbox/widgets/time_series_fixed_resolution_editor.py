@@ -28,6 +28,7 @@ from spinedb_api import (
 from plotting import add_time_series_plot
 from time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
+from widgets.custom_qtableview import TimeSeriesFixedResolutionTableView
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 from widgets.plot_widget import PlotWidget
 
@@ -77,9 +78,11 @@ class TimeSeriesFixedResolutionEditor(QWidget):
         self._ui.calendar_button.clicked.connect(self._show_calendar)
         self._ui.resolution_edit.setText(_resolution_to_text(initial_value.resolution))
         self._ui.resolution_edit.editingFinished.connect(self._resolution_changed)
-        self._ui.time_series_table.setModel(self._model)
-        self._ui.time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self._ui.time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
+        self._time_series_table = TimeSeriesFixedResolutionTableView(self._ui.splitter)
+        self._ui.left_layout.addWidget(self._time_series_table)
+        self._time_series_table.setModel(self._model)
+        self._time_series_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self._time_series_table.customContextMenuRequested.connect(self._show_table_context_menu)
         self._ui.ignore_year_check_box.setChecked(self._model.value.ignore_year)
         self._ui.ignore_year_check_box.toggled.connect(self._model.set_ignore_year)
         self._ui.repeat_check_box.setChecked(self._model.value.repeat)
@@ -103,7 +106,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     @Slot("QPoint", name="_show_table_context_menu")
     def _show_table_context_menu(self, pos):
         """Shows the table's context menu."""
-        handle_table_context_menu(pos, self._ui.time_series_table, self._model, self)
+        handle_table_context_menu(pos, self._time_series_table, self._model, self)
 
     @Slot("QDate", name='_select_date')
     def _select_date(self, selected_date):
