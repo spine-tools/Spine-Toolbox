@@ -18,7 +18,7 @@ Contains the TreeViewForm class.
 
 import os
 import time  # just to measure loading time and sqlalchemy ORM performance
-from PySide2.QtWidgets import QFileDialog, QDockWidget, QTreeView, QTableView, QMessageBox, QDialog
+from PySide2.QtWidgets import QFileDialog, QDockWidget, QInputDialog, QTreeView, QTableView, QMessageBox, QDialog
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QIcon
 from spinedb_api import copy_database, SpineDBAPIError
@@ -120,7 +120,7 @@ class TreeViewForm(DataStoreForm):
         # Menu actions
         # Import export
         self.ui.actionImport.triggered.connect(self.show_import_file_dialog)
-        self.ui.actionExport.triggered.connect(self.show_export_file_dialog)
+        self.ui.actionExport.triggered.connect(self.export_database)
         # Copy and paste
         self.ui.actionCopy.triggered.connect(self.copy)
         self.ui.actionPaste.triggered.connect(self.paste)
@@ -437,27 +437,48 @@ class TreeViewForm(DataStoreForm):
                     # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
                     self.msg_error.emit(msg)
 
-    @Slot("bool", name="show_export_file_dialog")
-    def show_export_file_dialog(self, checked=False):
-        """Show dialog to allow user to select a file to export."""
+    @Slot("bool", name="export_database")
+    def export_database(self, checked=False):
+        """Exports a database to a file."""
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-        answer = QFileDialog.getSaveFileName(
+        db_map = self._select_database()
+        if db_map is None:  # Database selection cancelled
+            return
+        file_path, selected_filter = QFileDialog.getSaveFileName(
             self, "Export to file", self._project.project_dir, "Excel file (*.xlsx);;SQlite database (*.sqlite *.db)"
         )
-        file_path = answer[0]
-        if not file_path:  # Cancel button clicked
+        if not file_path:  # File selection cancelled
             return
-        if answer[1].startswith("SQlite"):
-            self.export_to_sqlite(file_path)
-        elif answer[1].startswith("Excel"):
-            self.export_to_excel(file_path)
+        if selected_filter.startswith("SQlite"):
+            self.export_to_sqlite(db_map, file_path)
+        elif selected_filter.startswith("Excel"):
+            self.export_to_excel(db_map, file_path)
+
+    def _select_database(self):
+        """
+        Lets user select a database from available databases.
+
+        Shows a dialog from which user can select a single database.
+        If there is only a single database it is selected automatically and no dialog is shown.
+
+        Returns:
+             the database map of the database or None if no database was selected
+        """
+        if len(self.db_maps) == 1:
+            return self.db_maps[0]
+        selected_database, ok = QInputDialog.getItem(
+            self, "Select database", "Select database to export", self.db_names, editable=False
+        )
+        if not ok:
+            return None
+        return self.db_maps[self.db_names.index(selected_database)]
 
     @busy_effect
-    def export_to_excel(self, file_path):
+    def export_to_excel(self, db_map, file_path):
         """Export data from database into Excel file."""
         filename = os.path.split(file_path)[1]
         try:
-            export_spine_database_to_xlsx(self.db_map, file_path)
+            export_spine_database_to_xlsx(db_map, file_path)
             self.msg.emit("Excel file successfully exported.")
         except PermissionError:
             self.msg_error.emit(
@@ -467,10 +488,10 @@ class TreeViewForm(DataStoreForm):
             self.msg_error.emit("[OSError] Unable to export to file <b>{0}</b>".format(filename))
 
     @busy_effect
-    def export_to_sqlite(self, file_path):
+    def export_to_sqlite(self, db_map, file_path):
         """Export data from database into SQlite file."""
         dst_url = 'sqlite:///{0}'.format(file_path)
-        copy_database(dst_url, self.db_map.db_url, overwrite=True)
+        copy_database(dst_url, db_map, overwrite=True)
         self.msg.emit("SQlite file successfully exported.")
 
     def init_models(self):
