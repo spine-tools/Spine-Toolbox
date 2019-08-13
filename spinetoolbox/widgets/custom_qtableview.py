@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Class for a custom QTableView that allows copy-paste, and maybe some other feature we may think of.
+Custom QTableView classes that support copy-paste and the like.
 
 :author: M. Marin (KTH)
 :date:   18.5.2018
@@ -27,21 +27,7 @@ from models import TableModel, MinimalTableModel
 
 
 class CopyPasteTableView(QTableView):
-    """Custom QTableView class with copy and paste methods.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
-
-    def __init__(self, parent):
-        """Initialize the class."""
-        super().__init__(parent=parent)
-        QApplication.clipboard().dataChanged.connect(self.clipboard_data_changed)
-        self.clipboard_text = QApplication.clipboard().text()
-
-    @Slot(name="clipboard_data_changed")
-    def clipboard_data_changed(self):
-        self.clipboard_text = QApplication.clipboard().text()
+    """Custom QTableView class with copy and paste methods."""
 
     def keyPressEvent(self, event):
         """Copy and paste to and from clipboard in Excel-like format."""
@@ -71,17 +57,20 @@ class CopyPasteTableView(QTableView):
                     if h_header.isSectionHidden(j):
                         continue
                     data = self.model().index(i, j).data(Qt.EditRole)
-                    if isinstance(data, float):
-                        str_data = format(data, "n")
+                    if data is not None:
+                        try:
+                            number = float(data)
+                            str_data = locale.str(number)
+                        except ValueError:
+                            str_data = str(data)
                     else:
-                        str_data = str(data) if data is not None else ""
+                        str_data = ""
                     row.append(str_data)
-        rows = list()
-        for key in sorted(row_dict):
-            row = row_dict[key]
-            rows.append("\t".join(row))
-        content = "\n".join(rows)
-        QApplication.clipboard().setText(content)
+        with io.StringIO() as output:
+            writer = csv.writer(output, delimiter='\t')
+            for key in sorted(row_dict):
+                writer.writerow(row_dict[key])
+            QApplication.clipboard().setText(output.getvalue())
         return True
 
     def canPaste(self):  # pylint: disable=no-self-use
@@ -91,17 +80,33 @@ class CopyPasteTableView(QTableView):
         """Paste data from clipboard."""
         selection = self.selectionModel().selection()
         if len(selection.indexes()) > 1:
-            self.paste_on_selection()
-        else:
-            self.paste_normal()
+            return self.paste_on_selection()
+        return self.paste_normal()
+
+    @staticmethod
+    def _read_pasted_text(text):
+        """
+        Parses a tab separated CSV text table.
+
+        Args:
+            text (str): a CSV formatted table
+        Returns:
+            a list of rows
+        """
+        with io.StringIO(text) as input_stream:
+            reader = csv.reader(input_stream, delimiter='\t')
+            rows = list()
+            for row in reader:
+                rows.append([locale.delocalize(element) for element in row])
+            return rows
 
     def paste_on_selection(self):
         """Paste clipboard data on selection, but not beyond.
         If data is smaller than selection, repeat data to fit selection."""
-        text = self.clipboard_text
+        text = QApplication.clipboard().text()
         if not text:
             return False
-        data = [line.split('\t') for line in text.split('\n')]
+        data = self._read_pasted_text(text)
         if not data:
             return False
         selection = self.selectionModel().selection()
@@ -128,10 +133,10 @@ class CopyPasteTableView(QTableView):
 
     def paste_normal(self):
         """Paste clipboard data, overwriting cells if needed"""
-        text = self.clipboard_text.strip()
+        text = QApplication.clipboard().text().strip()
         if not text:
             return False
-        data = [line.split('\t') for line in text.split('\n')]
+        data = self._read_pasted_text(text)
         if not data:
             return False
         current = self.currentIndex()

@@ -15,15 +15,10 @@ Custom item delegates.
 :author: M. Marin (KTH)
 :date:   1.9.2018
 """
-from PySide2.QtCore import Qt, Signal, Slot, QEvent, QPoint, QRect
-from PySide2.QtWidgets import (
-    QItemDelegate,
-    QStyleOptionButton,
-    QStyle,
-    QApplication,
-    QStyledItemDelegate,
-    QStyleOptionComboBox,
-)
+
+import sys
+from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
+from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyleOptionComboBox
 from PySide2.QtGui import QIcon
 from spinedb_api import from_database, DateTime, Duration, ParameterValueFormatError, TimePattern, TimeSeries
 from widgets.custom_editors import (
@@ -32,12 +27,14 @@ from widgets.custom_editors import (
     SearchBarEditor,
     MultiSearchBarEditor,
     CheckListEditor,
+    NumberParameterInlineEditor,
 )
 
 
 class ComboBoxDelegate(QItemDelegate):
     def __init__(self, parent, choices):
         super().__init__(parent)
+        self.editor = None
         self.items = choices
 
     def createEditor(self, parent, option, index):
@@ -217,7 +214,10 @@ class ParameterDelegate(QItemDelegate):
         if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)):
             self.parameter_value_editor_requested.emit(index, value)
             return None
-        editor = CustomLineEditor(parent)
+        elif isinstance(value, (float, int)):
+            editor = NumberParameterInlineEditor(parent)
+        else:
+            editor = CustomLineEditor(parent)
         editor.set_data(index.data(Qt.EditRole))
         return editor
 
