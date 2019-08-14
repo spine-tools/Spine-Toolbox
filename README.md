@@ -1,5 +1,7 @@
 # Spine Toolbox
 
+[![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
+
 An application to define, manage, and execute various energy system simulation models.
 
 ## License
