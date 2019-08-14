@@ -40,8 +40,8 @@ class CSVConnector(SourceConnection):
 
     # dict with option specification for source.
     OPTIONS = {
-        "delimiter": {'type': str, 'label': 'delimiter', 'MaxLength': 1, 'default': ','},
-        "quotechar": {'type': str, 'label': 'quotechar', 'MaxLength': 1, 'default': ''},
+        "delimiter": {'type': str, 'label': 'Delimiter', 'MaxLength': 1, 'default': ','},
+        "quotechar": {'type': str, 'label': 'Quotechar', 'MaxLength': 1, 'default': ''},
         "has_header": {'type': bool, 'label': 'Has header', 'default': False},
         "skip": {'type': int, 'label': 'Skip rows', 'Minimum': 0, 'default': 0},
     }
@@ -89,8 +89,8 @@ class CSVConnector(SourceConnection):
                                           quotechar for csv.reader and
                                           number of rows to skip
         """
-        dialect = {"delimiter": options.get("delim", ",")}
-        quotechar = options.get("quotechar", None)
+        dialect = {"delimiter": options.get("delimiter", ",")}
+        quotechar = options.get("Quotechar", None)
         if quotechar:
             dialect.update({"quotechar": quotechar})
         has_header = options.get("has_header", False)
