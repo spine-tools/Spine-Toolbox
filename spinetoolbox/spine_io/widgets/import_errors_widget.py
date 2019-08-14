@@ -16,8 +16,7 @@ Contains ImportErrorWidget class.
 :date:   1.6.2019
 """
 
-from PySide2.QtWidgets import QWidget, QListWidget, QVBoxLayout, QDialogButtonBox, QLabel
-from PySide2.QtCore import Signal
+from PySide2.QtWidgets import QWidget, QListWidget, QVBoxLayout, QLabel
 
 
 class ImportErrorWidget(QWidget):

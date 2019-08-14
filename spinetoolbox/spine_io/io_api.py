@@ -39,12 +39,12 @@ class SourceConnection:
         Arguments:
             source {} -- object with information on source to be connected to, ex: filepath string for a csv connection
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def disconnect(self):
         """Disconnect from connected source.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_tables(self):
         """Method that should return a list of table names, list(str)
@@ -52,14 +52,14 @@ class SourceConnection:
         Raises:
             NotImplementedError: [description]
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_data_iterator(self, table, options, max_rows=-1):
         """
         Function that should return a data iterator, data header and number of
         columns.
         """
-        raise NotImplementedError
+        raise NotImplementedError()
 
     def get_data(self, table, options, max_rows=-1):
         """

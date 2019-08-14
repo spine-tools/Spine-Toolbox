@@ -66,7 +66,7 @@ class ODBCConnector(FileImportTemplate):
 
     def read_data(self, table, max_rows=100):
         """
-        Return data read from data source table in table. If max_rows is 
+        Return data read from data source table in table. If max_rows is
         specified only that number of rows.
         """
         if not self._connection:

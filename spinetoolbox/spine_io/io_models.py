@@ -348,7 +348,7 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping_value = str(mapping.value_reference)
         return mapping_value
 
-    def get_map_append_display(self, mapping, name):
+    def get_map_append_display(mapping, name):
         append_str = ""
         if isinstance(mapping, Mapping):
             append_str = mapping.append_str
@@ -405,21 +405,17 @@ class MappingSpecModel(QAbstractTableModel):
         if mapping is None:
             if index.column() <= 2:
                 return editable
-            else:
-                return non_editable
+            return non_editable
 
         if isinstance(mapping, str):
             if index.column() <= 2:
                 return editable
-            else:
-                return non_editable
+            return non_editable
         elif isinstance(mapping, Mapping) and mapping.map_type == "row" and mapping.value_reference == -1:
             if index.column() == 2:
                 return non_editable
-            else:
-                return editable
-        else:
             return editable
+        return editable
 
     def setData(self, index, value, role):
         name = self._display_names[index.row()]

@@ -21,7 +21,6 @@ from PySide2.QtWidgets import (
     QWidget,
     QListWidget,
     QVBoxLayout,
-    QDialogButtonBox,
     QTableView,
     QMenu,
     QListWidgetItem,
@@ -37,7 +36,7 @@ from spine_io.io_models import MappingPreviewModel, MappingListModel
 class ImportPreviewWidget(QWidget):
     """
     A Widget for defining one or more Mappings associated to a data Source (CSV file, Excel file, etc).
-    Currently it's being embeded in ImportDialog and ImportPreviewWindow.
+    Currently it's being embedded in ImportDialog and ImportPreviewWindow.
 
     Args:
         connector (ConnectionManager)
@@ -80,7 +79,6 @@ class ImportPreviewWidget(QWidget):
         top_source_splitter = QSplitter()
         top_source_splitter.addWidget(self._ui_list)
         top_source_splitter.addWidget(self.connector.option_widget())
-        top_src_widget = QWidget()
         source_splitter.addWidget(top_source_splitter)
         source_splitter.addWidget(self._ui_table)
         source_groupbox.setLayout(source_layout)

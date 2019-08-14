@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains ImportErrorWidget class.
+Contains OptionsWidget class.
 
 :author: P. Vennström (VTT)
 :date:   1.6.2019
@@ -69,20 +69,24 @@ class OptionsWidget(QWidget):
         """
         for key, options in self._options.items():
             ui_element = self._ui_choices[options["type"]]()
-            if options.get('Maximum', None) is not None:
-                ui_element.setMaximum(options['Maximum'])
-            if options.get('Minimum', None) is not None:
-                ui_element.setMinimum(options['Minimum'])
-            if options.get('MaxLength', None) is not None:
-                ui_element.setMaxLength(options['MaxLength'])
-            # using lambdas here beacuse i want to emit a signal without arguments
+            maximum = options.get('Maximum', None)
+            if maximum is not None:
+                ui_element.setMaximum(maximum)
+            minimum = options.get('Minimum', None)
+            if minimum is not None:
+                ui_element.setMinimum(minimum)
+            max_length = options.get('MaxLength', None)
+            if max_length is not None:
+                ui_element.setMaxLength(max_length)
+            # using lambdas here because I want to emit a signal without arguments
+            # pylint: disable=unnecessary-lambda
             if isinstance(ui_element, QSpinBox):
                 ui_element.valueChanged.connect(lambda: self.optionsChanged.emit())
-            if isinstance(ui_element, QLineEdit):
+            elif isinstance(ui_element, QLineEdit):
                 ui_element.textChanged.connect(lambda: self.optionsChanged.emit())
-            if isinstance(ui_element, QCheckBox):
+            elif isinstance(ui_element, QCheckBox):
                 ui_element.stateChanged.connect(lambda: self.optionsChanged.emit())
-            if isinstance(ui_element, QComboBox):
+            elif isinstance(ui_element, QComboBox):
                 ui_element.addItems([str(x) for x in options["Items"]])
                 ui_element.currentIndexChanged.connect(lambda: self.optionsChanged.emit())
             self._ui_elements[key] = ui_element
@@ -109,11 +113,11 @@ class OptionsWidget(QWidget):
             ui_element.blockSignals(True)
             if isinstance(ui_element, QSpinBox):
                 ui_element.setValue(value)
-            if isinstance(ui_element, QLineEdit):
+            elif isinstance(ui_element, QLineEdit):
                 ui_element.setText(value)
-            if isinstance(ui_element, QCheckBox):
+            elif isinstance(ui_element, QCheckBox):
                 ui_element.setChecked(value)
-            if isinstance(ui_element, QComboBox):
+            elif isinstance(ui_element, QComboBox):
                 ui_element.setCurrentText(value)
             ui_element.blockSignals(False)
 
@@ -127,11 +131,11 @@ class OptionsWidget(QWidget):
         for key, ui_element in self._ui_elements.items():
             if isinstance(ui_element, QSpinBox):
                 value = int(ui_element.value())
-            if isinstance(ui_element, QLineEdit):
+            elif isinstance(ui_element, QLineEdit):
                 value = str(ui_element.text())
-            if isinstance(ui_element, QCheckBox):
+            elif isinstance(ui_element, QCheckBox):
                 value = bool(ui_element.checkState())
-            if isinstance(ui_element, QComboBox):
+            elif isinstance(ui_element, QComboBox):
                 value = str(ui_element.currentText())
             options[key] = value
         return options
