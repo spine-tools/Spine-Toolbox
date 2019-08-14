@@ -997,7 +997,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.outgoing_arc_items.append(arc_item)
 
     def keyPressEvent(self, event):
-        """Trigger editing name."""
+        """Triggers name editing."""
         if event.key() == Qt.Key_F2:
             self.edit_name()
             event.accept()
@@ -1005,17 +1005,17 @@ class ObjectItem(QGraphicsPixmapItem):
             super().keyPressEvent(event)
 
     def mouseDoubleClickEvent(self, event):
-        """Triger editing name."""
+        """Triggers name editing."""
         self.edit_name()
         event.accept()
 
     def mousePressEvent(self, event):
-        """Save original position."""
+        """Saves original position."""
         super().mousePressEvent(event)
         self._original_pos = self.pos()
 
     def mouseMoveEvent(self, event):
-        """Call move related items and check for a merge target."""
+        """Calls move related items and checks for a merge target."""
         super().mouseMoveEvent(event)
         # Move selected items together
         object_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
@@ -1049,7 +1049,7 @@ class ObjectItem(QGraphicsPixmapItem):
             self._original_pos = None
 
     def check_for_merge_target(self, scene_pos):
-        """Check if this item is touching another item so they can merge
+        """Checks if this item is touching another item so they can merge
         (this happens when building a relationship)."""
         self._merge_target = None
         self._bounce = False
@@ -1065,8 +1065,8 @@ class ObjectItem(QGraphicsPixmapItem):
             break
 
     def merge_item(self, other):
-        """Merge this item with other.
-        Try and create a relationship if needed."""
+        """Merges this item with another.
+        Tries to create a relationship if needed."""
         if not other:
             return False
         if self.is_template == other.is_template:
@@ -1080,7 +1080,7 @@ class ObjectItem(QGraphicsPixmapItem):
         template_object_name = self.object_name
         self.object_name = other.object_name
         if not self.add_into_relationship():
-            # Restablish object name, since something went wrong (not that it matters too much, though)
+            # Re-establish object name, since something went wrong (not that it matters too much, though)
             self.object_name = template_object_name
             return False
         # Add template id-dimension to other
@@ -1096,7 +1096,7 @@ class ObjectItem(QGraphicsPixmapItem):
         return True
 
     def add_into_relationship(self):
-        """Try and add a this item into a relationship between the buddies."""
+        """Try and add this item into a relationship between the buddies."""
         template_id = list(self.template_id_dim)[0]
         items = self.scene().items()
         template_buddies = [x for x in items if isinstance(x, ObjectItem) and template_id in x.template_id_dim]
@@ -1107,14 +1107,14 @@ class ObjectItem(QGraphicsPixmapItem):
         return self._graph_view_form.add_relationship(template_id, template_buddies)
 
     def move_related_items_by(self, pos_diff):
-        """Move related items."""
+        """Moves related items."""
         for item in self.outgoing_arc_items:
             item.move_src_by(pos_diff)
         for item in self.incoming_arc_items:
             item.move_dst_by(pos_diff)
 
     def contextMenuEvent(self, e):
-        """Show context menu.
+        """Shows context menu.
 
         Args:
             e (QGraphicsSceneMouseEvent): Mouse event
@@ -1126,13 +1126,13 @@ class ObjectItem(QGraphicsPixmapItem):
         self._graph_view_form.show_object_item_context_menu(e, self)
 
     def set_all_visible(self, on):
-        """Set visible status for this item and all related ones."""
+        """Sets visibility status for this item and all related items."""
         for item in self.incoming_arc_items + self.outgoing_arc_items:
             item.setVisible(on)
         self.setVisible(on)
 
     def wipe_out(self):
-        """Remove this item and all related from the scene."""
+        """Removes this item and all related items from the scene."""
         scene = self.scene()
         for item in self.incoming_arc_items + self.outgoing_arc_items:
             if not item.scene():
@@ -1153,9 +1153,9 @@ class ArcItem(QGraphicsLineItem):
         width (int): Preferred line width
         arc_color (QColor): arc color
         object_id_list (str): object id comma separated list
-        token_extent (int): token preferred extent
+        token_object_extent (int): token preferred extent
         token_color (QColor): token bg color
-        token_name_tuple_list (list): token (object class name, object name) tuple list
+        token_object_name_tuple_list (list): token (object class name, object name) tuple list
     """
 
     def __init__(

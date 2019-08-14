@@ -1445,9 +1445,13 @@ class ToolboxUI(QMainWindow):
         view = self.project_item_model.project_item(cur_index)
         global_pos = self.ui.treeView_view.viewport().mapToGlobal(pos)
         self.view_prop_context_menu = ViewPropertiesContextMenu(self, global_pos, ind)
-        option = self.di_files_context_menu.get_action()
-        if option == "Open graph view":
-            view.open_graph_view(ind)
+        option = self.view_prop_context_menu.get_action()
+        if option == "Open tree view":
+            view.open_tree_view_btn_clicked()
+        elif option == "Open graph view":
+            view.open_graph_view_btn_clicked()
+        elif option == "Open tabular view":
+            view.open_tabular_view_btn_clicked()
         return
 
     @Slot("QPoint", name="show_di_files_properties_context_menu")
