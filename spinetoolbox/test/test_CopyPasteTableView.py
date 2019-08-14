@@ -83,7 +83,15 @@ class TestCopyPasteTableView(unittest.TestCase):
     def setUp(self):
         self._original_locale = locale.getlocale()
         # Set locale to something with special (non-dot) decimal separator.
-        locale.setlocale(locale.LC_ALL, 'de_DE')
+        try:
+            locale.setlocale(locale.LC_ALL, "de_DE")
+        except locale.Error:
+            # locale de_DE not found on this system. Let's try something else.
+            try:
+                locale.setlocale(locale.LC_ALL, "German")
+            except locale.Error:
+                # locale German not supported either. Skip test
+                self.skipTest("Locales de_DE and German not found on your system")
 
     def tearDown(self):
         locale.setlocale(locale.LC_ALL, self._original_locale)
