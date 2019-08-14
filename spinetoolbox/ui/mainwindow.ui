@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -127,7 +127,7 @@
      <x>0</x>
      <y>0</y>
      <width>862</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <property name="nativeMenuBar">
@@ -440,8 +440,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>402</width>
-              <height>331</height>
+              <width>269</width>
+              <height>315</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_25">
@@ -1250,8 +1250,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>402</width>
-              <height>331</height>
+              <width>349</width>
+              <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_16">
@@ -1458,6 +1458,9 @@
                <property name="selectionMode">
                 <enum>QAbstractItemView::ExtendedSelection</enum>
                </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideLeft</enum>
+               </property>
                <property name="verticalScrollMode">
                 <enum>QAbstractItemView::ScrollPerPixel</enum>
                </property>
@@ -1657,8 +1660,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>402</width>
-              <height>331</height>
+              <width>256</width>
+              <height>234</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_17">
@@ -1980,8 +1983,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>402</width>
-              <height>331</height>
+              <width>269</width>
+              <height>159</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_18">
@@ -2214,8 +2217,8 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>399</width>
-              <height>331</height>
+              <width>98</width>
+              <height>163</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_21">
