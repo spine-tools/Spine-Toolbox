@@ -335,7 +335,12 @@ class DataConnection(ProjectItem):
         """Returns a list of files that are in the data directory."""
         if not os.path.isdir(self.data_dir):
             return None
-        return os.listdir(self.data_dir)
+        files = list()
+        with os.scandir(self.data_dir) as scan_iterator:
+            for entry in scan_iterator:
+                if entry.is_file():
+                    files.append(entry.path)
+        return files
 
     @Slot(name="refresh")
     def refresh(self):
