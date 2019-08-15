@@ -26,7 +26,6 @@ The last section contains the complete code reference of Spine Toolbox.
    terminology
    dependencies
    contribution_guide
-   code_ref
 
 
 Indices and tables

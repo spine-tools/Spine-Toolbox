@@ -51,6 +51,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'recommonmark',
+    'autoapi.extension',
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -77,6 +78,9 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
+# Location of package for Sphinx AutoAPI
+autoapi_dirs = ['../../spinetoolbox']
+autoapi_ignore = ['*rc.py']
 
 # -- Options for HTML output -------------------------------------------------
 
