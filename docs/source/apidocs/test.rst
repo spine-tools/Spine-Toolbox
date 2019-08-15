@@ -20,6 +20,14 @@ test.test\_ConnectionModel module
    :undoc-members:
    :show-inheritance:
 
+test.test\_CopyPasteTableView module
+------------------------------------
+
+.. automodule:: test.test_CopyPasteTableView
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 test.test\_DatetimeEditor module
 --------------------------------
 
@@ -48,6 +56,14 @@ test.test\_IndexedValueTableModel module
 ----------------------------------------
 
 .. automodule:: test.test_IndexedValueTableModel
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+test.test\_IndexedValueTableView module
+---------------------------------------
+
+.. automodule:: test.test_IndexedValueTableView
    :members:
    :undoc-members:
    :show-inheritance:
@@ -112,6 +128,14 @@ test.test\_TimeSeriesFixedResolutionEditor module
 -------------------------------------------------
 
 .. automodule:: test.test_TimeSeriesFixedResolutionEditor
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
+test.test\_TimeSeriesFixedResolutionTableView module
+----------------------------------------------------
+
+.. automodule:: test.test_TimeSeriesFixedResolutionTableView
    :members:
    :undoc-members:
    :show-inheritance:

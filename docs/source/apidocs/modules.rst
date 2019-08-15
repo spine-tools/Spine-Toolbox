@@ -23,6 +23,7 @@ spinetoolbox
    qsubprocess
    resources_icons_rc
    resources_logos_rc
+   spine_io
    spinetoolbox
    tabularview_models
    test
