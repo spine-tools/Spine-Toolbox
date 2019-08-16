@@ -21,6 +21,8 @@ The last section contains the complete code reference of Spine Toolbox.
    executing_tools
    settings
    data_store_views
+   plotting
+   parameter_value_editor
    data_import_export
    spine_datapackage_editor
    terminology

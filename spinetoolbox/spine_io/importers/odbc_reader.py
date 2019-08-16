@@ -17,33 +17,50 @@ Contains ODBCConnector class.
 """
 
 import pyodbc
-from spine_io.io_api import FileImportTemplate
+from spine_io.io_api import SourceConnection
 from PySide2.QtWidgets import (
     QWidget,
-    QFormLayout,
-    QLabel,
-    QLineEdit,
-    QCheckBox,
-    QSpinBox,
-    QGroupBox,
-    QVBoxLayout,
     QInputDialog,
     QErrorMessage,
 )
-from PySide2.QtCore import QObject, Signal
 
 
-class ODBCConnector(FileImportTemplate):
+class ODBCConnector(SourceConnection):
 
     HAS_TABLES = True
     DISPLAY_NAME = 'ODBC'
 
     def __init__(self):
+        """Constructor."""
         super(ODBCConnector, self).__init__()
-
         self._connection = None
         self._options = {}
         self._option_widget = QWidget()
+
+    @property
+    def tables(self):
+        """Tables."""
+        if not self._connection:
+            return []
+        cursor = self._connection.cursor()
+        tables = [row.table_name for row in cursor.tables() if row.table_type != "SYSTEM TABLE"]
+        return tables
+
+    def connect_to_source(self, source):
+        """TODO: Needs implementation"""
+        pass
+
+    def disconnect(self):
+        """TODO: Needs implementation"""
+        pass
+
+    def get_tables(self):
+        """TODO: Needs implementation"""
+        pass
+
+    def get_data_iterator(self, table, options, max_rows=-1):
+        """TODO: Needs implementation"""
+        pass
 
     def _new_options(self):
         self.refreshDataRequest.emit()
@@ -65,17 +82,13 @@ class ODBCConnector(FileImportTemplate):
         return True
 
     def read_data(self, table, max_rows=100):
-        """
-        Return data read from data source table in table. If max_rows is
+        """Return data read from data source table in table. If max_rows is
         specified only that number of rows.
         """
         if not self._connection:
             return [], []
-
         cursor = self._connection.cursor()
-
         data = [[row.table_name, row.table_type] for row in cursor.tables()]
-
         return data, []
 
     def preview_data(self, table):
@@ -91,15 +104,5 @@ class ODBCConnector(FileImportTemplate):
         return data, header
 
     def option_widget(self):
-        """
-        Return a Qwidget with options for reading data from a table in source
-        """
+        """Return a QWidget with options for reading data from a table in source."""
         return self._option_widget
-
-    @property
-    def tables(self):
-        if not self._connection:
-            return []
-        cursor = self._connection.cursor()
-        tables = [row.table_name for row in cursor.tables() if row.table_type != "SYSTEM TABLE"]
-        return tables
