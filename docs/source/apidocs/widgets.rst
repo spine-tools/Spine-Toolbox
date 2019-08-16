@@ -180,6 +180,14 @@ widgets.graph\_view\_widget module
    :undoc-members:
    :show-inheritance:
 
+widgets.import\_preview\_window module
+--------------------------------------
+
+.. automodule:: widgets.import_preview_window
+   :members:
+   :undoc-members:
+   :show-inheritance:
+
 widgets.indexed\_value\_table\_context\_menu module
 ---------------------------------------------------
 

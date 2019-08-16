@@ -105,7 +105,7 @@ class ConnectionManager(QObject):
         """Get tables tables from source, emits two singals,
         fetchingData: ConnectionManager is busy waiting for data
         startTableGet: a signal that the worker in another thread is listening
-                       to know when to run get a list of table names.
+        to know when to run get a list of table names.
         """
         if self.is_connected:
             self.fetchingData.emit()
