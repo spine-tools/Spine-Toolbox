@@ -16,10 +16,10 @@ Classes for tool configuration assistants.
 :date:   10.1.2019
 """
 
-import qsubprocess
 from PySide2.QtCore import QObject, Signal
-from config import JULIA_EXECUTABLE, APPLICATION_PATH
+from config import JULIA_EXECUTABLE
 from helpers import busy_effect
+import qsubprocess
 
 
 class SpineModelConfigurationAssistant(QObject):
@@ -42,7 +42,9 @@ class SpineModelConfigurationAssistant(QObject):
             self.julia_exe = julia_path
         else:
             self.julia_exe = JULIA_EXECUTABLE
-        self.julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="@.")
+        self.julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if self.julia_project_path == "":
+            self.julia_project_path = "@."
         self._julia_version = None
         self._julia_active_project = None
         self.find_out_julia_version_and_project()
@@ -79,7 +81,7 @@ class SpineModelConfigurationAssistant(QObject):
         args = list()
         args.append(f"--project={self.julia_project_path}")
         args.append("-e")
-        args.append("using SpineModel; using Pkg; println(Pkg.installed()[ARGS[1]]);")
+        args.append("using Pkg; Pkg.update(ARGS[1]);")
         args.append("SpineModel")
         return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=True)
 
@@ -101,6 +103,16 @@ class SpineModelConfigurationAssistant(QObject):
         args.append("using Pkg; Pkg.add(PackageSpec(url=ARGS[1])); Pkg.add(PackageSpec(url=ARGS[2]));")
         args.append("https://github.com/Spine-project/SpineInterface.jl.git")
         args.append("https://github.com/Spine-project/Spine-Model.git")
+        return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=False)
+
+    def install_py_call(self):
+        """Return qsubprocess that installs PyCall in current julia version.
+        """
+        args = list()
+        args.append(f"--project={self.julia_project_path}")
+        args.append("-e")
+        args.append("using Pkg; Pkg.add(ARGS[1]);")
+        args.append("PyCall")
         return qsubprocess.QSubProcess(self._toolbox, self.julia_exe, args, silent=False)
 
     def reconfigure_py_call(self, pyprogramname):

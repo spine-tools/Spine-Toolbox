@@ -77,7 +77,7 @@ class TestDataStore(unittest.TestCase):
     def test_create_new_spine_database(self):
         """Test that a new Spine database is created when clicking on Spine-icon tool button.
         """
-        self.toolbox.project().add_data_store("DS", "", reference=None)  # Create Data Store to project
+        self.toolbox.project().add_data_store("DS", "", "sqlite:///mock_db.sqlite")  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         with mock.patch("data_store.QFileDialog.selectedFiles") as mock_sf, mock.patch(
@@ -87,9 +87,9 @@ class TestDataStore(unittest.TestCase):
             mock_sf.return_value = [file_path]
             data_store.create_new_spine_database()
         self.assertTrue(os.path.isfile(file_path), "mock_db.sqlite file not found.")
-        sqlite_file = self.toolbox.ui.lineEdit_SQLite_file.text()
+        sqlite_file = self.toolbox.ui.lineEdit_database.text()
         self.assertEqual(sqlite_file, file_path)
-        database = self.toolbox.ui.lineEdit_database.text()
+        database = os.path.basename(self.toolbox.ui.lineEdit_database.text())
         basename = os.path.basename(file_path)
         self.assertEqual(database, basename)
 
@@ -104,25 +104,23 @@ class TestDataStore(unittest.TestCase):
                 pass
         url = "sqlite:///" + file_path
         create_new_spine_database(url)
-        reference = dict(database="foo", username="bar", url=url)
-        # data_store = DataStore(self.toolbox, "DS", "", reference, 0, 0)
-        self.toolbox.project().add_data_store("DS", "", reference=reference)  # Create Data Store to project
+        self.toolbox.project().add_data_store("DS", "", url)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
         dialect = self.toolbox.ui.comboBox_dialect.currentText()
-        database = self.toolbox.ui.lineEdit_database.text()
+        database = os.path.basename(self.toolbox.ui.lineEdit_database.text())
         username = self.toolbox.ui.lineEdit_username.text()
         self.assertEqual(dialect, 'sqlite')
-        self.assertEqual(database, 'foo')
-        self.assertEqual(username, 'bar')
+        self.assertEqual(database, 'mock_db.sqlite')
+        self.assertEqual(username, '')
 
     def test_save_and_restore_selections(self):
         """Test that selections are saved and restored when deactivating a Data Store and activating it again.
         """
         # FIXME: For now it only tests the mysql dialect
         # data_store = DataStore(self.toolbox, "DS", "", dict(), 0, 0)
-        self.toolbox.project().add_data_store("DS", "", reference=None)  # Create Data Store to project
+        self.toolbox.project().add_data_store("DS", "", "sqlite:///mock_db.sqlite")  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
@@ -154,13 +152,11 @@ class TestDataStore(unittest.TestCase):
                 pass
         url = "sqlite:///" + file_path
         create_new_spine_database(url)
-        reference = dict(database="foo", username="bar", url=url)
-        # data_store = DataStore(self.toolbox, "DS", "", reference, 0, 0)
-        self.toolbox.project().add_data_store("DS", "", reference=reference)  # Create Data Store to project
+        self.toolbox.project().add_data_store("DS", "", url)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
-        self.toolbox.ui.toolButton_copy_db_url.click()
+        self.toolbox.ui.toolButton_copy_url.click()
         # noinspection PyArgumentList
         clipboard_text = QApplication.clipboard().text()
         self.assertEqual(clipboard_text, url)

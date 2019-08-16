@@ -24,10 +24,9 @@ from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, Q
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
 from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
-from helpers import create_dir
+from helpers import busy_effect, create_dir
 from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 from graphics_items import DataConnectionIcon
-from helpers import busy_effect
 
 
 class DataConnection(ProjectItem):
@@ -110,7 +109,6 @@ class DataConnection(ProjectItem):
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-        pass
 
     def get_icon(self):
         """Returns the item representing this data connection in the scene."""
@@ -330,14 +328,19 @@ class DataConnection(ProjectItem):
         return
 
     def file_references(self):
-        """Return a list of paths to files that are in this item as references."""
+        """Returns a list of paths to files that are in this item as references."""
         return self.references
 
     def data_files(self):
-        """Return a list of files that are in the data directory."""
+        """Returns a list of files that are in the data directory."""
         if not os.path.isdir(self.data_dir):
             return None
-        return os.listdir(self.data_dir)
+        files = list()
+        with os.scandir(self.data_dir) as scan_iterator:
+            for entry in scan_iterator:
+                if entry.is_file():
+                    files.append(entry.path)
+        return files
 
     @Slot(name="refresh")
     def refresh(self):

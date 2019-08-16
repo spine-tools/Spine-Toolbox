@@ -272,8 +272,7 @@ class ToolTemplateWidget(QWidget):
         except OSError:
             pass
         try:
-            with open(file_path, "w") as fp:
-                # logging.debug("Created file:{0}".format(file_path))
+            with open(file_path, "w"):
                 pass
         except OSError:
             msg = "Please check directory permissions."
@@ -321,7 +320,7 @@ class ToolTemplateWidget(QWidget):
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getExistingDirectory(self, "Select a directory to add to source files", path)
         file_paths = list()
-        for root, dirs, files in os.walk(answer):
+        for root, _, files in os.walk(answer):
             for file in files:
                 file_paths.append(os.path.abspath(os.path.join(root, file)))
         for path in file_paths:
@@ -371,20 +370,19 @@ class ToolTemplateWidget(QWidget):
         if not index.isValid():
             self._toolbox.msg_error.emit("Selected index not valid")
             return
-        else:
-            includes_file = self.sourcefiles_model.itemFromIndex(index).text()
-            fname, ext = os.path.splitext(includes_file)
-            if ext in [".bat", ".exe"]:
-                self._toolbox.msg_warning.emit(
-                    "Sorry, opening files with extension <b>{0}</b> not implemented. "
-                    "Please open the file manually.".format(ext)
-                )
-                return
-            url = "file:///" + os.path.join(self.program_path, includes_file)
-            # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-            if not res:
-                self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
+        includes_file = self.sourcefiles_model.itemFromIndex(index).text()
+        _, ext = os.path.splitext(includes_file)
+        if ext in [".bat", ".exe"]:
+            self._toolbox.msg_warning.emit(
+                "Sorry, opening files with extension <b>{0}</b> not implemented. "
+                "Please open the file manually.".format(ext)
+            )
+            return
+        url = "file:///" + os.path.join(self.program_path, includes_file)
+        # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._toolbox.msg_error.emit("Failed to open file: <b>{0}</b>".format(includes_file))
 
     @Slot(name="remove_source_files_with_del")
     def remove_source_files_with_del(self):
@@ -555,7 +553,7 @@ class ToolTemplateWidget(QWidget):
         folder_path, file_path = os.path.split(main_program)
         self.program_path = os.path.abspath(folder_path)
         self.ui.label_mainpath.setText(self.program_path)
-        self.definition["execute_in_work"] = True if self.ui.checkBox_execute_in_work.isChecked() else False
+        self.definition["execute_in_work"] = self.ui.checkBox_execute_in_work.isChecked()
         self.definition["includes"] = [file_path]
         self.definition["includes"] += [i.text() for i in self.sourcefiles_model.findItems("", flags)]
         self.definition["inputfiles"] = [i.text() for i in self.inputfiles_model.findItems("", flags)]

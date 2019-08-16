@@ -122,10 +122,9 @@ class PythonReplWidget(RichJupyterWidget):
                 # Happens when context-menu 'Start' item is clicked while the kernel is already running
                 self._toolbox.msg.emit("Kernel {0} already running in Python Console".format(self.kernel_name))
                 return
-            else:
-                self._toolbox.msg.emit("*** Restarting Python Console ***")
-                self._toolbox.msg.emit("\tShutting down IPython kernel <b>{0}</b>".format(self.kernel_name))
-                self.shutdown_kernel(hush=True)
+            self._toolbox.msg.emit("*** Restarting Python Console ***")
+            self._toolbox.msg.emit("\tShutting down IPython kernel <b>{0}</b>".format(self.kernel_name))
+            self.shutdown_kernel(hush=True)
         else:
             self._toolbox.msg.emit("*** Starting Python Console ***")
         self.kernel_name = k_name
@@ -229,8 +228,7 @@ class PythonReplWidget(RichJupyterWidget):
         if retval != 0:
             self._toolbox.msg_error.emit("\tInstalling required package failed. Please install it manually.")
             return
-        else:
-            self._toolbox.msg_success.emit("\tInstalling package to environment {0} succeeded".format(self.python_cmd))
+        self._toolbox.msg_success.emit("\tInstalling package to environment {0} succeeded".format(self.python_cmd))
         self.check_and_install_requirements()  # Check reqs again
 
     def start_kernelspec_install_process(self):
@@ -265,9 +263,8 @@ class PythonReplWidget(RichJupyterWidget):
         if retval != 0:
             self._toolbox.msg_error.emit("\tInstalling kernel specs failed. Please install them manually.")
             return
-        else:
-            self._toolbox.msg_success.emit("\tKernel specs <b>{0}</b> installed".format(self.kernel_name))
-            self.start_python_kernel()
+        self._toolbox.msg_success.emit("\tKernel specs <b>{0}</b> installed".format(self.kernel_name))
+        self.start_python_kernel()
 
     def start_python_kernel(self):
         """Starts kernel manager and client and attaches
@@ -310,7 +307,7 @@ class PythonReplWidget(RichJupyterWidget):
         """
         self._control.viewport().setCursor(Qt.BusyCursor)
         self._running = True
-        if len(self.commands) == 0:
+        if not self.commands:
             # self._toolbox.msg.emit("Executing code:{0}".format(code))
             pass  # Happens when users type commands directly to iPython Console
         else:
@@ -330,7 +327,7 @@ class PythonReplWidget(RichJupyterWidget):
         if msg['content']['status'] == 'ok':
             # TODO: If user Stops execution, it should be handled here
             # Run next command or finish up if no more commands to execute
-            if len(self.commands) == 0:
+            if not self.commands:
                 self.execution_finished_signal.emit(0)
             else:
                 cmd = self.commands.pop(0)
@@ -384,12 +381,11 @@ class PythonReplWidget(RichJupyterWidget):
                         # Kernel is idle after starting up -> execute pending command
                         self._kernel_starting = False
                         # Start executing the first command (if available) from the command buffer immediately
-                        if len(self.commands) == 0:  # Happens if Python console is started from context-menu
+                        if not self.commands:  # Happens if Python console is started from context-menu
                             return
-                        else:
-                            # Happens if Python console is started by clicking on Tool's Execute button
-                            cmd = self.commands.pop(0)
-                            self.execute(cmd)
+                        # Happens if Python console is started by clicking on Tool's Execute button
+                        cmd = self.commands.pop(0)
+                        self.execute(cmd)
                 else:
                     # This should probably happen when _kernel_state is 'starting' but it doesn't seem to show up
                     self._toolbox.msg_error.emit(
@@ -449,10 +445,10 @@ class PythonReplWidget(RichJupyterWidget):
         menu.insertSeparator(first_action)
         return menu
 
-    def dragEnterEvent(self, event):
+    def dragEnterEvent(self, e):
         """Don't accept project item drops."""
-        source = event.source()
+        source = e.source()
         if isinstance(source, DraggableWidget):
-            event.ignore()
+            e.ignore()
         else:
-            super().dragEnterEvent(event)
+            super().dragEnterEvent(e)

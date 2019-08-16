@@ -96,9 +96,9 @@ class ToolConfigurationAssistantWidget(QWidget):
                 "Unable to determine Julia version. Make sure that Julia is correctly installed and try again"
             )
             QApplication.restoreOverrideCursor()
-        elif julia_version > "1.1.0" or julia_version < "1.0.0":
+        elif julia_version < "1.1.0":
             self.add_spine_model_error_msg(
-                "SpineModel.jl requires Julia version 1.x, whereas current version is {}.".format(julia_version)
+                "SpineModel.jl requires Julia version 1.1.0, whereas current version is {}.".format(julia_version)
             )
             QApplication.restoreOverrideCursor()
         else:
@@ -124,8 +124,7 @@ class ToolConfigurationAssistantWidget(QWidget):
                 self.q_process.subprocess_finished_signal.connect(self._handle_spine_model_installation_finished)
                 self.q_process.start_process()
         else:
-            spine_model_version = self.q_process.output
-            self.add_spine_model_msg("SpineModel version {0} is correctly installed.".format(spine_model_version))
+            self.add_spine_model_msg("SpineModel is correctly installed.")
             self.q_process = self.spine_model_config_asst.py_call_program_check()
             self.q_process.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)
             self.q_process.start_process()

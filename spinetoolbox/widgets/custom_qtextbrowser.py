@@ -49,7 +49,7 @@ class CustomQTextBrowser(QTextBrowser):
             blocks_to_remove = block_count - self._max_blocks
             cursor = self.textCursor()
             cursor.movePosition(QTextCursor.Start)
-            for i in range(blocks_to_remove):
+            for _ in range(blocks_to_remove):
                 cursor.select(QTextCursor.BlockUnderCursor)
                 cursor.removeSelectedText()
                 cursor.deleteChar()  # Remove the trailing newline
@@ -62,7 +62,7 @@ class CustomQTextBrowser(QTextBrowser):
         """
         clear_action = QAction("Clear", self)
         # noinspection PyUnresolvedReferences
-        clear_action.triggered.connect(lambda: self.clear())
+        clear_action.triggered.connect(lambda: self.clear())  # pylint: disable=unnecessary-lambda
         menu = self.createStandardContextMenu()
         menu.addSeparator()
         menu.addAction(clear_action)

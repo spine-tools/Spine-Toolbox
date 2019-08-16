@@ -5,7 +5,7 @@
 Dependencies
 ************
 
-Spine Toolbox requires Python 3.5 or higher.
+Spine Toolbox requires Python 3.6 or higher.
 
 Spine Toolbox uses code from packages and/or projects listed in the table below. Required packages
 must be installed for the application to start. Users can choose the SQL dialect API (pymysql,
@@ -74,4 +74,8 @@ Pre-commit hook enables automatic code formatting at git commit.
 | sphinx            | 1.7.5         |     BSD       |
 +-------------------+---------------+---------------+
 | sphinx_rtd_theme  | 0.4.0         |     MIT       |
++-------------------+---------------+---------------+
+| recommonmark      | 0.5.0         |     MIT       |
++-------------------+---------------+---------------+
+| sphinx-autoapi    | 1.1.0         |     MIT       |
 +-------------------+---------------+---------------+

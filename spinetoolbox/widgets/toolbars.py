@@ -70,43 +70,57 @@ class ItemToolBar(QToolBar):
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
         remove_all = QToolButton(parent)
         remove_all.setIcon(remove_all_icon)
-        remove_all.clicked.connect(self.remove_all_clicked)
+        remove_all.clicked.connect(self.remove_all)
+        remove_all.setToolTip("Remove all items from project.")
         self.addSeparator()
         self.addWidget(remove_all)
         # Execute label and button
         self.addSeparator()
-        ex_label = QLabel("Execute Project")
+        ex_label = QLabel("Execute")
         self.addWidget(ex_label)
         execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(24, 24)
         execute_project = QToolButton(parent)
         execute_project.setIcon(execute_project_icon)
-        execute_project.clicked.connect(self.execute_project_clicked)
+        execute_project.clicked.connect(self.execute_project)
+        execute_project.setToolTip("Execute project.")
         self.addWidget(execute_project)
-        ex_selected_label = QLabel("Execute Selected")
-        self.addWidget(ex_selected_label)
+        # ex_selected_label = QLabel("Execute Selected")
+        # self.addWidget(ex_selected_label)
         execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(24, 24)
         execute_selected = QToolButton(parent)
         execute_selected.setIcon(execute_selected_icon)
-        execute_selected.clicked.connect(self.execute_selected_clicked)
+        execute_selected.clicked.connect(self.execute_selected)
+        execute_selected.setToolTip("Execute selection.")
         self.addWidget(execute_selected)
         self.addSeparator()
         stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(24, 24)
         stop = QToolButton(parent)
         stop.setIcon(stop_icon)
-        stop.clicked.connect(self.stop_clicked)
+        stop.clicked.connect(self.stop_execution)
+        stop.setToolTip("Stop execution.")
         self.addWidget(stop)
+        # Data label and button
+        self.addSeparator()
+        data_label = QLabel("Data")
+        self.addWidget(data_label)
+        open_tree_view_icon = QIcon(":/icons/project_item_icons/tree.svg").pixmap(24, 24)
+        open_tree_view = QToolButton(parent)
+        open_tree_view.setIcon(open_tree_view_icon)
+        open_tree_view.clicked.connect(self.open_tree_view)
+        open_tree_view.setToolTip("Open selected data stores in tree view.")
+        self.addWidget(open_tree_view)
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
 
-    @Slot(bool, name="remove_all_clicked")
-    def remove_all_clicked(self, checked=False):
+    @Slot(bool, name="remove_all")
+    def remove_all(self, checked=False):
         """Slot for handling the remove all tool button clicked signal.
         Calls ToolboxUI remove_all_items() method."""
         self._toolbox.remove_all_items()
 
-    @Slot(bool, name="execute_project_clicked")
-    def execute_project_clicked(self, checked=False):
+    @Slot(bool, name="execute_project")
+    def execute_project(self, checked=False):
         """Slot for handling the Execute project tool button clicked signal."""
         if not self._toolbox.project():
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
@@ -114,8 +128,8 @@ class ItemToolBar(QToolBar):
         self._toolbox.project().execute_project()
         return
 
-    @Slot(bool, name="execute_selected_clicked")
-    def execute_selected_clicked(self, checked=False):
+    @Slot(bool, name="execute_selected")
+    def execute_selected(self, checked=False):
         """Slot for handling the Execute selected tool button clicked signal."""
         if not self._toolbox.project():
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
@@ -123,13 +137,21 @@ class ItemToolBar(QToolBar):
         self._toolbox.project().execute_selected()
         return
 
-    @Slot(bool, name="stop_clicked")
-    def stop_clicked(self, checked=False):
+    @Slot(bool, name="stop_execution")
+    def stop_execution(self, checked=False):
         """Slot for handling the Stop execution tool button clicked signal."""
         if not self._toolbox.project():
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().stop()
+
+    @Slot(bool, name="open_tree_view")
+    def open_tree_view(self, checked=False):
+        """Slot for handling the Open tree view tool button clicked signal."""
+        if not self._toolbox.project():
+            self._toolbox.msg.emit("Please create a new project or open an existing one first")
+            return
+        self._toolbox.project().open_tree_view()
 
 
 class DraggableWidget(QLabel):
@@ -147,11 +169,7 @@ class DraggableWidget(QLabel):
         self.setPixmap(pixmap)
         self.drag_start_pos = None
         self.setToolTip(
-            """
-            <p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>
-        """.format(
-                self.text
-            )
+            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(self.text)
         )
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -187,64 +205,88 @@ class ParameterTagToolBar(QToolBar):
     """A toolbar to add items using drag and drop actions.
 
     Attributes:
-        parent (ToolboxUI): QMainWindow instance
+        parent (DataStoreForm): tree or graph view form
     """
 
-    tag_button_toggled = Signal("int", "bool", name="tag_button_toggled")
+    tag_button_toggled = Signal("QVariant", "bool", name="tag_button_toggled")
     manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
 
-    def __init__(self, parent, db_map):
+    def __init__(self, parent):
         """Init class"""
         super().__init__("Parameter Tag Toolbar", parent=parent)
-        self.db_map = db_map
-        self.action_dict = {}
-        self.filter_action_tool_tip = "<html>Check these buttons to filter parameters according to their tags.</html>"
-        self.tag_button_group = QButtonGroup(self)
-        self.tag_button_group.setExclusive(False)
+        self._parent = parent
         label = QLabel("Parameter tag")
         self.addWidget(label)
-        action = self.addAction("untagged")
-        action.setCheckable(True)
-        action.setToolTip(self.filter_action_tool_tip)
-        self.action_dict[0] = action
-        button = self.widgetForAction(action)
-        self.tag_button_group.addButton(button, id=0)
-        for tag in self.db_map.parameter_tag_list():
-            action = self.addAction(tag.tag)
-            action.setCheckable(True)
-            action.setToolTip(self.filter_action_tool_tip)
-            self.action_dict[tag.id] = action
-            button = self.widgetForAction(action)
-            self.tag_button_group.addButton(button, id=tag.id)
-        self.tag_button_group.buttonToggled["int", "bool"].connect(
-            lambda id, checked: self.tag_button_toggled.emit(id, checked)
-        )
+        self.tag_button_group = QButtonGroup(self)
+        self.tag_button_group.setExclusive(False)
+        self.actions = []
+        self.db_map_ids = []
         empty = QWidget()
         empty.setSizePolicy(QSizePolicy.Expanding, QSizePolicy.Expanding)
         self.empty_action = self.addWidget(empty)
         button = QPushButton("Manage tags...")
         self.addWidget(button)
         # noinspection PyUnresolvedReferences
+        # pylint: disable=unnecessary-lambda
         button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
 
-    def add_tag_actions(self, parameter_tags):
-        for tag in parameter_tags:
-            action = QAction(tag.tag)
+    def init_toolbar(self):
+        for button in self.tag_button_group.buttons():
+            self.tag_button_group.removeButton(button)
+        for action in self.actions:
+            self.removeAction(action)
+        action = QAction("untagged")
+        self.insertAction(self.empty_action, action)
+        action.setCheckable(True)
+        button = self.widgetForAction(action)
+        self.tag_button_group.addButton(button, id=0)
+        self.actions = [action]
+        self.db_map_ids = [[(db_map, 0) for db_map in self._parent.db_maps]]
+        tag_dict = {}
+        for db_map in self._parent.db_maps:
+            for parameter_tag in db_map.parameter_tag_list():
+                tag_dict.setdefault(parameter_tag.tag, {})[db_map] = parameter_tag.id
+        for tag, db_map_dict in tag_dict.items():
+            action = QAction(tag)
             self.insertAction(self.empty_action, action)
             action.setCheckable(True)
-            action.setToolTip(self.filter_action_tool_tip)
-            self.action_dict[tag.id] = action
             button = self.widgetForAction(action)
-            self.tag_button_group.addButton(button, id=tag.id)
+            self.tag_button_group.addButton(button, id=len(self.db_map_ids))
+            self.actions.append(action)
+            self.db_map_ids.append([(db_map, id_) for db_map, id_ in db_map_dict.items()])
+        self.tag_button_group.buttonToggled["int", "bool"].connect(
+            lambda id, checked: self.tag_button_toggled.emit(self.db_map_ids[id], checked)
+        )
 
-    def remove_tag_actions(self, parameter_tag_ids):
+    def add_tag_actions(self, db_map, parameter_tags):
+        action_texts = [a.text() for a in self.actions]
+        for parameter_tag in parameter_tags:
+            if parameter_tag.tag in action_texts:
+                # Already a tag named after that, add db_map id information
+                i = action_texts.index(parameter_tag.tag)
+                self.db_map_ids[i].append((db_map, parameter_tag.id))
+            else:
+                action = QAction(parameter_tag.tag)
+                self.insertAction(self.empty_action, action)
+                action.setCheckable(True)
+                button = self.widgetForAction(action)
+                self.tag_button_group.addButton(button, id=len(self.db_map_ids))
+                self.actions.append(action)
+                self.db_map_ids.append([(db_map, parameter_tag.id)])
+                action_texts.append(action.text())
+
+    def remove_tag_actions(self, db_map, parameter_tag_ids):
         for tag_id in parameter_tag_ids:
-            action = self.action_dict[tag_id]
-            self.removeAction(action)
+            i = next(k for k, x in enumerate(self.db_map_ids) if (db_map, tag_id) in x)
+            self.db_map_ids[i].remove((db_map, tag_id))
+            if not self.db_map_ids[i]:
+                self.db_map_ids.pop(i)
+                self.removeAction(self.actions.pop(i))
 
-    def update_tag_actions(self, parameter_tags):
-        for tag in parameter_tags:
-            action = self.action_dict[tag.id]
-            action.setText(tag.tag)
+    def update_tag_actions(self, db_map, parameter_tags):
+        for parameter_tag in parameter_tags:
+            i = next(k for k, x in enumerate(self.db_map_ids) if (db_map, parameter_tag.id) in x)
+            action = self.actions[i]
+            action.setText(parameter_tag.tag)

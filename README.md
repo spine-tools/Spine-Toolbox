@@ -1,5 +1,7 @@
 # Spine Toolbox
 
+[![Documentation Status](https://readthedocs.org/projects/spine-toolbox/badge/?version=latest)](https://spine-toolbox.readthedocs.io/en/latest/?badge=latest)
+
 An application to define, manage, and execute various energy system simulation models.
 
 ## License
@@ -29,7 +31,7 @@ version of the source code to your computer.
 Step-by-step instructions:
 
 1. Clone either the `master` or `dev` branch onto your computer
-2. Install Python (3.5->)
+2. Install Python (3.6->)
 3. Install requirements (see below)
 4. Go to directory `\spinetoolbox` and run 
 
@@ -40,7 +42,7 @@ Remember to update your clone occasionally with the
 
 ## Requirements
 
-Python 3.5 or higher is required.
+Python 3.6 or higher is required.
 
 See file `requirements.txt` for packages needed to use Spinetoolbox.
 Additional packages are needed for development which are listed in `dev-requirements.txt`.
@@ -127,6 +129,14 @@ index page can be found in `/docs/build/html/index.html`. The User Guide can als
 be opened from Spine Toolbox menu Help->User Guide (F2).
 
 ## Troubleshooting
+
+### Installation on Linux
+If Python runs into errors while installing on Linux systems, running the 
+following commands in a terminal may help:
+```shell
+sudo apt install libpq-dev
+sudo apt-get install unixodbc-dev
+```
 
 ### Problems in starting the application
 

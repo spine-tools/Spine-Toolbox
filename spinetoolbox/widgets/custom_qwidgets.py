@@ -40,7 +40,7 @@ class FilterWidget(QWidget):
     okPressed = Signal()
     cancelPressed = Signal()
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, show_empty=True):
         """Init class."""
         super().__init__(parent)
         # parameters
@@ -64,7 +64,7 @@ class FilterWidget(QWidget):
         self._search_timer = QTimer()  # Used to limit search so it doesn't search when typing
         self._search_timer.setSingleShot(True)
 
-        self._filter_model = FilterCheckboxListModel()
+        self._filter_model = FilterCheckboxListModel(show_empty=show_empty)
         self._filter_model.set_list(self._filter_state)
         self._ui_list.setModel(self._filter_model)
 
@@ -78,7 +78,10 @@ class FilterWidget(QWidget):
     def save_state(self):
         """Saves the state of the FilterCheckboxListModel."""
         self._filter_state = self._filter_model.get_selected()
-        self._filter_empty_state = self._filter_model._empty_selected
+        if self._filter_model._show_empty:
+            self._filter_empty_state = self._filter_model._empty_selected
+        else:
+            self._filter_empty_state = False
 
     def reset_state(self):
         """Sets the state of the FilterCheckboxListModel to saved state."""
@@ -96,7 +99,10 @@ class FilterWidget(QWidget):
     def set_filter_list(self, data):
         """Sets the list of items to filter."""
         self._filter_state = set(data)
-        self._filter_empty_state = True
+        if self._filter_model._show_empty:
+            self._filter_empty_state = True
+        else:
+            self._filter_empty_state = False
         self._filter_model.set_list(self._filter_state)
 
     def _apply_filter(self):

@@ -220,7 +220,7 @@ class TestSpineToolboxProject(unittest.TestCase):
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
         with mock.patch("data_store.create_dir") as mock_create_dir:
-            self.toolbox.project().add_data_store("DS", "", reference=None)
+            self.toolbox.project().add_data_store("DS", "", "sqlite://")
         return "DS"
 
     def add_dc(self):

@@ -148,8 +148,7 @@ def project_dir(qsettings):
     proj_dir = qsettings.value("appSettings/projectsDir", defaultValue="")
     if not proj_dir:
         return DEFAULT_PROJECT_DIR
-    else:
-        return proj_dir
+    return proj_dir
 
 
 def get_datetime(show):
@@ -161,8 +160,7 @@ def get_datetime(show):
     if show:
         t = datetime.datetime.now()
         return "[{}-{:02d}-{:02d} {:02d}:{:02d}:{:02d}] ".format(t.day, t.month, t.year, t.hour, t.minute, t.second)
-    else:
-        return ""
+    return ""
 
 
 def create_dir(base_path, folder='', verbosity=False):
@@ -203,6 +201,22 @@ def create_output_dir_timestamp():
         logging.error('Timestamp out of range.')
         return ''
     extension = stamp.strftime('%Y-%m-%dT%H.%M.%S')
+    return extension
+
+
+def create_log_file_timestamp():
+    """ Creates a new timestamp string that is used as Data Interface and Data Store error log file.
+
+    Returns:
+        Timestamp string or empty string if failed.
+    """
+    try:
+        # Create timestamp
+        stamp = datetime.datetime.fromtimestamp(time.time())
+    except OverflowError:
+        logging.error('Timestamp out of range.')
+        return ''
+    extension = stamp.strftime('%Y%m%dT%H%M%S')
     return extension
 
 
@@ -367,18 +381,52 @@ def format_string_list(str_list):
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def strip_json_data(data, maxlen):
-    """Return a json equivalent to `data`, stripped to `maxlen` characters.
+def get_db_map(url, upgrade=False):
+    """Returns a DiffDatabaseMapping instance from url.
+    If the db is not the latest version, asks the user if they want to upgrade it.
     """
-    if not data:
-        return data
     try:
-        stripped_data = json.dumps(json.loads(data), ensure_ascii=False)
-    except json.JSONDecodeError:
-        stripped_data = data
-    if len(stripped_data) > 2 * maxlen:
-        stripped_data = stripped_data[:maxlen] + "..." + stripped_data[-maxlen:]
-    return stripped_data
+        db_map = do_get_db_map(url, upgrade)
+        return db_map
+    except spinedb_api.SpineDBVersionError:
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setWindowTitle("Incompatible database version")
+        msg.setText(
+            "The database at <b>{}</b> is from an older version of Spine "
+            "and needs to be upgraded in order to be used with the current version.".format(url)
+        )
+        msg.setInformativeText(
+            "Do you want to upgrade it now?"
+            "<p><b>WARNING</b>: After the upgrade, "
+            "the database may no longer be used "
+            "with previous versions of Spine."
+        )
+        msg.addButton(QMessageBox.Cancel)
+        msg.addButton("Upgrade", QMessageBox.YesRole)
+        ret = msg.exec_()  # Show message box
+        if ret == QMessageBox.Cancel:
+            return None
+        return get_db_map(url, upgrade=True)
+
+
+@busy_effect
+def do_get_db_map(url, upgrade):
+    """Returns a DiffDatabaseMapping instance from url.
+    Called by `get_db_map`.
+    """
+    return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
+
+
+def int_list_to_row_count_tuples(int_list):
+    """Breaks a list of integers into a list of tuples (row, count) corresponding
+    to chunks of successive elements.
+    """
+    sorted_list = sorted(set(int_list))
+    break_points = [k + 1 for k in range(len(sorted_list) - 1) if sorted_list[k] + 1 != sorted_list[k + 1]]
+    break_points = [0] + break_points + [len(sorted_list)]
+    ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
+    return [(sorted_list[start], stop - start) for start, stop in ranges]
 
 
 class IconManager:
@@ -432,7 +480,8 @@ class IconManager:
         pixmap = self.create_object_pixmap(display_icon)
         return QIcon(pixmap)
 
-    def icon_color_code(self, display_icon):
+    @staticmethod
+    def icon_color_code(display_icon):
         """Take a display icon integer and return an equivalent tuple of icon and color code."""
         if not isinstance(display_icon, int) or display_icon < 0:
             return int("f1b2", 16), 0
@@ -443,7 +492,8 @@ class IconManager:
             color_code = 0
         return icon_code, color_code
 
-    def display_icon(self, icon_code, color_code):
+    @staticmethod
+    def display_icon(icon_code, color_code):
         """Take tuple of icon and color codes, and return equivalent integer."""
         return icon_code + (color_code << 16)
 
@@ -451,8 +501,8 @@ class IconManager:
         return self.display_icon(*self.icon_color_code(None))
 
     def setup_object_pixmaps(self, object_classes):
-        """Called after adding or updating object classes. 
-        Create the corresponding object pixmaps and clear obsolete entries 
+        """Called after adding or updating object classes.
+        Create the corresponding object pixmaps and clear obsolete entries
         from the relationship class icon cache."""
         for object_class in object_classes:
             self.create_object_pixmap(object_class.display_icon)

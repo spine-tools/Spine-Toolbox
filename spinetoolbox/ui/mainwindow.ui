@@ -440,7 +440,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
+              <width>349</width>
               <height>361</height>
              </rect>
             </property>
@@ -1250,7 +1250,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
+              <width>349</width>
               <height>361</height>
              </rect>
             </property>
@@ -1458,6 +1458,9 @@
                <property name="selectionMode">
                 <enum>QAbstractItemView::ExtendedSelection</enum>
                </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideLeft</enum>
+               </property>
                <property name="verticalScrollMode">
                 <enum>QAbstractItemView::ScrollPerPixel</enum>
                </property>
@@ -1657,7 +1660,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
+              <width>349</width>
               <height>361</height>
              </rect>
             </property>
@@ -1980,7 +1983,7 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>336</width>
+              <width>349</width>
               <height>361</height>
              </rect>
             </property>
@@ -1998,18 +2001,24 @@
                <property name="acceptDrops">
                 <bool>true</bool>
                </property>
+               <property name="selectionMode">
+                <enum>QAbstractItemView::ExtendedSelection</enum>
+               </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideLeft</enum>
+               </property>
                <property name="rootIsDecorated">
                 <bool>false</bool>
                </property>
               </widget>
              </item>
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="0,1">
+              <layout class="QHBoxLayout" name="horizontalLayout_8" stretch="0,0,0,0,0">
                <property name="spacing">
                 <number>6</number>
                </property>
                <item>
-                <widget class="QPushButton" name="pushButton_open_network_map">
+                <widget class="QPushButton" name="pushButton_view_open_tree_view">
                  <property name="sizePolicy">
                   <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
                    <horstretch>0</horstretch>
@@ -2024,15 +2033,15 @@
                  </property>
                  <property name="maximumSize">
                   <size>
-                   <width>75</width>
+                   <width>16777215</width>
                    <height>23</height>
                   </size>
                  </property>
                  <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Graph view for selected db reference (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tree view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
                  </property>
                  <property name="text">
-                  <string>Graph view</string>
+                  <string>Tree view</string>
                  </property>
                 </widget>
                </item>
@@ -2048,6 +2057,75 @@
                   </size>
                  </property>
                 </spacer>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_view_open_graph_view">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>75</width>
+                   <height>23</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>23</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Graph view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Graph view</string>
+                 </property>
+                </widget>
+               </item>
+               <item>
+                <spacer name="horizontalSpacer_9">
+                 <property name="orientation">
+                  <enum>Qt::Horizontal</enum>
+                 </property>
+                 <property name="sizeHint" stdset="0">
+                  <size>
+                   <width>40</width>
+                   <height>20</height>
+                  </size>
+                 </property>
+                </spacer>
+               </item>
+               <item>
+                <widget class="QPushButton" name="pushButton_view_open_tabular_view">
+                 <property name="sizePolicy">
+                  <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                   <horstretch>0</horstretch>
+                   <verstretch>0</verstretch>
+                  </sizepolicy>
+                 </property>
+                 <property name="minimumSize">
+                  <size>
+                   <width>75</width>
+                   <height>23</height>
+                  </size>
+                 </property>
+                 <property name="maximumSize">
+                  <size>
+                   <width>16777215</width>
+                   <height>23</height>
+                  </size>
+                 </property>
+                 <property name="toolTip">
+                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open Tabular view for selected db references (read-only)&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+                 </property>
+                 <property name="text">
+                  <string>Tabular view</string>
+                 </property>
+                </widget>
                </item>
               </layout>
              </item>
@@ -2109,6 +2187,9 @@
          <string>Data Interface</string>
         </attribute>
         <layout class="QVBoxLayout" name="verticalLayout_15">
+         <property name="leftMargin">
+          <number>6</number>
+         </property>
          <property name="topMargin">
           <number>6</number>
          </property>
@@ -2175,64 +2256,32 @@
              <rect>
               <x>0</x>
               <y>0</y>
-              <width>333</width>
+              <width>349</width>
               <height>361</height>
              </rect>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_21">
              <item>
-              <layout class="QHBoxLayout" name="horizontalLayout_4">
-               <item>
-                <widget class="QLineEdit" name="lineEdit_mapping_script_path">
-                 <property name="text">
-                  <string/>
-                 </property>
-                 <property name="placeholderText">
-                  <string>Path to mapping script</string>
-                 </property>
-                 <property name="clearButtonEnabled">
-                  <bool>true</bool>
-                 </property>
-                </widget>
-               </item>
-               <item>
-                <widget class="QToolButton" name="toolButton_select_mapping_script">
-                 <property name="enabled">
-                  <bool>true</bool>
-                 </property>
-                 <property name="sizePolicy">
-                  <sizepolicy hsizetype="Expanding" vsizetype="Fixed">
-                   <horstretch>0</horstretch>
-                   <verstretch>0</verstretch>
-                  </sizepolicy>
-                 </property>
-                 <property name="minimumSize">
-                  <size>
-                   <width>22</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="maximumSize">
-                  <size>
-                   <width>22</width>
-                   <height>22</height>
-                  </size>
-                 </property>
-                 <property name="toolTip">
-                  <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open SQLite file.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
-                 </property>
-                 <property name="icon">
-                  <iconset resource="resources/resources_icons.qrc">
-                   <normaloff>:/icons/menu_icons/folder-open-regular.svg</normaloff>:/icons/menu_icons/folder-open-regular.svg</iconset>
-                 </property>
-                </widget>
-               </item>
-              </layout>
-             </item>
-             <item>
-              <widget class="QPushButton" name="pushButton_mapping_editor">
-               <property name="text">
-                <string>Mapping Editor</string>
+              <widget class="QTreeView" name="treeView_data_interface_files">
+               <property name="font">
+                <font>
+                 <pointsize>10</pointsize>
+                </font>
+               </property>
+               <property name="contextMenuPolicy">
+                <enum>Qt::CustomContextMenu</enum>
+               </property>
+               <property name="textElideMode">
+                <enum>Qt::ElideLeft</enum>
+               </property>
+               <property name="indentation">
+                <number>5</number>
+               </property>
+               <property name="rootIsDecorated">
+                <bool>false</bool>
+               </property>
+               <property name="uniformRowHeights">
+                <bool>true</bool>
                </property>
               </widget>
              </item>
@@ -2248,6 +2297,34 @@
                 </size>
                </property>
               </spacer>
+             </item>
+             <item>
+              <widget class="QPushButton" name="pushButton_import_editor">
+               <property name="sizePolicy">
+                <sizepolicy hsizetype="MinimumExpanding" vsizetype="Fixed">
+                 <horstretch>0</horstretch>
+                 <verstretch>0</verstretch>
+                </sizepolicy>
+               </property>
+               <property name="minimumSize">
+                <size>
+                 <width>75</width>
+                 <height>23</height>
+                </size>
+               </property>
+               <property name="maximumSize">
+                <size>
+                 <width>16777215</width>
+                 <height>23</height>
+                </size>
+               </property>
+               <property name="toolTip">
+                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open selected file in Import Editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+               </property>
+               <property name="text">
+                <string>Import Editor</string>
+               </property>
+              </widget>
              </item>
              <item>
               <widget class="Line" name="line_6">
@@ -3030,15 +3107,10 @@
   <tabstop>toolButton_tool_open_dir</tabstop>
   <tabstop>scrollArea_4</tabstop>
   <tabstop>treeView_view</tabstop>
-  <tabstop>pushButton_open_network_map</tabstop>
   <tabstop>toolButton_view_open_dir</tabstop>
   <tabstop>tableView_connections</tabstop>
   <tabstop>scrollArea_6</tabstop>
-  <tabstop>lineEdit_mapping_script_path</tabstop>
-  <tabstop>toolButton_select_mapping_script</tabstop>
-  <tabstop>pushButton_mapping_editor</tabstop>
   <tabstop>toolButton_di_open_dir</tabstop>
-  <tabstop>tabWidget_item_properties</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

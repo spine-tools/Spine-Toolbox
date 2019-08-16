@@ -17,15 +17,14 @@ Class for a custom RichJupyterWidget to use as julia REPL.
 """
 
 import logging
-import qsubprocess
 from PySide2.QtWidgets import QMessageBox, QAction, QApplication
 from PySide2.QtCore import Slot, Signal, Qt
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
-from qtconsole.manager import QtKernelManager
-from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel, get_kernel_spec
-from qtconsole.manager import QtKernelRestarter
+from qtconsole.manager import QtKernelManager, QtKernelRestarter
+from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
 from config import JULIA_EXECUTABLE, JL_REPL_TIME_TO_DEAD, JL_REPL_RESTART_LIMIT
 from widgets.toolbars import DraggableWidget
+import qsubprocess
 from helpers import busy_effect
 
 
@@ -38,7 +37,7 @@ class CustomQtKernelManager(QtKernelManager):
 
     @property
     def kernel_spec(self):
-        if self._kernel_spec is None and self.kernel_name is not "":
+        if self._kernel_spec is None and self.kernel_name != "":
             self._kernel_spec = self.kernel_spec_manager.get_kernel_spec(self.kernel_name)
             self.override_project_arg()
         return self._kernel_spec
@@ -118,8 +117,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         """
         self._toolbox.msg.emit("\tInitializing Julia...")
         julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
-        self.julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="@.")
-        if not julia_path == "":
+        if julia_path != "":
             self.julia_exe = julia_path
         else:
             self.julia_exe = JULIA_EXECUTABLE
@@ -153,19 +151,22 @@ class JuliaREPLWidget(RichJupyterWidget):
         kernel_name = self.julia_kernel_name()
         if not kernel_name:
             return False
-        if self.kernel_manager and kernel_name == self.kernel_name:
+        julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if julia_project_path == "":
+            julia_project_path = "@."
+        if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             self._toolbox.msg.emit("*** Using previously started Julia Console ***")
             return True
         self.kernel_name = kernel_name
+        self.julia_project_path = julia_project_path
         self.kernel_execution_state = None
         kernel_specs = find_kernel_specs()
         # logging.debug("kernel_specs:{0}".format(kernel_specs))
         julia_kernel_names = [x for x in kernel_specs if x.startswith('julia')]
         if self.kernel_name in julia_kernel_names:
             return self.start_available_jupyter_kernel()
-        else:
-            self._toolbox.msg_error.emit("\tCouldn't find kernel specification {0}".format(self.kernel_name))
-            return self.handle_repl_failed_to_start()
+        self._toolbox.msg_error.emit("\tCouldn't find kernel specification {0}".format(self.kernel_name))
+        return self.handle_repl_failed_to_start()
 
     def start_available_jupyter_kernel(self):
         """Start a Jupyter kernel which is available (from the attribute `kernel_name`)
@@ -177,7 +178,6 @@ class JuliaREPLWidget(RichJupyterWidget):
         self.starting = True
         self._toolbox.msg.emit("*** Starting Julia Console ***")
         kernel_manager = CustomQtKernelManager(kernel_name=self.kernel_name, project_path=self.julia_project_path)
-        spec = get_kernel_spec(self.kernel_name)
         try:
             kernel_manager.start_kernel()
             self.kernel_manager = kernel_manager
@@ -288,7 +288,10 @@ class JuliaREPLWidget(RichJupyterWidget):
         kernel_name = self.julia_kernel_name()
         if not kernel_name:
             return
-        if self.kernel_manager and kernel_name == self.kernel_name:
+        julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if julia_project_path == "":
+            julia_project_path = "@."
+        if self.kernel_manager and kernel_name == self.kernel_name and julia_project_path == self.julia_project_path:
             # Restart current kernel
             self.starting = True
             self._toolbox.msg.emit("*** Restarting Julia REPL ***")
@@ -298,6 +301,7 @@ class JuliaREPLWidget(RichJupyterWidget):
         else:
             # No kernel to restart (!) or julia has changed in settings. Start a new kernel
             self.kernel_name = kernel_name
+            self.julia_project_path = julia_project_path
             kernel_specs = find_kernel_specs()
             julia_kernel_names = [x for x in kernel_specs if x.startswith('julia')]
             if self.kernel_name in julia_kernel_names:
@@ -472,13 +476,13 @@ class JuliaREPLWidget(RichJupyterWidget):
         if self.starting:
             self._control.viewport().setCursor(Qt.BusyCursor)
 
-    def dragEnterEvent(self, event):
+    def dragEnterEvent(self, e):
         """Don't accept drops from Add Item Toolbar."""
-        source = event.source()
+        source = e.source()
         if isinstance(source, DraggableWidget):
-            event.ignore()
+            e.ignore()
         else:
-            super().dragEnterEvent(event)
+            super().dragEnterEvent(e)
 
     def copy_input(self):
         """Copy only input."""

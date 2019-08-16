@@ -17,13 +17,23 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget, QLineEdit, QTableView
-from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine, QSortFilterProxyModel, QItemSelectionModel
-from helpers import fix_name_ambiguity, tuple_itemgetter
 from operator import itemgetter
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox
+from PySide2.QtGui import QIcon
+from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine
+from helpers import fix_name_ambiguity, tuple_itemgetter
+from plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from widgets.custom_qwidgets import FilterWidget
-from models import MinimalTableModel
+from widgets.parameter_value_editor import ParameterValueEditor
+from widgets.report_plotting_failure import report_plotting_failure
+
+
+def handle_plotting_failure(error):
+    """Reports a PlottingError exception to the user."""
+    errorBox = QMessageBox()
+    errorBox.setWindowTitle("Plotting failed")
+    errorBox.setText(error.message)
+    errorBox.exec()
 
 
 class CustomContextMenu(QMenu):
@@ -115,9 +125,11 @@ class ProjectItemContextMenu(CustomContextMenu):
             self.add_action("Edit Tool template", enabled=enabled)
             self.add_action("Edit main program file...", enabled=enabled)
         elif d.item_type == "View":
-            pass
+            self.add_action("Open directory...")
+        elif d.item_type == "Data Interface":
+            self.add_action("Open directory...")
         else:
-            logging.error("Unknown item type:{0}".format(d.item_type))
+            logging.error("Unknown item type: %s", d.item_type)
             return
         self.addSeparator()
         self.add_action("Rename")
@@ -262,7 +274,31 @@ class ViewPropertiesContextMenu(CustomContextMenu):
         if not index.isValid():
             # If no item at index
             return
+        self.add_action("Open tree view")
         self.add_action("Open graph view")
+        self.add_action("Open tabular view")
+        self.exec_(position)
+
+
+class DiFilesContextMenu(CustomContextMenu):
+    """Context menu class for source files view in Data Interface properties.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            self.add_action("Open directory...")
+        else:
+            self.add_action("Open import editor")
+            self.add_action("Select connector type")
+            self.addSeparator()
+            self.add_action("Open directory...")
         self.exec_(position)
 
 
@@ -357,7 +393,7 @@ class RelationshipTreeContextMenu(CustomContextMenu):
 
 
 class ParameterContextMenu(CustomContextMenu):
-    """Context menu class for object (relationship) parameter (value) items in tree views.
+    """Context menu class for object (relationship) parameter items in tree views.
 
     Attributes:
         parent (QWidget): Parent for menu widget (TreeViewForm)
@@ -373,6 +409,55 @@ class ParameterContextMenu(CustomContextMenu):
         copy_icon = self._parent.ui.actionCopy.icon()
         paste_icon = self._parent.ui.actionPaste.icon()
         remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
+        self.add_action("Copy", copy_icon)
+        self.add_action("Paste", paste_icon)
+        self.addSeparator()
+        self.add_action("Remove selection", remove_icon)
+        self.exec_(position)
+
+
+class SimpleEditableParameterValueContextMenu(CustomContextMenu):
+    """
+    Context menu class for object (relationship) parameter value items in graph views.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+
+    def __init__(self, parent, position, index):
+        """Class constructor."""
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        self.add_action("Open in editor...")
+        self.addSeparator()
+        self.add_action("Plot")
+        self.exec_(position)
+
+
+class EditableParameterValueContextMenu(CustomContextMenu):
+    """
+    Context menu class for object (relationship) parameter value items in tree views.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (TreeViewForm)
+        position (QPoint): Position on screen
+        index (QModelIndex): Index of item that requested the context-menu
+    """
+
+    def __init__(self, parent, position, index):
+        super().__init__(parent)
+        if not index.isValid():
+            return
+        copy_icon = self._parent.ui.actionCopy.icon()
+        paste_icon = self._parent.ui.actionPaste.icon()
+        remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
+        self.add_action("Open in editor...")
+        self.addSeparator()
+        self.add_action("Plot")
+        self.addSeparator()
         self.add_action("Copy", copy_icon)
         self.add_action("Paste", paste_icon)
         self.addSeparator()
@@ -530,7 +615,7 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
 
     def __init__(self, parent, tool):
         super().__init__(parent)
-        enabled = True if tool.tool_template() else False
+        enabled = bool(tool.tool_template())
         self.add_action("Edit Tool template", tool.edit_tool_template, enabled=enabled)
         self.add_action("Edit main program file...", tool.open_tool_main_program_file, enabled=enabled)
         self.add_action("Open main program directory...", tool.open_tool_main_directory, enabled=enabled)
@@ -578,10 +663,10 @@ class FilterMenu(QMenu):
 
     filterChanged = Signal(object, set, bool)
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, show_empty=True):
         super().__init__(parent)
         self._remove_filter = QAction('Remove filters', None)
-        self._filter = FilterWidget()
+        self._filter = FilterWidget(show_empty=show_empty)
         self._filter_action = QWidgetAction(parent)
         self._filter_action.setDefaultWidget(self._filter)
         self.addAction(self._remove_filter)
@@ -637,6 +722,10 @@ class PivotTableModelMenu(QMenu):
         self._RELATIONSHIP_CLASS = "relationship"
 
         # actions
+        self.open_value_editor_action = self.addAction('Open in editor...')
+        self.addSeparator()
+        self.plot_action = self.addAction('Plot')
+        self.addSeparator()
         self.restore_values_action = self.addAction('Restore selected values')
         self.delete_values_action = self.addAction('Delete selected values')
         self.delete_index_action = self.addAction(self._DELETE_INDEX)
@@ -647,6 +736,8 @@ class PivotTableModelMenu(QMenu):
         self.insert_col_action = self.addAction('Insert columns')
 
         # connect signals
+        self.open_value_editor_action.triggered.connect(self.open_value_editor)
+        self.plot_action.triggered.connect(self.plot)
         self.restore_values_action.triggered.connect(self.restore_values)
         self.delete_values_action.triggered.connect(self.delete_values)
         self.delete_index_action.triggered.connect(self.delete_index_values)
@@ -662,7 +753,7 @@ class PivotTableModelMenu(QMenu):
         for i in indexes:
             index_name = None
             if self._model.index_in_column_headers(i):
-                value = self.pivot_table_model.data(i)
+                value = self._model.data(i)
                 if value:
                     index_name = self._model.model.pivot_columns[i.row()]
             elif self._model.index_in_row_headers(i):
@@ -702,16 +793,16 @@ class PivotTableModelMenu(QMenu):
             indexes = [self._proxy.mapToSource(i) for i in indexes]
         return indexes
 
-    def delete_invalid_row(self):
+    def delete_invalid_row(self):  # pylint: disable=no-self-use
         return
 
-    def delete_invalid_col(self):
+    def delete_invalid_col(self):  # pylint: disable=no-self-use
         return
 
-    def insert_row(self):
+    def insert_row(self):  # pylint: disable=no-self-use
         return
 
-    def insert_col(self):
+    def insert_col(self):  # pylint: disable=no-self-use
         return
 
     def delete_values(self):
@@ -738,13 +829,39 @@ class PivotTableModelMenu(QMenu):
         if delete_tuples:
             self._model.delete_tuple_index_values({self.relationship_tuple_key: delete_tuples})
 
+    def open_value_editor(self):
+        """Opens the parameter value editor for the first selected cell."""
+        model_index = self._get_selected_indexes()[0]
+        value_name = ", ".join(self._model.get_key(model_index))
+        value_editor = ParameterValueEditor(model_index, value_name, parent_widget=self.parent())
+        value_editor.show()
+
+    def plot(self):
+        """Plots the selected cells in the pivot table."""
+        selected_indexes = self._get_selected_indexes()
+        hints = PivotTablePlottingHints()
+        try:
+            plot_window = plot_selection(self._model, selected_indexes, hints)
+        except PlottingError as error:
+            report_plotting_failure(error)
+            return
+        plotted_column_names = set()
+        for index in selected_indexes:
+            label = hints.column_label(self._model, index.column())
+            plotted_column_names.add(label)
+        plot_window.setWindowTitle("Plot    -- {} --".format(", ".join(plotted_column_names)))
+        plot_window.show()
+
     def request_menu(self, QPos=None):
+        """Shows the context menu on the screen."""
         indexes = self._get_selected_indexes()
         self.delete_relationship_action.setText(self._DELETE_RELATIONSHIP)
         self.delete_relationship_action.setEnabled(False)
 
         if len(indexes) > 1:
             # more than one index selected
+            self.open_value_editor_action.setEnabled(False)
+            self.plot_action.setEnabled(any(self._model.index_in_data(index) for index in indexes))
             if any(self._model.index_in_column_headers(i) for i in indexes) or any(
                 self._model.index_in_row_headers(i) for i in indexes
             ):
@@ -757,6 +874,9 @@ class PivotTableModelMenu(QMenu):
         elif len(indexes) == 1:
             # one selected, show names
             selected_index = self._find_selected_indexes(indexes)
+            index_in_data = self._model.index_in_data(indexes[0])
+            self.open_value_editor_action.setEnabled(index_in_data)
+            self.plot_action.setEnabled(index_in_data)
             if selected_index:
                 index_name = list(selected_index.keys())[0]
                 index_value = list(selected_index[index_name])[0]
@@ -779,166 +899,55 @@ class PivotTableModelMenu(QMenu):
         self.show()
 
 
-class AutoFilterMenu(QMenu):
-    """A widget to show the auto filter 'menu'.
+class PivotTableHorizontalHeaderMenu(QMenu):
+    """
+    A context menu for the horizontal header of a pivot table.
 
     Attributes:
-        parent (QTableView): the parent widget.
+         model (PivotTableModel): a model
+         parent (QWidget): a parent widget
     """
 
-    asc_sort_triggered = Signal(name="asc_sort_triggered")
-    desc_sort_triggered = Signal(name="desc_sort_triggered")
-    filter_triggered = Signal(name="filter_triggered")
-
-    def __init__(self, parent):
-        """Initialize class."""
+    def __init__(self, model, parent=None):
         super().__init__(parent)
-        self.row_is_accepted = []
-        self.unchecked_values = dict()
-        self.model = MinimalTableModel(self)
-        self.model.data = self._model_data
-        self.model.flags = self._model_flags
-        self.proxy_model = QSortFilterProxyModel(self)
-        self.proxy_model.setFilterKeyColumn(1)
-        self.proxy_model.setSourceModel(self.model)
-        self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
-        self.text_filter = QLineEdit(self)
-        self.text_filter.setPlaceholderText("Search...")
-        self.text_filter.setClearButtonEnabled(True)
-        self.view = QTableView(self)
-        self.view.setModel(self.proxy_model)
-        self.view.verticalHeader().hide()
-        self.view.horizontalHeader().hide()
-        self.view.setShowGrid(False)
-        self.view.setMouseTracking(True)
-        self.view.entered.connect(self._handle_view_entered)
-        self.view.clicked.connect(self._handle_view_clicked)
-        self.view.leaveEvent = self._view_leave_event
-        self.view.keyPressEvent = self._view_key_press_event
-        # sort_asc_action = self.addAction("Sort ascending")
-        # sort_desc_action = self.addAction("Sort descending")
-        text_filter_action = QWidgetAction(self)
-        text_filter_action.setDefaultWidget(self.text_filter)
-        view_action = QWidgetAction(self)
-        view_action.setDefaultWidget(self.view)
-        self.addAction(text_filter_action)
-        self.addAction(view_action)
-        ok_action = self.addAction("Ok")
-        self.text_filter.textEdited.connect(lambda x: self.proxy_model.setFilterRegExp(x))
-        # sort_asc_action.triggered.connect(lambda x: self.asc_sort_triggered.emit())
-        # sort_desc_action.triggered.connect(lambda x: self.desc_sort_triggered.emit())
-        ok_action.triggered.connect(self._handle_ok_action_triggered)
+        self._model = model
+        self._model_index = None
+        self._plot_action = self.addAction("Plot single column")
+        self._plot_action.triggered.connect(self._plot_column)
+        self._set_as_X_action = self.addAction("Use as X")
+        self._set_as_X_action.setCheckable(True)
+        self._set_as_X_action.triggered.connect(self._set_x_flag)
 
-    def _model_flags(self, index):
-        """Return no item flags."""
-        return ~Qt.ItemIsEditable
+    @Slot(name="_plot_column")
+    def _plot_column(self):
+        """Plots a single column not the selection."""
+        try:
+            support = PivotTablePlottingHints()
+            plot_window = plot_pivot_column(self._model, self._model_index.column(), support)
+        except PlottingError as error:
+            report_plotting_failure(error)
+            return
+        plot_window.setWindowTitle(
+            "Plot    -- {} --".format(support.column_label(self._model, self._model_index.column()))
+        )
+        plot_window.show()
 
-    def _model_data(self, index, role=Qt.DisplayRole):
-        """Read checked state from first column."""
-        if role == Qt.CheckStateRole:
-            checked = self.model._main_data[index.row()][0]
-            if checked is None:
-                return Qt.PartiallyChecked
-            elif checked is True:
-                return Qt.Checked
-            else:
-                return Qt.Unchecked
-        return MinimalTableModel.data(self.model, index, role)
-
-    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
-        """Overridden method to always accept first row.
-        """
-        if source_row == 0:
-            return True
-        result = QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
-        self.row_is_accepted[source_row] = result
-        return result
-
-    @Slot("QModelIndex", name="_handle_view_entered")
-    def _handle_view_entered(self, index):
-        """Highlight current row."""
-        self.view.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
-
-    def _view_key_press_event(self, event):
-        QTableView.keyPressEvent(self.view, event)
-        if event.key() == Qt.Key_Space:
-            index = self.view.currentIndex()
-            self.toggle_checked_state(index)
-
-    @Slot("QModelIndex", name="_handle_view_clicked")
-    def _handle_view_clicked(self, index):
-        self.toggle_checked_state(index)
-
-    def toggle_checked_state(self, checked_index):
-        """Toggle checked state."""
-        index = self.proxy_model.index(checked_index.row(), 0)
-        checked = index.data(Qt.EditRole)
-        row_count = self.proxy_model.rowCount()
-        if index.row() == 0:
-            # All row
-            all_checked = checked in (None, False)
-            for row in range(0, row_count):
-                self.proxy_model.setData(self.proxy_model.index(row, 0), all_checked)
-            self.proxy_model.dataChanged.emit(self.proxy_model.index(0, 1), self.proxy_model.index(row_count - 1, 1))
+    @Slot("QPoint", name="request_menu")
+    def request_menu(self, pos):
+        """Shows the context menu on the screen."""
+        self.move(self.parent().mapToGlobal(pos))
+        self._model_index = self.parent().indexAt(pos)
+        if self._model.index_in_top_left(self._model_index):
+            self._plot_action.setEnabled(False)
+            self._set_as_X_action.setEnabled(False)
+            self._set_as_X_action.setChecked(False)
         else:
-            # Data row
-            self.proxy_model.setData(index, not checked)
-            self.proxy_model.dataChanged.emit(checked_index, checked_index)
-            self.set_data_for_all_index()
+            self._plot_action.setEnabled(True)
+            self._set_as_X_action.setEnabled(True)
+            self._set_as_X_action.setChecked(self._model_index.column() == self._model.plot_x_column)
+        self.show()
 
-    def _view_leave_event(self, event):
-        """Clear selection."""
-        self.view.selectionModel().clearSelection()
-        event.accept()
-
-    def set_data_for_all_index(self):
-        """Set data for 'all' index based on data from all other indexes."""
-        all_index = self.proxy_model.index(0, 0)
-        true_count = 0
-        row_count = self.proxy_model.rowCount()
-        for row in range(1, row_count):
-            if self.proxy_model.index(row, 0).data():
-                true_count += 1
-        if true_count == row_count - 1:
-            self.proxy_model.setData(all_index, True)
-        elif true_count == 0:
-            self.proxy_model.setData(all_index, False)
-        else:
-            self.proxy_model.setData(all_index, None)
-        index = self.proxy_model.index(0, 1)
-        self.proxy_model.dataChanged.emit(index, index)
-
-    @Slot("bool", name="_handle_ok_action_triggered")
-    def _handle_ok_action_triggered(self, checked=False):
-        """Called when user presses Ok."""
-        self.unchecked_values = dict()
-        for row in range(1, self.model.rowCount()):
-            checked, value, object_class_id_set = self.model._main_data[row]
-            if not self.row_is_accepted[row] or not checked:
-                for object_class_id in object_class_id_set:
-                    self.unchecked_values.setdefault(object_class_id, set()).add(value)
-        self.filter_triggered.emit()
-
-    def set_values(self, values):
-        """Set values to show in the 'menu'."""
-        self.row_is_accepted = [True for _ in range(len(values) + 1)]
-        self.model.reset_model([[None, "(Select All)", ""]] + values)
-        self.set_data_for_all_index()
-        self.view.horizontalHeader().hideSection(0)  # Column 0 holds the checked state
-        self.view.horizontalHeader().hideSection(2)  # Column 2 holds the (cls_id_set)
-        self.proxy_model.setFilterRegExp("")
-
-    def popup(self, pos, width=0, at_action=None):
-        super().popup(pos, at_action)
-        self.text_filter.clear()
-        self.text_filter.setFocus()
-        self.view.horizontalHeader().setMinimumSectionSize(0)
-        self.view.resizeColumnToContents(1)
-        table_width = self.view.horizontalHeader().sectionSize(1) + 2
-        width = max(table_width, width)
-        self.view.horizontalHeader().setMinimumSectionSize(width)
-        parent_section_height = self.parent().verticalHeader().defaultSectionSize()
-        self.view.verticalHeader().setDefaultSectionSize(parent_section_height)
-        # if self.view.verticalScrollBar().isVisible():
-        #    width += qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
-        self.setFixedWidth(width)
+    @Slot(name="_set_x_flag")
+    def _set_x_flag(self):
+        """Sets the X flag for a column."""
+        self._model.set_plot_x_column(self._model_index.column(), self._set_as_X_action.isChecked())

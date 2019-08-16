@@ -18,6 +18,7 @@ Custom editors for model/view programming.
 """
 
 import json
+import sys
 from PySide2.QtCore import (
     Qt,
     Slot,
@@ -33,6 +34,7 @@ from PySide2.QtCore import (
 )
 from PySide2.QtWidgets import (
     QComboBox,
+    QDoubleSpinBox,
     QLineEdit,
     QTableView,
     QItemDelegate,
@@ -48,7 +50,7 @@ from PySide2.QtWidgets import (
     QLabel,
 )
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from models import JSONArrayModel
+from treeview_models import LazyLoadingArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 
 
@@ -59,15 +61,10 @@ class CustomLineEditor(QLineEdit):
         parent (QWidget): the widget that wants to edit the data
     """
 
-    data_committed = Signal(name="data_committed")
-
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def set_data(self, data):
         if data is not None:
             self.setText(str(data))
-        if type(data) is int:
+        if isinstance(data, int):
             self.setValidator(QIntValidator(self))
 
     def data(self):
@@ -88,16 +85,13 @@ class CustomComboEditor(QComboBox):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def set_data(self, current_text, items):
         self.addItems(items)
         if current_text and current_text in items:
             self.setCurrentText(current_text)
         else:
             self.setCurrentIndex(-1)
-        self.activated.connect(lambda: self.data_committed.emit())
+        self.activated.connect(lambda: self.data_committed.emit())  # pylint: disable=unnecessary-lambda
         self.showPopup()
 
     def data(self):
@@ -126,7 +120,7 @@ class CustomLineEditDelegate(QItemDelegate):
         """
         editor = CustomLineEditor(parent)
         editor.set_data(index.data())
-        editor.textEdited.connect(lambda s: self.text_edited.emit(s))
+        editor.textEdited.connect(lambda s: self.text_edited.emit(s))  # pylint: disable=unnecessary-lambda
         return editor
 
     def eventFilter(self, editor, event):
@@ -156,11 +150,12 @@ class SearchBarEditor(QTableView):
 
     data_committed = Signal(name="data_committed")
 
-    def __init__(self, parent, elder_sibling=None):
+    def __init__(self, parent, elder_sibling=None, is_json=False):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
         self._elder_sibling = elder_sibling
+        self._is_json = is_json
         self._base_size = None
         self._original_text = None
         self._orig_pos = None
@@ -175,14 +170,16 @@ class SearchBarEditor(QTableView):
         self.setShowGrid(False)
         self.setMouseTracking(True)
         self.setTabKeyNavigation(False)
-        self._delegate = CustomLineEditDelegate(self)
-        self._delegate.text_edited.connect(self._handle_delegate_text_edited)
-        self.setItemDelegateForRow(0, self._delegate)
+        delegate = CustomLineEditDelegate(self)
+        delegate.text_edited.connect(self._handle_delegate_text_edited)
+        self.setItemDelegateForRow(0, delegate)
 
-    def set_data(self, current, all):
+    def set_data(self, current, all_data):
         """Populate model and initialize first index."""
+        if self._is_json:
+            all_data = [json.loads(x) for x in all_data]
         item_list = [QStandardItem(current)]
-        for name in all:
+        for name in all_data:
             qitem = QStandardItem(name)
             item_list.append(qitem)
             qitem.setFlags(~Qt.ItemIsEditable)
@@ -217,7 +214,10 @@ class SearchBarEditor(QTableView):
         self.move(self.pos() - QPoint(x_offset, y_offset))
 
     def data(self):
-        return self.first_index.data()
+        data = self.first_index.data(Qt.EditRole)
+        if self._is_json:
+            data = json.dumps(data)
+        return data
 
     @Slot("QString", name="_handle_delegate_text_edited")
     def _handle_delegate_text_edited(self, text):
@@ -279,7 +279,7 @@ class SearchBarEditor(QTableView):
         index = self.indexAt(event.pos())
         if index.row() == 0:
             return
-        self.proxy_model.setData(self.first_index, index.data())
+        self.proxy_model.setData(self.first_index, index.data(Qt.EditRole))
         self.data_committed.emit()
 
 
@@ -326,8 +326,6 @@ class SearchBarDelegate(QItemDelegate):
 class MultiSearchBarEditor(QTableView):
     """A table view made of several Google-like search bars."""
 
-    data_committed = Signal(name="data_committed")
-
     def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
@@ -342,9 +340,6 @@ class MultiSearchBarEditor(QTableView):
         self.setItemDelegate(delegate)
         self.verticalHeader().hide()
         self.horizontalHeader().setStretchLastSection(True)
-
-    def keyPressEvent(self, event):
-        super().keyPressEvent(event)
 
     def set_data(self, header, currents, alls):
         self.model.setHorizontalHeaderLabels(header)
@@ -377,7 +372,8 @@ class MultiSearchBarEditor(QTableView):
             self._parent.size()
         )
         self.resize(size)
-        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
+        if self._elder_sibling:
+            self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -396,9 +392,7 @@ class MultiSearchBarEditor(QTableView):
 class CheckListEditor(QTableView):
     """A check list editor."""
 
-    data_committed = Signal(name="data_committed")
-
-    def __init__(self, parent, elder_sibling):
+    def __init__(self, parent, elder_sibling=None):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
@@ -444,7 +438,7 @@ class CheckListEditor(QTableView):
             else:
                 qitem.setCheckState(Qt.Unchecked)
             qitem.setFlags(~Qt.ItemIsEditable & ~Qt.ItemIsUserCheckable)
-            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)
+            qitem.setData(qApp.palette().window(), Qt.BackgroundRole)  # pylint: disable=undefined-variable
             self.model.appendRow(qitem)
         self.selectionModel().select(self.model.index(0, 0), QItemSelectionModel.Select)
 
@@ -466,7 +460,8 @@ class CheckListEditor(QTableView):
         total_height = self.verticalHeader().length() + 2
         size = QSize(self._base_size.width(), total_height).boundedTo(self._parent.size())
         self.resize(size)
-        self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
+        if self._elder_sibling:
+            self.move(self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
         # Adjust position if widget is outside parent's limits
         bottom_right = self.mapToGlobal(self.rect().bottomRight())
         parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
@@ -509,8 +504,7 @@ class JSONEditor(QTabWidget):
         self.addTab(self.tab_table, "Table")
         self.setCurrentIndex(0)
         self._base_size = None
-        self.json_data = None
-        self.model = JSONArrayModel(self)
+        self.model = LazyLoadingArrayModel(self)
         self.table_view.setModel(self.model)
         self.text_edit.installEventFilter(self)
         self.table_view.installEventFilter(self)
@@ -562,7 +556,7 @@ class JSONEditor(QTabWidget):
         Check if the focus is still on this widget (which would mean it was a tab change)
         otherwise emit signal so this is closed.
         """
-        if qApp.focusWidget() != self.focusWidget():
+        if qApp.focusWidget() != self.focusWidget():  # pylint: disable=undefined-variable
             self.data_committed.emit()
 
     @Slot("int", name="_handle_current_changed")
@@ -570,17 +564,17 @@ class JSONEditor(QTabWidget):
         """Update json data on text edit or table view, and set focus.
         """
         if index == 0:
-            data = self.model.json_data()
-            if not data:
-                data = self.json_data
-            try:
-                formatted_data = json.dumps(json.loads(data), indent=4)
+            data = self.model.all_data()
+            if data is not None:
+                formatted_data = json.dumps(data, indent=4)
                 self.text_edit.setText(formatted_data)
-            except (TypeError, json.JSONDecodeError):
-                pass
             self.text_edit.setFocus()
         elif index == 1:
-            data = self.text_edit.toPlainText()
+            text = self.text_edit.toPlainText()
+            try:
+                data = json.loads(text)
+            except json.JSONDecodeError:
+                data = None
             self.model.reset_model(data)
             self.table_view.setFocus()
             self.table_view.setCurrentIndex(self.model.index(0, 0))
@@ -589,17 +583,19 @@ class JSONEditor(QTabWidget):
     def set_data(self, data, current_index):
         """Set data on text edit or table view (model) depending on current index.
         """
-        self.json_data = data
         self.setCurrentIndex(current_index)
         self.currentChanged.connect(self._handle_current_changed)
+        try:
+            loaded_data = json.loads(data)
+        except (TypeError, json.JSONDecodeError):
+            # NOTE: TypeError happens when data is None
+            loaded_data = None
         if current_index == 0:
-            try:
-                formatted_data = json.dumps(json.loads(data), indent=4)
+            if loaded_data is not None:
+                formatted_data = json.dumps(loaded_data, indent=4)
                 self.text_edit.setText(formatted_data)
-            except (TypeError, json.JSONDecodeError):
-                pass
         elif current_index == 1:
-            self.model.reset_model(data)
+            self.model.reset_model(loaded_data)
         QTimer.singleShot(0, self.start_editing)
 
     def start_editing(self):
@@ -642,22 +638,21 @@ class JSONEditor(QTabWidget):
     def data(self):
         index = self.currentIndex()
         if index == 0:
-            return self.text_edit.toPlainText()
-        elif index == 1:
-            return self.model.json_data()
-        return None
+            text = self.text_edit.toPlainText()
+            if not text:  # empty string is not valid JSON
+                text = 'null'
+            return text
+        if index == 1:
+            return json.dumps(self.model.all_data())
 
 
 class IconPainterDelegate(QItemDelegate):
     """A delegate to highlight decorations in a QListWidget."""
 
-    def __init__(self, parent):
-        super().__init__(parent)
-
     def paint(self, painter, option, index):
         """Highlight selected items."""
         if option.state & QStyle.State_Selected:
-            painter.fillRect(option.rect, qApp.palette().highlight())
+            painter.fillRect(option.rect, qApp.palette().highlight())  # pylint: disable=undefined-variable
         super().paint(painter, option, index)
 
 
@@ -730,3 +725,21 @@ class IconColorEditor(QDialog):
         icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
         return self.icon_mngr.display_icon(icon_code, color_code)
+
+
+class NumberParameterInlineEditor(QDoubleSpinBox):
+    """
+    An editor widget for numeric (datatype double) parameter values.
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent)
+        self.setRange(-sys.float_info.max, sys.float_info.max)
+        self.setDecimals(sys.float_info.mant_dig)
+
+    def set_data(self, data):
+        if data is not None:
+            self.setValue(float(data))
+
+    def data(self):
+        return str(self.value())

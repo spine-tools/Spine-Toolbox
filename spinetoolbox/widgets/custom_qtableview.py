@@ -10,36 +10,24 @@
 ######################################################################################################################
 
 """
-Class for a custom QTableView that allows copy-paste, and maybe some other feature we may think of.
+Custom QTableView classes that support copy-paste and the like.
 
 :author: M. Marin (KTH)
 :date:   18.5.2018
 """
 
-import time
-from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView
-from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint
+import csv
+import io
+import locale
+import numpy as np
+from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView, QMenu, QLineEdit, QWidgetAction
+from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QSortFilterProxyModel
 from PySide2.QtGui import QKeySequence
-from widgets.custom_menus import AutoFilterMenu
-from models import TableModel
+from models import TableModel, MinimalTableModel
 
 
 class CopyPasteTableView(QTableView):
-    """Custom QTableView class with copy and paste methods.
-
-    Attributes:
-        parent (QWidget): The parent of this view
-    """
-
-    def __init__(self, parent):
-        """Initialize the class."""
-        super().__init__(parent=parent)
-        QApplication.clipboard().dataChanged.connect(self.clipboard_data_changed)
-        self.clipboard_text = QApplication.clipboard().text()
-
-    @Slot(name="clipboard_data_changed")
-    def clipboard_data_changed(self):
-        self.clipboard_text = QApplication.clipboard().text()
+    """Custom QTableView class with copy and paste methods."""
 
     def keyPressEvent(self, event):
         """Copy and paste to and from clipboard in Excel-like format."""
@@ -69,40 +57,61 @@ class CopyPasteTableView(QTableView):
                     if h_header.isSectionHidden(j):
                         continue
                     data = self.model().index(i, j).data(Qt.EditRole)
-                    str_data = str(data) if data is not None else ""
+                    if data is not None:
+                        try:
+                            number = float(data)
+                            str_data = locale.str(number)
+                        except ValueError:
+                            str_data = str(data)
+                    else:
+                        str_data = ""
                     row.append(str_data)
-        rows = list()
-        for key in sorted(row_dict):
-            row = row_dict[key]
-            rows.append("\t".join(row))
-        content = "\n".join(rows)
-        QApplication.clipboard().setText(content)
+        with io.StringIO() as output:
+            writer = csv.writer(output, delimiter='\t')
+            for key in sorted(row_dict):
+                writer.writerow(row_dict[key])
+            QApplication.clipboard().setText(output.getvalue())
         return True
 
-    def canPaste(self):
+    def canPaste(self):  # pylint: disable=no-self-use
         return True
 
     def paste(self):
         """Paste data from clipboard."""
         selection = self.selectionModel().selection()
         if len(selection.indexes()) > 1:
-            self.paste_on_selection()
-        else:
-            self.paste_normal()
+            return self.paste_on_selection()
+        return self.paste_normal()
+
+    @staticmethod
+    def _read_pasted_text(text):
+        """
+        Parses a tab separated CSV text table.
+
+        Args:
+            text (str): a CSV formatted table
+        Returns:
+            a list of rows
+        """
+        with io.StringIO(text) as input_stream:
+            reader = csv.reader(input_stream, delimiter='\t')
+            rows = list()
+            for row in reader:
+                rows.append([locale.delocalize(element) for element in row])
+            return rows
 
     def paste_on_selection(self):
         """Paste clipboard data on selection, but not beyond.
         If data is smaller than selection, repeat data to fit selection."""
-        text = self.clipboard_text
+        text = QApplication.clipboard().text()
         if not text:
             return False
-        data = [line.split('\t') for line in text.split('\n')]
+        data = self._read_pasted_text(text)
         if not data:
             return False
         selection = self.selectionModel().selection()
         if selection.isEmpty():
             return False
-        first = selection.first()
         indexes = list()
         values = list()
         is_row_hidden = self.verticalHeader().isSectionHidden
@@ -124,10 +133,10 @@ class CopyPasteTableView(QTableView):
 
     def paste_normal(self):
         """Paste clipboard data, overwriting cells if needed"""
-        text = self.clipboard_text.strip()
+        text = QApplication.clipboard().text().strip()
         if not text:
             return False
-        data = [line.split('\t') for line in text.split('\n')]
+        data = self._read_pasted_text(text)
         if not data:
             return False
         current = self.currentIndex()
@@ -139,7 +148,7 @@ class CopyPasteTableView(QTableView):
         rows = []
         rows_append = rows.append
         is_row_hidden = self.verticalHeader().isSectionHidden
-        for x in range(len(data)):
+        for _ in range(len(data)):
             while is_row_hidden(row):
                 row += 1
             rows_append(row)
@@ -150,7 +159,7 @@ class CopyPasteTableView(QTableView):
         columns_append = columns.append
         h = self.horizontalHeader()
         is_visual_column_hidden = lambda x: h.isSectionHidden(h.logicalIndex(x))
-        for x in range(len(data[0])):
+        for _ in range(len(data[0])):
             while is_visual_column_hidden(visual_column):
                 visual_column += 1
             columns_append(h.logicalIndex(visual_column))
@@ -182,6 +191,167 @@ class CopyPasteTableView(QTableView):
                     values.append(value)
         self.model().batch_set_data(indexes, values)
         return True
+
+
+class AutoFilterMenu(QMenu):
+    """A widget to show the auto filter 'menu'.
+
+    Attributes:
+        parent (QTableView): the parent widget.
+    """
+
+    asc_sort_triggered = Signal(name="asc_sort_triggered")
+    desc_sort_triggered = Signal(name="desc_sort_triggered")
+    filter_triggered = Signal(name="filter_triggered")
+
+    def __init__(self, parent):
+        """Initialize class."""
+        super().__init__(parent)
+        self.row_is_accepted = []
+        self.unchecked_values = dict()
+        self.model = MinimalTableModel(self)
+        self.model.data = self._model_data
+        self.model.flags = self._model_flags
+        self.proxy_model = QSortFilterProxyModel(self)
+        self.proxy_model.setFilterKeyColumn(1)
+        self.proxy_model.setSourceModel(self.model)
+        self.proxy_model.filterAcceptsRow = self._proxy_model_filter_accepts_row
+        self.text_filter = QLineEdit(self)
+        self.text_filter.setPlaceholderText("Search...")
+        self.text_filter.setClearButtonEnabled(True)
+        self.view = QTableView(self)
+        self.view.setModel(self.proxy_model)
+        self.view.verticalHeader().hide()
+        self.view.horizontalHeader().hide()
+        self.view.setShowGrid(False)
+        self.view.setMouseTracking(True)
+        self.view.entered.connect(self._handle_view_entered)
+        self.view.clicked.connect(self._handle_view_clicked)
+        self.view.leaveEvent = self._view_leave_event
+        self.view.keyPressEvent = self._view_key_press_event
+        text_filter_action = QWidgetAction(self)
+        text_filter_action.setDefaultWidget(self.text_filter)
+        view_action = QWidgetAction(self)
+        view_action.setDefaultWidget(self.view)
+        self.addAction(text_filter_action)
+        self.addAction(view_action)
+        ok_action = self.addAction("Ok")
+        # pylint: disable=unnecessary-lambda
+        self.text_filter.textEdited.connect(lambda x: self.proxy_model.setFilterRegExp(x))
+        ok_action.triggered.connect(self._handle_ok_action_triggered)
+
+    def _model_flags(self, index):  # pylint: disable=no-self-use
+        """Return no item flags."""
+        return ~Qt.ItemIsEditable
+
+    def _model_data(self, index, role=Qt.DisplayRole):
+        """Read checked state from first column."""
+        if role == Qt.CheckStateRole:
+            checked = self.model._main_data[index.row()][0]
+            if checked is None:
+                return Qt.PartiallyChecked
+            if checked is True:
+                return Qt.Checked
+            return Qt.Unchecked
+        return MinimalTableModel.data(self.model, index, role)
+
+    def _proxy_model_filter_accepts_row(self, source_row, source_parent):
+        """Overridden method to always accept first row.
+        """
+        if source_row == 0:
+            return True
+        result = QSortFilterProxyModel.filterAcceptsRow(self.proxy_model, source_row, source_parent)
+        self.row_is_accepted[source_row] = result
+        return result
+
+    @Slot("QModelIndex", name="_handle_view_entered")
+    def _handle_view_entered(self, index):
+        """Highlight current row."""
+        self.view.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+
+    def _view_key_press_event(self, event):
+        QTableView.keyPressEvent(self.view, event)
+        if event.key() == Qt.Key_Space:
+            index = self.view.currentIndex()
+            self.toggle_checked_state(index)
+
+    @Slot("QModelIndex", name="_handle_view_clicked")
+    def _handle_view_clicked(self, index):
+        self.toggle_checked_state(index)
+
+    def toggle_checked_state(self, checked_index):
+        """Toggle checked state."""
+        index = self.proxy_model.index(checked_index.row(), 0)
+        checked = index.data(Qt.EditRole)
+        row_count = self.proxy_model.rowCount()
+        if index.row() == 0:
+            # All row
+            all_checked = checked in (None, False)
+            for row in range(0, row_count):
+                self.proxy_model.setData(self.proxy_model.index(row, 0), all_checked)
+            self.proxy_model.dataChanged.emit(self.proxy_model.index(0, 1), self.proxy_model.index(row_count - 1, 1))
+        else:
+            # Data row
+            self.proxy_model.setData(index, not checked)
+            self.proxy_model.dataChanged.emit(checked_index, checked_index)
+            self.set_data_for_all_index()
+
+    def _view_leave_event(self, event):
+        """Clear selection."""
+        self.view.selectionModel().clearSelection()
+        event.accept()
+
+    def set_data_for_all_index(self):
+        """Set data for 'all' index based on data from all other indexes."""
+        all_index = self.proxy_model.index(0, 0)
+        true_count = 0
+        row_count = self.proxy_model.rowCount()
+        for row in range(1, row_count):
+            if self.proxy_model.index(row, 0).data():
+                true_count += 1
+        if true_count == row_count - 1:
+            self.proxy_model.setData(all_index, True)
+        elif true_count == 0:
+            self.proxy_model.setData(all_index, False)
+        else:
+            self.proxy_model.setData(all_index, None)
+        index = self.proxy_model.index(0, 1)
+        self.proxy_model.dataChanged.emit(index, index)
+
+    @Slot("bool", name="_handle_ok_action_triggered")
+    def _handle_ok_action_triggered(self, checked=False):
+        """Called when user presses Ok."""
+        self.unchecked_values = dict()
+        for row in range(1, self.model.rowCount()):
+            checked, value, object_class_id_set = self.model._main_data[row]
+            if not self.row_is_accepted[row] or not checked:
+                for object_class_id in object_class_id_set:
+                    self.unchecked_values.setdefault(object_class_id, set()).add(value)
+        self.filter_triggered.emit()
+
+    def set_values(self, values):
+        """Set values to show in the 'menu'."""
+        self.row_is_accepted = [True for _ in range(len(values) + 1)]
+        self.model.reset_model([[None, "(Select All)", ""]] + values)
+        self.set_data_for_all_index()
+        self.view.horizontalHeader().hideSection(0)  # Column 0 holds the checked state
+        self.view.horizontalHeader().hideSection(2)  # Column 2 holds the (cls_id_set)
+        self.proxy_model.setFilterRegExp("")
+
+    def popup(self, pos, width=0, at_action=None):
+        super().popup(pos, at_action)
+        self.text_filter.clear()
+        self.text_filter.setFocus()
+        self.view.horizontalHeader().setMinimumSectionSize(0)
+        self.view.resizeColumnToContents(1)
+        table_width = self.view.horizontalHeader().sectionSize(1) + 2
+        width = max(table_width, width)
+        self.view.horizontalHeader().setMinimumSectionSize(width)
+        parent_section_height = self.parent().verticalHeader().defaultSectionSize()
+        self.view.verticalHeader().setDefaultSectionSize(parent_section_height)
+        # if self.view.verticalScrollBar().isVisible():
+        #    width += qApp.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        self.setFixedWidth(width)
 
 
 class AutoFilterCopyPasteTableView(CopyPasteTableView):
@@ -269,9 +439,8 @@ class FrozenTableView(QTableView):
         index = self.selectedIndexes()
         if not index:
             return tuple(None for _ in range(self.model.columnCount()))
-        else:
-            index = self.selectedIndexes()[0]
-            return self.model.row(index)
+        index = self.selectedIndexes()[0]
+        return self.model.row(index)
 
     def set_data(self, headers, values):
         self.selectionModel().blockSignals(True)  # prevent selectionChanged signal when updating
@@ -335,3 +504,278 @@ class SimpleCopyPasteTableView(QTableView):
             self.model().paste_data(top_left_index, data)
         else:
             super().keyPressEvent(event)
+
+
+class IndexedParameterValueTableViewBase(CopyPasteTableView):
+    """
+    Custom QTableView base class with copy and paste methods for indexed parameter values.
+    """
+
+    def copy(self):
+        """Copy current selection to clipboard in CSV format."""
+        selection_model = self.selectionModel()
+        if not selection_model.hasSelection():
+            return False
+        selected_indexes = sorted(selection_model.selectedIndexes(), key=lambda index: 2 * index.row() + index.column())
+        row_first = selected_indexes[0].row()
+        row_last = selected_indexes[-1].row()
+        row_count = row_last - row_first + 1
+        data_indexes = row_count * [None]
+        data_values = row_count * [None]
+        data_model = self.model()
+        for selected_index in selected_indexes:
+            data = data_model.data(selected_index)
+            row = selected_index.row()
+            if selected_index.column() == 0:
+                data_indexes[row - row_first] = data
+            else:
+                data_values[row - row_first] = data
+        with io.StringIO() as output:
+            writer = csv.writer(output, delimiter='\t')
+            if all(stamp is None for stamp in data_indexes):
+                for value in data_values:
+                    writer.writerow([locale.str(value) if value is not None else ""])
+            elif all(value is None for value in data_values):
+                for index in data_indexes:
+                    writer.writerow([index if index is not None else ""])
+            else:
+                for index, value in zip(data_indexes, data_values):
+                    index = index if index is not None else ""
+                    value = locale.str(value) if value is not None else ""
+                    writer.writerow([index, value])
+            QApplication.clipboard().setText(output.getvalue())
+        return True
+
+    @staticmethod
+    def _read_pasted_text(text):
+        """Reads CSV formatted table."""
+        raise NotImplementedError()
+
+    def paste(self):
+        """Pastes data from clipboard to selection."""
+        raise NotImplementedError()
+
+    @staticmethod
+    def _range(indexes):
+        """
+        Returns the top left and bottom right corners of selected model indexes.
+
+        Args:
+            indexes (list): a list of selected QModelIndex objects
+        Returns:
+            a tuple (top row, bottom row, left column, right column)
+        """
+        rows = np.empty(len(indexes), dtype=int)
+        columns = np.empty(len(indexes), dtype=int)
+        for i, index in enumerate(indexes):
+            rows[i] = index.row()
+            columns[i] = index.column()
+        return np.amin(rows), np.amax(rows), np.amin(columns), np.amax(columns)
+
+    def _select_pasted(self, indexes):
+        """Selects the given model indexes."""
+        selection_model = self.selectionModel()
+        selection_model.clear()
+        for index in indexes:
+            selection_model.select(index, QItemSelectionModel.Select)
+
+
+class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
+    """A QTableView for fixed resolution time series table."""
+
+    def paste(self):
+        """Pastes data from clipboard."""
+        selection_model = self.selectionModel()
+        if not selection_model.hasSelection():
+            return False
+        mime_data = QApplication.clipboard().mimeData()
+        data_formats = mime_data.formats()
+        if not 'text/plain' in data_formats:
+            return False
+        try:
+            pasted_table = self._read_pasted_text(QApplication.clipboard().text())
+        except ValueError:
+            return False
+        selected_indexes = selection_model.selectedIndexes()
+        if isinstance(pasted_table, tuple):
+            # Always use the first column
+            pasted_table = pasted_table[0]
+        paste_length = len(pasted_table)
+        first_row, last_row, _, _ = self._range(selected_indexes)
+        selection_length = last_row - first_row + 1
+        model = self.model()
+        model_row_count = model.rowCount()
+        if selection_length == 1:
+            # If a single row is selected, we paste everything.
+            if model_row_count <= first_row + paste_length:
+                model.insertRows(model_row_count, paste_length - (model_row_count - first_row))
+        elif paste_length > selection_length:
+            # If multiple row are selected, we paste what fits the selection.
+            paste_length = selection_length
+            pasted_table = pasted_table[0:selection_length]
+        indexes_to_set, values_to_set = self._paste_to_values_column(pasted_table, first_row, paste_length)
+        model.batch_set_data(indexes_to_set, values_to_set)
+        self._select_pasted(indexes_to_set)
+
+    @staticmethod
+    def _read_pasted_text(text):
+        """
+        Parses the given CSV table.
+
+        Parsing is locale aware.
+
+        Args:
+            text (str): a CSV table containing numbers
+        Returns:
+            A list of floats
+        """
+        with io.StringIO(text) as input_stream:
+            reader = csv.reader(input_stream, delimiter='\t')
+            single_column = list()
+            for row in reader:
+                number = locale.atof(row[0])
+                single_column.append(number)
+        return single_column
+
+    def _paste_to_values_column(self, values, first_row, paste_length):
+        """
+        Pastes data to the Values column.
+
+        Args:
+            values (list): a list of float values to paste
+            first_row (int): index of the first row where to paste
+            paste_length (int): length of the paste selection (can be different from len(values))
+        Returns:
+            A tuple (list(pasted indexes), list(pasted values))
+        """
+        values_to_set = list()
+        indexes_to_set = list()
+        create_model_index = self.model().index
+        # Always paste to the Values column.
+        for row in range(first_row, first_row + paste_length):
+            values_to_set.append(values[row - first_row])
+            indexes_to_set.append(create_model_index(row, 1))
+        return indexes_to_set, values_to_set
+
+
+class IndexedValueTableView(IndexedParameterValueTableViewBase):
+    """A QTableView class with for variable resolution time series and time patterns."""
+
+    def paste(self):
+        """Pastes data from clipboard."""
+        selection_model = self.selectionModel()
+        if not selection_model.hasSelection():
+            return False
+        mime_data = QApplication.clipboard().mimeData()
+        data_formats = mime_data.formats()
+        if not 'text/plain' in data_formats:
+            return False
+        try:
+            pasted_table = self._read_pasted_text(QApplication.clipboard().text())
+        except ValueError:
+            return False
+        selected_indexes = selection_model.selectedIndexes()
+        paste_single_column = isinstance(pasted_table, list)
+        paste_length = len(pasted_table) if paste_single_column else len(pasted_table[0])
+        first_row, last_row, first_column, _ = self._range(selected_indexes)
+        selection_length = last_row - first_row + 1
+        model = self.model()
+        model_row_count = model.rowCount()
+        if selection_length == 1:
+            # If a single row is selected, we paste everything.
+            if model_row_count <= first_row + paste_length:
+                model.insertRows(model_row_count, paste_length - (model_row_count - first_row))
+        elif paste_length > selection_length:
+            # If multiple row are selected, we paste what fits the selection.
+            paste_length = selection_length
+            if paste_single_column:
+                pasted_table = pasted_table[0:selection_length]
+            else:
+                pasted_table = pasted_table[0][0:selection_length], pasted_table[1][0:selection_length]
+        if paste_single_column:
+            indexes_to_set, values_to_set = self._paste_single_column(
+                pasted_table, first_row, first_column, paste_length
+            )
+        else:
+            indexes_to_set, values_to_set = self._paste_two_columns(
+                pasted_table[0], pasted_table[1], first_row, paste_length
+            )
+        model.batch_set_data(indexes_to_set, values_to_set)
+        self._select_pasted(indexes_to_set)
+
+    def _paste_two_columns(self, data_indexes, data_values, first_row, paste_length):
+        """
+        Pastes data indexes and values.
+
+        Args:
+            data_indexes (list): a list of data indexes (time stamps/durations)
+            data_values (list): a list of data values
+            first_row (int): first row index
+            paste_length (int): selection length for pasting
+        Returns:
+            a tuple (modified model indexes, modified model values)
+        """
+        values_to_set = list()
+        indexes_to_set = list()
+        create_model_index = self.model().index
+        for row in range(first_row, first_row + paste_length):
+            i = row - first_row
+            values_to_set.append(data_indexes[i])
+            indexes_to_set.append(create_model_index(row, 0))
+            values_to_set.append(data_values[i])
+            indexes_to_set.append(create_model_index(row, 1))
+        return indexes_to_set, values_to_set
+
+    def _paste_single_column(self, values, first_row, first_column, paste_length):
+        """
+        Pastes a single column of data
+
+        Args:
+            values (list): a list of data to paste (data indexes or values)
+            first_row (int): first row index
+            paste_length (int): selection length for pasting
+        Returns:
+            a tuple (modified model indexes, modified model values)
+        """
+        values_to_set = list()
+        indexes_to_set = list()
+        create_model_index = self.model().index
+        # Always paste numbers to the Values column.
+        target_column = first_column if not isinstance(values[0], float) else 1
+        for row in range(first_row, first_row + paste_length):
+            values_to_set.append(values[row - first_row])
+            indexes_to_set.append(create_model_index(row, target_column))
+        return indexes_to_set, values_to_set
+
+    @staticmethod
+    def _read_pasted_text(text):
+        """
+        Parses a given CSV table
+
+        Args:
+            text (str): a CSV table
+        Returns:
+            a tuple (data indexes, data values)
+        """
+        with io.StringIO(text) as input_stream:
+            reader = csv.reader(input_stream, delimiter='\t')
+            single_column = list()
+            data_indexes = list()
+            data_values = list()
+            for row in reader:
+                column_count = len(row)
+                if column_count == 1:
+                    try:
+                        number = locale.atof(row[0])
+                        single_column.append(number)
+                    except ValueError:
+                        single_column.append(row[0])
+                elif column_count > 1:
+                    data_indexes.append(row[0])
+                    data_values.append(locale.atof(row[1]))
+        if single_column:
+            if data_indexes:
+                # Don't know how to handle a mixture of single and multiple columns.
+                raise ValueError()
+            return single_column
+        return data_indexes, data_values

@@ -18,22 +18,20 @@ Module for data store class.
 
 import sys
 import os
-import getpass
 import logging
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
-from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication, QCheckBox
+from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
+import spinedb_api
+from sqlalchemy import create_engine
+from sqlalchemy.engine.url import make_url, URL
 from project_item import ProjectItem
 from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
-from helpers import create_dir, busy_effect
-from sqlalchemy import create_engine
-from sqlalchemy.exc import SQLAlchemyError, DatabaseError, ArgumentError
-from sqlalchemy.engine.url import make_url, URL
+from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
 import qsubprocess
-import spinedb_api
 
 
 class DataStore(ProjectItem):
@@ -60,8 +58,10 @@ class DataStore(ProjectItem):
         self.tabular_view_form = None
         # Make project directory for this Data Store
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
             create_dir(self.data_dir)
+            create_dir(self.logs_dir)
         except OSError:
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
@@ -129,37 +129,42 @@ class DataStore(ProjectItem):
     def make_url(self, log_errors=True):
         """Return a sqlalchemy url from the current url attribute or None if not valid."""
         if not self._url:
-            log_errors and self._toolbox.msg_error.emit(
-                "No URL specified for <b>{0}</b>. Please specify one and try again".format(self.name)
-            )
+            if log_errors:
+                self._toolbox.msg_error.emit(
+                    "No URL specified for <b>{0}</b>. Please specify one and try again".format(self.name)
+                )
             return None
         try:
             url_copy = dict(self._url)
             dialect = url_copy.pop("dialect")
             if not dialect:
-                log_errors and self._toolbox.msg_error.emit(
-                    "Unable to generate URL from <b>{0}</b> selections: invalid dialect {1}. "
-                    "<br>Please select a new dialect and try again.".format(self.name, dialect)
-                )
-                return
+                if log_errors:
+                    self._toolbox.msg_error.emit(
+                        "Unable to generate URL from <b>{0}</b> selections: invalid dialect {1}. "
+                        "<br>Please select a new dialect and try again.".format(self.name, dialect)
+                    )
+                return None
             if dialect == 'sqlite':
-                url = URL('sqlite', **url_copy)
+                url = URL('sqlite', **url_copy)  # pylint: disable=unexpected-keyword-arg
             else:
                 db_api = spinedb_api.SUPPORTED_DIALECTS[dialect]
                 drivername = f"{dialect}+{db_api}"
-                url = URL(drivername, **url_copy)
-        except Exception as e:  # This is in case one of the keys has invalid format
-            log_errors and self._toolbox.msg_error.emit(
-                "Unable to generate URL from <b>{0}</b> selections: {1} "
-                "<br>Please make new selections and try again.".format(self.name, e)
-            )
+                url = URL(drivername, **url_copy)  # pylint: disable=unexpected-keyword-arg
+        except Exception as e:  # pylint: disable=broad-except
+            # This is in case one of the keys has invalid format
+            if log_errors:
+                self._toolbox.msg_error.emit(
+                    "Unable to generate URL from <b>{0}</b> selections: {1} "
+                    "<br>Please make new selections and try again.".format(self.name, e)
+                )
             return None
         # Small hack to make sqlite file paths relative to this DS directory
         if dialect == "sqlite" and not url.database:
-            log_errors and self._toolbox.msg_error.emit(
-                "Unable to generate URL from <b>{0}</b> selections: database missing. "
-                "<br>Please select a database and try again.".format(self.name)
-            )
+            if log_errors:
+                self._toolbox.msg_error.emit(
+                    "Unable to generate URL from <b>{0}</b> selections: database missing. "
+                    "<br>Please select a database and try again.".format(self.name)
+                )
             return None
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
@@ -169,11 +174,12 @@ class DataStore(ProjectItem):
             engine = create_engine(url)
             with engine.connect():
                 pass
-        except Exception as e:
-            log_errors and self._toolbox.msg_error.emit(
-                "Unable to generate URL from <b>{0}</b> selections: {1} "
-                "<br>Please make new selections and try again.".format(self.name, e)
-            )
+        except Exception as e:  # pylint: disable=broad-except
+            if log_errors:
+                self._toolbox.msg_error.emit(
+                    "Unable to generate URL from <b>{0}</b> selections: {1} "
+                    "<br>Please make new selections and try again.".format(self.name, e)
+                )
             return None
         return url
 
@@ -420,44 +426,9 @@ class DataStore(ProjectItem):
             conda.cli.main('conda', 'install', '-y', dbapi)
             self._toolbox.msg_success.emit("Module <b>{0}</b> successfully installed".format(dbapi))
             return True
-        except Exception:
+        except Exception:  # pylint: disable=broad-except
             self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
             return False
-
-    def get_db_map(self, url, upgrade=False):
-        """Return a DiffDatabaseMapping instance to work with.
-        """
-        try:
-            db_map = self.do_get_db_map(url, upgrade)
-            return db_map
-        except spinedb_api.SpineDBVersionError:
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Incompatible database version")
-            msg.setText(
-                "The database at <b>{}</b> is from an older version of Spine "
-                "and needs to be upgraded in order to be used with the current version.".format(url)
-            )
-            msg.setInformativeText(
-                "Do you want to upgrade it now?"
-                "<p><b>WARNING</b>: After the upgrade, "
-                "the database may no longer be used "
-                "with previous versions of Spine."
-            )
-            msg.addButton(QMessageBox.Cancel)
-            msg.addButton("Upgrade", QMessageBox.YesRole)
-            ret = msg.exec_()  # Show message box
-            if ret == QMessageBox.Cancel:
-                return None
-            return self.get_db_map(url, upgrade=True)
-        except spinedb_api.SpineDBAPIError as e:
-            self._toolbox.msg_error.emit(e.msg)
-            return None
-
-    @busy_effect
-    def do_get_db_map(self, url, upgrade):
-        """Separate method so 'busy_effect' don't overlay any message box."""
-        return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
 
     @Slot(bool, name="open_tree_view")
     def open_tree_view(self, checked=False):
@@ -467,7 +438,7 @@ class DataStore(ProjectItem):
             return
         if self.tree_view_form:
             # If the url hasn't changed, just raise the current form
-            if self.tree_view_form.db_map.db_url == url:
+            if self.tree_view_form.db_maps[0].db_url == url:
                 if self.tree_view_form.windowState() & Qt.WindowMinimized:
                     # Remove minimized status and restore window with the previous state (maximized/normal state)
                     self.tree_view_form.setWindowState(
@@ -479,15 +450,19 @@ class DataStore(ProjectItem):
                 return
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
-        db_map = self.get_db_map(url)
+        try:
+            db_map = get_db_map(url)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            db_map = None
         if not db_map:
             return
-        self.do_open_tree_view(db_map, url.database)
+        self.do_open_tree_view(db_map)
 
     @busy_effect
-    def do_open_tree_view(self, db_map, database):
+    def do_open_tree_view(self, db_map):
         """Open url in tree view form."""
-        self.tree_view_form = TreeViewForm(self, db_map, database)
+        self.tree_view_form = TreeViewForm(self._project, {self.name: db_map})
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -516,15 +491,19 @@ class DataStore(ProjectItem):
                 return
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
-        db_map = self.get_db_map(url)
+        try:
+            db_map = get_db_map(url)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            db_map = None
         if not db_map:
             return
-        self.do_open_graph_view(db_map, url.database)
+        self.do_open_graph_view(db_map)
 
     @busy_effect
-    def do_open_graph_view(self, db_map, database):
+    def do_open_graph_view(self, db_map):
         """Open url in graph view form."""
-        self.graph_view_form = GraphViewForm(self, db_map, database, read_only=False)
+        self.graph_view_form = GraphViewForm(self._project, {self.name: db_map}, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
@@ -553,7 +532,11 @@ class DataStore(ProjectItem):
                 return
             self.tabular_view_form.destroyed.disconnect(self.tabular_view_form_destroyed)
             self.tabular_view_form.close()
-        db_map = self.get_db_map(url)
+        try:
+            db_map = get_db_map(url)
+        except spinedb_api.SpineDBAPIError as e:
+            self._toolbox.msg_error.emit(e.msg)
+            db_map = None
         if not db_map:
             return
         self.do_open_tabular_view(db_map, url.database)
@@ -564,6 +547,7 @@ class DataStore(ProjectItem):
         self.tabular_view_form = TabularViewForm(self, db_map, database)
         self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
         self.tabular_view_form.show()
+        self.destroyed.connect(self.tabular_view_form.close)
 
     @Slot(name="tabular_view_form_destroyed")
     def tabular_view_form_destroyed(self):
@@ -588,6 +572,8 @@ class DataStore(ProjectItem):
     def copy_url(self, checked=False):
         """Copy db url to clipboard."""
         url = self.make_url()
+        if not url:
+            return
         url.password = None
         QApplication.clipboard().setText(str(url))
         self._toolbox.msg.emit("Database url '{}' successfully copied to clipboard.".format(url))
@@ -613,7 +599,7 @@ class DataStore(ProjectItem):
                 msg.setWindowTitle("Database not empty")
                 msg.setText("The database at <b>'{0}'</b> is not empty.".format(url))
                 msg.setInformativeText("Do you want to overwrite it?")
-                overwrite_button = msg.addButton("Overwrite", QMessageBox.AcceptRole)
+                msg.addButton("Overwrite", QMessageBox.AcceptRole)
                 msg.addButton("Cancel", QMessageBox.RejectRole)
                 ret = msg.exec_()  # Show message box
                 if ret != QMessageBox.AcceptRole:
@@ -624,7 +610,7 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit("Unable to create new Spine db at '{0}': {1}.".format(url, e))
 
     @busy_effect
-    def do_create_new_spine_database(self, url, for_spine_model):
+    def do_create_new_spine_database(self, url, for_spine_model):  # pylint: disable=no-self-use
         """Separate method so 'busy_effect' don't overlay any message box."""
         spinedb_api.create_new_spine_database(url, for_spine_model=for_spine_model)
 
@@ -636,20 +622,8 @@ class DataStore(ProjectItem):
         """Executes this Data Store."""
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Data Store <b>{0}</b>".format(self.name))
+        self._toolbox.msg.emit("***")
         inst = self._toolbox.project().execution_instance
-        # Update Data Store based on project items that are already executed
-        # Override reference if there's an sqlite Tool output file in the execution instance
-        # NOTE: Takes the first .sqlite file that is found
-        for output_file_path in inst.tool_output_files:
-            p, fn = os.path.split(output_file_path)
-            if fn.lower().endswith(".sqlite"):
-                self._toolbox.msg_warning.emit("Overriding database reference")
-                self.enable_sqlite()
-                url = dict(dialect="sqlite", database=output_file_path)
-                self.set_url(url)
-                self.load_url_into_selections()
-                self._toolbox.msg.emit("New URL:<i>{0}<i/>".format(url))
-        # Update execution instance for project items downstream
         url = self.make_url()
         if not url:
             # Invalid url, nothing else to do here
@@ -675,6 +649,50 @@ class DataStore(ProjectItem):
                 # IDEA: just add the entire url dictionary to some attribute in the `ExecutionInstance` object,
                 # then figure everything out in `ExecutionInstance.find_file`
                 pass
+            # Import mapped data from Data Interfaces in the execution instance
+            try:
+                db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
+            except (SpineDBAPIError, SpineDBVersionError) as err:
+                self._toolbox.msg_error.emit(
+                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted: "
+                    "{}".format(err)
+                )
+                db_map = None
+            if db_map:
+                all_import_errors = []
+                for di_name, all_data in inst.di_data.items():
+                    self._toolbox.msg_proc.emit("Importing data from <b>{}</b> into '{}'".format(di_name, url))
+                    for data in all_data:
+                        import_num, import_errors = spinedb_api.import_data(db_map, **data)
+                        if import_errors:
+                            db_map.rollback_session()
+                            all_import_errors += import_errors
+                        else:
+                            db_map.commit_session("imported with mapper")
+                            self._toolbox.msg.emit(
+                                "<b>{0}:</b> Inserted {1} data with {2} errors into {3}".format(
+                                    self.name, import_num, len(import_errors), db_map.db_url
+                                )
+                            )
+                if all_import_errors:
+                    # Log errors in a time stamped file into the logs directory
+                    timestamp = create_log_file_timestamp()
+                    logfilepath = os.path.abspath(os.path.join(self.logs_dir, timestamp + "_error.log"))
+                    with open(logfilepath, 'w') as f:
+                        for err in all_import_errors:
+                            f.write("{}\n".format(err.msg))
+                    # Make error log file anchor with path as tooltip
+                    logfile_anchor = (
+                        "<a style='color:#BB99FF;' title='"
+                        + logfilepath
+                        + "' href='file:///"
+                        + logfilepath
+                        + "'>error log</a>"
+                    )
+                    self._toolbox.msg.emit(
+                        "There where import errors while executing <b>{0}</b>, rolling back: "
+                        "{1}".format(self.name, logfile_anchor)
+                    )
         self._toolbox.msg.emit("***")
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
