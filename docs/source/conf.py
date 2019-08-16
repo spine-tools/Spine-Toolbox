@@ -78,9 +78,9 @@ exclude_patterns = []
 # The name of the Pygments (syntax highlighting) style to use.
 pygments_style = 'sphinx'
 
-# Location of package for Sphinx AutoAPI
-autoapi_dirs = ['../../spinetoolbox']
-autoapi_ignore = ['*rc.py']
+# Settings for Sphinx AutoAPI
+autoapi_dirs = ['../../spinetoolbox']  # package to be documented
+autoapi_ignore = ['*_rc.py']  # ignored modules
 
 # -- Options for HTML output -------------------------------------------------
 
