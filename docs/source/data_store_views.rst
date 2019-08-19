@@ -1,3 +1,5 @@
+.. _Data store views:
+
 ****************
 Data store views
 ****************

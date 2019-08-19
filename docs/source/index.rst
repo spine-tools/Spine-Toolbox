@@ -9,7 +9,7 @@ computation tasks, such as energy system models.
 You can either start reading from the first page onwards or go straight to the :ref:`Getting Started` section to get you
 started quickly. If you need help understanding the terms we use throughout the app and this User Guide, please
 check the :ref:`Terminology` section. If you want to contribute to this project, please see the :ref:`Contribution Guide`.
-The last section contains the complete :ref:`code reference <Source Code Documentation>` of Spine Toolbox.
+The last section contains the complete code reference of Spine Toolbox.
 
 .. toctree::
    :maxdepth: 1
@@ -17,6 +17,7 @@ The last section contains the complete :ref:`code reference <Source Code Documen
 
    tutorials
    main_window
+   project_items
    tool_template_editor
    executing_tools
    settings
@@ -28,7 +29,6 @@ The last section contains the complete :ref:`code reference <Source Code Documen
    terminology
    dependencies
    contribution_guide
-
 
 Indices and tables
 ==================
