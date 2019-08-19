@@ -1,3 +1,6 @@
+dist: xenial  # Use Ubuntu 16.04 (Xenial Xerus)
+services:
+  - xvfb  # X Virtual Framebuffer for tests that require display
 language: python
 python:
   - "3.7"
