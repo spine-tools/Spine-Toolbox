@@ -1,6 +1,9 @@
 .. Main Window documentation
    Created 16.1.2019
 
+.. |trash| image:: ../../spinetoolbox/ui/resources/menu_icons/trash-alt.svg
+            :width: 16
+
 ***********
 Main Window
 ***********
@@ -12,28 +15,29 @@ The first time you start the application you will see the main window like this.
 .. image:: img/main_window_no_project.png
    :align: center
 
-The application main window contains five dock widgets (*Project*, *Properties*, *Event Log*, *Process Log*, and *Julia
-Console*), an *Add Item* tool bar, a project *Design view*, and a menu bar with *File*, *Edit*, *View*, and *Help*
-menus. The Project dock widget contains a list of project items and Tool templates that are available in your
-project. The Properties dock widget shows the properties of the selected project item. Event Log shows messages
-depending on what you do in Spine Toolbox. Process Log shows messages from processes that are spawned by the
-application, i.e. it shows the stdout and stderr streams of GAMS, Julia (if running without the Julia REPL, see
-``Settings`` section in the User Guide), and executable programs. Julia Console provides an embedded Julia REPL.
-If you choose to execute Julia tools in REPL, the Julia code will be included into the Julia REPL in the Julia
-Console and executed there. You can interact with the Julia REPL in the Julia Console like you would with any
-Julia REPL that you use.
+The application main window contains six dock widgets (*Project*, *Properties*, *Event Log*, *Process Log*, *Julia
+Console*, and *Python Console*), an *Add Item* tool bar, a project *Design view*, and a menu bar with *File*,
+*Edit*, *View*, and *Help* menus. The Project dock widget contains a list of project items and Tool templates
+that are available in your project. The Properties dock widget shows the properties of the selected project item.
+Event Log shows messages depending on what you do in Spine Toolbox. Process Log shows messages from processes that
+are spawned by the application, i.e. it shows the stdout and stderr streams of GAMS, Julia (if running without
+the Julia REPL, see :ref:`Settings` section in the User Guide), and executable programs. Julia and Python Consoles
+provide an embedded Julia REPL and a Python interpreter. If you choose to execute Julia tools in REPL, the Julia
+code will be included into the Julia REPL in the Julia Console and executed there. You can interact with the Julia
+REPL in the Julia Console like you would with any Julia REPL that you use.
 
-.. tip:: You can configure the Julia version you want to use in ``File->Settings``.
+.. tip:: You can configure the Julia ja Python versions you want to use in ``File->Settings``.
 
 The menu bar in the top of the application contains *File*, *Edit*, *View*, and *Help* menus. In the *File* menu
 you can create a new project, save the project, open an existing project, rename your project, and open the
-application Settings. Spine Toolbox is project based, which means that you need to create a new project or
-open an existing one before you can do anything. You can create a new project by selecting ``File->New...``
-from the menu bar. *Add Item* tool bar contains four draggable items *DS*, *DC*, *T*, and *V*, which represent
-the available project item types. It also has a button with a red *X*, which can be used to remove all items from your
-project. *Design view* is where you build your project using project items. You can add a new project item by
-pointing your mouse cursor on any of the draggable items in the *Add Item* tool bar, then click-and-drag the
-project item on to the *Design view*. After this you will be presented a dialog, which asks you to fill in basic
+application Settings among other things. Spine Toolbox is project based, which means that you need to create
+a new project or open an existing one before you can do anything. You can create a new project by selecting
+``File->New...`` from the menu bar. *Drag & Drop Icon* tool bar contains the available
+:ref:`project item <Project Items>` types. The |trash| button can be used to remove all items from your
+project. The *Execute* icons control the execution of the items in the *Design view* where you build your project
+using the project items. You can add a new project item by pointing your mouse cursor on any of the draggable items
+in the *Drag & Drop Icon* tool bar, then click-and-drag the item on to the *Design view*.
+After this you will be presented a dialog, which asks you to fill in basic
 information about the new project item (name, description, etc.).
 
 The main window is very customizable so you can e.g. close the dock widgets that you do not need and/or you can

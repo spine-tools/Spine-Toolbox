@@ -1,6 +1,8 @@
 .. Settings form documentation
    Created 14.1.2019
 
+.. _Settings:
+
 ********
 Settings
 ********

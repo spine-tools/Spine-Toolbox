@@ -1,3 +1,5 @@
+.. _Spine datapackage editor:
+
 ************************
 Spine datapackage editor
 ************************
