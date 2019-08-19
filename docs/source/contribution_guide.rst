@@ -4,6 +4,8 @@
 .. _Qt Style Sheets: http://doc.qt.io/qt-5/stylesheet.html
 .. _PEP-8: https://www.python.org/dev/peps/pep-0008/
 
+.. _Contribution Guide:
+
 ************************************
 Contribution Guide for Spine Toolbox
 ************************************

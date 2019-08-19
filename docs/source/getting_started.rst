@@ -5,7 +5,13 @@
             :width: 16
 .. |plus| image:: ../../spinetoolbox/ui/resources/plus.svg
           :width: 16
+.. |file| image:: ../../spinetoolbox/ui/resources/file.svg
+          :width: 16
+.. |file_link| image:: ../../spinetoolbox/ui/resources/file-link.svg
+          :width: 16
 .. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
+             :width: 16
+.. |execute| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-solid.svg
              :width: 16
 .. |add_tool_template| image:: ../../spinetoolbox/ui/resources/wrench_plus.svg
               :width: 16
@@ -19,6 +25,7 @@
 .. _Jupyter: http://jupyter.org/
 .. _IJulia.jl: https://github.com/JuliaLang/IJulia.jl
 
+.. _Getting Started:
 
 ***************
 Getting Started
@@ -38,7 +45,7 @@ Spine Toolbox Interface
 
 The central element in Spine Toolbox's interface is the *Design View*,
 where you can visualize and manipulate your project in a pictorial way.
-Alongside *Design view* there are a few 'docked widgets' that provide additional functionality:
+Alongside *Design view* there are a few 'dock widgets' that provide additional functionality:
 
 - *Project* provides a more concise view of your project, including:
 
@@ -51,12 +58,14 @@ Alongside *Design view* there are a few 'docked widgets' that provide additional
 - *Process Log* shows the output of executed Tools.
 - *Julia console* provides an interface to interact with the Julia programming language,
   and also allows Spine Toolbox to execute Julia Tools.
+- *Python console* provides an interface to interact with the Python programming language.
 
-.. tip:: You can drag-and-drop the Docked Widgets around the screen,
+.. tip:: You can drag-and-drop the Dock Widgets around the screen,
    customizing the interface at your will.
-   Also, you can select which ones are shown/hidden using either the **View/Docked Widgets** menu,
+   Also, you can select which ones are shown/hidden using either the **View/Dock Widgets** menu,
    or the *Add Item* toolbar's context menu.
-   Spine Toolbox will remember your configuration in between sessions.
+   Spine Toolbox will remember your configuration in between sessions. Selecting **Restore Dock Widgets**
+   from the **View/Dock Widgets** menu resets the the widgets back to their default configuration.
 
 .. tip:: Most elements in the Spine Toolbox's interface are equipped with *tool tips*. Leave your mouse
    cursor over an element (button, view, etc.) for a moment to make the tool tip appear.
@@ -86,15 +95,11 @@ In the *Project* widget, click on the 'add tool template button' (|add_tool_temp
 just below the *Tool templates* list, and select **New** from the popup menu.
 The *Edit Tool Template* form will appear. Follow the instructions below to create a minimal Tool template:
 
-- Type 'hello_world' in the *name* field.
-- Select 'Executable' from the *type* dropdown list,
-- Click on the plus button (|plus|) right next to the field that reads *Add main program file here...*, and
+- Type 'hello_world' in the *Type name here...* field.
+- Select 'Python' from the *Select type...* dropdown list,
+- Click on the |file| button right next to the field that reads *Add main program file here...*, and
   select the option **Make new main program** from the popup menu.
-- Now you should enter the name of the main program file for this tool template.
-  If you are on Windows, enter 'hello_world.bat';
-  if you are on Linux or Mac, enter 'hello_world.sh'. Click **Ok**.
-- A new dialog will open where you can select a folder to save this main program file.
-  Select any folder and click **Open**.
+- A file browser dialog should open. Name the file 'hello_world.py' and save it in a folder of your choice.
 
 After all this, the *Edit Tool Template* form should be looking similar to this:
 
@@ -115,25 +120,20 @@ Now you should see the new tool template in the *Project* widget, *Tool template
 
 Congratulations, you have just created your first minimal Tool template.
 
-However, the main program file 'hello_world.bat' (or 'hello_world.sh') was created empty, so for the moment this Tool
+However, the main program file 'hello_world.py' was created empty, so for the moment this Tool
 template does absolutely nothing. To change that, we need to add instructions to that program file so it actually
 does something when executed.
 
 Right click on the 'hello_world' item in the *Tool templates* list and select **Edit main program file...** from the
-context menu. This will open the file 'hello_world.bat' (or 'hello_world.sh') in your default text editor.
+context menu. This will open the file 'hello_world.py' in your default editor.
 
-If you're on Windows and your main program file is called 'hello_world.bat',
-enter the following into the file's content::
+Enter the following into the file's content::
 
-    @echo Hello, World!
-
-If you're on Linux or Mac and your main program file is called 'hello_world.sh',
-enter the following into the file's content::
-
-    echo Hello, World!
+    print("Hello, World!")
 
 Save the file.
-Now, whenever 'hello_world.bat' (or 'hello_world.sh') is executed, the sentence 'Hello, World!'
+
+Now, whenever 'hello_world.py' is executed, the sentence 'Hello, World!'
 will be printed to the standard output.
 
 
@@ -146,7 +146,7 @@ Let's add a Tool item to our project, so that we're able to run the Tool templat
 To add a Tool item please do one of the following:
 
 A) From the application main menu, select **Edit -> Add Tool**.
-B) Drag-and-drop the Tool icon (|tool_icon|) from the *Add Item* toolbar onto the *Design View*.
+B) Drag-and-drop the Tool icon (|tool_icon|) from the *Drag & Drop Icon* toolbar onto the *Design View*.
 
 The *Add Tool* form will popup.
 Type 'say hello world' in the name field, select 'hello_world' from the dropdown list just below, and click **Ok**.
@@ -167,11 +167,11 @@ of the window, looking similar to this:
 .. image:: img/say_hello_world_tool_properties.png
    :align: center
 
-Press **Execute**. This will execute the Tool template 'hello world',
-which in turn will run the main program file 'hello_world.bat' (or 'hello_world.sh') in a dedicated process.
+Press *execute project* |execute| button on the toolbar. This will execute the Tool template 'hello world',
+which in turn will run the main program file 'hello_world.py' in a dedicated process.
 
-You can see more details about execution in the *Event log*. Once it's finished, you will see its output in
-the *Process log*:
+You can see more details about execution in the *Event Log*. Once it's finished, you will see its output in
+the *Process Log*:
 
 .. image:: img/hello_world_event_process_log.png
    :align: center
@@ -191,8 +191,8 @@ Click on the 'tool template options' button (|tool_template_options|) in 'say he
 *Properties*, and select **Edit Tool template** from the popup menu.
 This will open the 'Edit Tool Template' form pre-filled with data from the 'hello_world' template.
 
-Right below the *Input files* list, you will find two buttons. Click on the left one.
-A dialog will appear so that you can enter a
+Click the *add input files and/or directories* |file-link| button right below the *Input files* list
+A dialog will appear that lets you can enter a
 name for a new input file. Type 'input.txt' and click **Ok**. The form
 should now be looking like this:
 
@@ -204,23 +204,19 @@ Clik **Ok** at the bottom of the form.
 So far so good. Now let's use this input file in our program.
 Click on the 'tool template options' button (|tool_template_options|) again,
 and this time select **Edit main program file...** from the popup menu. This will open the file
-'hello_world.bat' (or 'hello_world.sh') in your default text editor.
+'hello_world.py' in your default editor.
 
-If you're on Windows and your main program file is called 'hello_world.bat',
-delete whatever it's in the file and enter the following instead::
+Delete whatever it's in the file and enter the following instead::
 
-    type input.txt
-
-If you're on Linux or Mac and your main program file is called 'hello_world.sh',
-delete whatever it's in the file and enter the following instead::
-
-    cat input.txt
+    with open("input.txt") as input_file:
+        print(input_file.read())
 
 Save the file.
-Now, whenever 'hello_world.bat' (or 'hello_world.sh') is executed, it will look for a file called 'input.txt'
+
+Now, whenever 'hello_world.py' is executed, it will look for a file called 'input.txt'
 in the current directory, and print its content to the standard output.
 
-Press **Execute** in 'say hello world' *Properties* again.
+Try executing the tool by pressing |execute| in the toolbar.
 *The execution will fail.* This is because the file 'input.txt' is not
 made available for the Tool:
 
@@ -282,14 +278,14 @@ As mentioned above, a Tool item looks for input files in
 Data Connection and Data Store items connected to its input. Thus, what we need to do now is
 create a *connection* from 'pass input txt' to 'say hello world', so the file 'input.txt' gets passed.
 
-To do this, click on the *connector* button at the center of 'pass input txt' in the *Design view*, and then
-on the corresponding button of 'say hello world'. This will create an arrow pointing from one to another,
+To do this, click one of the *connector* slot at the edges of 'pass input txt' in the *Design view*, and then
+on a similar slot in 'say hello world'. This will create an arrow pointing from one to another,
 as seen below:
 
 .. image:: img/pass_input_txt_dc_to_say_hello_world_tool.png
    :align: center
 
-Select 'say hello world' and press **Execute**. The Tool will run successfully this time:
+Press |execute| on the toolbar. The Tool will run successfully this time:
 
 .. image:: img/hello_again_world_event_process_log.png
    :align: center
