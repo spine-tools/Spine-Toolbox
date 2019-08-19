@@ -191,7 +191,7 @@ Click on the 'tool template options' button (|tool_template_options|) in 'say he
 *Properties*, and select **Edit Tool template** from the popup menu.
 This will open the 'Edit Tool Template' form pre-filled with data from the 'hello_world' template.
 
-Click the *add input files and/or directories* |file-link| button right below the *Input files* list
+Click the *add input files and/or directories* |file_link| button right below the *Input files* list
 A dialog will appear that lets you can enter a
 name for a new input file. Type 'input.txt' and click **Ok**. The form
 should now be looking like this:
