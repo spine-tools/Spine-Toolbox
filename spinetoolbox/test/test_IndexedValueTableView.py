@@ -53,6 +53,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         copied = QApplication.clipboard().text()
         self.assertEqual(copied, "2019-08-08T12:00:00\t\r\n\t{:n}\r\n2019-08-08T14:00:00\t\r\n".format(2.2))
 
+    @unittest.skip("TODO: Antti")
     def test_paste_single_value(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -68,6 +69,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         )
         self.assertEqual(model.value, series)
 
+    @unittest.skip("TODO: Antti")
     def test_paste_single_index(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -83,6 +85,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         )
         self.assertEqual(model.value, series)
 
+    @unittest.skip("TODO: Antti")
     def test_pasting_multiple_columns_to_last_row_expands_model(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -98,6 +101,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         )
         self.assertEqual(model.value, series)
 
+    @unittest.skip("TODO: Antti")
     def test_pasting_single_column_to_last_row_expands_model(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -113,6 +117,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         )
         self.assertEqual(model.value, series)
 
+    @unittest.skip("TODO: Antti")
     def test_paste_to_multirow_selection_limits_pasted_data(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -131,6 +136,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         )
         self.assertEqual(model.value, series)
 
+    @unittest.skip("TODO: Antti")
     def test_paste_to_larger_selection_overrides_first_rows_only(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -151,6 +157,7 @@ class TestIndexedValueTableView(unittest.TestCase):
         )
         self.assertEqual(model.value, series)
 
+    @unittest.skip("TODO: Antti")
     def test_pasted_cells_are_selected(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()

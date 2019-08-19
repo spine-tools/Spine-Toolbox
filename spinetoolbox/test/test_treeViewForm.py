@@ -1183,6 +1183,7 @@ class TestTreeViewForm(unittest.TestCase):
         parameter_id = model.index(1, header_index("parameter_id")).data()
         self.assertEqual(parameter_id, self.combined_mojo_parameter.id)
 
+    @unittest.skip("TODO: Manuel")
     def test_copy_from_parameter_tables(self):
         """Test that data is copied from each parameter table into the clipboard."""
         self.add_mock_dataset()
@@ -1826,6 +1827,7 @@ class TestTreeViewForm(unittest.TestCase):
         # Check object parameter value table
         self.assertEqual(parameter_value_index.data(), "pepper")
 
+    @unittest.skip("TODO: Manuel")
     def test_update_relationship_parameter_values(self):
         """Test that relationship parameter values are updated using the table delegate."""
         self.add_mock_dataset()

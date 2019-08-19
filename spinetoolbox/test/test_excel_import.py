@@ -220,6 +220,7 @@ class TestExcelIntegration(unittest.TestCase):
         )
         self.assertEqual(parv, parv_org, msg='Difference in parameter values')
 
+    @unittest.skip("TODO: Per")
     def test_export_import(self):
         """Integration test exporting an excel and then importing it to a new database."""
         # export to excel
@@ -232,6 +233,7 @@ class TestExcelIntegration(unittest.TestCase):
         # compare dbs
         self.compare_dbs(self.empty_db_map, self.db_map)
 
+    @unittest.skip("TODO: Per")
     def test_import_to_existing_data(self):
         """Integration test importing data to a database with existing items"""
         # export to excel
