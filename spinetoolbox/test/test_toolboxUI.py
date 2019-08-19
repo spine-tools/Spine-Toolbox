@@ -158,6 +158,9 @@ class TestToolboxUI(unittest.TestCase):
         a->b->c->d.
         """
         load_path = os.path.join(os.getcwd(), "project_files", "unit_test_project.proj")
+        if not os.path.exists(load_path):
+            self.skipTest("Test project file not found in path:'{0}'".format(load_path))
+            return
         self.assertIsNone(self.toolbox.project())
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "project.create_dir"

@@ -630,7 +630,7 @@ class ConnectionModel(QAbstractTableModel):
         if row < 0 or row > self.rowCount():
             return False
         if not count == 1:
-            logging.error("Insert 1 row at a time")
+            # logging.error("Insert 1 row at a time")
             return False
         # beginInsertRows(const QModelIndex & parent, int first, int last)
         self.beginInsertRows(parent, row, row)
@@ -660,7 +660,7 @@ class ConnectionModel(QAbstractTableModel):
         if column < 0 or column > self.columnCount():
             return False
         if not count == 1:
-            logging.error("Insert 1 column at a time")
+            # logging.error("Insert 1 column at a time")
             return False
         # beginInsertColumns(const QModelIndex & parent, int first, int last)
         self.beginInsertColumns(parent, column, column)
@@ -686,7 +686,8 @@ class ConnectionModel(QAbstractTableModel):
         """
         if not self._rowRemovalPossible(row, count):
             if count != 1:
-                logging.error("Remove 1 row at a time")
+                # logging.error("Remove 1 row at a time")
+                pass
             return False
         # beginRemoveRows(const QModelIndex & parent, int first, int last)
         self.beginRemoveRows(parent, row, row)
@@ -710,7 +711,8 @@ class ConnectionModel(QAbstractTableModel):
         """
         if not self._columnRemovalPossible(column, count):
             if count != 1:
-                logging.error("Remove 1 column at a time")
+                # logging.error("Remove 1 column at a time")
+                pass
             return False
         self.beginRemoveColumns(parent, column, column)
         # for loop all rows and remove the column from each
@@ -756,7 +758,7 @@ class ConnectionModel(QAbstractTableModel):
         try:
             item_index = self.header.index(name)
         except ValueError:
-            logging.error("%s not found in connection table header list", name)
+            # logging.error("%s not found in connection table header list", name)
             return False
         if not self._rowRemovalPossible(item_index, 1) or not self._columnRemovalPossible(item_index, 1):
             return False
