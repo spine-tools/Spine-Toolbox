@@ -348,7 +348,7 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping_value = str(mapping.value_reference)
         return mapping_value
 
-    def get_map_append_display(mapping, name):
+    def get_map_append_display(self, mapping, name):
         append_str = ""
         if isinstance(mapping, Mapping):
             append_str = mapping.append_str
