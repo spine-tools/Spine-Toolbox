@@ -429,26 +429,14 @@ def int_list_to_row_count_tuples(int_list):
     return [(sorted_list[start], stop - start) for start, stop in ranges]
 
 
-class IconManager:
-    """A class to manage object class icons for data store forms."""
+class IconListManager:
+    """A class to manage icons for icon list widgets."""
 
-    # TODO: Document methods
-
-    def __init__(self):
-        """Init instance."""
-        super().__init__()
-        self.obj_cls_icon_cache = {}  # A mapping from object class name to display icon
-        self.icon_pixmap_cache = {}  # A mapping from display_icon to associated pixmap
-        self.rel_cls_icon_cache = {}  # A mapping from object class name list to associated pixmap
+    def __init__(self, icon_size):
+        self._icon_size = icon_size
         self.searchterms = {}
         self.model = QStandardItemModel()
         self.model.data = self._model_data
-        qfile = QFile(":/fonts/fontawesome5-codepoints.json")
-        qfile.open(QIODevice.ReadOnly | QIODevice.Text)
-        data = str(qfile.readAll().data(), "utf-8")
-        qfile.close()
-        self.codepoints = json.loads(data)
-        self.icon_count = len(self.codepoints)
 
     @busy_effect
     def init_model(self):
@@ -470,8 +458,11 @@ class IconManager:
         self.model.invisibleRootItem().appendRows(items)
 
     def _model_data(self, index, role):
-        """Replacement method for model.data().
-        Create pixmaps as they're requested by the data() method, to reduce loading time."""
+        """
+        Replacement method for model.data().
+
+        Create pixmaps as they're requested by the data() method, to reduce loading time.
+        """
         if role == Qt.DisplayRole:
             return None
         if role != Qt.DecorationRole:
@@ -480,25 +471,33 @@ class IconManager:
         pixmap = self.create_object_pixmap(display_icon)
         return QIcon(pixmap)
 
-    @staticmethod
-    def icon_color_code(display_icon):
-        """Take a display icon integer and return an equivalent tuple of icon and color code."""
-        if not isinstance(display_icon, int) or display_icon < 0:
-            return int("f1b2", 16), 0
-        icon_code = display_icon & 65535
-        try:
-            color_code = display_icon >> 16
-        except OverflowError:
-            color_code = 0
-        return icon_code, color_code
+    def create_object_pixmap(self, display_icon):
+        """Create and return a pixmap corresponding to display_icon."""
+        icon_code, color_code = interpret_icon_id(display_icon)
+        engine = CharIconEngine(chr(icon_code), color_code)
+        return engine.pixmap(self._icon_size)
 
-    @staticmethod
-    def display_icon(icon_code, color_code):
-        """Take tuple of icon and color codes, and return equivalent integer."""
-        return icon_code + (color_code << 16)
 
-    def default_display_icon(self):
-        return self.display_icon(*self.icon_color_code(None))
+class IconManager:
+    """A class to manage object class icons for data store forms."""
+
+    ICON_SIZE = QSize(512, 512)
+
+    def __init__(self):
+        self.obj_cls_icon_cache = {}  # A mapping from object class name to display icon
+        self.icon_pixmap_cache = {}  # A mapping from display_icon to associated pixmap
+        self.rel_cls_icon_cache = {}  # A mapping from object class name list to associated pixmap
+        self.searchterms = {}
+
+    def create_object_pixmap(self, display_icon):
+        """Create a pixmap corresponding to display_icon, cache it, and return it."""
+        pixmap = self.icon_pixmap_cache.get(display_icon, None)
+        if pixmap is None:
+            icon_code, color_code = interpret_icon_id(display_icon)
+            engine = CharIconEngine(chr(icon_code), color_code)
+            pixmap = engine.pixmap(self.ICON_SIZE)
+            self.icon_pixmap_cache[display_icon] = pixmap
+        return pixmap
 
     def setup_object_pixmaps(self, object_classes):
         """Called after adding or updating object classes.
@@ -512,23 +511,14 @@ class IconManager:
         for k in dirty_keys:
             del self.rel_cls_icon_cache[k]
 
-    def create_object_pixmap(self, display_icon):
-        """Create a pixmap corresponding to display_icon, cache it, and return it."""
-        if display_icon not in self.icon_pixmap_cache:
-            icon_code, color_code = self.icon_color_code(display_icon)
-            engine = CharIconEngine(chr(icon_code), color_code)
-            self.icon_pixmap_cache[display_icon] = engine.pixmap(QSize(512, 512))
-        return self.icon_pixmap_cache[display_icon]
-
     def object_pixmap(self, object_class_name):
-        """A pixmap for the given object class.
-        """
+        """A pixmap for the given object class."""
         if object_class_name in self.obj_cls_icon_cache:
             display_icon = self.obj_cls_icon_cache[object_class_name]
             if display_icon in self.icon_pixmap_cache:
                 return self.icon_pixmap_cache[display_icon]
         engine = CharIconEngine("\uf1b2", 0)
-        return engine.pixmap(QSize(512, 512))
+        return engine.pixmap(self.ICON_SIZE)
 
     def object_icon(self, object_class_name):
         """An icon for the given object class."""
@@ -539,7 +529,7 @@ class IconManager:
         created by rendering several object pixmaps next to each other."""
         if not str_object_class_name_list:
             engine = CharIconEngine("\uf1b3", 0)
-            return engine.pixmap(QSize(512, 512))
+            return engine.pixmap(self.ICON_SIZE)
         object_class_name_list = tuple(str_object_class_name_list.split(","))
         if object_class_name_list in self.rel_cls_icon_cache:
             return self.rel_cls_icon_cache[object_class_name_list]
@@ -592,3 +582,24 @@ class CharIconEngine(QIconEngine):
         pm.fill(Qt.transparent)
         self.paint(QPainter(pm), QRect(QPoint(0, 0), size), mode, state)
         return pm
+
+
+def make_icon_id(icon_code, color_code):
+    """Take icon and color codes, and return equivalent integer."""
+    return icon_code + (color_code << 16)
+
+
+def interpret_icon_id(display_icon):
+    """Take a display icon integer and return an equivalent tuple of icon and color code."""
+    if not isinstance(display_icon, int) or display_icon < 0:
+        return 0xF1B2, 0
+    icon_code = display_icon & 65535
+    try:
+        color_code = display_icon >> 16
+    except OverflowError:
+        color_code = 0
+    return icon_code, color_code
+
+def default_icon_id():
+    return make_icon_id(*interpret_icon_id(None))
+
