@@ -600,6 +600,6 @@ def interpret_icon_id(display_icon):
         color_code = 0
     return icon_code, color_code
 
+
 def default_icon_id():
     return make_icon_id(*interpret_icon_id(None))
-
