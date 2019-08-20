@@ -52,6 +52,7 @@ from PySide2.QtWidgets import (
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
 from treeview_models import LazyLoadingArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
+from helpers import IconListManager, interpret_icon_id, make_icon_id
 
 
 class CustomLineEditor(QLineEdit):
@@ -660,15 +661,16 @@ class IconColorEditor(QDialog):
     """An editor to let the user select an icon and a color for an object class.
     """
 
-    def __init__(self, parent, icon_mngr):
+    def __init__(self, parent):
         """Init class."""
         super().__init__(parent)  # , Qt.Popup)
-        self.icon_mngr = icon_mngr
+        icon_size = QSize(32, 32)
+        self.icon_mngr = IconListManager(icon_size)
         self.setWindowTitle("Select icon and color")
         self.icon_widget = QWidget(self)
         self.icon_list = QListView(self.icon_widget)
         self.icon_list.setViewMode(QListView.IconMode)
-        self.icon_list.setIconSize(QSize(32, 32))
+        self.icon_list.setIconSize(icon_size)
         self.icon_list.setResizeMode(QListView.Adjust)
         self.icon_list.setItemDelegate(IconPainterDelegate(self))
         self.icon_list.setMovement(QListView.Static)
@@ -712,7 +714,7 @@ class IconColorEditor(QDialog):
         self.button_box.rejected.connect(self.reject)
 
     def set_data(self, data):
-        icon_code, color_code = self.icon_mngr.icon_color_code(data)
+        icon_code, color_code = interpret_icon_id(data)
         self.icon_mngr.init_model()
         for i in range(self.proxy_model.rowCount()):
             index = self.proxy_model.index(i, 0)
@@ -724,7 +726,7 @@ class IconColorEditor(QDialog):
     def data(self):
         icon_code = self.icon_list.currentIndex().data(Qt.UserRole)
         color_code = self.color_dialog.currentColor().rgb()
-        return self.icon_mngr.display_icon(icon_code, color_code)
+        return make_icon_id(icon_code, color_code)
 
 
 class NumberParameterInlineEditor(QDoubleSpinBox):
