@@ -21,11 +21,14 @@ Functions to import and export from excel to spine database.
 from collections import namedtuple
 from itertools import groupby, islice, takewhile
 import json
+from operator import itemgetter
 from openpyxl import Workbook, load_workbook
 from openpyxl.utils import get_column_letter
 
-from spinedb_api import import_data
-from operator import itemgetter
+import numpy as np
+
+from spinedb_api import import_data, from_database, TimeSeries, TimeSeriesVariableResolution, TimePattern
+
 
 
 SheetData = namedtuple(
@@ -95,15 +98,11 @@ def get_objects_and_parameters(db):
     """
 
     # get all objects
-    obj = (
-        db.object_list()
-        .add_columns(db.ObjectClass.name.label('class_name'))
-        .filter(db.ObjectClass.id == db.Object.class_id)
-        .all()
-    )
+    obj = db.object_list().all()
 
     # get all object classes
     obj_class = db.object_class_list().all()
+    obj_class_id_2_name = {oc.id: oc.name for oc in obj_class}
 
     # get all parameter values
     pval = db.object_parameter_value_list().all()
@@ -113,26 +112,32 @@ def get_objects_and_parameters(db):
 
     # make all in same format
     par = [(p.object_class_name, None, p.parameter_name, None) for p in par]
-    pval = [(p.object_class_name, p.object_name, p.parameter_name, json.loads(p.value)) for p in pval]
-    obj = [(p.class_name, p.name, None, None) for p in obj]
+    pval = [(p.object_class_name, p.object_name, p.parameter_name, from_database(p.value)) for p in pval]
+    obj = [(obj_class_id_2_name[p.class_id], p.name, None, None) for p in obj]
     obj_class = [(p.name, None, None, None) for p in obj_class]
 
     object_and_par = pval + par + obj + obj_class
 
     object_par = []
     object_json = []
+    object_ts = []
+    object_timepattern = []
     for d in object_and_par:
-        if isinstance(d[3], list):
+        if d[3] is None or isinstance(d[3], (int, float, str)):
+            object_par.append(d)
+        elif isinstance(d[3], list):
             object_json.append(d)
             object_par.append(d[:-1] + (None,))
+        elif isinstance(d[3], TimeSeries):
+            object_ts.append(d)
+            object_par.append(d[:-1] + (None,))
+        elif isinstance(d[3], TimePattern):
+            object_timepattern.append(d)
+            object_par.append(d[:-1] + (None,))
         else:
-            if isinstance(d[3], dict):
-                d = d[:-1] + (json.dumps(d[3]),)
-            elif isinstance(d[3], str):
-                d = d[:-1] + ('"' + d[3] + '"',)
-            object_par.append(d)
+            raise Warning(f"Unsuported export type: {type(d[3])}, Skipping export")
 
-    return object_par, object_json
+    return object_par, object_json, object_ts, object_timepattern
 
 
 def get_relationships_and_parameters(db):
@@ -153,7 +158,7 @@ def get_relationships_and_parameters(db):
     rel_class_id_2_name = {rc.id: rc.name for rc in rel_class}
 
     out_data = [
-        [r.relationship_class_name, r.object_name_list, r.parameter_name, json.loads(r.value)] for r in rel_par_value
+        [r.relationship_class_name, r.object_name_list, r.parameter_name, from_database(r.value)] for r in rel_par_value
     ]
 
     rel_with_par = set(r.object_name_list for r in rel_par_value)
@@ -172,18 +177,24 @@ def get_relationships_and_parameters(db):
 
     rel_par = []
     rel_json = []
+    rel_ts = []
+    rel_timepattern = []
     for d in rel_data:
-        if isinstance(d[3], list):
+        if d[3] is None or isinstance(d[3], (int, float, str)):
+            rel_par.append(d)
+        elif isinstance(d[3], list):
             rel_json.append(d)
             rel_par.append(d[:-1] + [None])
+        elif isinstance(d[3], TimeSeries):
+            rel_ts.append(d)
+            rel_par.append(d[:-1] + [None])
+        elif isinstance(d[3], TimePattern):
+            rel_timepattern.append(d)
+            rel_par.append(d[:-1] + [None])
         else:
-            if isinstance(d[3], dict):
-                d[3] = json.dumps(d[3])
-            elif isinstance(d[3], str):
-                d = d[:-1] + ['"' + d[3] + '"']
-            rel_par.append(d)
+            raise Warning(f"Unsuported export type: {type(d[3])}, Skipping export")
 
-    return rel_par, rel_json, rel_class
+    return rel_par, rel_json, rel_class, rel_ts, rel_timepattern
 
 
 def unstack_list_of_tuples(data, headers, key_cols, value_name_col, value_col):
@@ -315,7 +326,7 @@ def get_unstacked_relationships(db):
         (List, List): Two list of data for relationship, one with parameter values
         and the second one with json values
     """
-    data, data_json, rel_class = get_relationships_and_parameters(db)
+    data, data_json, rel_class, data_ts, data_timepattern = get_relationships_and_parameters(db)
 
     class_2_obj_list = {rc.name: rc.object_class_name_list.split(',') for rc in rel_class}
 
@@ -334,6 +345,34 @@ def get_unstacked_relationships(db):
             object_classes = class_2_obj_list[k]
             parsed_json.append([k, object_classes, json_vals])
 
+    data_ts = sorted(data_ts, key=keyfunc)
+    parsed_ts = []
+    # ts data, split by relationship class
+    for k, v in groupby(data_ts, key=keyfunc):
+        ts_vals = []
+        for row in v:
+            rel_list = row[1].split(',')
+            parameter = row[2]
+            val = row[3]
+            ts_vals.append([rel_list + [parameter], val])
+        if ts_vals:
+            object_classes = class_2_obj_list[k]
+            parsed_ts.append([k, object_classes, ts_vals])
+
+    data_timepattern = sorted(data_timepattern, key=keyfunc)
+    parsed_timepattern = []
+    # ts data, split by relationship class
+    for k, v in groupby(data_timepattern, key=keyfunc):
+        tp_vals = []
+        for row in v:
+            rel_list = row[1].split(',')
+            parameter = row[2]
+            val = row[3]
+            tp_vals.append([rel_list + [parameter], val])
+        if tp_vals:
+            object_classes = class_2_obj_list[k]
+            parsed_timepattern.append([k, object_classes, tp_vals])
+
     # parameter data, split by relationship class
     stacked_rels = []
     data = sorted(data, key=keyfunc)
@@ -349,7 +388,7 @@ def get_unstacked_relationships(db):
         rel = [r[1].split(',') + list(r[2:]) for r in rel]
         object_classes = class_2_obj_list[k]
         stacked_rels.append([k, rel, object_classes, parameters])
-    return stacked_rels, parsed_json
+    return stacked_rels, parsed_json, parsed_ts, parsed_timepattern
 
 
 def get_unstacked_objects(db):
@@ -362,7 +401,7 @@ def get_unstacked_objects(db):
         (List, List): Two list of data for objects, one with parameter values
         and the second one with json values
     """
-    data, data_json = get_objects_and_parameters(db)
+    data, data_json, data_ts, data_timepattern = get_objects_and_parameters(db)
 
     keyfunc = lambda x: x[0]
 
@@ -378,6 +417,31 @@ def get_unstacked_objects(db):
         if json_vals:
             parsed_json.append([k, [k], json_vals])
 
+    parsed_ts = []
+    data_ts = sorted(data_ts, key=keyfunc)
+    for k, v in groupby(data_ts, key=keyfunc):
+        ts_vals = []
+        for row in v:
+            obj = row[1]
+            parameter = row[2]
+            val = row[3]
+            ts_vals.append([[obj, parameter], val])
+        if ts_vals:
+            parsed_ts.append([k, [k], ts_vals])
+
+    data_timepattern = sorted(data_timepattern, key=keyfunc)
+    parsed_timepattern = []
+    # ts data, split by object class
+    for k, v in groupby(data_timepattern, key=keyfunc):
+        tp_vals = []
+        for row in v:
+            obj = row[1]
+            parameter = row[2]
+            val = row[3]
+            tp_vals.append([[obj, parameter], val])
+        if tp_vals:
+            parsed_timepattern.append([k, [k], tp_vals])
+
     stacked_obj = []
     data = sorted(data, key=keyfunc)
     for k, v in groupby(data, key=keyfunc):
@@ -390,7 +454,7 @@ def get_unstacked_objects(db):
         obj = [[o[1]] + list(o[2:]) for o in obj]
         object_classes = [k]
         stacked_obj.append([k, obj, object_classes, parameters])
-    return stacked_obj, parsed_json
+    return stacked_obj, parsed_json, parsed_ts, parsed_timepattern
 
 
 def write_relationships_to_xlsx(wb, relationship_data):
@@ -485,6 +549,79 @@ def write_json_array_to_xlsx(wb, data, sheet_type):
                 ws.cell(row=start_row + row_iter, column=2 + col).value = json_val
 
 
+def write_TimeSeries_to_xlsx(wb, data, sheet_type, data_type):
+    """Writes spinedb_api TimeSeries data for object classes and relationship classes.
+    Writes one sheet per relationship/object class.
+
+    Args:
+        wb (openpyxl.Workbook): excel workbook to write too.
+        data (List[List]): List of lists containing json data give by function
+        get_unstacked_objects and get_unstacked_relationships
+        sheet_type (str): str with value "relationship" or "object" telling if data is for a relationship or object
+    """
+    for i, d in enumerate(data):
+        if sheet_type == "relationship":
+            sheet_title = "ts_"
+        elif sheet_type == "object":
+            sheet_title = "ts_"
+        else:
+            raise ValueError("sheet_type must be a str with value 'relationship' or 'object'")
+
+        if data_type.lower() == "time series":
+            index_name = "timestamp"
+        elif data_type.lower() == "time pattern":
+            index_name = "pattern"
+        else:
+            raise ValueError("data_type must be a str with value 'time series' or 'time pattern'")
+
+        ws = wb.create_sheet()
+        # sheet name can only be 31 chars log
+        title = sheet_title + d[0]
+        if len(title) < 32:
+            ws.title = title
+        else:
+            ws.title = '{}_ts{}'.format(sheet_type, i)
+
+        ws['A1'] = "Sheet type"
+        ws['A2'] = sheet_type
+        ws['B1'] = "Data type"
+        ws['B2'] = data_type
+        ws['C1'] = sheet_type + " class name"
+        ws['C2'] = d[0]
+
+        if sheet_type == "relationship":
+            ws['D1'] = "Number of relationship dimensions"
+            ws['D2'] = len(d[1])
+
+        title_rows = d[1] + [index_name]
+        for c, val in enumerate(title_rows):
+            ws.cell(row=4 + c, column=1).value = val
+
+        # find common timestamps
+        unique_timestamps = np.unique(np.concatenate([v[1].indexes for v in d[2]]))
+
+        # write object names
+        start_row = 4 + len(title_rows)
+        for col, obj_list in enumerate(d[2]):
+            for obj_iter, obj in enumerate(obj_list[0]):
+                ws.cell(row=4 + obj_iter, column=2 + col).value = obj
+
+        # write timestamps
+        if data_type.lower() == "time series":
+            for row_iter, time in enumerate(unique_timestamps):
+                ws.cell(row=start_row + row_iter, column=1).value = str(np.datetime_as_string(time))
+        else:
+            for row_iter, time in enumerate(unique_timestamps):
+                ws.cell(row=start_row + row_iter, column=1).value = str(time)
+
+        # write values
+        for col, obj_list in enumerate(d[2]):
+            for row_index, value in zip(
+                np.where(np.isin(unique_timestamps, obj_list[1].indexes))[0], obj_list[1].values
+            ):
+                ws.cell(row=start_row + row_index, column=2 + col).value = value
+
+
 def write_objects_to_xlsx(wb, object_data):
     """Writes Classes, parameter and parameter values for objects.
     Writes one sheet per relationship/object class.
@@ -532,13 +669,17 @@ def export_spine_database_to_xlsx(db, filepath):
         db (spinedb_api.DatabaseMapping): database mapping for database.
         filepath (str): str with filepath to save excel file to.
     """
-    obj_data, obj_json_data = get_unstacked_objects(db)
-    rel_data, rel_json_data = get_unstacked_relationships(db)
+    obj_data, obj_json_data, obj_ts, obj_timepattern = get_unstacked_objects(db)
+    rel_data, rel_json_data, rel_ts, rel_timepattern = get_unstacked_relationships(db)
     wb = Workbook()
     write_relationships_to_xlsx(wb, rel_data)
     write_objects_to_xlsx(wb, obj_data)
     write_json_array_to_xlsx(wb, obj_json_data, "object")
     write_json_array_to_xlsx(wb, rel_json_data, "relationship")
+    write_TimeSeries_to_xlsx(wb, obj_ts, "object", "time series")
+    write_TimeSeries_to_xlsx(wb, rel_ts, "relationship", "time series")
+    write_TimeSeries_to_xlsx(wb, obj_timepattern, "object", "time pattern")
+    write_TimeSeries_to_xlsx(wb, rel_timepattern, "relationship", "time pattern")
     wb.save(filepath)
     wb.close()
 
@@ -598,6 +739,17 @@ def read_spine_xlsx(filepath):
                     obj_json_data.append(data)
             except Exception as e:
                 error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e), "sheet", filepath, ''))
+        elif sheet_data in ("time series", "time pattern"):
+            # read sheet with data type: 'time series'
+            try:
+                data = read_TimeSeries_sheet(ws, sheet_type)
+                if sheet_type == "relationship":
+                    rel_json_data.append(data)
+                else:
+                    obj_json_data.append(data)
+            except Exception as e:
+                error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e), "sheet", filepath, ''))
+
     wb.close()
 
     # merge sheets that have the same class.
@@ -700,7 +852,7 @@ def validate_sheet(ws):
         return False
     if sheet_type.lower() not in ["relationship", "object"]:
         return False
-    if sheet_data.lower() not in ["parameter", "json array"]:
+    if sheet_data.lower() not in ["parameter", "json array", "time series", "time pattern"]:
         return False
 
     if sheet_type.lower() == "relationship":
@@ -761,6 +913,7 @@ def read_json_sheet(ws, sheet_type):
 
     # search row for until first empty cell
     add_if_not_break = 1
+    c = 0
     for c, cell in enumerate(ws[4]):
         if c > 0:
             if cell.value is None:
@@ -793,8 +946,95 @@ def read_json_sheet(ws, sheet_type):
         for objects, parameter, data_list in zip(obj_path, parameters, data):
             # save values if there is json data, a parameter name
             # and the obj_path doesn't contain None.
-            packed_json = json.dumps(list(takewhile(lambda x: x is not None, data_list)))
+            packed_json = list(takewhile(lambda x: x is not None, data_list))
             json_data.append(Data._make(["json"] + objects + [parameter, packed_json]))
+
+    return SheetData(
+        sheet_name=ws.title,
+        class_name=class_name,
+        object_classes=object_classes,
+        parameters=list(set(parameters)),
+        parameter_values=json_data,
+        objects=[],
+        class_type=sheet_type,
+    )
+
+
+def read_TimeSeries_sheet(ws, sheet_type):
+    """Reads a sheet containg json array data for objects and relationships
+
+    Args:
+        ws (openpyxl.workbook.worksheet): worksheet to read from
+        sheet_type (str): str with value "relationship" or "object" telling if sheet is a relationship or object sheet
+
+    Returns:
+        (List[SheetData])
+    """
+    if sheet_type == "relationship":
+        dim = ws['D2'].value
+    else:
+        dim = 1
+
+    sheet_data = ws['B2'].value
+
+    path = ["object" + str(i) for i in range(dim)]
+
+    class_name = ws['C2'].value
+
+    object_classes = []
+    for i in range(4, 4 + dim, 1):
+        object_classes.append(ws["A" + str(i)].value)
+
+    # search row for until first empty cell
+    add_if_not_break = 1
+    c = 0
+    for c, cell in enumerate(ws[4]):
+        if c > 0:
+            if cell.value is None:
+                add_if_not_break = 0
+                break
+    read_cols = range(1, c + add_if_not_break)
+    read_to_col = c + add_if_not_break
+
+    json_data = []
+    # red columnwise from second column.
+    rows = ws.iter_rows()
+    obj_path = []
+    parameters = []
+    for r, row in enumerate(rows):
+        if 2 < r < 3 + dim:
+            # get object path
+            obj_path.append([cell.value for i, cell in enumerate(row) if i in read_cols])
+        elif r == 3 + dim:
+            # get parameter name
+            parameters = [cell.value for i, cell in enumerate(row) if i in read_cols]
+            break
+
+    # pivot object paths
+    obj_path = [[obj_path[r][c] for r in range(len(obj_path))] for c in range(len(obj_path[0]))]
+    # read data
+    objects_parameters = [(tuple(o), p) for o, p in zip(obj_path, parameters)]
+    values = {(o, p): {'indexes': [], 'values': []} for o, p in objects_parameters}
+    for row in rows:
+        timestamp = row[0].value
+        if timestamp is None:
+            break
+        for cell, obj_par in zip(islice(row, 1, read_to_col), objects_parameters):
+            cell_value = cell.value
+            if cell_value is None:
+                continue
+            values[obj_par]['indexes'].append(timestamp)
+            values[obj_par]['values'].append(cell_value)
+
+    Data = namedtuple("Data", ["parameter_type"] + path + ["parameter", "value"])
+    for (objects, parameter), data in values.items():
+        # save values if there is json data, a parameter name
+        # and the obj_path doesn't contain None.
+        if sheet_data.lower() == "time series":
+            timeseries = TimeSeriesVariableResolution(data['indexes'], data['values'], repeat=False, ignore_year=False)
+        elif sheet_data.lower() == "time pattern":
+            timeseries = TimePattern(data['indexes'], data['values'])
+        json_data.append(Data._make(["json"] + list(objects) + [parameter, timeseries]))
 
     return SheetData(
         sheet_name=ws.title,
@@ -833,6 +1073,7 @@ def read_parameter_sheet(ws):
     # encounters a empty cell.
     parameters = []
     read_cols = []
+    c = 0
     for c, cell in enumerate(ws[4]):
         if cell.value is None:
             break
