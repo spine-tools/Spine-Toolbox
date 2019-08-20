@@ -578,7 +578,9 @@ class TestTreeViewForm(unittest.TestCase):
         self.assertEqual(split_scooby_nemo_object_id_list, [self.nemo_object.id, self.scooby_object.id])
         self.assertEqual(nemo_scooby_item2_object_name_list, "nemo,scooby")
 
-    @unittest.skip("TODO: Travis gives a ValueError exception on line _, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict) in treeview_models.py")
+    @unittest.skip(
+        "TODO: Travis gives a ValueError exception on line _, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict) in treeview_models.py"
+    )
     def test_add_object_parameter_definitions(self):
         """Test that object parameter definitions are added to the model."""
         self.tree_view_form.object_parameter_definition_model.reset_model()
@@ -615,7 +617,9 @@ class TestTreeViewForm(unittest.TestCase):
         view.itemDelegate().destroyEditor(editor, parameter_name_index)
         self.assertEqual(parameter_name_index.data(), 'breed')
 
-    @unittest.skip("TODO: Travis gives a ValueError exception on line _, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict) in treeview_models.py")
+    @unittest.skip(
+        "TODO: Travis gives a ValueError exception on line _, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict) in treeview_models.py"
+    )
     def test_add_relationship_parameter_definitions(self):
         """Test that relationship parameter definitions are added to the model."""
         self.tree_view_form.relationship_parameter_definition_model.reset_model()
@@ -880,7 +884,6 @@ class TestTreeViewForm(unittest.TestCase):
         split_obj_id_list = [int(x) for x in obj_id_list_index.data().split(',')]
         self.assertEqual(split_obj_id_list, [self.nemo_object.id, self.scooby_object.id])
 
-    @unittest.skip("TODO: Fix this. Does not work on Windows nor on Travis")
     def test_paste_add_object_parameter_definitions(self):
         """Test that data is pasted onto the view and object parameter definitions are added to the model."""
         self.add_mock_object_classes()
@@ -1036,7 +1039,6 @@ class TestTreeViewForm(unittest.TestCase):
         parameter_id = model.index(2, header_index("parameter_id")).data()
         self.assertEqual(parameter_id, self.breed_parameter.id)
 
-    @unittest.skip("TODO: Fix this. Does not work on Windows nor on Travis")
     def test_paste_add_relationship_parameter_definitions(self):
         """Test that data is pasted onto the view and relationship parameter definitions are added to the model."""
         self.add_mock_object_classes()
