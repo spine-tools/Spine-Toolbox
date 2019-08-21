@@ -46,7 +46,6 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         copied = QApplication.clipboard().text()
         self.assertEqual(copied.strip(), "2019-08-08T15:00:00")
 
-    @unittest.skip("TODO: Antti")
     def test_paste_single_value(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -57,7 +56,6 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [-1.1, 2.2, 3.3, 4.4], False, False)
         self.assertEqual(model.value, series)
 
-    @unittest.skip("TODO: Antti")
     def test_paste_value_when_time_stamp_is_selected(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -68,7 +66,6 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [-1.1, 2.2, 3.3, 4.4], False, False)
         self.assertEqual(model.value, series)
 
-    @unittest.skip("TODO: Antti")
     def test_pasting_to_last_row_expands_model(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -79,7 +76,6 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [1.1, 2.2, 3.3, -4.4, -5.5], False, False)
         self.assertEqual(model.value, series)
 
-    @unittest.skip("TODO: Antti")
     def test_paste_to_multirow_selection_limits_pasted_data(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -91,7 +87,6 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [-1.1, -2.2, 3.3, 4.4], False, False)
         self.assertEqual(model.value, series)
 
-    @unittest.skip("TODO: Antti")
     def test_paste_to_larger_selection_overrides_first_rows_only(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
@@ -103,7 +98,6 @@ class TestTimeSeriesFixedResolutionTableView(unittest.TestCase):
         series = TimeSeriesFixedResolution("2019-08-08T15:00", "1h", [-1.1, 2.2, 3.3, 4.4], False, False)
         self.assertEqual(model.value, series)
 
-    @unittest.skip("TODO: Antti")
     def test_pasted_cells_are_selected(self):
         selection_model = self._table_view.selectionModel()
         model = self._table_view.model()
