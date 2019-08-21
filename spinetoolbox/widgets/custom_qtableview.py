@@ -588,7 +588,8 @@ class TimeSeriesFixedResolutionTableView(IndexedParameterValueTableViewBase):
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
             return False
-        mime_data = QApplication.clipboard().mimeData()
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
         if not 'text/plain' in data_formats:
             return False
@@ -666,7 +667,8 @@ class IndexedValueTableView(IndexedParameterValueTableViewBase):
         selection_model = self.selectionModel()
         if not selection_model.hasSelection():
             return False
-        mime_data = QApplication.clipboard().mimeData()
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
         data_formats = mime_data.formats()
         if not 'text/plain' in data_formats:
             return False

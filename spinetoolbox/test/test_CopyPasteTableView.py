@@ -18,6 +18,7 @@ Unit tests for CopyPasteTableView class.
 
 import locale
 import unittest
+from unittest.mock import patch
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, QItemSelectionModel, Qt
 from PySide2.QtWidgets import QApplication
 from widgets.custom_qtableview import CopyPasteTableView
@@ -74,28 +75,22 @@ class _MockModel(QAbstractTableModel):
         return len(self._data)
 
 
+def delocalize_comma_decimal_separator(x):
+    return x.replace(',', '.')
+
+
+def str_with_comma_decimal_separator(x):
+    string = str(x)
+    return string.replace('.', ',')
+
+
 class TestCopyPasteTableView(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
-    def setUp(self):
-        self._original_locale = locale.getlocale()
-        # Set locale to something with special (non-dot) decimal separator.
-        try:
-            locale.setlocale(locale.LC_ALL, "de_DE")
-        except locale.Error:
-            # locale de_DE not found on this system. Let's try something else.
-            try:
-                locale.setlocale(locale.LC_ALL, "German")
-            except locale.Error:
-                # locale German not supported either. Skip test
-                self.skipTest("Locales de_DE and German not found on your system")
-
-    def tearDown(self):
-        locale.setlocale(locale.LC_ALL, self._original_locale)
-
+    @patch('widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
     def test_copy_single_number(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -107,6 +102,7 @@ class TestCopyPasteTableView(unittest.TestCase):
         copied = clipboard.text()
         self.assertEqual(copied, "1,1\r\n")
 
+    @patch('widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
     def test_copy_row_with_hidden_column(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -119,6 +115,9 @@ class TestCopyPasteTableView(unittest.TestCase):
         copied = clipboard.text()
         self.assertEqual(copied, "a\t1,1\r\n")
 
+    @patch('locale.str', str_with_comma_decimal_separator)
+    @patch('widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
+    @patch('widgets.custom_qtableview.locale.delocalize', delocalize_comma_decimal_separator)
     def test_paste_single_localized_number(self):
         view = CopyPasteTableView()
         model = _MockModel()
@@ -128,6 +127,9 @@ class TestCopyPasteTableView(unittest.TestCase):
         self.assertTrue(view.paste())
         self.assertEqual(model.index(0, 2).data(), "-1.1")
 
+    @patch('locale.str', str_with_comma_decimal_separator)
+    @patch('widgets.custom_qtableview.locale.str', str_with_comma_decimal_separator)
+    @patch('widgets.custom_qtableview.locale.delocalize', delocalize_comma_decimal_separator)
     def test_paste_single_localized_row(self):
         view = CopyPasteTableView()
         model = _MockModel()
