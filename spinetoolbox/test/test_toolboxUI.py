@@ -27,6 +27,7 @@ from PySide2.QtTest import QTest
 from ui_main import ToolboxUI
 from project import SpineToolboxProject
 from test.mock_helpers import MockQWidget, qsettings_value_side_effect
+from config import APPLICATION_PATH
 
 
 # noinspection PyUnusedLocal
@@ -157,9 +158,9 @@ class TestToolboxUI(unittest.TestCase):
         Data Connection 'b', Tool 'c', and View 'd'. The items are connected
         a->b->c->d.
         """
-        load_path = os.path.join(os.getcwd(), "project_files", "unit_test_project.proj")
-        if not os.path.exists(load_path):
-            self.skipTest("Test project file not found in path:'{0}'".format(load_path))
+        test_project_path = os.path.join(APPLICATION_PATH, "test", "project_files", "unit_test_project.proj")
+        if not os.path.exists(test_project_path):
+            self.skipTest("Test project file not found in path:'{0}'".format(test_project_path))
             return
         self.assertIsNone(self.toolbox.project())
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
@@ -171,7 +172,7 @@ class TestToolboxUI(unittest.TestCase):
         ) as mock_create_dir, mock.patch(
             "view.create_dir"
         ) as mock_create_dir:
-            self.toolbox.open_project(load_path)
+            self.toolbox.open_project(test_project_path)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
         self.assertEqual(self.toolbox.project_item_model.n_items(), 4)
