@@ -188,7 +188,7 @@ class MappingOptionsWidget(QWidget):
         self._ui_ignore_columns.setMenu(self._ui_ignore_columns_filtermenu)
 
         self._ui_class_type.addItems(["Object", "Relationship"])
-        self._ui_parameter_type.addItems(["Single value", "Time series", "None"])
+        self._ui_parameter_type.addItems(["Single value", "Time series", "Time pattern", "Definition", "List", "None"])
 
         self._ui_dimension.setMinimum(1)
 
@@ -268,19 +268,12 @@ class MappingOptionsWidget(QWidget):
             self._ui_dimension_label.hide()
             self._ui_dimension.hide()
             self._ui_class_type.setCurrentIndex(0)
-        if self._model._model.parameters is None:
-            self._ui_parameter_type.setCurrentIndex(2)
-        else:
-            if self._model._model.parameters.extra_dimensions:
-                self._ui_parameter_type.setCurrentIndex(1)
-            else:
-                self._ui_parameter_type.setCurrentIndex(0)
-        if self._model._model.is_pivoted():
-            self._ui_ignore_columns.show()
-            self._ui_ignore_columns_label.show()
-        else:
-            self._ui_ignore_columns.hide()
-            self._ui_ignore_columns_label.hide()
+        # update parameter mapping
+        self._ui_parameter_type.setCurrentIndex(self._ui_parameter_type.findText(self._model.parameter_type))
+
+        self._ui_ignore_columns.setVisible(self._model.is_pivoted)
+        self._ui_ignore_columns_label.setVisible(self._model.is_pivoted)
+
         # update ignore columns filter
         skip_cols = []
         if self._model._model.skip_columns:
