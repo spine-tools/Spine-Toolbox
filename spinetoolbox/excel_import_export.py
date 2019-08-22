@@ -30,7 +30,6 @@ import numpy as np
 from spinedb_api import import_data, from_database, TimeSeries, TimeSeriesVariableResolution, TimePattern
 
 
-
 SheetData = namedtuple(
     "SheetData",
     ["sheet_name", "class_name", "object_classes", "parameters", "parameter_values", "objects", "class_type"],
