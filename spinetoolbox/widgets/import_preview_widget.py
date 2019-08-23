@@ -19,7 +19,7 @@ Contains ImportPreviewWidget, and MappingTableMenu classes.
 from spinedb_api import ObjectClassMapping, Mapping, dict_to_map
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QListWidgetItem, QErrorMessage
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
-from spine_io.widgets.mapping_widget import MappingWidget
+from widgets.mapping_widget import MappingWidget
 from spine_io.io_models import MappingPreviewModel, MappingListModel
 from ui.import_preview import Ui_ImportPreview
 

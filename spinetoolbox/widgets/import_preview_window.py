@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, Signal
 from PySide2.QtGui import QGuiApplication
 from PySide2.QtWidgets import QMainWindow, QDialogButtonBox, QWidget, QVBoxLayout, QSplitter
 from spine_io.connection_manager import ConnectionManager
-from spine_io.widgets.import_preview_widget import ImportPreviewWidget
+from widgets.import_preview_widget import ImportPreviewWidget
 
 
 class ImportPreviewWindow(QMainWindow):

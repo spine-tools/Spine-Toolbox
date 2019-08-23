@@ -33,8 +33,8 @@ from spine_io.importers.csv_reader import CSVConnector
 from spine_io.importers.excel_reader import ExcelConnector
 from spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
 from spine_io.importers.gdx_connector import GdxConnector
-from spine_io.widgets.import_preview_widget import ImportPreviewWidget
-from spine_io.widgets.import_errors_widget import ImportErrorWidget
+from widgets.import_preview_widget import ImportPreviewWidget
+from widgets.import_errors_widget import ImportErrorWidget
 from spine_io.connection_manager import ConnectionManager
 from ui.import_source_selector import Ui_ImportSourceSelector
 
