@@ -207,7 +207,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 if event.button() != Qt.LeftButton:
                     return
                 self._toolbox.msg_warning.emit(
-                    "Unable to make connection. Try landing " "the connection onto a connector button."
+                    "Unable to make connection. Try landing the connection onto a connector button."
                 )
 
     def mouseMoveEvent(self, event):

@@ -28,10 +28,10 @@ from ui_main import ToolboxUI
 from project import SpineToolboxProject
 from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 from config import APPLICATION_PATH
-from graphics_items import Link
+from graphics_items import ProjectItemIcon, Link
 
 
-# noinspection PyUnusedLocal
+# noinspection PyUnusedLocal,DuplicatedCode
 class TestToolboxUI(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -328,7 +328,7 @@ class TestToolboxUI(unittest.TestCase):
         dc1_index = self.toolbox.project_item_model.find_item(dc1)
         gv = self.toolbox.ui.graphicsView
         dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
-        dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)  # Center point in graphics view viewport coordinates
+        dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)  # Center point in graphics view viewport coords.
         # Simulate mouse click on Data Connection in Design View
         QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
         tv_sm = self.toolbox.ui.treeView_project.selectionModel()
@@ -469,9 +469,40 @@ class TestToolboxUI(unittest.TestCase):
         # The Link item should be selected in Design View
         self.assertIsInstance(selected_items[0], Link)
 
-    @unittest.skip("TODO")
     def test_remove_item(self):
-        self.fail()
+        """Test removing a single project item."""
+        self.toolbox.create_project("UnitTest Project", "")
+        dc1 = "DC1"
+        self.add_dc(dc1)
+        dc1_index = self.toolbox.project_item_model.find_item(dc1)
+        # Check the size of project item model
+        n_items = self.toolbox.project_item_model.n_items()
+        self.assertEqual(n_items, 1)
+        # Check connection model
+        rows_in_connection_model = self.toolbox.connection_model.rowCount()
+        columns_in_connection_model = self.toolbox.connection_model.columnCount()
+        self.assertEqual(rows_in_connection_model, 1)
+        self.assertEqual(columns_in_connection_model, 1)
+        # Check DAG handler
+        dags = self.toolbox.project().dag_handler.dags()
+        self.assertEqual(1, len(dags))  # Number of DAGs (DiGraph objects) in project
+        self.assertEqual(1, len(dags[0].nodes()))  # Number of nodes in the DiGraph
+        # Check number of items in Design View
+        items_in_design_view = self.toolbox.ui.graphicsView.scene().items()
+        n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
+        self.assertEqual(n_items_in_design_view, 1)
+        # NOW REMOVE DC1
+        self.toolbox.remove_item(dc1_index, delete_item=False)
+        self.assertEqual(self.toolbox.project_item_model.n_items(), 0)  # Check the number of project items
+        rows_in_connection_model = self.toolbox.connection_model.rowCount()
+        columns_in_connection_model = self.toolbox.connection_model.columnCount()
+        self.assertEqual(rows_in_connection_model, 0)
+        self.assertEqual(columns_in_connection_model, 0)
+        dags = self.toolbox.project().dag_handler.dags()
+        self.assertEqual(0, len(dags))  # Number of DAGs (DiGraph) objects in project
+        items_in_design_view = self.toolbox.ui.graphicsView.scene().items()
+        n_items_in_design_view = len([item for item in items_in_design_view if isinstance(item, ProjectItemIcon)])
+        self.assertEqual(n_items_in_design_view, 0)
 
     @unittest.skip("TODO")
     def test_add_tool_template(self):
