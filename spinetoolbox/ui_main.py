@@ -63,6 +63,7 @@ from widgets.python_repl_widget import PythonReplWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from config import (
+    APPLICATION_PATH,
     SPINE_TOOLBOX_VERSION,
     STATUSBAR_SS,
     TEXTBROWSER_SS,
@@ -234,6 +235,16 @@ class ToolboxUI(QMainWindow):
         """
         open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="2"))
         if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
+            p = os.path.join(APPLICATION_PATH, os.pardir, "docs", "build", "html", "getting_started.html")
+            getting_started_anchor = (
+                    "<a style='color:#99CCFF;' title='"
+                    + p
+                    + "' href='file:///"
+                    + p
+                    + "'>Getting Started</a>"
+            )
+            self.msg.emit("Welcome to Spine Toolbox! If you need help, here's a {0} guide."
+                          .format(getting_started_anchor))
             return
         # Get path to previous project file
         project_file_path = self._qsettings.value("appSettings/previousProject", defaultValue="")

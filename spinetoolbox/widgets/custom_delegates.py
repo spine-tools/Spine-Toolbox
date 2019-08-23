@@ -16,7 +16,6 @@ Custom item delegates.
 :date:   1.9.2018
 """
 
-import sys
 from PySide2.QtCore import Qt, Signal, QEvent, QPoint, QRect
 from PySide2.QtWidgets import QComboBox, QItemDelegate, QStyleOptionButton, QStyle, QApplication, QStyleOptionComboBox
 from PySide2.QtGui import QIcon
@@ -214,7 +213,7 @@ class ParameterDelegate(QItemDelegate):
         if isinstance(value, (DateTime, Duration, TimePattern, TimeSeries)):
             self.parameter_value_editor_requested.emit(index, value)
             return None
-        elif isinstance(value, (float, int)):
+        if isinstance(value, (float, int)):
             editor = NumberParameterInlineEditor(parent)
         else:
             editor = CustomLineEditor(parent)

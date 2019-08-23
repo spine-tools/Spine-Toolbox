@@ -21,14 +21,11 @@ from PySide2.QtWidgets import (
     QLineEdit,
     QComboBox,
     QCheckBox,
-    QVBoxLayout,
-    QFormLayout,
-    QGroupBox,
     QSpinBox,
     QWidget,
 )
 from PySide2.QtCore import Signal
-
+from ui.import_options import Ui_ImportOptions
 
 class OptionsWidget(QWidget):
     """A widget for handling simple options. Used by ConnectionManager.
@@ -53,14 +50,8 @@ class OptionsWidget(QWidget):
         # ui
         self._ui_choices = {str: QLineEdit, list: QComboBox, int: QSpinBox, bool: QCheckBox}
         self._ui_elements = {}
-
-        # layout
-        self.setLayout(QVBoxLayout())
-        self._form_layout = QFormLayout()
-        self._groupbox = QGroupBox(header)
-        self._groupbox.setLayout(self._form_layout)
-        self.layout().addWidget(self._groupbox)
-
+        self._ui = Ui_ImportOptions()
+        self._ui.setupUi(self)
         self._build_ui()
         self.set_options()
 
@@ -92,7 +83,7 @@ class OptionsWidget(QWidget):
             self._ui_elements[key] = ui_element
 
             # Add to layout:
-            self._form_layout.addRow(QLabel(options['label']), ui_element)
+            self._ui.options_layout.addRow(QLabel(options['label'] + ':'), ui_element)
 
     def set_options(self, options=None, set_missing_default=True):
         """Sets state of options

@@ -378,12 +378,14 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping_value = str(mapping.value_reference)
         return mapping_value
 
+    # pylint: disable=no-self-use
     def get_map_append_display(self, mapping, name):
         append_str = ""
         if isinstance(mapping, Mapping):
             append_str = mapping.append_str
         return append_str
 
+    # pylint: disable=no-self-use
     def get_map_prepend_display(self, mapping, name):
         prepend_str = ""
         if isinstance(mapping, Mapping):
@@ -441,7 +443,7 @@ class MappingSpecModel(QAbstractTableModel):
             if index.column() <= 2:
                 return editable
             return non_editable
-        elif isinstance(mapping, Mapping) and mapping.map_type == "row" and mapping.value_reference == -1:
+        if isinstance(mapping, Mapping) and mapping.map_type == "row" and mapping.value_reference == -1:
             if index.column() == 2:
                 return non_editable
             return editable
@@ -451,11 +453,11 @@ class MappingSpecModel(QAbstractTableModel):
         name = self._display_names[index.row()]
         if index.column() == 1:
             return self.set_type(name, value)
-        elif index.column() == 2:
+        if index.column() == 2:
             return self.set_value(name, value)
-        elif index.column() == 3:
+        if index.column() == 3:
             return self.set_prepend_str(name, value)
-        elif index.column() == 4:
+        if index.column() == 4:
             return self.set_append_str(name, value)
         return False
 

@@ -16,9 +16,9 @@ Contains ODBCConnector class.
 :date:   1.6.2019
 """
 
+from PySide2.QtWidgets import QWidget, QInputDialog, QErrorMessage
 import pyodbc
 from spine_io.io_api import SourceConnection
-from PySide2.QtWidgets import QWidget, QInputDialog, QErrorMessage
 
 
 class ODBCConnector(SourceConnection):
@@ -44,19 +44,15 @@ class ODBCConnector(SourceConnection):
 
     def connect_to_source(self, source):
         """TODO: Needs implementation"""
-        pass
 
     def disconnect(self):
         """TODO: Needs implementation"""
-        pass
 
     def get_tables(self):
         """TODO: Needs implementation"""
-        pass
 
     def get_data_iterator(self, table, options, max_rows=-1):
         """TODO: Needs implementation"""
-        pass
 
     def _new_options(self):
         self.refreshDataRequest.emit()
@@ -70,7 +66,7 @@ class ODBCConnector(SourceConnection):
             return False
         try:
             self._connection = pyodbc.connect(value)
-        except Exception as e:
+        except Exception as e:  # pylint: disable=broad-except
             self._connection = None
             error_dialog = QErrorMessage()
             error_dialog.showMessage(str(e))

@@ -17,7 +17,7 @@ Contains ConnectionManager class.
 """
 
 from PySide2.QtCore import QObject, Signal, QThread
-from spine_io.widgets.options_widget import OptionsWidget
+from widgets.options_widget import OptionsWidget
 
 
 class ConnectionManager(QObject):
