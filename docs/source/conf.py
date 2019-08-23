@@ -79,8 +79,8 @@ exclude_patterns = []
 pygments_style = 'sphinx'
 
 # Settings for Sphinx AutoAPI
-autoapi_dirs = ['../../spinetoolbox']  # package to be documented
-autoapi_ignore = ['*_rc.py']  # ignored modules
+autoapi_dirs = ['../../spinetoolbox']  # packag[e to be documented
+autoapi_ignore = ['*_rc.py', '*test/*', '*ui/*']  # ignored modules
 
 # -- Options for HTML output -------------------------------------------------
 

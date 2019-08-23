@@ -548,7 +548,7 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
         if not self.dag_handler.dags():
-            self._toolbox.msg.emit_warning("Project has no items to execute")
+            self._toolbox.msg_warning.emit("Project has no items to execute")
             return
         # Get selected item
         selected_indexes = self._toolbox.ui.treeView_project.selectedIndexes()
@@ -605,7 +605,7 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.ui.textBrowser_eventlog.verticalScrollBar().maximum()
         )
         if not self.dag_handler.dags():
-            self._toolbox.msg.emit_warning("Project has no items to execute")
+            self._toolbox.msg_warning.emit("Project has no items to execute")
             return
         self._n_graphs = len(self.dag_handler.dags())
         i = 0  # Key for self._ordered_dags dictionary TODO: Switch self._ordered_dags to a list?
@@ -705,7 +705,7 @@ class SpineToolboxProject(MetaObject):
     def export_graphs(self):
         """Export all valid directed acyclic graphs in project to GraphML files."""
         if not self.dag_handler.dags():
-            self._toolbox.msg.emit_warning("Project has no graphs to export")
+            self._toolbox.msg_warning.emit("Project has no graphs to export")
             return
         i = 0
         for g in self.dag_handler.dags():

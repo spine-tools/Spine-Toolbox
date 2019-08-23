@@ -20,6 +20,15 @@ from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListMo
 from PySide2.QtGui import QColor
 from models import MinimalTableModel
 
+_DISPLAY_TYPE_TO_TYPE = {
+    "Single value": "single value",
+    "List": "1d array",
+    "Time series": "time series",
+    "Time pattern": "time pattern",
+    "Definition": "definition",
+}
+_TYPE_TO_DISPLAY_TYPE = {value: key for key, value in _DISPLAY_TYPE_TO_TYPE.items()}
+
 
 class MappingPreviewModel(MinimalTableModel):
     """A model for highlighting columns, rows, and so on, depending on Mapping specification.
@@ -66,7 +75,7 @@ class MappingPreviewModel(MinimalTableModel):
         mapping = self._mapping._model
         if mapping.parameters is not None:
             # parameter colors
-            if mapping.is_pivoted():
+            if mapping.is_pivoted() and mapping.parameters.parameter_type != "definition":
                 # parameter values color
                 last_row = mapping.last_pivot_row()
                 if (
@@ -197,6 +206,18 @@ class MappingSpecModel(QAbstractTableModel):
             return self._model.import_objects
         return True
 
+    @property
+    def parameter_type(self):
+        if self._model.parameters is None:
+            return "None"
+        return _TYPE_TO_DISPLAY_TYPE[self._model.parameters.parameter_type]
+
+    @property
+    def is_pivoted(self):
+        if self._model:
+            return self._model.is_pivoted()
+        return False
+
     def set_import_objects(self, flag):
         self._model.import_objects = bool(flag)
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
@@ -264,24 +285,29 @@ class MappingSpecModel(QAbstractTableModel):
 
     def change_parameter_type(self, new_type):
         """
-        Change parameter between time series, single, and no parameter
+        Change parameter type
         """
+
         self.beginResetModel()
         if new_type == "None":
             self._model.parameters = None
-        elif new_type == "Single value":
-            if self._model.parameters is not None:
-                self._model.parameters.extra_dimensions = None
-            else:
+        elif new_type in ("Single value", "List", "Definition"):
+            if self._model.parameters is None:
                 self._model.parameters = ParameterMapping()
-        elif new_type == "Time series":
-            if self._model.parameters is not None:
-                if self._model.parameters.extra_dimensions is None:
-                    self._model.parameters.extra_dimensions = [None]
-                else:
-                    self._model.parameters.extra_dimensions = self._model.parameters.extra_dimensions[:1]
-            else:
+            self._model.parameters.extra_dimensions = None
+            if new_type == "Definition":
+                self._model.parameters.value = None
+            self._model.parameters.parameter_type = _DISPLAY_TYPE_TO_TYPE[new_type]
+        elif new_type in ("Time series", "Time pattern"):
+            if self._model.parameters is None:
                 self._model.parameters = ParameterMapping(extra_dimensions=[None])
+
+            if self._model.parameters.extra_dimensions is None:
+                self._model.parameters.extra_dimensions = [None]
+            else:
+                self._model.parameters.extra_dimensions = self._model.parameters.extra_dimensions[:1]
+            self._model.parameters.parameter_type = _DISPLAY_TYPE_TO_TYPE[new_type]
+
         self.update_display_table()
         self.dataChanged.emit(QModelIndex, QModelIndex, [])
         self.endResetModel()
@@ -305,10 +331,14 @@ class MappingSpecModel(QAbstractTableModel):
         if self._model.parameters:
             display_name.append("Parameter names")
             mappings.append(self._model.parameters.name)
-            display_name.append("Parameter values")
-            mappings.append(self._model.parameters.value)
-            if self._model.parameters.extra_dimensions:
+            if self._model.parameters.parameter_type != "definition":
+                display_name.append("Parameter values")
+                mappings.append(self._model.parameters.value)
+            if self._model.parameters.parameter_type == "time series":
                 display_name.append("Parameter time index")
+                mappings.append(self._model.parameters.extra_dimensions[0])
+            if self._model.parameters.parameter_type == "time pattern":
+                display_name.append("Parameter time pattern index")
                 mappings.append(self._model.parameters.extra_dimensions[0])
         self._display_names = display_name
         self._mappings = mappings
@@ -348,7 +378,7 @@ class MappingSpecModel(QAbstractTableModel):
                 mapping_value = str(mapping.value_reference)
         return mapping_value
 
-    def get_map_append_display(mapping, name):
+    def get_map_append_display(self, mapping, name):
         append_str = ""
         if isinstance(mapping, Mapping):
             append_str = mapping.append_str
@@ -520,7 +550,7 @@ class MappingSpecModel(QAbstractTableModel):
             mapping = self._model.parameters.name
         elif name == "Parameter values":
             mapping = self._model.parameters.value
-        elif name == "Parameter time index":
+        elif name in ("Parameter time index", "Parameter time pattern index"):
             mapping = self._model.parameters.extra_dimensions[0]
         else:
             return None
@@ -543,7 +573,7 @@ class MappingSpecModel(QAbstractTableModel):
             self._model.parameters.name = mapping
         elif name == "Parameter values":
             self._model.parameters.value = mapping
-        elif name == "Parameter time index":
+        elif name in ("Parameter time index", "Parameter time pattern index"):
             self._model.parameters.extra_dimensions = [mapping]
         else:
             return False

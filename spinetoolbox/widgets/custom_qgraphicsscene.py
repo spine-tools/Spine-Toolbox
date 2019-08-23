@@ -27,7 +27,6 @@ class CustomQGraphicsScene(QGraphicsScene):
     """A scene that handles drag and drop events of DraggableWidget sources."""
 
     files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
-    item_about_to_be_dropped = Signal(int, int, name="item_about_to_be_dropped")
 
     def __init__(self, parent, toolbox):
         """Initialize class."""
@@ -130,11 +129,10 @@ class CustomQGraphicsScene(QGraphicsScene):
         event.acceptProposedAction()
         text = event.mimeData().text()
         pos = event.scenePos()
-        x = pos.x() - 35
-        y = pos.y() - 35
         w = 70
         h = 70
-        self.item_about_to_be_dropped.emit(x, y)
+        x = pos.x() - w / 2
+        y = pos.y() - h / 2
         if text == "Data Store":
             self.item_shadow = DataStoreIcon(self._toolbox, x, y, w, h, "...")
             self._toolbox.show_add_data_store_form(pos.x(), pos.y())

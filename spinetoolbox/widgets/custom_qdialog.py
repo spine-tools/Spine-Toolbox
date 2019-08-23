@@ -45,7 +45,7 @@ from widgets.custom_delegates import (
 )
 from widgets.custom_editors import IconColorEditor
 from widgets.custom_qtableview import CopyPasteTableView
-from helpers import busy_effect
+from helpers import busy_effect, default_icon_id
 
 
 class ManageItemsDialog(QDialog):
@@ -204,7 +204,7 @@ class ShowIconColorEditorMixin:
 
     @busy_effect
     def show_icon_color_editor(self, index):
-        editor = IconColorEditor(self, self._parent.icon_mngr)
+        editor = IconColorEditor(self)
         editor.set_data(index.data(Qt.DisplayRole))
         editor.accepted.connect(lambda index=index, editor=editor: self.set_model_data(index, editor.data()))
         editor.show()
@@ -232,7 +232,7 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
         db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps])
-        self.default_display_icon = self._parent.icon_mngr.default_display_icon()
+        self.default_display_icon = default_icon_id()
         self.model.set_default_row(**{'databases': db_names, 'display icon': self.default_display_icon})
         self.model.clear()
         insert_at_position_list = ['Insert new classes at the top']
@@ -695,7 +695,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
         self.orig_data = list()
-        self.default_display_icon = self._parent.icon_mngr.default_display_icon()
+        self.default_display_icon = default_icon_id()
         model_data = list()
         for db_map_dict in db_map_dicts:
             db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])

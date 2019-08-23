@@ -19,7 +19,7 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 import logging
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QPointF, QTimeLine, QMarginsF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF
 from graphics_items import LinkDrawer, Link
 from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsscene import CustomQGraphicsScene
@@ -37,11 +37,8 @@ class CustomQGraphicsView(QGraphicsView):
         super().__init__(parent=parent)  # Pass parent to QGraphicsView constructor
         self._zoom_factor_base = 1.0015
         self._angle = 120
-        self.target_viewport_pos = None
-        self.target_scene_pos = QPointF(0, 0)
         self._num_scheduled_scalings = 0
         self.anim = None
-        self.rel_zoom_factor = 1.0
         self.default_zoom_factor = 1
         self.max_rel_zoom_factor = 10.0
         self.min_rel_zoom_factor = 0.1
@@ -88,16 +85,6 @@ class CustomQGraphicsView(QGraphicsView):
         self.setDragMode(QGraphicsView.ScrollHandDrag)
         self.viewport().setCursor(Qt.ArrowCursor)
 
-    def mouseMoveEvent(self, event):
-        """Register mouse position to recenter the scene after zoom."""
-        super().mouseMoveEvent(event)
-        if self.target_viewport_pos is not None:
-            delta = self.target_viewport_pos - event.pos()
-            if delta.manhattanLength() <= 3:
-                return
-        self.target_viewport_pos = event.pos()
-        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
-
     def wheelEvent(self, event):
         """Zoom in/out.
 
@@ -121,18 +108,18 @@ class CustomQGraphicsView(QGraphicsView):
                 self.anim.deleteLater()
             self.anim = QTimeLine(200, self)
             self.anim.setUpdateInterval(20)
-            self.anim.valueChanged.connect(self.scaling_time)
+            self.anim.valueChanged.connect(lambda x, pos=event.pos(): self.scaling_time(pos))
             self.anim.finished.connect(self.anim_finished)
             self.anim.start()
         else:
             angle = event.angleDelta().y()
             factor = self._zoom_factor_base ** angle
-            self.gentle_zoom(factor)
+            self.gentle_zoom(factor, event.pos())
 
-    def scaling_time(self, x):
+    def scaling_time(self, pos):
         """Called when animation value for smooth zoom changes. Perform zoom."""
         factor = 1.0 + self._num_scheduled_scalings / 100.0
-        self.gentle_zoom(factor)
+        self.gentle_zoom(factor, pos)
 
     def anim_finished(self):
         """Called when animation for smooth zoom finishes. Clean up."""
@@ -145,37 +132,33 @@ class CustomQGraphicsView(QGraphicsView):
 
     def zoom_in(self):
         """Perform a zoom in with a fixed scaling."""
-        self.target_viewport_pos = self.viewport().rect().center()
-        self.target_scene_pos = self.mapToScene(self.target_viewport_pos)
-        self.gentle_zoom(self._zoom_factor_base ** self._angle)
+        self.gentle_zoom(self._zoom_factor_base ** self._angle, self.viewport().rect().center())
 
     def zoom_out(self):
         """Perform a zoom out with a fixed scaling."""
-        self.gentle_zoom(self._zoom_factor_base ** -self._angle)
+        self.gentle_zoom(self._zoom_factor_base ** -self._angle, self.viewport().rect().center())
 
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
         self.scale(self.default_zoom_factor, self.default_zoom_factor)
-        self.rel_zoom_factor = 1.0
 
-    def gentle_zoom(self, factor):
+    def gentle_zoom(self, factor, center):
         """Perform a zoom by a given factor."""
-        new_rel_zoom_factor = self.rel_zoom_factor * factor
-        if new_rel_zoom_factor > self.max_rel_zoom_factor or new_rel_zoom_factor < self.min_rel_zoom_factor:
+        transform = self.transform()
+        current_scaling_factor = transform.m11()  # The [1, 1] element contains the x scaling factor
+        proposed_scaling_factor = current_scaling_factor * factor
+        if proposed_scaling_factor > self.max_rel_zoom_factor or proposed_scaling_factor < self.min_rel_zoom_factor:
             return
-        self.rel_zoom_factor = new_rel_zoom_factor
         self.scale(factor, factor)
-        self.centerOn(self.target_scene_pos)
-        delta_viewport_pos = self.target_viewport_pos - self.viewport().rect().center()
-        viewport_center = self.mapFromScene(self.target_scene_pos) - delta_viewport_pos
-        self.centerOn(self.mapToScene(viewport_center))
+        scene_center = self.mapToScene(center)
+        self.centerOn(scene_center)
 
     def scale_to_fit_scene(self):
         """Scale view so the scene fits best in it."""
         if not self.isVisible():
             return
-        scene_rect = self.sceneRect()
+        scene_rect = self.scene().sceneRect()
         scene_extent = max(scene_rect.width(), scene_rect.height())
         if not scene_extent:
             return
@@ -224,7 +207,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 if event.button() != Qt.LeftButton:
                     return
                 self._toolbox.msg_warning.emit(
-                    "Unable to make connection. Try landing " "the connection onto a connector button."
+                    "Unable to make connection. Try landing the connection onto a connector button."
                 )
 
     def mouseMoveEvent(self, event):
@@ -242,7 +225,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """Set a new scene into the Design View when app is started."""
         self._toolbox = toolbox
         self.setScene(CustomQGraphicsScene(self, toolbox))
-        self.scene().item_about_to_be_dropped.connect(self._handle_scene_item_about_to_be_dropped)
 
     def init_scene(self, empty=False):
         """Resize scene and add a link drawer on scene.
@@ -267,18 +249,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.scene().setSceneRect(rect)
             self.centerOn(rect.center())
         self.reset_zoom()  # Reset zoom
-
-    @Slot(int, int, name="_handle_scene_item_about_to_be_dropped")
-    def _handle_scene_item_about_to_be_dropped(self, x, y):
-        """Called when the user is about to drop a new item onto the scene.
-        Extend `bg_item` to fill the viewport. This prevents the whole scene to be shifted
-        after the item is dropped.
-        """
-        scene_rect = self.sceneRect()
-        x1, y1, x2, y2 = scene_rect.getCoords()
-        new_rect = QRectF(min(x, x1), min(y, y1), max(x, x2), max(y, y2))
-        new_rect.moveCenter(scene_rect.center())
-        self.setSceneRect(new_rect)
 
     def set_project_item_model(self, model):
         """Set project item model."""

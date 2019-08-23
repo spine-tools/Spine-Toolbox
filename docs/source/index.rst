@@ -6,9 +6,9 @@ Welcome to Spine Toolbox's User Guide!
 Spine Toolbox is an application, which provides means to define, manage, and execute complex data processing and
 computation tasks, such as energy system models.
 
-You can either start reading from the first page onwards or go straight to the Getting Started section to get you
+You can either start reading from the first page onwards or go straight to the :ref:`Getting Started` section to get you
 started quickly. If you need help understanding the terms we use throughout the app and this User Guide, please
-check the Terminology section. If you want to contribute to this project, please see the Contribution Guide.
+check the :ref:`Terminology` section. If you want to contribute to this project, please see the :ref:`Contribution Guide`.
 The last section contains the complete code reference of Spine Toolbox.
 
 .. toctree::
@@ -17,6 +17,7 @@ The last section contains the complete code reference of Spine Toolbox.
 
    tutorials
    main_window
+   project_items
    tool_template_editor
    executing_tools
    settings
@@ -28,7 +29,6 @@ The last section contains the complete code reference of Spine Toolbox.
    terminology
    dependencies
    contribution_guide
-
 
 Indices and tables
 ==================

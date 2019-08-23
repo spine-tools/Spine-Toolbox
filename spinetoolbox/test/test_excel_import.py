@@ -19,10 +19,18 @@ Unit tests for Excel import and export.
 import os
 import tempfile
 import unittest
+
 from unittest import mock
 from unittest.mock import MagicMock
 from collections import namedtuple
-from spinedb_api import DiffDatabaseMapping, create_new_spine_database
+from spinedb_api import (
+    DiffDatabaseMapping,
+    create_new_spine_database,
+    TimeSeriesVariableResolution,
+    to_database,
+    TimePattern,
+)
+import numpy as np
 from excel_import_export import (
     stack_list_of_tuples,
     unstack_list_of_tuples,
@@ -35,6 +43,7 @@ from excel_import_export import (
     export_spine_database_to_xlsx,
     import_xlsx_to_db,
 )
+
 
 UUID_STR = 'f7f92ced-faff-4315-900e-704d2a786a65'
 TEMP_EXCEL_FILENAME = os.path.join(tempfile.gettempdir(), UUID_STR + '-excel.xlsx')
@@ -99,6 +108,7 @@ class TestExcelIntegration(unittest.TestCase):
         oc1_obj2 = db_map.add_object(**{'name': 'oc1_obj2', 'class_id': oc_1.id})
         oc2_obj1 = db_map.add_object(**{'name': 'oc2_obj1', 'class_id': oc_2.id})
         oc2_obj2 = db_map.add_object(**{'name': 'oc2_obj2', 'class_id': oc_2.id})
+        oc3_obj1 = db_map.add_object(**{'name': 'oc3_obj1', 'class_id': oc_3.id})
 
         # add relationships
         rel1 = db_map.add_wide_relationship(
@@ -113,6 +123,8 @@ class TestExcelIntegration(unittest.TestCase):
         p2 = db_map.add_parameter_definitions(*[{'name': 'parameter2', 'object_class_id': oc_1.id}])[0].first()
         p3 = db_map.add_parameter_definitions(*[{'name': 'parameter3', 'object_class_id': oc_2.id}])[0].first()
         p4 = db_map.add_parameter_definitions(*[{'name': 'parameter4', 'object_class_id': oc_2.id}])[0].first()
+        p5 = db_map.add_parameter_definitions(*[{'name': 'parameter5', 'object_class_id': oc_3.id}])[0].first()
+        p6 = db_map.add_parameter_definitions(*[{'name': 'parameter6', 'object_class_id': oc_3.id}])[0].first()
         rel_p1 = db_map.add_parameter_definitions(*[{'name': 'rel_parameter1', 'relationship_class_id': relc1.id}])[
             0
         ].first()
@@ -141,6 +153,16 @@ class TestExcelIntegration(unittest.TestCase):
         db_map.add_parameter_value(
             **{'parameter_definition_id': rel_p4.id, 'relationship_id': rel2.id, 'value': '[1, 2, 3, 4]'}
         )
+
+        time = [np.datetime64('2005-02-25T00:00'), np.datetime64('2005-02-25T01:00'), np.datetime64('2005-02-25T02:00')]
+        value = [1, 2, 3]
+        ts_val = to_database(TimeSeriesVariableResolution(time, value, False, False))
+        db_map.add_parameter_value(**{'parameter_definition_id': p5.id, 'object_id': oc3_obj1.id, 'value': ts_val})
+
+        timepattern = ['m1', 'm2', 'm3']
+        value = [1.1, 2.2, 3.3]
+        ts_val = to_database(TimePattern(timepattern, value))
+        db_map.add_parameter_value(**{'parameter_definition_id': p6.id, 'object_id': oc3_obj1.id, 'value': ts_val})
 
         # commit
         db_map.commit_session('test')
@@ -432,7 +454,9 @@ class TestExcelImport(unittest.TestCase):
         self.assertEqual(d1.class_name, d2.class_name)
         self.assertEqual(d1.object_classes, d2.object_classes)
         self.assertEqual(set(d1.parameters), set(d2.parameters))
-        self.assertEqual(set(d1.parameter_values), set(d2.parameter_values))
+        d1_pval = {p[1:-1]: p[-1] for p in d1.parameter_values}
+        d2_pval = {p[1:-1]: p[-1] for p in d2.parameter_values}
+        self.assertEqual(d1_pval, d2_pval)
         if d1.class_type == 'relationship':
             self.assertEqual(set(tuple(r) for r in d1.objects), set(tuple(r) for r in d2.objects))
         else:
@@ -473,8 +497,8 @@ class TestExcelImport(unittest.TestCase):
         )
         # data for object json sheet
         parameter_values = [
-            self.ObjData('json', 'obj1', 'parameter1', '[1, 2, 3]'),
-            self.ObjData('json', 'obj2', 'parameter2', '[4, 5, 6]'),
+            self.ObjData('json', 'obj1', 'parameter1', [1, 2, 3]),
+            self.ObjData('json', 'obj2', 'parameter2', [4, 5, 6]),
         ]
         data_obj_json = SheetData(
             'object_json',
@@ -503,8 +527,8 @@ class TestExcelImport(unittest.TestCase):
         )
         # data for relationship json sheet
         parameter_values = [
-            self.RelData('json', 'a_obj1', 'b_obj1', 'parameter1', '[1, 2, 3]'),
-            self.RelData('json', 'a_obj2', 'b_obj2', 'parameter2', '[4, 5, 6]'),
+            self.RelData('json', 'a_obj1', 'b_obj1', 'parameter1', [1, 2, 3]),
+            self.RelData('json', 'a_obj2', 'b_obj2', 'parameter2', [4, 5, 6]),
         ]
         data_rel_json = SheetData(
             'relationship_json',
@@ -611,8 +635,8 @@ class TestExcelImport(unittest.TestCase):
         """Test reading a sheet with object parameter"""
         ws = self.ws_rel_json
         parameter_values = [
-            self.RelData('json', 'a_obj1', 'b_obj1', 'parameter1', '[1, 2, 3]'),
-            self.RelData('json', 'a_obj2', 'b_obj2', 'parameter2', '[4, 5, 6]'),
+            self.RelData('json', 'a_obj1', 'b_obj1', 'parameter1', [1, 2, 3]),
+            self.RelData('json', 'a_obj2', 'b_obj2', 'parameter2', [4, 5, 6]),
         ]
         test_data = SheetData(
             'title',
@@ -633,8 +657,8 @@ class TestExcelImport(unittest.TestCase):
         """Test reading a sheet with object parameter"""
         ws = self.ws_obj_json
         parameter_values = [
-            self.ObjData('json', 'obj1', 'parameter1', '[1, 2, 3]'),
-            self.ObjData('json', 'obj2', 'parameter2', '[4, 5, 6]'),
+            self.ObjData('json', 'obj1', 'parameter1', [1, 2, 3]),
+            self.ObjData('json', 'obj2', 'parameter2', [4, 5, 6]),
         ]
         test_data = SheetData(
             'title',

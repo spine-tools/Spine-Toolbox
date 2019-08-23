@@ -1,6 +1,8 @@
 .. Tool template editor documentation
    Created 15.1.2019
 
+.. _Tool template editor:
+
 ********************
 Tool template editor
 ********************

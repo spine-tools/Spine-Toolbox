@@ -832,6 +832,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
         # Remove item icon (QGraphicsItems) from scene
         self.ui.graphicsView.scene().removeItem(project_item.get_icon())
+        self._project.dag_handler.remove_node_from_graph(name)
         if delete_item:
             if data_dir:
                 # Remove data directory and all its contents
@@ -839,13 +840,9 @@ class ToolboxUI(QMainWindow):
                 try:
                     if not erase_dir(data_dir):
                         self.msg_error.emit("Directory does not exist")
-                        return
                 except OSError:
                     self.msg_error.emit("[OSError] Removing directory failed. Check directory permissions.")
-                    return
-        self._project.dag_handler.remove_node_from_graph(name)
         self.msg.emit("Item <b>{0}</b> removed from project".format(name))
-        return
 
     @Slot("QUrl", name="open_anchor")
     def open_anchor(self, qurl):

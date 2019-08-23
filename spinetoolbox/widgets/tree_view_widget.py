@@ -551,21 +551,28 @@ class TreeViewForm(DataStoreForm):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
         for index in deselected.indexes():
-            item_type = index.data(Qt.UserRole)
-            self.selected_obj_tree_indexes[item_type].pop(index)
+            if index.column() == 0:
+                item_type = index.data(Qt.UserRole)
+                self.selected_obj_tree_indexes[item_type].pop(index)
+        filtered_selected_indexes = list()
         for index in selected.indexes():
-            item_type = index.data(Qt.UserRole)
-            self.selected_obj_tree_indexes.setdefault(item_type, {})[index] = None
+            if index.column() == 0:
+                item_type = index.data(Qt.UserRole)
+                self.selected_obj_tree_indexes.setdefault(item_type, {})[index] = None
+                filtered_selected_indexes.append(index)
         self.object_tree_selection_available.emit(any(v for v in self.selected_obj_tree_indexes.values()))
         self.object_class_selection_available.emit(bool(self.selected_obj_tree_indexes.get('object_class', {})))
         self.object_selection_available.emit(bool(self.selected_obj_tree_indexes.get('object', {})))
         if self.do_clear_other_selections:
+            index = filtered_selected_indexes[-1] if filtered_selected_indexes else None
             self.relationship_class_selection_available.emit(
                 bool(self.selected_obj_tree_indexes.get('relationship_class', {}))
             )
             self.relationship_selection_available.emit(bool(self.selected_obj_tree_indexes.get('relationship', {})))
             self.clear_other_selections(self.ui.treeView_object)
-            index = selected.indexes()[-1] if selected.indexes() else None
+            # if index is not None and index.column() > 0:
+            #    # Normalize index because the database column was selected
+            #    index = index.model().index(index.row(), 0, parent=index.parent())
             self.set_default_parameter_rows(index)
             self.update_filter()
 
@@ -575,19 +582,23 @@ class TreeViewForm(DataStoreForm):
         """Called when the relationship tree selection changes.
         Set default rows and apply filters on parameter models."""
         for index in deselected.indexes():
-            item_type = index.data(Qt.UserRole)
-            self.selected_rel_tree_indexes[item_type].pop(index)
+            if index.column() == 0:
+                item_type = index.data(Qt.UserRole)
+                self.selected_rel_tree_indexes[item_type].pop(index)
+        filtered_selected_indexes = list()
         for index in selected.indexes():
-            item_type = index.data(Qt.UserRole)
-            self.selected_rel_tree_indexes.setdefault(item_type, {})[index] = None
+            if index.column() == 0:
+                item_type = index.data(Qt.UserRole)
+                self.selected_rel_tree_indexes.setdefault(item_type, {})[index] = None
+                filtered_selected_indexes.append(index)
         self.relationship_tree_selection_available.emit(any(v for v in self.selected_rel_tree_indexes.values()))
         if self.do_clear_other_selections:
+            index = filtered_selected_indexes[-1] if filtered_selected_indexes else None
             self.relationship_class_selection_available.emit(
                 bool(self.selected_rel_tree_indexes.get('relationship_class', {}))
             )
             self.relationship_selection_available.emit(bool(self.selected_rel_tree_indexes.get('relationship', {})))
             self.clear_other_selections(self.ui.treeView_relationship)
-            index = selected.indexes()[-1] if selected.indexes() else None
             self.set_default_parameter_rows(index)
             self.update_filter()
 
