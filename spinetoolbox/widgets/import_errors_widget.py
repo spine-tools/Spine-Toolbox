@@ -16,29 +16,23 @@ Contains ImportErrorWidget class.
 :date:   1.6.2019
 """
 
-from PySide2.QtWidgets import QWidget, QListWidget, QVBoxLayout, QLabel
+from PySide2.QtWidgets import QWidget
+from ui.import_errors import Ui_ImportErrors
 
 
 class ImportErrorWidget(QWidget):
     """Widget to display errors while importing and ask user for action."""
 
     def __init__(self, parent=None):
-        super(ImportErrorWidget, self).__init__(parent)
+        super().__init__(parent)
 
         # state
         self._error_list = []
         self._num_imported = 0
 
-        # create widgets
-        self._ui_num_errors = QLabel()
-        self._ui_num_imports = QLabel()
-        self._ui_error_list = QListWidget()
-
-        # layout
-        self.setLayout(QVBoxLayout())
-        self.layout().addWidget(self._ui_num_imports)
-        self.layout().addWidget(self._ui_num_errors)
-        self.layout().addWidget(self._ui_error_list)
+        # ui
+        self._ui = Ui_ImportErrors()
+        self._ui.setupUi(self)
 
     def set_import_state(self, num_imported, errors):
         """Sets state of error widget.
@@ -47,7 +41,7 @@ class ImportErrorWidget(QWidget):
             num_imported {int} -- number of successfully imported items
             errors {list} -- list of errors.
         """
-        self._ui_num_errors.setText(f"Number of errors: {len(errors)}")
-        self._ui_num_imports.setText(f"Number of imports: {num_imported}")
-        self._ui_error_list.clear()
-        self._ui_error_list.addItems(errors)
+        self._ui.error_count_label.setText(f"Number of errors: {len(errors)}")
+        self._ui.import_count_label.setText(f"Number of imports: {num_imported}")
+        self._ui.error_list.clear()
+        self._ui.error_list.addItems(errors)

@@ -64,6 +64,36 @@ CALL pyside2-uic ../spinetoolbox/ui/graph_view_form.ui -o ../spinetoolbox/ui/gra
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\graph_view_form.py.o > ..\spinetoolbox\ui\graph_view_form.py
 del ..\spinetoolbox\ui\graph_view_form.py.o
 
+ECHO building import_errors.py
+CALL pyside2-uic ../spinetoolbox/ui/import_errors.ui -o ../spinetoolbox/ui/import_errors.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\import_errors.py.o > ..\spinetoolbox\ui\import_errors.py
+del ..\spinetoolbox\ui\import_errors.py.o
+
+ECHO building import_mapping_options.py
+CALL pyside2-uic ../spinetoolbox/ui/import_mapping_options.ui -o ../spinetoolbox/ui/import_mapping_options.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\import_mapping_options.py.o > ..\spinetoolbox\ui\import_mapping_options.py
+del ..\spinetoolbox\ui\import_mapping_options.py.o
+
+ECHO building import_mapping.py
+CALL pyside2-uic ../spinetoolbox/ui/import_mapping.ui -o ../spinetoolbox/ui/import_mapping.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\import_mapping.py.o > ..\spinetoolbox\ui\import_mapping.py
+del ..\spinetoolbox\ui\import_mapping.py.o
+
+ECHO building import_options.py
+CALL pyside2-uic ../spinetoolbox/ui/import_options.ui -o ../spinetoolbox/ui/import_options.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\import_options.py.o > ..\spinetoolbox\ui\import_options.py
+del ..\spinetoolbox\ui\import_options.py.o
+
+ECHO building import_preview.py
+CALL pyside2-uic ../spinetoolbox/ui/import_preview.ui -o ../spinetoolbox/ui/import_preview.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\import_preview.py.o > ..\spinetoolbox\ui\import_preview.py
+del ..\spinetoolbox\ui\import_preview.py.o
+
+ECHO building import_source_selector.py
+CALL pyside2-uic ../spinetoolbox/ui/import_source_selector.ui -o ../spinetoolbox/ui/import_source_selector.py.o
+findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\import_source_selector.py.o > ..\spinetoolbox\ui\import_source_selector.py
+del ..\spinetoolbox\ui\import_source_selector.py.o
+
 ECHO building mainwindow.py
 CALL pyside2-uic ../spinetoolbox/ui/mainwindow.ui -o ../spinetoolbox/ui/mainwindow.py.o
 findstr /V /C:"# Created:" /C:"#      by:" ..\spinetoolbox\ui\mainwindow.py.o > ..\spinetoolbox\ui\mainwindow.py
@@ -147,6 +177,12 @@ CALL append_license_xml ..\spinetoolbox\ui\add_view.ui
 CALL append_license_xml ..\spinetoolbox\ui\duration_editor.ui
 CALL append_license_xml ..\spinetoolbox\ui\datetime_editor.ui
 CALL append_license_xml ..\spinetoolbox\ui\graph_view_form.ui
+CALL append_license_xml ..\spinetoolbox\ui\import_errors.ui
+CALL append_license_xml ..\spinetoolbox\ui\import_mapping.ui
+CALL append_license_xml ..\spinetoolbox\ui\import_mapping_options.ui
+CALL append_license_xml ..\spinetoolbox\ui\import_options.ui
+CALL append_license_xml ..\spinetoolbox\ui\import_preview.ui
+CALL append_license_xml ..\spinetoolbox\ui\import_source_selector.ui
 CALL append_license_xml ..\spinetoolbox\ui\mainwindow.ui
 CALL append_license_xml ..\spinetoolbox\ui\parameter_value_editor.ui
 CALL append_license_xml ..\spinetoolbox\ui\plain_parameter_value_editor.ui
@@ -171,6 +207,12 @@ CALL append_license_py ..\spinetoolbox\ui\add_view.py
 CALL append_license_py ..\spinetoolbox\ui\duration_editor.py
 CALL append_license_py ..\spinetoolbox\ui\datetime_editor.py
 CALL append_license_py ..\spinetoolbox\ui\graph_view_form.py
+CALL append_license_py ..\spinetoolbox\ui\import_errors.py
+CALL append_license_py ..\spinetoolbox\ui\import_mapping.py
+CALL append_license_py ..\spinetoolbox\ui\import_mapping_options.py
+CALL append_license_py ..\spinetoolbox\ui\import_options.py
+CALL append_license_py ..\spinetoolbox\ui\import_preview.py
+CALL append_license_py ..\spinetoolbox\ui\import_source_selector.py
 CALL append_license_py ..\spinetoolbox\ui\mainwindow.py
 CALL append_license_py ..\spinetoolbox\ui\parameter_value_editor.py
 CALL append_license_py ..\spinetoolbox\ui\plain_parameter_value_editor.py
