@@ -22,12 +22,13 @@ import logging
 import os
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
-from PySide2.QtCore import SIGNAL, Qt
+from PySide2.QtCore import SIGNAL, Qt, QPoint
 from PySide2.QtTest import QTest
 from ui_main import ToolboxUI
 from project import SpineToolboxProject
 from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 from config import APPLICATION_PATH
+from graphics_items import Link
 
 
 # noinspection PyUnusedLocal
@@ -311,32 +312,162 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(tv_sm.isSelected(ds2_ind))
         self.assertEqual(tv_sm.currentIndex(), ds2_ind)
         self.assertEqual(2, len(tv_sm.selectedIndexes()))
+        # There should also be 2 items selected in the Design View
+        n_selected_items_in_design_view = len(self.toolbox.ui.graphicsView.scene().selectedItems())
+        self.assertEqual(2, n_selected_items_in_design_view)
 
     def test_selection_in_design_view_1(self):
-        """Test item selection in Design View. Simulates mouse clicks on a Data Store items.
+        """Test item selection in Design View. Simulates mouse click on a Data Connection item.
         Test a single item selection.
         """
         self.toolbox.create_project("UnitTest Project", "")
-        ds1 = "DS1"
-        self.add_ds(ds1)
+        dc1 = "DC1"
+        self.add_dc(dc1, x=0, y=0)
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 1)  # Check that the project contains one item
-        ds1_ind = self.toolbox.project_item_model.find_item(ds1)
+        dc1_index = self.toolbox.project_item_model.find_item(dc1)
         gv = self.toolbox.ui.graphicsView
-        ds1_item = self.toolbox.project_item_model.project_item(ds1_ind)
-        # Get DS1 item rectangle in item coordinates
-        ds1_rectf = ds1_item.get_icon().rect()  # QRectF in item coordinates
-        # Map item center coordinates to scene coordinates
-        pointf_on_scene = ds1_item.get_icon().mapToScene(ds1_rectf.center())  # QPointF in scene coordinates
-        # Map scene coordinates to viewport coordinates
-        point_on_view = gv.mapFromScene(pointf_on_scene)  # QPoint in graphics view viewport coordinates
-        # Simulate mouse click on selected item
-        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, point_on_view)
+        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)  # Center point in graphics view viewport coordinates
+        # Simulate mouse click on Data Connection in Design View
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
         tv_sm = self.toolbox.ui.treeView_project.selectionModel()
-        self.assertTrue(tv_sm.isSelected(ds1_ind))
-        self.assertEqual(ds1_ind, tv_sm.currentIndex())
+        self.assertTrue(tv_sm.isSelected(dc1_index))
+        self.assertEqual(dc1_index, tv_sm.currentIndex())
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         self.assertEqual(1, len(gv.scene().selectedItems()))
+
+    def test_selection_in_design_view_2(self):
+        """Test item selection in Design View.
+        First mouse click on project item. Second mouse click on a project item.
+        """
+        self.toolbox.create_project("UnitTest Project", "")
+        dc1 = "DC1"
+        dc2 = "DC2"
+        self.add_dc(dc1, x=0, y=0)
+        self.add_dc(dc2, x=100, y=100)
+        n_items = self.toolbox.project_item_model.n_items()
+        self.assertEqual(n_items, 2)  # Check the number of project items
+        dc1_index = self.toolbox.project_item_model.find_item(dc1)
+        dc2_index = self.toolbox.project_item_model.find_item(dc2)
+        gv = self.toolbox.ui.graphicsView
+        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
+        dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
+        # Mouse click on dc1
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
+        # Then mouse click on dc2
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc2_center_point)
+        tv_sm = self.toolbox.ui.treeView_project.selectionModel()
+        self.assertTrue(tv_sm.isSelected(dc2_index))
+        self.assertEqual(dc2_index, tv_sm.currentIndex())
+        self.assertEqual(1, len(tv_sm.selectedIndexes()))
+        self.assertEqual(1, len(gv.scene().selectedItems()))
+
+    def test_selection_in_design_view_3(self):
+        """Test item selection in Design View.
+        First mouse click on project item. Second mouse click on design view.
+        """
+        self.toolbox.create_project("UnitTest Project", "")
+        dc1 = "DC1"
+        self.add_dc(dc1, x=0, y=0)
+        dc1_index = self.toolbox.project_item_model.find_item(dc1)
+        gv = self.toolbox.ui.graphicsView
+        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
+        # Mouse click on dc1
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
+        # Then mouse click somewhere else in Design View (not on project item)
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, QPoint(1, 1))
+        # Treeview current index should be dc1_index
+        tv_sm = self.toolbox.ui.treeView_project.selectionModel()
+        self.assertEqual(dc1_index, tv_sm.currentIndex())
+        self.assertEqual(0, len(tv_sm.selectedIndexes()))  # No items in pi list should be selected
+        self.assertEqual(0, len(gv.scene().selectedItems()))  # No items in design view should be selected
+
+    def test_selection_in_design_view_4(self):
+        """Test item selection in Design View.
+        Mouse click on a link. Check that Link is selected.
+        """
+        self.toolbox.create_project("UnitTest Project", "")
+        dc1 = "DC1"
+        dc2 = "DC2"
+        self.add_dc(dc1, x=0, y=0)
+        self.add_dc(dc2, x=100, y=100)
+        n_items = self.toolbox.project_item_model.n_items()
+        self.assertEqual(n_items, 2)  # Check the number of project items
+        dc1_index = self.toolbox.project_item_model.find_item(dc1)
+        dc2_index = self.toolbox.project_item_model.find_item(dc2)
+        gv = self.toolbox.ui.graphicsView
+        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        row = self.toolbox.connection_model.header.index(dc1)
+        column = self.toolbox.connection_model.header.index(dc2)
+        index = self.toolbox.connection_model.createIndex(row, column)
+        # Add link between dc1 and dc2
+        gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"), index)
+        # Find link
+        links = self.toolbox.connection_model.connected_links(dc1)
+        self.assertEqual(1, len(links))
+        link_center_point = self.find_click_point_of_link(links[0], gv)
+        # Mouse click on link
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, link_center_point)
+        tv_sm = self.toolbox.ui.treeView_project.selectionModel()
+        # Check that dc1 is NOT selected
+        self.assertFalse(tv_sm.isSelected(dc1_index))
+        # Check that dc2 is NOT selected
+        self.assertFalse(tv_sm.isSelected(dc2_index))
+        # No items should be selected in the tree view
+        self.assertEqual(0, len(tv_sm.selectedIndexes()))
+        # One item should be selected in Design View (the Link)
+        selected_items = gv.scene().selectedItems()
+        self.assertEqual(1, len(selected_items))
+        # The Link item should be selected in Design View
+        self.assertIsInstance(selected_items[0], Link)
+
+    def test_selection_in_design_view_5(self):
+        """Test item selection in Design View.
+        First mouse click on project item, then mouse click on a Link.
+        """
+        self.toolbox.create_project("UnitTest Project", "")
+        dc1 = "DC1"
+        dc2 = "DC2"
+        self.add_dc(dc1, x=0, y=0)
+        self.add_dc(dc2, x=100, y=100)
+        n_items = self.toolbox.project_item_model.n_items()
+        self.assertEqual(n_items, 2)  # Check the number of project items
+        dc1_index = self.toolbox.project_item_model.find_item(dc1)
+        dc2_index = self.toolbox.project_item_model.find_item(dc2)
+        gv = self.toolbox.ui.graphicsView
+        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        row = self.toolbox.connection_model.header.index(dc1)
+        column = self.toolbox.connection_model.header.index(dc2)
+        index = self.toolbox.connection_model.createIndex(row, column)
+        # Add link between dc1 and dc2
+        gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"), index)
+        # Find link
+        links = self.toolbox.connection_model.connected_links(dc1)
+        self.assertEqual(1, len(links))
+        dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
+        link_center_point = self.find_click_point_of_link(links[0], gv)
+        # Mouse click on dc1
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, dc1_center_point)
+        # Mouse click on link
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.NoModifier, link_center_point)
+        tv_sm = self.toolbox.ui.treeView_project.selectionModel()
+        # Check that dc1 is NOT selected
+        self.assertFalse(tv_sm.isSelected(dc1_index))
+        # Check that dc2 is NOT selected
+        self.assertFalse(tv_sm.isSelected(dc2_index))
+        # No items should be selected in the tree view
+        self.assertEqual(0, len(tv_sm.selectedIndexes()))
+        # One item should be selected in Design View (the Link)
+        selected_items = gv.scene().selectedItems()
+        self.assertEqual(1, len(selected_items))
+        # The Link item should be selected in Design View
+        self.assertIsInstance(selected_items[0], Link)
 
     @unittest.skip("TODO")
     def test_remove_item(self):
@@ -350,29 +481,57 @@ class TestToolboxUI(unittest.TestCase):
     def test_remove_tool_template(self):
         self.fail()
 
-    def add_ds(self, name):
-        """Helper method to add Data Store. Returns created items name."""
+    def add_ds(self, name, x=0, y=0):
+        """Helper method to create a Data Store with the given name and coordinates."""
         with mock.patch("data_store.create_dir") as mock_create_dir:
-            self.toolbox.project().add_data_store(name, "", "sqlite://")
+            self.toolbox.project().add_data_store(name, "", "sqlite://", x=x, y=y)
         return
 
-    def add_dc(self):
-        """Helper method to add Data Connection. Returns created items name."""
+    def add_dc(self, name, x=0, y=0):
+        """Helper method to create a Data Connection with the given name and coordinates."""
         with mock.patch("data_connection.create_dir") as mock_create_dir:
-            self.toolbox.project().add_data_connection("DC", "", references=list())
-        return "DC"
+            self.toolbox.project().add_data_connection(name, "", references=list(), x=x, y=y)
+        return
 
-    def add_tool(self):
-        """Helper method to add Tool. Returns created items name."""
-        with mock.patch("tool.create_dir") as mock_create_dir:
-            self.toolbox.project().add_tool("tool", "", tool_template=None)
-        return "tool"
+    @staticmethod
+    def find_click_point_of_pi(pi, gv):
+        """Maps given project item icons center coordinates to given Graphics View viewport coordinates.
 
-    def add_view(self):
-        """Helper method to add View. Returns created items name."""
-        with mock.patch("view.create_dir") as mock_create_dir:
-            self.toolbox.project().add_view("view", "")
-        return "view"
+        Args:
+            pi (ProjectItem): Project item to process
+            gv (QGraphicsView): View that contains the scene where the project item icon is shown
+
+        Returns:
+            (QPoint): Center point of the project item icon in graphics view viewport coordinates.
+        """
+        # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
+        # Get project item icon rectangle
+        qrectf = pi.get_icon().rect()  # Returns a rectangle in item coordinate system
+        # Map project item icon rectangle center point to scene coordinates
+        qpointf = pi.get_icon().mapToScene(qrectf.center())  # Returns a point in scene coordinate system
+        # Map scene coordinates to graphics view viewport coordinates
+        qpoint = gv.mapFromScene(qpointf)  # Returns a point in Graphics view viewport coordinate system
+        return qpoint
+
+    @staticmethod
+    def find_click_point_of_link(link, gv):
+        """Maps given Link icons center coordinates to given Graphics View viewport coordinates.
+
+        Args:
+            link (QGraphicsPathItem): Link to process
+            gv (QGraphicsView): Graphics View containing the scene that displays the link
+
+        Returns:
+            (QPoint): Center point of the Link in graphics view viewport coordinates.
+        """
+        # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
+        # Get project item icon rectangle
+        qrectf = link.boundingRect()  # Returns a rectangle in item coordinate system
+        # Map project item icon rectangle center point to scene coordinates
+        qpointf = link.mapToScene(qrectf.center())  # Returns a point in scene coordinate system
+        # Map scene coordinates to graphics view viewport coordinates
+        qpoint = gv.mapFromScene(qpointf)  # Returns a point in Graphics view viewport coordinate system
+        return qpoint
 
 
 if __name__ == '__main__':
