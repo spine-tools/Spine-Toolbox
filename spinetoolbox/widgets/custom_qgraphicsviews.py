@@ -149,7 +149,9 @@ class CustomQGraphicsView(QGraphicsView):
         transform = self.transform()
         current_scaling_factor = transform.m11()  # The [1, 1] element contains the x scaling factor
         proposed_scaling_factor = current_scaling_factor * factor
-        if proposed_scaling_factor > self.max_rel_zoom_factor or proposed_scaling_factor < self.min_rel_zoom_factor:
+        if (
+            proposed_scaling_factor > current_scaling_factor and proposed_scaling_factor > self.max_rel_zoom_factor
+        ) or (proposed_scaling_factor < current_scaling_factor and proposed_scaling_factor < self.min_rel_zoom_factor):
             return
         self.scale(factor, factor)
         post_scaling_focus_on_scene = self.mapToScene(zoom_focus)
