@@ -17,20 +17,11 @@ Contains ImportPreviewWidget, and MappingTableMenu classes.
 """
 
 from spinedb_api import ObjectClassMapping, Mapping, dict_to_map
-from PySide2.QtWidgets import (
-    QWidget,
-    QListWidget,
-    QVBoxLayout,
-    QTableView,
-    QMenu,
-    QListWidgetItem,
-    QErrorMessage,
-    QSplitter,
-    QGroupBox,
-)
+from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QListWidgetItem, QErrorMessage
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
 from spine_io.widgets.mapping_widget import MappingWidget
 from spine_io.io_models import MappingPreviewModel, MappingListModel
+from ui.import_preview import Ui_ImportPreview
 
 
 class ImportPreviewWidget(QWidget):
@@ -58,50 +49,21 @@ class ImportPreviewWidget(QWidget):
         self.table_updating = False
         self.data_updating = False
 
-        # create widgets
+        # create ui
+        self._ui = Ui_ImportPreview()
+        self._ui.setupUi(self)
+        self._ui.source_data_table.setModel(self.table)
         self._ui_error = QErrorMessage()
-        self._ui_list = QListWidget()  # List of data sources
-        self._ui_table = QTableView()  # Table of source data
-        self._ui_table.setModel(self.table)
+        self._ui_preview_menu = MappingTableMenu(self._ui.source_data_table)
+        self._ui.top_source_splitter.addWidget(self.connector.option_widget())
+        self._ui.mappings_box.setLayout(QVBoxLayout())
         self._ui_mapper = MappingWidget()
-        self._ui_preview_menu = MappingTableMenu(self._ui_table)
-
-        # layout
-        self.setLayout(QVBoxLayout())
-        main_splitter = QSplitter()
-        self.layout().addWidget(main_splitter)
-
-        source_groupbox = QGroupBox("Sources")
-        source_layout = QVBoxLayout()
-        source_splitter = QSplitter()
-        source_splitter.setOrientation(Qt.Vertical)
-        source_layout.addWidget(source_splitter)
-        top_source_splitter = QSplitter()
-        top_source_splitter.addWidget(self._ui_list)
-        top_source_splitter.addWidget(self.connector.option_widget())
-        source_splitter.addWidget(top_source_splitter)
-        source_splitter.addWidget(self._ui_table)
-        source_groupbox.setLayout(source_layout)
-
-        mapping_groupbox = QGroupBox("Mappings")
-        mapping_layout = QVBoxLayout()
-        mapping_layout.addWidget(self._ui_mapper)
-        mapping_groupbox.setLayout(mapping_layout)
-
-        main_splitter.addWidget(source_groupbox)
-        main_splitter.addWidget(mapping_groupbox)
-
-        # Name splitters, so they are found by ImportPreviewWindow.findChildren()
-        main_splitter.setObjectName("ImportPreviewWidget_main_splitter")
-        source_splitter.setObjectName("ImportPreviewWidget_source_splitter")
-        top_source_splitter.setObjectName("ImportPreviewWidget_top_source_splitter")
+        self._ui.mappings_box.layout().addWidget(self._ui_mapper)
 
         # connect signals
-        self._ui_table.setContextMenuPolicy(Qt.CustomContextMenu)
-        self._ui_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
-
-        self._ui_list.currentItemChanged.connect(self.select_table)
-        self._ui_list.itemChanged.connect(self.check_list_item)
+        self._ui.source_data_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
+        self._ui.source_list.currentItemChanged.connect(self.select_table)
+        self._ui.source_list.itemChanged.connect(self.check_list_item)
 
         # signals for connector
         self.connector.connectionReady.connect(self.connection_ready)
@@ -133,8 +95,8 @@ class ImportPreviewWidget(QWidget):
     @property
     def checked_tables(self):
         checked_items = []
-        for i in range(self._ui_list.count()):
-            item = self._ui_list.item(i)
+        for i in range(self._ui.source_list.count()):
+            item = self._ui.source_list.item(i)
             if item.checkState() == Qt.Checked:
                 checked_items.append(item.text())
         return checked_items
@@ -143,8 +105,8 @@ class ImportPreviewWidget(QWidget):
         """
         Sets widgets enable state
         """
-        self._ui_list.setDisabled(status)
-        self._ui_table.setDisabled(status)
+        self._ui.source_list.setDisabled(status)
+        self._ui.source_data_table.setDisabled(status)
         self._ui_mapper.setDisabled(status)
         self.connector.option_widget().setDisabled(status)
 
@@ -203,19 +165,19 @@ class ImportPreviewWidget(QWidget):
                 self.table_mappings.pop(k)
 
         if not tables:
-            self._ui_list.clear()
-            self._ui_list.clearSelection()
+            self._ui.source_list.clear()
+            self._ui.source_list.clearSelection()
             return
 
         # current selected table
-        selected = self._ui_list.selectedItems()
+        selected = self._ui.source_list.selectedItems()
         self.selected_source_tables = set(tables.keys()).intersection(self.selected_source_tables)
 
         # empty tables list and add new tables
-        self._ui_list.blockSignals(True)
-        self._ui_list.currentItemChanged.disconnect(self.select_table)
-        self._ui_list.clear()
-        self._ui_list.clearSelection()
+        self._ui.source_list.blockSignals(True)
+        self._ui.source_list.currentItemChanged.disconnect(self.select_table)
+        self._ui.source_list.clear()
+        self._ui.source_list.clearSelection()
         for t in tables:
             item = QListWidgetItem()
             item.setText(t)
@@ -224,19 +186,19 @@ class ImportPreviewWidget(QWidget):
                 item.setCheckState(Qt.Checked)
             else:
                 item.setCheckState(Qt.Unchecked)
-            self._ui_list.addItem(item)
-        self._ui_list.currentItemChanged.connect(self.select_table)
-        self._ui_list.blockSignals(False)
+            self._ui.source_list.addItem(item)
+        self._ui.source_list.currentItemChanged.connect(self.select_table)
+        self._ui.source_list.blockSignals(False)
 
         # reselect table if existing otherwise select first table
         if selected and selected[0].text() in tables:
             table = selected[0].text()
-            self._ui_list.setCurrentRow(tables.index(table), QItemSelectionModel.SelectCurrent)
+            self._ui.source_list.setCurrentRow(tables.index(table), QItemSelectionModel.SelectCurrent)
         elif tables:
             # select first item
-            self._ui_list.setCurrentRow(0, QItemSelectionModel.SelectCurrent)
-        if self._ui_list.selectedItems():
-            self.select_table(self._ui_list.selectedItems()[0])
+            self._ui.source_list.setCurrentRow(0, QItemSelectionModel.SelectCurrent)
+        if self._ui.source_list.selectedItems():
+            self.select_table(self._ui.source_list.selectedItems()[0])
         self.tableChecked.emit()
 
     def update_preview_data(self, data, header):
@@ -257,8 +219,8 @@ class ImportPreviewWidget(QWidget):
         }
         self.connector.set_table_options(settings.get("table_options", {}))
         self.selected_source_tables.update(set(settings.get("selected_tables", [])))
-        if self._ui_list.selectedItems():
-            self.select_table(self._ui_list.selectedItems()[0])
+        if self._ui.source_list.selectedItems():
+            self.select_table(self._ui.source_list.selectedItems()[0])
 
     def get_settings_dict(self):
         """Returns a dictionary with type of connector, connector options for tables,

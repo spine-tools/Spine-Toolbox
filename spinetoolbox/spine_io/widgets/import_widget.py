@@ -19,7 +19,6 @@ ImportDialog class.
 from PySide2.QtWidgets import (
     QWidget,
     QApplication,
-    QListWidget,
     QVBoxLayout,
     QDialogButtonBox,
     QMainWindow,
@@ -37,6 +36,7 @@ from spine_io.importers.gdx_connector import GdxConnector
 from spine_io.widgets.import_preview_widget import ImportPreviewWidget
 from spine_io.widgets.import_errors_widget import ImportErrorWidget
 from spine_io.connection_manager import ConnectionManager
+from ui.import_source_selector import Ui_ImportSourceSelector
 
 
 class ImportDialog(QDialog):
@@ -50,7 +50,7 @@ class ImportDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-
+        self.setWindowTitle("Import data")
         # DB mapping
         if parent is not None:
             self._db_map = parent.db_maps[0]
@@ -66,7 +66,6 @@ class ImportDialog(QDialog):
 
         # create widgets
         self._import_preview = None
-        self._ui_list = QListWidget()
         self._error_widget = ImportErrorWidget()
         self._error_widget.hide()
         self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Abort | QDialogButtonBox.Cancel)
@@ -75,9 +74,9 @@ class ImportDialog(QDialog):
         self._layout = QVBoxLayout()
 
         # layout
-        self.select_widget = QWidget()
-        self.select_widget.setLayout(QVBoxLayout())
-        self.select_widget.layout().addWidget(self._ui_list)
+        self.select_widget = QWidget(self)
+        self._select_widget_ui = Ui_ImportSourceSelector()
+        self._select_widget_ui.setupUi(self.select_widget)
 
         self.setLayout(QVBoxLayout())
         self.layout().addLayout(self._layout)
@@ -86,14 +85,14 @@ class ImportDialog(QDialog):
         self._layout.addWidget(self.select_widget)
 
         # set list items
-        self._ui_list.blockSignals(True)
-        self._ui_list.addItems([c for c in self.connector_list.keys()])
-        self._ui_list.clearSelection()
-        self._ui_list.blockSignals(False)
+        self._select_widget_ui.source_list.blockSignals(True)
+        self._select_widget_ui.source_list.addItems([c for c in self.connector_list.keys()])
+        self._select_widget_ui.source_list.clearSelection()
+        self._select_widget_ui.source_list.blockSignals(False)
 
         # connect signals
-        self._ui_list.currentItemChanged.connect(self.connector_selected)
-        self._ui_list.activated.connect(self.launch_import_preview)
+        self._select_widget_ui.source_list.currentItemChanged.connect(self.connector_selected)
+        self._select_widget_ui.source_list.activated.connect(self.launch_import_preview)
         self._dialog_buttons.button(QDialogButtonBox.Ok).clicked.connect(self.ok_clicked)
         self._dialog_buttons.button(QDialogButtonBox.Cancel).clicked.connect(self.cancel_clicked)
         self._dialog_buttons.button(QDialogButtonBox.Abort).clicked.connect(self.back_clicked)
