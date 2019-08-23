@@ -143,16 +143,19 @@ class CustomQGraphicsView(QGraphicsView):
         self.resetTransform()
         self.scale(self.default_zoom_factor, self.default_zoom_factor)
 
-    def gentle_zoom(self, factor, center):
+    def gentle_zoom(self, factor, zoom_focus):
         """Perform a zoom by a given factor."""
+        initial_focus_on_scene = self.mapToScene(zoom_focus)
         transform = self.transform()
         current_scaling_factor = transform.m11()  # The [1, 1] element contains the x scaling factor
         proposed_scaling_factor = current_scaling_factor * factor
         if proposed_scaling_factor > self.max_rel_zoom_factor or proposed_scaling_factor < self.min_rel_zoom_factor:
             return
         self.scale(factor, factor)
-        scene_center = self.mapToScene(center)
-        self.centerOn(scene_center)
+        post_scaling_focus_on_scene = self.mapToScene(zoom_focus)
+        center_on_scene = self.mapToScene(self.viewport().rect().center())
+        focus_diff = post_scaling_focus_on_scene - initial_focus_on_scene
+        self.centerOn(center_on_scene - focus_diff)
 
     def scale_to_fit_scene(self):
         """Scale view so the scene fits best in it."""
