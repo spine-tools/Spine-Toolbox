@@ -32,11 +32,11 @@ from widgets.custom_menus import (
     ParameterValueListContextMenu,
 )
 from widgets.custom_qdialog import RemoveTreeItemsDialog
+from widgets.import_widget import ImportDialog
 from widgets.report_plotting_failure import report_plotting_failure
 from treeview_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import datapackage_to_spine
-from widgets.import_widget import ImportDialog
 from helpers import busy_effect, int_list_to_row_count_tuples
 from plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 

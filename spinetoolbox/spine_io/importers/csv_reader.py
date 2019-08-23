@@ -74,7 +74,8 @@ class CSVConnector(SourceConnection):
         tables = [self._filename]
         return tables
 
-    def parse_options(self, options):
+    @staticmethod
+    def parse_options(options):
         """Parses options dict to dialect and quotechar options for csv.reader
 
         Arguments:

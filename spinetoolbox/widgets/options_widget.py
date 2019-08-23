@@ -21,9 +21,6 @@ from PySide2.QtWidgets import (
     QLineEdit,
     QComboBox,
     QCheckBox,
-    QVBoxLayout,
-    QFormLayout,
-    QGroupBox,
     QSpinBox,
     QWidget,
 )
