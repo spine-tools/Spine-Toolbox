@@ -3,7 +3,7 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [Unreleased]
+## [0.3b] - 2019-08-26
 
 ### Added
 - Zooming (by using the mouse wheel) is now enabled in Design View. You can also select multiple project
@@ -48,17 +48,10 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Executing project items does not happen from the Tool Properties anymore. It happens instead by pressing the
   Play button in the main window Toolbar.
 
-
-### Deprecated
-
 ### Removed
 - ConfigurationParser class in configuration.py.
 - Execute button in Tool Properties.
 - Stop button in Tool Properties.
-
-### Fixed
-
-### Security
 
 ## [0.2] - 2019-01-17
 
