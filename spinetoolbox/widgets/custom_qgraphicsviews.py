@@ -17,6 +17,7 @@ Classes for custom QGraphicsViews for the Design and Graph views.
 """
 
 import logging
+import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF
@@ -39,9 +40,9 @@ class CustomQGraphicsView(QGraphicsView):
         self._angle = 120
         self._num_scheduled_scalings = 0
         self.anim = None
-        self.default_zoom_factor = 1
-        self.max_rel_zoom_factor = 10.0
-        self.min_rel_zoom_factor = 0.1
+        self._scene_fitting_zoom = 1.0
+        self._max_zoom = 10.0
+        self._min_zoom = 0.1
 
     def keyPressEvent(self, event):
         """Overridden method. Enable zooming with plus and minus keys (comma resets zoom).
@@ -141,17 +142,19 @@ class CustomQGraphicsView(QGraphicsView):
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
-        self.scale(self.default_zoom_factor, self.default_zoom_factor)
+        self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
 
     def gentle_zoom(self, factor, zoom_focus):
         """Perform a zoom by a given factor."""
         initial_focus_on_scene = self.mapToScene(zoom_focus)
         transform = self.transform()
-        current_scaling_factor = transform.m11()  # The [1, 1] element contains the x scaling factor
-        proposed_scaling_factor = current_scaling_factor * factor
-        if (
-            proposed_scaling_factor > current_scaling_factor and proposed_scaling_factor > self.max_rel_zoom_factor
-        ) or (proposed_scaling_factor < current_scaling_factor and proposed_scaling_factor < self.min_rel_zoom_factor):
+        current_zoom = transform.m11()  # The [1, 1] element contains the x scaling factor
+        proposed_zoom = current_zoom * factor
+        if proposed_zoom < self._min_zoom:
+            factor = self._min_zoom / current_zoom
+        elif proposed_zoom > self._max_zoom:
+            factor = self._max_zoom / current_zoom
+        if math.isclose(factor, 1.0):
             return
         self.scale(factor, factor)
         post_scaling_focus_on_scene = self.mapToScene(zoom_focus)
@@ -169,7 +172,8 @@ class CustomQGraphicsView(QGraphicsView):
             return
         size = self.size()
         extent = min(size.height(), size.width())
-        self.default_zoom_factor = extent / scene_extent
+        self._scene_fitting_zoom = extent / scene_extent
+        self._min_zoom = min(self._scene_fitting_zoom, 0.1)
         self.reset_zoom()
 
 
