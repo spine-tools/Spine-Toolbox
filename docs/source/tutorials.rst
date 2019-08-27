@@ -12,5 +12,4 @@ The following tutorials are available:
 .. toctree::
    :maxdepth: 1
 
-   getting_started
    case_study_a5

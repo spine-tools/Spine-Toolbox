@@ -23,13 +23,13 @@ from config import SPINE_TOOLBOX_VERSION
 # -- Project information -----------------------------------------------------
 
 project = 'Spine Toolbox'
-copyright = '2019, Pekka Savolainen, Manuel Marin, Erkka Rinne, Per Vennström'
-author = 'Pekka Savolainen, Manuel Marin, Erkka Rinne, Per Vennström'
+copyright = '2019, P. Savolainen, M. Marin, E. Rinne, P. Vennström, A. Soininen'
+author = 'P. Savolainen, M. Marin, E. Rinne, P. Vennström, A. Soininen'
 
 # The short X.Y version
 version = SPINE_TOOLBOX_VERSION
 # The full version, including alpha/beta/rc tags
-release = '0.2'
+release = '0.3b'
 
 
 # -- General configuration ---------------------------------------------------

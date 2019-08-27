@@ -15,6 +15,7 @@ The last section contains the complete code reference of Spine Toolbox.
    :maxdepth: 1
    :caption: Contents:
 
+   getting_started
    tutorials
    main_window
    project_items
