@@ -54,7 +54,6 @@ class GraphViewForm(DataStoreForm):
         self.ui.graphicsView._graph_view_form = self
         self.read_only = read_only
         self._has_graph = False
-        self._scene_bg = None
         self.extent = 512
         self._spread = 3 * self.extent
         self.object_label_color = self.palette().color(QPalette.Normal, QPalette.ToolTipBase)
@@ -304,8 +303,7 @@ class GraphViewForm(DataStoreForm):
         self.init_graph_data()
         self._has_graph = self.make_graph()
         if self._has_graph:
-            self.ui.graphicsView.scale_to_fit_scene()
-            self.extend_scene_bg()
+            self.extend_scene()
             toc = time.clock()
             self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         else:
@@ -590,24 +588,17 @@ class GraphViewForm(DataStoreForm):
         old_scene = self.ui.graphicsView.scene()
         if old_scene:
             old_scene.deleteLater()
-        self._scene_bg = QGraphicsRectItem()
-        self._scene_bg.setPen(Qt.NoPen)
-        self._scene_bg.setZValue(-100)
         scene = QGraphicsScene()
         self.ui.graphicsView.setScene(scene)
-        scene.addItem(self._scene_bg)
         scene.changed.connect(self._handle_scene_changed)
         scene.selectionChanged.connect(self._handle_scene_selection_changed)
         return scene
 
-    def extend_scene_bg(self):
-        """Make scene background the size of the view.
-        """
-        view_rect = self.ui.graphicsView.viewport().rect()
-        top_left = self.ui.graphicsView.mapToScene(view_rect.topLeft())
-        bottom_right = self.ui.graphicsView.mapToScene(view_rect.bottomRight())
-        rectf = QRectF(top_left, bottom_right)
-        self._scene_bg.setRect(rectf)
+    def extend_scene(self):
+        """Make scene rect the size of the scene show all items."""
+        bounding_rect = self.ui.graphicsView.scene().itemsBoundingRect()
+        self.ui.graphicsView.scene().setSceneRect(bounding_rect)
+        self.ui.graphicsView.reset_zoom()
 
     @Slot(name="_handle_scene_selection_changed")
     def _handle_scene_selection_changed(self):
@@ -629,13 +620,17 @@ class GraphViewForm(DataStoreForm):
                 self.selected_object_id_lists.setdefault(item.relationship_class_id, set()).add(item.object_id_list)
         self.do_update_filter()
 
-    @Slot("QList<QRectF>", name="_handle_scene_changed")
+    @Slot(list, name="_handle_scene_changed")
     def _handle_scene_changed(self, region):
         """Handle scene changed. Show usage message if no items other than the bg.
         """
-        if len(self.ui.graphicsView.scene().items()) > 1:  # TODO: should we use sender() here?
+        scene_rect = self.ui.graphicsView.scene().sceneRect()
+        if all(scene_rect.contains(rect) for rect in region):
             return
-        self.show_usage_msg()
+        extended_rect = scene_rect
+        for rect in region:
+            extended_rect = extended_rect.united(rect)
+        self.ui.graphicsView.scene().setSceneRect(extended_rect)
 
     def show_usage_msg(self):
         """Show usage instructions in new scene.
@@ -686,7 +681,7 @@ class GraphViewForm(DataStoreForm):
         usage_item.linkActivated.connect(self._handle_usage_link_activated)
         scene.addItem(usage_item)
         self._has_graph = False
-        self.ui.graphicsView.scale_to_fit_scene()
+        self.extend_scene()
 
     @Slot("QString", name="_handle_usage_link_activated")
     def _handle_usage_link_activated(self, link):
@@ -706,7 +701,6 @@ class GraphViewForm(DataStoreForm):
             scene = self.ui.graphicsView.scene()
         else:
             scene = self.new_scene()
-        self.extend_scene_bg()
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         data = eval(text)  # pylint: disable=eval-used
         if data["type"] == "object_class":
@@ -744,6 +738,7 @@ class GraphViewForm(DataStoreForm):
             self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
             self.template_id += 1
         self._has_graph = True
+        self.extend_scene()
 
     def relationship_items(
         self,
