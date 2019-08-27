@@ -35,7 +35,7 @@ class CustomQGraphicsView(QGraphicsView):
 
     def __init__(self, parent):
         """Init CustomQGraphicsView."""
-        super().__init__(parent=parent)  # Pass parent to QGraphicsView constructor
+        super().__init__(parent=parent)
         self._zoom_factor_base = 1.0015
         self._angle = 120
         self._num_scheduled_scalings = 0
@@ -117,6 +117,20 @@ class CustomQGraphicsView(QGraphicsView):
             factor = self._zoom_factor_base ** angle
             self.gentle_zoom(factor, event.pos())
 
+    def setScene(self, scene):
+        super().setScene(scene)
+        scene.sceneRectChanged.connect(self._update_zoom_limits)
+
+    @Slot("QRectF", name="_update_zoom_limits")
+    def _update_zoom_limits(self, rect):
+        scene_extent = max(rect.width(), rect.height())
+        if not scene_extent:
+            return
+        size = self.size()
+        extent = min(size.height(), size.width())
+        self._scene_fitting_zoom = extent / scene_extent
+        self._min_zoom = min(self._scene_fitting_zoom, 0.1)
+
     def scaling_time(self, pos):
         """Called when animation value for smooth zoom changes. Perform zoom."""
         factor = 1.0 + self._num_scheduled_scalings / 100.0
@@ -142,7 +156,8 @@ class CustomQGraphicsView(QGraphicsView):
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
-        self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
+        if self._scene_fitting_zoom < 1.0:
+            self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
 
     def gentle_zoom(self, factor, zoom_focus):
         """Perform a zoom by a given factor."""
@@ -161,20 +176,6 @@ class CustomQGraphicsView(QGraphicsView):
         center_on_scene = self.mapToScene(self.viewport().rect().center())
         focus_diff = post_scaling_focus_on_scene - initial_focus_on_scene
         self.centerOn(center_on_scene - focus_diff)
-
-    def scale_to_fit_scene(self):
-        """Scale view so the scene fits best in it."""
-        if not self.isVisible():
-            return
-        scene_rect = self.scene().sceneRect()
-        scene_extent = max(scene_rect.width(), scene_rect.height())
-        if not scene_extent:
-            return
-        size = self.size()
-        extent = min(size.height(), size.width())
-        self._scene_fitting_zoom = extent / scene_extent
-        self._min_zoom = min(self._scene_fitting_zoom, 0.1)
-        self.reset_zoom()
 
 
 class DesignQGraphicsView(CustomQGraphicsView):
@@ -257,7 +258,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             rect = QRectF(0, 0, 401, 301)
             self.scene().setSceneRect(rect)
             self.centerOn(rect.center())
-        self.reset_zoom()  # Reset zoom
+        self.reset_zoom()
 
     def set_project_item_model(self, model):
         """Set project item model."""
