@@ -118,27 +118,43 @@ class CustomQGraphicsView(QGraphicsView):
             self.gentle_zoom(factor, event.pos())
 
     def resizeEvent(self, event):
+        """
+        Updates zoom if needed when the view is resized.
+
+        Args:
+            event (QResizeEvent): a resize event
+        """
         new_size = self.size()
         old_size = event.oldSize()
         if new_size != old_size:
             scene = self.scene()
             if scene is not None:
                 self._update_zoom_limits(self.scene().sceneRect())
+                if new_size.width() > old_size.width() or new_size.height() > old_size.height():
+                    transform = self.transform()
+                    zoom = transform.m11()
+                    if zoom < self._min_zoom:
+                        self.reset_zoom()
         super().resizeEvent(event)
 
-    def showEvent(self, event):
-        scene = self.scene()
-        if scene is not None:
-            self._update_zoom_limits(self.scene().sceneRect())
-            self.reset_zoom()
-        super().showEvent(event)
-
     def setScene(self, scene):
+        """
+        Sets a new scene to this view.
+
+        Args:
+            scene (QGraphicsScene): a new scene
+        """
         super().setScene(scene)
         scene.sceneRectChanged.connect(self._update_zoom_limits)
 
     @Slot("QRectF", name="_update_zoom_limits")
     def _update_zoom_limits(self, rect):
+        """
+        Updates the minimum zoom limit and the zoom level with which the entire scene fits the view.
+
+        Args:
+            rect (QRectF): the scene's rect
+        """
         scene_extent = max(rect.width(), rect.height())
         if not scene_extent:
             return
@@ -176,7 +192,13 @@ class CustomQGraphicsView(QGraphicsView):
             self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
 
     def gentle_zoom(self, factor, zoom_focus):
-        """Perform a zoom by a given factor."""
+        """
+        Perform a zoom by a given factor.
+
+        Args:
+            factor (float): a scaling factor relative to the current scene scaling
+            zoom_focus (QPoint): focus of the zoom, e.g. mouse pointer position
+        """
         initial_focus_on_scene = self.mapToScene(zoom_focus)
         transform = self.transform()
         current_zoom = transform.m11()  # The [1, 1] element contains the x scaling factor
