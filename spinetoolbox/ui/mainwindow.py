@@ -1251,6 +1251,9 @@ class Ui_MainWindow(object):
         icon26.addPixmap(QtGui.QPixmap(":/icons/project_item_icons/map-solid.svg"), QtGui.QIcon.Normal, QtGui.QIcon.Off)
         self.actionAdd_Data_Interface.setIcon(icon26)
         self.actionAdd_Data_Interface.setObjectName("actionAdd_Data_Interface")
+        self.actionGetting_started = QtWidgets.QAction(MainWindow)
+        self.actionGetting_started.setIcon(icon21)
+        self.actionGetting_started.setObjectName("actionGetting_started")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
         self.menuFile.addAction(self.actionSave)
@@ -1262,6 +1265,7 @@ class Ui_MainWindow(object):
         self.menuFile.addSeparator()
         self.menuFile.addAction(self.actionQuit)
         self.menuHelp.addAction(self.actionUser_Guide)
+        self.menuHelp.addAction(self.actionGetting_started)
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionAbout_Qt)
         self.menuHelp.addAction(self.actionAbout)
@@ -1326,10 +1330,16 @@ class Ui_MainWindow(object):
         MainWindow.setTabOrder(self.radioButton_execute_in_source, self.toolButton_tool_open_dir)
         MainWindow.setTabOrder(self.toolButton_tool_open_dir, self.scrollArea_4)
         MainWindow.setTabOrder(self.scrollArea_4, self.treeView_view)
-        MainWindow.setTabOrder(self.treeView_view, self.toolButton_view_open_dir)
-        MainWindow.setTabOrder(self.toolButton_view_open_dir, self.tableView_connections)
-        MainWindow.setTabOrder(self.tableView_connections, self.scrollArea_6)
-        MainWindow.setTabOrder(self.scrollArea_6, self.toolButton_di_open_dir)
+        MainWindow.setTabOrder(self.treeView_view, self.pushButton_view_open_tree_view)
+        MainWindow.setTabOrder(self.pushButton_view_open_tree_view, self.pushButton_view_open_graph_view)
+        MainWindow.setTabOrder(self.pushButton_view_open_graph_view, self.pushButton_view_open_tabular_view)
+        MainWindow.setTabOrder(self.pushButton_view_open_tabular_view, self.toolButton_view_open_dir)
+        MainWindow.setTabOrder(self.toolButton_view_open_dir, self.scrollArea_6)
+        MainWindow.setTabOrder(self.scrollArea_6, self.treeView_data_interface_files)
+        MainWindow.setTabOrder(self.treeView_data_interface_files, self.pushButton_import_editor)
+        MainWindow.setTabOrder(self.pushButton_import_editor, self.toolButton_di_open_dir)
+        MainWindow.setTabOrder(self.toolButton_di_open_dir, self.tableView_connections)
+        MainWindow.setTabOrder(self.tableView_connections, self.tabWidget_item_properties)
 
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Spine Toolbox", None, -1))
@@ -1455,14 +1465,16 @@ class Ui_MainWindow(object):
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
         self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1))
-        self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
+        self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F5", None, -1))
         self.actionRemove_all.setText(QtWidgets.QApplication.translate("MainWindow", "Remove all", None, -1))
         self.actionRemove_all.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1))
         self.actionExport_project_to_GraphML.setText(QtWidgets.QApplication.translate("MainWindow", "Export project to GraphML", None, -1))
         self.actionAdd_Data_Interface.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1))
+        self.actionGetting_started.setText(QtWidgets.QApplication.translate("MainWindow", "Getting started", None, -1))
+        self.actionGetting_started.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
+from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 import resources_icons_rc

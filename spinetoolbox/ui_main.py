@@ -68,7 +68,7 @@ from config import (
     STATUSBAR_SS,
     TEXTBROWSER_SS,
     MAINWINDOW_SS,
-    DOC_INDEX_PATH,
+    DOCUMENTATION_PATH,
     TREEVIEW_HEADER_SS,
 )
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
@@ -192,6 +192,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Data_Interface.triggered.connect(self.show_add_data_interface_form)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
+        self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
@@ -235,7 +236,7 @@ class ToolboxUI(QMainWindow):
         """
         open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="2"))
         if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
-            p = os.path.join(APPLICATION_PATH, os.pardir, "docs", "build", "html", "getting_started.html")
+            p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
             getting_started_anchor = (
                     "<a style='color:#99CCFF;' title='"
                     + p
@@ -243,7 +244,7 @@ class ToolboxUI(QMainWindow):
                     + p
                     + "'>Getting Started</a>"
             )
-            self.msg.emit("Welcome to Spine Toolbox! If you need help, here's a {0} guide."
+            self.msg.emit("Welcome to Spine Toolbox! If you need help, please read the {0} guide."
                           .format(getting_started_anchor))
             return
         # Get path to previous project file
@@ -1210,13 +1211,24 @@ class ToolboxUI(QMainWindow):
     @Slot(name="show_user_guide")
     def show_user_guide(self):
         """Open Spine Toolbox documentation index page in browser."""
-        index_url = "file:///" + DOC_INDEX_PATH
+        doc_index_path = os.path.join(DOCUMENTATION_PATH, "index.html")
+        index_url = "file:///" + doc_index_path
         # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
         res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
         if not res:
             logging.error("Failed to open editor for %s", index_url)
-            # filename, file_extension = os.path.splitext(index_path)
-            self.msg_error.emit("Unable to open file <b>{0}</b>".format(DOC_INDEX_PATH))
+            self.msg_error.emit("Unable to open file <b>{0}</b>".format(doc_index_path))
+
+    @Slot(name="show_getting_started_guide")
+    def show_getting_started_guide(self):
+        """Open Spine Toolbox Getting Started HTML page in browser."""
+        getting_started_path = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
+        index_url = "file:///" + getting_started_path
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(index_url, QUrl.TolerantMode))
+        if not res:
+            logging.error("Failed to open editor for %s", index_url)
+            self.msg_error.emit("Unable to open file <b>{0}</b>".format(getting_started_path))
 
     @Slot("QPoint", name="show_item_context_menu")
     def show_item_context_menu(self, pos):
