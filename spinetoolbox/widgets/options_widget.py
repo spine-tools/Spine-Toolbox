@@ -16,16 +16,10 @@ Contains OptionsWidget class.
 :date:   1.6.2019
 """
 
-from PySide2.QtWidgets import (
-    QLabel,
-    QLineEdit,
-    QComboBox,
-    QCheckBox,
-    QSpinBox,
-    QWidget,
-)
+from PySide2.QtWidgets import QLabel, QLineEdit, QComboBox, QCheckBox, QSpinBox, QWidget
 from PySide2.QtCore import Signal
 from ui.import_options import Ui_ImportOptions
+
 
 class OptionsWidget(QWidget):
     """A widget for handling simple options. Used by ConnectionManager.
