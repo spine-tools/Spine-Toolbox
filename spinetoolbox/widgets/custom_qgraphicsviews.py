@@ -117,6 +117,22 @@ class CustomQGraphicsView(QGraphicsView):
             factor = self._zoom_factor_base ** angle
             self.gentle_zoom(factor, event.pos())
 
+    def resizeEvent(self, event):
+        new_size = self.size()
+        old_size = event.oldSize()
+        if new_size != old_size:
+            scene = self.scene()
+            if scene is not None:
+                self._update_zoom_limits(self.scene().sceneRect())
+        super().resizeEvent(event)
+
+    def showEvent(self, event):
+        scene = self.scene()
+        if scene is not None:
+            self._update_zoom_limits(self.scene().sceneRect())
+            self.reset_zoom()
+        super().showEvent(event)
+
     def setScene(self, scene):
         super().setScene(scene)
         scene.sceneRectChanged.connect(self._update_zoom_limits)
