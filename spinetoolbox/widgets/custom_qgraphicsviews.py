@@ -292,11 +292,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
             items_rect = self.scene().itemsBoundingRect()
             margin_rect = items_rect.marginsAdded(QMarginsF(20, 20, 20, 20))  # Add margins
             self.scene().setSceneRect(margin_rect)
-            self.centerOn(margin_rect.center())
         else:
             rect = QRectF(0, 0, 401, 301)
             self.scene().setSceneRect(rect)
-            self.centerOn(rect.center())
+        self.scene().update()
         self.reset_zoom()
 
     def set_project_item_model(self, model):
