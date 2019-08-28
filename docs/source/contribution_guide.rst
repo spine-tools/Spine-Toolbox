@@ -3,6 +3,7 @@
 
 .. _Qt Style Sheets: http://doc.qt.io/qt-5/stylesheet.html
 .. _PEP-8: https://www.python.org/dev/peps/pep-0008/
+.. _Google style: http://google.github.io/styleguide/pyguide.html
 
 .. _Contribution Guide:
 
@@ -20,7 +21,7 @@ breaks with the greater community - just follow along.
 Spine Toolbox coding style follows PEP-8_ style guide for Python code with the following variations:
 
 * Maximum line length is 120 characters. Longer lines are acceptable if there's a sound reason.
-* Google style docstrings with the title and input parameters are required for all classes, functions, and methods.
+* `Google style`_ docstrings with the title and input parameters are required for all classes, functions, and methods.
   For small functions or methods only the summary is necessary. Return types are highly recommended but not required
   if it is obvious what the function or method returns.
 * Other deviations from PEP-8 can be discussed if there are good reasons.
@@ -32,8 +33,7 @@ plain text files that are formatted in a way that Sphinx understands and is able
 You can find a brief introduction to reStructured text in (http://www.sphinx-doc.org/en/stable/rest.html).
 You can modify the existing or create new .rst files into ``docs/source`` directory. When you are done editing, run
 ``bin/build_doc.bat`` on Windows or ``bin/build_doc.sh`` on Linux to build the HTML pages. The created pages are
-found in ``docs/build/html`` directory. Both scripts first run the sphinx-apidoc tool, which reads DocStrings from
-the source code and turns them into a nice looking API HTML reference automatically.
+found in ``docs/build/html`` directory. 
 
 Contributing to the Spine Toolbox Graphical User Interface
 ==========================================================
@@ -108,20 +108,13 @@ that one set of changes from your repository, in case you have multiple unrelate
 A corollary: don't submit unrelated changes in the same branch/pull request! The maintainer shouldn't have
 to reject your awesome bugfix because the feature you put in with it needs more review.
 
-Base your new branch off of the appropriate branch on the main repository:
+Name your new branch descriptively, e.g. `issue#XXX-fixing-a-serious-bug` or `issue#ZZZ-cool-new-feature`. 
+New branches should in general be based on the latest `dev` branch. 
+In case you want to include a new feature still in development, you can also start working from its branch.
+The developers will backport any relevant bug-fixes to previous or upcoming releases under preparation.
 
-**Bug fixes should be based on the branch named after the oldest supported release line the bug affects**
-
-    E.g. if a feature was introduced in 1.1, the latest release line is 1.3, and a bug is found in that
-    feature - make your branch based on 1.1. The maintainer will then forward-port it to 1.3 and master.
-    Bug fixes requiring large changes to the code or which have a chance of being otherwise disruptive,
-    may need to base off of master instead. This is a judgement call – ask the devs!
-
-**New features should branch off of the 'master' branch**
-
-    Note that depending on how long it takes for the dev team to merge your patch, the copy of master
-    you worked off of may get out of date! If you find yourself 'bumping' a pull request that’s been
-    sidelined for a while, make sure you rebase or merge to latest master to ensure a speedier resolution.
+Finally, make a pull request from your branch so that the developers can review your changes. 
+You might be asked to make additional changes or clarifications or add tests to prove the new feature works as intended.
 
 Test-driven development is your friend
 --------------------------------------
@@ -134,17 +127,15 @@ is strongly encouraged.
 
 Full example
 ------------
-Here’s an example workflow for a project ``theproject`` hosted on Github, which is currently in version
-1.3.x. Your username is ``yourname`` and you’re submitting a basic bugfix. (This workflow only changes
-slightly if the project is hosted at Bitbucket, self-hosted, or etc.)
+Here’s an example workflow. Your username is ``yourname`` and you’re submitting a basic bugfix. 
 
 **Preparing your Fork**
 
-1. Click ‘Fork’ on Github, creating e.g. ``yourname/theproject``
-2. Clone your project: ``git clone git@github.com:yourname/theproject``
-3. ``cd theproject``
+1. Click ‘Fork’ on Github, creating e.g. ``yourname/Spine-Toolbox``
+2. Clone your project: ``git clone git@github.com:yourname/Spine-Toolbox``
+3. ``cd Spine-Toolbox``
 4. Create a virtual environment and install requirements
-5. Create a branch: ``git checkout -b foo-the-bars 1.3``
+5. Create a branch: ``git checkout -b foo-the-bars master``
 
 **Making your Changes**
 
