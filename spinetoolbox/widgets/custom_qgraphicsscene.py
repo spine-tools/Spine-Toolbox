@@ -156,13 +156,12 @@ class CustomQGraphicsScene(QGraphicsScene):
             painter (QPainter): Painter that is used to paint background
             rect (QRectF): The exposed (viewport) rectangle in scene coordinates
         """
-        rect = self.sceneRect()  # Override to only draw background for the scene rectangle
+        scene_rect = self.sceneRect()
+        rect = rect.intersected(scene_rect)   # Limit to only draw background for the scene rectangle
         if not self.bg_grid:
             painter.fillRect(rect, QBrush(self.bg_color))
             return
         step = 20  # Grid step
-        # logging.debug("sceneRect pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
-        #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
         painter.setPen(QPen(QColor(0, 0, 0, 40)))
         # Draw horizontal grid
         start = round(rect.top(), step)
