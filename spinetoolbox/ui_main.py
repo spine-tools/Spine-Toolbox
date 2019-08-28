@@ -158,7 +158,6 @@ class ToolboxUI(QMainWindow):
         self.hide_tabs()
         # Finalize init
         self.connect_signals()
-        self.init_project()
         self.init_shared_widgets()  # Shared among multiple project items
         self.restore_ui()
         self.ui.lineEdit_port.setValidator(QIntValidator())

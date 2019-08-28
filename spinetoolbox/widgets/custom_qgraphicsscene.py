@@ -57,9 +57,9 @@ class CustomQGraphicsScene(QGraphicsScene):
     @Slot("QList<QRectF>", name="scene_changed")
     def scene_changed(self, rects):
         """Resize scene as it changes."""
-        # rect = self.scene().sceneRect()
-        # logging.debug("scene_changed pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
-        #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
+        scene_rect = self.sceneRect()
+        if all(scene_rect.contains(rect) for rect in rects):
+            return
         self.resize_scene()
 
     @Slot(name="handle_selection_changed")

@@ -52,6 +52,7 @@ def main(argv):
     QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     window = ToolboxUI()
     window.show()
+    window.init_project()
     # Enter main event loop and wait until exit() is called
     return_code = app.exec_()
     return return_code

@@ -134,6 +134,7 @@ class CustomQGraphicsView(QGraphicsView):
                     transform = self.transform()
                     zoom = transform.m11()
                     if zoom < self._min_zoom:
+                        # Reset the zoom if the view has grown and the current zoom is too small
                         self.reset_zoom()
         super().resizeEvent(event)
 
