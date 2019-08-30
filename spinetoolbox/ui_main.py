@@ -63,7 +63,6 @@ from widgets.python_repl_widget import PythonReplWidget
 import widgets.toolbars
 from project import SpineToolboxProject
 from config import (
-    APPLICATION_PATH,
     SPINE_TOOLBOX_VERSION,
     STATUSBAR_SS,
     TEXTBROWSER_SS,
@@ -553,12 +552,13 @@ class ToolboxUI(QMainWindow):
         proj_items = [self.project_item_model.project_item(i) for i in inds]
         # NOTE: Category items are not selectable anymore
         # Sync selection with the scene
-        scene = self.ui.graphicsView.scene()
-        scene.sync_selection = False  # This tells the scene not to sync back
-        scene.clearSelection()
-        for item in proj_items:
-            item.get_icon().setSelected(True)
-        scene.sync_selection = True
+        if len(proj_items) > 0:
+            scene = self.ui.graphicsView.scene()
+            scene.sync_selection = False  # This tells the scene not to sync back
+            scene.clearSelection()
+            for item in proj_items:
+                item.get_icon().setSelected(True)
+            scene.sync_selection = True
         # Refresh active item if needed
         if len(proj_items) == 1:
             new_active_project_item = proj_items[0]

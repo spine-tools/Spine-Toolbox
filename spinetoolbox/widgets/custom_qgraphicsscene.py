@@ -16,10 +16,14 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
+import logging
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon, DataInterfaceIcon, ProjectItemIcon
+from graphics_items import DataConnectionIcon, ToolIcon, \
+    DataStoreIcon, ViewIcon, \
+    DataInterfaceIcon, ProjectItemIcon, \
+    Link
 from widgets.toolbars import DraggableWidget
 
 
@@ -64,13 +68,12 @@ class CustomQGraphicsScene(QGraphicsScene):
 
     @Slot(name="handle_selection_changed")
     def handle_selection_changed(self):
-        """Synchronize selection with the project tree.
-        """
+        """Synchronize selection with the project tree."""
         if not self.sync_selection:
             return
         selected_items = [item for item in self.selectedItems() if isinstance(item, ProjectItemIcon)]
-        self._toolbox.ui.treeView_project.clearSelection()
         selected_inds = [self._toolbox.project_item_model.find_item(item.name()) for item in selected_items]
+        self._toolbox.ui.treeView_project.clearSelection()
         for ind in selected_inds:
             self._toolbox.ui.treeView_project.selectionModel().select(ind, QItemSelectionModel.Select)
         # Make last item selected the current index in project tree view
