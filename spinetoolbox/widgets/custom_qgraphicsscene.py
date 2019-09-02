@@ -20,10 +20,15 @@ import logging
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import DataConnectionIcon, ToolIcon, \
-    DataStoreIcon, ViewIcon, \
-    DataInterfaceIcon, ProjectItemIcon, \
-    Link
+from graphics_items import (
+    DataConnectionIcon,
+    ToolIcon,
+    DataStoreIcon,
+    ViewIcon,
+    DataInterfaceIcon,
+    ProjectItemIcon,
+    Link,
+)
 from widgets.toolbars import DraggableWidget
 
 
@@ -78,7 +83,9 @@ class CustomQGraphicsScene(QGraphicsScene):
             self._toolbox.ui.treeView_project.selectionModel().select(ind, QItemSelectionModel.Select)
         # Make last item selected the current index in project tree view
         if bool(selected_inds):
-            self._toolbox.ui.treeView_project.setCurrentIndex(selected_inds[-1])
+            self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(
+                selected_inds[-1], QItemSelectionModel.NoUpdate
+            )
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.
@@ -160,7 +167,7 @@ class CustomQGraphicsScene(QGraphicsScene):
             rect (QRectF): The exposed (viewport) rectangle in scene coordinates
         """
         scene_rect = self.sceneRect()
-        rect = rect.intersected(scene_rect)   # Limit to only draw background for the scene rectangle
+        rect = rect.intersected(scene_rect)  # Limit to only draw background for the scene rectangle
         if not self.bg_grid:
             painter.fillRect(rect, QBrush(self.bg_color))
             return
