@@ -547,7 +547,6 @@ class ToolboxUI(QMainWindow):
         active item: disconnect signals of previous active item, connect signals of current active item
         and show correct properties tab for the latter.
         """
-        # TODO: use `selected` and `deselected` to keep a list of selected indexes?
         inds = self.ui.treeView_project.selectedIndexes()
         proj_items = [self.project_item_model.project_item(i) for i in inds]
         # NOTE: Category items are not selectable anymore
