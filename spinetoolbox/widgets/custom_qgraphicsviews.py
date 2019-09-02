@@ -513,6 +513,10 @@ class GraphQGraphicsView(CustomQGraphicsView):
         super().__init__(parent=parent)
         self._graph_view_form = None
 
+    def set_graph_view_form(self, form):
+        """Sets the _graph_view_form attribute."""
+        self._graph_view_form = form
+
     def dragLeaveEvent(self, event):
         """Accept event. Then call the super class method
         only if drag source is not DragListView."""

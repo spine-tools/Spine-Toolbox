@@ -21,9 +21,17 @@ import logging
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import QToolButton, QApplication, QGraphicsScene, QGraphicsRectItem, QAction, QWidgetAction
-from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QSize
-from PySide2.QtGui import QIcon, QPalette
+from PySide2.QtWidgets import (
+    QToolButton,
+    QApplication,
+    QGraphicsScene,
+    QGraphicsRectItem,
+    QAction,
+    QWidgetAction,
+    QAbstractItemView,
+)
+from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QSize, QEvent
+from PySide2.QtGui import QIcon, QPalette, QMouseEvent
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
 from ui.graph_view_form import Ui_MainWindow
 from widgets.data_store_widget import DataStoreForm
@@ -51,7 +59,7 @@ class GraphViewForm(DataStoreForm):
         super().__init__(project, Ui_MainWindow(), db_maps)
         self.db_map = self.db_maps[0]
         self.db_name = self.db_names[0]
-        self.ui.graphicsView._graph_view_form = self
+        self.ui.graphicsView.set_graph_view_form(self)
         self.read_only = read_only
         self._has_graph = False
         self.extent = 512
@@ -104,6 +112,8 @@ class GraphViewForm(DataStoreForm):
         # Set up splitters
         area = self.dockWidgetArea(self.ui.dockWidget_item_palette)
         self._handle_item_palette_dock_location_changed(area)
+        # Override mouse press event of object tree view
+        self.ui.treeView_object.mousePressEvent = self._object_tree_view_mouse_press_event
         # Set up dock widgets
         self.restore_dock_widgets()
         # Initialize stuff
@@ -210,6 +220,25 @@ class GraphViewForm(DataStoreForm):
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
         self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
 
+    def _object_tree_view_mouse_press_event(self, event):
+        """Overrides mousePressEvent of ui.treeView_object so that selection is extended
+        as if Ctrl key was pressed."""
+        local_pos = event.localPos()
+        window_pos = event.windowPos()
+        screen_pos = event.screenPos()
+        button = event.button()
+        buttons = event.buttons()
+        modifiers = event.modifiers()
+        if modifiers & Qt.ControlModifier:
+            modifiers &= ~Qt.ControlModifier
+        else:
+            modifiers |= Qt.ControlModifier
+        source = event.source()
+        new_event = QMouseEvent(
+            QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
+        )
+        QAbstractItemView.mousePressEvent(self.ui.treeView_object, new_event)
+
     @Slot(name="restore_dock_widgets")
     def restore_dock_widgets(self):
         """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
@@ -265,10 +294,10 @@ class GraphViewForm(DataStoreForm):
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
         """Called when a menu from the menubar is about to show."""
-        self.ui.actionGraph_hide_selected.setEnabled(len(self.object_item_selection) > 0)
-        self.ui.actionGraph_show_hidden.setEnabled(len(self.hidden_items) > 0)
-        self.ui.actionGraph_prune_selected.setEnabled(len(self.object_item_selection) > 0)
-        self.ui.actionGraph_reinstate_pruned.setEnabled(len(self.rejected_items) > 0)
+        self.ui.actionGraph_hide_selected.setEnabled(bool(self.object_item_selection))
+        self.ui.actionGraph_show_hidden.setEnabled(bool(self.hidden_items))
+        self.ui.actionGraph_prune_selected.setEnabled(bool(self.object_item_selection))
+        self.ui.actionGraph_reinstate_pruned.setEnabled(bool(self.rejected_items))
 
     @Slot("Qt.DockWidgetArea", name="_handle_item_palette_dock_location_changed")
     def _handle_item_palette_dock_location_changed(self, area):
