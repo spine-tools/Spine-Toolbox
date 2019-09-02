@@ -84,7 +84,7 @@ class CustomQGraphicsView(QGraphicsView):
         """Reestablish scroll hand drag mode."""
         super().mouseReleaseEvent(event)
         self.setDragMode(QGraphicsView.ScrollHandDrag)
-        self.viewport().setCursor(Qt.ArrowCursor)
+        # self.viewport().setCursor(Qt.ArrowCursor)
 
     def wheelEvent(self, event):
         """Zoom in/out.
