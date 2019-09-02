@@ -485,6 +485,38 @@ class TestToolboxUI(unittest.TestCase):
         # Active project item should be None
         self.assertIsNone(self.toolbox.active_project_item)
 
+    def test_selection_in_design_view_6(self):
+        """Test multiple item selection in Design View.
+        First mouse click on project item (Ctrl-key pressed).
+        Second mouse click on a project item (Ctrl-key pressed).
+        """
+        self.toolbox.create_project("UnitTest Project", "")
+        dc1 = "DC1"
+        dc2 = "DC2"
+        self.add_dc(dc1, x=0, y=0)
+        self.add_dc(dc2, x=100, y=100)
+        n_items = self.toolbox.project_item_model.n_items()
+        self.assertEqual(n_items, 2)  # Check the number of project items
+        dc1_index = self.toolbox.project_item_model.find_item(dc1)
+        dc2_index = self.toolbox.project_item_model.find_item(dc2)
+        gv = self.toolbox.ui.graphicsView
+        dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
+        dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
+        dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
+        dc2_center_point = self.find_click_point_of_pi(dc2_item, gv)
+        # Mouse click on dc1
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.ControlModifier, dc1_center_point)
+        # Then mouse click on dc2
+        QTest.mouseClick(gv.viewport(), Qt.LeftButton, Qt.ControlModifier, dc2_center_point)
+        tv_sm = self.toolbox.ui.treeView_project.selectionModel()
+        self.assertEqual(2, len(tv_sm.selectedIndexes()))
+        self.assertTrue(tv_sm.isSelected(dc1_index))
+        self.assertTrue(tv_sm.isSelected(dc2_index))
+        # NOTE: No test for tv_sm current index here!
+        self.assertEqual(2, len(gv.scene().selectedItems()))
+        # Active project item should be None
+        self.assertIsNone(self.toolbox.active_project_item)
+
     def test_remove_item(self):
         """Test removing a single project item."""
         self.toolbox.create_project("UnitTest Project", "")
