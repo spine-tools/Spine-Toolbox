@@ -1290,13 +1290,14 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
         self._cursor = self.textCursor()
-        # Position
-        x = -self.boundingRect().width() / 2
-        y = -self.boundingRect().height() / 2
+        self.reset_position()
+
+    def reset_position(self):
+        """Centers this item."""
+        rectf = self.boundingRect()
+        x = -rectf.width() / 2
+        y = -rectf.height() / 2
         self.setPos(x, y)
-        option = self.document().defaultTextOption()
-        option.setAlignment(Qt.AlignCenter)
-        self.document().setDefaultTextOption(option)
 
     def set_bg_color(self, bg_color):
         """Set background color."""
@@ -1310,6 +1311,7 @@ class ObjectLabelItem(QGraphicsTextItem):
             self.clearFocus()
         else:
             super().keyPressEvent(event)
+        self.reset_position()
         self.bg.setRect(self.boundingRect())
 
     def focusOutEvent(self, event):
@@ -1412,9 +1414,6 @@ class SimpleObjectItem(QGraphicsPixmapItem):
         x = (self.boundingRect().width() - self.text_item.boundingRect().width()) / 2
         y = (self.boundingRect().height() - self.text_item.boundingRect().height()) / 2
         self.text_item.setPos(x, y)
-        option = self.text_item.document().defaultTextOption()
-        option.setAlignment(Qt.AlignCenter)
-        self.text_item.document().setDefaultTextOption(option)
         self.bg = QGraphicsRectItem(self.text_item.boundingRect(), self.text_item)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.bg.setBrush(QBrush(label_color))
