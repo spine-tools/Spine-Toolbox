@@ -254,6 +254,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(tv_sm.isSelected(ds_ind))
         self.assertEqual(tv_sm.currentIndex(), ds_ind)
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
+        # Active project item should be DS1
+        self.assertEqual(self.toolbox.project_item_model.project_item(ds_ind), self.toolbox.active_project_item)
 
     def test_selection_in_project_item_list_2(self):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
@@ -282,6 +284,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(tv_sm.isSelected(ds2_ind))
         self.assertEqual(tv_sm.currentIndex(), ds2_ind)
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
+        # Active project item should be DS2
+        self.assertEqual(self.toolbox.project_item_model.project_item(ds2_ind), self.toolbox.active_project_item)
 
     def test_selection_in_project_item_list_3(self):
         """Test item selection in treeView_project. Simulates mouse clicks on a Data Store items.
@@ -315,6 +319,8 @@ class TestToolboxUI(unittest.TestCase):
         # There should also be 2 items selected in the Design View
         n_selected_items_in_design_view = len(self.toolbox.ui.graphicsView.scene().selectedItems())
         self.assertEqual(2, n_selected_items_in_design_view)
+        # Active project item should be None
+        self.assertIsNone(self.toolbox.active_project_item)
 
     def test_selection_in_design_view_1(self):
         """Test item selection in Design View. Simulates mouse click on a Data Connection item.
@@ -336,6 +342,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(dc1_index, tv_sm.currentIndex())
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         self.assertEqual(1, len(gv.scene().selectedItems()))
+        # Active project item should be DC1
+        self.assertEqual(self.toolbox.project_item_model.project_item(dc1_index), self.toolbox.active_project_item)
 
     def test_selection_in_design_view_2(self):
         """Test item selection in Design View.
@@ -364,6 +372,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(dc2_index, tv_sm.currentIndex())
         self.assertEqual(1, len(tv_sm.selectedIndexes()))
         self.assertEqual(1, len(gv.scene().selectedItems()))
+        # Active project item should be DC2
+        self.assertEqual(self.toolbox.project_item_model.project_item(dc2_index), self.toolbox.active_project_item)
 
     def test_selection_in_design_view_3(self):
         """Test item selection in Design View.
@@ -385,6 +395,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(dc1_index, tv_sm.currentIndex())
         self.assertEqual(0, len(tv_sm.selectedIndexes()))  # No items in pi list should be selected
         self.assertEqual(0, len(gv.scene().selectedItems()))  # No items in design view should be selected
+        # Active project item should be None
+        self.assertIsNone(self.toolbox.active_project_item)
 
     def test_selection_in_design_view_4(self):
         """Test item selection in Design View.
@@ -425,6 +437,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(1, len(selected_items))
         # The Link item should be selected in Design View
         self.assertIsInstance(selected_items[0], Link)
+        # Active project item should be None
+        self.assertIsNone(self.toolbox.active_project_item)
 
     def test_selection_in_design_view_5(self):
         """Test item selection in Design View.
@@ -468,6 +482,8 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(1, len(selected_items))
         # The Link item should be selected in Design View
         self.assertIsInstance(selected_items[0], Link)
+        # Active project item should be None
+        self.assertIsNone(self.toolbox.active_project_item)
 
     def test_remove_item(self):
         """Test removing a single project item."""
