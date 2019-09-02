@@ -99,16 +99,6 @@ class ItemToolBar(QToolBar):
         stop.clicked.connect(self.stop_execution)
         stop.setToolTip("Stop execution.")
         self.addWidget(stop)
-        # Data label and button
-        self.addSeparator()
-        data_label = QLabel("Data")
-        self.addWidget(data_label)
-        open_tree_view_icon = QIcon(":/icons/project_item_icons/tree.svg").pixmap(24, 24)
-        open_tree_view = QToolButton(parent)
-        open_tree_view.setIcon(open_tree_view_icon)
-        open_tree_view.clicked.connect(self.open_tree_view)
-        open_tree_view.setToolTip("Open selected data stores in tree view.")
-        self.addWidget(open_tree_view)
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
@@ -144,14 +134,6 @@ class ItemToolBar(QToolBar):
             self._toolbox.msg.emit("Please create a new project or open an existing one first")
             return
         self._toolbox.project().stop()
-
-    @Slot(bool, name="open_tree_view")
-    def open_tree_view(self, checked=False):
-        """Slot for handling the Open tree view tool button clicked signal."""
-        if not self._toolbox.project():
-            self._toolbox.msg.emit("Please create a new project or open an existing one first")
-            return
-        self._toolbox.project().open_tree_view()
 
 
 class DraggableWidget(QLabel):
