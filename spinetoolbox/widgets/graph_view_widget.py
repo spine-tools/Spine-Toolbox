@@ -62,7 +62,7 @@ class GraphViewForm(DataStoreForm):
         self.ui.graphicsView.set_graph_view_form(self)
         self.read_only = read_only
         self._has_graph = False
-        self.extent = 512
+        self.extent = 64
         self._spread = 3 * self.extent
         self.object_label_color = self.palette().color(QPalette.Normal, QPalette.ToolTipBase)
         self.object_label_color.setAlphaF(0.8)
@@ -221,8 +221,10 @@ class GraphViewForm(DataStoreForm):
         self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
 
     def _object_tree_view_mouse_press_event(self, event):
-        """Overrides mousePressEvent of ui.treeView_object so that selection is extended
-        as if Ctrl key was pressed."""
+        """Overrides mousePressEvent of ui.treeView_object so that Ctrl has the opposite effect.
+        That is, if Ctrl is not pressed, then the selection is extended.
+        If Ctrl *is* pressed, then the selection is reset.
+        """
         local_pos = event.localPos()
         window_pos = event.windowPos()
         screen_pos = event.screenPos()
@@ -624,7 +626,7 @@ class GraphViewForm(DataStoreForm):
         return scene
 
     def extend_scene(self):
-        """Make scene rect the size of the scene show all items."""
+        """Make scene rect the size of the scene to show all items."""
         bounding_rect = self.ui.graphicsView.scene().itemsBoundingRect()
         self.ui.graphicsView.scene().setSceneRect(bounding_rect)
         self.ui.graphicsView.reset_zoom()
@@ -683,9 +685,9 @@ class GraphViewForm(DataStoreForm):
             <ol>
             <li>Select items in <a href="Object tree">Object tree</a> to show objects here.
                 <ul>
-                <li>Hold down the 'Ctrl' key or just drag your mouse to add multiple items to the selection.</li>
-                <li>Selected objects are vertices in the graph,
-                while relationships between those objects are edges.
+                <li>Ctrl + click starts a new selection.</li>
+                <li>Selected objects become vertices in the graph,
+                while relationships between those objects become edges.
                 </ul>
             </li>
             <li>Select items here to show their parameters in <a href="Parameters">Parameters</a>.
@@ -705,7 +707,7 @@ class GraphViewForm(DataStoreForm):
             </html>
         """
         font = QApplication.font()
-        font.setPointSize(self.extent / 8)
+        font.setPointSize(64)
         usage_item = CustomTextItem(usage, font)
         usage_item.linkActivated.connect(self._handle_usage_link_activated)
         scene.addItem(usage_item)

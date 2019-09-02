@@ -209,12 +209,13 @@ class CustomQGraphicsView(QGraphicsView):
         elif proposed_zoom > self._max_zoom:
             factor = self._max_zoom / current_zoom
         if math.isclose(factor, 1.0):
-            return
+            return False
         self.scale(factor, factor)
         post_scaling_focus_on_scene = self.mapToScene(zoom_focus)
         center_on_scene = self.mapToScene(self.viewport().rect().center())
         focus_diff = post_scaling_focus_on_scene - initial_focus_on_scene
         self.centerOn(center_on_scene - focus_diff)
+        return True
 
 
 class DesignQGraphicsView(CustomQGraphicsView):
@@ -565,3 +566,35 @@ class GraphQGraphicsView(CustomQGraphicsView):
             return
         e.accept()
         self._graph_view_form.show_graph_view_context_menu(e.globalPos())
+
+    def gentle_zoom(self, factor, zoom_focus):
+        """
+        Perform a zoom by a given factor.
+
+        Args:
+            factor (float): a scaling factor relative to the current scene scaling
+            zoom_focus (QPoint): focus of the zoom, e.g. mouse pointer position
+        """
+        if not super().gentle_zoom(factor, zoom_focus):
+            return False
+        self.adjust_items_to_zoom(factor)
+        return True
+
+    def reset_zoom(self):
+        """Reset zoom to the default factor."""
+        self.resetTransform()
+        self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
+        self.adjust_items_to_zoom(self._scene_fitting_zoom)
+
+    def adjust_items_to_zoom(self, factor):
+        """Update items geometry after performing a zoom.
+        This is so items stay the same size but there's more space between them.
+
+        Args:
+            factor (float): a scaling factor relative to the current scene scaling
+        """
+        for item in self.items():
+            try:
+                item.adjust_to_zoom(factor)
+            except AttributeError:
+                pass

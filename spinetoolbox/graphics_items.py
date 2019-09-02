@@ -873,7 +873,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.object_class_name = object_class_name
         self._extent = extent
         self._label_color = label_color
-        self.label_item = ObjectLabelItem(self, object_name, extent, label_color)
+        self.label_item = ObjectLabelItem(self, object_name, label_color)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
@@ -884,7 +884,6 @@ class ObjectItem(QGraphicsPixmapItem):
         self._merge = False
         self._bounce = False
         self._views_cursor = {}
-        self.shade = QGraphicsRectItem()
         self._selected_color = graph_view_form.palette().highlight()
         pixmap = self._graph_view_form.icon_mngr.object_icon(object_class_name).pixmap(extent)
         self.setPixmap(pixmap.scaled(extent, extent))
@@ -894,10 +893,9 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
-        self.shade.setRect(self.boundingRect())
+        self.shade = QGraphicsRectItem(super().boundingRect(), self)
         self.shade.setBrush(self._selected_color)
         self.shade.setPen(Qt.NoPen)
-        self.shade.setParentItem(self)
         self.shade.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
         self.shade.hide()
         self.setZValue(0)
@@ -908,6 +906,10 @@ class ObjectItem(QGraphicsPixmapItem):
         path = QPainterPath()
         path.addRect(self.boundingRect())
         return path
+
+    def boundingRect(self):
+        """Include children's bounding rect so they are correctly painted."""
+        return super().boundingRect() | self.childrenBoundingRect()
 
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
@@ -969,7 +971,6 @@ class ObjectItem(QGraphicsPixmapItem):
     def edit_name(self):
         """Start editing object name."""
         self.setSelected(True)
-        self.label_item.set_full_text()
         self.label_item.setTextInteractionFlags(Qt.TextEditorInteraction)
         self.label_item.setFocus()
         cursor = QTextCursor(self.label_item._cursor)
@@ -986,7 +987,7 @@ class ObjectItem(QGraphicsPixmapItem):
         else:
             # Update
             self._graph_view_form.update_object(self, name)
-        self.label_item.set_text(self.object_name)
+        self.label_item.setPlainText(self.object_name)
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -1141,6 +1142,12 @@ class ObjectItem(QGraphicsPixmapItem):
             scene.removeItem(item)
         scene.removeItem(self)
 
+    def adjust_to_zoom(self, factor):
+        """Update item geometry after performing a zoom.
+        This is so items stay the same size but there's more space between them."""
+        new_scale = self.scale() / factor
+        self.setScale(new_scale)
+
 
 class ArcItem(QGraphicsLineItem):
     """Arc item to use with GraphViewForm.
@@ -1206,6 +1213,13 @@ class ArcItem(QGraphicsLineItem):
         viewport = self._graph_view_form.ui.graphicsView.viewport()
         self.viewport_cursor = viewport.cursor()
 
+    def adjust_to_zoom(self, factor):
+        """Update item geometry after performing a zoom.
+        This is so items stay the same size but there's more space between them."""
+        self.width /= factor
+        self.normal_pen.setWidth(self.width)
+        self.selected_pen.setWidth(self.width)
+
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
         if option.state & (QStyle.State_Selected):
@@ -1259,27 +1273,20 @@ class ObjectLabelItem(QGraphicsTextItem):
     Attributes:
         object_item (ObjectItem): the ObjectItem instance
         text (str): text
-        width (int): maximum width
         bg_color (QColor): color to paint the label
     """
 
-    def __init__(self, object_item, text, width, bg_color):
+    def __init__(self, object_item, text, bg_color):
         """Init class."""
         super().__init__(object_item)
         self.object_item = object_item
-        self._width = width
         self._font = QApplication.font()
-        self._font.setPointSize(width / 8)
+        self._font.setPointSize(11)
         self.setFont(self._font)
-        self.set_text(text)
-        self.setTextWidth(self._width)
-        self.bg = QGraphicsRectItem()
-        self.bg.setRect(self.boundingRect())
-        self.bg.setParentItem(self)
+        self.setPlainText(text)
+        self.bg = QGraphicsRectItem(self.boundingRect(), self)
         self.set_bg_color(bg_color)
-        # self.bg.setPen(Qt.NoPen)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
-        self.bg.setRect(self.boundingRect())
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
         self._cursor = self.textCursor()
@@ -1294,24 +1301,6 @@ class ObjectLabelItem(QGraphicsTextItem):
     def set_bg_color(self, bg_color):
         """Set background color."""
         self.bg.setBrush(QBrush(bg_color))
-
-    def set_full_text(self):
-        self.setPlainText(self._text)
-
-    def set_text(self, text):
-        """Store real text, and then try and fit it as best as possible in the width
-        (reduce font point size, elide text...)
-        """
-        self._text = text
-        factor = max(0.75, 0.9 * self._width / QFontMetrics(self._font).width(text))
-        if factor < 1:
-            scaled_font = QFont(self._font)
-            scaled_font.setPointSizeF(scaled_font.pointSize() * factor)
-            self.setFont(scaled_font)
-        else:
-            self.setFont(self._font)
-        elided = QFontMetrics(self.font()).elidedText(text, Qt.ElideMiddle, 0.9 * self._width)
-        self.setPlainText(elided)
 
     def keyPressEvent(self, event):
         """Give up focus when the user presses Enter or Return.
@@ -1357,11 +1346,11 @@ class ArcTokenItem(QGraphicsEllipseItem):
                 object_item.setZValue(-1)
             object_item.setPos(x, y)
             x += 0.875 * 0.5 * object_item.boundingRect().width()
-        rectf = self.childrenBoundingRect()
+        rectf = self.direct_children_bounding_rect()
         offset = -rectf.topLeft()
         for item in self.childItems():
             item.setOffset(offset)
-        rectf = self.childrenBoundingRect()
+        rectf = self.direct_children_bounding_rect()
         width = rectf.width()
         height = rectf.height()
         if width > height:
@@ -1374,6 +1363,24 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self.setPen(Qt.NoPen)
         self.setBrush(color)
         self.update_pos()
+        self.setTransformOriginPoint(self.boundingRect().center())
+
+    def boundingRect(self):
+        """Include children's bounding rect so they are correctly painted."""
+        return self.childrenBoundingRect() | super().boundingRect()
+
+    def direct_children_bounding_rect(self):
+        """Alternative to childrenBoundingRect that only goes one generation forward."""
+        rectf = QRectF()
+        for item in self.childItems():
+            rectf |= item.sceneBoundingRect()
+        return rectf
+
+    def adjust_to_zoom(self, factor):
+        """Update item geometry after performing a zoom.
+        This is so items stay the same size but there's more space between them."""
+        new_scale = self.scale() / factor
+        self.setScale(new_scale)
 
     def update_pos(self):
         """Put token item in position."""
@@ -1398,16 +1405,10 @@ class SimpleObjectItem(QGraphicsPixmapItem):
         super().__init__(parent)
         pixmap = parent.arc_item._graph_view_form.icon_mngr.object_pixmap(object_class_name).scaledToWidth(extent)
         self.setPixmap(pixmap)
-        self.text_item = QGraphicsTextItem(self)
-        self.text_item.setTextWidth(extent)
+        self.text_item = QGraphicsTextItem(object_name, self)
         font = QApplication.font()
-        font.setPointSize(extent / 8)
-        factor = max(0.75, extent / QFontMetrics(font).width(object_name))
-        if factor < 1:
-            font.setPointSizeF(font.pointSize() * factor)
+        font.setPointSize(9)
         self.text_item.setFont(font)
-        elided = QFontMetrics(font).elidedText(object_name, Qt.ElideMiddle, extent)
-        self.text_item.setPlainText(elided)
         x = (self.boundingRect().width() - self.text_item.boundingRect().width()) / 2
         y = (self.boundingRect().height() - self.text_item.boundingRect().height()) / 2
         self.text_item.setPos(x, y)
