@@ -583,12 +583,18 @@ class GraphQGraphicsView(CustomQGraphicsView):
     def reset_zoom(self):
         """Reset zoom to the default factor."""
         self.resetTransform()
+        self.reset_items_zoom()
+        self.init_zoom()
+
+    def init_zoom(self):
+        """Init zoom."""
+        self.resetTransform()
         self.scale(self._scene_fitting_zoom, self._scene_fitting_zoom)
         self.adjust_items_to_zoom(self._scene_fitting_zoom)
 
     def adjust_items_to_zoom(self, factor):
         """Update items geometry after performing a zoom.
-        This is so items stay the same size but there's more space between them.
+        This is so items stay the same size (that is, the zoom controls the *spread*).
 
         Args:
             factor (float): a scaling factor relative to the current scene scaling
@@ -596,5 +602,14 @@ class GraphQGraphicsView(CustomQGraphicsView):
         for item in self.items():
             try:
                 item.adjust_to_zoom(factor)
+            except AttributeError:
+                pass
+
+    def reset_items_zoom(self):
+        """Reset items geometry to original unzoomed state.
+        """
+        for item in self.items():
+            try:
+                item.reset_zoom()
             except AttributeError:
                 pass

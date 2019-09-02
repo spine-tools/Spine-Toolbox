@@ -1144,9 +1144,14 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def adjust_to_zoom(self, factor):
         """Update item geometry after performing a zoom.
-        This is so items stay the same size but there's more space between them."""
+        This is so items stay the same size (that is, the zoom controls the *spread*)."""
         new_scale = self.scale() / factor
         self.setScale(new_scale)
+
+    def reset_zoom(self):
+        """Reset items geometry to original unzoomed state.
+        """
+        self.setScale(1.0)
 
 
 class ArcItem(QGraphicsLineItem):
@@ -1187,6 +1192,7 @@ class ArcItem(QGraphicsLineItem):
         self.src_item = src_item
         self.dst_item = dst_item
         self.width = width
+        self._orig_width = width
         self.is_template = False
         self.template_id = None
         src_x = src_item.x()
@@ -1215,8 +1221,15 @@ class ArcItem(QGraphicsLineItem):
 
     def adjust_to_zoom(self, factor):
         """Update item geometry after performing a zoom.
-        This is so items stay the same size but there's more space between them."""
+        This is so items stay the same size (that is, the zoom controls the *spread*)."""
         self.width /= factor
+        self.normal_pen.setWidth(self.width)
+        self.selected_pen.setWidth(self.width)
+
+    def reset_zoom(self):
+        """Reset items geometry to original unzoomed state.
+        """
+        self.width = self._orig_width
         self.normal_pen.setWidth(self.width)
         self.selected_pen.setWidth(self.width)
 
@@ -1380,9 +1393,15 @@ class ArcTokenItem(QGraphicsEllipseItem):
 
     def adjust_to_zoom(self, factor):
         """Update item geometry after performing a zoom.
-        This is so items stay the same size but there's more space between them."""
+        This is so items stay the same size (that is, the zoom controls the *spread*).
+        """
         new_scale = self.scale() / factor
         self.setScale(new_scale)
+
+    def reset_zoom(self):
+        """Reset items geometry to original unzoomed state.
+        """
+        self.setScale(1.0)
 
     def update_pos(self):
         """Put token item in position."""

@@ -629,7 +629,7 @@ class GraphViewForm(DataStoreForm):
         """Make scene rect the size of the scene to show all items."""
         bounding_rect = self.ui.graphicsView.scene().itemsBoundingRect()
         self.ui.graphicsView.scene().setSceneRect(bounding_rect)
-        self.ui.graphicsView.reset_zoom()
+        self.ui.graphicsView.init_zoom()
 
     @Slot(name="_handle_scene_selection_changed")
     def _handle_scene_selection_changed(self):
