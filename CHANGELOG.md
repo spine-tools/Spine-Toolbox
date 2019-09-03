@@ -3,6 +3,13 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.3-beta.4] - 2019-09-03
+
+### Fixed
+- NameError: SpineDBAPIError when executing Data Stores
+- Removed an unnecessary error dialog in Import Preview widget.
+- Added missing modules from *spinedb_api\alembic\versions* package into installation bundle.
+
 ## [0.3-beta.3] - 2019-09-03
 
 ### Fixed
@@ -12,7 +19,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ## [0.3-beta.2] - 2019-09-03
 
 ### Added
-- *packaging* and *appdirs* packages are now included in the installation bundle
+- *packaging* and *appdirs* packages are now included in the installation bundle.
 
 ### Fixed
 - Link to Getting Started Guide in Event Log

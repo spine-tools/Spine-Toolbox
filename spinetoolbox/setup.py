@@ -47,7 +47,7 @@ def main(argv):
     # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
     # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
     build_exe_options = {
-        "packages": ["packaging", "pkg_resources"],
+        "packages": ["packaging", "pkg_resources", "spinedb_api.alembic"],
         "excludes": ["scipy.spatial.cKDTree"],
         "includes": [
             "atexit",
@@ -75,7 +75,7 @@ def main(argv):
             "scipy.spatial.ckdtree",
             "pymysql",
             "tabulator.loaders.local",
-            "tabulator.parsers.csv",
+            "tabulator.parsers.csv"
         ],
         "include_files": [
             (doc_path, "docs/"),
@@ -84,7 +84,7 @@ def main(argv):
             changelog_file,
             readme_file,
             copying_file,
-            copying_lesser_file,
+            copying_lesser_file
         ],
         "include_msvcr": True,
     }
