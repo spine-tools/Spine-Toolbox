@@ -13,8 +13,8 @@
 cx-Freeze setup file for Spine Toolbox.
 
 Usage:
-- Building the application into /build directory can be done with command 'python setup.py build'
-- Packaging the built application into an installer file for distribution:
+- Build the application into /build directory with command 'python setup.py build'
+- Package the built application into an installer file for distribution:
 1. On Windows, compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
 2. On other platforms, use setup.py (this file) and Cx_Freeze (see Cx_Freeze documentation for help)
 
@@ -47,7 +47,7 @@ def main(argv):
     # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
     # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
     build_exe_options = {
-        "packages": [],
+        "packages": ["packaging", "pkg_resources"],
         "excludes": ["scipy.spatial.cKDTree"],
         "includes": [
             "atexit",

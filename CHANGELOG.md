@@ -3,15 +3,15 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.3b1] - 2019-09-03
+## [0.3-beta.2] - 2019-09-03
 
 ### Added
-- *packaging* and *appdirs* are now shipped with the distribution package
+- *packaging* and *appdirs* packages are now included in the installation bundle
 
 ### Fixed
 - Link to Getting Started Guide in Event Log
 
-## [0.3b] - 2019-08-26
+## [0.3-beta] - 2019-08-26
 
 ### Added
 - Zooming (by using the mouse wheel) is now enabled in Design View. You can also select multiple project
