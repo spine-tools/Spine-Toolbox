@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for TreeViewForm and GraphViewForm classes.
+Unit tests for DataStore class.
 
 :author: M. Marin (KTH)
 :date:   6.12.2018
