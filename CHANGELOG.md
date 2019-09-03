@@ -3,6 +3,12 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.3-beta.3] - 2019-09-03
+
+### Fixed
+- *numpy* is now deleted before installation begins so installing over an existing installation of Spine Toolbox 
+  works again.
+
 ## [0.3-beta.2] - 2019-09-03
 
 ### Added
