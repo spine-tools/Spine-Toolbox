@@ -25,7 +25,7 @@ class OptionsWidget(QWidget):
     """A widget for handling simple options. Used by ConnectionManager.
     """
 
-    # Emitted whenever a option in the widget is changed.
+    # Emitted whenever an option in the widget is changed.
     optionsChanged = Signal()
 
     def __init__(self, options, header="Options", parent=None):

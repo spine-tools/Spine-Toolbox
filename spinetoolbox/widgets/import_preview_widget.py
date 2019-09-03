@@ -108,7 +108,6 @@ class ImportPreviewWidget(QWidget):
         self._ui.source_list.setDisabled(status)
         self._ui.source_data_table.setDisabled(status)
         self._ui_mapper.setDisabled(status)
-        self.connector.option_widget().setDisabled(status)
 
     def connection_ready(self):
         """
