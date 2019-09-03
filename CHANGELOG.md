@@ -3,6 +3,14 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.3b1] - 2019-09-03
+
+### Added
+- *packaging* and *appdirs* are now shipped with the distribution package
+
+### Fixed
+- Link to Getting Started Guide in Event Log
+
 ## [0.3b] - 2019-08-26
 
 ### Added
