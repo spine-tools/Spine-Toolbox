@@ -11,19 +11,22 @@ Here is a list of definitions that are used throughout the User Guide and in Spi
 
 Spine Toolbox Terminology
 -------------------------
-- **Data Connection** is a project item, which facilitates data transfer from original data sources,
-  e.g. spreadsheet files or databases, to Spine Toolbox. The original data source file does not need to
-  conform to the format that Spine Toolbox is capable of reading, since there is an interpreting layer
-  between them (Data Interface).
+- **Data Connection** is a project item used to store a collection of data files that may or may not be in
+  Spine data format. It facilitates data transfer from original data sources e.g. spreadsheet files to Spine
+  Toolbox. The original data source file does not need to conform to the format that Spine Toolbox is capable
+  of reading, since there we can use an interpreting layer (Data Interface) between the raw data and the Spine
+  format database (Data Store).
+- **Data Interface** is a project item that can be used to import data from e.g. an Excel file, transform it
+  to Spine data structure, and into a Data Store.
 - **Data Store** is a project item. It's a Spine Toolbox internal data container which follows the Spine data
   model. A data store is implemented using a database, it may be, for example, an SQL database.
 - **Project** is a Spine Toolbox concept and consists of a data processing chain that
   is built by the user for solving a particular problem. Current items that constitute a project are;
-  Data Connection, Data Store, Tool, and View. There can be any number of these items in a project, and
-  they can be connected by drawing links between them.
+  Data Connection, Data Store, Tool, View, and a Data Interface. There can be any number of these items in a
+  project, and they can be connected by drawing links between them.
 - **Source directory** When in context of Tool templates, a Source directory is the directory where the main
-  program file of the Tool template is located. This is also where the Tool template definition file (.json) is
-  saved.
+  program file of the Tool template is located. This is also the recommended place where the Tool template
+  definition file (.json) is saved.
 - **Tool** is a project item that is used to execute Tool templates. To execute a script or a simulation
   model in Spine Toolbox, you attach a Tool template to a Tool.
 - **Tool template** can be a computational process or a simulation model, or it can also be a script to
