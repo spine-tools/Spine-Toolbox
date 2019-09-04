@@ -42,7 +42,7 @@ class DataInterface(ProjectItem):
         y (int): Initial icon scene Y coordinate
     """
 
-    data_interface_refresh_signal = Signal(name="data_interface_refresh_signal")
+    item_refresh_signal = Signal(name="item_refresh_signal")
 
     def __init__(self, toolbox, name, description, filepath, settings, x, y):
         """Class constructor."""
@@ -66,8 +66,8 @@ class DataInterface(ProjectItem):
         self.all_files = []  # All source files
         self.unchecked_files = []  # Unchecked source files
         self._graphics_item = DataInterfaceIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        # NOTE: data_interface_refresh_signal is not shared with other proj. items so there's no need to disconnect it
-        self.data_interface_refresh_signal.connect(self.refresh)
+        # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
+        self.item_refresh_signal.connect(self.refresh)
         self._sigs = self.make_signal_handler_dict()
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance

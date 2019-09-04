@@ -330,12 +330,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_item = self._project_item_model.project_item(dst_item_index)
         # Add edge (connection link) to a dag as well
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
-        # TODO: Add refresh signal and method to all project items, so that we don't need check what item is the dst
-        # Refresh View and Data Interface items
-        if dst_item.item_type == "View":
-            dst_item.view_refresh_signal.emit()
-        elif dst_item.item_type == "Data Interface":
-            dst_item.data_interface_refresh_signal.emit()
+        dst_item.item_refresh_signal.emit()
 
     def remove_link(self, index):
         """Removes link between source and sink items on scene and
@@ -351,14 +346,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_item = self._project_item_model.project_item(self._project_item_model.find_item(dst_name))
         self.scene().removeItem(link)
         self._connection_model.setData(index, None)
-        # TODO: Add refresh signal and method to all project items, so that we don't need check what item is the dst
-        # Refresh View and Data Interface items
-        if dst_item.item_type == "View":
-            dst_item.view_refresh_signal.emit()
-        elif dst_item.item_type == "Data Interface":
-            dst_item.data_interface_refresh_signal.emit()
         # Remove edge (connection link) from dag
         self._toolbox.project().dag_handler.remove_graph_edge(src_name, dst_name)
+        # Refresh items
+        dst_item.item_refresh_signal.emit()
 
     def take_link(self, index):
         """Remove link, then start drawing another one from the same source connector."""

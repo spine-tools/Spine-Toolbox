@@ -20,7 +20,7 @@ import logging
 import os
 import shutil
 import sys
-from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
+from PySide2.QtCore import Signal, Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from project_item import ProjectItem
@@ -43,6 +43,8 @@ class Tool(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
+    item_refresh_signal = Signal(name="item_refresh_signal")
 
     def __init__(self, toolbox, name, description, tool_template, use_work, x, y):
         """Class constructor."""

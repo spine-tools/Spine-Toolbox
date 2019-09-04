@@ -20,7 +20,7 @@ import sys
 import os
 import logging
 from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl, Qt
+from PySide2.QtCore import Signal, Slot, QUrl, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 import spinedb_api
 from sqlalchemy import create_engine
@@ -45,6 +45,8 @@ class DataStore(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
+
+    item_refresh_signal = Signal(name="item_refresh_signal")
 
     def __init__(self, toolbox, name, description, url, x, y):
         """Class constructor."""
