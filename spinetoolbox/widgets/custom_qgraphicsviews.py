@@ -328,14 +328,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_name = dst_connector.parent_name()  # Project item name
         dst_item_index = self._project_item_model.find_item(dst_name)
         dst_item = self._project_item_model.project_item(dst_item_index)
+        # Add edge (connection link) to a dag as well
+        self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
         # TODO: Add refresh signal and method to all project items, so that we don't need check what item is the dst
         # Refresh View and Data Interface items
         if dst_item.item_type == "View":
             dst_item.view_refresh_signal.emit()
         elif dst_item.item_type == "Data Interface":
             dst_item.data_interface_refresh_signal.emit()
-        # Add edge (connection link) to a dag as well
-        self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
     def remove_link(self, index):
         """Removes link between source and sink items on scene and
