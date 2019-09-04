@@ -261,19 +261,9 @@ class DataInterface(ProjectItem):
     @Slot(name="refresh")
     def refresh(self):
         """Update the list of files that this item is viewing."""
-        file_list = list()
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            found_index = self._toolbox.project_item_model.find_item(input_item)
-            if not found_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(found_index)
-            if item.item_type != "Data Connection":
-                continue
-            files = item.data_files()
-            file_list += files
-            refs = item.file_references()
-            file_list += refs
+        self._project.simulate_execution(self)
+        inst = self._project.execution_instance
+        file_list = inst.dc_refs + inst.dc_files
         self.update_file_model(file_list)
 
     def execute(self):

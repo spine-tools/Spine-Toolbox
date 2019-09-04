@@ -407,3 +407,11 @@ class DataConnection(ProjectItem):
         """Stops executing this Data Connection."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+
+    def simulate_execution(self):
+        """Simulates executing this Data Connection."""
+        inst = self._toolbox.project().execution_instance
+        refs = self.file_references()
+        inst.append_dc_refs(refs)
+        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        inst.append_dc_files(f_list)

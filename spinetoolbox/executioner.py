@@ -448,6 +448,24 @@ class ExecutionInstance(QObject):
         item.stop_execution()
         return
 
+    def simulate_execution(self, item):
+        """Simulates execution of all items in the execution list just until before
+        the given item is reached.
+        This is used by Data Interface items to find out its sources statically.
+
+        Args:
+            item (ProjectItem): The item that requests the simulation, before which it should stop.
+        """
+        for item_name in self.execution_list:
+            ind = self._toolbox.project_item_model.find_item(item_name)
+            curr_item = self._toolbox.project_item_model.project_item(ind)
+            if curr_item == item:
+                break
+            try:
+                curr_item.simulate_execution()
+            except AttributeError:
+                continue
+
     def add_ds_ref(self, dialect, ref):
         """Adds given database reference to a dictionary. Key is the dialect.
         If dialect is sqlite, value is a list of full paths to sqlite files.
