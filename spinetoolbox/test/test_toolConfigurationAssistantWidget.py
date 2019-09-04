@@ -18,12 +18,13 @@ Unit tests for ToolConfigurationAssistantWidget class.
 
 import unittest
 from unittest import mock
+from unittest.mock import patch
 import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 
-# noinspection PyUnusedLocal,DuplicatedCode
+
 class TestToolConfigurationAssistantWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
@@ -41,7 +42,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test."""
-        with mock.patch("widgets.tool_configuration_assistant_widget.SpineModelConfigurationAssistant"):
+        with patch("widgets.tool_configuration_assistant_widget.SpineModelConfigurationAssistant"):
             self.widget = ToolConfigurationAssistantWidget(QWidget(), autorun=False)
             self.assistant = self.widget.spine_model_config_asst
 
@@ -55,7 +56,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
     def test_unknown_julia_version(self):
         """Test that an error message is shown if julia version is unknown."""
         self.assistant.julia_version.return_value = None
-        with mock.patch.object(self.widget, "add_spine_model_error_msg") as mock_method:
+        with patch.object(self.widget, "add_spine_model_error_msg") as mock_method:
             self.widget.configure_spine_model()
         mock_method.assert_called_once()
         self.assertIsNone(self.widget.q_process)
@@ -63,7 +64,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
     def test_invalid_julia_version(self):
         """Test that an error message is shown if julia version is below 1.1.0."""
         self.assistant.julia_version.return_value = "1.0.0"
-        with mock.patch.object(self.widget, "add_spine_model_error_msg") as mock_method:
+        with patch.object(self.widget, "add_spine_model_error_msg") as mock_method:
             self.widget.configure_spine_model()
         mock_method.assert_called_once()
         self.assertIsNone(self.widget.q_process)
@@ -79,9 +80,9 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
 
     def test_spine_model_installation_is_cancelled(self):
         """Test that the spine model installation is cancelled by the user."""
-        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+        with patch.object(self.widget, "q_process") as mock_process, patch.object(
             self.widget, "get_permission"
-        ) as mock_get_permission, mock.patch.object(self.widget, "add_spine_model_error_msg") as mock_add_err_msg:
+        ) as mock_get_permission, patch.object(self.widget, "add_spine_model_error_msg") as mock_add_err_msg:
             mock_process.process_failed_to_start = False
             mock_get_permission.side_effect = lambda x, y: False
             self.widget._handle_spine_model_version_check_finished(1)
@@ -95,7 +96,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         self.assistant.install_spine_model.return_value = mock_process
         self.widget.q_process = mock.Mock()
         self.widget.q_process.process_failed_to_start = False
-        with mock.patch.object(self.widget, "get_permission") as mock_get_permission, mock.patch.object(
+        with patch.object(self.widget, "get_permission") as mock_get_permission, patch.object(
             self.widget, "add_spine_model_msg"
         ) as mock_add_msg:
             mock_get_permission.side_effect = lambda x, y: True
@@ -110,14 +111,14 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         self.assistant.py_call_program_check.return_value = mock_process
         self.widget.q_process = mock.Mock()
         self.widget.q_process.process_failed_to_start = False
-        with mock.patch.object(self.widget, "add_spine_model_msg") as mock_add_msg:
+        with patch.object(self.widget, "add_spine_model_msg") as mock_add_msg:
             self.widget._handle_spine_model_version_check_finished(0)
         mock_add_msg.assert_called_once()
         self.assertEqual(self.widget.q_process, mock_process)
 
     def test_spine_model_installation_fails(self):
         """Test that the spine model installation fails."""
-        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+        with patch.object(self.widget, "q_process") as mock_process, patch.object(
             self.widget, "add_spine_model_error_msg"
         ) as mock_add_err_msg:
             mock_process.process_failed_to_start = False
@@ -131,16 +132,16 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         self.assistant.py_call_program_check.return_value = mock_process
         self.widget.q_process = mock.Mock()
         self.widget.q_process.process_failed_to_start = False
-        with mock.patch.object(self.widget, "add_spine_model_success_msg") as mock_add_succ_msg:
+        with patch.object(self.widget, "add_spine_model_success_msg") as mock_add_succ_msg:
             self.widget._handle_spine_model_installation_finished(0)
         mock_add_succ_msg.assert_called_once()
         self.assertEqual(self.widget.q_process, mock_process)
 
     def test_py_call_installation_is_cancelled(self):
         """Test that PyCall installation is cancelled by the user."""
-        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+        with patch.object(self.widget, "q_process") as mock_process, patch.object(
             self.widget, "get_permission"
-        ) as mock_get_permission, mock.patch.object(self.widget, "add_spine_model_error_msg") as mock_add_err_msg:
+        ) as mock_get_permission, patch.object(self.widget, "add_spine_model_error_msg") as mock_add_err_msg:
             mock_process.process_failed_to_start = False
             mock_get_permission.side_effect = lambda x, y: False
             self.widget._handle_py_call_program_check_finished(1)
@@ -154,7 +155,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         self.assistant.install_py_call.return_value = mock_process
         self.widget.q_process = mock.Mock()
         self.widget.q_process.process_failed_to_start = False
-        with mock.patch.object(self.widget, "get_permission") as mock_get_permission, mock.patch.object(
+        with patch.object(self.widget, "get_permission") as mock_get_permission, patch.object(
             self.widget, "add_spine_model_msg"
         ) as mock_add_msg:
             mock_get_permission.side_effect = lambda x, y: True
@@ -165,11 +166,9 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
 
     def test_py_call_reconfiguration_is_cancelled(self):
         """Test that PyCall reconfiguration is cancelled by the user."""
-        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+        with patch.object(self.widget, "q_process") as mock_process, patch.object(
             self.widget, "get_permission"
-        ) as mock_get_permission, mock.patch.object(
-            self.widget, "add_spine_model_msg"
-        ) as mock_add_msg, mock.patch.object(
+        ) as mock_get_permission, patch.object(self.widget, "add_spine_model_msg") as mock_add_msg, patch.object(
             self.widget, "add_spine_model_error_msg"
         ) as mock_add_err_msg:
             mock_process.process_failed_to_start = False
@@ -188,7 +187,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         self.widget.q_process = mock.Mock()
         self.widget.q_process.process_failed_to_start = False
         self.widget.q_process.output = "badpython"
-        with mock.patch.object(self.widget, "get_permission") as mock_get_permission, mock.patch.object(
+        with patch.object(self.widget, "get_permission") as mock_get_permission, patch.object(
             self.widget, "add_spine_model_msg"
         ) as mock_add_msg:
             mock_get_permission.side_effect = lambda x, y: True
@@ -199,7 +198,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
 
     def test_correct_py_call_configuration(self):
         """Test that process finishes successfully if PyCall configuration is correct."""
-        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+        with patch.object(self.widget, "q_process") as mock_process, patch.object(
             self.widget, "add_spine_model_success_msg"
         ) as mock_add_succ_msg:
             mock_process.process_failed_to_start = False
@@ -210,7 +209,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
 
     def test_py_call_installation_fails(self):
         """Test that PyCall installation fails."""
-        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+        with patch.object(self.widget, "q_process") as mock_process, patch.object(
             self.widget, "add_spine_model_error_msg"
         ) as mock_add_err_msg:
             mock_process.process_failed_to_start = False
@@ -224,14 +223,14 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         self.assistant.py_call_program_check.return_value = mock_process
         self.widget.q_process = mock.Mock()
         self.widget.q_process.process_failed_to_start = False
-        with mock.patch.object(self.widget, "add_spine_model_success_msg") as mock_add_succ_msg:
+        with patch.object(self.widget, "add_spine_model_success_msg") as mock_add_succ_msg:
             self.widget._handle_py_call_installation_finished(0)
         mock_add_succ_msg.assert_called_once()
         self.assertEqual(self.widget.q_process, mock_process)
 
     def test_py_call_reconfiguration_fails(self):
         """Test that PyCall reconfiguration fails."""
-        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+        with patch.object(self.widget, "q_process") as mock_process, patch.object(
             self.widget, "add_spine_model_error_msg"
         ) as mock_add_err_msg:
             mock_process.process_failed_to_start = False
@@ -241,7 +240,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
 
     def test_py_call_reconfiguration_succeeds(self):
         """Test that process finishes successfully if PyCall reconfiguration succeeds."""
-        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+        with patch.object(self.widget, "q_process") as mock_process, patch.object(
             self.widget, "add_spine_model_success_msg"
         ) as mock_add_succ_msg:
             mock_process.process_failed_to_start = False
