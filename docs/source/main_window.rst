@@ -27,7 +27,7 @@ Console*, and *Python Console*), a tool bar, a *Design view*, and a menu bar wit
 that are available in your project. The *Properties* dock widget shows the properties of the selected project item.
 *Event Log* shows messages depending on what you do in Spine Toolbox. *Process Log* shows messages from processes that
 are spawned by the application, i.e. it shows the stdout and stderr streams of GAMS, Julia, Python (if Tools are
-executed without embedded Julia and Python Consoles, see :ref:`Settings` section in the User Guide), and executable
+executed without embedded Julia and Python Consoles, see :ref:`Settings` section), and executable
 programs. Julia and Python Consoles provide full iJulia and a iPython consoles. If you choose to execute Julia tools
 in the embedded Julia Console, the Julia code will be included into the Julia Console and executed there. You can
 interact with the iJulia in the Julia Console like you would with any iJulia you use.
