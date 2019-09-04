@@ -77,8 +77,8 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         self.assistant.spine_model_version_check.assert_called_once()
         self.assertEqual(self.widget.q_process, mock_process)
 
-    def test_spine_model_installation_aborted(self):
-        """Test that the spine model installation is aborted by the user."""
+    def test_spine_model_installation_is_cancelled(self):
+        """Test that the spine model installation is cancelled by the user."""
         with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
             self.widget, "get_permission"
         ) as mock_get_permission, mock.patch.object(self.widget, "add_spine_model_error_msg") as mock_add_err_msg:
@@ -89,10 +89,10 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         mock_add_err_msg.assert_called_once()
         self.assertIsNone(self.widget.q_process)
 
-    def test_spine_model_installation_accepted(self):
+    def test_spine_model_installation_is_accepted(self):
         """Test that the spine model installation is accepted by the user."""
-        mock_install_process = mock.Mock()
-        self.assistant.install_spine_model.return_value = mock_install_process
+        mock_process = mock.Mock()
+        self.assistant.install_spine_model.return_value = mock_process
         self.widget.q_process = mock.Mock()
         self.widget.q_process.process_failed_to_start = False
         with mock.patch.object(self.widget, "get_permission") as mock_get_permission, mock.patch.object(
@@ -102,7 +102,152 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
             self.widget._handle_spine_model_version_check_finished(1)
         mock_get_permission.assert_called_once()
         mock_add_msg.assert_called_once()
-        self.assertEqual(self.widget.q_process, mock_install_process)
+        self.assertEqual(self.widget.q_process, mock_process)
+
+    def test_py_call_program_check_starts_if_spine_model_was_installed(self):
+        """Test that the PyCall program check is started if Spine Model was installed."""
+        mock_process = mock.Mock()
+        self.assistant.py_call_program_check.return_value = mock_process
+        self.widget.q_process = mock.Mock()
+        self.widget.q_process.process_failed_to_start = False
+        with mock.patch.object(self.widget, "add_spine_model_msg") as mock_add_msg:
+            self.widget._handle_spine_model_version_check_finished(0)
+        mock_add_msg.assert_called_once()
+        self.assertEqual(self.widget.q_process, mock_process)
+
+    def test_spine_model_installation_fails(self):
+        """Test that the spine model installation fails."""
+        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+            self.widget, "add_spine_model_error_msg"
+        ) as mock_add_err_msg:
+            mock_process.process_failed_to_start = False
+            self.widget._handle_spine_model_installation_finished(1)
+        mock_add_err_msg.assert_called_once()
+        self.assertIsNone(self.widget.q_process)
+
+    def test_py_call_program_check_starts_after_installing_spine_model(self):
+        """Test that the PyCall program check is started after installing Spine Model."""
+        mock_process = mock.Mock()
+        self.assistant.py_call_program_check.return_value = mock_process
+        self.widget.q_process = mock.Mock()
+        self.widget.q_process.process_failed_to_start = False
+        with mock.patch.object(self.widget, "add_spine_model_success_msg") as mock_add_succ_msg:
+            self.widget._handle_spine_model_installation_finished(0)
+        mock_add_succ_msg.assert_called_once()
+        self.assertEqual(self.widget.q_process, mock_process)
+
+    def test_py_call_installation_is_cancelled(self):
+        """Test that PyCall installation is cancelled by the user."""
+        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+            self.widget, "get_permission"
+        ) as mock_get_permission, mock.patch.object(self.widget, "add_spine_model_error_msg") as mock_add_err_msg:
+            mock_process.process_failed_to_start = False
+            mock_get_permission.side_effect = lambda x, y: False
+            self.widget._handle_py_call_program_check_finished(1)
+        mock_get_permission.assert_called_once()
+        mock_add_err_msg.assert_called_once()
+        self.assertIsNone(self.widget.q_process)
+
+    def test_py_call_installation_is_accepted(self):
+        """Test that PyCall installation is accepted by the user."""
+        mock_process = mock.Mock()
+        self.assistant.install_py_call.return_value = mock_process
+        self.widget.q_process = mock.Mock()
+        self.widget.q_process.process_failed_to_start = False
+        with mock.patch.object(self.widget, "get_permission") as mock_get_permission, mock.patch.object(
+            self.widget, "add_spine_model_msg"
+        ) as mock_add_msg:
+            mock_get_permission.side_effect = lambda x, y: True
+            self.widget._handle_py_call_program_check_finished(1)
+        mock_get_permission.assert_called_once()
+        mock_add_msg.assert_called_once()
+        self.assertEqual(self.widget.q_process, mock_process)
+
+    def test_py_call_reconfiguration_is_cancelled(self):
+        """Test that PyCall reconfiguration is cancelled by the user."""
+        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+            self.widget, "get_permission"
+        ) as mock_get_permission, mock.patch.object(
+            self.widget, "add_spine_model_msg"
+        ) as mock_add_msg, mock.patch.object(
+            self.widget, "add_spine_model_error_msg"
+        ) as mock_add_err_msg:
+            mock_process.process_failed_to_start = False
+            mock_process.output = "badpython"
+            mock_get_permission.side_effect = lambda x, y: False
+            self.widget._handle_py_call_program_check_finished(0)
+        mock_get_permission.assert_called_once()
+        mock_add_msg.assert_called_once()
+        mock_add_err_msg.assert_called_once()
+        self.assertIsNone(self.widget.q_process)
+
+    def test_py_call_reconfiguration_is_accepted(self):
+        """Test that PyCall reconfiguration is accepted by the user."""
+        mock_process = mock.Mock()
+        self.assistant.reconfigure_py_call.return_value = mock_process
+        self.widget.q_process = mock.Mock()
+        self.widget.q_process.process_failed_to_start = False
+        self.widget.q_process.output = "badpython"
+        with mock.patch.object(self.widget, "get_permission") as mock_get_permission, mock.patch.object(
+            self.widget, "add_spine_model_msg"
+        ) as mock_add_msg:
+            mock_get_permission.side_effect = lambda x, y: True
+            self.widget._handle_py_call_program_check_finished(0)
+        mock_get_permission.assert_called_once()
+        mock_add_msg.assert_called()
+        self.assertEqual(self.widget.q_process, mock_process)
+
+    def test_correct_py_call_configuration(self):
+        """Test that process finishes successfully if PyCall configuration is correct."""
+        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+            self.widget, "add_spine_model_success_msg"
+        ) as mock_add_succ_msg:
+            mock_process.process_failed_to_start = False
+            mock_process.output = sys.executable
+            self.widget._handle_py_call_program_check_finished(0)
+        mock_add_succ_msg.assert_called_once()
+        self.assertIsNone(self.widget.q_process)
+
+    def test_py_call_installation_fails(self):
+        """Test that PyCall installation fails."""
+        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+            self.widget, "add_spine_model_error_msg"
+        ) as mock_add_err_msg:
+            mock_process.process_failed_to_start = False
+            self.widget._handle_py_call_installation_finished(1)
+        mock_add_err_msg.assert_called_once()
+        self.assertIsNone(self.widget.q_process)
+
+    def test_py_call_program_check_starts_after_installing_py_call(self):
+        """Test that the PyCall program check is started after installing PyCall."""
+        mock_process = mock.Mock()
+        self.assistant.py_call_program_check.return_value = mock_process
+        self.widget.q_process = mock.Mock()
+        self.widget.q_process.process_failed_to_start = False
+        with mock.patch.object(self.widget, "add_spine_model_success_msg") as mock_add_succ_msg:
+            self.widget._handle_py_call_installation_finished(0)
+        mock_add_succ_msg.assert_called_once()
+        self.assertEqual(self.widget.q_process, mock_process)
+
+    def test_py_call_reconfiguration_fails(self):
+        """Test that PyCall reconfiguration fails."""
+        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+            self.widget, "add_spine_model_error_msg"
+        ) as mock_add_err_msg:
+            mock_process.process_failed_to_start = False
+            self.widget._handle_py_call_reconfiguration_finished(1)
+        mock_add_err_msg.assert_called_once()
+        self.assertIsNone(self.widget.q_process)
+
+    def test_py_call_reconfiguration_succeeds(self):
+        """Test that process finishes successfully if PyCall reconfiguration succeeds."""
+        with mock.patch.object(self.widget, "q_process") as mock_process, mock.patch.object(
+            self.widget, "add_spine_model_success_msg"
+        ) as mock_add_succ_msg:
+            mock_process.process_failed_to_start = False
+            self.widget._handle_py_call_reconfiguration_finished(0)
+        mock_add_succ_msg.assert_called()
+        self.assertIsNone(self.widget.q_process)
 
 
 if __name__ == '__main__':
