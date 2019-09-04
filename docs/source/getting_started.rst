@@ -199,7 +199,7 @@ should now be looking like this:
 .. image:: img/hello_world_input_tool_template_editor.png
   :align: center
 
-Clik **Ok** at the bottom of the form.
+Click **Ok** at the bottom of the form.
 
 So far so good. Now let's use this input file in our program.
 Click on the 'tool template options' button (|tool_template_options|) again,
