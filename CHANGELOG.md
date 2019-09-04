@@ -3,10 +3,17 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.3-beta.5] - 2019-09-04
+
+### Fixed
+- .py files in *spinedb_api\alembic\versions* are now copied to the installation bundle without compiling them to 
+  .pyc files first. Also, if there's a previous version installed, *spinedb_api\alembic* directory is deleted 
+  before installation begins.  
+
 ## [0.3-beta.4] - 2019-09-03
 
 ### Fixed
-- NameError: SpineDBAPIError when executing Data Stores
+- NameError: SpineDBAPIError when executing Data Stores.
 - Removed an unnecessary error dialog in Import Preview widget.
 - Added missing modules from *spinedb_api\alembic\versions* package into installation bundle.
 

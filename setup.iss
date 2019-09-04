@@ -2,7 +2,7 @@
 ; SEE THE DOCUMENTATION FOR DETAILS ON CREATING INNO SETUP SCRIPT FILES!
 
 #define MyAppName "Spine Toolbox"
-#define MyAppVersion "0.3-beta.4"
+#define MyAppVersion "0.3-beta.5"
 #define MyAppPublisher "Spine Project Consortium"
 #define MyAppURL "https://github.com/Spine-project"
 #define MyAppExeName "spinetoolbox.exe"
@@ -68,6 +68,7 @@ Name: "{commondesktop}\{#MyAppName} {#MyAppVersion}"; Filename: "{app}\{#MyAppEx
 
 [InstallDelete]
 Type: filesandordirs; Name: "{app}\lib\numpy"
+Type: filesandordirs; Name: "{app}\lib\spinedb_api\alembic"
 
 [Run]
 Filename: "{app}\{#MyAppExeName}"; Description: "{cm:LaunchProgram,{#StringChange(MyAppName, '&', '&&')}}"; Flags: nowait postinstall skipifsilent

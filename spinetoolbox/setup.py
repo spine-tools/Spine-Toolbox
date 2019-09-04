@@ -43,11 +43,12 @@ def main(argv):
     readme_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "README.md"))
     copying_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING"))
     copying_lesser_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING.LESSER"))
+    alembic_version_files = alembic_files(python_dir)
     # Most dependencies are automatically detected but some need to be manually included.
     # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
     # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
     build_exe_options = {
-        "packages": ["packaging", "pkg_resources", "spinedb_api.alembic"],
+        "packages": ["packaging", "pkg_resources"],
         "excludes": ["scipy.spatial.cKDTree"],
         "includes": [
             "atexit",
@@ -84,8 +85,8 @@ def main(argv):
             changelog_file,
             readme_file,
             copying_file,
-            copying_lesser_file
-        ],
+            copying_lesser_file,
+        ] + alembic_version_files,
         "include_msvcr": True,
     }
     # Windows specific options
@@ -112,6 +113,19 @@ def main(argv):
         options={"build_exe": build_exe_options},
         executables=executables,
     )
+
+
+def alembic_files(python_dir):
+    """Returns a list of tuples of files in python/Lib/site-packages/spinedb_api/alembic/versions.
+    First item in tuple is the source file. Second item is the relative destination path to the install directory.
+    """
+    dest_dir = os.path.join("lib", "spinedb_api", "alembic", "versions")
+    p = os.path.join(python_dir, "Lib", "site-packages", "spinedb_api", "alembic", "versions")
+    files = list()
+    for f in os.listdir(p):
+        if f.endswith(".py"):
+            files.append((os.path.abspath(os.path.join(p, f)), os.path.join(dest_dir, f)))
+    return files
 
 
 if __name__ == '__main__':
