@@ -19,6 +19,7 @@ ProjectItem class.
 
 import logging
 from metaobject import MetaObject
+from PySide2.QtCore import Signal
 
 
 class ProjectItem(MetaObject):
@@ -31,6 +32,8 @@ class ProjectItem(MetaObject):
         is_root (bool): True if new item should be a root item
         is_category (bool): True if new item should be a category item
     """
+
+    item_refresh_signal = Signal(name="item_refresh_signal")
 
     def __init__(self, name, description, is_root=False, is_category=False):
         """Class constructor."""

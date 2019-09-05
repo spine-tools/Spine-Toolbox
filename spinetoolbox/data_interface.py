@@ -18,7 +18,7 @@ Contains DataInterface class.
 
 import logging
 import os
-from PySide2.QtCore import Qt, Slot, Signal, QUrl, QFileInfo
+from PySide2.QtCore import Qt, Slot, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QMainWindow, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from project_item import ProjectItem
@@ -41,8 +41,6 @@ class DataInterface(ProjectItem):
         x (int): Initial icon scene X coordinate
         y (int): Initial icon scene Y coordinate
     """
-
-    item_refresh_signal = Signal(name="item_refresh_signal")
 
     def __init__(self, toolbox, name, description, filepath, settings, x, y):
         """Class constructor."""

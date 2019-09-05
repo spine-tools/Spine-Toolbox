@@ -19,7 +19,7 @@ Module for data connection class.
 import os
 import shutil
 import logging
-from PySide2.QtCore import Signal, Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
+from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
 from project_item import ProjectItem
@@ -40,8 +40,6 @@ class DataConnection(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-
-    item_refresh_signal = Signal(name="item_refresh_signal")
 
     def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""

@@ -18,7 +18,7 @@ Module for view class.
 
 import logging
 import os
-from PySide2.QtCore import Qt, Slot, Signal, QUrl
+from PySide2.QtCore import Qt, Slot, QUrl
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
 from sqlalchemy.engine.url import URL
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
@@ -41,8 +41,6 @@ class View(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
-
-    item_refresh_signal = Signal(name="item_refresh_signal")
 
     def __init__(self, toolbox, name, description, x, y):
         super().__init__(name, description)
