@@ -166,17 +166,12 @@ class ConcreteProjectItem(ProjectItem):
 
     def execute(self):
         """Executes this item."""
-        self.begin_execution()
-        self.end_execution()
 
     def simulate_execution(self):
         """Simulates executing this Item."""
-        self.begin_execution()
-        self.end_execution()
 
     def begin_execution(self):
-        """Begins execution. When reimplementing execute() or simulate_execution() in a subclass,
-        call this function before *taking care* of the item.
+        """Begins execution.
         """
         # Initialize the set of ancestors
         self.ancestors.clear()
@@ -186,8 +181,7 @@ class ConcreteProjectItem(ProjectItem):
             self.ancestors.update(item.ancestors)
 
     def end_execution(self):
-        """Ends execution. When reimplementing execute() or simulate_execution() in a subclass,
-        call this function after *taking care* of the item.
+        """Ends execution.
         """
         # Add this item to the set of ancestors
         self.ancestors.add(self)

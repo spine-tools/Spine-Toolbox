@@ -33,8 +33,8 @@ class DirectedGraphHandler:
     def __init__(self, toolbox):
         """Class constructor."""
         self._toolbox = toolbox
-        self.running_dag = None
-        self.running_item = None
+        # self.running_dag = None
+        # self.running_item = None
         self._dags = list()
 
     def dags(self):
@@ -395,23 +395,24 @@ class ExecutionInstance(QObject):
         self._toolbox = toolbox
         self.execution_list = execution_list  # Ordered list of nodes to execute. First node at index 0
         self.running_item = None
-        self.dc_refs = list()  # Data Connection reference list
-        self.dc_files = list()  # Data Connection file list
-        self.ds_refs = dict()  # DS refs. Key is dialect, value is a list of paths or urls depending on dialect
-        self.di_data = dict()  # Data Interface data. Key is DI name, value is data for import
-        self.tool_output_files = list()  # Paths to result files from ToolInstance
+        self.dc_refs = dict()  # Key is DC ProjectItem, value is reference list
+        self.dc_files = dict()  # Key is DC ProjectItem, value is file list
+        self.ds_urls = dict()  # Key is DS ProjectItem, value is url
+        self.di_data = dict()  # Key is DI ProjectItem, value is data for import
+        self.tool_output_files = dict()  # Key is Tool ProjectItem, value is list of paths to output files
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
-        self.running_item = self.execution_list.pop(0)
-        self.execute_project_item()
+        item_name = self.execution_list.pop(0)
+        self.execute_project_item(item_name)
 
-    def execute_project_item(self):
+    def execute_project_item(self, item_name):
         """Starts executing project item."""
+        item_ind = self._toolbox.project_item_model.find_item(item_name)
+        self.running_item = self._toolbox.project_item_model.project_item(item_ind)
         self.project_item_execution_finished_signal.connect(self.item_execution_finished)
-        item_ind = self._toolbox.project_item_model.find_item(self.running_item)
-        item = self._toolbox.project_item_model.project_item(item_ind)
-        item.execute()
+        self.running_item.begin_execution()
+        self.running_item.execute()
 
     @Slot(int, name="item_execution_finished")
     def item_execution_finished(self, item_finish_state):
@@ -421,6 +422,7 @@ class ExecutionInstance(QObject):
             item_finish_state (int): 0=Continue to next project item. -2=Stop executing this graph (happens when e.g.
             Tool does not find req. input files or something)
         """
+        self.running_item.end_execution()
         self.project_item_execution_finished_signal.disconnect()
         if item_finish_state == -1:
             # Item execution failed due to e.g. Tool did not find input files or something
@@ -431,11 +433,11 @@ class ExecutionInstance(QObject):
             self.graph_execution_finished_signal.emit(-2)
             return
         try:
-            self.running_item = self.execution_list.pop(0)
+            item_name = self.execution_list.pop(0)
         except IndexError:
             self.graph_execution_finished_signal.emit(0)
             return
-        self.execute_project_item()
+        self.execute_project_item(item_name)
 
     def stop(self):
         """Stops running project item and terminates current graph execution."""
@@ -443,9 +445,7 @@ class ExecutionInstance(QObject):
             self._toolbox.msg.emit("No running item")
             self.graph_execution_finished_signal.emit(-2)
             return
-        item_ind = self._toolbox.project_item_model.find_item(self.running_item)
-        item = self._toolbox.project_item_model.project_item(item_ind)
-        item.stop_execution()
+        self.running_item.stop_execution()
         return
 
     def simulate_execution(self, item):
@@ -459,125 +459,96 @@ class ExecutionInstance(QObject):
         for item_name in self.execution_list:
             ind = self._toolbox.project_item_model.find_item(item_name)
             curr_item = self._toolbox.project_item_model.project_item(ind)
+            curr_item.begin_execution()
             if curr_item == item:
                 break
             curr_item.simulate_execution()
+            curr_item.end_execution()
 
-    def add_ds_ref(self, dialect, ref):
-        """Adds given database reference to a dictionary. Key is the dialect.
-        If dialect is sqlite, value is a list of full paths to sqlite files.
-        For other dialects, key is the dialect and value is a list of URLs to
-        database servers.
+    def add_ds_url(self, ds_item, url):
+        """Adds given url to the dictionary.
 
         Args:
-            dialect (str): Dialect name (lower case)
-            ref (str): Database reference
+            ds_item (ProjecItem): Data store item
+            url (URL): Url
         """
-        try:
-            self.ds_refs[dialect].append(ref)
-        except KeyError:
-            self.ds_refs[dialect] = [ref]
+        self.ds_urls[ds_item] = url
 
-    def add_di_data(self, di_name, data):
-        """Adds given data from data interface to a list.
+    def add_di_data(self, di_item, data):
+        """Adds given data from data interface to the dictionary.
 
         Args:
-            di_name (str): Data interface name
+            di_item (ProjecItem): Data interface item
             data (dict): Data to import
         """
-        self.di_data[di_name] = data
+        self.di_data[di_item] = data
 
-    def append_dc_refs(self, refs):
-        """Adds given file paths (Data Connection file references) to a list.
+    def append_dc_refs(self, dc_item, refs):
+        """Adds given file paths (Data Connection file references) to the dictionary.
 
         Args:
+            dc_item (ProjecItem): Data connection item
             refs (list): List of file paths (references)
         """
-        self.dc_refs += refs
+        self.dc_refs.setdefault(dc_item, list()).extend(refs)
 
-    def append_dc_files(self, files):
-        """Adds given project data file paths to a list.
+    def append_dc_files(self, dc_item, files):
+        """Adds given project data file paths to the dictionary.
 
         Args:
-            files (list): List of file paths
+            dc_item (ProjecItem): Data connection item
+            refs (list): List of file paths (references)
         """
-        self.dc_files += files
+        self.dc_files.setdefault(dc_item, list()).extend(files)
 
-    def append_tool_output_file(self, filepath):
-        """Adds given file path to a list containing paths to Tool output files.
+    def append_tool_output_file(self, tool_item, filepath):
+        """Adds given file path the dictionary containing paths to Tool output files.
 
         Args:
+            tool_item (ProjecItem): Tool item
             filepath (str): Path to a tool output file (in tool result directory)
         """
-        self.tool_output_files.append(filepath)
+        self.tool_output_files.setdefault(tool_item, list()).append(filepath)
 
-    def find_file(self, filename):
-        """Returns the first occurrence to full path to given file name or None if file was not found.
+    def find_file(self, filename, items):
+        """Returns the first occurrence of full path to given file name in files advertised by items,
+        or None if file was not found.
 
         Args:
             filename (str): Searched file name (no path) TODO: Change to pattern
+            items (set of ProjecItem): Search in files advertised by the given items only
 
         Returns:
             str: Full path to file if found, None if not found
         """
         # Look in Data Stores
-        # SQLITE
-        try:
-            for sqlite_ref in self.ds_refs["sqlite"]:
-                _, file_candidate = os.path.split(sqlite_ref)
+        ds_urls = [self.ds_urls[item] for item in items]
+        for url in ds_urls:
+            drivername = url.drivername.lower()
+            if drivername.startswith('sqlite'):
+                filepath = url.database
+                _, file_candidate = os.path.split(filepath)
                 if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, sqlite_ref))
-                    return sqlite_ref
-        except KeyError:
-            pass
-        # MYSQL
-        try:
-            for mysql_url in self.ds_refs["mysql"]:
-                _, file_candidate = os.path.split(mysql_url)
-                if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, mysql_url))
-                    return mysql_url
-        except KeyError:
-            pass
-        # MSSQL
-        try:
-            for mssql_url in self.ds_refs["mssql"]:
-                _, file_candidate = os.path.split(mssql_url)
-                if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, mssql_url))
-                    return mssql_url
-        except KeyError:
-            pass
-        # POSTGRESQL
-        try:
-            for postgresql_url in self.ds_refs["postgresql"]:
-                _, file_candidate = os.path.split(postgresql_url)
-                if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, postgresql_url))
-                    return postgresql_url
-        except KeyError:
-            pass
-        # ORACLE
-        try:
-            for oracle_url in self.ds_refs["oracle"]:
-                _, file_candidate = os.path.split(oracle_url)
-                if file_candidate == filename:
-                    logging.debug("Found path for % from ds refs: %s", filename, oracle_url)
-                    return oracle_url
-        except KeyError:
-            pass
+                    # logging.debug("Found path for {0} from ds urls: {1}".format(filename, url))
+                    return filepath
+            else:
+                # TODO: Other dialects
+                pass
         # Look in Data Connections
-        for dc_ref in self.dc_refs:
+        dc_refs = [r for item in items for r in self.dc_refs[item]]
+        for dc_ref in dc_refs:
             _, file_candidate = os.path.split(dc_ref)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
                 return dc_ref
-        for dc_file in self.dc_files:
+        dc_files = [f for item in items for f in self.dc_files[item]]
+        for dc_file in dc_files:
             _, file_candidate = os.path.split(dc_file)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
                 return dc_file
         # Look in Tool output files
+        tool_output_files = [f for item in items for f in self.tool_output_files[item]]
         for tool_file in self.tool_output_files:
             _, file_candidate = os.path.split(tool_file)
             if file_candidate == filename:
@@ -585,32 +556,34 @@ class ExecutionInstance(QObject):
                 return tool_file
         return None
 
-    def find_optional_files(self, pattern):
-        """Returns a list of found paths to files that match the given pattern.
+    def find_optional_files(self, pattern, items):
+        """Returns a list of found paths to files that match the given pattern in files advertised by items.
 
         Returns:
             list: List of (full) paths
+            items (set of ProjecItem): Search in files advertised by the given items only
         """
         # logging.debug("Searching optional input files. Pattern: '{0}'".format(pattern))
         matches = list()
         # Find matches when pattern includes wildcards
         if ('*' in pattern) or ('?' in pattern):
-            # Find matches in Data Store references
-            try:
-                # NOTE: Only sqlite files are checked
-                ds_matches = fnmatch.filter(self.ds_refs["sqlite"], pattern)
-            except KeyError:
-                ds_matches = list()
+            # Find matches in Data Store urls. NOTE: Only sqlite urls are considered
+            ds_urls = [self.ds_urls[item] for item in items]
+            ds_files = [url.database for url in ds_urls if url.drivername.lower().startswith('sqlite')]
+            ds_matches = fnmatch.filter(ds_files, pattern)
             # Find matches in Data Connection references
-            dc_ref_matches = fnmatch.filter(self.dc_refs, pattern)
+            dc_refs = [r for item in items for r in self.dc_refs[item]]
+            dc_ref_matches = fnmatch.filter(dc_refs, pattern)
             # Find matches in Data Connection data files
-            dc_file_matches = fnmatch.filter(self.dc_files, pattern)
+            dc_files = [f for item in items for f in self.dc_files[item]]
+            dc_file_matches = fnmatch.filter(dc_files, pattern)
             # Find matches in Tool output files
-            tool_matches = fnmatch.filter(self.tool_output_files, pattern)
+            tool_output_files = [f for item in items for f in self.tool_output_files[item]]
+            tool_matches = fnmatch.filter(tool_output_files, pattern)
             matches += ds_matches + dc_ref_matches + dc_file_matches + tool_matches
         else:
             # Pattern is an exact filename (no wildcards)
-            match = self.find_file(pattern)
+            match = self.find_file(pattern, items)
             if match is not None:
                 matches.append(match)
         # logging.debug("Matches:{0}".format(matches))

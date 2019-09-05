@@ -592,7 +592,6 @@ class Tool(ConcreteProjectItem):
 
     def populate_template_model(self, populate):
         """Add all tool template specs to a single QTreeView.
-        If items is None or an empty list, model is cleared.
 
         Args:
             populate (bool): False to clear model, True to populate.
@@ -683,9 +682,7 @@ class Tool(ConcreteProjectItem):
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
-                    self.instance = ToolInstance(
-                        self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
-                    )
+                    self.instance = ToolInstance(self)
                 except OSError as e:
                     self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
                     self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
@@ -717,9 +714,7 @@ class Tool(ConcreteProjectItem):
                 pass
         else:  # Tool template does not have requirements
             try:
-                self.instance = ToolInstance(
-                    self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
-                )
+                self.instance = ToolInstance(self)
             except OSError as e:
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
@@ -751,7 +746,7 @@ class Tool(ConcreteProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            found_file = self._toolbox.project().execution_instance.find_file(filename)
+            found_file = self._toolbox.project().execution_instance.find_file(filename, self.ancestors)
             if not found_file:
                 self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
                 return None
