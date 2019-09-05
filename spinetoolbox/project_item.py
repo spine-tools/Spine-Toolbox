@@ -173,15 +173,16 @@ class ConcreteProjectItem(ProjectItem):
     def begin_execution(self):
         """Begins execution.
         """
-        # Initialize the set of ancestors
+        # Initialize the set of ancestors. These are the direct parents plus their ancestors.
+        # Note that, since we execute DAGs in BFS order, parents' ancestors have always been computed
+        # when treating this item.
         self.ancestors.clear()
         for item_name in self._toolbox.connection_model.input_items(self.name):
             ind = self._toolbox.project_item_model.find_item(item_name)
             item = self._toolbox.project_item_model.project_item(ind)
             self.ancestors.update(item.ancestors)
+            self.ancestors.add(item)
 
     def end_execution(self):
         """Ends execution.
         """
-        # Add this item to the set of ancestors
-        self.ancestors.add(self)
