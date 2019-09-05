@@ -3,6 +3,14 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
+## [0.3-beta.6] - 2019-09-05
+
+### Fixed
+- Mouse click problems in Design View
+- Mouse cursor problem in Tool Configuration Assistant
+- Welcome message is now shown for first time users
+- User Guide almost up-to-date for 0.3
+
 ## [0.3-beta.5] - 2019-09-04
 
 ### Fixed
