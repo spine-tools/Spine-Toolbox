@@ -138,7 +138,7 @@ class ConcreteProjectItem(ProjectItem):
         self._toolbox = toolbox
         # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
         self.item_refresh_signal.connect(self.refresh)
-        self.visited_items = list()  # List of items visited at execution
+        self.ancestors = set()  # Ancestors, populated at execution or execution simulation
 
     def connect_signals(self):
         """Connect signals to handlers."""
@@ -160,12 +160,34 @@ class ConcreteProjectItem(ProjectItem):
                 return False
         return True
 
-    def simulate_execution(self):
-        """Simulates executing this Item."""
-
     @Slot(name="refresh")
     def refresh(self):
         """Refresh this item's UI."""
 
     def execute(self):
         """Executes this item."""
+        self.begin_execution()
+        self.end_execution()
+
+    def simulate_execution(self):
+        """Simulates executing this Item."""
+        self.begin_execution()
+        self.end_execution()
+
+    def begin_execution(self):
+        """Begins execution. When reimplementing execute() or simulate_execution() in a subclass,
+        call this function before *taking care* of the item.
+        """
+        # Initialize the set of ancestors
+        self.ancestors.clear()
+        for item_name in self._toolbox.connection_model.input_items(self.name):
+            ind = self._toolbox.project_item_model.find_item(item_name)
+            item = self._toolbox.project_item_model.project_item(ind)
+            self.ancestors.update(item.ancestors)
+
+    def end_execution(self):
+        """Ends execution. When reimplementing execute() or simulate_execution() in a subclass,
+        call this function after *taking care* of the item.
+        """
+        # Add this item to the set of ancestors
+        self.ancestors.add(self)
