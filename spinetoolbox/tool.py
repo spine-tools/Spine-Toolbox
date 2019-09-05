@@ -746,7 +746,7 @@ class Tool(ConcreteProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            found_file = self._toolbox.project().execution_instance.find_file(filename, self.ancestors)
+            found_file = self._toolbox.project().execution_instance.find_file(filename, self)
             if not found_file:
                 self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
                 return None

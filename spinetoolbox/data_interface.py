@@ -257,10 +257,8 @@ class DataInterface(ConcreteProjectItem):
     def refresh(self):
         """Update the list of files that this item is viewing."""
         self._project.simulate_execution(self)
-        file_list = list()
         inst = self._project.execution_instance
-        for anc in self.ancestors:
-            file_list.extend(inst.dc_refs.get(anc, []) + inst.dc_files.get(anc, []))
+        file_list = inst.dc_refs_at_sight(self) + inst.dc_files_at_sight(self)
         self.update_file_model(file_list)
 
     def execute(self):

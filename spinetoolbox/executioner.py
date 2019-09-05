@@ -510,20 +510,59 @@ class ExecutionInstance(QObject):
         """
         self.tool_output_files.setdefault(tool_item, list()).append(filepath)
 
-    def find_file(self, filename, items):
-        """Returns the first occurrence of full path to given file name in files advertised by items,
+    def ds_urls_at_sight(self, item):
+        """Returns a list of ds_urls entries currently seen by the given item.
+
+        Args:
+            item (ProjectItem)
+        """
+        return [self.ds_urls[anc] for anc in item.ancestors if anc in self.ds_urls]
+
+    def di_data_at_sight(self, item):
+        """Returns a list of di_data entries currently seen by the given item.
+
+        Args:
+            item (ProjectItem)
+        """
+        return [self.di_data[anc] for anc in item.ancestors if anc in self.di_data]
+
+    def dc_refs_at_sight(self, item):
+        """Returns a list of dc_refs entries currently seen by the given item.
+
+        Args:
+            item (ProjectItem)
+        """
+        return [ref for anc in item.ancestors for ref in self.dc_refs.get(anc, [])]
+
+    def dc_files_at_sight(self, item):
+        """Returns a list of dc_files entries currently seen by the given item.
+
+        Args:
+            item (ProjectItem)
+        """
+        return [data for anc in item.ancestors for data in self.dc_files.get(anc, [])]
+
+    def tool_output_files_at_sight(self, item):
+        """Returns a list of tool_output_files entries currently seen by the given item.
+
+        Args:
+            item (ProjectItem)
+        """
+        return [fn for anc in item.ancestors for fn in self.tool_output_files.get(anc, [])]
+
+    def find_file(self, filename, item):
+        """Returns the first occurrence of full path to given file name in files seen by the given item,
         or None if file was not found.
 
         Args:
             filename (str): Searched file name (no path) TODO: Change to pattern
-            items (set of ProjecItem): Search in files advertised by the given items only
+            item (ProjecItem): Search only in files seen by this item
 
         Returns:
             str: Full path to file if found, None if not found
         """
         # Look in Data Stores
-        ds_urls = [self.ds_urls[item] for item in items]
-        for url in ds_urls:
+        for url in self.ds_urls_at_sight(item):
             drivername = url.drivername.lower()
             if drivername.startswith('sqlite'):
                 filepath = url.database
@@ -535,55 +574,52 @@ class ExecutionInstance(QObject):
                 # TODO: Other dialects
                 pass
         # Look in Data Connections
-        dc_refs = [r for item in items for r in self.dc_refs[item]]
-        for dc_ref in dc_refs:
+        for dc_ref in self.dc_refs_at_sight(item):
             _, file_candidate = os.path.split(dc_ref)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
                 return dc_ref
-        dc_files = [f for item in items for f in self.dc_files[item]]
-        for dc_file in dc_files:
+        for dc_file in self.dc_files_at_sight(item):
             _, file_candidate = os.path.split(dc_file)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
                 return dc_file
         # Look in Tool output files
-        tool_output_files = [f for item in items for f in self.tool_output_files[item]]
-        for tool_file in self.tool_output_files:
+        for tool_file in self.tool_output_files_at_sight(item):
             _, file_candidate = os.path.split(tool_file)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
                 return tool_file
         return None
 
-    def find_optional_files(self, pattern, items):
-        """Returns a list of found paths to files that match the given pattern in files advertised by items.
+    def find_optional_files(self, pattern, item):
+        """Returns a list of found paths to files that match the given pattern in files seen by item.
 
         Returns:
             list: List of (full) paths
-            items (set of ProjecItem): Search in files advertised by the given items only
+            item (ProjecItem): Search only in files seen by this item
         """
         # logging.debug("Searching optional input files. Pattern: '{0}'".format(pattern))
         matches = list()
         # Find matches when pattern includes wildcards
         if ('*' in pattern) or ('?' in pattern):
             # Find matches in Data Store urls. NOTE: Only sqlite urls are considered
-            ds_urls = [self.ds_urls[item] for item in items]
+            ds_urls = self.ds_urls_at_sight(item)
             ds_files = [url.database for url in ds_urls if url.drivername.lower().startswith('sqlite')]
             ds_matches = fnmatch.filter(ds_files, pattern)
             # Find matches in Data Connection references
-            dc_refs = [r for item in items for r in self.dc_refs[item]]
+            dc_refs = self.dc_refs_at_sight(item)
             dc_ref_matches = fnmatch.filter(dc_refs, pattern)
             # Find matches in Data Connection data files
-            dc_files = [f for item in items for f in self.dc_files[item]]
+            dc_files = self.dc_files_at_sight(item)
             dc_file_matches = fnmatch.filter(dc_files, pattern)
             # Find matches in Tool output files
-            tool_output_files = [f for item in items for f in self.tool_output_files[item]]
+            tool_output_files = self.tool_output_files_at_sight(item)
             tool_matches = fnmatch.filter(tool_output_files, pattern)
             matches += ds_matches + dc_ref_matches + dc_file_matches + tool_matches
         else:
             # Pattern is an exact filename (no wildcards)
-            match = self.find_file(pattern, items)
+            match = self.find_file(pattern, item)
             if match is not None:
                 matches.append(match)
         # logging.debug("Matches:{0}".format(matches))
