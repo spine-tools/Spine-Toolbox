@@ -21,7 +21,7 @@ import os
 from PySide2.QtCore import Qt, Slot, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QMainWindow, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
-from project_item import ProjectItem
+from project_item import ConcreteProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
 from spine_io.importers.csv_reader import CSVConnector
@@ -29,7 +29,7 @@ from spine_io.importers.excel_reader import ExcelConnector
 from widgets.import_preview_window import ImportPreviewWindow
 
 
-class DataInterface(ProjectItem):
+class DataInterface(ConcreteProjectItem):
     """DataInterface class.
 
     Attributes:
@@ -44,8 +44,7 @@ class DataInterface(ProjectItem):
 
     def __init__(self, toolbox, name, description, filepath, settings, x, y):
         """Class constructor."""
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Interface"
         # Make data directory and logs subdirectory for this item

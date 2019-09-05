@@ -22,14 +22,14 @@ import logging
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from project_item import ProjectItem
+from project_item import ConcreteProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import busy_effect, create_dir
 from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 from graphics_items import DataConnectionIcon
 
 
-class DataConnection(ProjectItem):
+class DataConnection(ConcreteProjectItem):
     """Data Connection class.
 
     Attributes:
@@ -43,8 +43,7 @@ class DataConnection(ProjectItem):
 
     def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Connection"
         self.reference_model = QStandardItemModel()  # References to files

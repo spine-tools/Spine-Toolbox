@@ -25,7 +25,7 @@ from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 import spinedb_api
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
-from project_item import ProjectItem
+from project_item import ConcreteProjectItem
 from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
@@ -34,7 +34,7 @@ from helpers import create_dir, busy_effect, get_db_map, create_log_file_timesta
 import qsubprocess
 
 
-class DataStore(ProjectItem):
+class DataStore(ConcreteProjectItem):
     """Data Store class.
 
     Attributes:
@@ -48,8 +48,7 @@ class DataStore(ProjectItem):
 
     def __init__(self, toolbox, name, description, url, x, y):
         """Class constructor."""
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self._url = self.parse_url(url)

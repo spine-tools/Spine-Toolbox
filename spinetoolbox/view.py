@@ -22,7 +22,7 @@ from PySide2.QtCore import Qt, Slot, QUrl
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
 from sqlalchemy.engine.url import URL
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
-from project_item import ProjectItem
+from project_item import ConcreteProjectItem
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from widgets.tree_view_widget import TreeViewForm
@@ -30,7 +30,7 @@ from graphics_items import ViewIcon
 from helpers import create_dir
 
 
-class View(ProjectItem):
+class View(ConcreteProjectItem):
     """
     View class.
 
@@ -43,8 +43,7 @@ class View(ProjectItem):
     """
 
     def __init__(self, toolbox, name, description, x, y):
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "View"
         self._graph_views = {}

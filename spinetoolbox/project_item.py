@@ -33,8 +33,6 @@ class ProjectItem(MetaObject):
         is_category (bool): True if new item should be a category item
     """
 
-    item_refresh_signal = Signal(name="item_refresh_signal")
-
     def __init__(self, name, description, is_root=False, is_category=False):
         """Class constructor."""
         super().__init__(name, description)
@@ -42,8 +40,6 @@ class ProjectItem(MetaObject):
         self._children = list()  # Child ProjectItems. Appended when new items are inserted into model.
         self.is_root = is_root
         self.is_category = is_category
-        # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
-        self.item_refresh_signal.connect(self.refresh)
 
     def parent(self):
         """Returns parent project item."""
@@ -122,6 +118,27 @@ class ProjectItem(MetaObject):
         child = self._children.pop(row)
         child._parent = None
         return True
+
+
+class ConcreteProjectItem(ProjectItem):
+    """Class for project items that are not category nor root.
+    These items can be executed, refreshed, and so on.
+
+    Attributes:
+        toolbox (ToolboxUI): QMainWindow instance
+        name (str): Object name
+        description (str): Object description
+    """
+
+    item_refresh_signal = Signal(name="item_refresh_signal")
+
+    def __init__(self, toolbox, name, description):
+        """Class constructor."""
+        super().__init__(name, description, is_root=False, is_category=False)
+        self._toolbox = toolbox
+        # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
+        self.item_refresh_signal.connect(self.refresh)
+        self.visited_items = list()  # List of items visited at execution
 
     def connect_signals(self):
         """Connect signals to handlers."""

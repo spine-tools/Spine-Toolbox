@@ -23,7 +23,7 @@ import sys
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
-from project_item import ProjectItem
+from project_item import ConcreteProjectItem
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 from graphics_items import ToolIcon
@@ -31,7 +31,7 @@ from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from helpers import create_dir
 
 
-class Tool(ProjectItem):
+class Tool(ConcreteProjectItem):
     """Tool class.
 
     Attributes:
@@ -46,8 +46,7 @@ class Tool(ProjectItem):
 
     def __init__(self, toolbox, name, description, tool_template, use_work, x, y):
         """Class constructor."""
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Tool"
         self.source_file_model = QStandardItemModel()
