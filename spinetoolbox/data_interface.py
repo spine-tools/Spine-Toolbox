@@ -64,8 +64,6 @@ class DataInterface(ProjectItem):
         self.all_files = []  # All source files
         self.unchecked_files = []  # Unchecked source files
         self._graphics_item = DataInterfaceIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
-        self.item_refresh_signal.connect(self.refresh)
         self._sigs = self.make_signal_handler_dict()
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance

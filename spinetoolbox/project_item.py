@@ -19,7 +19,7 @@ ProjectItem class.
 
 import logging
 from metaobject import MetaObject
-from PySide2.QtCore import Signal
+from PySide2.QtCore import Signal, Slot
 
 
 class ProjectItem(MetaObject):
@@ -42,6 +42,8 @@ class ProjectItem(MetaObject):
         self._children = list()  # Child ProjectItems. Appended when new items are inserted into model.
         self.is_root = is_root
         self.is_category = is_category
+        # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
+        self.item_refresh_signal.connect(self.refresh)
 
     def parent(self):
         """Returns parent project item."""
@@ -140,3 +142,13 @@ class ProjectItem(MetaObject):
                 logging.error("Disconnecting signal %s from handler %s failed", signal, handler)
                 return False
         return True
+
+    def simulate_execution(self):
+        """Simulates executing this Item."""
+
+    @Slot(name="refresh")
+    def refresh(self):
+        """Refresh this item's UI."""
+
+    def execute(self):
+        """Executes this item."""

@@ -62,8 +62,6 @@ class View(ProjectItem):
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
         self._graphics_item = ViewIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        # Note: item_refresh_signal is not shared with other project items so there is no need to disconnect it
-        self.item_refresh_signal.connect(self.refresh)
         self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):

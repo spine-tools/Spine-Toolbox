@@ -461,10 +461,7 @@ class ExecutionInstance(QObject):
             curr_item = self._toolbox.project_item_model.project_item(ind)
             if curr_item == item:
                 break
-            try:
-                curr_item.simulate_execution()
-            except AttributeError:
-                continue
+            curr_item.simulate_execution()
 
     def add_ds_ref(self, dialect, ref):
         """Adds given database reference to a dictionary. Key is the dialect.
