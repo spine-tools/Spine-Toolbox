@@ -511,44 +511,44 @@ class ExecutionInstance(QObject):
         self.tool_output_files.setdefault(tool_item, list()).append(filepath)
 
     def ds_urls_at_sight(self, item):
-        """Returns a list of ds_urls entries currently seen by the given item.
+        """Returns ds_urls currently seen by the given item.
 
         Args:
             item (ProjectItem)
         """
-        return [self.ds_urls[anc] for anc in item.ancestors if anc in self.ds_urls]
+        return {self.ds_urls[anc]: anc for anc in item.ancestors if anc in self.ds_urls}
 
     def di_data_at_sight(self, item):
-        """Returns a list of di_data entries currently seen by the given item.
+        """Returns di_data currently seen by the given item.
 
         Args:
             item (ProjectItem)
         """
-        return [self.di_data[anc] for anc in item.ancestors if anc in self.di_data]
+        return {self.di_data[anc]: anc for anc in item.ancestors if anc in self.di_data}
 
     def dc_refs_at_sight(self, item):
-        """Returns a list of dc_refs entries currently seen by the given item.
+        """Returns dc_refs currently seen by the given item.
 
         Args:
             item (ProjectItem)
         """
-        return [ref for anc in item.ancestors for ref in self.dc_refs.get(anc, [])]
+        return {ref: anc for anc in item.ancestors for ref in self.dc_refs.get(anc, [])}
 
     def dc_files_at_sight(self, item):
-        """Returns a list of dc_files entries currently seen by the given item.
+        """Returns dc_files currently seen by the given item.
 
         Args:
             item (ProjectItem)
         """
-        return [data for anc in item.ancestors for data in self.dc_files.get(anc, [])]
+        return {f: anc for anc in item.ancestors for f in self.dc_files.get(anc, [])}
 
     def tool_output_files_at_sight(self, item):
-        """Returns a list of tool_output_files entries currently seen by the given item.
+        """Returns tool_output_files currently seen by the given item.
 
         Args:
             item (ProjectItem)
         """
-        return [fn for anc in item.ancestors for fn in self.tool_output_files.get(anc, [])]
+        return {f: anc for anc in item.ancestors for f in self.tool_output_files.get(anc, [])}
 
     def find_file(self, filename, item):
         """Returns the first occurrence of full path to given file name in files seen by the given item,

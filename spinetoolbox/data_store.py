@@ -644,8 +644,7 @@ class DataStore(ConcreteProjectItem):
                 db_map = None
             if db_map:
                 all_import_errors = []
-                # FIXME: Import mapped data from ancestors only
-                for di_item, all_data in inst.di_data.items():
+                for all_data, di_item in inst.di_data_at_sight(self).items():
                     self._toolbox.msg_proc.emit("Importing data from <b>{}</b> into '{}'".format(di_item.name, url))
                     for data in all_data:
                         import_num, import_errors = spinedb_api.import_data(db_map, **data)
