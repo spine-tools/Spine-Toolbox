@@ -61,9 +61,9 @@ class ToolInstance(QObject):
         self.ipython_command_list = list()
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
-        self.inputfiles = [os.path.join(self.basedir, f) for f in tool_template.inputfiles]
-        self.inputfiles_opt = [os.path.join(self.basedir, f) for f in tool_template.inputfiles_opt]
-        self.outputfiles = [os.path.join(self.basedir, f) for f in tool_template.outputfiles]
+        self.inputfiles = [os.path.join(self.basedir, f) for f in self.tool_template.inputfiles]
+        self.inputfiles_opt = [os.path.join(self.basedir, f) for f in self.tool_template.inputfiles_opt]
+        self.outputfiles = [os.path.join(self.basedir, f) for f in self.tool_template.outputfiles]
         # Check that required output directories are created
         self.make_work_output_dirs()
         # Checkout Tool template to work directory
