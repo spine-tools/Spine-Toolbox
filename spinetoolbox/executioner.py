@@ -411,7 +411,7 @@ class ExecutionInstance(QObject):
         item_ind = self._toolbox.project_item_model.find_item(item_name)
         self.running_item = self._toolbox.project_item_model.project_item(item_ind)
         self.project_item_execution_finished_signal.connect(self.item_execution_finished)
-        self.running_item.begin_execution()
+        self.running_item.update_ancestors()
         self.running_item.execute()
 
     @Slot(int, name="item_execution_finished")
@@ -422,7 +422,6 @@ class ExecutionInstance(QObject):
             item_finish_state (int): 0=Continue to next project item. -2=Stop executing this graph (happens when e.g.
             Tool does not find req. input files or something)
         """
-        self.running_item.end_execution()
         self.project_item_execution_finished_signal.disconnect()
         if item_finish_state == -1:
             # Item execution failed due to e.g. Tool did not find input files or something
@@ -449,21 +448,19 @@ class ExecutionInstance(QObject):
         return
 
     def simulate_execution(self, item):
-        """Simulates execution of all items in the execution list just until before
-        the given item is reached.
+        """Simulates execution of all items in the execution list that come *before* the given item.
         This is used by Data Interface items to find out its sources statically.
 
         Args:
-            item (ProjectItem): The item that requests the simulation, before which it should stop.
+            item (ProjectItem): When reaching this item, the simulation should stop.
         """
         for item_name in self.execution_list:
             ind = self._toolbox.project_item_model.find_item(item_name)
             curr_item = self._toolbox.project_item_model.project_item(ind)
-            curr_item.begin_execution()
+            curr_item.update_ancestors()
             if curr_item == item:
                 break
             curr_item.simulate_execution()
-            curr_item.end_execution()
 
     def add_ds_url(self, ds_item, url):
         """Adds given url to the dictionary.

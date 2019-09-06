@@ -170,10 +170,10 @@ class ConcreteProjectItem(ProjectItem):
     def simulate_execution(self):
         """Simulates executing this Item."""
 
-    def begin_execution(self):
-        """Begins execution.
+    def update_ancestors(self):
+        """Update the set of ancestors. This is called by ExecutionInstance before calling execute()
         """
-        # Initialize the set of ancestors. These are the direct parents plus their ancestors.
+        # Ancestors are the direct parents plus their ancestors.
         # Note that, since we execute DAGs in BFS order, parents' ancestors have always been computed
         # when treating this item.
         self.ancestors.clear()
@@ -182,7 +182,3 @@ class ConcreteProjectItem(ProjectItem):
             item = self._toolbox.project_item_model.project_item(ind)
             self.ancestors.update(item.ancestors)
             self.ancestors.add(item)
-
-    def end_execution(self):
-        """Ends execution.
-        """
