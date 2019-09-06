@@ -654,7 +654,7 @@ class Tool(ConcreteProjectItem):
     @Slot(name="refresh")
     def refresh(self):
         """Check if all input files are there and mark them in the tree view."""
-        self._project.simulate_execution(self)
+        self._project.simulate_execution(self.name)
         inst = self._project.execution_instance
         for i in range(self.template_model.rowCount()):
             item = self.template_model.item(i)
@@ -662,7 +662,7 @@ class Tool(ConcreteProjectItem):
                 for j in range(item.rowCount()):
                     filename = item.child(j).text()
                     print(filename)
-                    print(inst.find_file(filename, self))
+                    print(inst.find_file(filename, self.name))
                     # TODO: finish this. Beware of `filename`s which actually are a directory?
 
     def execute(self):
@@ -761,7 +761,7 @@ class Tool(ConcreteProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            found_file = self._toolbox.project().execution_instance.find_file(filename, self)
+            found_file = self._toolbox.project().execution_instance.find_file(filename, self.name)
             if not found_file:
                 self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
                 return None
@@ -783,8 +783,7 @@ class Tool(ConcreteProjectItem):
             if not pattern:
                 # It's a directory -> skip
                 continue
-            # found_files = self.find_files(filename)  # Obsolete
-            found_files = self._toolbox.project().execution_instance.find_optional_files(pattern)
+            found_files = self._toolbox.project().execution_instance.find_optional_files(pattern, self.name)
             if not found_files:
                 self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(pattern))
             else:

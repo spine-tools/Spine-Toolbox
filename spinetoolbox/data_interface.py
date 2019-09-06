@@ -256,9 +256,9 @@ class DataInterface(ConcreteProjectItem):
     @Slot(name="refresh")
     def refresh(self):
         """Update the list of files that this item is viewing."""
-        self._project.simulate_execution(self)
+        self._project.simulate_execution(self.name)
         inst = self._project.execution_instance
-        file_list = [*inst.dc_refs_at_sight(self), *inst.dc_files_at_sight(self)]
+        file_list = inst.dc_refs_at_sight(self.name) + inst.dc_files_at_sight(self.name)
         self.update_file_model(file_list)
 
     def execute(self):
@@ -308,7 +308,7 @@ class DataInterface(ConcreteProjectItem):
         if all_data:
             # Add mapped data to a dict in the execution instance.
             # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
-            inst.add_di_data(self, all_data)
+            inst.add_di_data(self.name, (self.name, all_data))
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):

@@ -632,7 +632,7 @@ class DataStore(ConcreteProjectItem):
                 "& <i>password</i> for other database dialects."
             )
         else:
-            inst.add_ds_url(self, url)
+            inst.add_ds_url(self.name, url)
             # Import mapped data from Data Interfaces in the execution instance
             try:
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
@@ -644,8 +644,8 @@ class DataStore(ConcreteProjectItem):
                 db_map = None
             if db_map:
                 all_import_errors = []
-                for all_data, di_item in inst.di_data_at_sight(self).items():
-                    self._toolbox.msg_proc.emit("Importing data from <b>{}</b> into '{}'".format(di_item.name, url))
+                for (di_name, all_data) in inst.di_data_at_sight(self):
+                    self._toolbox.msg_proc.emit("Importing data from <b>{0}</b> into '{1}'".format(di_name, url))
                     for data in all_data:
                         import_num, import_errors = spinedb_api.import_data(db_map, **data)
                         if import_errors:
@@ -690,4 +690,4 @@ class DataStore(ConcreteProjectItem):
         inst = self._toolbox.project().execution_instance
         url = self.make_url()
         if url:
-            inst.add_ds_url(self, url)
+            inst.add_ds_url(self.name, url)

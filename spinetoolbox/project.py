@@ -719,10 +719,10 @@ class SpineToolboxProject(MetaObject):
 
     def simulate_execution(self, item):
         """Simulates the execution of the dag containing item just until before it's reached."""
-        dag = self.dag_handler.dag_with_node(item.name)
+        dag = self.dag_handler.dag_with_node(item)
         if not dag:
             self._toolbox.msg_error.emit(
-                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item.name)
+                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
             return
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
@@ -730,7 +730,7 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg.emit("")
             self._toolbox.msg_warning.emit(
                 "The graph containing {0} is not a directed acyclic graph. "
-                "Please edit connections in Design View and try again.".format(item.name)
+                "Please edit connections in Design View and try again.".format(item)
             )
             return
         # Make execution instance and run simulation

@@ -392,14 +392,14 @@ class DataConnection(ConcreteProjectItem):
         inst = self._toolbox.project().execution_instance
         # Update Data Connection based on project items that are already executed
         # Add previously executed Tool's output file paths to references
-        self.references += inst.tool_output_files
+        self.references += inst.tool_output_files_at_sight(self.name)
         self.populate_reference_list(self.references)
         # Update execution instance for project items downstream
         # Add data file references and data files into execution instance
         refs = self.file_references()
-        inst.append_dc_refs(self, refs)
+        inst.append_dc_refs(self.name, refs)
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        inst.append_dc_files(self, f_list)
+        inst.append_dc_files(self.name, f_list)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
@@ -411,6 +411,6 @@ class DataConnection(ConcreteProjectItem):
         """Simulates executing this Data Connection."""
         inst = self._toolbox.project().execution_instance
         refs = self.file_references()
-        inst.append_dc_refs(self, refs)
+        inst.append_dc_refs(self.name, refs)
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        inst.append_dc_files(self, f_list)
+        inst.append_dc_files(self.name, f_list)

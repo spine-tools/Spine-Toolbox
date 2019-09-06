@@ -395,11 +395,12 @@ class ExecutionInstance(QObject):
         self._toolbox = toolbox
         self.execution_list = execution_list  # Ordered list of nodes to execute. First node at index 0
         self.running_item = None
-        self.dc_refs = dict()  # Key is DC ProjectItem, value is reference list
-        self.dc_files = dict()  # Key is DC ProjectItem, value is file list
-        self.ds_urls = dict()  # Key is DS ProjectItem, value is url
-        self.di_data = dict()  # Key is DI ProjectItem, value is data for import
-        self.tool_output_files = dict()  # Key is Tool ProjectItem, value is list of paths to output files
+        # Data seen by project items in the list
+        self.dc_refs = dict()  # Key is DC item name, value is reference list
+        self.dc_files = dict()  # Key is DC item name, value is file list
+        self.ds_urls = dict()  # Key is DS item name, value is url
+        self.di_data = dict()  # Key is DI item name, value is data for import
+        self.tool_output_files = dict()  # Key is Tool item name, value is list of paths to output files
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
@@ -411,7 +412,6 @@ class ExecutionInstance(QObject):
         item_ind = self._toolbox.project_item_model.find_item(item_name)
         self.running_item = self._toolbox.project_item_model.project_item(item_ind)
         self.project_item_execution_finished_signal.connect(self.item_execution_finished)
-        self.running_item.update_ancestors()
         self.running_item.execute()
 
     @Slot(int, name="item_execution_finished")
@@ -431,6 +431,7 @@ class ExecutionInstance(QObject):
             # User pressed Stop button
             self.graph_execution_finished_signal.emit(-2)
             return
+        self.propagate_data(self.running_item.name)
         try:
             item_name = self.execution_list.pop(0)
         except IndexError:
@@ -447,105 +448,130 @@ class ExecutionInstance(QObject):
         self.running_item.stop_execution()
         return
 
-    def simulate_execution(self, item):
+    def simulate_execution(self, final_item):
         """Simulates execution of all items in the execution list that come *before* the given item.
         This is used by Data Interface items to find out its sources statically.
 
         Args:
-            item (ProjectItem): When reaching this item, the simulation should stop.
+            final_item (str): When reaching this item, the simulation should stop.
         """
-        for item_name in self.execution_list:
-            ind = self._toolbox.project_item_model.find_item(item_name)
-            curr_item = self._toolbox.project_item_model.project_item(ind)
-            curr_item.update_ancestors()
-            if curr_item == item:
+        for item in self.execution_list:
+            if item == final_item:
                 break
-            curr_item.simulate_execution()
+            ind = self._toolbox.project_item_model.find_item(item)
+            project_item = self._toolbox.project_item_model.project_item(ind)
+            project_item.simulate_execution()
+            self.propagate_data(item)
 
     def add_ds_url(self, ds_item, url):
-        """Adds given url to the dictionary.
+        """Adds given url provided by ds_item.
 
         Args:
-            ds_item (ProjecItem): Data store item
+            ds_item (str): name of Data store item that provides the url
             url (URL): Url
         """
-        self.ds_urls[ds_item] = url
+        for item in self._toolbox.connection_model.output_items(ds_item):
+            self.ds_urls.setdefault(item, list()).append(url)
 
     def add_di_data(self, di_item, data):
-        """Adds given data from data interface to the dictionary.
+        """Adds given import data provided by di_item.
 
         Args:
-            di_item (ProjecItem): Data interface item
+            di_item (str): name of Data interface item that provides the data
             data (dict): Data to import
         """
-        self.di_data[di_item] = data
+        for item in self._toolbox.connection_model.output_items(di_item):
+            self.di_data.setdefault(item, list()).append(data)
 
     def append_dc_refs(self, dc_item, refs):
-        """Adds given file paths (Data Connection file references) to the dictionary.
+        """Adds given file paths (Data Connection file references) provided by dc_item.
 
         Args:
-            dc_item (ProjecItem): Data connection item
+            dc_item (str): name of Data connection item that provides the file references
             refs (list): List of file paths (references)
         """
-        self.dc_refs.setdefault(dc_item, list()).extend(refs)
+        for item in self._toolbox.connection_model.output_items(dc_item):
+            self.dc_refs.setdefault(item, list()).extend(refs)
 
     def append_dc_files(self, dc_item, files):
-        """Adds given project data file paths to the dictionary.
+        """Adds given project data file paths provided by dc_item.
 
         Args:
-            dc_item (ProjecItem): Data connection item
+            dc_item (str): name of Data connection item that provides the files
             refs (list): List of file paths (references)
         """
-        self.dc_files.setdefault(dc_item, list()).extend(files)
+        for item in self._toolbox.connection_model.output_items(dc_item):
+            self.dc_files.setdefault(item, list()).extend(files)
 
     def append_tool_output_file(self, tool_item, filepath):
-        """Adds given file path the dictionary containing paths to Tool output files.
+        """Adds given file path provided by tool_item.
 
         Args:
-            tool_item (ProjecItem): Tool item
+            tool_item (str): name of Tool item that provides the file
             filepath (str): Path to a tool output file (in tool result directory)
         """
-        self.tool_output_files.setdefault(tool_item, list()).append(filepath)
+        for item in self._toolbox.connection_model.output_items(tool_item):
+            self.tool_output_files.setdefault(item, list()).append(filepath)
 
     def ds_urls_at_sight(self, item):
         """Returns ds_urls currently seen by the given item.
 
         Args:
-            item (ProjectItem)
+            item (str): item name
         """
-        return {self.ds_urls[anc]: anc for anc in item.ancestors if anc in self.ds_urls}
+        return self.ds_urls.get(item, [])
 
     def di_data_at_sight(self, item):
         """Returns di_data currently seen by the given item.
 
         Args:
-            item (ProjectItem)
+            item (str): item name
         """
-        return {self.di_data[anc]: anc for anc in item.ancestors if anc in self.di_data}
+        return self.di_data.get(item, [])
 
     def dc_refs_at_sight(self, item):
         """Returns dc_refs currently seen by the given item.
 
         Args:
-            item (ProjectItem)
+            item (str): item name
         """
-        return {ref: anc for anc in item.ancestors for ref in self.dc_refs.get(anc, [])}
+        return self.dc_refs.get(item, [])
 
     def dc_files_at_sight(self, item):
         """Returns dc_files currently seen by the given item.
 
         Args:
-            item (ProjectItem)
+            item (str): item name
         """
-        return {f: anc for anc in item.ancestors for f in self.dc_files.get(anc, [])}
+        return self.dc_files.get(item, [])
 
     def tool_output_files_at_sight(self, item):
         """Returns tool_output_files currently seen by the given item.
 
         Args:
-            item (ProjectItem)
+            item (str): item name
         """
-        return {f: anc for anc in item.ancestors for f in self.tool_output_files.get(anc, [])}
+        return self.tool_output_files.get(item, [])
+
+    def propagate_data(self, input_item):
+        """Propagate data seen by given item into output items.
+
+        Args:
+            input_item (str): Project item name
+        """
+        # Everything that the input item sees...
+        ds_urls_at_sight = self.ds_urls_at_sight(input_item)
+        di_data_at_sight = self.di_data_at_sight(input_item)
+        dc_refs_at_sight = self.dc_refs_at_sight(input_item)
+        dc_files_at_sight = self.dc_files_at_sight(input_item)
+        tool_output_files_at_sight = self.tool_output_files_at_sight(input_item)
+        # ...make it seeable also by output items
+        for item in self._toolbox.connection_model.output_items(input_item):
+            self.ds_urls.setdefault(item, list()).extend(ds_urls_at_sight)
+            self.di_data.setdefault(item, list()).extend(di_data_at_sight)
+            self.dc_refs.setdefault(item, list()).extend(dc_refs_at_sight)
+            self.dc_files.setdefault(item, list()).extend(dc_files_at_sight)
+            self.tool_output_files.setdefault(item, list()).extend(tool_output_files_at_sight)
 
     def find_file(self, filename, item):
         """Returns the first occurrence of full path to given file name in files seen by the given item,
@@ -553,7 +579,7 @@ class ExecutionInstance(QObject):
 
         Args:
             filename (str): Searched file name (no path) TODO: Change to pattern
-            item (ProjecItem): Search only in files seen by this item
+            item (str): item name
 
         Returns:
             str: Full path to file if found, None if not found
@@ -594,7 +620,7 @@ class ExecutionInstance(QObject):
 
         Returns:
             list: List of (full) paths
-            item (ProjecItem): Search only in files seen by this item
+            item (str): item name
         """
         # logging.debug("Searching optional input files. Pattern: '{0}'".format(pattern))
         matches = list()

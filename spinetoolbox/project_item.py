@@ -138,7 +138,6 @@ class ConcreteProjectItem(ProjectItem):
         self._toolbox = toolbox
         # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
         self.item_refresh_signal.connect(self.refresh)
-        self.ancestors = set()  # Ancestors, populated at execution or execution simulation
 
     def connect_signals(self):
         """Connect signals to handlers."""
@@ -169,16 +168,3 @@ class ConcreteProjectItem(ProjectItem):
 
     def simulate_execution(self):
         """Simulates executing this Item."""
-
-    def update_ancestors(self):
-        """Update the set of ancestors. This is called by ExecutionInstance before calling execute()
-        """
-        # Ancestors are the direct parents plus their ancestors.
-        # Note that, since we execute DAGs in BFS order, parents' ancestors have always been computed
-        # when treating this item.
-        self.ancestors.clear()
-        for item_name in self._toolbox.connection_model.input_items(self.name):
-            ind = self._toolbox.project_item_model.find_item(item_name)
-            item = self._toolbox.project_item_model.project_item(ind)
-            self.ancestors.update(item.ancestors)
-            self.ancestors.add(item)
