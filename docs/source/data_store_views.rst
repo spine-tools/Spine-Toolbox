@@ -34,11 +34,10 @@ The **Tabular view** has three main components:
 * *Main table* (3), where the actual data is displayed.
 
 From the drop-down list at the top of the selection component,
-you can select three different input types:
+you can select two different input types:
 
 * *value*: display all objects (or relationships), as well as all parameters and parameter values
   for the selected object (or relationship) class.
-* *json*: display only timeseries data from the json field for the selected object (or relationship) class.
 * *set*: display only the objects (or relationships) for the selected object (or relationship) class.
 
 Pivoting and filtering data
@@ -121,13 +120,14 @@ within a Spine database:
 .. image:: img/tree_view.png
    :align: center
 
-The interface has three main components:
+The interface has four main components:
 
 1. *Object tree*, where you can expand and collapse the different levels of the hierarchy.
    It also acts as a filtering tool for the other two table components, so that only items selected in the
    *Object tree* are shown in the *Parameter tables*.
-2. *Object parameter table*, where you can view, add, edit, and delete object parameter definitions and values.
-3. *Relationship parameter table*, where you can view, add, edit, and delete relationship parameter
+2. *Relationship tree*, similar to *Object tree* but for relationships.
+3. *Object parameter table*, where you can view, add, edit, and delete object parameter definitions and values.
+4. *Relationship parameter table*, where you can view, add, edit, and delete relationship parameter
    definitions and values.
 
 Editing items
@@ -152,10 +152,7 @@ Viewing parameter definitions and values
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 In the *Parameter tables*, you can switch between viewing parameter definitions or values by using the tabs
-in the upper right corner:
-
-.. image:: img/tree_view_table_tab.png
-   :align: center
+in the upper right corner.
 
 You can also (further) filter the tables by clicking on the column headers.
 
@@ -165,9 +162,6 @@ Editing parameters definitions and values
 
 To add new parameter definitions or values you can directly do it in the last row of each table.
 The tables also support pasting values from the clipboard.
-
-.. image:: img/tree_view_table_parameter_tools.png
-   :align: center
 
 
 Graph view
