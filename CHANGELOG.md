@@ -3,46 +3,11 @@ All **notable** changes to this project are documented here.
 
 The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 
-## [0.3-beta.6] - 2019-09-05
-
-### Fixed
-- Mouse click problems in Design View
-- Mouse cursor problem in Tool Configuration Assistant
-- Welcome message is now shown for first time users
-- User Guide almost up-to-date for 0.3
-
-## [0.3-beta.5] - 2019-09-04
-
-### Fixed
-- .py files in *spinedb_api\alembic\versions* are now copied to the installation bundle without compiling them to 
-  .pyc files first. Also, if there's a previous version installed, *spinedb_api\alembic* directory is deleted 
-  before installation begins.  
-
-## [0.3-beta.4] - 2019-09-03
-
-### Fixed
-- NameError: SpineDBAPIError when executing Data Stores.
-- Removed an unnecessary error dialog in Import Preview widget.
-- Added missing modules from *spinedb_api\alembic\versions* package into installation bundle.
-
-## [0.3-beta.3] - 2019-09-03
-
-### Fixed
-- *numpy* is now deleted before installation begins so installing over an existing installation of Spine Toolbox 
-  works again.
-
-## [0.3-beta.2] - 2019-09-03
+## [0.3] - 2019-09-06
 
 ### Added
-- *packaging* and *appdirs* packages are now included in the installation bundle.
-
-### Fixed
-- Link to Getting Started Guide in Event Log
-
-## [0.3-beta] - 2019-08-26
-
-### Added
-- Zooming (by using the mouse wheel) is now enabled in Design View. You can also select multiple project
+- Welcome message including a link to Getting Started guide.
+- Zooming (by using the mouse wheel) is now enabled in Design View. You can also select multiple project.
   items by pressing the Ctrl-key down and dragging the mouse.
 - New project item icons on Design View.
 - Two options for the Design View background (grid or solid). See Settings (F1).
@@ -54,30 +19,41 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - The Data Store treeview now also has a relationship tree.
 - Support for reordering columns in the treeview.
 - Selecting 'edit object classes' in the treeview now also allows the icon to be selected.
-- There is now an upper limit on how much text is logged in Event Log and Process Log. The oldest lines are removed
-  if the limit is exceeded.
 - Play button to main window Toolbar that executes all Directed Acyclic Graphs in the Project one after another.
 - Another Play button to main window Toolbar to execute selected Directed Acyclic Graph. Selecting a DAG happens by
   selecting one or more project items belonging to the wanted DAG in the Design View or in Project Items list.
 - Stop button to main window Toolbar, which terminates execution.
-- Now it's possible to specify a dedicated Julia project or environment for Spine Toolbox in the settings.
+- Possibility to specify a dedicated Julia project or environment for Spine Toolbox in the settings.
 - Feature to Export project to GraphML format. Each graph in Design View is written to its own file. To do this, just
   select *Export project to GraphML* from the Project Item list context-menu or from *File -> 
   Export project to GraphML*.
-- New project item: Data Interface
+- New project item: *Data Interface*
 - Parameter and relationship parameter values can now be edited in a dedicated editor window in Tree, Graph and Tabular
-  views. The editor is accessible from when right clicking a value and selecting `Open in editor...`.
+  views. The editor is accessible by right-clicking a value and selecting `Open in editor...`.
 - It is now possible to plot parameter and relationship parameter values in Tree, Graph and Tabular views.
+
+### Fixed
+- There is now an upper limit on how much text is logged in Event Log and Process Log. The oldest lines are removed
+  if the limit is exceeded. This fixes a problem with excessive memory usage when running long processes.
+- Mouse click problems in Design View
+- Mouse cursor problem in Tool Configuration Assistant
+- Welcome message is now shown for first time users
+- NameError: SpineDBAPIError when executing Data Stores.
+- .py files in *spinedb_api\alembic\versions* are now copied to the installation bundle without compiling them to 
+  .pyc files first. Also, if there's a previous version installed, *spinedb_api\alembic* directory is deleted 
+  before installation begins [Win-x64].
+- Added missing modules from *spinedb_api\alembic\versions* package into installation bundle [Win-x64].
+- *numpy* is now deleted before installation begins so installing over an existing installation of Spine Toolbox 
+  works again [Win-x64].
+- *packaging* and *appdirs* packages are now included in the installation bundle [Win-x64].
 
 ### Changed
 - Selecting the Julia environment in Settings now requires picking the Julia interpreter **file**
   (e.g. julia.exe on Windows) instead of the directory where the Julia interpreter is located.
 - Selecting the GAMS program (**file**) in Settings now requires picking the GAMS program (e.g. gams.exe
   on Windows) instead of the directory where the GAMS program is located.
-- Selected Julia and GAMS are now stored to persistent memory using Qt's QSettings class and not into
-  settings.conf file. This means that these options have been set to factory defaults in Settings.
-- All application Settings are now saved using Qt's QSettings class. *conf/settings.conf* file is not
-  needed anymore.
+- All application Settings are now saved using Qt's QSettings class. Old configuration file, 
+  *conf/settings.conf* file has been removed.
 - New Spine databases can be created in any backend supported by spinedb_api. The Data Store item properties
   have been changed to allow for this.
 - Executing Directed Acyclic Graphs instead of just Tools.
@@ -85,9 +61,11 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   Play button in the main window Toolbar.
 
 ### Removed
+- An unnecessary error dialog in Import Preview widget.
 - ConfigurationParser class in configuration.py.
 - Execute button in Tool Properties.
 - Stop button in Tool Properties.
+- Console window that opened in addition to the application window is not shown anymore [Win-x64].
 
 ## [0.2] - 2019-01-17
 
