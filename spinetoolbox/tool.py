@@ -674,10 +674,8 @@ class Tool(ConcreteProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
-        if self.execute_in_work:
-            self._toolbox.msg.emit("*** Executing in <b>work</b> directory mode ***")
-        else:
-            self._toolbox.msg.emit("*** Executing in <b>source</b> directory mode ***")
+        work_or_source = "work" if self.execute_in_work else "source"
+        self._toolbox.msg.emit("*** Executing in <b>{0}</b> directory mode ***".format(work_or_source))
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Checking Tool template requirements ***")
@@ -702,10 +700,7 @@ class Tool(ConcreteProjectItem):
                     self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
                     self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                     return
-                if self.execute_in_work:
-                    self._toolbox.msg.emit("*** Copying input files to work directory ***")
-                else:
-                    self._toolbox.msg.emit("*** Copying input files to source directory ***")
+                self._toolbox.msg.emit("*** Copying input files to {0} directory ***".format(work_or_source))
                 # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_paths):
                     self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
@@ -715,10 +710,7 @@ class Tool(ConcreteProjectItem):
                 # logging.debug("No input files to copy")
                 pass
             if n_dirs > 0:
-                if self.execute_in_work:
-                    self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
-                else:
-                    self._toolbox.msg.emit("*** Creating subdirectories to source directory ***")
+                self._toolbox.msg.emit("*** Creating subdirectories to {0} directory ***".format(work_or_source))
                 if not self.create_subdirectories():
                     # Creating directories failed -> abort
                     self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted.")
