@@ -50,7 +50,7 @@ Alongside *Design view* there are a few 'dock widgets' that provide additional f
 - *Project* provides a more concise view of your project, including:
 
    - *Items* currently in the project, grouped by category:
-     Data Stores, Data Connections, Tools and Views.
+     Data Stores, Data Connections, Tools, Views, and Data Interfaces.
    - *Tool templates* available in the project.
 
 - *Properties* provides an interface to interact with the currently selected project item.
@@ -58,14 +58,15 @@ Alongside *Design view* there are a few 'dock widgets' that provide additional f
 - *Process Log* shows the output of executed Tools.
 - *Julia console* provides an interface to interact with the Julia programming language,
   and also allows Spine Toolbox to execute Julia Tools.
-- *Python console* provides an interface to interact with the Python programming language.
+- *Python console* provides an interface to interact with the Python programming language,
+  and also allows Spine Toolbox to execute Python Tools.
 
 .. tip:: You can drag-and-drop the Dock Widgets around the screen,
    customizing the interface at your will.
    Also, you can select which ones are shown/hidden using either the **View/Dock Widgets** menu,
-   or the *Add Item* toolbar's context menu.
-   Spine Toolbox will remember your configuration in between sessions. Selecting **Restore Dock Widgets**
-   from the **View/Dock Widgets** menu resets the the widgets back to their default configuration.
+   or the main menu toolbar's context menu.
+   Spine Toolbox remembers your configuration between sessions. Selecting **Restore Dock Widgets**
+   from the **View/Dock Widgets** menu restores the widgets back to their default location.
 
 .. tip:: Most elements in the Spine Toolbox's interface are equipped with *tool tips*. Leave your mouse
    cursor over an element (button, view, etc.) for a moment to make the tool tip appear.
@@ -75,7 +76,7 @@ Creating a Project
 
 To create a new project, please do one of the following:
 
-A) From the application main menu, select **File -> New...**
+A) From the application main menu, select **File -> New project...**
 B) Press *Ctrl+N*.
 
 The *New Project* form will show up.
@@ -91,7 +92,7 @@ Creating a Tool template
    required and optional input files, and expected output files. Once a Tool template is added to a project, it can
    then be associated to a **Tool** item for its execution as part of the project workflow.
 
-In the *Project* widget, click on the 'add tool template button' (|add_tool_template|)
+In the *Project* dock widget, click on the 'add tool template button' (|add_tool_template|)
 just below the *Tool templates* list, and select **New** from the popup menu.
 The *Edit Tool Template* form will appear. Follow the instructions below to create a minimal Tool template:
 
@@ -99,16 +100,16 @@ The *Edit Tool Template* form will appear. Follow the instructions below to crea
 - Select 'Python' from the *Select type...* dropdown list,
 - Click on the |file| button right next to the field that reads *Add main program file here...*, and
   select the option **Make new main program** from the popup menu.
-- A file browser dialog should open. Name the file 'hello_world.py' and save it in a folder of your choice.
+- A file browser dialog should open. Name the file *hello_world.py* and save it in a folder of your choice.
 
-After all this, the *Edit Tool Template* form should be looking similar to this:
+After this, the *Edit Tool Template* form should be looking similar to this:
 
 .. image:: img/hello_world_tool_template_editor.png
   :align: center
 
 Click **Ok** at the bottom of the form. A new system dialog will appear, allowing you to
 select a file name and location to save the Tool template we've just created.
-Don't change the default file name, which should be 'hello_world.json'.
+Don't change the default file name, which should be *hello_world.json*.
 Just select a folder from your system (it can be the same where you saved the main program file)
 and click **Save**.
 
@@ -118,14 +119,14 @@ Now you should see the new tool template in the *Project* widget, *Tool template
    another project. To do this, you just need to click on the add tool button (|add_tool_template|),
    select **Add existing...** from the popup menu, and then select the tool template file from your system.
 
-Congratulations, you have just created your first minimal Tool template.
+Congratulations, you have just created your first Tool template.
 
-However, the main program file 'hello_world.py' was created empty, so for the moment this Tool
+However, the main program file *hello_world.py* was created empty, so for the moment this Tool
 template does absolutely nothing. To change that, we need to add instructions to that program file so it actually
 does something when executed.
 
 Right click on the 'hello_world' item in the *Tool templates* list and select **Edit main program file...** from the
-context menu. This will open the file 'hello_world.py' in your default editor.
+context menu. This will open the file *hello_world.py* in your default editor.
 
 Enter the following into the file's content::
 
@@ -133,7 +134,7 @@ Enter the following into the file's content::
 
 Save the file.
 
-Now, whenever 'hello_world.py' is executed, the sentence 'Hello, World!'
+Now, whenever *hello_world.py* is executed, the sentence 'Hello, World!'
 will be printed to the standard output.
 
 
@@ -151,7 +152,7 @@ B) Drag-and-drop the Tool icon (|tool_icon|) from the *Drag & Drop Icon* toolbar
 The *Add Tool* form will popup.
 Type 'say hello world' in the name field, select 'hello_world' from the dropdown list just below, and click **Ok**.
 Now you should see the newly added Tool item as an icon in the *Design View*,
-and also as an entry in the *Project* widget, *Items* list, under the 'Tools' category. It should
+and also as an entry in the *Project* dock widget, *Items* list, under the 'Tools' category. It should
 look similar to this:
 
 .. image:: img/say_hello_world_tool.png
@@ -168,15 +169,15 @@ of the window, looking similar to this:
    :align: center
 
 Press *execute project* |execute| button on the toolbar. This will execute the Tool template 'hello world',
-which in turn will run the main program file 'hello_world.py' in a dedicated process.
+which in turn will run the main program file *hello_world.py* in a dedicated process.
 
 You can see more details about execution in the *Event Log*. Once it's finished, you will see its output in
-the *Process Log*:
+the *Process Log* or in the *Python Console* depending on your settings (See :ref:`Settings`).
 
 .. image:: img/hello_world_event_process_log.png
    :align: center
 
-Congratulations, you just run your first Spine Toolbox project.
+Congratulations, you just ran your first Spine Toolbox project.
 
 Editing a Tool template
 -----------------------
@@ -201,10 +202,12 @@ should now be looking like this:
 
 Click **Ok** at the bottom of the form.
 
+.. note:: See :ref:`Tool template editor` for more information on editing Tool templates.
+
 So far so good. Now let's use this input file in our program.
 Click on the 'tool template options' button (|tool_template_options|) again,
 and this time select **Edit main program file...** from the popup menu. This will open the file
-'hello_world.py' in your default editor.
+*hello_world.py* in your default editor.
 
 Delete whatever it's in the file and enter the following instead::
 
@@ -213,7 +216,7 @@ Delete whatever it's in the file and enter the following instead::
 
 Save the file.
 
-Now, whenever 'hello_world.py' is executed, it will look for a file called 'input.txt'
+Now, whenever *hello_world.py* is executed, it will look for a file called 'input.txt'
 in the current directory, and print its content to the standard output.
 
 Try executing the tool by pressing |execute| in the toolbar.
@@ -235,12 +238,12 @@ Let's add a Data Connection item to our project, so that we're able to pass the 
 To add a Data Connection item, please do one of the following:
 
 A) From the application main menu, click **Edit -> Add Data Connection**.
-B) Drag-and-drop the Data Connection icon (|dc_icon|) from the *Add Item* toolbar onto the *Design View*.
+B) Drag-and-drop the Data Connection icon (|dc_icon|) from the main window toolbar onto the *Design View*.
 
 The *Add Data Connection* form will show up.
 Type 'pass input txt' in the name field and click **Ok**.
 Now you should see the newly added Data Connection item as an icon in the *Design View*,
-and also as an entry in the *Project* widget, *Items* list, under the 'Data Connections' category. It should
+and also as an entry in the *Project* dock widget, *Items* list, under the 'Data Connections' category. It should
 look similar to this:
 
 .. image:: img/pass_input_txt_dc_and_say_hello_world_tool.png
@@ -278,7 +281,7 @@ As mentioned above, a Tool item looks for input files in
 Data Connection and Data Store items connected to its input. Thus, what we need to do now is
 create a *connection* from 'pass input txt' to 'say hello world', so the file 'input.txt' gets passed.
 
-To do this, click one of the *connector* slot at the edges of 'pass input txt' in the *Design view*, and then
+To do this, click on one of the *connector* slots at the edges of 'pass input txt' in the *Design view*, and then
 on a similar slot in 'say hello world'. This will create an arrow pointing from one to another,
 as seen below:
 
