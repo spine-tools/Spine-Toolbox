@@ -724,15 +724,10 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_error.emit(
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
-            return
+            return False
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
-            self._toolbox.msg.emit("")
-            self._toolbox.msg_warning.emit(
-                "The graph containing {0} is not a directed acyclic graph. "
-                "Please edit connections in Design View and try again.".format(item)
-            )
-            return
+            return False
         # Make execution instance and run simulation
         self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self.execution_instance.simulate_execution(item)
