@@ -116,8 +116,31 @@ class ConnectorButton(QGraphicsRectItem):
         self.setBrush(self.brush)
 
 
+class ExclamationIcon(QGraphicsSvgItem):
+    """
+    """
+
+    def __init__(self, parent):
+        """Class constructor."""
+        super().__init__()
+        self._parent = parent
+        self.renderer = QSvgRenderer()
+        self.colorizer = QGraphicsColorizeEffect()
+        self.colorizer.setColor(QColor("red"))
+        # Load SVG
+        loading_ok = self.renderer.load(":/icons/project_item_icons/exclamation-circle.svg")
+        if not loading_ok:
+            return
+        size = self.renderer.defaultSize()
+        self.setSharedRenderer(self.renderer)
+        dim_max = max(size.width(), size.height())
+        rect_w = parent.rect().width()  # Parent rect width
+        self.setScale(0.4 * rect_w / dim_max)
+        self.setGraphicsEffect(self.colorizer)
+
+
 class ProjectItemIcon(QGraphicsRectItem):
-    """Base class for Tool and View project item icons drawn in Design View.
+    """Base class for project item icons drawn in Design View.
 
     Attributes:
         toolbox (ToolBoxUI): QMainWindow instance
@@ -150,6 +173,15 @@ class ProjectItemIcon(QGraphicsRectItem):
             left=ConnectorButton(self, toolbox, position="left"),
             right=ConnectorButton(self, toolbox, position="right"),
         )
+        # Make exclamation icon
+        self.exclamation_icon = ExclamationIcon(self)
+        # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
+        # NOTE: setting the parent item moves the items as one!
+        self.name_item.setParentItem(self)
+        for conn in self.connectors.values():
+            conn.setParentItem(self)
+        self.svg_item.setParentItem(self)
+        self.exclamation_icon.setParentItem(self)
 
     def setup(self, pen, brush, svg, svg_color):
         """Setup item's attributes according to project item type.
@@ -188,6 +220,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setAcceptDrops(True)
         self.setCursor(Qt.PointingHandCursor)
+        # Set exclamation icon position
+        self.exclamation_icon.setPos(self.rect().bottomRight() - self.exclamation_icon.sceneBoundingRect().center())
 
     def name(self):
         """Returns name of the item that is represented by this icon."""
@@ -215,11 +249,7 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def conn_button(self, position="left"):
         """Returns items connector button (QWidget)."""
-        try:
-            connector = self.connectors[position]
-        except KeyError:
-            connector = self.connectors["left"]
-        return connector
+        return self.connectors.get(position, self.connectors["left"])
 
     def hoverEnterEvent(self, event):
         """Sets a drop shadow effect to icon when mouse enters its boundaries.
@@ -337,12 +367,6 @@ class DataConnectionIcon(ProjectItemIcon):
         self.brush = QBrush(QColor("#e6e6ff"))  # QBrush for the background rectangle
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/file-alt.svg", QColor(0, 0, 255, 160))
         self.setAcceptDrops(True)
-        # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
-        # NOTE: setting the parent item moves the items as one!
-        self.name_item.setParentItem(self)
-        for conn in self.connectors.values():
-            conn.setParentItem(self)
-        self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
         self.drag_over = False
@@ -419,11 +443,6 @@ class ToolIcon(ProjectItemIcon):
         # Draw icon
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/hammer.svg", QColor("red"))
         self.setAcceptDrops(False)
-        # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
-        self.name_item.setParentItem(self)
-        for conn in self.connectors.values():
-            conn.setParentItem(self)
-        self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)  # Adds also child items automatically
         # animation stuff
@@ -484,11 +503,6 @@ class DataStoreIcon(ProjectItemIcon):
         # Setup icons and attributes
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/database.svg", QColor("#cc33ff"))
         self.setAcceptDrops(False)
-        # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
-        self.name_item.setParentItem(self)
-        for conn in self.connectors.values():
-            conn.setParentItem(self)
-        self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
 
@@ -513,11 +527,6 @@ class ViewIcon(ProjectItemIcon):
         # Setup icons and attributes
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/binoculars.svg", QColor("#33cc33"))
         self.setAcceptDrops(False)
-        # Group drawn items together by setting the master as the parent of other QGraphicsItems
-        self.name_item.setParentItem(self)
-        for conn in self.connectors.values():
-            conn.setParentItem(self)
-        self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
 
@@ -544,11 +553,6 @@ class DataInterfaceIcon(ProjectItemIcon):
         # Setup icons and attributes
         self.setup(self.pen, self.brush, ":/icons/project_item_icons/map-solid.svg", QColor("#990000"))
         self.setAcceptDrops(False)
-        # Group drawn items together by setting the background rectangle as the parent of other QGraphicsItems
-        self.name_item.setParentItem(self)
-        for conn in self.connectors.values():
-            conn.setParentItem(self)
-        self.svg_item.setParentItem(self)
         # Add items to scene
         self._toolbox.ui.graphicsView.scene().addItem(self)
 
