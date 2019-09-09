@@ -11,7 +11,7 @@
 
 
 """
-ProjectItem class.
+BaseProjectItem and ProjectItem classes.
 
 :authors: P. Savolainen (VTT)
 :date:   4.10.2018
@@ -22,7 +22,7 @@ from metaobject import MetaObject
 from PySide2.QtCore import Signal, Slot
 
 
-class ProjectItem(MetaObject):
+class BaseProjectItem(MetaObject):
     """Base class for all project items. Create root and category items by
     instantiating objects from this class.
 
@@ -36,8 +36,8 @@ class ProjectItem(MetaObject):
     def __init__(self, name, description, is_root=False, is_category=False):
         """Class constructor."""
         super().__init__(name, description)
-        self._parent = None  # Parent ProjectItem. Set when add_child is called
-        self._children = list()  # Child ProjectItems. Appended when new items are inserted into model.
+        self._parent = None  # Parent BaseProjectItem. Set when add_child is called
+        self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
         self.is_root = is_root
         self.is_category = is_category
 
@@ -54,13 +54,13 @@ class ProjectItem(MetaObject):
         return self._children
 
     def child(self, row):
-        """Returns child ProjectItem on given row.
+        """Returns child BaseProjectItem on given row.
 
         Args:
             row (int): Row of child to return
 
         Returns:
-            ProjectItem on given row or None if it does not exist
+            BaseProjectItem on given row or None if it does not exist
         """
         try:
             item = self._children[row]
@@ -83,7 +83,7 @@ class ProjectItem(MetaObject):
         ProjectItemModel when new items are added.
 
         Args:
-            child_item (ProjectItem): Project item to add
+            child_item (BaseProjectItem): Project item to add
 
         Returns:
             True if operation succeeded, False otherwise
@@ -104,7 +104,7 @@ class ProjectItem(MetaObject):
         return True
 
     def remove_child(self, row):
-        """Remove the child of this ProjectItem from given row. Do not call this method directly.
+        """Remove the child of this BaseProjectItem from given row. Do not call this method directly.
         This method is called by ProjectItemModel when items are removed.
 
         Args:
@@ -120,7 +120,7 @@ class ProjectItem(MetaObject):
         return True
 
 
-class ConcreteProjectItem(ProjectItem):
+class ProjectItem(BaseProjectItem):
     """Class for project items that are not category nor root.
     These items can be executed, refreshed, and so on.
 
