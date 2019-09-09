@@ -136,6 +136,7 @@ class ProjectItem(BaseProjectItem):
         """Class constructor."""
         super().__init__(name, description, is_root=False, is_category=False)
         self._toolbox = toolbox
+        self._graphics_item = None
         # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
         self.item_refresh_signal.connect(self.refresh)
 
@@ -158,6 +159,10 @@ class ProjectItem(BaseProjectItem):
                 logging.error("Disconnecting signal %s from handler %s failed", signal, handler)
                 return False
         return True
+
+    def get_icon(self):
+        """Returns the graphics item representing this item in the scene."""
+        return self._graphics_item
 
     @Slot(name="refresh")
     def refresh(self):

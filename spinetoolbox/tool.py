@@ -228,10 +228,6 @@ class Tool(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
 
-    def get_icon(self):
-        """Returns the graphics item representing this tool in the scene."""
-        return self._graphics_item
-
     @Slot(name="edit_tool_template")
     def edit_tool_template(self):
         """Open Tool template editor for the Tool template attached to this Tool."""

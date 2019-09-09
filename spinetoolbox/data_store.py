@@ -186,10 +186,6 @@ class DataStore(ProjectItem):
         """Returns current project or None if no project open."""
         return self._project
 
-    def get_icon(self):
-        """Returns the item representing this Data Store on the scene."""
-        return self._graphics_item
-
     @Slot("QString", name="set_path_to_sqlite_file")
     def set_path_to_sqlite_file(self, file_path):
         """Set path to SQLite file."""

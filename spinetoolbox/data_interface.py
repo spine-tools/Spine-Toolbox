@@ -114,10 +114,6 @@ class DataInterface(ProjectItem):
         self._toolbox.ui.treeView_data_interface_files.setModel(None)
         self.file_model.itemChanged.disconnect(self._handle_file_model_item_changed)
 
-    def get_icon(self):
-        """Returns the graphics item representing this data interface on scene."""
-        return self._graphics_item
-
     def update_name_label(self):
         """Update Data Interface tab name label. Used only when renaming project items."""
         self._toolbox.ui.label_di_name.setText(self.name)

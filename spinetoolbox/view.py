@@ -96,10 +96,6 @@ class View(ProjectItem):
         """Save selections in shared widgets for this project item into instance variables."""
         self._toolbox.ui.treeView_view.setModel(None)
 
-    def get_icon(self):
-        """Returns the item representing this Data Store on the scene."""
-        return self._graphics_item
-
     def references(self):
         """Returns a list of url strings that are in this item as references."""
         return self._references
