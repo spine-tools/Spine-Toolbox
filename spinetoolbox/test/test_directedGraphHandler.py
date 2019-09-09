@@ -894,6 +894,20 @@ class TestDirectedGraphHandler(unittest.TestCase):
         # Execution order for this graph should be empty since it's not a DAG
         self.assertEqual(0, len(exec_order))
 
+    def test_execution_order_to_node_1(self):
+        """Test that execution order to node is correct with all kinds of graphs.
+        Graph Nodes: [a, b, c, d]. Edges: [a->b, a->c, b->d]
+        Expected order: a-b-c-d or a-c-b-d
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("a", "c"), ("b", "d")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        exec_order = self.dag_handler.calc_exec_order_to_node(d, "d")
+        self.assertEqual(exec_order, {'a': ['b'], 'b': ['d'], 'd': []})
+
     def test_remove_node_from_graph1(self):
         """Test that graphs are updated correctly when project items are removed.
         Make a Star graph and remove the center.
