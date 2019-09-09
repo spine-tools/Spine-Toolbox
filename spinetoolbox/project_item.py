@@ -164,6 +164,10 @@ class ProjectItem(BaseProjectItem):
         """Returns the graphics item representing this item in the scene."""
         return self._graphics_item
 
+    def set_item_ready(self, ready):
+        """Shows/hides the exclamation icon depending on the given ready status."""
+        self.get_icon().exclamation_icon.setVisible(not ready)
+
     @Slot(name="refresh")
     def refresh(self):
         """Refresh this item's UI."""
@@ -173,3 +177,4 @@ class ProjectItem(BaseProjectItem):
 
     def simulate_execution(self):
         """Simulates executing this Item."""
+        self.set_item_ready(True)

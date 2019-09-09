@@ -451,7 +451,7 @@ class ExecutionInstance(QObject):
         self.running_item.stop_execution()
         return
 
-    def simulate_execution(self, final_item):
+    def simulate_execution(self, final_item=None):
         """Simulates execution of all items in the execution list that come *before* the given item.
         This is used by Data Interface items to find out its sources statically.
 
