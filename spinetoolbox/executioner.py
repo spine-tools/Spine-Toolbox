@@ -464,7 +464,7 @@ class ExecutionInstance(QObject):
             self.propagate_data(item)
 
     def add_ds_url(self, ds_item, url):
-        """Adds given url provided by ds_item.
+        """Adds given url to the list of urls seen by ds_item output items.
 
         Args:
             ds_item (str): name of Data store item that provides the url
@@ -474,7 +474,7 @@ class ExecutionInstance(QObject):
             self.ds_urls.setdefault(item, list()).append(url)
 
     def add_di_data(self, di_item, data):
-        """Adds given import data provided by di_item.
+        """Adds given import data to the list seen by di_item output items.
 
         Args:
             di_item (str): name of Data interface item that provides the data
@@ -484,7 +484,7 @@ class ExecutionInstance(QObject):
             self.di_data.setdefault(item, list()).append(data)
 
     def append_dc_refs(self, dc_item, refs):
-        """Adds given file paths (Data Connection file references) provided by dc_item.
+        """Adds given file paths (Data Connection file references) to the list seen by dc_item output items.
 
         Args:
             dc_item (str): name of Data connection item that provides the file references
@@ -494,7 +494,7 @@ class ExecutionInstance(QObject):
             self.dc_refs.setdefault(item, list()).extend(refs)
 
     def append_dc_files(self, dc_item, files):
-        """Adds given project data file paths provided by dc_item.
+        """Adds given project data file paths to the list seen by dc_item output items.
 
         Args:
             dc_item (str): name of Data connection item that provides the files
@@ -504,7 +504,7 @@ class ExecutionInstance(QObject):
             self.dc_files.setdefault(item, list()).extend(files)
 
     def append_tool_output_file(self, tool_item, filepath):
-        """Adds given file path provided by tool_item.
+        """Adds given file path provided to the list seen by tool_item output items.
 
         Args:
             tool_item (str): name of Tool item that provides the file
@@ -514,7 +514,7 @@ class ExecutionInstance(QObject):
             self.tool_output_files.setdefault(item, list()).append(filepath)
 
     def ds_urls_at_sight(self, item):
-        """Returns ds_urls currently seen by the given item.
+        """Returns ds urls currently seen by the given item.
 
         Args:
             item (str): item name
@@ -522,7 +522,7 @@ class ExecutionInstance(QObject):
         return self.ds_urls.get(item, [])
 
     def di_data_at_sight(self, item):
-        """Returns di_data currently seen by the given item.
+        """Returns di data currently seen by the given item.
 
         Args:
             item (str): item name
@@ -530,7 +530,7 @@ class ExecutionInstance(QObject):
         return self.di_data.get(item, [])
 
     def dc_refs_at_sight(self, item):
-        """Returns dc_refs currently seen by the given item.
+        """Returns dc refs currently seen by the given item.
 
         Args:
             item (str): item name
@@ -538,7 +538,7 @@ class ExecutionInstance(QObject):
         return self.dc_refs.get(item, [])
 
     def dc_files_at_sight(self, item):
-        """Returns dc_files currently seen by the given item.
+        """Returns dc files currently seen by the given item.
 
         Args:
             item (str): item name
@@ -546,7 +546,7 @@ class ExecutionInstance(QObject):
         return self.dc_files.get(item, [])
 
     def tool_output_files_at_sight(self, item):
-        """Returns tool_output_files currently seen by the given item.
+        """Returns tool output files currently seen by the given item.
 
         Args:
             item (str): item name
@@ -555,9 +555,11 @@ class ExecutionInstance(QObject):
 
     def propagate_data(self, input_item):
         """Propagate data seen by given item into output items.
+        This is called after successful execution of input_item.
+        Note that executing DAGs in BFS-order ensures data is correctly propagated.
 
         Args:
-            input_item (str): Project item name
+            input_item (str): Project item name whose data needs to be propagated
         """
         # Everything that the input item sees...
         ds_urls_at_sight = self.ds_urls_at_sight(input_item)

@@ -441,6 +441,7 @@ class Tool(ConcreteProjectItem):
         return True
 
     def find_output_items(self):
+        # NOTE: Not in use at the moment
         """Find output items of this Tool.
 
         Returns:
@@ -654,16 +655,7 @@ class Tool(ConcreteProjectItem):
     @Slot(name="refresh")
     def refresh(self):
         """Check if all input files are there and mark them in the tree view."""
-        self._project.simulate_execution(self.name)
-        inst = self._project.execution_instance
-        for i in range(self.template_model.rowCount()):
-            item = self.template_model.item(i)
-            if item.text() == "Input files":
-                for j in range(item.rowCount()):
-                    filename = item.child(j).text()
-                    print(filename)
-                    print(inst.find_file(filename, self.name))
-                    # TODO: finish this. Beware of `filename`s which actually are a directory?
+        # TODO
 
     def execute(self):
         """Executes this Tool."""
