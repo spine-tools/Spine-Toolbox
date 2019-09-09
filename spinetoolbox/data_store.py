@@ -688,6 +688,6 @@ class DataStore(ProjectItem):
     def simulate_execution(self):
         """Simulates executing this Data Store."""
         inst = self._toolbox.project().execution_instance
-        url = self.make_url()
+        url = self.make_url(log_errors=False)
         if url:
             inst.add_ds_url(self.name, url)
