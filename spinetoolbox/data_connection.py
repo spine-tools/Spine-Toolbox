@@ -410,3 +410,4 @@ class DataConnection(ProjectItem):
         inst.append_dc_refs(self.name, refs)
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
         inst.append_dc_files(self.name, f_list)
+        self.set_item_ready(bool(refs + f_list))
