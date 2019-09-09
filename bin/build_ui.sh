@@ -27,7 +27,7 @@ cd $path
 ui_path="../spinetoolbox/ui"
 spinetoolbox_path="../spinetoolbox"
 
-for diff_file in "$ui_path"/*; do
+for diff_file in $(find $ui_path -name '*.ui' -or -name '*.qrc'); do
     extension="${diff_file##*.}"
     if [ "$extension" == "ui" ]
     then
@@ -42,7 +42,7 @@ for diff_file in "$ui_path"/*; do
       bash "append_license_py.sh" $py_file
     elif [ "$extension" == "qrc" ]
     then
-      qrc_file="$path/../$diff_file"
+      qrc_file="$diff_file"
       py_file="${qrc_file%.qrc}_rc.py"
       py_file=$(basename "$py_file")
       py_file=$spinetoolbox_path/$py_file
