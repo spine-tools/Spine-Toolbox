@@ -231,7 +231,9 @@ class DirectedGraphHandler:
         return None
 
     def calc_exec_order(self, g):
-        """Returns an bfs-ordered list of nodes in the given graph.
+        """Returns a bfs-ordered dict of nodes in the given graph.
+        Key is the node, value is a list of its direct successors
+        (the successors are important to do the advertising).
         Adds a dummy source node to the graph if there are more than
         one nodes that have no inbound connections. The dummy source
         node is needed for the bfs-algorithm.
@@ -243,14 +245,14 @@ class DirectedGraphHandler:
             list: bfs-ordered list of node names (first item at index 0).
             Empty list if given graph is not a DAG.
         """
-        exec_order = list()
         if not nx.is_directed_acyclic_graph(g):
-            return exec_order
+            return {}
         sources = self.source_nodes(g)  # Project items that have no inbound connections
         if not sources:
             # Should not happen if nx.is_directed_acyclic_graph() works
             logging.error("This graph has no source nodes. Execution failed.")
-            return exec_order
+            return {}
+        exec_order = list()
         if len(sources) > 1:
             # Make an invisible source node for all nodes that have no inbound connections
             invisible_src_node = 0  # This is unique name since it's an integer. Item called "0" can still be created
@@ -271,7 +273,7 @@ class DirectedGraphHandler:
         # Collect dst nodes from bfs-edge iterator
         for src, dst in edges_to_execute:
             exec_order.append(dst)
-        return exec_order
+        return {n: list(g.successors(n)) for n in exec_order}
 
     def node_is_isolated(self, node, allow_self_loop=False):
         """Checks if the project item with the given name has any connections.
@@ -383,17 +385,18 @@ class ExecutionInstance(QObject):
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
-        execution_list (list): Ordered list of nodes to execute
+        ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
     """
 
     graph_execution_finished_signal = Signal(int, name="graph_execution_finished_signal")
     project_item_execution_finished_signal = Signal(int, name="project_item_execution_finished_signal")
 
-    def __init__(self, toolbox, execution_list):
+    def __init__(self, toolbox, ordered_nodes):
         """Class constructor."""
         QObject.__init__(self)
         self._toolbox = toolbox
-        self.execution_list = execution_list  # Ordered list of nodes to execute. First node at index 0
+        self._ordered_nodes = ordered_nodes
+        self.execution_list = list(ordered_nodes)  # Ordered list of nodes to execute. First node at index 0
         self.running_item = None
         # Data seen by project items in the list
         self.dc_refs = dict()  # Key is DC item name, value is reference list
@@ -470,7 +473,7 @@ class ExecutionInstance(QObject):
             ds_item (str): name of Data store item that provides the url
             url (URL): Url
         """
-        for item in self._toolbox.connection_model.output_items(ds_item):
+        for item in self._ordered_nodes[ds_item]:
             self.ds_urls.setdefault(item, list()).append(url)
 
     def add_di_data(self, di_item, data):
@@ -480,7 +483,7 @@ class ExecutionInstance(QObject):
             di_item (str): name of Data interface item that provides the data
             data (dict): Data to import
         """
-        for item in self._toolbox.connection_model.output_items(di_item):
+        for item in self._ordered_nodes[di_item]:
             self.di_data.setdefault(item, list()).append(data)
 
     def append_dc_refs(self, dc_item, refs):
@@ -490,7 +493,7 @@ class ExecutionInstance(QObject):
             dc_item (str): name of Data connection item that provides the file references
             refs (list): List of file paths (references)
         """
-        for item in self._toolbox.connection_model.output_items(dc_item):
+        for item in self._ordered_nodes[dc_item]:
             self.dc_refs.setdefault(item, list()).extend(refs)
 
     def append_dc_files(self, dc_item, files):
@@ -500,7 +503,7 @@ class ExecutionInstance(QObject):
             dc_item (str): name of Data connection item that provides the files
             refs (list): List of file paths (references)
         """
-        for item in self._toolbox.connection_model.output_items(dc_item):
+        for item in self._ordered_nodes[dc_item]:
             self.dc_files.setdefault(item, list()).extend(files)
 
     def append_tool_output_file(self, tool_item, filepath):
@@ -510,7 +513,7 @@ class ExecutionInstance(QObject):
             tool_item (str): name of Tool item that provides the file
             filepath (str): Path to a tool output file (in tool result directory)
         """
-        for item in self._toolbox.connection_model.output_items(tool_item):
+        for item in self._ordered_nodes[tool_item]:
             self.tool_output_files.setdefault(item, list()).append(filepath)
 
     def ds_urls_at_sight(self, item):
@@ -568,7 +571,7 @@ class ExecutionInstance(QObject):
         dc_files_at_sight = self.dc_files_at_sight(input_item)
         tool_output_files_at_sight = self.tool_output_files_at_sight(input_item)
         # ...make it seeable also by output items
-        for item in self._toolbox.connection_model.output_items(input_item):
+        for item in self._ordered_nodes[input_item]:
             self.ds_urls.setdefault(item, list()).extend(ds_urls_at_sight)
             self.di_data.setdefault(item, list()).extend(di_data_at_sight)
             self.dc_refs.setdefault(item, list()).extend(dc_refs_at_sight)
