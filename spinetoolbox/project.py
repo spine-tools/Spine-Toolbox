@@ -724,7 +724,7 @@ class SpineToolboxProject(MetaObject):
             if not ordered_nodes:
                 continue
             self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
-            self.execution_instance.simulate_execution(final_item=None)
+            self.execution_instance.simulate_execution()
 
     def simulate_item_execution(self, item):
         """Simulates the execution of the dag containing item just until before it's reached.
@@ -736,10 +736,10 @@ class SpineToolboxProject(MetaObject):
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
             return False
-        ordered_nodes = self.dag_handler.calc_exec_order(dag)
+        ordered_nodes = self.dag_handler.calc_exec_order_to_node(dag, item)
         if not ordered_nodes:
             return False
         # Make execution instance and run simulation
         self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
-        self.execution_instance.simulate_execution(final_item=item)
+        self.execution_instance.simulate_execution()
         return True

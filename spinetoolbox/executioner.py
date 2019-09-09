@@ -275,6 +275,12 @@ class DirectedGraphHandler:
             exec_order.append(dst)
         return {n: list(g.successors(n)) for n in exec_order}
 
+    def calc_exec_order_to_node(self, g, node):
+        """Like calc_exec_order but only until node,
+        and ignoring all nodes that are not its ancestors."""
+        bunch = list(nx.ancestors(g, node)) + [node]
+        return self.calc_exec_order(g.subgraph(bunch))
+
     def node_is_isolated(self, node, allow_self_loop=False):
         """Checks if the project item with the given name has any connections.
 
@@ -451,16 +457,10 @@ class ExecutionInstance(QObject):
         self.running_item.stop_execution()
         return
 
-    def simulate_execution(self, final_item=None):
-        """Simulates execution of all items in the execution list that come *before* the given item.
-        This is used by Data Interface items to find out its sources statically.
-
-        Args:
-            final_item (str): When reaching this item, the simulation should stop.
+    def simulate_execution(self):
+        """Simulates execution of all items in the execution list.
         """
         for item in self.execution_list:
-            if item == final_item:
-                break
             ind = self._toolbox.project_item_model.find_item(item)
             project_item = self._toolbox.project_item_model.project_item(ind)
             project_item.simulate_execution()
