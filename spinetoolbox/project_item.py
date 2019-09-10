@@ -137,12 +137,12 @@ class ProjectItem(BaseProjectItem):
         super().__init__(name, description, is_root=False, is_category=False)
         self._toolbox = toolbox
         self._graphics_item = None
-        # Simulate execution when this item changes
-        # NOTE: item_changed is not shared with other proj. items so there's no need to disconnect it
-        self.item_changed.connect(lambda: self._toolbox.project().simulate_item_execution(self.name))
 
     def connect_signals(self):
         """Connect signals to handlers."""
+        # Simulate execution when this item changes
+        # NOTE: item_changed is not shared with other proj. items so there's no need to disconnect it
+        self.item_changed.connect(lambda: self._toolbox.project().simulate_item_execution(self.name))
         for signal, handler in self._sigs.items():
             signal.connect(handler)
 

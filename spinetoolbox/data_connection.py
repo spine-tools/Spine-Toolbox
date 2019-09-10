@@ -344,7 +344,7 @@ class DataConnection(ProjectItem):
         d = self.data_files()
         self.populate_data_list(d)
 
-    def populate_reference_list(self, items):
+    def populate_reference_list(self, items, emit_item_changed=True):
         """List file references in QTreeView.
         If items is None or empty list, model is cleared.
         """
@@ -357,6 +357,8 @@ class DataConnection(ProjectItem):
                 qitem.setData(item, Qt.ToolTipRole)
                 qitem.setData(self._toolbox.style().standardIcon(QStyle.SP_FileLinkIcon), Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
+        if emit_item_changed:
+            self.item_changed.emit()
 
     def populate_data_list(self, items):
         """List project internal data (files) in QTreeView.
@@ -375,6 +377,7 @@ class DataConnection(ProjectItem):
                 full_path = os.path.join(self.data_dir, item)  # For drag and drop
                 qitem.setData(full_path, Qt.UserRole)
                 self.data_model.appendRow(qitem)
+        self.item_changed.emit()
 
     def update_name_label(self):
         """Update Data Connection tab name label. Used only when renaming project items."""
@@ -389,7 +392,7 @@ class DataConnection(ProjectItem):
         # Update Data Connection based on project items that are already executed
         # Add previously executed Tool's output file paths to references
         self.references += inst.tool_output_files_at_sight(self.name)
-        self.populate_reference_list(self.references)
+        self.populate_reference_list(self.references, emit_item_changed=False)
         # Update execution instance for project items downstream
         # Add data file references and data files into execution instance
         refs = self.file_references()
