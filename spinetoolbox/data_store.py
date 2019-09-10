@@ -217,8 +217,6 @@ class DataStore(ProjectItem):
         if not self._url:
             return
         dialect = self._url["dialect"]
-        if not self.check_dialect(dialect):
-            return
         self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
         if self._url["host"]:
             self._toolbox.ui.lineEdit_host.setText(self._url["host"])
@@ -268,11 +266,9 @@ class DataStore(ProjectItem):
 
     @Slot("QString", name="refresh_dialect")
     def refresh_dialect(self, dialect=""):
-        if self.check_dialect(dialect):
-            self._url["dialect"] = dialect
-        else:
-            self._toolbox.msg_error.emit("Unable to use dialect '{}'.".format(dialect))
-            self._url["dialect"] = None
+        if not dialect:
+            dialect = None
+        self._url["dialect"] = dialect
 
     def enable_no_dialect(self):
         """Adjust widget enabled status to default when no dialect is selected."""
@@ -323,72 +319,6 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_database.setEnabled(True)
         self._toolbox.ui.lineEdit_username.setEnabled(True)
         self._toolbox.ui.lineEdit_password.setEnabled(True)
-
-    def check_dialect(self, dialect):
-        """Check if selected dialect is supported. Offer to install DBAPI if not.
-
-        Returns:
-            True if dialect is supported, False if not.
-        """
-        if dialect not in spinedb_api.SUPPORTED_DIALECTS:
-            self.enable_no_dialect()
-            return False
-        dbapi = spinedb_api.SUPPORTED_DIALECTS[dialect]
-        try:
-            if dialect == 'sqlite':
-                create_engine('sqlite://')
-                self.enable_sqlite()
-            elif dialect == 'mssql':
-                import pyodbc
-
-                dsns = pyodbc.dataSources()
-                # Collect dsns which use the msodbcsql driver
-                mssql_dsns = list()
-                for key, value in dsns.items():
-                    if 'msodbcsql' in value.lower():
-                        mssql_dsns.append(key)
-                if mssql_dsns:
-                    self._toolbox.ui.comboBox_dsn.clear()
-                    self._toolbox.ui.comboBox_dsn.addItems(mssql_dsns)
-                    self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
-                    self.enable_mssql()
-                else:
-                    msg = "Please create a SQL Server ODBC Data Source first."
-                    self._toolbox.msg_warning.emit(msg)
-            else:
-                create_engine(f"{dialect}+{dbapi}://")
-                self.enable_common()
-            return True
-        except ModuleNotFoundError:
-            dbapi = spinedb_api.SUPPORTED_DIALECTS[dialect]
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Dialect not supported")
-            msg.setText(
-                "Spine Toolbox needs to install the following DBAPI package: '{0}' "
-                "(support for the {1} dialect).".format(dbapi, dialect)
-            )
-            msg.setInformativeText("Do you want to install it using pip or conda?")
-            pip_button = msg.addButton("pip", QMessageBox.YesRole)
-            conda_button = msg.addButton("conda", QMessageBox.NoRole)
-            msg.addButton("Cancel", QMessageBox.RejectRole)
-            msg.exec_()  # Show message box
-            if msg.clickedButton() == pip_button:
-                if not self.install_dbapi_pip(dbapi):
-                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
-                    return False
-            elif msg.clickedButton() == conda_button:
-                if not self.install_dbapi_conda(dbapi):
-                    self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
-                    return False
-            else:
-                self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
-                return False
-            # Check dialect again to see how it went
-            if not self.check_dialect(dialect):
-                self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
-                return False
-            return True
 
     @busy_effect
     def install_dbapi_pip(self, dbapi):
