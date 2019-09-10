@@ -600,5 +600,5 @@ class DataStore(ProjectItem):
             inst.add_ds_url(self.name, url)
         else:
             self.add_notification(
-                "The URL for this item has not been set. You may do it by using the Properties panel."
+                "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
             )

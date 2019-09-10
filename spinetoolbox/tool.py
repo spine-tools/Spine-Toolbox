@@ -145,6 +145,7 @@ class Tool(ProjectItem):
         else:
             new_tool = self._toolbox.tool_template_model.tool_template(row)
             self.set_tool_template(new_tool)
+            self.item_changed.emit()
 
     def set_tool_template(self, tool_template):
         """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
@@ -672,7 +673,9 @@ class Tool(ProjectItem):
             if n_files > 0:
                 self._toolbox.msg.emit("*** Searching for required input files ***")
                 file_paths = self.find_input_files()
-                if not file_paths:
+                not_found = [k for k, v in file_paths.items() if v is None]
+                if not_found:
+                    self._toolbox.msg_error.emit("Required file(s) <b>{0}</b> not found".format(", ".join(not_found)))
                     self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                     return
                 # Required files and dirs should have been found at this point, so create instance
@@ -725,7 +728,7 @@ class Tool(ProjectItem):
         """Iterates files in required input files model and looks for them from execution instance.
 
         Returns:
-            Dictionary of paths where required files are found or None if some file was not found.
+            Dictionary mapping required files to path where they are found, or to None if not found
         """
         file_paths = dict()
         for i in range(self.input_file_model.rowCount()):
@@ -735,11 +738,7 @@ class Tool(ProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            found_file = self._toolbox.project().execution_instance.find_file(filename, self.name)
-            if not found_file:
-                self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
-                return None
-            file_paths[req_file_path] = found_file
+            file_paths[req_file_path] = self._toolbox.project().execution_instance.find_file(filename, self.name)
         return file_paths
 
     def find_optional_input_files(self):
@@ -785,13 +784,23 @@ class Tool(ProjectItem):
 
     def stop_execution(self):
         """Stops executing this Tool."""
-        self.stop_process()
-
-    @Slot(bool, name="stop_process")
-    def stop_process(self, checked=False):
-        """Terminate Tool template execution."""
         self._graphics_item.stop_animation()
         self.instance.instance_finished_signal.disconnect(self.execute_finished)
         self._toolbox.msg_warning.emit("Stopping Tool <b>{0}</b>".format(self.name))
         self.instance.terminate_instance()
         # Note: QSubProcess, PythonReplWidget, and JuliaREPLWidget emit project_item_execution_finished_signal
+
+    def simulate_execution(self):
+        """Simulates executing this Tool."""
+        super().simulate_execution()
+        inst = self._toolbox.project().execution_instance
+        for i in range(self.output_file_model.rowCount()):
+            out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
+            inst.append_tool_output_file(self.name, out_file_path)
+        file_paths = self.find_input_files()
+        not_found = [k for k, v in file_paths.items() if v is None]
+        if not_found:
+            self.add_notification(
+                "File(s) {0} needed to execute this Tool are not provided by any input item. "
+                "Connect items that provide the required files to this Tool.".format(", ".join(not_found))
+            )

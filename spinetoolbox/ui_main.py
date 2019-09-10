@@ -1280,7 +1280,7 @@ class ToolboxUI(QMainWindow):
             if d.get_icon().timer.state() != QTimeLine.Running:
                 self.msg.emit("Tool <b>{0}</b> is not running".format(d.name))
             else:
-                d.stop_process()  # Proceed with stopping
+                d.stop_execution()  # Proceed with stopping
         elif option == "Edit Tool template":
             d.edit_tool_template()
         elif option == "Edit main program file...":

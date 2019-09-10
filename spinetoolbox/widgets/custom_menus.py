@@ -113,6 +113,7 @@ class ProjectItemContextMenu(CustomContextMenu):
             self.add_action("Open directory...")
         elif d.item_type == "Tool":
             self.add_action("Results...")
+            # TODO: Do we still want to have the stop action here???
             if d.get_icon().timer.state() == QTimeLine.Running:
                 self.add_action("Stop")
             else:

@@ -418,5 +418,6 @@ class DataConnection(ProjectItem):
         inst.append_dc_files(self.name, f_list)
         if not refs + f_list:
             self.add_notification(
-                "This item does not have any references or data. You may add some using the Properties panel."
+                "This Data Connection does not have any references or data. "
+                "Add some in the Data Connection Properties panel."
             )
