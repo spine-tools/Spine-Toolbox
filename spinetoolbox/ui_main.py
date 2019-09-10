@@ -232,7 +232,7 @@ class ToolboxUI(QMainWindow):
         """Initializes project at application start-up. Loads the last project that was open
         when app was closed or starts without a project if app is started for the first time.
         """
-        open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="2"))
+        open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
         if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
             p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
             getting_started_anchor = (

@@ -90,7 +90,10 @@ class CSVConnector(SourceConnection):
                                           quotechar for csv.reader and
                                           number of rows to skip
         """
-        dialect = {"delimiter": options.get("delimiter", ",")}
+        delimiter = options.get("delimiter", ",")
+        if not delimiter:
+            delimiter = ','
+        dialect = {"delimiter": delimiter}
         quotechar = options.get("Quotechar", None)
         if quotechar:
             dialect.update({"quotechar": quotechar})

@@ -224,7 +224,7 @@ class SettingsWidget(QWidget):
         """Read saved settings from app QSettings instance and update UI to display them."""
         # checkBox check state 0: unchecked, 1: partially checked, 2: checked
         # QSettings value() method returns a str even if a boolean was stored
-        open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="2"))
+        open_previous_project = int(self._qsettings.value("appSettings/openPreviousProject", defaultValue="0"))
         show_exit_prompt = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
         save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))  # tri-state
         datetime = int(self._qsettings.value("appSettings/dateTime", defaultValue="2"))

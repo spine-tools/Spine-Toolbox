@@ -83,6 +83,8 @@ pygments_style = 'sphinx'
 autoapi_dirs = ['../../spinetoolbox']  # package to be documented
 autoapi_ignore = [
     '*_rc.py',
+    '*/spinetoolbox/build/*',
+    '*/spinetoolbox/dist/*',
     '*/spinetoolbox/test/*',
     '*/spinetoolbox/ui/*',
     '*/spinetoolbox/setup.py',

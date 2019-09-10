@@ -13,8 +13,8 @@
 cx-Freeze setup file for Spine Toolbox.
 
 Usage:
-- Building the application into /build directory can be done with command 'python setup.py build'
-- Packaging the built application into an installer file for distribution:
+- Build the application into /build directory with command 'python setup.py build'
+- Package the built application into an installer file for distribution:
 1. On Windows, compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
 2. On other platforms, use setup.py (this file) and Cx_Freeze (see Cx_Freeze documentation for help)
 
@@ -43,11 +43,12 @@ def main(argv):
     readme_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "README.md"))
     copying_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING"))
     copying_lesser_file = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "COPYING.LESSER"))
+    alembic_version_files = alembic_files(python_dir)
     # Most dependencies are automatically detected but some need to be manually included.
     # NOTE: Excluding 'scipy.spatial.cKDTree' and including 'scipy.spatial.ckdtree' is a workaround
     # for a bug in cx_Freeze affecting Windows (https://github.com/anthony-tuininga/cx_Freeze/issues/233)
     build_exe_options = {
-        "packages": [],
+        "packages": ["packaging", "pkg_resources"],
         "excludes": ["scipy.spatial.cKDTree"],
         "includes": [
             "atexit",
@@ -75,7 +76,7 @@ def main(argv):
             "scipy.spatial.ckdtree",
             "pymysql",
             "tabulator.loaders.local",
-            "tabulator.parsers.csv",
+            "tabulator.parsers.csv"
         ],
         "include_files": [
             (doc_path, "docs/"),
@@ -85,12 +86,12 @@ def main(argv):
             readme_file,
             copying_file,
             copying_lesser_file,
-        ],
+        ] + alembic_version_files,
         "include_msvcr": True,
     }
     # Windows specific options
     if os.name == "nt":  # Windows specific options
-        base = "Console"  # set this to "Win32GUI" to not show console, "Console" shows console
+        base = "Win32GUI"  # set this to "Win32GUI" to not show console, "Console" shows console
         # Set Windows .msi installer default install path to C:\SpineToolbox-version
         systemdrive = os.environ['SYSTEMDRIVE']
         # Hardcoded path to msvcr120.dll because include_msvcr option does not seem to do anything
@@ -112,6 +113,19 @@ def main(argv):
         options={"build_exe": build_exe_options},
         executables=executables,
     )
+
+
+def alembic_files(python_dir):
+    """Returns a list of tuples of files in python/Lib/site-packages/spinedb_api/alembic/versions.
+    First item in tuple is the source file. Second item is the relative destination path to the install directory.
+    """
+    dest_dir = os.path.join("lib", "spinedb_api", "alembic", "versions")
+    p = os.path.join(python_dir, "Lib", "site-packages", "spinedb_api", "alembic", "versions")
+    files = list()
+    for f in os.listdir(p):
+        if f.endswith(".py"):
+            files.append((os.path.abspath(os.path.join(p, f)), os.path.join(dest_dir, f)))
+    return files
 
 
 if __name__ == '__main__':

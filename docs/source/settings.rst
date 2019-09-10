@@ -7,7 +7,7 @@
 Settings
 ********
 
-Spine Toolbox settings are categorized in the following way:
+Spine Toolbox settings are categorized in the following way
 
 .. contents::
     :local:
@@ -20,71 +20,107 @@ You can open the application settings from the main window menu `File->Settings.
 .. image:: img/settings_form.png
    :align: center
 
-The settings on this form have been categorized into five categories. The *General*, *GAMS*, *Julia*, and
-*Data Store views* settings are general application settings, which affect all projects. Settings in the
-*Project* category only affect the current project. The general application settings are saved to file called
-``settings.conf`` in your application directory. It is safe to delete this file if you want to go back to default
-settings.
+The settings on this form have been categorized into six categories. *General*, *GAMS*, *Julia*, *Python* and
+*Data store views* settings are general application settings, which affect all projects. Settings in the
+*Project* category only affect the current project.
 
 General settings
 ================
 
-- **Open previous project at exit** If checked, application opens the project at startup that was open the last
-  time the application was exited. If left unchecked, application starts without a project open.
+- **Open previous project at startup** If checked, application opens the project at startup that was open the last
+  time the application was shut down. If left unchecked, application starts without a project open.
+
 - **Show confirm exit prompt** If checked, confirm exit prompt is shown. If unchecked, application exits
   without prompt.
+
 - **Save project at exit** Unchecked: Does not save project and does not show message box. Partially checked:
   Shows message box (default). Checked: Saves project and does not show message box.
-- **Show date and time in Event Log messages** If checked, date and time string is appended into every Event
-  Log message.
+
+- **Show date and time in Event Log messages** If checked, date and time is appended into every Event Log message.
+
 - **Delete data when project item is removed from project** Check this box to delete project item's data when
   a project item is removed from project. This means, that the project item directory and its contents will be
-  deleted from your HD.
+  deleted from your hard drive.
+
 - **Project directory** Directory where projects are saved. This is non-editable at the moment.
+
+- **Smooth zoom** Controls the way zooming (by using the mouse wheel) behaves in Design View and Graph View.
+  Controls if the zoom in/out is continuous or discrete. On older computers, smooth zoom is not recommended.
+
+- **Design View background** Choosing grid shows a black grid as the Design View background. Choosing Solid and then
+  clicking on the square next to it let's you choose the background color.
 
 GAMS settings
 =============
-- **Path to GAMS executable** Path to directory where GAMS and GAMSIDE executables are found. GAMS in the
-  selected directory is used to execute GAMS tools. You can leave this blank to use the system GAMS i.e. GAMS
-  that you have set up in your system PATH variable.
+
+- **GAMS program** Path to Gams executable you wish to use to execute GAMS Tool templates. Leave this blank to use
+  the system GAMS i.e. GAMS set up in your system PATH variable.
 
 Julia settings
 ==============
-- **Run Julia scripts in REPL** Check this option to execute Julia tools in the built-in Julia REPL. If you leave
-  this un-checked, Julia tools will be executed as in the shell. For example, on Windows this would be the
-  equivalent as running command ``julia.exe example_script.jl`` in the command prompt. If using the Julia REPL,
-  the ``example_script.jl`` is *included* into the built-in Julia REPL and executed there.
-- **Path to Julia executable**. Path to Julia executable that you wish to use to execute Julia Tools. This is the
-  Julia REPL that will be used if REPL execution is preferred and also the Julia executable used when executing
-  Julia tools as in the shell. You can leave this blank, if you wish to use the system Julia.
+
+- **Julia executable** Path to Julia executable you wish to use to execute Julia Tool templates. This is the Julia
+  that will be used in the embedded Julia Console and also the Julia that is used when executing Julia Tool templates
+  as in the shell. Leave this blank, if you wish to use the system Julia.
+
+- **Julia home project** Set the Julia home project here.
+
+- **Use embedded Julia Console** Check this box to execute Julia Tool templates in the built-in Julia Console. If
+  you leave this un-checked, Julia Tool templates will be executed as in the shell. For example, on Windows this
+  would be the equivalent as running command ``julia.exe example_script.jl`` in the command prompt. If you decide
+  to use the embedded Julia Console, the ``example_script.jl`` is *included* into the console and executed there.
+  It is highly recommended to use the embedded Julia Console, since this gives significant performance improvements
+  compared to shell execution.
+
+Python settings
+===============
+
+- **Python interpreter** Path to Python executable you wish to use to execute Python Tool templates. This is the
+  Python that will be used in the embedded Python Console and also the Python that is used when executing Python
+  Tool templates as in the shell. Leave this blank, if you wish to use the system Python.
+
+- **Use embedded Python Console** Check this box to execute Python Tool templates in the embedded iPython Console.
+  If you un-check this box, Python Tool templates will be executed as in the shell. For example, on Windows this
+  would be the equivalent as running command ``python.exe script.py`` in the command prompt. If you decide to use
+  the embedded Python Console, the ``script.py`` is executed there.
 
 Data Store views settings
 =========================
-- **Commit session at exit** This checkbox controls what happens when you close the tree view, graph view,
-  or the tabular view when you have uncommitted changes. Unchecked: Does not commit session and does not show
-  message box. Partially checked: Shows message box (default). Checked: Commits session and does not show
+
+- **Commit session when view is closed** This checkbox controls what happens when you close the Tree view, the
+  Graph view, or the tabular view and when you have uncommitted changes. Unchecked: Does not commit session and does
+  not show message box. Partially checked: Shows message box (default). Checked: Commits session and does not show
   message box.
-- **Use smooth zoom in graph view** Controls if the zoom in/out in graph view is continuous or if there are
-  discrete steps in zooming. On slower computers, it's recommended to not use smooth zooming.
 
 Project settings
-----------------
+================
 These settings affect only the project that is currently open.
 
 - **Name** Current project name. If you want to change the name of the project, use menu option `File-Save as...`.
+
 - **Description** Current project description. You can edit the description here.
+
 - **Work directory** Directory where processing the Tool takes place. You can change this directory. Make sure to
   clean up the directory every now and then.
 
 Project item settings / properties
 ----------------------------------
-Each project item (Data Store, Data Connection, Tool, or View) has its own set of properties. These are saved
-into the project save file. You can view and edit them in project item properties on the main window.
+Each project item (Data Store, Data Connection, Tool, View, and Data Interface) has its own set of properties.
+These are saved into the project save file. You can view and edit them in project item properties on the main window.
 
 Application preferences
 -----------------------
 Spine Toolbox remembers the size, location, and placement of most of the application windows from the
-previous session (i.e. when closing and restarting the app). These settings are saved to a location depending
-on your operating system. E.g. on Windows you can find these settings in the registry key
-``HKEY_CURRENT_USER\Software\SpineProject\Spine Toolbox``. Its safe to delete this key if you want to reset
-the preferences to factory settings.
+previous session (i.e. when closing and restarting the app).
+
+Where are the Settings stored?
+------------------------------
+Application Settings and Preferences are saved to a location that depends on your operating system. On Windows,
+there is no separate settings file, the settings are stored into registry key
+``HKEY_CURRENT_USER\Software\SpineProject\Spine Toolbox``. It is safe to delete this key if you want to reset
+application to factory settings.
+
+Projects are saved to `.proj` files in the Project directory. In addition, each project has its own dedicated
+directory under the Project directory which can be used to keep data from different projects separate. All project
+items in a project have their own directory under that project's directory, where individual project item data can be
+stored (e.g. `.sqlite` files in Data Store directories).
