@@ -608,7 +608,7 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Project has no items to execute")
             return
         self._n_graphs = len(self.dag_handler.dags())
-        i = 0  # Key for self._ordered_dags dictionary TODO: Switch self._ordered_dags to a list?
+        i = 0  # Key for self._ordered_dags dictionary
         for g in self.dag_handler.dags():
             bfs_ordered_nodes = self.dag_handler.calc_exec_order(g)
             if not bfs_ordered_nodes:
@@ -618,7 +618,7 @@ class SpineToolboxProject(MetaObject):
             i += 1
         if not self._ordered_dags.keys():
             self._toolbox.msg_error.emit(
-                "There are no valid Directed Acyclic " "Graphs to execute. Please modify connections."
+                "There are no valid Directed Acyclic Graphs to execute. Please modify connections."
             )
             self._invalid_graphs.clear()
             return
