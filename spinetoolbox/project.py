@@ -80,6 +80,10 @@ class SpineToolboxProject(MetaObject):
                 "[OSError] Creating work directory {0} failed." " Check permissions.".format(self.work_dir)
             )
 
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.dag_handler.dag_simulation_requested.connect(self.simulate_dag_execution)
+
     def change_name(self, name):
         """Changes project name and updates project dir and save file name.
 
@@ -725,18 +729,22 @@ class SpineToolboxProject(MetaObject):
             self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
             self.execution_instance.simulate_execution()
 
-    def simulate_item_execution(self, item):
-        """Simulates the execution of the dag containing item.
-        """
-        dag = self.dag_handler.dag_with_node(item)
-        if not dag:
-            self._toolbox.msg_error.emit(
-                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
-            )
-            return
+    @Slot("QVariant", name="simulate_dag_execution")
+    def simulate_dag_execution(self, dag):
+        """Simulates the execution of the given dag."""
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
             return
         # Make execution instance and run simulation
         self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self.execution_instance.simulate_execution()
+
+    def simulate_item_execution(self, item):
+        """Simulates the execution of the dag containing given item."""
+        dag = self.dag_handler.dag_with_node(item)
+        if not dag:
+            self._toolbox.msg_error.emit(
+                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
+            )
+            return
+        self.simulate_dag_execution(dag)

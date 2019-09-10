@@ -23,31 +23,34 @@ from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
 
 
-class DirectedGraphHandler:
+class DirectedGraphHandler(QObject):
     """Class for manipulating graphs according to user's actions.
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
     """
 
+    dag_simulation_requested = Signal("QVariant", name="dag_simulation_requested")
+
     def __init__(self, toolbox):
         """Class constructor."""
+        QObject.__init__(self)
         self._toolbox = toolbox
-        # self.running_dag = None
-        # self.running_item = None
         self._dags = list()
 
     def dags(self):
         """Returns a list of graphs (DiGraph) in the project."""
         return self._dags
 
-    def add_dag(self, dag):
+    def add_dag(self, dag, request_simulation=True):
         """Add graph to list.
 
         Args:
             dag (DiGraph): Graph to add
         """
         self._dags.append(dag)
+        if request_simulation:
+            self.dag_simulation_requested.emit(dag)
 
     def remove_dag(self, dag):
         """Remove graph from instance variable list.
@@ -65,7 +68,7 @@ class DirectedGraphHandler:
         """
         dag = nx.DiGraph()
         dag.add_node(node_name)
-        self._dags.append(dag)
+        self.add_dag(dag)
 
     def add_graph_edge(self, src_node, dst_node):
         """Adds an edge between the src and dst nodes. If nodes are in
@@ -88,6 +91,7 @@ class DirectedGraphHandler:
         if src_graph == dst_graph:
             # src and dst are already in same graph. Just add edge to src_graph and return
             src_graph.add_edge(src_node, dst_node)
+            self.dag_simulation_requested.emit(src_graph)
             return
         # Unify graphs
         union_dag = nx.union(src_graph, dst_graph)
@@ -114,18 +118,21 @@ class DirectedGraphHandler:
         # Check if src or dst node is isolated (without connections) after removing the edge
         if self.node_is_isolated(src_node):
             dag.remove_node(src_node)  # Remove node from original dag
+            self.dag_simulation_requested.emit(dag)
             g = nx.DiGraph()
             g.add_node(src_node)  # Make a new graph containing only the isolated node
             self.add_dag(g)
             return
         if self.node_is_isolated(dst_node):
             dag.remove_node(dst_node)
+            self.dag_simulation_requested.emit(dag)
             g = nx.DiGraph()
             g.add_node(dst_node)
             self.add_dag(g)
             return
         # If src node still has a path (ignoring edge directions) to dst node -> return, we're fine
         if self.nodes_connected(dag, src_node, dst_node):
+            self.dag_simulation_requested.emit(dag)
             return
         # Now for the fun part. We need to break the original DAG into two separate DAGs.
         # Get src node descendant edges, ancestor edges, and its own edges
@@ -153,7 +160,7 @@ class DirectedGraphHandler:
         # Remove old graph and add new graphs instead
         self.remove_dag(dag)
         self.add_dag(descendant_graph)
-        self.add_dag(ancestor_graph)
+        self.add_dag(ancestor_graph, request_simulation=False)  # No need to simulate the ancestor graph
 
     def remove_node_from_graph(self, node_name):
         """Removes node from a graph that contains
@@ -162,7 +169,7 @@ class DirectedGraphHandler:
         Args:
             node_name (str): Project item name
         """
-        # This is called every time a previous project is closed and another is opened.
+        # This is called every time a previous project is closed and another is opened. --Really?
         g = self.dag_with_node(node_name)
         edges_to_remove = list()
         for edge in g.edges():
@@ -184,6 +191,8 @@ class DirectedGraphHandler:
         g.remove_nodes_from(nodes_to_remove)
         if not g.nodes():
             self.remove_dag(g)
+        else:
+            self.dag_simulation_requested.emit(g)
 
     def rename_node(self, old_name, new_name):
         """Handles renaming the node and edges in a graph when a project item is renamed.
@@ -332,9 +341,10 @@ class DirectedGraphHandler:
     @staticmethod
     def nodes_connected(dag, a, b):
         """Checks if node a is connected to node b. Edge directions are ignored.
-        If any of source node a's ancestors or descendants have a path to destination
-        node b, returns True. Also returns True if destination node b has a path to
-        any of source node a's ancestors or descendants.
+        If source node a or any of its ancestors have a path
+        to destination node b or any of its descendants, returns True.
+        If destination node b or any of its ancestors have a path
+        to source node a or any of its descendants, also returns True.
 
         Args:
             dag (DiGraph): Graph that contains nodes a and b
@@ -344,29 +354,24 @@ class DirectedGraphHandler:
         Returns:
             bool: True if a and b are connected, False otherwise
         """
-        src_anc = nx.ancestors(dag, a)
-        src_des = nx.descendants(dag, a)
-        # logging.debug("src {0} ancestors:{1}. descendants:{2}".format(a, src_anc, src_des))
-        # Check ancestors
+        # Check if any src ancestor has a path to any dst descendant
+        src_anc = nx.ancestors(dag, a).union({a})
+        dst_des = nx.descendants(dag, b).union({b})
+        # logging.debug("src {0} ancestors:{1}. dst {2} descendants:{3}".format(a, src_anc, b, dst_des))
         for anc in src_anc:
-            # Check if any src ancestor has a path to dst node
-            if nx.has_path(dag, anc, b):
-                # logging.debug("Found path from anc {0} to dst {1}".format(anc, b))
-                return True
-            # Check if dst node has a path to any src ancestor
-            if nx.has_path(dag, b, anc):
-                # logging.debug("Found path from dst {0} to anc {1}".format(b, anc))
-                return True
-        # Check descendants
-        for des in src_des:
-            # Check if any src descendant has a path to dst node
-            if nx.has_path(dag, des, b):
-                # logging.debug("Found path from des {0} to dst {1}".format(des, b))
-                return True
-            # Check if dst node has a path to any src descendant
-            if nx.has_path(dag, b, des):
-                # logging.debug("Found path from dst {0} to des {1}".format(b, des))
-                return True
+            for des in dst_des:
+                if nx.has_path(dag, anc, des):
+                    # logging.debug("Found path from anc {0} to dst {1}".format(anc, des))
+                    return True
+        # Check if any dst ancestor has a path to any src descendant
+        dst_anc = nx.ancestors(dag, b).union({b})
+        src_des = nx.descendants(dag, a).union({a})
+        # logging.debug("dst {0} ancestors:{1}. src {2} descendants:{3}".format(b, dst_anc, a, src_des))
+        for anc in dst_anc:
+            for des in src_des:
+                if nx.has_path(dag, anc, des):
+                    # logging.debug("Found path from anc {0} to dst {1}".format(anc, des))
+                    return True
         return False
 
     @staticmethod

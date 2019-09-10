@@ -142,6 +142,7 @@ class ExclamationIcon(QGraphicsSvgItem):
         self.setScale(0.4 * rect_w / dim_max)
         self.setGraphicsEffect(self.colorizer)
         self.setAcceptHoverEvents(True)
+        self.hide()
 
     def clear_notifications(self):
         """Clear all notifications."""

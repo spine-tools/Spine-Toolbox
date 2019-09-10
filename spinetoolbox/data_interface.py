@@ -312,5 +312,5 @@ class DataInterface(ProjectItem):
         self.update_file_model(file_list)
         if not file_list:
             self.add_notification(
-                "This item does not have any input data. Please connect some Data Connection items to it."
+                "This item does not have any input data. You may add some by connecting Data Connection items to it."
             )

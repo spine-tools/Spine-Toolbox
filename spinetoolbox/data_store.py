@@ -688,3 +688,7 @@ class DataStore(ProjectItem):
         url = self.make_url(log_errors=False)
         if url:
             inst.add_ds_url(self.name, url)
+        else:
+            self.add_notification(
+                "The URL for this item has not been set. You may do it by using the Properties panel."
+            )

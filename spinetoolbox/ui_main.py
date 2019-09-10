@@ -270,6 +270,7 @@ class ToolboxUI(QMainWindow):
         """
         self.clear_ui()
         self._project = SpineToolboxProject(self, name, description)
+        self._project.connect_signals()
         self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
@@ -354,6 +355,7 @@ class ToolboxUI(QMainWindow):
         self.ui.graphicsView.restore_links()
         # Simulate project execution after restoring links
         self._project.simulate_project_execution()
+        self._project.connect_signals()
         self.ui.tabWidget.setCurrentIndex(0)  # Activate 'Items' tab
         # Initialize Design View scene
         self.ui.graphicsView.init_scene()
@@ -534,6 +536,8 @@ class ToolboxUI(QMainWindow):
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind)
         self.activate_no_selection_tab()  # Clear widget info from QDockWidget
+        if self._project:
+            self._project.deleteLater()
         self._project = None
         self.tool_template_model = None
         self.ui.textBrowser_eventlog.clear()

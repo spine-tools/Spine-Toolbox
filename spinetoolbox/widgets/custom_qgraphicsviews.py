@@ -333,8 +333,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         src_name = src_connector.parent_name()  # Project item name
         dst_name = dst_connector.parent_name()  # Project item name
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
-        # Simulate the DAG containing the new edge
-        self._toolbox.project().simulate_item_execution(dst_name)
 
     def remove_link(self, index):
         """Removes link between source and sink items on scene and
@@ -349,9 +347,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         src_name = link.src_icon.name()
         dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.remove_graph_edge(src_name, dst_name)
-        # Simulate the DAG containing the destination node
-        # NOTE: No need to simulate the DAG containing the source, right?
-        self._toolbox.project().simulate_item_execution(dst_name)
 
     def take_link(self, index):
         """Remove link, then start drawing another one from the same source connector."""
