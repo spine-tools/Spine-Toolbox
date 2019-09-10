@@ -118,7 +118,6 @@ class Tool(ProjectItem):
             row = self._toolbox.tool_template_model.tool_template_row(self._tool_template_name)
             self._toolbox.ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
             self.restore_tool_template(tool_template)
-            self.refresh()
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -647,11 +646,6 @@ class Tool(ProjectItem):
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
-
-    @Slot(name="refresh")
-    def refresh(self):
-        """Check if all input files are there and mark them in the tree view."""
-        # TODO
 
     def execute(self):
         """Executes this Tool."""

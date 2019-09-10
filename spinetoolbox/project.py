@@ -335,7 +335,6 @@ class SpineToolboxProject(MetaObject):
             mappings = data_interfaces[name].get("mappings", {})
             filepath = data_interfaces[name].get("import_file_path", "")
             self.add_data_interface(name, desc, filepath, mappings, x, y, verbosity=False)
-        self.simulate_project_execution()
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -727,19 +726,17 @@ class SpineToolboxProject(MetaObject):
             self.execution_instance.simulate_execution()
 
     def simulate_item_execution(self, item):
-        """Simulates the execution of the dag containing item just until before it's reached.
-        Returns True or False depending on result.
+        """Simulates the execution of the dag containing item.
         """
         dag = self.dag_handler.dag_with_node(item)
         if not dag:
             self._toolbox.msg_error.emit(
                 "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
-            return False
-        ordered_nodes = self.dag_handler.calc_exec_order_to_node(dag, item)
+            return
+        ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
-            return False
+            return
         # Make execution instance and run simulation
         self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self.execution_instance.simulate_execution()
-        return True

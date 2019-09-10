@@ -236,14 +236,11 @@ class ToolboxUI(QMainWindow):
         if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
             p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
             getting_started_anchor = (
-                    "<a style='color:#99CCFF;' title='"
-                    + p
-                    + "' href='file:///"
-                    + p
-                    + "'>Getting Started</a>"
+                "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
             )
-            self.msg.emit("Welcome to Spine Toolbox! If you need help, please read the {0} guide."
-                          .format(getting_started_anchor))
+            self.msg.emit(
+                "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(getting_started_anchor)
+            )
             return
         # Get path to previous project file
         project_file_path = self._qsettings.value("appSettings/previousProject", defaultValue="")
@@ -355,6 +352,8 @@ class ToolboxUI(QMainWindow):
         self.connection_model.reset_model(connections)
         self.ui.tableView_connections.resizeColumnsToContents()
         self.ui.graphicsView.restore_links()
+        # Simulate project execution after restoring links
+        self._project.simulate_project_execution()
         self.ui.tabWidget.setCurrentIndex(0)  # Activate 'Items' tab
         # Initialize Design View scene
         self.ui.graphicsView.init_scene()

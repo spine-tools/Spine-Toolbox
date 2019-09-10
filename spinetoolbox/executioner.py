@@ -276,6 +276,7 @@ class DirectedGraphHandler:
         return {n: list(g.successors(n)) for n in exec_order}
 
     def calc_exec_order_to_node(self, g, node):
+        # NOTE: Not in use at the moment
         """Like calc_exec_order but only until node,
         and ignoring all nodes that are not its ancestors."""
         bunch = list(nx.ancestors(g, node)) + [node]

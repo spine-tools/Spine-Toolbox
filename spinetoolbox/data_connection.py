@@ -405,9 +405,15 @@ class DataConnection(ProjectItem):
 
     def simulate_execution(self):
         """Simulates executing this Data Connection."""
+        super().simulate_execution()
         inst = self._toolbox.project().execution_instance
+        if not inst:
+            return
         refs = self.file_references()
         inst.append_dc_refs(self.name, refs)
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
         inst.append_dc_files(self.name, f_list)
-        self.set_item_ready(bool(refs + f_list))
+        if not refs + f_list:
+            self.add_notification(
+                "This item does not have any references or data. You may add some using the Properties panel."
+            )

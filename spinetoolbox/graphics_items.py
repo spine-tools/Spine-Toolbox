@@ -18,7 +18,7 @@ Classes for drawing graphics items on QGraphicsScene.
 
 from math import atan2, degrees, sin, cos, pi
 import os
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer, QRect
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -33,9 +33,12 @@ from PySide2.QtWidgets import (
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
     QApplication,
+    QToolTip,
+    QWidget,
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QFontMetrics
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
+from helpers import format_string_list
 
 
 class ConnectorButton(QGraphicsRectItem):
@@ -124,6 +127,7 @@ class ExclamationIcon(QGraphicsSvgItem):
         """Class constructor."""
         super().__init__()
         self._parent = parent
+        self._notifications = list()
         self.renderer = QSvgRenderer()
         self.colorizer = QGraphicsColorizeEffect()
         self.colorizer.setColor(QColor("red"))
@@ -137,6 +141,36 @@ class ExclamationIcon(QGraphicsSvgItem):
         rect_w = parent.rect().width()  # Parent rect width
         self.setScale(0.4 * rect_w / dim_max)
         self.setGraphicsEffect(self.colorizer)
+        self.setAcceptHoverEvents(True)
+
+    def clear_notifications(self):
+        """Clear all notifications."""
+        self._notifications.clear()
+        self.hide()
+
+    def add_notification(self, text):
+        """Add a notification."""
+        self._notifications.append(text)
+        self.show()
+
+    def hoverEnterEvent(self, event):
+        """Shows notifications as tool tip.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        if not self._notifications:
+            return
+        tip = format_string_list(self._notifications)
+        QToolTip.showText(event.screenPos(), tip, self._parent._toolbox.ui.graphicsView, QRect(), 60000)
+
+    def hoverLeaveEvent(self, event):
+        """Hides tool tip.
+
+        Args:
+            event (QGraphicsSceneMouseEvent): Event
+        """
+        QToolTip.hideText()
 
 
 class ProjectItemIcon(QGraphicsRectItem):

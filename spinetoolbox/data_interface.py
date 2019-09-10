@@ -107,7 +107,6 @@ class DataInterface(ProjectItem):
         self._toolbox.ui.label_di_name.setText(self.name)
         self._toolbox.ui.treeView_data_interface_files.setModel(self.file_model)
         self.file_model.itemChanged.connect(self._handle_file_model_item_changed)
-        self.refresh()
 
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
@@ -249,14 +248,6 @@ class DataInterface(ProjectItem):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.file_model.appendRow(qitem)
 
-    @Slot(name="refresh")
-    def refresh(self):
-        """Update the list of files that this item is viewing."""
-        if self._project.simulate_item_execution(self.name):
-            inst = self._project.execution_instance
-            file_list = inst.dc_refs_at_sight(self.name) + inst.dc_files_at_sight(self.name)
-            self.update_file_model(file_list)
-
     def execute(self):
         """Executes this Data Interface."""
         self._toolbox.msg.emit("")
@@ -310,3 +301,16 @@ class DataInterface(ProjectItem):
     def stop_execution(self):
         """Stops executing this Data Interface."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
+
+    def simulate_execution(self):
+        """Simulates executing this Item."""
+        super().simulate_execution()
+        inst = self._project.execution_instance
+        if not inst:
+            return
+        file_list = inst.dc_refs_at_sight(self.name) + inst.dc_files_at_sight(self.name)
+        self.update_file_model(file_list)
+        if not file_list:
+            self.add_notification(
+                "This item does not have any input data. Please connect some Data Connection items to it."
+            )

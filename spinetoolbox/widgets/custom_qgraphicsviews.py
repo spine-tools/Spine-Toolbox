@@ -20,7 +20,7 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QEvent
 from graphics_items import LinkDrawer, Link
 from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsscene import CustomQGraphicsScene
@@ -241,6 +241,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.dst_item_name = None  # Name of destination project item when drawing links
         self.show()
 
+    def viewportEvent(self, event):
+        """Don't handle ToolTip events, so the ProjectItemIcons can show custom tool tips."""
+        if event.type() == QEvent.ToolTip:
+            return False
+        return super().viewportEvent(event)
+
     def mousePressEvent(self, event):
         """Manage drawing of links. Handle the case where a link is being
         drawn and the user doesn't hit a connector button.
@@ -323,14 +329,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
         link = Link(self._toolbox, src_connector, dst_connector)
         self.scene().addItem(link)
         self._connection_model.setData(index, link)
-        # Refresh View references
+        # Add edge (connection link) to a dag as well
         src_name = src_connector.parent_name()  # Project item name
         dst_name = dst_connector.parent_name()  # Project item name
-        dst_item_index = self._project_item_model.find_item(dst_name)
-        dst_item = self._project_item_model.project_item(dst_item_index)
-        # Add edge (connection link) to a dag as well
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
-        dst_item.item_refresh_signal.emit()
+        # Simulate the DAG containing the new edge
+        self._toolbox.project().simulate_item_execution(dst_name)
 
     def remove_link(self, index):
         """Removes link between source and sink items on scene and
@@ -339,17 +343,15 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if not link:
             logging.error("Link not found. This should not happen.")
             return False
-        # Source item name
-        src_name = link.src_icon.name()
-        # Find destination item and refresh it is a View
-        dst_name = link.dst_icon.name()
-        dst_item = self._project_item_model.project_item(self._project_item_model.find_item(dst_name))
         self.scene().removeItem(link)
         self._connection_model.setData(index, None)
         # Remove edge (connection link) from dag
+        src_name = link.src_icon.name()
+        dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.remove_graph_edge(src_name, dst_name)
-        # Refresh items
-        dst_item.item_refresh_signal.emit()
+        # Simulate the DAG containing the destination node
+        # NOTE: No need to simulate the DAG containing the source, right?
+        self._toolbox.project().simulate_item_execution(dst_name)
 
     def take_link(self, index):
         """Remove link, then start drawing another one from the same source connector."""

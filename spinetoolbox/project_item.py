@@ -130,15 +130,15 @@ class ProjectItem(BaseProjectItem):
         description (str): Object description
     """
 
-    item_refresh_signal = Signal(name="item_refresh_signal")
+    item_changed = Signal(name="item_changed")
 
     def __init__(self, toolbox, name, description):
         """Class constructor."""
         super().__init__(name, description, is_root=False, is_category=False)
         self._toolbox = toolbox
         self._graphics_item = None
-        # NOTE: item_refresh_signal is not shared with other proj. items so there's no need to disconnect it
-        self.item_refresh_signal.connect(self.refresh)
+        # NOTE: item_changed is not shared with other proj. items so there's no need to disconnect it
+        self.item_changed.connect(lambda: self._toolbox.project().simulate_item_execution(self.name))
 
     def connect_signals(self):
         """Connect signals to handlers."""
@@ -164,17 +164,17 @@ class ProjectItem(BaseProjectItem):
         """Returns the graphics item representing this item in the scene."""
         return self._graphics_item
 
-    def set_item_ready(self, ready):
-        """Shows/hides the exclamation icon depending on the given ready status."""
-        self.get_icon().exclamation_icon.setVisible(not ready)
+    def clear_notifications(self):
+        """Clear all notifications from the exclamation icon."""
+        self.get_icon().exclamation_icon.clear_notifications()
 
-    @Slot(name="refresh")
-    def refresh(self):
-        """Refresh this item's UI."""
+    def add_notification(self, text):
+        """Add a notification to the exclamation icon."""
+        self.get_icon().exclamation_icon.add_notification(text)
 
     def execute(self):
         """Executes this item."""
 
     def simulate_execution(self):
         """Simulates executing this Item."""
-        self.set_item_ready(True)
+        self.clear_notifications()
