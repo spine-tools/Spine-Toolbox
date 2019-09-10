@@ -797,9 +797,6 @@ class Tool(ProjectItem):
             self.add_notification("This Tool does not have any Tool Template set. Set it in the Tool Properties Panel.")
             return
         inst = self._toolbox.project().execution_instance
-        for i in range(self.output_file_model.rowCount()):
-            out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            inst.append_tool_output_file(self.name, out_file_path)
         file_paths = self.find_input_files()
         not_found = [k for k, v in file_paths.items() if v is None]
         if not_found:
@@ -807,3 +804,7 @@ class Tool(ProjectItem):
                 "File(s) {0} needed to execute this Tool are not provided by any input item. "
                 "Connect items that provide the required files to this Tool.".format(", ".join(not_found))
             )
+            return
+        for i in range(self.output_file_model.rowCount()):
+            out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
+            inst.append_tool_output_file(self.name, out_file_path)
