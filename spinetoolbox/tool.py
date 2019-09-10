@@ -145,7 +145,7 @@ class Tool(ProjectItem):
         else:
             new_tool = self._toolbox.tool_template_model.tool_template(row)
             self.set_tool_template(new_tool)
-            self.item_changed.emit()
+        self.item_changed.emit()
 
     def set_tool_template(self, tool_template):
         """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
@@ -793,6 +793,9 @@ class Tool(ProjectItem):
     def simulate_execution(self):
         """Simulates executing this Tool."""
         super().simulate_execution()
+        if not self.tool_template():
+            self.add_notification("This Tool does not have any Tool Template set. Set it in the Tool Properties Panel.")
+            return
         inst = self._toolbox.project().execution_instance
         for i in range(self.output_file_model.rowCount()):
             out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
