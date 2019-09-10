@@ -45,6 +45,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Parameter and relationship parameter values can now be edited in a dedicated editor window in Tree, Graph and Tabular
   views. The editor is accessible by right-clicking a value and selecting `Open in editor...`.
 - It is now possible to plot parameter and relationship parameter values in Tree, Graph and Tabular views.
+- A small notification icon is painted next to project items in the design view whenever they are missing some
+  configuration. Hovering the icon shows tips for completing the configuration.
 
 ### Fixed
 - There is now an upper limit on how much text is logged in Event Log and Process Log. The oldest lines are removed
