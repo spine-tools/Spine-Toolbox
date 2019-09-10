@@ -39,7 +39,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Stop button to main window Toolbar, which terminates execution.
 - Possibility to specify a dedicated Julia project or environment for Spine Toolbox in the settings.
 - Feature to Export project to GraphML format. Each graph in Design View is written to its own file. To do this, just
-  select *Export project to GraphML* from the Project Item list context-menu or from *File -> 
+  select *Export project to GraphML* from the Project Item list context-menu or from *File ->
   Export project to GraphML*.
 - New project item: *Data Interface*
 - Parameter and relationship parameter values can now be edited in a dedicated editor window in Tree, Graph and Tabular
@@ -53,20 +53,21 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Mouse cursor problem in Tool Configuration Assistant
 - Welcome message is now shown for first time users
 - NameError: SpineDBAPIError when executing Data Stores.
-- .py files in *spinedb_api\alembic\versions* are now copied to the installation bundle without compiling them to 
-  .pyc files first. Also, if there's a previous version installed, *spinedb_api\alembic* directory is deleted 
+- .py files in *spinedb_api\alembic\versions* are now copied to the installation bundle without compiling them to
+  .pyc files first. Also, if there's a previous version installed, *spinedb_api\alembic* directory is deleted
   before installation begins [Win-x64].
 - Added missing modules from *spinedb_api\alembic\versions* package into installation bundle [Win-x64].
-- *numpy* is now deleted before installation begins so installing over an existing installation of Spine Toolbox 
+- *numpy* is now deleted before installation begins so installing over an existing installation of Spine Toolbox
   works again [Win-x64].
 - *packaging* and *appdirs* packages are now included in the installation bundle [Win-x64].
+- Data advertised by a project item during execution is only accessible by its descendants.
 
 ### Changed
 - Selecting the Julia environment in Settings now requires picking the Julia interpreter **file**
   (e.g. julia.exe on Windows) instead of the directory where the Julia interpreter is located.
 - Selecting the GAMS program (**file**) in Settings now requires picking the GAMS program (e.g. gams.exe
   on Windows) instead of the directory where the GAMS program is located.
-- All application Settings are now saved using Qt's QSettings class. Old configuration file, 
+- All application Settings are now saved using Qt's QSettings class. Old configuration file,
   *conf/settings.conf* file has been removed.
 - New Spine databases can be created in any backend supported by spinedb_api. The Data Store item properties
   have been changed to allow for this.
