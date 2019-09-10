@@ -16,10 +16,19 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
+import logging
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import DataConnectionIcon, ToolIcon, DataStoreIcon, ViewIcon, DataInterfaceIcon, ProjectItemIcon
+from graphics_items import (
+    DataConnectionIcon,
+    ToolIcon,
+    DataStoreIcon,
+    ViewIcon,
+    DataInterfaceIcon,
+    ProjectItemIcon,
+    Link,
+)
 from widgets.toolbars import DraggableWidget
 
 
@@ -57,25 +66,26 @@ class CustomQGraphicsScene(QGraphicsScene):
     @Slot("QList<QRectF>", name="scene_changed")
     def scene_changed(self, rects):
         """Resize scene as it changes."""
-        # rect = self.scene().sceneRect()
-        # logging.debug("scene_changed pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
-        #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
+        scene_rect = self.sceneRect()
+        if all(scene_rect.contains(rect) for rect in rects):
+            return
         self.resize_scene()
 
     @Slot(name="handle_selection_changed")
     def handle_selection_changed(self):
-        """Synchronize selection with the project tree.
-        """
+        """Synchronize selection with the project tree."""
         if not self.sync_selection:
             return
         selected_items = [item for item in self.selectedItems() if isinstance(item, ProjectItemIcon)]
-        self._toolbox.ui.treeView_project.clearSelection()
         selected_inds = [self._toolbox.project_item_model.find_item(item.name()) for item in selected_items]
+        self._toolbox.ui.treeView_project.clearSelection()
         for ind in selected_inds:
             self._toolbox.ui.treeView_project.selectionModel().select(ind, QItemSelectionModel.Select)
         # Make last item selected the current index in project tree view
         if bool(selected_inds):
-            self._toolbox.ui.treeView_project.setCurrentIndex(selected_inds[-1])
+            self._toolbox.ui.treeView_project.selectionModel().setCurrentIndex(
+                selected_inds[-1], QItemSelectionModel.NoUpdate
+            )
 
     def set_bg_color(self, color):
         """Change background color when this is changed in Settings.
@@ -156,13 +166,12 @@ class CustomQGraphicsScene(QGraphicsScene):
             painter (QPainter): Painter that is used to paint background
             rect (QRectF): The exposed (viewport) rectangle in scene coordinates
         """
-        rect = self.sceneRect()  # Override to only draw background for the scene rectangle
+        scene_rect = self.sceneRect()
+        rect = rect.intersected(scene_rect)  # Limit to only draw background for the scene rectangle
         if not self.bg_grid:
             painter.fillRect(rect, QBrush(self.bg_color))
             return
         step = 20  # Grid step
-        # logging.debug("sceneRect pos:({0:.1f}, {1:.1f}) size:({2:.1f}, {3:.1f})"
-        #               .format(rect.x(), rect.y(), rect.width(), rect.height()))
         painter.setPen(QPen(QColor(0, 0, 0, 40)))
         # Draw horizontal grid
         start = round(rect.top(), step)

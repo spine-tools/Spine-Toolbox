@@ -23,13 +23,14 @@ from config import SPINE_TOOLBOX_VERSION
 # -- Project information -----------------------------------------------------
 
 project = 'Spine Toolbox'
-copyright = '2019, Pekka Savolainen, Manuel Marin, Erkka Rinne, Per Vennström'
-author = 'Pekka Savolainen, Manuel Marin, Erkka Rinne, Per Vennström'
+author = 'P. Savolainen, M. Marin, E. Rinne, P. Vennström, A. Soininen'
+copyright = '2019, {}'.format(author)
+
 
 # The short X.Y version
-version = SPINE_TOOLBOX_VERSION
+version = SPINE_TOOLBOX_VERSION.rpartition('.')[0]
 # The full version, including alpha/beta/rc tags
-release = '0.2'
+release = SPINE_TOOLBOX_VERSION
 
 
 # -- General configuration ---------------------------------------------------
@@ -79,8 +80,15 @@ exclude_patterns = []
 pygments_style = 'sphinx'
 
 # Settings for Sphinx AutoAPI
-autoapi_dirs = ['../../spinetoolbox']  # packag[e to be documented
-autoapi_ignore = ['*_rc.py', '*test/*', '*ui/*']  # ignored modules
+autoapi_dirs = ['../../spinetoolbox']  # package to be documented
+autoapi_ignore = [
+    '*_rc.py',
+    '*/spinetoolbox/build/*',
+    '*/spinetoolbox/dist/*',
+    '*/spinetoolbox/test/*',
+    '*/spinetoolbox/ui/*',
+    '*/spinetoolbox/setup.py',
+]  # ignored modules
 
 # -- Options for HTML output -------------------------------------------------
 

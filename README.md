@@ -8,7 +8,7 @@ An application to define, manage, and execute various energy system simulation m
 ## License
 
 Spine Toolbox is released under the GNU Lesser General Public License (LGPL) license. All accompanying
-documentation, original graphics, and manual are released under the Creative Commons BY-SA 4.0 license.
+documentation, original graphics and other material are released under the [Creative Commons BY-SA 4.0 license](https://creativecommons.org/licenses/by-sa/4.0/).
 Licenses of all packages used by Spine Toolbox are listed in the Spine Toolbox User 
 Guide.
 
@@ -34,7 +34,7 @@ Step-by-step instructions:
 1. Clone either the `master` or `dev` branch onto your computer
 2. Install Python (3.6->)
 3. Install requirements (see below)
-4. Go to directory `\spinetoolbox` and run 
+4. Go to directory `spinetoolbox` and run 
 
         python spinetoolbox.py
 
@@ -102,7 +102,7 @@ To upgrade `spinedb_api` manually, run
     pip install --upgrade git+https://github.com/Spine-project/Spine-Database-API.git
 
 Or run `upgrade_spinedb_api.bat` on Windows or `upgrade_spinedb_api.sh` 
-on Linux and Mac OS X. The scripts are located in the `/bin` directory.
+on Linux and Mac OS X. The scripts are located in the `bin` directory.
 
 **Note:** You don't need to clone or download the `spinedb_api` source code. 
 *pip* takes care of installing the latest version from GitHub to your system 
@@ -120,13 +120,13 @@ since you first installed the requirements.
 
 ## Building the User Guide
 
-Source files for the User Guide can be found in `/docs/source` directory. In order to 
+Source files for the User Guide can be found in `docs/source` directory. In order to 
 build the HTML docs, you need to install the *optional requirements* (see section 
 'Installing requirements' above). This installs Sphinx (among other things), which 
 is required in building the documentation. When Sphinx is installed, you can build the 
-HTML pages from the user guide source files by using the `/bin/build_doc.bat` script on 
-Windows or the `/bin/build_doc.sh` script on Linux and Mac. After running the script, the 
-index page can be found in `/docs/build/html/index.html`. The User Guide can also 
+HTML pages from the user guide source files by using the `bin/build_doc.bat` script on 
+Windows or the `bin/build_doc.sh` script on Linux and Mac. After running the script, the 
+index page can be found in `docs/build/html/index.html`. The User Guide can also 
 be opened from Spine Toolbox menu Help->User Guide (F2).
 
 ## Troubleshooting
@@ -163,7 +163,7 @@ not needed and there is a chance of conflicts between the packages.
 
 All are welcome to contribute!
 
-See detailed instructions for contribution in Spine Toolbox User Guide.
+See detailed instructions for contribution in [Spine Toolbox User Guide](https://spine-toolbox.readthedocs.io/en/latest/contribution_guide.html).
 
 Below are the bare minimum things you need to know.
 

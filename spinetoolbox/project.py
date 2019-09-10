@@ -716,17 +716,3 @@ class SpineToolboxProject(MetaObject):
             else:
                 self._toolbox.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
             i += 1
-
-    @busy_effect
-    def open_tree_view(self):
-        """Open all selected data stores in tree view.
-        """
-        indexes = self._toolbox.ui.treeView_project.selectedIndexes()
-        proj_items = [self._toolbox.project_item_model.project_item(ind) for ind in indexes]
-        data_stores = [item for item in proj_items if item.item_type == "Data Store"]
-        if not data_stores:
-            self._toolbox.msg_error.emit("No Data Store selected. Please select one or more Data Store items.")
-            return
-        db_maps = {ds.name: get_db_map(ds.make_url()) for ds in data_stores}
-        tree_view_form = TreeViewForm(self, **db_maps)
-        tree_view_form.show()

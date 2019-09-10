@@ -30,9 +30,10 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     Attributes:
         toolbox (ToolboxUI): Parent widget.
+        autorun (bool): whether or not to start configuration process at form load
     """
 
-    def __init__(self, toolbox):
+    def __init__(self, toolbox, autorun=True):
         """ Initialize class. """
         super().__init__(parent=toolbox, f=Qt.Window)
         self._toolbox = toolbox  # QWidget parent
@@ -45,7 +46,8 @@ class ToolConfigurationAssistantWidget(QWidget):
         self.setAttribute(Qt.WA_DeleteOnClose)
         self.ui.textBrowser_spine_model.setStyleSheet(TEXTBROWSER_SS)
         self.connect_signals()
-        self.configure_spine_model()
+        if autorun:
+            self.configure_spine_model()
 
     def connect_signals(self):
         """Connect signals."""
@@ -98,7 +100,7 @@ class ToolConfigurationAssistantWidget(QWidget):
             QApplication.restoreOverrideCursor()
         elif julia_version < "1.1.0":
             self.add_spine_model_error_msg(
-                "SpineModel.jl requires Julia version 1.1.0, whereas current version is {}.".format(julia_version)
+                "SpineModel.jl requires Julia version >= 1.1.0, whereas current version is {}.".format(julia_version)
             )
             QApplication.restoreOverrideCursor()
         else:
@@ -119,7 +121,7 @@ class ToolConfigurationAssistantWidget(QWidget):
                 self.add_spine_model_error_msg("Aborted by the user")
                 QApplication.restoreOverrideCursor()
             else:
-                self.add_spine_model_error_msg("Installing SpineModel. This operation can take a few moments...")
+                self.add_spine_model_msg("Installing SpineModel. This operation can take a few moments...")
                 self.q_process = self.spine_model_config_asst.install_spine_model()
                 self.q_process.subprocess_finished_signal.connect(self._handle_spine_model_installation_finished)
                 self.q_process.start_process()
@@ -227,3 +229,13 @@ class ToolConfigurationAssistantWidget(QWidget):
         msg.addButton("Cancel", QMessageBox.RejectRole)
         msg.exec_()  # Show message box
         return msg.clickedButton() == allow_button
+
+    def closeEvent(self, event=None):
+        """Handle close widget.
+
+        Args:
+             event (QEvent): PySide2 event
+        """
+        QApplication.restoreOverrideCursor()
+        if event:
+            event.accept()

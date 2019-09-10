@@ -19,8 +19,8 @@ Application constants and style sheets
 import sys
 import os
 
-SPINE_TOOLBOX_VERSION = "0.3b"
-REQUIRED_SPINEDB_API_VERSION = "0.0.34"
+SPINE_TOOLBOX_VERSION = "0.3"
+REQUIRED_SPINEDB_API_VERSION = "0.0.36"
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
 # Invalid characters for directory names
@@ -35,14 +35,12 @@ if getattr(sys, "frozen", False):
     APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
-    DOC_INDEX_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html", "index.html"))
+    DOCUMENTATION_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
-    DOC_INDEX_PATH = os.path.abspath(
-        os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build", "html", "index.html")
-    )
+    DOCUMENTATION_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build", "html"))
 
 # Tool output directory name
 TOOL_OUTPUT_DIR = "output"

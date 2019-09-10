@@ -260,6 +260,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         Args:
             event (QGraphicsSceneMouseEvent): Mouse event
         """
+        self.scene().clearSelection()
         self.setSelected(True)
         self._toolbox.show_item_image_context_menu(event.screenPos(), self.name())
 

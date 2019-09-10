@@ -4,6 +4,8 @@
 Spine datapackage editor
 ************************
 
+.. note:: This section is a work in progress.
+
 This section describes the Spine datapackage editor, used to interact with tabular data and export it into
 Spine format.
 

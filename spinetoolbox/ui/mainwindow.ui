@@ -153,6 +153,7 @@
      <string>Help</string>
     </property>
     <addaction name="actionUser_Guide"/>
+    <addaction name="actionGetting_started"/>
     <addaction name="separator"/>
     <addaction name="actionAbout_Qt"/>
     <addaction name="actionAbout"/>
@@ -3003,7 +3004,7 @@
     <string>Tool configuration assistant...</string>
    </property>
    <property name="shortcut">
-    <string>F3</string>
+    <string>F5</string>
    </property>
   </action>
   <action name="actionRemove_all">
@@ -3034,6 +3035,18 @@
    </property>
    <property name="text">
     <string>Add Data Interface</string>
+   </property>
+  </action>
+  <action name="actionGetting_started">
+   <property name="icon">
+    <iconset resource="resources/resources_icons.qrc">
+     <normaloff>:/icons/menu_icons/question-circle.svg</normaloff>:/icons/menu_icons/question-circle.svg</iconset>
+   </property>
+   <property name="text">
+    <string>Getting started</string>
+   </property>
+   <property name="shortcut">
+    <string>F3</string>
    </property>
   </action>
  </widget>
@@ -3107,10 +3120,16 @@
   <tabstop>toolButton_tool_open_dir</tabstop>
   <tabstop>scrollArea_4</tabstop>
   <tabstop>treeView_view</tabstop>
+  <tabstop>pushButton_view_open_tree_view</tabstop>
+  <tabstop>pushButton_view_open_graph_view</tabstop>
+  <tabstop>pushButton_view_open_tabular_view</tabstop>
   <tabstop>toolButton_view_open_dir</tabstop>
-  <tabstop>tableView_connections</tabstop>
   <tabstop>scrollArea_6</tabstop>
+  <tabstop>treeView_data_interface_files</tabstop>
+  <tabstop>pushButton_import_editor</tabstop>
   <tabstop>toolButton_di_open_dir</tabstop>
+  <tabstop>tableView_connections</tabstop>
+  <tabstop>tabWidget_item_properties</tabstop>
  </tabstops>
  <resources>
   <include location="resources/resources_icons.qrc"/>

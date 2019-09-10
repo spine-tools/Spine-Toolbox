@@ -12,8 +12,8 @@
 """
 Classes for handling models in PySide2's model/view framework.
 
-:author: M. Marin (KTH)
-:date:   8.8.2019
+:author: P. Vennström (VTT)
+:date:   1.6.2019
 """
 from spinedb_api import ObjectClassMapping, RelationshipClassMapping, ParameterMapping, Mapping
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel
