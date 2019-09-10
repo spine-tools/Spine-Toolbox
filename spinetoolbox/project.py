@@ -590,7 +590,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("--------------------------------------------------")
         self._toolbox.msg.emit("<b>Executing Selected Directed Acyclic Graph</b>")
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(ordered_nodes)))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(ordered_nodes))))
         self._toolbox.msg.emit("--------------------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
@@ -624,13 +624,13 @@ class SpineToolboxProject(MetaObject):
             return
         self._executed_graph_index = 0
         # Get first graph, connect signals and start executing it
-        execution_list = self._ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
-        self.execution_instance = ExecutionInstance(self._toolbox, execution_list)
+        ordered_nodes = self._ordered_dags.pop(self._executed_graph_index)  # Pop first set of items to execute
+        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("---------------------------------------")
         self._toolbox.msg.emit("<b>Executing All Directed Acyclic Graphs</b>")
         self._toolbox.msg.emit("<b>Starting DAG {0}/{1}</b>".format(self._executed_graph_index + 1, self._n_graphs))
-        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(execution_list)))
+        self._toolbox.msg.emit("Order: {0}".format(" -> ".join(list(ordered_nodes))))
         self._toolbox.msg.emit("---------------------------------------")
         self.execution_instance.graph_execution_finished_signal.connect(self.graph_execution_finished)
         self.execution_instance.start_execution()
@@ -719,20 +719,16 @@ class SpineToolboxProject(MetaObject):
 
     def simulate_execution(self, item):
         """Simulates the execution of the dag containing item just until before it's reached."""
-        dag = self.dag_handler.dag_with_node(item.name)
+        dag = self.dag_handler.dag_with_node(item)
         if not dag:
             self._toolbox.msg_error.emit(
-                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item.name)
+                "[BUG] Could not find a graph containing {0}. " "<b>Please reopen the project.</b>".format(item)
             )
-            return
+            return False
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
-            self._toolbox.msg.emit("")
-            self._toolbox.msg_warning.emit(
-                "The graph containing {0} is not a directed acyclic graph. "
-                "Please edit connections in Design View and try again.".format(item.name)
-            )
-            return
+            return False
         # Make execution instance and run simulation
         self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self.execution_instance.simulate_execution(item)
+        return True

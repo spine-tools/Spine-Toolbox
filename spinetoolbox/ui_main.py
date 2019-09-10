@@ -72,7 +72,7 @@ from config import (
 )
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
-from project_item import ProjectItem
+from project_item import BaseProjectItem
 
 
 class ToolboxUI(QMainWindow):
@@ -412,12 +412,12 @@ class ToolboxUI(QMainWindow):
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
         add them to the model."""
-        root_item = ProjectItem("root", "", is_root=True, is_category=False)
-        ds_category = ProjectItem("Data Stores", "", is_root=False, is_category=True)
-        dc_category = ProjectItem("Data Connections", "", is_root=False, is_category=True)
-        tool_category = ProjectItem("Tools", "", is_root=False, is_category=True)
-        view_category = ProjectItem("Views", "", is_root=False, is_category=True)
-        di_category = ProjectItem("Data Interfaces", "", is_root=False, is_category=True)
+        root_item = BaseProjectItem("root", "", is_root=True, is_category=False)
+        ds_category = BaseProjectItem("Data Stores", "", is_root=False, is_category=True)
+        dc_category = BaseProjectItem("Data Connections", "", is_root=False, is_category=True)
+        tool_category = BaseProjectItem("Tools", "", is_root=False, is_category=True)
+        view_category = BaseProjectItem("Views", "", is_root=False, is_category=True)
+        di_category = BaseProjectItem("Data Interfaces", "", is_root=False, is_category=True)
         self.project_item_model = ProjectItemModel(self, root=root_item)
         self.project_item_model.insert_item(ds_category)
         self.project_item_model.insert_item(dc_category)

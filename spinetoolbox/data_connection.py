@@ -43,8 +43,7 @@ class DataConnection(ProjectItem):
 
     def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Connection"
         self.reference_model = QStandardItemModel()  # References to files
@@ -393,14 +392,14 @@ class DataConnection(ProjectItem):
         inst = self._toolbox.project().execution_instance
         # Update Data Connection based on project items that are already executed
         # Add previously executed Tool's output file paths to references
-        self.references += inst.tool_output_files
+        self.references += inst.tool_output_files_at_sight(self.name)
         self.populate_reference_list(self.references)
         # Update execution instance for project items downstream
         # Add data file references and data files into execution instance
         refs = self.file_references()
-        inst.append_dc_refs(refs)
+        inst.append_dc_refs(self.name, refs)
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        inst.append_dc_files(f_list)
+        inst.append_dc_files(self.name, f_list)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
@@ -412,6 +411,6 @@ class DataConnection(ProjectItem):
         """Simulates executing this Data Connection."""
         inst = self._toolbox.project().execution_instance
         refs = self.file_references()
-        inst.append_dc_refs(refs)
+        inst.append_dc_refs(self.name, refs)
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        inst.append_dc_files(f_list)
+        inst.append_dc_files(self.name, f_list)

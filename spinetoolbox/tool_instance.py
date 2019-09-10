@@ -30,11 +30,7 @@ class ToolInstance(QObject):
     """Class for Tool instances.
 
     Args:
-        tool_template (ToolTemplate): Tool for which this instance is created
-        toolbox (ToolboxUI): QMainWindow instance
-        tool_output_dir (str): Directory where results are saved
-        project (SpineToolboxProject): Current project
-        execute_in_work (bool): True executes instance in work dir, False executes in Tool template source dir
+        tool (Tool): Tool for which this instance is created
 
     Class Variables:
         instance_finished_signal (Signal): Signal to emit when a Tool instance has finished processing
@@ -42,16 +38,16 @@ class ToolInstance(QObject):
 
     instance_finished_signal = Signal(int, name="instance_finished_signal")
 
-    def __init__(self, tool_template, toolbox, tool_output_dir, project, execute_in_work):
+    def __init__(self, tool):
         """class constructor."""
-
         super().__init__()  # TODO: Should this be QObject.__init__(self) like in MetaObject class?
-        self.tool_template = tool_template
-        self._toolbox = toolbox
-        self._project = project
-        self.execute_in_work = execute_in_work
+        self.tool = tool
+        self.tool_template = tool.tool_template()
+        self._toolbox = tool._toolbox
+        self._project = tool._project
+        self.execute_in_work = tool.execute_in_work
+        self.tool_output_dir = tool.output_dir
         self.tool_process = None
-        self.tool_output_dir = tool_output_dir
         # Directory where results were saved
         self.output_dir = None
         if self.execute_in_work:  # Execute in work directory
@@ -65,9 +61,9 @@ class ToolInstance(QObject):
         self.ipython_command_list = list()
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
-        self.inputfiles = [os.path.join(self.basedir, f) for f in tool_template.inputfiles]
-        self.inputfiles_opt = [os.path.join(self.basedir, f) for f in tool_template.inputfiles_opt]
-        self.outputfiles = [os.path.join(self.basedir, f) for f in tool_template.outputfiles]
+        self.inputfiles = [os.path.join(self.basedir, f) for f in self.tool_template.inputfiles]
+        self.inputfiles_opt = [os.path.join(self.basedir, f) for f in self.tool_template.inputfiles_opt]
+        self.outputfiles = [os.path.join(self.basedir, f) for f in self.tool_template.outputfiles]
         # Check that required output directories are created
         self.make_work_output_dirs()
         # Checkout Tool template to work directory
@@ -467,7 +463,7 @@ class ToolInstance(QObject):
                         self._toolbox.msg_error.emit(
                             "[OSError] Copying pattern {0} to {1} failed".format(fname_path, dst)
                         )
-                    self._toolbox.project().execution_instance.append_tool_output_file(dst)
+                    self._toolbox.project().execution_instance.append_tool_output_file(self.tool.name, dst)
                     saved_files.append(os.path.join(dst_subdir, fname))
             else:
                 output_file = os.path.join(self.basedir, pattern)
@@ -484,7 +480,7 @@ class ToolInstance(QObject):
                     self._toolbox.msg_error.emit(
                         "[OSError] Copying output file {0} to {1} failed".format(output_file, dst)
                     )
-                self._toolbox.project().execution_instance.append_tool_output_file(dst)
+                self._toolbox.project().execution_instance.append_tool_output_file(self.tool.name, dst)
                 saved_files.append(pattern)
         return saved_files, failed_files
 

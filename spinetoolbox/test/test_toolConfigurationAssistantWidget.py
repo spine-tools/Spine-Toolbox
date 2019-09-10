@@ -251,7 +251,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
         self.assertIsNone(self.widget.q_process)
 
     def test_restore_override_cursor_at_close(self):
-        """Test that no override cursor is set after closing this widget."""
+        """Test that no override cursor is set after closing the widget."""
         QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
         self.widget.close()
         self.assertIsNone(QApplication.overrideCursor())

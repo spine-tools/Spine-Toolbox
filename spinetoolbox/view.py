@@ -43,8 +43,7 @@ class View(ProjectItem):
     """
 
     def __init__(self, toolbox, name, description, x, y):
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "View"
         self._graph_views = {}

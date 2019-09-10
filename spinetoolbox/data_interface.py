@@ -44,8 +44,7 @@ class DataInterface(ProjectItem):
 
     def __init__(self, toolbox, name, description, filepath, settings, x, y):
         """Class constructor."""
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Interface"
         # Make data directory and logs subdirectory for this item
@@ -257,10 +256,10 @@ class DataInterface(ProjectItem):
     @Slot(name="refresh")
     def refresh(self):
         """Update the list of files that this item is viewing."""
-        self._project.simulate_execution(self)
-        inst = self._project.execution_instance
-        file_list = inst.dc_refs + inst.dc_files
-        self.update_file_model(file_list)
+        if self._project.simulate_execution(self.name):
+            inst = self._project.execution_instance
+            file_list = inst.dc_refs_at_sight(self.name) + inst.dc_files_at_sight(self.name)
+            self.update_file_model(file_list)
 
     def execute(self):
         """Executes this Data Interface."""
@@ -309,7 +308,7 @@ class DataInterface(ProjectItem):
         if all_data:
             # Add mapped data to a dict in the execution instance.
             # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
-            inst.add_di_data(self.name, all_data)
+            inst.add_di_data(self.name, (self.name, all_data))
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):

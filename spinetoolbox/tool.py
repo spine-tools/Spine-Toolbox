@@ -46,8 +46,7 @@ class Tool(ProjectItem):
 
     def __init__(self, toolbox, name, description, tool_template, use_work, x, y):
         """Class constructor."""
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Tool"
         self.source_file_model = QStandardItemModel()
@@ -119,6 +118,7 @@ class Tool(ProjectItem):
             row = self._toolbox.tool_template_model.tool_template_row(self._tool_template_name)
             self._toolbox.ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
             self.restore_tool_template(tool_template)
+            self.refresh()
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -441,6 +441,7 @@ class Tool(ProjectItem):
         return True
 
     def find_output_items(self):
+        # NOTE: Not in use at the moment
         """Find output items of this Tool.
 
         Returns:
@@ -593,7 +594,6 @@ class Tool(ProjectItem):
 
     def populate_template_model(self, populate):
         """Add all tool template specs to a single QTreeView.
-        If items is None or an empty list, model is cleared.
 
         Args:
             populate (bool): False to clear model, True to populate.
@@ -652,6 +652,11 @@ class Tool(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
+    @Slot(name="refresh")
+    def refresh(self):
+        """Check if all input files are there and mark them in the tree view."""
+        # TODO
+
     def execute(self):
         """Executes this Tool."""
         if not self.tool_template():
@@ -661,10 +666,8 @@ class Tool(ProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
-        if self.execute_in_work:
-            self._toolbox.msg.emit("*** Executing in <b>work</b> directory mode ***")
-        else:
-            self._toolbox.msg.emit("*** Executing in <b>source</b> directory mode ***")
+        work_or_source = "work" if self.execute_in_work else "source"
+        self._toolbox.msg.emit("*** Executing in <b>{0}</b> directory mode ***".format(work_or_source))
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Checking Tool template requirements ***")
@@ -684,17 +687,12 @@ class Tool(ProjectItem):
                     return
                 # Required files and dirs should have been found at this point, so create instance
                 try:
-                    self.instance = ToolInstance(
-                        self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
-                    )
+                    self.instance = ToolInstance(self)
                 except OSError as e:
                     self._toolbox.msg_error.emit("Creating Tool instance failed. {0}".format(e))
                     self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
                     return
-                if self.execute_in_work:
-                    self._toolbox.msg.emit("*** Copying input files to work directory ***")
-                else:
-                    self._toolbox.msg.emit("*** Copying input files to source directory ***")
+                self._toolbox.msg.emit("*** Copying input files to {0} directory ***".format(work_or_source))
                 # Copy input files to ToolInstance work or source directory
                 if not self.copy_input_files(file_paths):
                     self._toolbox.msg_error.emit("Copying input files failed. Tool execution aborted.")
@@ -704,10 +702,7 @@ class Tool(ProjectItem):
                 # logging.debug("No input files to copy")
                 pass
             if n_dirs > 0:
-                if self.execute_in_work:
-                    self._toolbox.msg.emit("*** Creating subdirectories to work directory ***")
-                else:
-                    self._toolbox.msg.emit("*** Creating subdirectories to source directory ***")
+                self._toolbox.msg.emit("*** Creating subdirectories to {0} directory ***".format(work_or_source))
                 if not self.create_subdirectories():
                     # Creating directories failed -> abort
                     self._toolbox.msg_error.emit("Creating subdirectories failed. Tool execution aborted.")
@@ -718,9 +713,7 @@ class Tool(ProjectItem):
                 pass
         else:  # Tool template does not have requirements
             try:
-                self.instance = ToolInstance(
-                    self.tool_template(), self._toolbox, self.output_dir, self._project, self.execute_in_work
-                )
+                self.instance = ToolInstance(self)
             except OSError as e:
                 self._toolbox.msg_error.emit("Tool instance creation failed. {0}".format(e))
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
@@ -752,7 +745,7 @@ class Tool(ProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            found_file = self._toolbox.project().execution_instance.find_file(filename)
+            found_file = self._toolbox.project().execution_instance.find_file(filename, self.name)
             if not found_file:
                 self._toolbox.msg_error.emit("Required file <b>{0}</b> not found".format(filename))
                 return None
@@ -774,8 +767,7 @@ class Tool(ProjectItem):
             if not pattern:
                 # It's a directory -> skip
                 continue
-            # found_files = self.find_files(filename)  # Obsolete
-            found_files = self._toolbox.project().execution_instance.find_optional_files(pattern)
+            found_files = self._toolbox.project().execution_instance.find_optional_files(pattern, self.name)
             if not found_files:
                 self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(pattern))
             else:

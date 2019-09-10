@@ -48,8 +48,7 @@ class DataStore(ProjectItem):
 
     def __init__(self, toolbox, name, description, url, x, y):
         """Class constructor."""
-        super().__init__(name, description)
-        self._toolbox = toolbox
+        super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self._url = self.parse_url(url)
@@ -158,7 +157,6 @@ class DataStore(ProjectItem):
                     "<br>Please make new selections and try again.".format(self.name, e)
                 )
             return None
-        # Small hack to make sqlite file paths relative to this DS directory
         if dialect == "sqlite" and not url.database:
             if log_errors:
                 self._toolbox.msg_error.emit(
@@ -166,6 +164,7 @@ class DataStore(ProjectItem):
                     "<br>Please select a database and try again.".format(self.name)
                 )
             return None
+        # Small hack to make sqlite file paths relative to this DS directory
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
             self._toolbox.ui.lineEdit_database.setText(url.database)
@@ -633,22 +632,7 @@ class DataStore(ProjectItem):
                 "& <i>password</i> for other database dialects."
             )
         else:
-            if url.drivername.lower().startswith('sqlite'):
-                # If dialect is sqlite, append full path of the sqlite file to execution_instance
-                sqlite_file = url.database
-                if not sqlite_file or not os.path.isfile(sqlite_file):
-                    self._toolbox.msg_warning.emit(
-                        "Warning: Data Store <b>{0}</b> SQLite url is not valid.".format(self.name)
-                    )
-                else:
-                    # Add Data Store reference into execution instance
-                    inst.add_ds_ref("sqlite", sqlite_file)
-            else:
-                # If dialect is other than sqlite file, just pass for now
-                # TODO: What needs to be done here?
-                # IDEA: just add the entire url dictionary to some attribute in the `ExecutionInstance` object,
-                # then figure everything out in `ExecutionInstance.find_file`
-                pass
+            inst.add_ds_url(self.name, url)
             # Import mapped data from Data Interfaces in the execution instance
             try:
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
@@ -660,8 +644,8 @@ class DataStore(ProjectItem):
                 db_map = None
             if db_map:
                 all_import_errors = []
-                for di_name, all_data in inst.di_data.items():
-                    self._toolbox.msg_proc.emit("Importing data from <b>{}</b> into '{}'".format(di_name, url))
+                for (di_name, all_data) in inst.di_data_at_sight(self):
+                    self._toolbox.msg_proc.emit("Importing data from <b>{0}</b> into '{1}'".format(di_name, url))
                     for data in all_data:
                         import_num, import_errors = spinedb_api.import_data(db_map, **data)
                         if import_errors:
@@ -700,3 +684,10 @@ class DataStore(ProjectItem):
         """Stops executing this Data Store."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+
+    def simulate_execution(self):
+        """Simulates executing this Data Store."""
+        inst = self._toolbox.project().execution_instance
+        url = self.make_url(log_errors=False)
+        if url:
+            inst.add_ds_url(self.name, url)
