@@ -240,49 +240,22 @@ class DirectedGraphHandler(QObject):
         return None
 
     def calc_exec_order(self, g):
-        """Returns a bfs-ordered dict of nodes in the given graph.
+        """Returns a dict of nodes in the given graph in topological sort order.
         Key is the node, value is a list of its direct successors
         (the successors are important to do the advertising).
-        Adds a dummy source node to the graph if there are more than
-        one nodes that have no inbound connections. The dummy source
-        node is needed for the bfs-algorithm.
+        A topological sort is a nonunique permutation of the nodes such that an edge from u to v
+        implies that u appears before v in the topological sort order.
 
         Args:
             g (DiGraph): Directed graph to process
 
         Returns:
-            list: bfs-ordered list of node names (first item at index 0).
-            Empty list if given graph is not a DAG.
+            dict: key is the node name, value is its direct successors
+            Empty dict if given graph is not a DAG.
         """
         if not nx.is_directed_acyclic_graph(g):
             return {}
-        sources = self.source_nodes(g)  # Project items that have no inbound connections
-        if not sources:
-            # Should not happen if nx.is_directed_acyclic_graph() works
-            logging.error("This graph has no source nodes. Execution failed.")
-            return {}
-        exec_order = list()
-        if len(sources) > 1:
-            # Make an invisible source node for all nodes that have no inbound connections
-            invisible_src_node = 0  # This is unique name since it's an integer. Item called "0" can still be created
-            g.add_node(invisible_src_node)
-            for src in sources:
-                g.add_edge(invisible_src_node, src)
-            # Calculate bfs-order by using the invisible dummy source node
-            edges_to_execute = list(nx.bfs_edges(g, invisible_src_node))
-            # Now remove the invisible dummy source node
-            for src in sources:
-                g.remove_edge(invisible_src_node, src)
-            g.remove_node(invisible_src_node)
-        else:
-            # The dag contains only one source item, so it can be used as the source node directly
-            # Calculate bfs-order
-            edges_to_execute = list(nx.bfs_edges(g, sources[0]))
-            exec_order.append(sources[0])  # Add source node
-        # Collect dst nodes from bfs-edge iterator
-        for src, dst in edges_to_execute:
-            exec_order.append(dst)
-        return {n: list(g.successors(n)) for n in exec_order}
+        return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
 
     def calc_exec_order_to_node(self, g, node):
         # NOTE: Not in use at the moment
