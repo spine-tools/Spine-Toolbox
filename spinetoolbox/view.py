@@ -90,7 +90,6 @@ class View(ProjectItem):
         """Restore selections into shared widgets when this project item is selected."""
         self._toolbox.ui.label_view_name.setText(self.name)
         self._toolbox.ui.treeView_view.setModel(self.reference_model)
-        self.refresh()
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -117,25 +116,6 @@ class View(ProjectItem):
                 continue
             item_list.append(item)
         return item_list
-
-    @Slot(name="refresh")
-    def refresh(self):
-        """Update the list of references that this item is viewing."""
-        input_items = self.find_input_items()
-        self._references = list()
-        for item in input_items:
-            if item.item_type == "Data Store":
-                url = item.make_url()
-                if not url:
-                    continue
-                self._references.append(url)
-            elif item.item_type == "Tool":
-                filepaths = []
-                for (dirpath, dirnames, filenames) in os.walk(item.output_dir):
-                    filepaths.extend([os.path.join(dirpath, fn) for fn in filenames])
-                self._references.extend([URL("sqlite", database=f) for f in filepaths if f.lower().endswith('.sqlite')])
-        # logging.debug("{0}".format(self._references))
-        self.populate_reference_list(self._references)
 
     @Slot(bool, name="open_graph_view_btn_clicked")
     def open_graph_view_btn_clicked(self, checked=False):
@@ -215,11 +195,33 @@ class View(ProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing View <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
+        inst = self._toolbox.project().execution_instance
+        self._references.clear()
+        for url in inst.ds_urls_at_sight(self.name):
+            drivername = url.drivername.lower()
+            if drivername.startswith('sqlite'):
+                self._references.append(url)
+        for filepath in inst.tool_output_files_at_sight(self.name):
+            if filepath.lower().endswith('.sqlite'):
+                url = URL("sqlite", database=filepath)
+                self._references.append(url)
+        self.populate_reference_list(self._references)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
         """Stops executing this View."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
+
+    def simulate_execution(self):
+        """Update the list of references that this item is viewing."""
+        super().simulate_execution()
+        inst = self._toolbox.project().execution_instance
+        self._references.clear()
+        for url in inst.ds_urls_at_sight(self.name):
+            drivername = url.drivername.lower()
+            if drivername.startswith('sqlite'):
+                self._references.append(url)
+        self.populate_reference_list(self._references)
 
     def _selected_indexes(self):
         """Returns selected indexes."""
