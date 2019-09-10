@@ -320,41 +320,6 @@ class DataStore(ProjectItem):
         self._toolbox.ui.lineEdit_username.setEnabled(True)
         self._toolbox.ui.lineEdit_password.setEnabled(True)
 
-    @busy_effect
-    def install_dbapi_pip(self, dbapi):
-        """Install DBAPI using pip."""
-        self._toolbox.msg.emit("Installing module <b>{0}</b> using pip".format(dbapi))
-        program = sys.executable
-        args = list()
-        args.append("-m")
-        args.append("pip")
-        args.append("install")
-        args.append("{0}".format(dbapi))
-        pip_install = qsubprocess.QSubProcess(self._toolbox, program, args)
-        pip_install.start_process()
-        if pip_install.wait_for_finished():
-            self._toolbox.msg_success.emit("Module <b>{0}</b> successfully installed".format(dbapi))
-            return True
-        self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
-        return False
-
-    @busy_effect
-    def install_dbapi_conda(self, dbapi):
-        """Install DBAPI using conda. Fails if conda is not installed."""
-        try:
-            import conda.cli
-        except ImportError:
-            self._toolbox.msg_error.emit("Conda not found. Installing {0} failed.".format(dbapi))
-            return False
-        try:
-            self._toolbox.msg.emit("Installing module <b>{0}</b> using Conda".format(dbapi))
-            conda.cli.main('conda', 'install', '-y', dbapi)
-            self._toolbox.msg_success.emit("Module <b>{0}</b> successfully installed".format(dbapi))
-            return True
-        except Exception:  # pylint: disable=broad-except
-            self._toolbox.msg_error.emit("Installing module <b>{0}</b> failed".format(dbapi))
-            return False
-
     @Slot(bool, name="open_tree_view")
     def open_tree_view(self, checked=False):
         """Open url in tree view form."""
