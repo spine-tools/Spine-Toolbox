@@ -720,15 +720,6 @@ class SpineToolboxProject(MetaObject):
                 self._toolbox.msg.emit("Graph nr. {0} exported to {1}".format(i, path))
             i += 1
 
-    def simulate_project_execution(self):
-        """Simulates the execution of all dags in the project."""
-        for g in self.dag_handler.dags():
-            ordered_nodes = self.dag_handler.calc_exec_order(g)
-            if not ordered_nodes:
-                continue
-            self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
-            self.execution_instance.simulate_execution()
-
     @Slot("QVariant", name="simulate_dag_execution")
     def simulate_dag_execution(self, dag):
         """Simulates the execution of the given dag."""
@@ -738,6 +729,11 @@ class SpineToolboxProject(MetaObject):
         # Make execution instance and run simulation
         self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
         self.execution_instance.simulate_execution()
+
+    def simulate_project_execution(self):
+        """Simulates the execution of all dags in the project."""
+        for g in self.dag_handler.dags():
+            self.simulate_dag_execution(g)
 
     def simulate_item_execution(self, item):
         """Simulates the execution of the dag containing given item."""

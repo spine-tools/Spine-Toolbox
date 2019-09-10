@@ -20,7 +20,7 @@ import logging
 import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
-from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF, QEvent
+from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF
 from graphics_items import LinkDrawer, Link
 from widgets.custom_qlistview import DragListView
 from widgets.custom_qgraphicsscene import CustomQGraphicsScene
@@ -240,12 +240,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
         self.show()
-
-    def viewportEvent(self, event):
-        """Don't handle ToolTip events, so the ProjectItemIcons can show custom tool tips."""
-        if event.type() == QEvent.ToolTip:
-            return False
-        return super().viewportEvent(event)
 
     def mousePressEvent(self, event):
         """Manage drawing of links. Handle the case where a link is being

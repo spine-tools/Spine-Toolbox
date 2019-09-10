@@ -18,7 +18,7 @@ Classes for drawing graphics items on QGraphicsScene.
 
 from math import atan2, degrees, sin, cos, pi
 import os
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer, QRect
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -33,10 +33,8 @@ from PySide2.QtWidgets import (
     QGraphicsColorizeEffect,
     QGraphicsDropShadowEffect,
     QApplication,
-    QToolTip,
-    QWidget,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QFontMetrics
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QFontMetrics, QPalette
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from helpers import format_string_list
 
@@ -120,7 +118,11 @@ class ConnectorButton(QGraphicsRectItem):
 
 
 class ExclamationIcon(QGraphicsSvgItem):
-    """
+    """Exclamation icon graphics item.
+    Used to notify that a ProjectItem is missing some configuration.
+
+    Attributes:
+        parent (ProjectItemIcon): the parent item
     """
 
     def __init__(self, parent):
@@ -139,9 +141,12 @@ class ExclamationIcon(QGraphicsSvgItem):
         self.setSharedRenderer(self.renderer)
         dim_max = max(size.width(), size.height())
         rect_w = parent.rect().width()  # Parent rect width
-        self.setScale(0.4 * rect_w / dim_max)
+        self.setScale(0.2 * rect_w / dim_max)
         self.setGraphicsEffect(self.colorizer)
+        self._notification_list_item = NotificationListItem()
+        self._notification_list_item.setZValue(2)
         self.setAcceptHoverEvents(True)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.hide()
 
     def clear_notifications(self):
@@ -162,8 +167,10 @@ class ExclamationIcon(QGraphicsSvgItem):
         """
         if not self._notifications:
             return
-        tip = format_string_list(self._notifications)
-        QToolTip.showText(event.screenPos(), tip, self._parent._toolbox.ui.graphicsView, QRect(), 60000)
+        tip = "<p>" + "<p>".join(self._notifications)
+        self._notification_list_item.setHtml(tip)
+        self.scene().addItem(self._notification_list_item)
+        self._notification_list_item.setPos(self.sceneBoundingRect().topRight() + QPointF(1, 0))
 
     def hoverLeaveEvent(self, event):
         """Hides tool tip.
@@ -171,7 +178,30 @@ class ExclamationIcon(QGraphicsSvgItem):
         Args:
             event (QGraphicsSceneMouseEvent): Event
         """
-        QToolTip.hideText()
+        self.scene().removeItem(self._notification_list_item)
+
+
+class NotificationListItem(QGraphicsTextItem):
+    """Notification list graphics item.
+    Used to show notifications for a ProjectItem
+
+    Attributes:
+        parent (ExclamationIcon): the parent item
+    """
+
+    def __init__(self):
+        """Init class."""
+        super().__init__()
+        self.bg = QGraphicsRectItem(self.boundingRect(), self)
+        bg_brush = QApplication.palette().brush(QPalette.ToolTipBase)
+        self.bg.setBrush(bg_brush)
+        self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+
+    def setHtml(self, html):
+        super().setHtml(html)
+        self.adjustSize()
+        self.bg.setRect(self.boundingRect())
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -256,7 +286,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setAcceptDrops(True)
         self.setCursor(Qt.PointingHandCursor)
         # Set exclamation icon position
-        self.exclamation_icon.setPos(self.rect().bottomRight() - self.exclamation_icon.sceneBoundingRect().center())
+        self.exclamation_icon.setPos(self.rect().topRight() - self.exclamation_icon.sceneBoundingRect().topRight())
 
     def name(self):
         """Returns name of the item that is represented by this icon."""
