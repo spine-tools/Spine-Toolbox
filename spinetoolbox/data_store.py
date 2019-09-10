@@ -116,10 +116,6 @@ class DataStore(ProjectItem):
             return False
         return True
 
-    def set_url(self, url):
-        """Set url attribute. Used by Tool when passing on results."""
-        self._url = self.parse_url(url)
-
     def url(self):
         """Return the url attribute, for saving the project."""
         return self._url
@@ -217,6 +213,7 @@ class DataStore(ProjectItem):
         if not self._url:
             return
         dialect = self._url["dialect"]
+        self.enable_dialect(dialect)
         self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
         if self._url["host"]:
             self._toolbox.ui.lineEdit_host.setText(self._url["host"])
@@ -229,46 +226,64 @@ class DataStore(ProjectItem):
         if self._url["password"]:
             self._toolbox.ui.lineEdit_password.setText(self._url["password"])
 
+    def set_url_key(self, key, value):
+        """Set url key to value."""
+        self._url[key] = value
+        self.item_changed.emit()
+
     @Slot("QString", name="refresh_host")
-    def refresh_host(self, host=""):
+    def refresh_host(self, host):
         """Refresh host from selections."""
-        if not host:
-            host = None
-        self._url["host"] = host
+        self.set_url_key("host", host)
 
     @Slot("QString", name="refresh_port")
-    def refresh_port(self, port=""):
+    def refresh_port(self, port):
         """Refresh port from selections."""
-        if not port:
-            port = None
-        self._url["port"] = port
+        self.set_url_key("port", port)
 
     @Slot("QString", name="refresh_database")
-    def refresh_database(self, database=""):
+    def refresh_database(self, database):
         """Refresh database from selections."""
-        if not database:
-            database = None
-        self._url["database"] = database
+        self.set_url_key("database", database)
 
     @Slot("QString", name="refresh_username")
-    def refresh_username(self, username=""):
+    def refresh_username(self, username):
         """Refresh username from selections."""
-        if not username:
-            username = None
-        self._url["username"] = username
+        self.set_url_key("username", username)
 
     @Slot("QString", name="refresh_password")
-    def refresh_password(self, password=""):
+    def refresh_password(self, password):
         """Refresh password from selections."""
-        if not password:
-            password = None
-        self._url["password"] = password
+        self.set_url_key("password", password)
 
     @Slot("QString", name="refresh_dialect")
-    def refresh_dialect(self, dialect=""):
-        if not dialect:
-            dialect = None
-        self._url["dialect"] = dialect
+    def refresh_dialect(self, dialect):
+        self.set_url_key("dialect", dialect)
+        self.enable_dialect(dialect)
+
+    def enable_dialect(self, dialect):
+        """Enable the given dialect in the item controls."""
+        if dialect == 'sqlite':
+            self.enable_sqlite()
+        elif dialect == 'mssql':
+            import pyodbc
+
+            dsns = pyodbc.dataSources()
+            # Collect dsns which use the msodbcsql driver
+            mssql_dsns = list()
+            for key, value in dsns.items():
+                if 'msodbcsql' in value.lower():
+                    mssql_dsns.append(key)
+            if mssql_dsns:
+                self._toolbox.ui.comboBox_dsn.clear()
+                self._toolbox.ui.comboBox_dsn.addItems(mssql_dsns)
+                self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
+                self.enable_mssql()
+            else:
+                msg = "Please create a SQL Server ODBC Data Source first."
+                self._toolbox.msg_warning.emit(msg)
+        else:
+            self.enable_common()
 
     def enable_no_dialect(self):
         """Adjust widget enabled status to default when no dialect is selected."""
