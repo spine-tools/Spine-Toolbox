@@ -39,6 +39,7 @@ class ToolConfigurationAssistantWidget(QWidget):
         self._toolbox = toolbox  # QWidget parent
         self.spine_model_config_asst = SpineModelConfigurationAssistant(toolbox)
         self.q_process = None
+        self.py_call_installed = False  # Whether or not PyCall has been installed
         # Set up the ui from Qt Designer files
         self.ui = ui.tool_configuration_assistant.Ui_PackagesForm()
         self.ui.setupUi(self)
@@ -157,7 +158,14 @@ class ToolConfigurationAssistantWidget(QWidget):
             self.add_spine_model_error_msg("Check failed. Make sure that Julia is correctly installed and try again.")
             QApplication.restoreOverrideCursor()
         elif ret != 0:
-            if not self.get_permission("PyCall not installed", "Install the PyCall package."):
+            if self.py_call_installed:
+                self.py_call_installed = False
+                py_call_program_check_err = self.q_process.error_output
+                self.add_spine_model_error_msg(
+                    "Unable to determine the python program used by PyCall: {}.".format(py_call_program_check_err)
+                )
+                QApplication.restoreOverrideCursor()
+            elif not self.get_permission("PyCall not installed", "Install the PyCall package."):
                 self.add_spine_model_error_msg("Aborted by the user")
                 QApplication.restoreOverrideCursor()
             else:
@@ -194,11 +202,13 @@ class ToolConfigurationAssistantWidget(QWidget):
         Check the python program used by PyCall.
         """
         if self.q_process.process_failed_to_start or ret != 0:
+            self.py_call_installed = False
             self.add_spine_model_error_msg(
                 "PyCall installation failed. Make sure that Julia is correctly installed and try again."
             )
             QApplication.restoreOverrideCursor()
         else:
+            self.py_call_installed = True
             self.add_spine_model_success_msg("PyCall successfully installed.")
             self.q_process = self.spine_model_config_asst.py_call_program_check()
             self.q_process.subprocess_finished_signal.connect(self._handle_py_call_program_check_finished)

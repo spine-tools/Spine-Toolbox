@@ -159,33 +159,23 @@ class QSubProcess(QObject):
         self._toolbox.msg_error.emit("Terminating process")
         try:
             self._process.finished.disconnect(self.process_finished)
-        except AttributeError:
-            pass
-        except RuntimeError:
+        except (AttributeError, RuntimeError):
             pass
         try:
             self._process.readyReadStandardOutput.disconnect(self.on_ready_stdout)
-        except AttributeError:
-            pass
-        except RuntimeError:
+        except (AttributeError, RuntimeError):
             pass
         try:
             self._process.readyReadStandardError.disconnect(self.on_ready_stderr)
-        except AttributeError:
-            pass
-        except RuntimeError:
+        except (AttributeError, RuntimeError):
             pass
         try:
             self._process.error.disconnect(self.on_process_error)  # errorOccurred available in Qt 5.6
-        except AttributeError:
-            pass
-        except RuntimeError:
+        except (AttributeError, RuntimeError):
             pass
         try:
             self._process.stateChanged.disconnect(self.on_state_changed)
-        except AttributeError:
-            pass
-        except RuntimeError:
+        except (AttributeError, RuntimeError):
             pass
         # logging.debug("Terminating QProcess nr.{0}. ProcessState:{1} and ProcessError:{2}"
         #               .format(self._process.processId(), self._process.state(), self._process.error()))
