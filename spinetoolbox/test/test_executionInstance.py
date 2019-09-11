@@ -78,7 +78,7 @@ class TestExecutionInstance(unittest.TestCase):
         di3 = mock.Mock()
         exec_order = {dc0: [dc1, dc2], dc1: [di3], dc2: [di3]}
         inst = ExecutionInstance(self.toolbox, exec_order)
-        dc0.simulate_execution.side_effect = lambda: inst.append_dc_refs(dc0, ["file1"])
+        dc0.simulate_execution.side_effect = lambda x: x.append_dc_refs(dc0, ["file1"])
         inst.simulate_execution()
         self.assertEqual(inst.dc_refs_at_sight(dc1), {"file1"})
         self.assertEqual(inst.dc_refs_at_sight(dc2), {"file1"})
@@ -91,9 +91,9 @@ class TestExecutionInstance(unittest.TestCase):
         exec_order = {dc0: [di1]}
         inst = ExecutionInstance(self.toolbox, exec_order)
 
-        def dc0_simul_exec_side_effect():
-            inst.append_dc_refs(dc0, ["file1"])
-            inst.append_dc_files(dc0, ["file1"])
+        def dc0_simul_exec_side_effect(x):
+            x.append_dc_refs(dc0, ["file1"])
+            x.append_dc_files(dc0, ["file1"])
 
         dc0.simulate_execution.side_effect = dc0_simul_exec_side_effect
         inst.simulate_execution()
