@@ -34,7 +34,20 @@ from PySide2.QtWidgets import (
     QGraphicsDropShadowEffect,
     QApplication,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QFontMetrics, QPalette
+from PySide2.QtGui import (
+    QColor,
+    QPen,
+    QBrush,
+    QPainterPath,
+    QFont,
+    QTextCursor,
+    QTransform,
+    QFontMetrics,
+    QPalette,
+    QTextBlockFormat,
+    QTextCursor,
+    QFontMetrics,
+)
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from helpers import format_string_list
 
@@ -60,9 +73,9 @@ class ConnectorButton(QGraphicsRectItem):
         self.brush = QBrush(QColor(255, 255, 255))  # Used in filling the item
         self.hover_brush = QBrush(QColor(50, 0, 50, 128))  # Used in filling the item while hovering
         self.setBrush(self.brush)
-        extent = 12
-        rect = QRectF(0, 0, extent, extent)
         parent_rect = parent.rect()
+        extent = 0.2 * parent_rect.width()
+        rect = QRectF(0, 0, extent, extent)
         if position == "top":
             rect.moveCenter(QPointF(parent_rect.center().x(), parent_rect.top() + extent / 2))
         elif position == "left":
@@ -184,9 +197,6 @@ class ExclamationIcon(QGraphicsSvgItem):
 class NotificationListItem(QGraphicsTextItem):
     """Notification list graphics item.
     Used to show notifications for a ProjectItem
-
-    Attributes:
-        parent (ExclamationIcon): the parent item
     """
 
     def __init__(self):
@@ -202,6 +212,47 @@ class NotificationListItem(QGraphicsTextItem):
         super().setHtml(html)
         self.adjustSize()
         self.bg.setRect(self.boundingRect())
+
+
+class RankIcon(QGraphicsTextItem):
+    """Rank icon graphics item.
+    Used to show the rank of a ProjectItem within its DAG
+
+    Attributes:
+        parent (ProjectItemIcon): the parent item
+    """
+
+    def __init__(self, parent):
+        """Init class."""
+        super().__init__(parent)
+        self._parent = parent
+        rect_w = parent.rect().width()  # Parent rect width
+        self.text_margin = 0.05 * rect_w
+        self.bg = QGraphicsRectItem(self.boundingRect(), self)
+        bg_brush = QApplication.palette().brush(QPalette.ToolTipBase)
+        self.bg.setBrush(bg_brush)
+        self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
+        self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
+        font = self.font()
+        font.setPointSize(parent.text_font_size)
+        font.setBold(True)
+        self.setFont(font)
+        doc = self.document()
+        doc.setDocumentMargin(0)
+
+    def set_rank(self, rank):
+        self.setPlainText(str(rank))
+        self.adjustSize()
+        self.setTextWidth(self.text_margin + self.textWidth())
+        self.bg.setRect(self.boundingRect())
+        # Align center
+        fmt = QTextBlockFormat()
+        fmt.setAlignment(Qt.AlignHCenter)
+        cursor = self.textCursor()
+        cursor.select(QTextCursor.Document)
+        cursor.mergeBlockFormat(fmt)
+        cursor.clearSelection()
+        self.setTextCursor(cursor)
 
 
 class ProjectItemIcon(QGraphicsRectItem):
@@ -224,7 +275,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item = QGraphicsSvgItem()
         self.colorizer = QGraphicsColorizeEffect()
         self.setRect(QRectF(x, y, w, h))  # Set ellipse coordinates and size
-        self.name_font_size = 10  # point size
+        self.text_font_size = 10  # point size
         # Make item name graphics item.
         self.name_item = QGraphicsSimpleTextItem(name)
         shadow_effect = QGraphicsDropShadowEffect()
@@ -238,8 +289,9 @@ class ProjectItemIcon(QGraphicsRectItem):
             left=ConnectorButton(self, toolbox, position="left"),
             right=ConnectorButton(self, toolbox, position="right"),
         )
-        # Make exclamation icon
+        # Make exclamation and rank icons
         self.exclamation_icon = ExclamationIcon(self)
+        self.rank_icon = RankIcon(self)
         # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         # NOTE: setting the parent item moves the items as one!
         self.name_item.setParentItem(self)
@@ -247,6 +299,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             conn.setParentItem(self)
         self.svg_item.setParentItem(self)
         self.exclamation_icon.setParentItem(self)
+        self.rank_icon.setParentItem(self)
 
     def setup(self, pen, brush, svg, svg_color):
         """Setup item's attributes according to project item type.
@@ -285,8 +338,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setAcceptHoverEvents(True)
         self.setAcceptDrops(True)
         self.setCursor(Qt.PointingHandCursor)
-        # Set exclamation icon position
+        # Set exclamation and rank icons position
         self.exclamation_icon.setPos(self.rect().topRight() - self.exclamation_icon.sceneBoundingRect().topRight())
+        self.rank_icon.setPos(self.rect().topLeft())
 
     def name(self):
         """Returns name of the item that is represented by this icon."""
@@ -302,7 +356,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.name_item.setZValue(3)
         # Set font size and style
         font = self.name_item.font()
-        font.setPointSize(self.name_font_size)
+        font.setPointSize(self.text_font_size)
         font.setBold(True)
         self.name_item.setFont(font)
         # Set name item position (centered on top of the master icon)
@@ -1522,7 +1576,7 @@ class OutlinedTextItem(QGraphicsSimpleTextItem):
         outline_pen (QPen)
     """
 
-    def __init__(self, text, font, brush=QBrush(Qt.black), outline_pen=QPen(Qt.white, 3, Qt.SolidLine)):
+    def __init__(self, text="", font=QFont(), brush=QBrush(Qt.black), outline_pen=QPen(Qt.white, 3, Qt.SolidLine)):
         """Init class."""
         super().__init__()
         self.setText(text)

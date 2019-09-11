@@ -376,6 +376,7 @@ class ExecutionInstance(QObject):
         self.ds_urls = dict()  # Key is DS item name, value is url
         self.di_data = dict()  # Key is DI item name, value is data for import
         self.tool_output_files = dict()  # Key is Tool item name, value is list of paths to output files
+        self.rank = 0  # The number in the list of the item currently simulated
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
@@ -426,10 +427,10 @@ class ExecutionInstance(QObject):
     def simulate_execution(self):
         """Simulates execution of all items in the execution list.
         """
-        for item in self.execution_list:
+        for self.rank, item in enumerate(self.execution_list):
             ind = self._toolbox.project_item_model.find_item(item)
             project_item = self._toolbox.project_item_model.project_item(ind)
-            project_item.simulate_execution()
+            project_item.simulate_execution(self)
             self.propagate_data(item)
 
     def add_ds_url(self, ds_item, url):

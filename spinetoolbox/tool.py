@@ -657,6 +657,7 @@ class Tool(ProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Tool <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
+        exec_inst = self._toolbox.project().execution_instance
         work_or_source = "work" if self.execute_in_work else "source"
         self._toolbox.msg.emit("*** Executing in <b>{0}</b> directory mode ***".format(work_or_source))
         # Find required input files for ToolInstance (if any)
@@ -672,7 +673,7 @@ class Tool(ProjectItem):
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_files > 0:
                 self._toolbox.msg.emit("*** Searching for required input files ***")
-                file_paths = self.find_input_files()
+                file_paths = self.find_input_files(exec_inst)
                 not_found = [k for k, v in file_paths.items() if v is None]
                 if not_found:
                     self._toolbox.msg_error.emit("Required file(s) <b>{0}</b> not found".format(", ".join(not_found)))
@@ -714,7 +715,7 @@ class Tool(ProjectItem):
         # Check if there are any optional input files to copy
         if self.opt_input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Searching for optional input files ***")
-            optional_file_paths = self.find_optional_input_files()
+            optional_file_paths = self.find_optional_input_files(exec_inst)
             for k, v in optional_file_paths.items():
                 self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
             if not self.copy_optional_input_files(optional_file_paths):
@@ -724,8 +725,11 @@ class Tool(ProjectItem):
         self.instance.instance_finished_signal.connect(self.execute_finished)
         self.instance.execute()
 
-    def find_input_files(self):
+    def find_input_files(self, exec_inst):
         """Iterates files in required input files model and looks for them from execution instance.
+
+        Args:
+            exec_inst (ExecutionInstance): Look for files in this execution instance.
 
         Returns:
             Dictionary mapping required files to path where they are found, or to None if not found
@@ -738,11 +742,14 @@ class Tool(ProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            file_paths[req_file_path] = self._toolbox.project().execution_instance.find_file(filename, self.name)
+            file_paths[req_file_path] = exec_inst.find_file(filename, self.name)
         return file_paths
 
-    def find_optional_input_files(self):
+    def find_optional_input_files(self, exec_inst):
         """Tries to find optional input files from previous project items in the DAG. Returns found paths.
+
+        Args:
+            exec_inst (ExecutionInstance): Look for files in this execution instance.
 
         Returns:
             Dictionary of optional input file paths or an empty dictionary if no files found. Key is the
@@ -756,7 +763,7 @@ class Tool(ProjectItem):
             if not pattern:
                 # It's a directory -> skip
                 continue
-            found_files = self._toolbox.project().execution_instance.find_optional_files(pattern, self.name)
+            found_files = exec_inst.find_optional_files(pattern, self.name)
             if not found_files:
                 self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(pattern))
             else:
@@ -790,14 +797,13 @@ class Tool(ProjectItem):
         self.instance.terminate_instance()
         # Note: QSubProcess, PythonReplWidget, and JuliaREPLWidget emit project_item_execution_finished_signal
 
-    def simulate_execution(self):
+    def simulate_execution(self, inst):
         """Simulates executing this Tool."""
-        super().simulate_execution()
+        super().simulate_execution(inst)
         if not self.tool_template():
             self.add_notification("This Tool does not have any Tool Template set. Set it in the Tool Properties Panel.")
             return
-        inst = self._toolbox.project().execution_instance
-        file_paths = self.find_input_files()
+        file_paths = self.find_input_files(inst)
         not_found = [k for k, v in file_paths.items() if v is None]
         if not_found:
             self.add_notification(

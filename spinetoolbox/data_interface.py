@@ -302,12 +302,9 @@ class DataInterface(ProjectItem):
         """Stops executing this Data Interface."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
 
-    def simulate_execution(self):
+    def simulate_execution(self, inst):
         """Simulates executing this Item."""
-        super().simulate_execution()
-        inst = self._project.execution_instance
-        if not inst:
-            return
+        super().simulate_execution(inst)
         file_list = inst.dc_refs_at_sight(self.name).union(inst.dc_files_at_sight(self.name))
         self.update_file_model(file_list)
         if not file_list:

@@ -406,12 +406,9 @@ class DataConnection(ProjectItem):
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
 
-    def simulate_execution(self):
+    def simulate_execution(self, inst):
         """Simulates executing this Data Connection."""
-        super().simulate_execution()
-        inst = self._toolbox.project().execution_instance
-        if not inst:
-            return
+        super().simulate_execution(inst)
         refs = self.file_references()
         inst.append_dc_refs(self.name, refs)
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()] if self.data_files() else []

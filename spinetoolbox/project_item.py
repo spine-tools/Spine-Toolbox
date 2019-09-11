@@ -172,9 +172,14 @@ class ProjectItem(BaseProjectItem):
         """Add a notification to the exclamation icon."""
         self.get_icon().exclamation_icon.add_notification(text)
 
+    def set_rank(self, rank):
+        """Set rank of this item for displaying in the design view."""
+        self.get_icon().rank_icon.set_rank(rank)
+
     def execute(self):
         """Executes this item."""
 
-    def simulate_execution(self):
+    def simulate_execution(self, inst):
         """Simulates executing this Item."""
         self.clear_notifications()
+        self.set_rank(inst.rank)

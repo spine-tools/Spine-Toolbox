@@ -591,10 +591,9 @@ class DataStore(ProjectItem):
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
 
-    def simulate_execution(self):
+    def simulate_execution(self, inst):
         """Simulates executing this Data Store."""
-        super().simulate_execution()
-        inst = self._toolbox.project().execution_instance
+        super().simulate_execution(inst)
         url = self.make_url(log_errors=False)
         if url:
             inst.add_ds_url(self.name, url)

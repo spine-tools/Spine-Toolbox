@@ -212,10 +212,9 @@ class View(ProjectItem):
         """Stops executing this View."""
         self._toolbox.msg.emit("Stopping {0}".format(self.name))
 
-    def simulate_execution(self):
+    def simulate_execution(self, inst):
         """Update the list of references that this item is viewing."""
-        super().simulate_execution()
-        inst = self._toolbox.project().execution_instance
+        super().simulate_execution(inst)
         self._references.clear()
         for url in inst.ds_urls_at_sight(self.name):
             drivername = url.drivername.lower()

@@ -727,8 +727,8 @@ class SpineToolboxProject(MetaObject):
         if not ordered_nodes:
             return
         # Make execution instance and run simulation
-        self.execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
-        self.execution_instance.simulate_execution()
+        execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)
+        execution_instance.simulate_execution()
 
     def simulate_project_execution(self):
         """Simulates the execution of all dags in the project."""
