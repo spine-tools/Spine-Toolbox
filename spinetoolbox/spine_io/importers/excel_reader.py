@@ -20,7 +20,7 @@ from itertools import islice, takewhile
 import io
 from PySide2.QtWidgets import QFileDialog
 from openpyxl import load_workbook
-from spinedb_api import RelationshipClassMapping, ObjectClassMapping
+from spinedb_api import RelationshipClassMapping, ObjectClassMapping, from_database, ParameterValueFormatError
 from spine_io.io_api import SourceConnection
 
 
@@ -131,10 +131,11 @@ class ExcelConnector(SourceConnection):
                 # find first empty col in top row and use that as a stop
                 num_cols = 0
                 for i, column in enumerate(islice(first_row, skip_columns, None)):
-                    num_cols = i
+
                     if column.value is None:
                         read_to_col = i + skip_columns
                         break
+                    num_cols = num_cols + 1
             else:
                 num_cols = len(first_row)
         except StopIteration:
@@ -161,6 +162,24 @@ class ExcelConnector(SourceConnection):
 
         return data_iterator, header, num_cols
 
+    def get_mapped_data(self, tables_mappings, options, max_rows=-1):
+        """
+        Overrides io_api method to check for some parameter value types.
+        """
+        mapped_data, errors = super(ExcelConnector, self).get_mapped_data(tables_mappings, options, max_rows)
+        for key in ("object_parameter_values", "relationship_parameter_values"):
+            for index, value in enumerate(mapped_data[key]):
+                val = value[-1]
+                if isinstance(val, str) and val and val[0] == "{":
+                    try:
+                        val = from_database(val)
+                        value = value[:-1] + (val,)
+                        mapped_data[key][index] = value
+                    except ParameterValueFormatError:
+                        pass
+
+        return mapped_data, errors
+
 
 def create_mapping_from_sheet(worksheet):
     """
@@ -178,7 +197,7 @@ def create_mapping_from_sheet(worksheet):
         return None, None
     if sheet_type.lower() not in ["relationship", "object"]:
         return None, None
-    if sheet_data.lower() not in ["parameter", "json array"]:
+    if sheet_data.lower() not in ["parameter", "time series", "time pattern", "1d array"]:
         return None, None
     if sheet_type.lower() == "relationship":
         mapping = RelationshipClassMapping()
@@ -208,10 +227,14 @@ def create_mapping_from_sheet(worksheet):
                     "name": rel_name,
                     "object_classes": obj_classes,
                     "objects": list(range(rel_dimension)),
-                    "parameters": {"map_type": "parameter", "name": {"map_type": "row", "value_reference": -1}},
+                    "parameters": {
+                        "map_type": "parameter",
+                        "name": {"map_type": "row", "value_reference": -1},
+                        "parameter_type": "single value",
+                    },
                 }
             )
-        else:
+        elif sheet_data.lower() == "1d array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = RelationshipClassMapping.from_dict(
                 {
@@ -223,6 +246,23 @@ def create_mapping_from_sheet(worksheet):
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": rel_dimension},
                         "extra_dimensions": [0],
+                        "parameter_type": "1d array",
+                    },
+                }
+            )
+        elif sheet_data.lower() in ("time series", "time pattern"):
+            options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": True})
+            mapping = RelationshipClassMapping.from_dict(
+                {
+                    "map_type": "RelationshipClass",
+                    "name": rel_name,
+                    "object_classes": obj_classes,
+                    "objects": [{"map_type": "row", "value_reference": i} for i in range(rel_dimension)],
+                    "parameters": {
+                        "map_type": "parameter",
+                        "name": {"map_type": "row", "value_reference": rel_dimension},
+                        "extra_dimensions": [0],
+                        "parameter_type": sheet_data.lower(),
                     },
                 }
             )
@@ -240,10 +280,14 @@ def create_mapping_from_sheet(worksheet):
                     "map_type": "ObjectClass",
                     "name": obj_name,
                     "object": 0,
-                    "parameters": {"map_type": "parameter", "name": {"map_type": "row", "value_reference": -1}},
+                    "parameters": {
+                        "map_type": "parameter",
+                        "name": {"map_type": "row", "value_reference": -1},
+                        "parameter_type": "single value",
+                    },
                 }
             )
-        else:
+        elif sheet_data.lower() == "1d array":
             options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": False})
             mapping = ObjectClassMapping.from_dict(
                 {
@@ -254,6 +298,22 @@ def create_mapping_from_sheet(worksheet):
                         "map_type": "parameter",
                         "name": {"map_type": "row", "value_reference": 1},
                         "extra_dimensions": [0],
+                        "parameter_type": "1d array",
+                    },
+                }
+            )
+        elif sheet_data.lower() in ("time series", "time pattern"):
+            options.update({"header": False, "row": 3, "read_until_col": True, "read_until_row": True})
+            mapping = ObjectClassMapping.from_dict(
+                {
+                    "map_type": "ObjectClass",
+                    "name": obj_name,
+                    "object": {"map_type": "row", "value_reference": 0},
+                    "parameters": {
+                        "map_type": "parameter",
+                        "name": {"map_type": "row", "value_reference": 1},
+                        "extra_dimensions": [0],
+                        "parameter_type": sheet_data.lower(),
                     },
                 }
             )

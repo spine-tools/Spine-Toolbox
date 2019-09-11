@@ -795,7 +795,7 @@ class TestExcelImport(unittest.TestCase):
             ws_mock['B2'].value = 'paRameTer'
             self.assertTrue(validate_sheet(ws_mock))
             # check json array as Data type
-            ws_mock['B2'].value = 'json array'
+            ws_mock['B2'].value = '1d array'
             mock_read_2d.return_value = [['obj_class1'], ['obj_class2']]
             self.assertTrue(validate_sheet(ws_mock))
 
@@ -834,7 +834,7 @@ class TestExcelImport(unittest.TestCase):
         ws_mock = self.ws_obj
         self.assertTrue(validate_sheet(ws_mock))
         # check json array as Data type
-        ws_mock['B2'].value = 'json array'
+        ws_mock['B2'].value = '1d array'
         self.assertTrue(validate_sheet(ws_mock))
         # check that validation is case insensitive
         ws_mock['A2'].value = 'oBjeCt'

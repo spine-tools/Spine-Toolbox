@@ -27,7 +27,7 @@ from openpyxl.utils import get_column_letter
 
 import numpy as np
 
-from spinedb_api import import_data, from_database, TimeSeries, TimeSeriesVariableResolution, TimePattern
+from spinedb_api import import_data, from_database, TimeSeries, TimeSeriesVariableResolution, TimePattern, DateTime, Duration, to_database
 
 
 SheetData = namedtuple(
@@ -122,7 +122,7 @@ def get_objects_and_parameters(db):
     object_ts = []
     object_timepattern = []
     for d in object_and_par:
-        if d[3] is None or isinstance(d[3], (int, float, str)):
+        if d[3] is None or isinstance(d[3], (int, float, str, DateTime, Duration)):
             object_par.append(d)
         elif isinstance(d[3], list):
             object_json.append(d)
@@ -179,7 +179,7 @@ def get_relationships_and_parameters(db):
     rel_ts = []
     rel_timepattern = []
     for d in rel_data:
-        if d[3] is None or isinstance(d[3], (int, float, str)):
+        if d[3] is None or isinstance(d[3], (int, float, str, DateTime, Duration)):
             rel_par.append(d)
         elif isinstance(d[3], list):
             rel_json.append(d)
@@ -495,6 +495,8 @@ def write_relationships_to_xlsx(wb, relationship_data):
         start_col = 1
         for r, line in enumerate(rel[1]):
             for c, val in enumerate(line):
+                if isinstance(val, (Duration, DateTime)):
+                    val = to_database(val)
                 ws.cell(row=start_row + r, column=start_col + c).value = val
 
 
@@ -527,7 +529,7 @@ def write_json_array_to_xlsx(wb, data, sheet_type):
         ws['A1'] = "Sheet type"
         ws['A2'] = sheet_type
         ws['B1'] = "Data type"
-        ws['B2'] = "json array"
+        ws['B2'] = "1d array"
         ws['C1'] = sheet_type + " class name"
         ws['C2'] = d[0]
 
@@ -658,6 +660,8 @@ def write_objects_to_xlsx(wb, object_data):
         start_col = 1
         for r, line in enumerate(obj[1]):
             for c, val in enumerate(line):
+                if isinstance(val, (Duration, DateTime)):
+                    val = to_database(val)
                 ws.cell(row=start_row + r, column=start_col + c).value = val
 
 
@@ -728,7 +732,7 @@ def read_spine_xlsx(filepath):
                     obj_data.append(data)
             except Exception as e:
                 error_log.append(ErrorLogMsg("Error reading sheet {}: {}".format(ws.title, e), "sheet", filepath, ''))
-        elif sheet_data == "json array":
+        elif sheet_data == "1d array":
             # read sheet with data type: 'json array'
             try:
                 data = read_json_sheet(ws, sheet_type)
@@ -851,7 +855,7 @@ def validate_sheet(ws):
         return False
     if sheet_type.lower() not in ["relationship", "object"]:
         return False
-    if sheet_data.lower() not in ["parameter", "json array", "time series", "time pattern"]:
+    if sheet_data.lower() not in ["parameter", "1d array", "time series", "time pattern"]:
         return False
 
     if sheet_type.lower() == "relationship":
