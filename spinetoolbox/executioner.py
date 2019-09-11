@@ -460,10 +460,10 @@ class ExecutionInstance(QObject):
 
         Args:
             di_item (str): name of Data interface item that provides the data
-            data (dict): Data to import
+            data (list): Data to import
         """
         for item in self._ordered_nodes[di_item]:
-            self.di_data.setdefault(item, set()).add(data)
+            self.di_data.setdefault(item, list()).append((di_item, data))
 
     def append_dc_refs(self, dc_item, refs):
         """Adds given file paths (Data Connection file references) to the list seen by dc_item output items.
@@ -509,7 +509,7 @@ class ExecutionInstance(QObject):
         Args:
             item (str): item name
         """
-        return self.di_data.get(item, set())
+        return self.di_data.get(item, list())
 
     def dc_refs_at_sight(self, item):
         """Returns dc refs currently seen by the given item.
@@ -552,7 +552,7 @@ class ExecutionInstance(QObject):
         # ...make it seeable also by output items
         for item in self._ordered_nodes[input_item]:
             self.ds_urls.setdefault(item, set()).update(ds_urls_at_sight)
-            self.di_data.setdefault(item, set()).update(di_data_at_sight)
+            self.di_data.setdefault(item, list()).extend(di_data_at_sight)
             self.dc_refs.setdefault(item, set()).update(dc_refs_at_sight)
             self.dc_files.setdefault(item, set()).update(dc_files_at_sight)
             self.tool_output_files.setdefault(item, set()).update(tool_output_files_at_sight)
