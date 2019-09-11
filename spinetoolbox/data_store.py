@@ -550,7 +550,7 @@ class DataStore(ProjectItem):
                 db_map = None
             if db_map:
                 all_import_errors = []
-                for (di_name, all_data) in inst.di_data_at_sight(self):
+                for (di_name, all_data) in inst.di_data_at_sight(self.name):
                     self._toolbox.msg_proc.emit("Importing data from <b>{0}</b> into '{1}'".format(di_name, url))
                     for data in all_data:
                         import_num, import_errors = spinedb_api.import_data(db_map, **data)
