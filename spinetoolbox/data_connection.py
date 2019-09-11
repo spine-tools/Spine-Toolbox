@@ -418,3 +418,9 @@ class DataConnection(ProjectItem):
                 "This Data Connection does not have any references or data. "
                 "Add some in the Data Connection Properties panel."
             )
+
+    def item_dict(self):
+        """Returns a dictionary corresponding to this item."""
+        d = super().item_dict()
+        d["references"] = self.file_references()
+        return d

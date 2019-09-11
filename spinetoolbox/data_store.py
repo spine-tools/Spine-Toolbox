@@ -601,3 +601,9 @@ class DataStore(ProjectItem):
             self.add_notification(
                 "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."
             )
+
+    def item_dict(self):
+        """Returns a dictionary corresponding to this item."""
+        d = super().item_dict()
+        d["url"] = self.url()
+        return d

@@ -183,3 +183,12 @@ class ProjectItem(BaseProjectItem):
         """Simulates executing this Item."""
         self.clear_notifications()
         self.set_rank(inst.rank)
+
+    def item_dict(self):
+        """Returns a dictionary corresponding to this item."""
+        return {
+            "short name": self.short_name,
+            "description": self.description,
+            "x": self.get_icon().sceneBoundingRect().center().x(),
+            "y": self.get_icon().sceneBoundingRect().center().y(),
+        }

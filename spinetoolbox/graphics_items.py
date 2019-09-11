@@ -42,11 +42,9 @@ from PySide2.QtGui import (
     QFont,
     QTextCursor,
     QTransform,
-    QFontMetrics,
     QPalette,
     QTextBlockFormat,
     QTextCursor,
-    QFontMetrics,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from helpers import format_string_list

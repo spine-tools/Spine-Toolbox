@@ -172,7 +172,6 @@ class SpineToolboxProject(MetaObject):
             tool_def_paths (list): List of paths to tool definition files
         """
         # Clear dictionary
-        saved_dict = dict()  # This is written to JSON file
         project_dict = dict()  # Dictionary for storing project info
         project_dict['name'] = self.name
         project_dict['description'] = self.description
@@ -188,156 +187,89 @@ class SpineToolboxProject(MetaObject):
         project_dict["scene_y"] = self._toolbox.ui.graphicsView.scene().sceneRect().y()
         project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
         project_dict["scene_h"] = self._toolbox.ui.graphicsView.scene().sceneRect().height()
-        item_dict = dict()  # Dictionary for storing project items
+        items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
-        category_names = [category_item.name for category_item in self._toolbox.project_item_model.root().children()]
-        for category in category_names:
-            items = self._toolbox.project_item_model.items(category)
-            item_dict[category] = dict()
-            for item in items:
-                # Save generic things common for all project items
-                name = item.name
-                item_dict[category][name] = dict()
-                item_dict[category][name]["short name"] = item.short_name
-                item_dict[category][name]["description"] = item.description
-                x = item.get_icon().sceneBoundingRect().center().x()
-                y = item.get_icon().sceneBoundingRect().center().y()
-                item_dict[category][name]["x"] = x
-                item_dict[category][name]["y"] = y
-                # Save item type specific things
-                if item.item_type == "Data Store":
-                    item_dict[category][name]["url"] = item.url()
-                elif item.item_type == "Data Connection":
-                    item_dict[category][name]["references"] = item.file_references()
-                elif item.item_type == "Tool":
-                    if not item.tool_template():
-                        item_dict[category][name]["tool"] = ""
-                    else:
-                        item_dict[category][name]["tool"] = item.tool_template().name
-                    item_dict[category][name]["execute_in_work"] = item.execute_in_work
-                elif item.item_type == "View":
-                    pass
-                elif item.item_type == "Data Interface":
-                    # TODO: Save Data Interface mapping script path here
-                    item_dict[category][name]["mappings"] = item.settings
-                else:
-                    logging.error("Unrecognized item type: %s", item.item_type)
+        for category_item in self._toolbox.project_item_model.root().children():
+            category = category_item.name
+            category_dict = items_dict[category] = dict()
+            for item in self._toolbox.project_item_model.items(category):
+                category_dict[item.name] = item.item_dict()
         # Save project to file
-        saved_dict['project'] = project_dict
-        saved_dict['objects'] = item_dict
+        saved_dict = dict(project=project_dict, objects=items_dict)
         # Write into JSON file
         with open(self.path, 'w') as fp:
             json.dump(saved_dict, fp, indent=4)
 
-    def load(self, item_dict):
+    def load(self, objects_dict):
         """Populate project item model with items loaded from project file.
 
         Args:
-            item_dict (dict): Dictionary containing all project items in JSON format
+            objects_dict (dict): Dictionary containing all project items in JSON format
 
         Returns:
             Boolean value depending on operation success.
         """
-        data_stores = item_dict["Data Stores"]
-        data_connections = item_dict["Data Connections"]
-        tools = item_dict["Tools"]
-        views = item_dict["Views"]
-        try:
-            data_interfaces = item_dict["Data Interfaces"]
-        except KeyError:
-            data_interfaces = dict()
-        n = (
-            len(data_stores.keys())
-            + len(data_connections.keys())
-            + len(tools.keys())
-            + len(views.keys())
-            + len(data_interfaces.keys())
-        )
+        data_stores = objects_dict.get("Data Stores", dict())
+        data_connections = objects_dict.get("Data Connections", dict())
+        tools = objects_dict.get("Tools", dict())
+        views = objects_dict.get("Views", dict())
+        data_interfaces = objects_dict.get("Data Interfaces", dict())
+        n = len(data_stores) + len(data_connections) + len(tools) + len(views) + len(data_interfaces)
         self._toolbox.msg.emit("Loading project items...")
         if n == 0:
             self._toolbox.msg_warning.emit("Project has no items")
         # Recreate Data Stores
-        for name in data_stores.keys():
-            desc = data_stores[name]['description']
+        for name, item_data in data_stores.items():
+            desc = item_data.get('description', '')
             try:
-                url = data_stores[name]["url"]
+                url = item_data["url"]
             except KeyError:
                 # Keep compatibility with previous version
-                reference = data_stores[name]["reference"]
-                if isinstance(reference, dict) and "url" in reference:
-                    url = reference["url"]
+                reference = item_data.get("reference", None)
+                if isinstance(reference, dict):
+                    url = reference.get("url", None)
                 else:
                     url = None
-            try:
-                x = data_stores[name]["x"]
-                y = data_stores[name]["y"]
-            except KeyError:
-                x = 0
-                y = 0
-            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, ref))
+            x = item_data.get("x", 0)
+            y = item_data.get("y", 0)
             self.add_data_store(name, desc, url, x, y, verbosity=False)
         # Recreate Data Connections
-        for name in data_connections.keys():
-            desc = data_connections[name]['description']
-            try:
-                refs = data_connections[name]["references"]
-            except KeyError:
-                refs = list()
-            try:
-                x = data_connections[name]["x"]
-                y = data_connections[name]["y"]
-            except KeyError:
-                x = 0
-                y = 0
-            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
+        for name, item_data in data_connections.items():
+            desc = item_data.get('description', '')
+            refs = item_data.get("references", list())
+            x = item_data.get("x", 0)
+            y = item_data.get("y", 0)
             self.add_data_connection(name, desc, refs, x, y, verbosity=False)
         # Recreate Tools
-        for name in tools.keys():
-            desc = tools[name]['description']
-            tool_name = tools[name]['tool']
+        for name, item_data in tools.items():
+            desc = item_data.get('description', '')
+            tool_name = item_data['tool']
             # Find tool template from model
             tool_template = self._toolbox.tool_template_model.find_tool_template(tool_name)
             # Clarifications for user
-            if not tool_name == "" and not tool_template:
+            if tool_name != "" and not tool_template:
                 self._toolbox.msg_error.emit(
                     "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
                     "it was not found. Add it to Tool templates and reopen "
                     "project.".format(name, tool_name)
                 )
-            try:
-                x = tools[name]["x"]
-                y = tools[name]["y"]
-            except KeyError:
-                x = 0
-                y = 0
-            try:
-                execute_in_work = tools[name]["execute_in_work"]  # boolean
-            except KeyError:
-                execute_in_work = True
+            x = item_data.get("x", 0)
+            y = item_data.get("y", 0)
+            execute_in_work = item_data.get("execute_in_work", True)  # boolean
             self.add_tool(name, desc, tool_template, execute_in_work, x, y, verbosity=False)
         # Recreate Views
-        for name in views.keys():
-            desc = views[name]['description']
-            try:
-                x = views[name]["x"]
-                y = views[name]["y"]
-            except KeyError:
-                x = 0
-                y = 0
-            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
+        for name, item_data in views.items():
+            desc = item_data.get('description', '')
+            x = item_data.get("x", 0)
+            y = item_data.get("y", 0)
             self.add_view(name, desc, x, y, verbosity=False)
         # Recreate Data Interfaces
-        for name in data_interfaces.keys():
-            desc = data_interfaces[name]["description"]
-            try:
-                x = data_interfaces[name]["x"]
-                y = data_interfaces[name]["y"]
-            except KeyError:
-                x = 0
-                y = 0
-            # logging.debug("{} - {} '{}' data:{}".format(name, short_name, desc, data))
-            mappings = data_interfaces[name].get("mappings", {})
-            filepath = data_interfaces[name].get("import_file_path", "")
+        for name, item_data in data_interfaces.items():
+            desc = item_data["description"]
+            x = item_data.get("x", 0)
+            y = item_data.get("y", 0)
+            mappings = item_data.get("mappings", {})
+            filepath = item_data.get("import_file_path", "")
             self.add_data_interface(name, desc, filepath, mappings, x, y, verbosity=False)
         return True
 
@@ -361,11 +293,8 @@ class SpineToolboxProject(MetaObject):
         except FileNotFoundError:
             self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(jsonfile))
             return None
-        # Infer path to the main program
-        try:
-            includes_main_path = definition["includes_main_path"]  # path to main program relative to definition file
-        except KeyError:
-            includes_main_path = "."  # assume main program and definition file are on the same path
+        # Path to main program relative to definition file
+        includes_main_path = definition.get("includes_main_path", ".")
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
         return self.load_tool_template_from_dict(definition, path)
 

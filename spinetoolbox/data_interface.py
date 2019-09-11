@@ -312,3 +312,10 @@ class DataInterface(ProjectItem):
                 "This Data Interface does not have any input data. "
                 "Connect Data Connections to this Data Interface to use their data as input."
             )
+
+    def item_dict(self):
+        """Returns a dictionary corresponding to this item."""
+        d = super().item_dict()
+        # TODO: Save Data Interface mapping script path here
+        d["mappings"] = self.settings
+        return d
