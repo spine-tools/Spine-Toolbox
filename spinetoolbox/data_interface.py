@@ -308,7 +308,7 @@ class DataInterface(ProjectItem):
         inst = self._project.execution_instance
         if not inst:
             return
-        file_list = inst.dc_refs_at_sight(self.name) + inst.dc_files_at_sight(self.name)
+        file_list = inst.dc_refs_at_sight(self.name).union(inst.dc_files_at_sight(self.name))
         self.update_file_model(file_list)
         if not file_list:
             self.add_notification(

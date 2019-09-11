@@ -1,4 +1,4 @@
-######################################################################################################################
+set()  ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
 # This file is part of Spine Toolbox.
 # Spine Toolbox is free software: you can redistribute it and/or modify it under the terms of the GNU Lesser General
@@ -453,7 +453,7 @@ class ExecutionInstance(QObject):
             url (URL): Url
         """
         for item in self._ordered_nodes[ds_item]:
-            self.ds_urls.setdefault(item, list()).append(url)
+            self.ds_urls.setdefault(item, set()).add(url)
 
     def add_di_data(self, di_item, data):
         """Adds given import data to the list seen by di_item output items.
@@ -463,7 +463,7 @@ class ExecutionInstance(QObject):
             data (dict): Data to import
         """
         for item in self._ordered_nodes[di_item]:
-            self.di_data.setdefault(item, list()).append(data)
+            self.di_data.setdefault(item, set()).add(data)
 
     def append_dc_refs(self, dc_item, refs):
         """Adds given file paths (Data Connection file references) to the list seen by dc_item output items.
@@ -473,7 +473,7 @@ class ExecutionInstance(QObject):
             refs (list): List of file paths (references)
         """
         for item in self._ordered_nodes[dc_item]:
-            self.dc_refs.setdefault(item, list()).extend(refs)
+            self.dc_refs.setdefault(item, set()).update(refs)
 
     def append_dc_files(self, dc_item, files):
         """Adds given project data file paths to the list seen by dc_item output items.
@@ -483,7 +483,7 @@ class ExecutionInstance(QObject):
             refs (list): List of file paths (references)
         """
         for item in self._ordered_nodes[dc_item]:
-            self.dc_files.setdefault(item, list()).extend(files)
+            self.dc_files.setdefault(item, set()).update(files)
 
     def append_tool_output_file(self, tool_item, filepath):
         """Adds given file path provided to the list seen by tool_item output items.
@@ -493,7 +493,7 @@ class ExecutionInstance(QObject):
             filepath (str): Path to a tool output file (in tool result directory)
         """
         for item in self._ordered_nodes[tool_item]:
-            self.tool_output_files.setdefault(item, list()).append(filepath)
+            self.tool_output_files.setdefault(item, set()).add(filepath)
 
     def ds_urls_at_sight(self, item):
         """Returns ds urls currently seen by the given item.
@@ -501,7 +501,7 @@ class ExecutionInstance(QObject):
         Args:
             item (str): item name
         """
-        return self.ds_urls.get(item, [])
+        return self.ds_urls.get(item, set())
 
     def di_data_at_sight(self, item):
         """Returns di data currently seen by the given item.
@@ -509,7 +509,7 @@ class ExecutionInstance(QObject):
         Args:
             item (str): item name
         """
-        return self.di_data.get(item, [])
+        return self.di_data.get(item, set())
 
     def dc_refs_at_sight(self, item):
         """Returns dc refs currently seen by the given item.
@@ -517,7 +517,7 @@ class ExecutionInstance(QObject):
         Args:
             item (str): item name
         """
-        return self.dc_refs.get(item, [])
+        return self.dc_refs.get(item, set())
 
     def dc_files_at_sight(self, item):
         """Returns dc files currently seen by the given item.
@@ -525,7 +525,7 @@ class ExecutionInstance(QObject):
         Args:
             item (str): item name
         """
-        return self.dc_files.get(item, [])
+        return self.dc_files.get(item, set())
 
     def tool_output_files_at_sight(self, item):
         """Returns tool output files currently seen by the given item.
@@ -533,7 +533,7 @@ class ExecutionInstance(QObject):
         Args:
             item (str): item name
         """
-        return self.tool_output_files.get(item, [])
+        return self.tool_output_files.get(item, set())
 
     def propagate_data(self, input_item):
         """Propagate data seen by given item into output items.
@@ -551,11 +551,11 @@ class ExecutionInstance(QObject):
         tool_output_files_at_sight = self.tool_output_files_at_sight(input_item)
         # ...make it seeable also by output items
         for item in self._ordered_nodes[input_item]:
-            self.ds_urls.setdefault(item, list()).extend(ds_urls_at_sight)
-            self.di_data.setdefault(item, list()).extend(di_data_at_sight)
-            self.dc_refs.setdefault(item, list()).extend(dc_refs_at_sight)
-            self.dc_files.setdefault(item, list()).extend(dc_files_at_sight)
-            self.tool_output_files.setdefault(item, list()).extend(tool_output_files_at_sight)
+            self.ds_urls.setdefault(item, set()).update(ds_urls_at_sight)
+            self.di_data.setdefault(item, set()).update(di_data_at_sight)
+            self.dc_refs.setdefault(item, set()).update(dc_refs_at_sight)
+            self.dc_files.setdefault(item, set()).update(dc_files_at_sight)
+            self.tool_output_files.setdefault(item, set()).update(tool_output_files_at_sight)
 
     def find_file(self, filename, item):
         """Returns the first occurrence of full path to given file name in files seen by the given item,
