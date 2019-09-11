@@ -36,13 +36,12 @@ class DataInterface(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Project item name
         description (str): Project item description
-        filepath (str): Path to file
         settings (dict): dict with mapping settings
         x (int): Initial icon scene X coordinate
         y (int): Initial icon scene Y coordinate
     """
 
-    def __init__(self, toolbox, name, description, filepath, settings, x, y):
+    def __init__(self, toolbox, name, description, settings, x, y):
         """Class constructor."""
         super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()

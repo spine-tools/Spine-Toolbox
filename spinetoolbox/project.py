@@ -273,10 +273,10 @@ class SpineToolboxProject(MetaObject):
             mappings = item_data.get("mappings", {})
             filepath = item_data.get("import_file_path", "")
             self.add_data_interface(name, desc, filepath, mappings, x, y, verbosity=False)
-        for name, item in gdx_export_items.items():
-            description = item["description"]
-            x = item.get("x", 0.0)
-            y = item.get("y", 0.0)
+        for name, item_data in gdx_export_items.items():
+            description = item_data.get("description", '')
+            x = item_data.get("x", 0.0)
+            y = item_data.get("y", 0.0)
             self.add_gdx_export(name, description, x, y, verbosity=False)
         return True
 
@@ -300,8 +300,11 @@ class SpineToolboxProject(MetaObject):
         except FileNotFoundError:
             self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(jsonfile))
             return None
-        # Path to main program relative to definition file
-        includes_main_path = definition.get("includes_main_path", ".")
+        # Infer path to the main program
+        try:
+            includes_main_path = definition["includes_main_path"]  # path to main program relative to definition file
+        except KeyError:
+            includes_main_path = "."  # assume main program and definition file are on the same path
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
         return self.load_tool_template_from_dict(definition, path)
 

@@ -103,7 +103,7 @@ class AddDataInterfaceWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        self._project.add_data_interface(self.name, self.description, "", {}, self._x, self._y, set_selected=True)
+        self._project.add_data_interface(self.name, self.description, {}, self._x, self._y, set_selected=True)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.
