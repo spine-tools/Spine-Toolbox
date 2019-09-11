@@ -544,9 +544,7 @@ class DataStore(ProjectItem):
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
             except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
                 self._toolbox.msg_error.emit(
-                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted: "
-                    "{}".format(err)
-                )
+                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err))
                 db_map = None
             if db_map:
                 all_import_errors = []
