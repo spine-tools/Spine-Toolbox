@@ -22,7 +22,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(400, 110)
+        Form.resize(400, 117)
         self.verticalLayout_2 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         self.frame = QtWidgets.QFrame(Form)
@@ -31,9 +31,11 @@ class Ui_Form(object):
         self.frame.setObjectName("frame")
         self.verticalLayout = QtWidgets.QVBoxLayout(self.frame)
         self.verticalLayout.setObjectName("verticalLayout")
-        self.url_label = QtWidgets.QLabel(self.frame)
-        self.url_label.setObjectName("url_label")
-        self.verticalLayout.addWidget(self.url_label)
+        self.url_field = QtWidgets.QLineEdit(self.frame)
+        self.url_field.setFrame(False)
+        self.url_field.setReadOnly(True)
+        self.url_field.setObjectName("url_field")
+        self.verticalLayout.addWidget(self.url_field)
         self.formLayout = QtWidgets.QFormLayout()
         self.formLayout.setObjectName("formLayout")
         self.file_name_label = QtWidgets.QLabel(self.frame)
@@ -58,7 +60,6 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
-        self.url_label.setText(QtWidgets.QApplication.translate("Form", "Database url", None, -1))
         self.file_name_label.setText(QtWidgets.QApplication.translate("Form", "Filename:", None, -1))
         self.settings_button.setText(QtWidgets.QApplication.translate("Form", "Settings...", None, -1))
 

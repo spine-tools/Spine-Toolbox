@@ -19,7 +19,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>110</height>
+    <height>117</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -36,9 +36,12 @@
      </property>
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
-       <widget class="QLabel" name="url_label">
-        <property name="text">
-         <string>Database url</string>
+       <widget class="QLineEdit" name="url_field">
+        <property name="frame">
+         <bool>false</bool>
+        </property>
+        <property name="readOnly">
+         <bool>true</bool>
         </property>
        </widget>
       </item>

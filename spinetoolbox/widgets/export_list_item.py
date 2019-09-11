@@ -25,7 +25,7 @@ class ExportListItem(QWidget):
         super().__init__(parent)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
-        self._ui.url_label.setText(url)
+        self._ui.url_field.setText(url)
 
     @property
     def settings_button(self):
