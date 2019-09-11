@@ -9,26 +9,28 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-# -*- coding: utf-8 -*-
+"""
+A small widget to set up a database export in Gdx Export settings.
 
-# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/time_pattern_editor.ui',
-# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/time_pattern_editor.ui' applies.
-#
-#
-# WARNING! All changes made in this file will be lost!
+:author: A. Soininen (VTT)
+:date:   10.9.2019
+"""
 
-from PySide2 import QtCore, QtGui, QtWidgets
+from PySide2.QtWidgets import QWidget
+from ui.export_list_item import Ui_Form
 
-class Ui_TimePatternEditor(object):
-    def setupUi(self, TimePatternEditor):
-        TimePatternEditor.setObjectName("TimePatternEditor")
-        TimePatternEditor.resize(586, 443)
-        self.verticalLayout = QtWidgets.QVBoxLayout(TimePatternEditor)
-        self.verticalLayout.setObjectName("verticalLayout")
 
-        self.retranslateUi(TimePatternEditor)
-        QtCore.QMetaObject.connectSlotsByName(TimePatternEditor)
+class ExportListItem(QWidget):
+    def __init__(self, url, parent=None):
+        super().__init__(parent)
+        self._ui = Ui_Form()
+        self._ui.setupUi(self)
+        self._ui.url_label.setText(url)
 
-    def retranslateUi(self, TimePatternEditor):
-        TimePatternEditor.setWindowTitle(QtWidgets.QApplication.translate("TimePatternEditor", "Form", None, -1))
+    @property
+    def settings_button(self):
+        return self._ui.settings_button
 
+    @property
+    def out_file_name_edit(self):
+        return self._ui.out_file_name_edit

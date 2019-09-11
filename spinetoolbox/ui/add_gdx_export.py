@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/add_data_interface.ui',
-# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/add_data_interface.ui' applies.
+# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/add_gdx_export.ui',
+# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/add_gdx_export.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -45,7 +45,6 @@ class Ui_Form(object):
         self.lineEdit_name.setSizePolicy(sizePolicy)
         self.lineEdit_name.setMinimumSize(QtCore.QSize(220, 20))
         self.lineEdit_name.setMaximumSize(QtCore.QSize(5000, 20))
-        self.lineEdit_name.setText("")
         self.lineEdit_name.setClearButtonEnabled(True)
         self.lineEdit_name.setObjectName("lineEdit_name")
         self.verticalLayout.addWidget(self.lineEdit_name)
@@ -110,7 +109,7 @@ class Ui_Form(object):
         Form.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Add Data Interface", None, -1))
+        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Add Gdx Export", None, -1))
         self.lineEdit_name.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item name (required)</p></body></html>", None, -1))
         self.lineEdit_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type item name here...", None, -1))
         self.lineEdit_description.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item description (optional)</p></body></html>", None, -1))

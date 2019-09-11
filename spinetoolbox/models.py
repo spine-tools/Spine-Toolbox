@@ -283,7 +283,7 @@ class ProjectItemModel(QAbstractItemModel):
         # Update name label in tab
         item.update_name_label()
         # Update name item of the QGraphicsItem
-        item.get_icon().update_name_item(value)
+        item.icon.update_name_item(value)
         # Change old item names in connection model headers to the new name
         header_index = self._toolbox.connection_model.find_index_in_header(old_name)
         self._toolbox.connection_model.setHeaderData(header_index, Qt.Horizontal, value)
@@ -348,24 +348,27 @@ class ProjectItemModel(QAbstractItemModel):
         Returns:
             int: Number of items according to category
         """
-        n_data_stores = self.rowCount(self.find_category("Data Stores"))
-        n_data_connections = self.rowCount(self.find_category("Data Connections"))
-        n_tools = self.rowCount(self.find_category("Tools"))
-        n_views = self.rowCount(self.find_category("Views"))
+        count = self.rowCount(self.find_category("Data Stores"))
         if category == "Data Stores":
             # Return number of data stores
-            return n_data_stores - 1
+            return count - 1
+        count += self.rowCount(self.find_category("Data Connections"))
         if category == "Data Connections":
             # Return number of data stores + data connections - 1
-            return n_data_stores + n_data_connections - 1
+            return count - 1
+        count += self.rowCount(self.find_category("Tools"))
         if category == "Tools":
             # Return number of data stores + data connections + tools - 1
-            return n_data_stores + n_data_connections + n_tools - 1
+            return count - 1
+        count += self.rowCount(self.find_category("Views"))
         if category == "Views":
             # Return number of data stores + data connections + tools + views - 1
-            return n_data_stores + n_data_connections + n_tools + n_views - 1
+            return count - 1
+        count += self.rowCount(self.find_category("Data Interfaces"))
         if category == "Data Interfaces":
             # Return total number of items - 1
+            return count - 1
+        if category == "Exporting":
             return self.n_items() - 1
         logging.error("Unknown category: %s", category)
         return 0

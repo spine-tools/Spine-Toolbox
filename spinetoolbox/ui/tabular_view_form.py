@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/tabular_view_form.ui',
-# licensing of '../spinetoolbox/ui/tabular_view_form.ui' applies.
+# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/tabular_view_form.ui',
+# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/tabular_view_form.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

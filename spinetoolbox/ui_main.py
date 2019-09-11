@@ -55,6 +55,7 @@ from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 from widgets.add_data_interface_widget import AddDataInterfaceWidget
+from widgets.add_gdx_export_widget import AddGdxExportWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import ZoomWidget
@@ -112,9 +113,6 @@ class ToolboxUI(QMainWindow):
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         # Widget and form references
-        self.settings_form = None
-        self.tool_config_asst_form = None
-        self.about_form = None
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
         self.link_context_menu = None
@@ -125,12 +123,6 @@ class ToolboxUI(QMainWindow):
         self.view_prop_context_menu = None
         self.di_files_context_menu = None
         self.project_form = None
-        self.add_data_store_form = None
-        self.add_data_connection_form = None
-        self.add_tool_form = None
-        self.add_view_form = None
-        self.add_data_interface_form = None
-        self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
         self.connections_tab = None
@@ -188,6 +180,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
         self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
         self.ui.actionAdd_Data_Interface.triggered.connect(self.show_add_data_interface_form)
+        self.ui.actionAdd_Gdx_Export.triggered.connect(self.show_add_gdx_export_form)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
@@ -419,12 +412,14 @@ class ToolboxUI(QMainWindow):
         tool_category = BaseProjectItem("Tools", "", is_root=False, is_category=True)
         view_category = BaseProjectItem("Views", "", is_root=False, is_category=True)
         di_category = BaseProjectItem("Data Interfaces", "", is_root=False, is_category=True)
+        export_category = BaseProjectItem("Exporting", "", is_category=True)
         self.project_item_model = ProjectItemModel(self, root=root_item)
         self.project_item_model.insert_item(ds_category)
         self.project_item_model.insert_item(dc_category)
         self.project_item_model.insert_item(tool_category)
         self.project_item_model.insert_item(view_category)
         self.project_item_model.insert_item(di_category)
+        self.project_item_model.insert_item(export_category)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)
@@ -1137,6 +1132,12 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
+    def __show_form(self, form):
+        if not self._project:
+            self.msg.emit("Please open or create a project first")
+            return
+        form.show()
+
     @Slot("float", "float", name="show_add_data_store_form")
     def show_add_data_store_form(self, x=0, y=0):
         """Show add data store widget."""
@@ -1147,67 +1148,51 @@ class ToolboxUI(QMainWindow):
         self.add_data_store_form.show()
 
     @Slot("float", "float", name="show_add_data_connection_form")
-    def show_add_data_connection_form(self, x=0, y=0):
+    def show_add_data_connection_form(self, x=0.0, y=0.0):
         """Show add data connection widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_data_connection_form = AddDataConnectionWidget(self, x, y)
-        self.add_data_connection_form.show()
+        self.__show_form(AddDataConnectionWidget(self, x, y))
 
     @Slot("float", "float", name="show_add_data_interface_form")
-    def show_add_data_interface_form(self, x=0, y=0):
+    def show_add_data_interface_form(self, x=0.0, y=0.0):
         """Show add data interface widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_data_interface_form = AddDataInterfaceWidget(self, x, y)
-        self.add_data_interface_form.show()
+        self.__show_form(AddDataInterfaceWidget(self, x, y))
 
     @Slot("float", "float", name="show_add_tool_form")
     def show_add_tool_form(self, x=0, y=0):
         """Show add tool widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_tool_form = AddToolWidget(self, x, y)
-        self.add_tool_form.show()
+        self.__show_form(AddToolWidget(self, x, y))
 
     @Slot("float", "float", name="show_add_view_form")
     def show_add_view_form(self, x=0, y=0):
         """Show add view widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_view_form = AddViewWidget(self, x, y)
-        self.add_view_form.show()
+        self.__show_form(AddViewWidget(self, x, y))
+
+    @Slot(float, float, name="show_add_gdx_export_form")
+    def show_add_gdx_export_form(self, x=0.0, y=0.0):
+        self.__show_form(AddGdxExportWidget(self, x, y))
 
     @Slot(name="show_tool_template_form")
     def show_tool_template_form(self, tool_template=None):
         """Show create tool template widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.tool_template_form = ToolTemplateWidget(self, tool_template)
-        self.tool_template_form.show()
+        self.__show_form(ToolTemplateWidget(self, tool_template))
 
     @Slot(name="show_settings")
     def show_settings(self):
         """Show Settings widget."""
-        self.settings_form = SettingsWidget(self)
-        self.settings_form.show()
+        form = SettingsWidget(self)
+        form.show()
 
     @Slot(name="show_tool_config_asst")
     def show_tool_config_asst(self):
         """Show Tool configuration assistant widget."""
-        self.tool_config_asst_form = ToolConfigurationAssistantWidget(self)
-        self.tool_config_asst_form.show()
+        form = ToolConfigurationAssistantWidget(self)
+        form.show()
 
     @Slot(name="show_about")
     def show_about(self):
         """Show About Spine Toolbox form."""
-        self.about_form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
-        self.about_form.show()
+        form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
+        form.show()
 
     @Slot(name="show_user_guide")
     def show_user_guide(self):

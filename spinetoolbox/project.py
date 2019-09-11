@@ -25,6 +25,7 @@ from metaobject import MetaObject
 from helpers import project_dir, create_dir, copy_dir, get_db_map, busy_effect
 from data_store import DataStore
 from data_connection import DataConnection
+from gdx_export import GdxExport
 from tool import Tool
 from view import View
 from data_interface import DataInterface
@@ -214,6 +215,7 @@ class SpineToolboxProject(MetaObject):
         tools = objects_dict.get("Tools", dict())
         views = objects_dict.get("Views", dict())
         data_interfaces = objects_dict.get("Data Interfaces", dict())
+        gdx_export_items = objects_dict.get("Exporting", dict())
         n = len(data_stores) + len(data_connections) + len(tools) + len(views) + len(data_interfaces)
         self._toolbox.msg.emit("Loading project items...")
         if n == 0:
@@ -271,6 +273,11 @@ class SpineToolboxProject(MetaObject):
             mappings = item_data.get("mappings", {})
             filepath = item_data.get("import_file_path", "")
             self.add_data_interface(name, desc, filepath, mappings, x, y, verbosity=False)
+        for name, item in gdx_export_items.items():
+            description = item["description"]
+            x = item.get("x", 0.0)
+            y = item.get("y", 0.0)
+            self.add_gdx_export(name, description, x, y, verbosity=False)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -326,6 +333,26 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
         return None
 
+    def _add_project_item(self, item, category_name, item_type_name, set_selected, verbosity):
+        """
+        Adds a project item to project.
+
+        Args:
+            item (ProjectItem): an item to add
+            category_name (str): category's name into which the item is added
+            item_type_name (str): the type of the item for logging purposes
+            set_selected (bool): whether to set item selected after the item has been added to project
+            vebosity (bool): if True logs a message
+        """
+        category = self._toolbox.project_item_model.find_category(category_name)
+        self._toolbox.project_item_model.insert_item(item, category)
+        self.append_connection_model(item.name, category_name)
+        self.add_to_dag(item.name)
+        if verbosity:
+            self._toolbox.msg.emit("{} <b>{}</b> added to project.".format(item_type_name, item.name))
+        if set_selected:
+            self.set_item_selected(item)
+
     def add_data_store(self, name, description, url, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Store to project item model.
 
@@ -338,18 +365,8 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category = "Data Stores"
         data_store = DataStore(self._toolbox, name, description, url, x, y)
-        ds_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(data_store, ds_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(data_store)
+        self._add_project_item(data_store, "Data Stores", "Data Store", set_selected, verbosity)
 
     def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Data Connection to project item model.
@@ -363,18 +380,8 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category = "Data Connections"
         data_connection = DataConnection(self._toolbox, name, description, references, x, y)
-        dc_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(data_connection, dc_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(data_connection)
+        self._add_project_item(data_connection, "Data Connections", "Data Connection", set_selected, verbosity)
 
     def add_tool(self, name, description, tool_template, use_work=True, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a Tool to project item model.
@@ -389,18 +396,8 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category = "Tools"
         tool = Tool(self._toolbox, name, description, tool_template, use_work, x, y)
-        tool_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(tool, tool_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(tool)
+        self._add_project_item(tool, "Tools", "Tool", set_selected, verbosity)
 
     def add_view(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
         """Adds a View to project item model.
@@ -413,18 +410,8 @@ class SpineToolboxProject(MetaObject):
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category = "Views"
         view = View(self._toolbox, name, description, x, y)
-        view_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(view, view_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(view)
+        self._add_project_item(view, "Views", "View", set_selected, verbosity)
 
     def add_data_interface(
         self, name, description, import_file_path="", mappings=None, x=0, y=0, set_selected=False, verbosity=True
@@ -441,18 +428,22 @@ class SpineToolboxProject(MetaObject):
         """
         if mappings is None:
             mappings = {}
-        category = "Data Interfaces"
         data_interface = DataInterface(self._toolbox, name, description, import_file_path, mappings, x, y)
-        di_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(data_interface, di_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("Data Interface <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(data_interface)
+        self._add_project_item(data_interface, "Data Interfaces", "Data Interface", set_selected, verbosity)
+
+    def add_gdx_export(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
+        """Adds a Gdx Export item to project item model.
+
+        Args:
+            name (str): Name
+            description (str): Description of item
+            x (int): X coordinate of item on scene
+            y (int): Y coordinate of item on scene
+            set_selected (bool): Whether to set item selected after the item has been added to project
+            verbosity (bool): If True, prints message
+        """
+        gdx_export = GdxExport(self._toolbox, name, description, x=x, y=y)
+        self._add_project_item(gdx_export, "Exporting", "Export item", set_selected, verbosity)
 
     def append_connection_model(self, item_name, category):
         """Adds new item to connection model to keep project and connection model synchronized."""

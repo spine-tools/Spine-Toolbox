@@ -26,6 +26,7 @@ from graphics_items import (
     DataStoreIcon,
     ViewIcon,
     DataInterfaceIcon,
+    GdxExportIcon,
     ProjectItemIcon,
     Link,
 )
@@ -158,6 +159,9 @@ class CustomQGraphicsScene(QGraphicsScene):
         elif text == "Data Interface":
             self.item_shadow = DataInterfaceIcon(self._toolbox, x, y, w, h, "...")
             self._toolbox.show_add_data_interface_form(pos.x(), pos.y())
+        elif text == "Gdx Export":
+            self.item_shadow = GdxExportIcon(self._toolbox, x, y, w, h, "...")
+            self._toolbox.show_add_gdx_export_form(pos.x(), pos.y())
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

@@ -815,12 +815,3 @@ class Tool(ProjectItem):
             out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
             inst.append_tool_output_file(self.name, out_file_path)
 
-    def item_dict(self):
-        """Returns a dictionary corresponding to this item."""
-        d = super().item_dict()
-        if not self.tool_template():
-            d["tool"] = ""
-        else:
-            d["tool"] = self.tool_template().name
-        d["execute_in_work"] = self.execute_in_work
-        return d

@@ -265,7 +265,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         name (str): Item name
     """
 
-    def __init__(self, toolbox, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, name, icon_path, icon_color_code, bg_color_code, accept_drops):
         """Class constructor."""
         super().__init__()
         self._toolbox = toolbox
@@ -290,6 +290,11 @@ class ProjectItemIcon(QGraphicsRectItem):
         # Make exclamation and rank icons
         self.exclamation_icon = ExclamationIcon(self)
         self.rank_icon = RankIcon(self)
+        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
+        self.brush = QBrush(QColor(bg_color_code))  # Brush for filling the bg rect
+        # Setup icons and attributes
+        self.setup(self.pen, self.brush, icon_path, QColor(icon_color_code))
+        self.setAcceptDrops(accept_drops)
         # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         # NOTE: setting the parent item moves the items as one!
         self.name_item.setParentItem(self)
@@ -298,6 +303,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item.setParentItem(self)
         self.exclamation_icon.setParentItem(self)
         self.rank_icon.setParentItem(self)
+        # Add items to scene
+        self._toolbox.ui.graphicsView.scene().addItem(self)
 
     def setup(self, pen, brush, svg, svg_color):
         """Setup item's attributes according to project item type.
@@ -479,13 +486,18 @@ class DataConnectionIcon(ProjectItemIcon):
 
     def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # QPen for the background rectangle
-        self.brush = QBrush(QColor("#e6e6ff"))  # QBrush for the background rectangle
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/file-alt.svg", QColor(0, 0, 255, 160))
-        self.setAcceptDrops(True)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/file-alt.svg",
+            icon_color_code="#0000a0",
+            bg_color_code="#e6e6ff",
+            accept_drops=True,
+        )
         self.drag_over = False
 
     def dragEnterEvent(self, event):
@@ -553,15 +565,18 @@ class ToolIcon(ProjectItemIcon):
     """
 
     def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Background rectangle pen
-        self.brush = QBrush(QColor("#ffe6e6"))  # Background rectangle brush
-        # Draw icon
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/hammer.svg", QColor("red"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)  # Adds also child items automatically
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/hammer.svg",
+            icon_color_code="red",
+            bg_color_code="#ffe6e6",
+            accept_drops=False,
+        )
         # animation stuff
         self.timer = QTimeLine()
         self.timer.setLoopCount(0)  # loop forever
@@ -613,15 +628,18 @@ class DataStoreIcon(ProjectItemIcon):
     """
 
     def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor("#f9e6ff"))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/database.svg", QColor("#cc33ff"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/database.svg",
+            icon_color_code="#cc33ff",
+            bg_color_code="#f9e6ff",
+            accept_drops=False,
+        )
 
 
 class ViewIcon(ProjectItemIcon):
@@ -637,15 +655,18 @@ class ViewIcon(ProjectItemIcon):
     """
 
     def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor("#ebfaeb"))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/binoculars.svg", QColor("#33cc33"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/binoculars.svg",
+            icon_color_code="#33cc33",
+            bg_color_code="#ebfaeb",
+            accept_drops=False,
+        )
 
 
 class DataInterfaceIcon(ProjectItemIcon):
@@ -664,14 +685,47 @@ class DataInterfaceIcon(ProjectItemIcon):
 
     def __init__(self, toolbox, x, y, w, h, name):
         """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor("#ffcccc"))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/map-solid.svg", QColor("#990000"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/map-solid.svg",
+            icon_color_code="#990000",
+            bg_color_code="#ffcccc",
+            accept_drops=False,
+        )
+
+
+class GdxExportIcon(ProjectItemIcon):
+    """
+    Gdx Export item that is drawn into QGraphicsScene.
+
+    Attributes:
+        toolbox (ToolBoxUI): QMainWindow instance
+        x (int): Icon x coordinate
+        y (int): Icon y coordinate
+        w (int): Width of master icon
+        h (int): Height of master icon
+        name (str): Item name
+    """
+
+    def __init__(self, toolbox, x, y, w, h, name):
+        """Class constructor."""
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/file-export-solid.svg",
+            icon_color_code="#990000",
+            bg_color_code="#ffcccc",
+            accept_drops=False,
+        )
 
 
 class Link(QGraphicsPathItem):

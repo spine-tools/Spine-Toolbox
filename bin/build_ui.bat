@@ -11,6 +11,8 @@ ECHO redistribute it under certain conditions; See files COPYING and
 ECHO COPYING.LESSER for details.
 ECHO.
 
+ECHO Use /f to force the build.
+
 PAUSE
 
 ECHO --- pyside2-uic version ---
@@ -22,12 +24,25 @@ ECHO --- Building Spine Toolbox GUI ---
 
 SET ui_path=..\spinetoolbox\ui
 SET spinetoolbox_path=..\spinetoolbox
-
-FOR /F %%f IN ('git diff --name-only -- %ui_path%') DO (
-    SET filepath=%%f
-    REM Process given file path with forward slashes replaced with backslashes
-    CALL :process_filepath ..\!filepath:/=\!
+IF NOT -%1-==-- (
+    IF -%1-==-/f- (
+        FOR /F %%f IN ('dir /s /b %ui_path%') DO (
+            SET filepath=%%f
+            REM Process given file path with forward slashes replaced with backslashes
+            CALL :process_filepath !filepath!
+        )
+    ) ELSE (
+        ECHO Unrecognized command line argument %1
+        exit /b
+    )
+) ELSE (
+    FOR /F %%f IN ('git diff --name-only -- %ui_path%') DO (
+        SET filepath=%%f
+        REM Process given file path with forward slashes replaced with backslashes
+        CALL :process_filepath ..\!filepath:/=\!
+    )
 )
+
 ECHO --- Build completed ---
 GOTO :EOF
 

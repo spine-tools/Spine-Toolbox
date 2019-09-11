@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/tool_template_form.ui',
-# licensing of '../spinetoolbox/ui/tool_template_form.ui' applies.
+# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/tool_template_form.ui',
+# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/tool_template_form.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -451,6 +451,6 @@ class Ui_Form(object):
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
 
-from widgets.custom_qtreeview import SourcesTreeView, CustomTreeView
+from widgets.custom_qtreeview import CustomTreeView, SourcesTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
 import resources_icons_rc

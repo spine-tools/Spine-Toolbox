@@ -312,8 +312,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._connection_model.columnsAboutToBeRemoved.connect(self.connection_columns_removed)
 
     def add_link(self, src_connector, dst_connector, index):
-        """Draws link between source and sink items on scene and
-        appends connection model. Refreshes View references if needed.
+        """
+        Draws link between source and sink items on scene and appends connection model.
+
+        Refreshes destination item's references if needed.
 
         Args:
             src_connector (ConnectorButton): Source connector button
@@ -329,8 +331,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
     def remove_link(self, index):
-        """Removes link between source and sink items on scene and
-        updates connection model. Refreshes View references if needed."""
+        """
+        Removes link between source and sink items on scene and updates connection model.
+
+        Refreshes destination item's references if needed.
+
+        Args:
+            index (QModelIndex): index in connection model
+        """
         link = self._connection_model.data(index, Qt.UserRole)
         if not link:
             logging.error("Link not found. This should not happen.")
@@ -445,47 +453,65 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 return
             src_item_type = self._project_item_model.project_item(src_index).item_type
             dst_item_type = self._project_item_model.project_item(dst_index).item_type
-            if src_item_type == "Data Connection" and dst_item_type == "Tool":
-                self._toolbox.msg.emit(
-                    "Link established. Tool <b>{0}</b> will look for input "
-                    "files from <b>{1}</b>'s references and data directory.".format(
-                        self.dst_item_name, self.src_item_name
+            if src_item_type == "Data Connection":
+                if dst_item_type == "Tool":
+                    self._toolbox.msg.emit(
+                        "Link established. Tool <b>{0}</b> will look for input "
+                        "files from <b>{1}</b>'s references and data directory.".format(
+                            self.dst_item_name, self.src_item_name
+                        )
                     )
-                )
-            elif src_item_type == "Data Store" and dst_item_type == "Tool":
-                self._toolbox.msg.emit(
-                    "Link established. Data Store <b>{0}</b> reference will "
-                    "be passed to Tool <b>{1}</b> when executing.".format(self.src_item_name, self.dst_item_name)
-                )
-            elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit(
-                    "Link established. Tool <b>{0}</b> output files will be "
-                    "passed to item <b>{1}</b> after execution.".format(self.src_item_name, self.dst_item_name)
-                )
-            elif src_item_type in ["Data Connection", "Data Store", "Data Interface"] and dst_item_type in [
+                    return
+            elif src_item_type == "Data Store":
+                if dst_item_type == "Tool":
+                    self._toolbox.msg.emit(
+                        "Link established. Data Store <b>{0}</b> reference will "
+                        "be passed to Tool <b>{1}</b> when executing.".format(self.src_item_name, self.dst_item_name)
+                    )
+                    return
+                elif dst_item_type == "View":
+                    self._toolbox.msg_warning.emit(
+                        "Link established. You can visualize Data Store "
+                        "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
+                    )
+                    return
+                elif dst_item_type == "Gdx Export":
+                    self._toolbox.msg_warning.emit(
+                        "Link established. Gdx Export <b>{}</b> will export Data Store <b>{}</b> into GDX format when executing.".format(
+                            self.dst_item_name, self.src_item_name))
+                    return
+            elif src_item_type == "Tool":
+                if dst_item_type in ["Data Connection", "Data Store"]:
+                    self._toolbox.msg.emit(
+                        "Link established. Tool <b>{0}</b> output files will be "
+                        "passed to item <b>{1}</b> after execution.".format(self.src_item_name, self.dst_item_name)
+                    )
+                    return
+                elif dst_item_type == "View":
+                    self._toolbox.msg_warning.emit(
+                        "Link established. You can visualize the output from Tool "
+                        "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
+                    )
+                    return
+                elif dst_item_type == "Tool":
+                    self._toolbox.msg_warning.emit("Link established.")
+                    return
+            elif src_item_type == "Gdx Export":
+                if dst_item_type == "Tool":
+                    self._toolbox.msg_warning.emit("Link established. GDX file from <b>{}</b> will be passed to Tool <b>{}</b> upon execution.".format(self.src_item_name, self.dst_item_name))
+                    return
+            if src_item_type in ["Data Connection", "Data Store", "Data Interface"] and dst_item_type in [
                 "Data Connection",
                 "Data Store",
                 "Data Interface",
             ]:
                 self._toolbox.msg.emit("Link established")
-            elif src_item_type == "Tool" and dst_item_type == "View":
-                self._toolbox.msg_warning.emit(
-                    "Link established. You can visualize the ouput from Tool "
-                    "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
-                )
-            elif src_item_type == "Data Store" and dst_item_type == "View":
-                self._toolbox.msg_warning.emit(
-                    "Link established. You can visualize Data Store "
-                    "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
-                )
-            elif src_item_type == "Tool" and dst_item_type == "Tool":
-                self._toolbox.msg_warning.emit("Link established.")
-            else:
-                self._toolbox.msg_warning.emit(
-                    "Link established. Interaction between a "
-                    "<b>{0}</b> and a <b>{1}</b> has not been "
-                    "implemented yet.".format(src_item_type, dst_item_type)
-                )
+                return
+            self._toolbox.msg_warning.emit(
+                "Link established. Interaction between a "
+                "<b>{0}</b> and a <b>{1}</b> has not been "
+                "implemented yet.".format(src_item_type, dst_item_type)
+            )
 
 
 class GraphQGraphicsView(CustomQGraphicsView):

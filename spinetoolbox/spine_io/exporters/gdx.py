@@ -17,6 +17,7 @@ Functions to export a Spine model database to GAMS .gdx file in TIMES format.
 """
 
 import logging
+
 try:
     import gams
 except ImportError:
@@ -106,7 +107,9 @@ def object_classes_to_domains(db_map):
         for set_object in object_list:
             record = DomainRecord(set_object)
             domain.records.append(record)
-            parameter_values = object_parameter_value_query.filter(db_map.object_parameter_value_sq.c.object_id == set_object.id).all()
+            parameter_values = object_parameter_value_query.filter(
+                db_map.object_parameter_value_sq.c.object_id == set_object.id
+            ).all()
             for parameter in parameter_values:
                 parameter = Parameter(parameter)
                 if parameter.value is not None:
@@ -125,7 +128,9 @@ def relationship_classes_to_sets(db_map):
         for relationship in relationship_list:
             record = SetRecord(relationship)
             current_set.records.append(record)
-            parameter_values = relationship_parameter_value_query.filter(db_map.relationship_parameter_value_sq.c.relationship_id == relationship.id).all()
+            parameter_values = relationship_parameter_value_query.filter(
+                db_map.relationship_parameter_value_sq.c.relationship_id == relationship.id
+            ).all()
             for parameter in parameter_values:
                 parameter = Parameter(parameter)
                 if parameter.value is not None:
@@ -137,12 +142,13 @@ def export_to_gdx(gams_database, file_name):
     gams_database.export(file_name)
 
 
-if __name__ == "__main__":
-    db_map = DatabaseMapping("sqlite:///C:\\data\\src\\toolbox\\projects\\inout666\\gams\\gams.sqlite")
-    domains = object_classes_to_domains(db_map)
-    sets = relationship_classes_to_sets(db_map)
-    gams_workspace = gams.GamsWorkspace()
-    gams_database = gams_workspace.add_database()
-    gams_domains = domains_to_gams(gams_database, domains)
-    sets_to_gams(gams_database, sets, gams_domains)
-    export_to_gdx(gams_database, "C:\\data\\output_gams_file.gdx")
+def make_gams_workspace():
+    return gams.GamsWorkspace()
+
+
+def make_gams_database(gams_workspace):
+    return gams_workspace.add_database()
+
+
+def available():
+    return gams is not None

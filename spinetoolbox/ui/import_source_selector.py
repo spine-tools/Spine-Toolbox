@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/import_source_selector.ui',
-# licensing of '../spinetoolbox/ui/import_source_selector.ui' applies.
+# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/import_source_selector.ui',
+# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/import_source_selector.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

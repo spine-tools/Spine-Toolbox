@@ -418,7 +418,7 @@ class TestToolboxUI(unittest.TestCase):
         column = self.toolbox.connection_model.header.index(dc2)
         index = self.toolbox.connection_model.createIndex(row, column)
         # Add link between dc1 and dc2
-        gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"), index)
+        gv.add_link(dc1_item.icon.conn_button("bottom"), dc2_item.icon.conn_button("bottom"), index)
         # Find link
         links = self.toolbox.connection_model.connected_links(dc1)
         self.assertEqual(1, len(links))
@@ -460,7 +460,7 @@ class TestToolboxUI(unittest.TestCase):
         column = self.toolbox.connection_model.header.index(dc2)
         index = self.toolbox.connection_model.createIndex(row, column)
         # Add link between dc1 and dc2
-        gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"), index)
+        gv.add_link(dc1_item.icon.conn_button("bottom"), dc2_item.icon.conn_button("bottom"), index)
         # Find link
         links = self.toolbox.connection_model.connected_links(dc1)
         self.assertEqual(1, len(links))
@@ -585,9 +585,9 @@ class TestToolboxUI(unittest.TestCase):
         """
         # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
         # Get project item icon rectangle
-        qrectf = pi.get_icon().rect()  # Returns a rectangle in item coordinate system
+        qrectf = pi.icon.rect()  # Returns a rectangle in item coordinate system
         # Map project item icon rectangle center point to scene coordinates
-        qpointf = pi.get_icon().mapToScene(qrectf.center())  # Returns a point in scene coordinate system
+        qpointf = pi.icon.mapToScene(qrectf.center())  # Returns a point in scene coordinate system
         # Map scene coordinates to graphics view viewport coordinates
         qpoint = gv.mapFromScene(qpointf)  # Returns a point in Graphics view viewport coordinate system
         return qpoint
