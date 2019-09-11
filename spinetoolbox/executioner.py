@@ -135,32 +135,19 @@ class DirectedGraphHandler(QObject):
             self.dag_simulation_requested.emit(dag)
             return
         # Now for the fun part. We need to break the original DAG into two separate DAGs.
-        # Get src node descendant edges, ancestor edges, and its own edges
-        src_descendants = nx.descendants(dag, src_node)
-        src_descendant_edges = nx.edges(dag, src_descendants)
-        src_ancestors = nx.ancestors(dag, src_node)
-        src_ancestor_edges = nx.edges(dag, src_ancestors)
-        src_edges = nx.edges(dag, src_node)
-        # Get dst node descendant edges, ancestor edges, and its own edges
-        dst_descendants = nx.descendants(dag, dst_node)
-        dst_descendant_edges = nx.edges(dag, dst_descendants)
-        dst_ancestors = nx.ancestors(dag, dst_node)
-        dst_ancestor_edges = nx.edges(dag, dst_ancestors)
-        dst_edges = nx.edges(dag, dst_node)
-        # Make descendant graph. This graph contains src node and all its neighbors.
-        descendant_graph = nx.DiGraph()
-        descendant_graph.add_edges_from(src_descendant_edges)
-        descendant_graph.add_edges_from(src_ancestor_edges)
-        descendant_graph.add_edges_from(src_edges)
-        # Make ancestor graph. This graph contains the dst node and all its neighbors.
-        ancestor_graph = nx.DiGraph()
-        ancestor_graph.add_edges_from(dst_descendant_edges)
-        ancestor_graph.add_edges_from(dst_ancestor_edges)
-        ancestor_graph.add_edges_from(dst_edges)
+        left_nodes, right_nodes = nx.weakly_connected_components(dag)
+        left_edges = nx.edges(dag, left_nodes)
+        right_edges = nx.edges(dag, right_nodes)
+        # Make left graph.
+        left_graph = nx.DiGraph()
+        left_graph.add_edges_from(left_edges)
+        # Make right graph.
+        right_graph = nx.DiGraph()
+        right_graph.add_edges_from(right_edges)
         # Remove old graph and add new graphs instead
         self.remove_dag(dag)
-        self.add_dag(descendant_graph)
-        self.add_dag(ancestor_graph, request_simulation=False)  # No need to simulate the ancestor graph
+        self.add_dag(left_graph)
+        self.add_dag(right_graph)
 
     def remove_node_from_graph(self, node_name):
         """Removes node from a graph that contains
