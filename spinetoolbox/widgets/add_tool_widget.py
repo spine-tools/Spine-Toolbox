@@ -126,11 +126,11 @@ class AddToolWidget(QWidget):
         """Creates new Item according to user's selections."""
         selected_row = self.ui.comboBox_tool.currentIndex()
         if selected_row == -1:
-            selected_tool_template = None
+            tool_template = None
         else:
-            selected_tool_template = self._toolbox.tool_template_model.tool_template(selected_row)
+            tool_template = self._toolbox.tool_template_model.tool_template(selected_row)
         self._project.add_tool(
-            self.name, self.description, selected_tool_template, True, self._x, self._y, set_selected=True
+            self.name, self.description, tool_template, "", True, self._x, self._y, set_selected=True
         )
 
     def keyPressEvent(self, e):

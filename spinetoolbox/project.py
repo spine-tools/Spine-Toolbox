@@ -209,68 +209,23 @@ class SpineToolboxProject(MetaObject):
         Returns:
             Boolean value depending on operation success.
         """
-        data_stores = objects_dict.get("Data Stores", dict())
-        data_connections = objects_dict.get("Data Connections", dict())
-        tools = objects_dict.get("Tools", dict())
-        views = objects_dict.get("Views", dict())
-        data_interfaces = objects_dict.get("Data Interfaces", dict())
-        n = len(data_stores) + len(data_connections) + len(tools) + len(views) + len(data_interfaces)
+        category_to_method = {
+            "Data Stores": self.add_data_store,
+            "Data Connections": self.add_data_connection,
+            "Data Interfaces": self.add_data_interface,
+            "Tools": self.add_tool,
+            "Views": self.add_view,
+        }
         self._toolbox.msg.emit("Loading project items...")
-        if n == 0:
+        empty = True
+        for category, category_dict in objects_dict.items():
+            method = category_to_method[category]
+            for name, item_dict in category_dict.items():
+                item_dict.pop("short name", None)
+                method(name, **item_dict)
+                empty = False
+        if empty:
             self._toolbox.msg_warning.emit("Project has no items")
-        # Recreate Data Stores
-        for name, item_data in data_stores.items():
-            desc = item_data.get('description', '')
-            try:
-                url = item_data["url"]
-            except KeyError:
-                # Keep compatibility with previous version
-                reference = item_data.get("reference", None)
-                if isinstance(reference, dict):
-                    url = reference.get("url", None)
-                else:
-                    url = None
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            self.add_data_store(name, desc, url, x, y, verbosity=False)
-        # Recreate Data Connections
-        for name, item_data in data_connections.items():
-            desc = item_data.get('description', '')
-            refs = item_data.get("references", list())
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            self.add_data_connection(name, desc, refs, x, y, verbosity=False)
-        # Recreate Tools
-        for name, item_data in tools.items():
-            desc = item_data.get('description', '')
-            tool_name = item_data['tool']
-            # Find tool template from model
-            tool_template = self._toolbox.tool_template_model.find_tool_template(tool_name)
-            # Clarifications for user
-            if tool_name != "" and not tool_template:
-                self._toolbox.msg_error.emit(
-                    "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                    "it was not found. Add it to Tool templates and reopen "
-                    "project.".format(name, tool_name)
-                )
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            execute_in_work = item_data.get("execute_in_work", True)  # boolean
-            self.add_tool(name, desc, tool_template, execute_in_work, x, y, verbosity=False)
-        # Recreate Views
-        for name, item_data in views.items():
-            desc = item_data.get('description', '')
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            self.add_view(name, desc, x, y, verbosity=False)
-        # Recreate Data Interfaces
-        for name, item_data in data_interfaces.items():
-            desc = item_data["description"]
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            mappings = item_data.get("mappings", {})
-            filepath = item_data.get("import_file_path", "")
-            self.add_data_interface(name, desc, filepath, mappings, x, y, verbosity=False)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -376,21 +331,43 @@ class SpineToolboxProject(MetaObject):
         if set_selected:
             self.set_item_selected(data_connection)
 
-    def add_tool(self, name, description, tool_template, use_work=True, x=0, y=0, set_selected=False, verbosity=True):
+    def add_tool(
+        self,
+        name,
+        description,
+        tool_template=None,
+        tool="",
+        execute_in_work=True,
+        x=0,
+        y=0,
+        set_selected=False,
+        verbosity=True,
+    ):
         """Adds a Tool to project item model.
 
         Args:
             name (str): Name
             description (str): Description of item
             tool_template (ToolTemplate): Tool template of this tool
-            use_work (bool): Execute in work directory
+            tool (str): Tool template name.
+            execute_in_work (bool): Execute in work directory
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
+        # Find tool template from model
+        if tool != "":
+            tool_template = self._toolbox.tool_template_model.find_tool_template(tool)
+            if not tool_template:
+                # Clarifications for user
+                self._toolbox.msg_error.emit(
+                    "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
+                    "it was not found. Add it to Tool templates and reopen "
+                    "project.".format(name, tool)
+                )
         category = "Tools"
-        tool = Tool(self._toolbox, name, description, tool_template, use_work, x, y)
+        tool = Tool(self._toolbox, name, description, tool_template, execute_in_work, x, y)
         tool_category = self._toolbox.project_item_model.find_category(category)
         self._toolbox.project_item_model.insert_item(tool, tool_category)
         # Append connection model
