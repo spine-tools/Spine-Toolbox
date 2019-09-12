@@ -102,7 +102,8 @@ class AddDataConnectionWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        self._project.add_data_connection(self.name, self.description, list(), self._x, self._y, set_selected=True)
+        item = dict(name=self.name, description=self.description, references=list(), x=self._x, y=self._y)
+        self._project.add_project_items("Data Connections", item, set_selected=True)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

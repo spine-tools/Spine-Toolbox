@@ -23,12 +23,6 @@ from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
 from helpers import project_dir, create_dir, copy_dir, get_db_map, busy_effect
-from data_store import DataStore
-from data_connection import DataConnection
-from tool import Tool
-from view import View
-from data_interface import DataInterface
-from widgets.tree_view_widget import TreeViewForm
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 from executioner import DirectedGraphHandler, ExecutionInstance
@@ -209,21 +203,16 @@ class SpineToolboxProject(MetaObject):
         Returns:
             Boolean value depending on operation success.
         """
-        category_to_method = {
-            "Data Stores": self.add_data_store,
-            "Data Connections": self.add_data_connection,
-            "Data Interfaces": self.add_data_interface,
-            "Tools": self.add_tool,
-            "Views": self.add_view,
-        }
         self._toolbox.msg.emit("Loading project items...")
         empty = True
-        for category, category_dict in objects_dict.items():
-            method = category_to_method[category]
+        for category_name, category_dict in objects_dict.items():
+            items = []
             for name, item_dict in category_dict.items():
                 item_dict.pop("short name", None)
-                method(name, **item_dict)
+                item_dict["name"] = name
+                items.append(item_dict)
                 empty = False
+            self.add_project_items(category_name, *items, verbosity=False)
         if empty:
             self._toolbox.msg_warning.emit("Project has no items")
         return True
@@ -281,155 +270,32 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
         return None
 
-    def add_data_store(self, name, description, url, x=0, y=0, set_selected=False, verbosity=True):
-        """Adds a Data Store to project item model.
+    def add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
+        """Adds item to project.
 
         Args:
-            name (str): Name
-            description (str): Description of item
-            url (dict): Url information
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
+            category_name (str): The items' category
+            items (dict): one or more dict of items to add
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        category = "Data Stores"
-        data_store = DataStore(self._toolbox, name, description, url, x, y)
-        ds_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(data_store, ds_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("Data Store <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(data_store)
-
-    def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False, verbosity=True):
-        """Adds a Data Connection to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            references (list(str)): List of file paths
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        category = "Data Connections"
-        data_connection = DataConnection(self._toolbox, name, description, references, x, y)
-        dc_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(data_connection, dc_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("Data Connection <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(data_connection)
-
-    def add_tool(
-        self,
-        name,
-        description,
-        tool_template=None,
-        tool="",
-        execute_in_work=True,
-        x=0,
-        y=0,
-        set_selected=False,
-        verbosity=True,
-    ):
-        """Adds a Tool to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            tool_template (ToolTemplate): Tool template of this tool
-            tool (str): Tool template name.
-            execute_in_work (bool): Execute in work directory
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        # Find tool template from model
-        if tool != "":
-            tool_template = self._toolbox.tool_template_model.find_tool_template(tool)
-            if not tool_template:
-                # Clarifications for user
-                self._toolbox.msg_error.emit(
-                    "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                    "it was not found. Add it to Tool templates and reopen "
-                    "project.".format(name, tool)
-                )
-        category = "Tools"
-        tool = Tool(self._toolbox, name, description, tool_template, execute_in_work, x, y)
-        tool_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(tool, tool_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("Tool <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(tool)
-
-    def add_view(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
-        """Adds a View to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        category = "Views"
-        view = View(self._toolbox, name, description, x, y)
-        view_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(view, view_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("View <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(view)
-
-    def add_data_interface(
-        self, name, description, import_file_path="", mappings=None, x=0, y=0, set_selected=False, verbosity=True
-    ):
-        """Adds a Data Interface to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        if mappings is None:
-            mappings = {}
-        category = "Data Interfaces"
-        data_interface = DataInterface(self._toolbox, name, description, import_file_path, mappings, x, y)
-        di_category = self._toolbox.project_item_model.find_category(category)
-        self._toolbox.project_item_model.insert_item(data_interface, di_category)
-        # Append connection model
-        self.append_connection_model(name, category)
-        # Append new node to networkx graph
-        self.add_to_dag(name)
-        if verbosity:
-            self._toolbox.msg.emit("Data Interface <b>{0}</b> added to project.".format(name))
-        if set_selected:
-            self.set_item_selected(data_interface)
+        category_ind = self._toolbox.project_item_model.find_category(category_name)
+        if not category_ind:
+            self._toolbox.msg_error.emit("Category {0} not found".format(category_name))
+            return
+        category_item = self._toolbox.project_item_model.project_item(category_ind)
+        item_maker = category_item.item_maker()
+        for item_dict in items:
+            item = item_maker(self._toolbox, **item_dict)
+            self._toolbox.project_item_model.insert_item(item, category_ind)
+            # Append connection model
+            self.append_connection_model(item.name, category_name)
+            # Append new node to networkx graph
+            self.add_to_dag(item.name)
+            if verbosity:
+                self._toolbox.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type, item.name))
+            if set_selected:
+                self.set_item_selected(item)
 
     def append_connection_model(self, item_name, category):
         """Adds new item to connection model to keep project and connection model synchronized."""

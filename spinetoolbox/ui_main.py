@@ -72,7 +72,7 @@ from config import (
 )
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
-from project_item import BaseProjectItem
+from project_item import RootProjectItem, CategoryProjectItem
 
 
 class ToolboxUI(QMainWindow):
@@ -105,6 +105,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
+        self.item_categories = dict()
         self._project = None
         self.project_item_model = None
         self.tool_template_model = None
@@ -160,6 +161,26 @@ class ToolboxUI(QMainWindow):
         self.init_shared_widgets()  # Shared among multiple project items
         self.restore_ui()
         self.ui.lineEdit_port.setValidator(QIntValidator())
+        self.load_project_item_plugins()
+
+    def load_project_item_plugins(self):
+        """Loads plugins for project items.
+        For now, it just imports project item constructors and puts them in a dictionary indexed by category."""
+        # NOTE: Once we really adopt the plugin approach we can soft-code all this...
+
+        from data_store import DataStore
+        from data_connection import DataConnection
+        from tool import Tool
+        from view import View
+        from data_interface import DataInterface
+
+        self.item_categories = {
+            "Data Stores": DataStore,
+            "Data Connections": DataConnection,
+            "Tools": Tool,
+            "Views": View,
+            "Data Interfaces": DataInterface,
+        }
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -413,18 +434,11 @@ class ToolboxUI(QMainWindow):
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
         add them to the model."""
-        root_item = BaseProjectItem("root", "", is_root=True, is_category=False)
-        ds_category = BaseProjectItem("Data Stores", "", is_root=False, is_category=True)
-        dc_category = BaseProjectItem("Data Connections", "", is_root=False, is_category=True)
-        tool_category = BaseProjectItem("Tools", "", is_root=False, is_category=True)
-        view_category = BaseProjectItem("Views", "", is_root=False, is_category=True)
-        di_category = BaseProjectItem("Data Interfaces", "", is_root=False, is_category=True)
+        root_item = RootProjectItem()
         self.project_item_model = ProjectItemModel(self, root=root_item)
-        self.project_item_model.insert_item(ds_category)
-        self.project_item_model.insert_item(dc_category)
-        self.project_item_model.insert_item(tool_category)
-        self.project_item_model.insert_item(view_category)
-        self.project_item_model.insert_item(di_category)
+        for category_name, item_maker in self.item_categories.items():
+            category_item = CategoryProjectItem(category_name, "", item_maker)
+            self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
         self.ui.graphicsView.set_project_item_model(self.project_item_model)

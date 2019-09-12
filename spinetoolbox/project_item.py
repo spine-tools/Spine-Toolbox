@@ -23,23 +23,18 @@ from PySide2.QtCore import Signal, Slot
 
 
 class BaseProjectItem(MetaObject):
-    """Base class for all project items. Create root and category items by
-    instantiating objects from this class.
+    """Base class for all project items.
 
     Attributes:
         name (str): Object name
         description (str): Object description
-        is_root (bool): True if new item should be a root item
-        is_category (bool): True if new item should be a category item
     """
 
-    def __init__(self, name, description, is_root=False, is_category=False):
+    def __init__(self, name, description):
         """Class constructor."""
         super().__init__(name, description)
         self._parent = None  # Parent BaseProjectItem. Set when add_child is called
         self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
-        self.is_root = is_root
-        self.is_category = is_category
 
     def parent(self):
         """Returns parent project item."""
@@ -88,20 +83,7 @@ class BaseProjectItem(MetaObject):
         Returns:
             True if operation succeeded, False otherwise
         """
-        if self.is_root:
-            if child_item.is_category:
-                self._children.append(child_item)
-                child_item._parent = self
-            else:
-                logging.error("You can only add category items as a child of root")
-                return False
-        elif self.is_category:
-            self._children.append(child_item)
-            child_item._parent = self
-        else:
-            logging.error("Trying to add '%s' as the child of '%s'", child_item.name, self.name)
-            return False
-        return True
+        return False
 
     def remove_child(self, row):
         """Remove the child of this BaseProjectItem from given row. Do not call this method directly.
@@ -120,21 +102,67 @@ class BaseProjectItem(MetaObject):
         return True
 
 
+class RootProjectItem(BaseProjectItem):
+    """Class for the root project items.
+    """
+
+    def __init__(self):
+        """Class constructor."""
+        super().__init__("root", "The Root Project Item.")
+
+    def add_child(self, child_item):
+        """Append child project item as the last item in the children list if it's a category item."""
+        if isinstance(child_item, CategoryProjectItem):
+            self._children.append(child_item)
+            child_item._parent = self
+            return True
+        logging.error("You can only add category items as a child of root")
+        return False
+
+
+class CategoryProjectItem(BaseProjectItem):
+    """Class for category project items.
+
+    Attributes:
+        name (str): Category name
+        description (str): Category description
+        item_maker (function): A method for creating items of this category
+    """
+
+    def __init__(self, name, description, item_maker):
+        """Class constructor."""
+        super().__init__(name, description)
+        self._item_maker = item_maker
+
+    def item_maker(self):
+        """Returns the item maker method."""
+        return self._item_maker
+
+    def add_child(self, child_item):
+        """Append child project item as the last item in the children list if it's a project item."""
+        if isinstance(child_item, ProjectItem):
+            self._children.append(child_item)
+            child_item._parent = self
+            return True
+        logging.error("You can only add project items as a child of categories")
+        return False
+
+
 class ProjectItem(BaseProjectItem):
     """Class for project items that are not category nor root.
     These items can be executed, refreshed, and so on.
 
     Attributes:
         toolbox (ToolboxUI): QMainWindow instance
-        name (str): Object name
-        description (str): Object description
+        name (str): Item name
+        description (str): Item description
     """
 
     item_changed = Signal(name="item_changed")
 
     def __init__(self, toolbox, name, description):
         """Class constructor."""
-        super().__init__(name, description, is_root=False, is_category=False)
+        super().__init__(name, description)
         self._toolbox = toolbox
         self._graphics_item = None
 
