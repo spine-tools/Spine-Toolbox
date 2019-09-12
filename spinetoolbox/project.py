@@ -277,7 +277,9 @@ class SpineToolboxProject(MetaObject):
             description = item_data.get("description", '')
             x = item_data.get("x", 0.0)
             y = item_data.get("y", 0.0)
-            self.add_gdx_export(name, description, x, y, verbosity=False)
+            database_urls = item_data.get("database_urls", None)
+            database_to_file_name_map = item_data.get("database_to_file_name_map", None)
+            self.add_gdx_export(name, description, database_urls, database_to_file_name_map, x, y, verbosity=False)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -434,18 +436,20 @@ class SpineToolboxProject(MetaObject):
         data_interface = DataInterface(self._toolbox, name, description, import_file_path, mappings, x, y)
         self._add_project_item(data_interface, "Data Interfaces", "Data Interface", set_selected, verbosity)
 
-    def add_gdx_export(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
+    def add_gdx_export(self, name, description, database_urls=None, database_to_file_name_map=None, x=0.0, y=0.0, set_selected=False, verbosity=True):
         """Adds a Gdx Export item to project item model.
 
         Args:
             name (str): Name
             description (str): Description of item
+            database_urls (list): A list of database urls
+            database_to_file_name_map (dict): Mapping between database paths and output file names
             x (int): X coordinate of item on scene
             y (int): Y coordinate of item on scene
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        gdx_export = GdxExport(self._toolbox, name, description, x=x, y=y)
+        gdx_export = GdxExport(self._toolbox, name, description, database_urls, database_to_file_name_map, x, y)
         self._add_project_item(gdx_export, "Exporting", "Export item", set_selected, verbosity)
 
     def append_connection_model(self, item_name, category):

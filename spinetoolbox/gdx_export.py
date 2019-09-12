@@ -37,6 +37,8 @@ class GdxExport(ProjectItem):
         toolbox (ToolboxUI): a ToolboxUI instance
         name (str): item name
         description (str): item description
+        database_urls (list): a list of connected database urls
+        database_to_file_name_map (dict): mapping from database path (str) to an output file name (str)
         x (int): initial X coordinate of item icon
         y (int): initial Y coordinate of item icon
     """
@@ -99,7 +101,8 @@ class GdxExport(ProjectItem):
             widget_to_remove.widget().deleteLater()
         for row, url in enumerate(self._database_urls):
             url = url["database"]
-            item = ExportListItem(url)
+            file_name = self._database_to_file_name_map.get(url, '')
+            item = ExportListItem(url, file_name)
             database_list_storage.insertWidget(0, item)
             item.settings_button.clicked.connect(lambda checked: self.__show_settings(url))
             item.out_file_name_edit.textChanged.connect(lambda text: self.__update_out_file_name(text, url))
@@ -155,3 +158,10 @@ class GdxExport(ProjectItem):
 
     def __update_out_file_name(self, file_name, url):
         self._database_to_file_name_map[url] = file_name
+
+    def item_dict(self):
+        """Returns a dictionary corresponding to this item."""
+        d = super().item_dict()
+        d["database_urls"] = self._database_urls
+        d["database_to_file_name_map"] = self._database_to_file_name_map
+        return d

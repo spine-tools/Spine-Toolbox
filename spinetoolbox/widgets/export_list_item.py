@@ -21,11 +21,12 @@ from ui.export_list_item import Ui_Form
 
 
 class ExportListItem(QWidget):
-    def __init__(self, url, parent=None):
+    def __init__(self, url, file_name, parent=None):
         super().__init__(parent)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.url_field.setText(url)
+        self._ui.out_file_name_edit.setText(file_name)
 
     @property
     def settings_button(self):
