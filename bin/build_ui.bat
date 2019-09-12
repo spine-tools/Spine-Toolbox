@@ -55,8 +55,8 @@ IF "%~x1"==".ui" (
     pyside2-uic -o !py_file!.o !ui_file:\=/!
     findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
     DEL !py_file!.o > NUL
-    CALL append_license_xml.bat !ui_file!
-    CALL append_license_py.bat !py_file!
+    CALL append_license_xml.bat !ui_file! %1
+    CALL append_license_py.bat !py_file! %1
 )
 
 IF "%~x1"==".qrc" (

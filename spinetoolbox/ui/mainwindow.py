@@ -1545,8 +1545,8 @@ class Ui_MainWindow(object):
         self.actionAdd_Gdx_Export.setText(QtWidgets.QApplication.translate("MainWindow", "Add Gdx Export", None, -1))
         self.actionAdd_Gdx_Export.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Add Gdx Export", None, -1))
 
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
 from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

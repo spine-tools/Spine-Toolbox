@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/gdx_export_settings.ui',
-# licensing of '../spinetoolbox/ui/gdx_export_settings.ui' applies.
+# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/gdx_export_settings.ui',
+# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/gdx_export_settings.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

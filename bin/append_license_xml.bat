@@ -2,6 +2,7 @@ REM This script is part of build_ui.bat script. See build_ui.bat for license.
 
 @echo off
 
+if "%2"=="/f" goto appendlicense
 if "%1"=="" (goto noargs) else (goto checkforlicense)
 
 :checkforlicense
