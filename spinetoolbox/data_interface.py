@@ -12,7 +12,7 @@
 """
 Contains DataInterface class.
 
-:authors: P. Savolainen (VTT)
+:authors: P. Savolainen (VTT), P. Vennström (VTT), A. Soininen (VTT)
 :date:   10.6.2019
 """
 
@@ -20,7 +20,7 @@ import logging
 import os
 from PySide2.QtCore import Qt, Slot, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-from PySide2.QtWidgets import QFileIconProvider, QMainWindow, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
+from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
