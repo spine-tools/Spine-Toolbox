@@ -24,29 +24,31 @@ from config import PLUGINS_PATH
 
 
 def get_plugins(subpath):
-    """Sniffs plugins directory, adds all found plugins to a dict and returns it."""
+    """Returns a list of plugin (module) names found in given subpath,
+    relative to plugins main directory.
+    Adds the directory to sys.path if any plugins were found.
+
+    Args:
+        subpath (src): look for plugins in this subdirectory of the plugins main dir
+    """
     searchpath = os.path.join(PLUGINS_PATH, subpath)
-    plugins = dict()
+    if not os.path.isdir(searchpath):
+        return []
+    plugins = list()
     for plugin_name in os.listdir(searchpath):
-        file_location = os.path.join(searchpath, plugin_name, "__init__.py")
-        if not os.path.isfile(file_location):
-            continue
-        plugin_spec = importlib.util.spec_from_file_location(plugin_name, file_location)
-        plugins[plugin_name] = plugin_spec
+        main_file_location = os.path.join(searchpath, plugin_name, "__init__.py")
+        if os.path.isfile(main_file_location):
+            plugins.append(plugin_name)
+    if plugins and searchpath not in sys.path:
+        sys.path.append(searchpath)
     return plugins
 
 
-def load_plugin(plugin_spec):
+def load_plugin(plugin_name):
     """Loads (imports) a plugin by using the given plugin spec.
 
     Args:
-        plugin_spec (ModuleSpec): Spec of the plugin (module) to load
+        plugin_name (str): Name of the plugin (module) to load
     """
-    plugin = importlib.util.module_from_spec(plugin_spec)
-    try:
-        plugin_spec.loader.exec_module(plugin)
-    except ModuleNotFoundError:
-        # Add submodule search locations directly to sys path...
-        sys.path.extend(plugin_spec.submodule_search_locations)
-        plugin_spec.loader.exec_module(plugin)
+    plugin = importlib.import_module(plugin_name)
     return plugin

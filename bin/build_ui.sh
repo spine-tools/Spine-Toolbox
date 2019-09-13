@@ -52,6 +52,20 @@ for diff_file in $(find $ui_path -name '*.ui' -or -name '*.qrc'); do
     fi
 done
 
+# Build plugins ui
+echo --- Building Spine Toolbox Plugins GUI ---
+
+plugins_path="../plugins"
+
+for ui_file in $(find $plugins_path -name '*.ui'); do
+    py_file="${ui_file%.ui}.py"
+    echo building $(basename "$py_file")
+    pyside2-uic $ui_file -o $py_file
+    sed -i '/# Created:/d;/#      by:/d' $py_file
+    bash "append_license_xml.sh" $ui_file
+    bash "append_license_py.sh" $py_file
+done
+
 echo --- Build completed ---
 
 cd $lwd

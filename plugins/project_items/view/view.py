@@ -26,8 +26,8 @@ from project_item import ProjectItem
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from widgets.tree_view_widget import TreeViewForm
-from graphics_items import ViewIcon
 from helpers import create_dir
+from .view_icon import ViewIcon
 
 
 class View(ProjectItem):
@@ -43,7 +43,7 @@ class View(ProjectItem):
     """
 
     def __init__(self, toolbox, name, description, x, y):
-        super().__init__(toolbox, name, description)
+        super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()
         self.item_type = "View"
         self._graph_views = {}
@@ -51,7 +51,7 @@ class View(ProjectItem):
         self._tree_views = {}
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
-        self.spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
+        self._spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
         # Make project directory for this View
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -60,17 +60,15 @@ class View(ProjectItem):
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
-        self._graphics_item = ViewIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.toolButton_view_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_view_open_graph_view.clicked] = self.open_graph_view_btn_clicked
-        s[self._toolbox.ui.pushButton_view_open_tabular_view.clicked] = self.open_tabular_view_btn_clicked
-        s[self._toolbox.ui.pushButton_view_open_tree_view.clicked] = self.open_tree_view_btn_clicked
+        s[self._properties_ui.toolButton_view_open_dir.clicked] = self.open_directory
+        s[self._properties_ui.pushButton_view_open_graph_view.clicked] = self.open_graph_view_btn_clicked
+        s[self._properties_ui.pushButton_view_open_tabular_view.clicked] = self.open_tabular_view_btn_clicked
+        s[self._properties_ui.pushButton_view_open_tree_view.clicked] = self.open_tree_view_btn_clicked
         return s
 
     def activate(self):
@@ -88,12 +86,12 @@ class View(ProjectItem):
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
-        self._toolbox.ui.label_view_name.setText(self.name)
-        self._toolbox.ui.treeView_view.setModel(self.reference_model)
+        self._properties_ui.label_view_name.setText(self.name)
+        self._properties_ui.treeView_view.setModel(self.reference_model)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-        self._toolbox.ui.treeView_view.setModel(None)
+        self._properties_ui.treeView_view.setModel(None)
 
     def references(self):
         """Returns a list of url strings that are in this item as references."""
@@ -174,12 +172,12 @@ class View(ProjectItem):
             for item in items:
                 qitem = QStandardItem(item.database)
                 qitem.setFlags(~Qt.ItemIsEditable)
-                qitem.setData(self.spine_ref_icon, Qt.DecorationRole)
+                qitem.setData(self._spine_ref_icon, Qt.DecorationRole)
                 self.reference_model.appendRow(qitem)
 
     def update_name_label(self):
         """Update View tab name label. Used only when renaming project items."""
-        self._toolbox.ui.label_view_name.setText(self.name)
+        self._properties_ui.label_view_name.setText(self.name)
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
@@ -224,10 +222,10 @@ class View(ProjectItem):
 
     def _selected_indexes(self):
         """Returns selected indexes."""
-        selection_model = self._toolbox.ui.treeView_view.selectionModel()
+        selection_model = self._properties_ui.treeView_view.selectionModel()
         if not selection_model.hasSelection():
-            self._toolbox.ui.treeView_view.selectAll()
-        return self._toolbox.ui.treeView_view.selectionModel().selectedRows()
+            self._properties_ui.treeView_view.selectAll()
+        return self._properties_ui.treeView_view.selectionModel().selectedRows()
 
     def _database_maps(self, indexes):
         """Returns database maps and database paths for given indexes."""

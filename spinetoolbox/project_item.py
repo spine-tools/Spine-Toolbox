@@ -126,13 +126,17 @@ class CategoryProjectItem(BaseProjectItem):
     Attributes:
         name (str): Category name
         description (str): Category description
-        item_maker (function): A method for creating items of this category
+        item_maker (ProjectItem): A method for creating items of this category
+        icon_maker (ProjectItemIcon): A method for creating icons (QGraphicsItems) for items of this category
+        properties_ui: The Item Properties UI
     """
 
-    def __init__(self, name, description, item_maker):
+    def __init__(self, name, description, item_maker, icon_maker, properties_ui):
         """Class constructor."""
         super().__init__(name, description)
         self._item_maker = item_maker
+        self._icon_maker = icon_maker
+        self._properties_ui = properties_ui
 
     def item_maker(self):
         """Returns the item maker method."""
@@ -143,6 +147,9 @@ class CategoryProjectItem(BaseProjectItem):
         if isinstance(child_item, ProjectItem):
             self._children.append(child_item)
             child_item._parent = self
+            icon = self._icon_maker(child_item._toolbox, child_item.x - 35, child_item.y - 35, 70, 70, child_item.name)
+            child_item.set_icon(icon)
+            child_item.set_properties_ui(self._properties_ui)
             return True
         logging.error("You can only add project items as a child of categories")
         return False
@@ -156,15 +163,25 @@ class ProjectItem(BaseProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Item name
         description (str): Item description
+        x (int): horizontal position in the screen
+        y (int): vertical position in the screen
     """
 
     item_changed = Signal(name="item_changed")
 
-    def __init__(self, toolbox, name, description):
+    def __init__(self, toolbox, name, description, x, y):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
-        self._graphics_item = None
+        self.x = x
+        self.y = y
+        self._properties_ui = None
+        self._icon = None
+
+    def make_signal_handler_dict(self):
+        """Returns a dictionary of all shared signals and their handlers.
+        This is to enable simpler connecting and disconnecting."""
+        return dict()
 
     def connect_signals(self):
         """Connect signals to handlers."""
@@ -188,9 +205,16 @@ class ProjectItem(BaseProjectItem):
                 return False
         return True
 
+    def set_properties_ui(self, properties_ui):
+        self._properties_ui = properties_ui
+        self._sigs = self.make_signal_handler_dict()
+
+    def set_icon(self, icon):
+        self._icon = icon
+
     def get_icon(self):
         """Returns the graphics item representing this item in the scene."""
-        return self._graphics_item
+        return self._icon
 
     def clear_notifications(self):
         """Clear all notifications from the exclamation icon."""

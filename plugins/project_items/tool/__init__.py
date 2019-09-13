@@ -17,7 +17,12 @@ Data store plugin.
 """
 
 
-from tool import Tool
+from .ui.tool_properties import Ui_Form
+from .tool import Tool
+from .tool_icon import ToolIcon
 
-category_name = "Tools"
+item_category = "Tools"
+item_type = "Tool"
 item_maker = Tool
+icon_maker = ToolIcon
+properties_ui = Ui_Form()

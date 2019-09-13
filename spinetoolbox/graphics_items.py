@@ -18,7 +18,7 @@ Classes for drawing graphics items on QGraphicsScene.
 
 from math import atan2, degrees, sin, cos, pi
 import os
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimer
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -26,7 +26,6 @@ from PySide2.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsSimpleTextItem,
     QGraphicsRectItem,
-    QGraphicsItemAnimation,
     QGraphicsPixmapItem,
     QGraphicsLineItem,
     QStyle,
@@ -34,18 +33,7 @@ from PySide2.QtWidgets import (
     QGraphicsDropShadowEffect,
     QApplication,
 )
-from PySide2.QtGui import (
-    QColor,
-    QPen,
-    QBrush,
-    QPainterPath,
-    QFont,
-    QTextCursor,
-    QTransform,
-    QPalette,
-    QTextBlockFormat,
-    QTextCursor,
-)
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QPalette, QTextBlockFormat
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
 from helpers import format_string_list
 
@@ -463,215 +451,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         """Update GUI to show the details of the selected item."""
         ind = self._toolbox.project_item_model.find_item(self.name())
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
-
-
-class DataConnectionIcon(ProjectItemIcon):
-    """Data Connection icon for the Design View.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # QPen for the background rectangle
-        self.brush = QBrush(QColor("#e6e6ff"))  # QBrush for the background rectangle
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/file-alt.svg", QColor(0, 0, 255, 160))
-        self.setAcceptDrops(True)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
-        self.drag_over = False
-
-    def dragEnterEvent(self, event):
-        """Drag and drop action enters.
-        Accept file drops from the filesystem.
-
-        Args:
-            event (QGraphicsSceneDragDropEvent): Event
-        """
-        urls = event.mimeData().urls()
-        for url in urls:
-            if not url.isLocalFile():
-                event.ignore()
-                return
-            if not os.path.isfile(url.toLocalFile()):
-                event.ignore()
-                return
-        event.accept()
-        event.setDropAction(Qt.CopyAction)
-        if self.drag_over:
-            return
-        self.drag_over = True
-        QTimer.singleShot(100, self.select_on_drag_over)
-
-    def dragLeaveEvent(self, event):
-        """Drag and drop action leaves.
-
-        Args:
-            event (QGraphicsSceneDragDropEvent): Event
-        """
-        event.accept()
-        self.drag_over = False
-
-    def dragMoveEvent(self, event):
-        """Accept event."""
-        event.accept()
-
-    def dropEvent(self, event):
-        """Emit files_dropped_on_dc signal from scene,
-        with this instance, and a list of files for each dropped url."""
-        self.scene().files_dropped_on_dc.emit(self, [url.toLocalFile() for url in event.mimeData().urls()])
-
-    def select_on_drag_over(self):
-        """Called when the timer started in drag_enter_event is elapsed.
-        Select this item if the drag action is still over it.
-        """
-        if not self.drag_over:
-            return
-        self.drag_over = False
-        self._toolbox.ui.graphicsView.scene().clearSelection()
-        self.setSelected(True)
-        self.show_item_info()
-
-
-class ToolIcon(ProjectItemIcon):
-    """Tool image with a rectangular background, an SVG icon, a name label, and a connector button.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Background rectangle pen
-        self.brush = QBrush(QColor("#ffe6e6"))  # Background rectangle brush
-        # Draw icon
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/hammer.svg", QColor("red"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)  # Adds also child items automatically
-        # animation stuff
-        self.timer = QTimeLine()
-        self.timer.setLoopCount(0)  # loop forever
-        self.timer.setFrameRange(0, 10)
-        # self.timer.setCurveShape(QTimeLine.CosineCurve)
-        self.timer.valueForTime = self.value_for_time
-        self.tool_animation = QGraphicsItemAnimation()
-        self.tool_animation.setItem(self.svg_item)
-        self.tool_animation.setTimeLine(self.timer)
-        # self.timer.frameChanged.connect(self.test)
-        self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
-
-    def value_for_time(self, msecs):
-        rem = (msecs % 1000) / 1000
-        return 1.0 - rem
-
-    def start_animation(self):
-        """Start the animation that plays when the Tool associated to this GraphicsItem is running.
-        """
-        self.svg_item.moveBy(0, -self.delta)
-        offset = 0.75 * self.svg_item.sceneBoundingRect().height()
-        for angle in range(1, 45):
-            step = angle / 45.0
-            self.tool_animation.setTranslationAt(step, 0, offset)
-            self.tool_animation.setRotationAt(step, angle)
-            self.tool_animation.setTranslationAt(step, 0, -offset)
-            self.tool_animation.setPosAt(step, QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
-        self.timer.start()
-
-    def stop_animation(self):
-        """Stop animation"""
-        self.timer.stop()
-        self.svg_item.moveBy(0, self.delta)
-        self.timer.setCurrentTime(999)
-
-
-class DataStoreIcon(ProjectItemIcon):
-    """Data Store item that is drawn into QGraphicsScene. NOTE: Make sure
-    to set self._master as the parent of all drawn items. This groups the
-    individual QGraphicsItems together.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor("#f9e6ff"))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/database.svg", QColor("#cc33ff"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
-
-
-class ViewIcon(ProjectItemIcon):
-    """View icon for the Design View
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of background rectangle
-        h (int): Height of background rectangle
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor("#ebfaeb"))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/binoculars.svg", QColor("#33cc33"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
-
-
-class DataInterfaceIcon(ProjectItemIcon):
-    """Data Interface item that is drawn into QGraphicsScene. NOTE: Make sure
-    to set self._master as the parent of all drawn items. This groups the
-    individual QGraphicsItems together.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor("#ffcccc"))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/map-solid.svg", QColor("#990000"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
 
 
 class Link(QGraphicsPathItem):

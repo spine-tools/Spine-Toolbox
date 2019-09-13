@@ -26,7 +26,6 @@ from PySide2.QtWidgets import QFileIconProvider
 from project_item import ProjectItem
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
-from graphics_items import ToolIcon
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from helpers import create_dir
 
@@ -46,7 +45,7 @@ class Tool(ProjectItem):
 
     def __init__(self, toolbox, name, description, tool, execute_in_work, x, y):
         """Class constructor."""
-        super().__init__(toolbox, name, description)
+        super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()
         self.item_type = "Tool"
         self.source_file_model = QStandardItemModel()
@@ -87,17 +86,15 @@ class Tool(ProjectItem):
             )
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
-        self._graphics_item = ToolIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.toolButton_tool_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_tool_results.clicked] = self.open_results
-        s[self._toolbox.ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
-        s[self._toolbox.ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
+        s[self._properties_ui.toolButton_tool_open_dir.clicked] = self.open_directory
+        s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
+        s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
+        s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
         return s
 
     def activate(self):
@@ -115,15 +112,15 @@ class Tool(ProjectItem):
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
-        self._toolbox.ui.label_tool_name.setText(self.name)
-        self._toolbox.ui.treeView_template.setModel(self.template_model)
+        self._properties_ui.label_tool_name.setText(self.name)
+        self._properties_ui.treeView_template.setModel(self.template_model)
         if self._tool_template_name == "":
-            self._toolbox.ui.comboBox_tool.setCurrentIndex(-1)
+            self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self.set_tool_template(None)
         else:
             tool_template = self._toolbox.tool_template_model.find_tool_template(self._tool_template_name)
             row = self._toolbox.tool_template_model.tool_template_row(self._tool_template_name)
-            self._toolbox.ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
+            self._properties_ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
             self.restore_tool_template(tool_template)
 
     def save_selections(self):
@@ -132,7 +129,7 @@ class Tool(ProjectItem):
             self._tool_template_name = ""
         else:
             self._tool_template_name = self.tool_template().name
-        self.execute_in_work = self._toolbox.ui.radioButton_execute_in_work.isChecked()
+        self.execute_in_work = self._properties_ui.radioButton_execute_in_work.isChecked()
 
     @Slot(bool, name="update_execution_mode")
     def update_execution_mode(self, checked):
@@ -147,12 +144,11 @@ class Tool(ProjectItem):
             row (int): Selected row in the comboBox
         """
         if row == -1:
-            self._toolbox.ui.comboBox_tool.setCurrentIndex(-1)
+            self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self.set_tool_template(None)
         else:
             new_tool = self._toolbox.tool_template_model.tool_template(row)
             self.set_tool_template(new_tool)
-        self.item_changed.emit()
 
     def set_tool_template(self, tool_template):
         """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
@@ -161,21 +157,22 @@ class Tool(ProjectItem):
             tool_template (ToolTemplate): Template for this Tool. None removes the template.
         """
         self._tool_template = tool_template
-        self.update_tool_ui()
+        # self.update_tool_ui()
+        self.item_changed.emit()
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details. Used when Tool template is changed.
         Overrides execution mode (work or source) with the template default."""
         if not self.tool_template():
-            self._toolbox.ui.lineEdit_tool_args.setText("")
+            self._properties_ui.lineEdit_tool_args.setText("")
             self.populate_source_file_model(None)
             self.populate_input_file_model(None)
             self.populate_opt_input_file_model(None)
             self.populate_output_file_model(None)
             self.populate_template_model(populate=False)
-            self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+            self._properties_ui.radioButton_execute_in_work.setChecked(True)
         else:
-            self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+            self._properties_ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.populate_source_file_model(self.tool_template().includes)
             self.populate_input_file_model(self.tool_template().inputfiles)
             self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
@@ -183,12 +180,12 @@ class Tool(ProjectItem):
             self.populate_template_model(populate=True)
             self.execute_in_work = self.tool_template().execute_in_work
             if self.execute_in_work:
-                self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+                self._properties_ui.radioButton_execute_in_work.setChecked(True)
             else:
-                self._toolbox.ui.radioButton_execute_in_source.setChecked(True)
+                self._properties_ui.radioButton_execute_in_source.setChecked(True)
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
-        self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
-        self._toolbox.ui.treeView_template.expandAll()
+        self._properties_ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
+        self._properties_ui.treeView_template.expandAll()
 
     def restore_tool_template(self, tool_template):
         """Restores the Tool Template of this Tool. Removes Tool Template if None given as argument.
@@ -199,27 +196,27 @@ class Tool(ProjectItem):
         """
         self._tool_template = tool_template
         if not tool_template:
-            self._toolbox.ui.lineEdit_tool_args.setText("")
+            self._properties_ui.lineEdit_tool_args.setText("")
             self.populate_source_file_model(None)
             self.populate_input_file_model(None)
             self.populate_opt_input_file_model(None)
             self.populate_output_file_model(None)
             self.populate_template_model(populate=False)
-            self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+            self._properties_ui.radioButton_execute_in_work.setChecked(True)
         else:
-            self._toolbox.ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+            self._properties_ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.populate_source_file_model(self.tool_template().includes)
             self.populate_input_file_model(self.tool_template().inputfiles)
             self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
             self.populate_output_file_model(self.tool_template().outputfiles)
             self.populate_template_model(populate=True)
             if self.execute_in_work:
-                self._toolbox.ui.radioButton_execute_in_work.setChecked(True)
+                self._properties_ui.radioButton_execute_in_work.setChecked(True)
             else:
-                self._toolbox.ui.radioButton_execute_in_source.setChecked(True)
+                self._properties_ui.radioButton_execute_in_source.setChecked(True)
         self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
-        self._toolbox.ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
-        self._toolbox.ui.treeView_template.expandAll()
+        self._properties_ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
+        self._properties_ui.treeView_template.expandAll()
 
     @Slot(bool, name="open_results")
     def open_results(self, checked=False):
@@ -644,7 +641,7 @@ class Tool(ProjectItem):
 
     def update_name_label(self):
         """Update Tool tab name label. Used only when renaming project items."""
-        self._toolbox.ui.label_tool_name.setText(self.name)
+        self._properties_ui.label_tool_name.setText(self.name)
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):

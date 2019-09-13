@@ -17,7 +17,12 @@ Data store plugin.
 """
 
 
-from data_interface import DataInterface
+from .ui.data_interface_properties import Ui_Form
+from .data_interface import DataInterface
+from .data_interface_icon import DataInterfaceIcon
 
-category_name = "Data Interfaces"
+item_category = "Data Interfaces"
+item_type = "Data Interface"
 item_maker = DataInterface
+icon_maker = DataInterfaceIcon
+properties_ui = Ui_Form()

@@ -22,7 +22,6 @@ from PySide2.QtCore import Qt, Slot, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QMainWindow, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from project_item import ProjectItem
-from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
 from spine_io.importers.csv_reader import CSVConnector
 from spine_io.importers.excel_reader import ExcelConnector
@@ -43,7 +42,7 @@ class DataInterface(ProjectItem):
 
     def __init__(self, toolbox, name, description, mappings, x, y):
         """Class constructor."""
-        super().__init__(toolbox, name, description)
+        super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()
         self.item_type = "Data Interface"
         # Make data directory and logs subdirectory for this item
@@ -61,8 +60,6 @@ class DataInterface(ProjectItem):
         self.file_model = QStandardItemModel()
         self.all_files = []  # All source files
         self.unchecked_files = []  # Unchecked source files
-        self._graphics_item = DataInterfaceIcon(self._toolbox, x - 35, y - 35, w=70, h=70, name=self.name)
-        self._sigs = self.make_signal_handler_dict()
         # connector class
         self._preview_widget = {}  # Key is the filepath, value is the ImportPreviewWindow instance
 
@@ -83,9 +80,9 @@ class DataInterface(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.toolButton_di_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_import_editor.clicked] = self._handle_import_editor_clicked
-        s[self._toolbox.ui.treeView_data_interface_files.doubleClicked] = self._handle_files_double_clicked
+        s[self._properties_ui.toolButton_di_open_dir.clicked] = self.open_directory
+        s[self._properties_ui.pushButton_import_editor.clicked] = self._handle_import_editor_clicked
+        s[self._properties_ui.treeView_data_interface_files.doubleClicked] = self._handle_files_double_clicked
         return s
 
     def activate(self):
@@ -103,18 +100,18 @@ class DataInterface(ProjectItem):
 
     def restore_selections(self):
         """Restores selections into shared widgets when this project item is selected."""
-        self._toolbox.ui.label_di_name.setText(self.name)
-        self._toolbox.ui.treeView_data_interface_files.setModel(self.file_model)
+        self._properties_ui.label_di_name.setText(self.name)
+        self._properties_ui.treeView_data_interface_files.setModel(self.file_model)
         self.file_model.itemChanged.connect(self._handle_file_model_item_changed)
 
     def save_selections(self):
         """Saves selections in shared widgets for this project item into instance variables."""
-        self._toolbox.ui.treeView_data_interface_files.setModel(None)
+        self._properties_ui.treeView_data_interface_files.setModel(None)
         self.file_model.itemChanged.disconnect(self._handle_file_model_item_changed)
 
     def update_name_label(self):
         """Update Data Interface tab name label. Used only when renaming project items."""
-        self._toolbox.ui.label_di_name.setText(self.name)
+        self._properties_ui.label_di_name.setText(self.name)
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
@@ -128,7 +125,7 @@ class DataInterface(ProjectItem):
     @Slot(bool, name="_handle_import_editor_clicked")
     def _handle_import_editor_clicked(self, checked=False):
         """Opens Import editor for the file selected in list view."""
-        index = self._toolbox.ui.treeView_data_interface_files.currentIndex()
+        index = self._properties_ui.treeView_data_interface_files.currentIndex()
         self.open_import_editor(index)
 
     @Slot("QModelIndex", name="_handle_files_double_clicked")

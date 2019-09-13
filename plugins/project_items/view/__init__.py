@@ -16,8 +16,12 @@ Data store plugin.
 :date:   12.9.2019
 """
 
+from .ui.view_properties import Ui_Form
+from .view import View
+from .view_icon import ViewIcon
 
-from view import View
-
-category_name = "Views"
+item_category = "Views"
+item_type = "View"
 item_maker = View
+icon_maker = ViewIcon
+properties_ui = Ui_Form()

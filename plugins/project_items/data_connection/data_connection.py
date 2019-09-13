@@ -26,7 +26,6 @@ from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import busy_effect, create_dir
 from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
-from graphics_items import DataConnectionIcon
 
 
 class DataConnection(ProjectItem):
@@ -43,7 +42,7 @@ class DataConnection(ProjectItem):
 
     def __init__(self, toolbox, name, description, references, x, y):
         """Class constructor."""
-        super().__init__(toolbox, name, description)
+        super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()
         self.item_type = "Data Connection"
         self.reference_model = QStandardItemModel()  # References to files
@@ -65,25 +64,23 @@ class DataConnection(ProjectItem):
         # Populate data (files) model
         data_files = self.data_files()
         self.populate_data_list(data_files)
-        self._graphics_item = DataConnectionIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self.spine_datapackage_form = None
-        self._sigs = self.make_signal_handler_dict()
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.toolButton_dc_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.toolButton_plus.clicked] = self.add_references
-        s[self._toolbox.ui.toolButton_minus.clicked] = self.remove_references
-        s[self._toolbox.ui.toolButton_add.clicked] = self.copy_to_project
-        s[self._toolbox.ui.pushButton_datapackage.clicked] = self.show_spine_datapackage_form
-        s[self._toolbox.ui.treeView_dc_references.doubleClicked] = self.open_reference
-        s[self._toolbox.ui.treeView_dc_data.doubleClicked] = self.open_data_file
+        s[self._properties_ui.toolButton_dc_open_dir.clicked] = self.open_directory
+        s[self._properties_ui.toolButton_plus.clicked] = self.add_references
+        s[self._properties_ui.toolButton_minus.clicked] = self.remove_references
+        s[self._properties_ui.toolButton_add.clicked] = self.copy_to_project
+        s[self._properties_ui.pushButton_datapackage.clicked] = self.show_spine_datapackage_form
+        s[self._properties_ui.treeView_dc_references.doubleClicked] = self.open_reference
+        s[self._properties_ui.treeView_dc_data.doubleClicked] = self.open_data_file
         s[self.data_dir_watcher.directoryChanged] = self.refresh
-        s[self._toolbox.ui.treeView_dc_references.files_dropped] = self.add_files_to_references
-        s[self._toolbox.ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
-        s[self._graphics_item.scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
+        s[self._properties_ui.treeView_dc_references.files_dropped] = self.add_files_to_references
+        s[self._properties_ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
+        s[self.get_icon().scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
         return s
 
     def activate(self):
@@ -101,9 +98,9 @@ class DataConnection(ProjectItem):
 
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
-        self._toolbox.ui.label_dc_name.setText(self.name)
-        self._toolbox.ui.treeView_dc_references.setModel(self.reference_model)
-        self._toolbox.ui.treeView_dc_data.setModel(self.data_model)
+        self._properties_ui.label_dc_name.setText(self.name)
+        self._properties_ui.treeView_dc_references.setModel(self.reference_model)
+        self._properties_ui.treeView_dc_data.setModel(self.data_model)
         self.refresh()
 
     def save_selections(self):
@@ -173,7 +170,7 @@ class DataConnection(ProjectItem):
         """Remove selected references from reference list.
         Do not remove anything if there are no references selected.
         """
-        indexes = self._toolbox.ui.treeView_dc_references.selectedIndexes()
+        indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
         if not indexes:  # Nothing selected
             self._toolbox.msg.emit("Please select references to remove")
             return
@@ -187,7 +184,7 @@ class DataConnection(ProjectItem):
     @Slot(bool, name="copy_to_project")
     def copy_to_project(self, checked=False):
         """Copy selected file references to this Data Connection's data directory."""
-        selected_indexes = self._toolbox.ui.treeView_dc_references.selectedIndexes()
+        selected_indexes = self._properties_ui.treeView_dc_references.selectedIndexes()
         if not selected_indexes:
             self._toolbox.msg_warning.emit("No files to copy")
             return
@@ -293,7 +290,7 @@ class DataConnection(ProjectItem):
 
     def remove_files(self):
         """Remove selected files from data directory."""
-        indexes = self._toolbox.ui.treeView_dc_data.selectedIndexes()
+        indexes = self._properties_ui.treeView_dc_data.selectedIndexes()
         if not indexes:  # Nothing selected
             self._toolbox.msg.emit("Please select files to remove")
             return
@@ -381,7 +378,7 @@ class DataConnection(ProjectItem):
 
     def update_name_label(self):
         """Update Data Connection tab name label. Used only when renaming project items."""
-        self._toolbox.ui.label_dc_name.setText(self.name)
+        self._properties_ui.label_dc_name.setText(self.name)
 
     def execute(self):
         """Executes this Data Connection."""

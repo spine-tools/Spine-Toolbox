@@ -20,15 +20,7 @@ import logging
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import (
-    DataConnectionIcon,
-    ToolIcon,
-    DataStoreIcon,
-    ViewIcon,
-    DataInterfaceIcon,
-    ProjectItemIcon,
-    Link,
-)
+from graphics_items import ProjectItemIcon, Link
 from widgets.toolbars import DraggableWidget
 
 

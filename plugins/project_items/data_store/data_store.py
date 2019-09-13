@@ -29,7 +29,6 @@ from project_item import ProjectItem
 from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
-from graphics_items import DataStoreIcon
 from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
 import qsubprocess
 
@@ -48,7 +47,7 @@ class DataStore(ProjectItem):
 
     def __init__(self, toolbox, name, description, url, x, y):
         """Class constructor."""
-        super().__init__(toolbox, name, description)
+        super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self._url = self.parse_url(url)
@@ -65,8 +64,6 @@ class DataStore(ProjectItem):
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
-        self._graphics_item = DataStoreIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
-        self._sigs = self.make_signal_handler_dict()
 
     def parse_url(self, url):
         """Return a complete url dictionary from the given dict or string"""
@@ -87,25 +84,25 @@ class DataStore(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = dict()
-        s[self._toolbox.ui.toolButton_ds_open_dir.clicked] = self.open_directory
-        s[self._toolbox.ui.pushButton_ds_tree_view.clicked] = self.open_tree_view
-        s[self._toolbox.ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
-        s[self._toolbox.ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
-        s[self._toolbox.ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
-        s[self._toolbox.ui.toolButton_create_new_spine_db.clicked] = self.create_new_spine_database
-        s[self._toolbox.ui.toolButton_copy_url.clicked] = self.copy_url
-        s[self._toolbox.ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
-        s[self._toolbox.ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
-        s[self._toolbox.ui.lineEdit_username.textChanged] = self.refresh_username
-        s[self._toolbox.ui.lineEdit_password.textChanged] = self.refresh_password
-        s[self._toolbox.ui.lineEdit_host.textChanged] = self.refresh_host
-        s[self._toolbox.ui.lineEdit_port.textChanged] = self.refresh_port
-        s[self._toolbox.ui.lineEdit_database.textChanged] = self.refresh_database
+        s[self._properties_ui.toolButton_ds_open_dir.clicked] = self.open_directory
+        s[self._properties_ui.pushButton_ds_tree_view.clicked] = self.open_tree_view
+        s[self._properties_ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
+        s[self._properties_ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
+        s[self._properties_ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
+        s[self._properties_ui.toolButton_create_new_spine_db.clicked] = self.create_new_spine_database
+        s[self._properties_ui.toolButton_copy_url.clicked] = self.copy_url
+        s[self._properties_ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
+        s[self._properties_ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
+        s[self._properties_ui.lineEdit_username.textChanged] = self.refresh_username
+        s[self._properties_ui.lineEdit_password.textChanged] = self.refresh_password
+        s[self._properties_ui.lineEdit_host.textChanged] = self.refresh_host
+        s[self._properties_ui.lineEdit_port.textChanged] = self.refresh_port
+        s[self._properties_ui.lineEdit_database.textChanged] = self.refresh_database
         return s
 
     def activate(self):
         """Load url into selections and connect signals."""
-        self._toolbox.ui.label_ds_name.setText(self.name)
+        self._properties_ui.label_ds_name.setText(self.name)
         self.load_url_into_selections()  # Do this before connecting signals or funny things happen
         super().connect_signals()
 
@@ -163,7 +160,7 @@ class DataStore(ProjectItem):
         # Small hack to make sqlite file paths relative to this DS directory
         if dialect == "sqlite" and not os.path.isabs(url.database):
             url.database = os.path.join(self.data_dir, url.database)
-            self._toolbox.ui.lineEdit_database.setText(url.database)
+            self._properties_ui.lineEdit_database.setText(url.database)
         # Final check
         try:
             engine = create_engine(url)
@@ -185,7 +182,7 @@ class DataStore(ProjectItem):
     @Slot("QString", name="set_path_to_sqlite_file")
     def set_path_to_sqlite_file(self, file_path):
         """Set path to SQLite file."""
-        self._toolbox.ui.lineEdit_database.setText(file_path)
+        self._properties_ui.lineEdit_database.setText(file_path)
 
     @Slot(bool, name='open_sqlite_file')
     def open_sqlite_file(self, checked=False):
@@ -197,34 +194,34 @@ class DataStore(ProjectItem):
         if not file_path:  # Cancel button clicked
             return
         # Update UI
-        self._toolbox.ui.lineEdit_database.setText(file_path)
+        self._properties_ui.lineEdit_database.setText(file_path)
 
     def load_url_into_selections(self):
         """Load url attribute into shared widget selections.
         Used when activating the item, and creating a new Spine db."""
         # TODO: Test what happens when Tool item calls this and this item is selected.
-        self._toolbox.ui.comboBox_dialect.setCurrentIndex(-1)
-        self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
-        self._toolbox.ui.lineEdit_host.clear()
-        self._toolbox.ui.lineEdit_port.clear()
-        self._toolbox.ui.lineEdit_database.clear()
-        self._toolbox.ui.lineEdit_username.clear()
-        self._toolbox.ui.lineEdit_password.clear()
+        self._properties_ui.comboBox_dialect.setCurrentIndex(-1)
+        self._properties_ui.comboBox_dsn.setCurrentIndex(-1)
+        self._properties_ui.lineEdit_host.clear()
+        self._properties_ui.lineEdit_port.clear()
+        self._properties_ui.lineEdit_database.clear()
+        self._properties_ui.lineEdit_username.clear()
+        self._properties_ui.lineEdit_password.clear()
         if not self._url:
             return
         dialect = self._url["dialect"]
         self.enable_dialect(dialect)
-        self._toolbox.ui.comboBox_dialect.setCurrentText(dialect)
+        self._properties_ui.comboBox_dialect.setCurrentText(dialect)
         if self._url["host"]:
-            self._toolbox.ui.lineEdit_host.setText(self._url["host"])
+            self._properties_ui.lineEdit_host.setText(self._url["host"])
         if self._url["port"]:
-            self._toolbox.ui.lineEdit_port.setText(str(self._url["port"]))
+            self._properties_ui.lineEdit_port.setText(str(self._url["port"]))
         if self._url["database"]:
-            self._toolbox.ui.lineEdit_database.setText(self._url["database"])
+            self._properties_ui.lineEdit_database.setText(self._url["database"])
         if self._url["username"]:
-            self._toolbox.ui.lineEdit_username.setText(self._url["username"])
+            self._properties_ui.lineEdit_username.setText(self._url["username"])
         if self._url["password"]:
-            self._toolbox.ui.lineEdit_password.setText(self._url["password"])
+            self._properties_ui.lineEdit_password.setText(self._url["password"])
 
     def set_url_key(self, key, value):
         """Set url key to value."""
@@ -275,9 +272,9 @@ class DataStore(ProjectItem):
                 if 'msodbcsql' in value.lower():
                     mssql_dsns.append(key)
             if mssql_dsns:
-                self._toolbox.ui.comboBox_dsn.clear()
-                self._toolbox.ui.comboBox_dsn.addItems(mssql_dsns)
-                self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
+                self._properties_ui.comboBox_dsn.clear()
+                self._properties_ui.comboBox_dsn.addItems(mssql_dsns)
+                self._properties_ui.comboBox_dsn.setCurrentIndex(-1)
                 self.enable_mssql()
             else:
                 msg = "Please create a SQL Server ODBC Data Source first."
@@ -287,53 +284,53 @@ class DataStore(ProjectItem):
 
     def enable_no_dialect(self):
         """Adjust widget enabled status to default when no dialect is selected."""
-        self._toolbox.ui.comboBox_dialect.setEnabled(True)
-        self._toolbox.ui.comboBox_dsn.setEnabled(False)
-        self._toolbox.ui.toolButton_open_sqlite_file.setEnabled(False)
-        self._toolbox.ui.lineEdit_host.setEnabled(False)
-        self._toolbox.ui.lineEdit_port.setEnabled(False)
-        self._toolbox.ui.lineEdit_database.setEnabled(False)
-        self._toolbox.ui.lineEdit_username.setEnabled(False)
-        self._toolbox.ui.lineEdit_password.setEnabled(False)
+        self._properties_ui.comboBox_dialect.setEnabled(True)
+        self._properties_ui.comboBox_dsn.setEnabled(False)
+        self._properties_ui.toolButton_open_sqlite_file.setEnabled(False)
+        self._properties_ui.lineEdit_host.setEnabled(False)
+        self._properties_ui.lineEdit_port.setEnabled(False)
+        self._properties_ui.lineEdit_database.setEnabled(False)
+        self._properties_ui.lineEdit_username.setEnabled(False)
+        self._properties_ui.lineEdit_password.setEnabled(False)
 
     def enable_mssql(self):
         """Adjust controls to mssql connection specification."""
-        self._toolbox.ui.comboBox_dsn.setEnabled(True)
-        self._toolbox.ui.toolButton_open_sqlite_file.setEnabled(False)
-        self._toolbox.ui.lineEdit_host.setEnabled(False)
-        self._toolbox.ui.lineEdit_port.setEnabled(False)
-        self._toolbox.ui.lineEdit_database.setEnabled(False)
-        self._toolbox.ui.lineEdit_username.setEnabled(True)
-        self._toolbox.ui.lineEdit_password.setEnabled(True)
-        self._toolbox.ui.lineEdit_host.clear()
-        self._toolbox.ui.lineEdit_port.clear()
-        self._toolbox.ui.lineEdit_database.clear()
+        self._properties_ui.comboBox_dsn.setEnabled(True)
+        self._properties_ui.toolButton_open_sqlite_file.setEnabled(False)
+        self._properties_ui.lineEdit_host.setEnabled(False)
+        self._properties_ui.lineEdit_port.setEnabled(False)
+        self._properties_ui.lineEdit_database.setEnabled(False)
+        self._properties_ui.lineEdit_username.setEnabled(True)
+        self._properties_ui.lineEdit_password.setEnabled(True)
+        self._properties_ui.lineEdit_host.clear()
+        self._properties_ui.lineEdit_port.clear()
+        self._properties_ui.lineEdit_database.clear()
 
     def enable_sqlite(self):
         """Adjust controls to sqlite connection specification."""
-        self._toolbox.ui.comboBox_dsn.setEnabled(False)
-        self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
-        self._toolbox.ui.toolButton_open_sqlite_file.setEnabled(True)
-        self._toolbox.ui.lineEdit_host.setEnabled(False)
-        self._toolbox.ui.lineEdit_port.setEnabled(False)
-        self._toolbox.ui.lineEdit_database.setEnabled(True)
-        self._toolbox.ui.lineEdit_username.setEnabled(False)
-        self._toolbox.ui.lineEdit_password.setEnabled(False)
-        self._toolbox.ui.lineEdit_host.clear()
-        self._toolbox.ui.lineEdit_port.clear()
-        self._toolbox.ui.lineEdit_username.clear()
-        self._toolbox.ui.lineEdit_password.clear()
+        self._properties_ui.comboBox_dsn.setEnabled(False)
+        self._properties_ui.comboBox_dsn.setCurrentIndex(-1)
+        self._properties_ui.toolButton_open_sqlite_file.setEnabled(True)
+        self._properties_ui.lineEdit_host.setEnabled(False)
+        self._properties_ui.lineEdit_port.setEnabled(False)
+        self._properties_ui.lineEdit_database.setEnabled(True)
+        self._properties_ui.lineEdit_username.setEnabled(False)
+        self._properties_ui.lineEdit_password.setEnabled(False)
+        self._properties_ui.lineEdit_host.clear()
+        self._properties_ui.lineEdit_port.clear()
+        self._properties_ui.lineEdit_username.clear()
+        self._properties_ui.lineEdit_password.clear()
 
     def enable_common(self):
         """Adjust controls to 'common' connection specification."""
-        self._toolbox.ui.comboBox_dsn.setEnabled(False)
-        self._toolbox.ui.comboBox_dsn.setCurrentIndex(-1)
-        self._toolbox.ui.toolButton_open_sqlite_file.setEnabled(False)
-        self._toolbox.ui.lineEdit_host.setEnabled(True)
-        self._toolbox.ui.lineEdit_port.setEnabled(True)
-        self._toolbox.ui.lineEdit_database.setEnabled(True)
-        self._toolbox.ui.lineEdit_username.setEnabled(True)
-        self._toolbox.ui.lineEdit_password.setEnabled(True)
+        self._properties_ui.comboBox_dsn.setEnabled(False)
+        self._properties_ui.comboBox_dsn.setCurrentIndex(-1)
+        self._properties_ui.toolButton_open_sqlite_file.setEnabled(False)
+        self._properties_ui.lineEdit_host.setEnabled(True)
+        self._properties_ui.lineEdit_port.setEnabled(True)
+        self._properties_ui.lineEdit_database.setEnabled(True)
+        self._properties_ui.lineEdit_username.setEnabled(True)
+        self._properties_ui.lineEdit_password.setEnabled(True)
 
     @Slot(bool, name="open_tree_view")
     def open_tree_view(self, checked=False):
@@ -486,14 +483,14 @@ class DataStore(ProjectItem):
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine database."""
-        for_spine_model = self._toolbox.ui.checkBox_for_spine_model.isChecked()
+        for_spine_model = self._properties_ui.checkBox_for_spine_model.isChecked()
         url = self.make_url(log_errors=False)
         if not url:
             self._toolbox.msg_warning.emit(
                 "Unable to generate URL from <b>{0}</b> selections. Defaults will be used...".format(self.name)
             )
-            self._toolbox.ui.comboBox_dialect.setCurrentText("sqlite")
-            self._toolbox.ui.lineEdit_database.setText(os.path.join(self.data_dir, self.name + ".sqlite"))
+            self._properties_ui.comboBox_dialect.setCurrentText("sqlite")
+            self._properties_ui.lineEdit_database.setText(os.path.join(self.data_dir, self.name + ".sqlite"))
             url = self.make_url(log_errors=True)
             if not url:
                 return
@@ -521,7 +518,7 @@ class DataStore(ProjectItem):
 
     def update_name_label(self):
         """Update Data Store tab name label. Used only when renaming project items."""
-        self._toolbox.ui.label_ds_name.setText(self.name)
+        self._properties_ui.label_ds_name.setText(self.name)
 
     def execute(self):
         """Executes this Data Store."""

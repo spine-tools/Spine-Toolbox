@@ -16,8 +16,12 @@ Data store plugin.
 :date:   12.9.2019
 """
 
+from .ui.data_connection_properties import Ui_Form
+from .data_connection import DataConnection
+from .data_connection_icon import DataConnectionIcon
 
-from data_connection import DataConnection
-
-category_name = "Data Connections"
+item_category = "Data Connections"
+item_type = "Data Connection"
 item_maker = DataConnection
+icon_maker = DataConnectionIcon
+properties_ui = Ui_Form()

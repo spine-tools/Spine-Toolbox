@@ -32,6 +32,7 @@ from PySide2.QtWidgets import (
     QDockWidget,
     QAction,
     QWidgetAction,
+    QWidget,
 )
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QIntValidator
 from spinedb_api import SUPPORTED_DIALECTS
@@ -56,6 +57,7 @@ from widgets.add_data_connection_widget import AddDataConnectionWidget
 from widgets.add_tool_widget import AddToolWidget
 from widgets.add_view_widget import AddViewWidget
 from widgets.add_data_interface_widget import AddDataInterfaceWidget
+from widgets.add_project_item_widget import AddProjectItemWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import ZoomWidget
@@ -106,7 +108,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
-        self.item_categories = dict()
+        self.categories = dict()
         self._project = None
         self.project_item_model = None
         self.tool_template_model = None
@@ -132,6 +134,7 @@ class ToolboxUI(QMainWindow):
         self.add_tool_form = None
         self.add_view_form = None
         self.add_data_interface_form = None
+        self.add_project_item_form = None
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
@@ -147,6 +150,7 @@ class ToolboxUI(QMainWindow):
         # Make Python REPL
         self.python_repl = PythonReplWidget(self)
         self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
+        self.load_plugins()
         # Setup main window menu
         self.setup_zoom_action()
         self.add_toggle_view_actions()
@@ -159,24 +163,34 @@ class ToolboxUI(QMainWindow):
         self.hide_tabs()
         # Finalize init
         self.connect_signals()
-        self.init_shared_widgets()  # Shared among multiple project items
+        # self.init_shared_widgets()  # Shared among multiple project items
         self.restore_ui()
-        self.ui.lineEdit_port.setValidator(QIntValidator())
-        self.load_plugins()
+        # self.ui.lineEdit_port.setValidator(QIntValidator())
 
     def load_plugins(self):
         """Loads and activates plugins.
         For now it just handles ProjectItem plugins."""
-        project_items = list()
-        for name, spec in plugin_loader.get_plugins("project_items").items():
+        self.categories.clear()
+        for name in plugin_loader.get_plugins("project_items"):
             self.msg.emit("Loading plugin " + name)
-            plugin = plugin_loader.load_plugin(spec)
-            project_items.append(plugin)
-        self.item_categories.clear()
-        for project_item in project_items:
-            category_name = project_item.category_name
-            item_maker = project_item.item_maker
-            self.item_categories[category_name] = item_maker
+            plugin = plugin_loader.load_plugin(name)
+            item_category = plugin.item_category
+            item_type = plugin.item_type
+            item_maker = plugin.item_maker
+            icon_maker = plugin.icon_maker
+            properties_ui = plugin.properties_ui
+            self.categories[item_category] = dict(
+                item_maker=item_maker, icon_maker=icon_maker, properties_ui=properties_ui
+            )
+            # Setup properties UI
+            widget = QWidget()
+            properties_ui.setupUi(widget)
+            self.ui.tabWidget_item_properties.addTab(widget, item_type)
+            # Create action for adding items of this type
+            action = self.ui.menuEdit.addAction(f"Add {item_type}")
+            action.triggered.connect(
+                lambda checked=False, c=item_category, t=item_type: self.show_add_project_item_form(c, t)
+            )
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -189,8 +203,8 @@ class ToolboxUI(QMainWindow):
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
         # Custom signals
-        self.ui.treeView_dc_references.del_key_pressed.connect(self.remove_refs_with_del_key)
-        self.ui.treeView_dc_data.del_key_pressed.connect(self.remove_data_with_del_key)
+        # self.ui.treeView_dc_references.del_key_pressed.connect(self.remove_refs_with_del_key)
+        # self.ui.treeView_dc_data.del_key_pressed.connect(self.remove_data_with_del_key)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -200,11 +214,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
-        self.ui.actionAdd_Data_Store.triggered.connect(self.show_add_data_store_form)
-        self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
-        self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
-        self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
-        self.ui.actionAdd_Data_Interface.triggered.connect(self.show_add_data_interface_form)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
@@ -223,14 +232,14 @@ class ToolboxUI(QMainWindow):
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
         # Context-menus
-        self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
-        self.ui.treeView_dc_references.customContextMenuRequested.connect(self.show_dc_ref_properties_context_menu)
-        self.ui.treeView_dc_data.customContextMenuRequested.connect(self.show_dc_data_properties_context_menu)
-        self.ui.treeView_template.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
-        self.ui.treeView_view.customContextMenuRequested.connect(self.show_view_properties_context_menu)
-        self.ui.treeView_data_interface_files.customContextMenuRequested.connect(
-            self.show_di_files_properties_context_menu
-        )
+        # self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
+        # self.ui.treeView_dc_references.customContextMenuRequested.connect(self.show_dc_ref_properties_context_menu)
+        # self.ui.treeView_dc_data.customContextMenuRequested.connect(self.show_dc_data_properties_context_menu)
+        # self.ui.treeView_template.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
+        # self.ui.treeView_view.customContextMenuRequested.connect(self.show_view_properties_context_menu)
+        # self.ui.treeView_data_interface_files.customContextMenuRequested.connect(
+        #    self.show_di_files_properties_context_menu
+        # )
         # Main menu
         self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
@@ -432,8 +441,8 @@ class ToolboxUI(QMainWindow):
         add them to the model."""
         root_item = RootProjectItem()
         self.project_item_model = ProjectItemModel(self, root=root_item)
-        for category_name, item_maker in self.item_categories.items():
-            category_item = CategoryProjectItem(category_name, "", item_maker)
+        for category, category_dict in self.categories.items():
+            category_item = CategoryProjectItem(category, "", **category_dict)
             self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
@@ -445,7 +454,7 @@ class ToolboxUI(QMainWindow):
         Args:
             tool_template_paths (list): List of tool definition file paths used in this project
         """
-        self.ui.comboBox_tool.setModel(QStandardItemModel())  # Reset combo box by setting and empty model to it
+        # self.ui.comboBox_tool.setModel(QStandardItemModel())  # Reset combo box by setting and empty model to it
         self.tool_template_model = ToolTemplateModel()
         n_tools = 0
         self.msg.emit("Loading Tool templates...")
@@ -466,7 +475,7 @@ class ToolboxUI(QMainWindow):
         # Set model to the tool template list view
         self.ui.listView_tool_templates.setModel(self.tool_template_model)
         # Set model to Tool project item combo box
-        self.ui.comboBox_tool.setModel(self.tool_template_model)
+        # self.ui.comboBox_tool.setModel(self.tool_template_model)
         # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
         # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
         n_recv_sig1 = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
@@ -1191,6 +1200,15 @@ class ToolboxUI(QMainWindow):
             return
         self.add_view_form = AddViewWidget(self, x, y)
         self.add_view_form.show()
+
+    @Slot("str", "str", "float", "float", name="show_add_project_item_form")
+    def show_add_project_item_form(self, item_category, item_type, x=0, y=0):
+        """Show add project item widget."""
+        if not self._project:
+            self.msg.emit("Please open or create a project first")
+            return
+        self.add_project_item_form = AddProjectItemWidget(self, item_category, item_type, x, y)
+        self.add_project_item_form.show()
 
     @Slot(name="show_tool_template_form")
     def show_tool_template_form(self, tool_template=None):
