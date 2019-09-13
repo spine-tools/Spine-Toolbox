@@ -36,11 +36,13 @@ if getattr(sys, "frozen", False):
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html"))
+    PLUGINS_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "plugins"))
 else:
     APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
     DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
     DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
     DOCUMENTATION_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build", "html"))
+    PLUGINS_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "plugins"))
 
 # Tool output directory name
 TOOL_OUTPUT_DIR = "output"

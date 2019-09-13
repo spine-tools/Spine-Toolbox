@@ -19,10 +19,10 @@ Module for data store class.
 import sys
 import os
 import logging
+import spinedb_api
 from PySide2.QtGui import QDesktopServices
 from PySide2.QtCore import Slot, QUrl, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
-import spinedb_api
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
 from project_item import ProjectItem
@@ -544,7 +544,8 @@ class DataStore(ProjectItem):
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
             except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
                 self._toolbox.msg_error.emit(
-                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err))
+                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err)
+                )
                 db_map = None
             if db_map:
                 all_import_errors = []

@@ -264,3 +264,12 @@ class View(ProjectItem):
         if view_store is self._tree_views:
             return TreeViewForm(self._project, db_maps)
         raise RuntimeError("view_store must be self._graph_views, self._tabular_views or self._tree_views")
+
+
+def activate(toolbox):
+    """Activate the plugin for using with given toolbox.
+
+    Args:
+        toolbox (ToolboxUI): activate the pluging for this toolbox
+    """
+    toolbox.item_categories["Views"] = View

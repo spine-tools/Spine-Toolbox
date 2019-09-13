@@ -831,3 +831,12 @@ class Tool(ProjectItem):
             d["tool"] = self.tool_template().name
         d["execute_in_work"] = self.execute_in_work
         return d
+
+
+def activate(toolbox):
+    """Activate the plugin for using with given toolbox.
+
+    Args:
+        toolbox (ToolboxUI): activate the pluging for this toolbox
+    """
+    toolbox.item_categories["Tools"] = Tool

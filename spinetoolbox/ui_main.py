@@ -20,6 +20,7 @@ import os
 import locale
 import logging
 import json
+import plugin_loader
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QTimeLine
 from PySide2.QtWidgets import (
     QMainWindow,
@@ -161,26 +162,21 @@ class ToolboxUI(QMainWindow):
         self.init_shared_widgets()  # Shared among multiple project items
         self.restore_ui()
         self.ui.lineEdit_port.setValidator(QIntValidator())
-        self.load_project_item_plugins()
+        self.load_plugins()
 
-    def load_project_item_plugins(self):
-        """Loads plugins for project items.
-        For now, it just imports project item constructors and puts them in a dictionary indexed by category."""
-        # NOTE: Once we really adopt the plugin approach we can soft-code all this...
-
-        from data_store import DataStore
-        from data_connection import DataConnection
-        from tool import Tool
-        from view import View
-        from data_interface import DataInterface
-
-        self.item_categories = {
-            "Data Stores": DataStore,
-            "Data Connections": DataConnection,
-            "Tools": Tool,
-            "Views": View,
-            "Data Interfaces": DataInterface,
-        }
+    def load_plugins(self):
+        """Loads and activates plugins.
+        For now it just handles ProjectItem plugins."""
+        project_items = list()
+        for name, spec in plugin_loader.get_plugins("project_items").items():
+            self.msg.emit("Loading plugin " + name)
+            plugin = plugin_loader.load_plugin(spec)
+            project_items.append(plugin)
+        self.item_categories.clear()
+        for project_item in project_items:
+            category_name = project_item.category_name
+            item_maker = project_item.item_maker
+            self.item_categories[category_name] = item_maker
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):

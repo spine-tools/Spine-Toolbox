@@ -424,3 +424,12 @@ class DataConnection(ProjectItem):
         d = super().item_dict()
         d["references"] = self.file_references()
         return d
+
+
+def activate(toolbox):
+    """Activate the plugin for using with given toolbox.
+
+    Args:
+        toolbox (ToolboxUI): activate the pluging for this toolbox
+    """
+    toolbox.item_categories["Data Connections"] = DataConnection

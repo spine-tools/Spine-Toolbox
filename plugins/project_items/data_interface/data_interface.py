@@ -317,3 +317,12 @@ class DataInterface(ProjectItem):
         d = super().item_dict()
         d["mappings"] = self.settings
         return d
+
+
+def activate(toolbox):
+    """Activate the plugin for using with given toolbox.
+
+    Args:
+        toolbox (ToolboxUI): activate the pluging for this toolbox
+    """
+    toolbox.item_categories["Data Interfaces"] = DataInterface
