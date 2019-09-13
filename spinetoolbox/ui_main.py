@@ -51,11 +51,6 @@ from widgets.custom_menus import (
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
-from widgets.add_data_store_widget import AddDataStoreWidget
-from widgets.add_data_connection_widget import AddDataConnectionWidget
-from widgets.add_tool_widget import AddToolWidget
-from widgets.add_view_widget import AddViewWidget
-from widgets.add_data_interface_widget import AddDataInterfaceWidget
 from widgets.add_project_item_widget import AddProjectItemWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
@@ -129,11 +124,6 @@ class ToolboxUI(QMainWindow):
         self.view_prop_context_menu = None
         self.di_files_context_menu = None
         self.project_form = None
-        self.add_data_store_form = None
-        self.add_data_connection_form = None
-        self.add_tool_form = None
-        self.add_view_form = None
-        self.add_data_interface_form = None
         self.add_project_item_form = None
         self.tool_template_form = None
         self.placing_item = ""
@@ -1136,51 +1126,6 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.append(message)
         # noinspection PyArgumentList
         QApplication.processEvents()
-
-    @Slot("float", "float", name="show_add_data_store_form")
-    def show_add_data_store_form(self, x=0, y=0):
-        """Show add data store widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_data_store_form = AddDataStoreWidget(self, x, y)
-        self.add_data_store_form.show()
-
-    @Slot("float", "float", name="show_add_data_connection_form")
-    def show_add_data_connection_form(self, x=0, y=0):
-        """Show add data connection widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_data_connection_form = AddDataConnectionWidget(self, x, y)
-        self.add_data_connection_form.show()
-
-    @Slot("float", "float", name="show_add_data_interface_form")
-    def show_add_data_interface_form(self, x=0, y=0):
-        """Show add data interface widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_data_interface_form = AddDataInterfaceWidget(self, x, y)
-        self.add_data_interface_form.show()
-
-    @Slot("float", "float", name="show_add_tool_form")
-    def show_add_tool_form(self, x=0, y=0):
-        """Show add tool widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_tool_form = AddToolWidget(self, x, y)
-        self.add_tool_form.show()
-
-    @Slot("float", "float", name="show_add_view_form")
-    def show_add_view_form(self, x=0, y=0):
-        """Show add view widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_view_form = AddViewWidget(self, x, y)
-        self.add_view_form.show()
 
     @Slot("str", "str", "float", "float", name="show_add_project_item_form")
     def show_add_project_item_form(self, item_category, item_type, x=0, y=0):

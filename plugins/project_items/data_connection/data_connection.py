@@ -35,12 +35,12 @@ class DataConnection(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        references (list): List of file references
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
+        references (list): List of file references
     """
 
-    def __init__(self, toolbox, name, description, references, x, y):
+    def __init__(self, toolbox, name, description, x, y, references=None):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()
@@ -59,6 +59,8 @@ class DataConnection(ProjectItem):
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
         # Populate references model
+        if references is None:
+            references = list()
         self.references = references
         self.populate_reference_list(self.references)
         # Populate data (files) model

@@ -40,12 +40,12 @@ class DataStore(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        url (str or dict): SQLAlchemy url
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
+        url (str or dict): SQLAlchemy url
     """
 
-    def __init__(self, toolbox, name, description, url, x, y):
+    def __init__(self, toolbox, name, description, x, y, url=None):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()
@@ -74,10 +74,6 @@ class DataStore(ProjectItem):
             sa_url = make_url(url)
             base_url["dialect"] = sa_url.get_dialect().name
             base_url.update(sa_url.translate_connect_args())
-        else:
-            self._toolbox.msg_error.emit(
-                "Unable to parse URL for <b>{0}</b>: unsupported type '{1}'".format(self.name, type(url))
-            )
         return base_url
 
     def make_signal_handler_dict(self):

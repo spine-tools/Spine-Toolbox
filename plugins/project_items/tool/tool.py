@@ -37,13 +37,13 @@ class Tool(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        tool (str): Template name for this Tool
-        execute_in_work (bool): Execute associated Tool template in work (True) or source directory (False)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
+        tool (str): Template name for this Tool
+        execute_in_work (bool): Execute associated Tool template in work (True) or source directory (False)
     """
 
-    def __init__(self, toolbox, name, description, tool, execute_in_work, x, y):
+    def __init__(self, toolbox, name, description, x, y, tool="", execute_in_work=True):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()

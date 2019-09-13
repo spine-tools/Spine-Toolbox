@@ -35,12 +35,12 @@ class DataInterface(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Project item name
         description (str): Project item description
-        mappings (dict): dict with mapping settings
         x (int): Initial icon scene X coordinate
         y (int): Initial icon scene Y coordinate
+        mappings (dict): dict with mapping settings
     """
 
-    def __init__(self, toolbox, name, description, mappings, x, y):
+    def __init__(self, toolbox, name, description, x, y, mappings=None):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
         self._project = self._toolbox.project()
@@ -56,6 +56,8 @@ class DataInterface(ProjectItem):
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
         # Variables for saving selections when item is (de)activated
+        if mappings is None:
+            mappings = dict()
         self.settings = mappings
         self.file_model = QStandardItemModel()
         self.all_files = []  # All source files
