@@ -152,7 +152,6 @@ class Tool(ProjectItem):
         else:
             new_tool = self._toolbox.tool_template_model.tool_template(row)
             self.set_tool_template(new_tool)
-        self.item_changed.emit()
 
     def set_tool_template(self, tool_template):
         """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
@@ -162,6 +161,7 @@ class Tool(ProjectItem):
         """
         self._tool_template = tool_template
         self.update_tool_ui()
+        self.item_changed.emit()
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details. Used when Tool template is changed.
