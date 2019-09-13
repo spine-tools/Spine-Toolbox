@@ -46,33 +46,13 @@ class ItemToolBar(QToolBar):
         self._toolbox = parent
         label = QLabel("Drag & Drop Icon")
         self.addWidget(label)
-        # Data Store
-        data_store_pixmap = QIcon(":/icons/project_item_icons/database.svg").pixmap(24, 24)
-        data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
-        self.addWidget(data_store_widget)
-        # Data Connection
-        data_connection_pixmap = QIcon(":/icons/project_item_icons/file-alt.svg").pixmap(24, 24)
-        data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
-        self.addWidget(data_connection_widget)
-        # Tool
-        tool_pixmap = QIcon(":/icons/project_item_icons/hammer.svg").pixmap(24, 24)
-        tool_widget = DraggableWidget(self, tool_pixmap, "Tool")
-        self.addWidget(tool_widget)
-        # View
-        view_pixmap = QIcon(":/icons/project_item_icons/binoculars.svg").pixmap(24, 24)
-        view_widget = DraggableWidget(self, view_pixmap, "View")
-        self.addWidget(view_widget)
-        # Data Interface
-        data_interface_pixmap = QIcon(":/icons/project_item_icons/map-solid.svg").pixmap(24, 24)
-        data_interface_widget = DraggableWidget(self, data_interface_pixmap, "Data Interface")
-        self.addWidget(data_interface_widget)
         # set remove all action
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
         remove_all = QToolButton(parent)
         remove_all.setIcon(remove_all_icon)
         remove_all.clicked.connect(self.remove_all)
         remove_all.setToolTip("Remove all items from project.")
-        self.addSeparator()
+        self.separator = self.addSeparator()
         self.addWidget(remove_all)
         # Execute label and button
         self.addSeparator()
@@ -102,6 +82,21 @@ class ItemToolBar(QToolBar):
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
+
+    def add_draggable_widgets(self, category_type_icon):
+        """Adds dragable widgets from the given list.
+
+        Args:
+            category_type_icon (list): List of tuples (item category (str), item type (str), icon path (str))
+        """
+        widgets = list()
+        for category, type_, icon in category_type_icon:
+            pixmap = QIcon(icon).pixmap(24, 24)
+            category_type = category + "," + type_
+            widget = DraggableWidget(self, pixmap, category_type)
+            widgets.append(widget)
+        for widget in widgets:
+            self.insertWidget(self.separator, widget)
 
     @Slot(bool, name="remove_all")
     def remove_all(self, checked=False):

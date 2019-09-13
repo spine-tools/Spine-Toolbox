@@ -24,6 +24,7 @@ from config import TREEVIEW_HEADER_SS
 
 item_category = "Views"
 item_type = "View"
+item_icon = ":/icons/project_item_icons/binoculars.svg"
 item_maker = View
 icon_maker = ViewIcon
 

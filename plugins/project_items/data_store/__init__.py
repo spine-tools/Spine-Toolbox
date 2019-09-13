@@ -26,6 +26,7 @@ from spinedb_api import SUPPORTED_DIALECTS
 
 item_category = "Data Stores"
 item_type = "Data Store"
+item_icon = ":/icons/project_item_icons/database.svg"
 item_maker = DataStore
 icon_maker = DataStoreIcon
 

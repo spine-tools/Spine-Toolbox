@@ -24,6 +24,7 @@ from config import TREEVIEW_HEADER_SS
 
 item_category = "Data Connections"
 item_type = "Data Connection"
+item_icon = ":/icons/project_item_icons/file-alt.svg"
 item_maker = DataConnection
 icon_maker = DataConnectionIcon
 

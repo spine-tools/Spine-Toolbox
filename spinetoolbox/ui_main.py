@@ -160,11 +160,13 @@ class ToolboxUI(QMainWindow):
         For now it just handles ProjectItem plugins."""
         self.categories.clear()
         add_item_actions = list()
+        category_type_icon = list()
         for name in plugin_loader.get_plugins("project_items"):
             self.msg.emit("Loading plugin " + name)
             plugin = plugin_loader.load_plugin(name)
             item_category = plugin.item_category
             item_type = plugin.item_type
+            item_icon = plugin.item_icon
             item_maker = plugin.item_maker
             icon_maker = plugin.icon_maker
             properties_ui = plugin.init_properties_ui(self)
@@ -172,14 +174,18 @@ class ToolboxUI(QMainWindow):
                 item_maker=item_maker, icon_maker=icon_maker, properties_ui=properties_ui
             )
             # Create action for adding items of this type
-            add_item_action = QAction(f"Add {item_type}")
+            add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
             add_item_action.triggered.connect(
                 lambda checked=False, c=item_category, t=item_type: self.show_add_project_item_form(c, t)
             )
             add_item_actions.append(add_item_action)
+            # Update category icon dict
+            category_type_icon.append((item_category, item_type, item_icon))
         # Add actions to menu
         remove_all_action = self.ui.menuEdit.actions()[0]
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
+        # Add draggable widgets to toolbar
+        self.item_toolbar.add_draggable_widgets(category_type_icon)
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):

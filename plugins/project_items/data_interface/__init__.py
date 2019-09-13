@@ -25,6 +25,7 @@ from config import TREEVIEW_HEADER_SS
 
 item_category = "Data Interfaces"
 item_type = "Data Interface"
+item_icon = ":/icons/project_item_icons/map-solid.svg"
 item_maker = DataInterface
 icon_maker = DataInterfaceIcon
 

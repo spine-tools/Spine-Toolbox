@@ -129,27 +129,16 @@ class CustomQGraphicsScene(QGraphicsScene):
             event.ignore()
             return
         event.acceptProposedAction()
-        text = event.mimeData().text()
+        category, type_ = event.mimeData().text().split(",")
         pos = event.scenePos()
         w = 70
         h = 70
         x = pos.x() - w / 2
         y = pos.y() - h / 2
-        if text == "Data Store":
-            self.item_shadow = DataStoreIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_data_store_form(pos.x(), pos.y())
-        elif text == "Data Connection":
-            self.item_shadow = DataConnectionIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
-        elif text == "Tool":
-            self.item_shadow = ToolIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_tool_form(pos.x(), pos.y())
-        elif text == "View":
-            self.item_shadow = ViewIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_view_form(pos.x(), pos.y())
-        elif text == "Data Interface":
-            self.item_shadow = DataInterfaceIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_data_interface_form(pos.x(), pos.y())
+        icon_maker = self._toolbox.categories[category]["icon_maker"]
+        item_type = self._toolbox.categories[category]["icon_maker"]
+        self.item_shadow = icon_maker(self._toolbox, x, y, w, h, "...")
+        self._toolbox.show_add_project_item_form(category, type_, pos.x(), pos.y())
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

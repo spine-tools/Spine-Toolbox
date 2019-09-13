@@ -25,6 +25,7 @@ from config import TREEVIEW_HEADER_SS
 
 item_category = "Tools"
 item_type = "Tool"
+item_icon = ":/icons/project_item_icons/hammer.svg"
 item_maker = Tool
 icon_maker = ToolIcon
 
