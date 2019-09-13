@@ -29,6 +29,7 @@ from project import SpineToolboxProject
 from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 from config import APPLICATION_PATH
 from graphics_items import ProjectItemIcon, Link
+from project_item import RootProjectItem
 
 
 # noinspection PyUnusedLocal,DuplicatedCode
@@ -97,16 +98,24 @@ class TestToolboxUI(unittest.TestCase):
         # Check that the items DisplayRoles are (In this particular order)
         item1 = self.toolbox.project_item_model.root().child(0)
         self.assertTrue(item1.name == "Data Stores", "Item on row 0 is not 'Data Stores'")
-        self.assertTrue(item1.parent().is_root, "Parent item of category item on row 0 should be root")
+        self.assertTrue(
+            isinstance(item1.parent(), RootProjectItem), "Parent item of category item on row 0 should be root"
+        )
         item2 = self.toolbox.project_item_model.root().child(1)
         self.assertTrue(item2.name == "Data Connections", "Item on row 1 is not 'Data Connections'")
-        self.assertTrue(item2.parent().is_root, "Parent item of category item on row 1 should be root")
+        self.assertTrue(
+            isinstance(item2.parent(), RootProjectItem), "Parent item of category item on row 1 should be root"
+        )
         item3 = self.toolbox.project_item_model.root().child(2)
         self.assertTrue(item3.name == "Tools", "Item on row 2 is not 'Tools'")
-        self.assertTrue(item3.parent().is_root, "Parent item of category item on row 2 should be root")
+        self.assertTrue(
+            isinstance(item3.parent(), RootProjectItem), "Parent item of category item on row 2 should be root"
+        )
         item4 = self.toolbox.project_item_model.root().child(3)
         self.assertTrue(item4.name == "Views", "Item on row 3 is not 'Views'")
-        self.assertTrue(item4.parent().is_root, "Parent item of category item on row 3 should be root")
+        self.assertTrue(
+            isinstance(item4.parent(), RootProjectItem), "Parent item of category item on row 3 should be root"
+        )
 
     def test_init_tool_template_model(self):
         """Check that tool template model has no items after init and that
@@ -562,14 +571,16 @@ class TestToolboxUI(unittest.TestCase):
 
     def add_ds(self, name, x=0, y=0):
         """Helper method to create a Data Store with the given name and coordinates."""
+        item = dict(name=name, description="", url=dict(), x=x, y=y)
         with mock.patch("data_store.create_dir") as mock_create_dir:
-            self.toolbox.project().add_data_store(name, "", "sqlite://", x=x, y=y)
+            self.toolbox.project().add_project_items("Data Stores", item)
         return
 
     def add_dc(self, name, x=0, y=0):
         """Helper method to create a Data Connection with the given name and coordinates."""
+        item = dict(name=name, description="", references=list(), x=x, y=y)
         with mock.patch("data_connection.create_dir") as mock_create_dir:
-            self.toolbox.project().add_data_connection(name, "", references=list(), x=x, y=y)
+            self.toolbox.project().add_project_items("Data Connections", item)
         return
 
     @staticmethod

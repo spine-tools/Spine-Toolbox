@@ -23,6 +23,7 @@ from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractListModel, QAbstractT
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
+from project_item import CategoryProjectItem
 
 
 class ProjectItemModel(QAbstractItemModel):
@@ -54,7 +55,7 @@ class ProjectItemModel(QAbstractItemModel):
         """
         if not parent.isValid():  # Number of category items (children of root)
             return self.root().child_count()
-        if parent.internalPointer().is_category:  # Number of project items in the category
+        if isinstance(parent.internalPointer(), CategoryProjectItem):  # Number of project items in the category
             return parent.internalPointer().child_count()
         return 0
 
@@ -68,7 +69,7 @@ class ProjectItemModel(QAbstractItemModel):
         Args:
             index (QModelIndex): Flags of item at this index.
         """
-        if not index.internalPointer().is_category:
+        if not isinstance(index.internalPointer(), CategoryProjectItem):
             return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
         return Qt.ItemIsEnabled  # | Qt.ItemIsSelectable
 

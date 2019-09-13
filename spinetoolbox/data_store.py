@@ -16,7 +16,6 @@ Module for data store class.
 :date:   18.12.2017
 """
 
-import sys
 import os
 import logging
 from PySide2.QtGui import QDesktopServices
@@ -31,7 +30,6 @@ from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
 from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
-import qsubprocess
 
 
 class DataStore(ProjectItem):

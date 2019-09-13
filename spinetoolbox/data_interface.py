@@ -12,7 +12,7 @@
 """
 Contains DataInterface class.
 
-:authors: P. Savolainen (VTT)
+:authors: P. Savolainen (VTT), P. Vennström (VTT), A. Soininen (VTT)
 :date:   10.6.2019
 """
 
@@ -20,7 +20,7 @@ import logging
 import os
 from PySide2.QtCore import Qt, Slot, QUrl, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
-from PySide2.QtWidgets import QFileIconProvider, QMainWindow, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
+from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from project_item import ProjectItem
 from graphics_items import DataInterfaceIcon
 from helpers import create_dir, create_log_file_timestamp
@@ -36,13 +36,12 @@ class DataInterface(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Project item name
         description (str): Project item description
-        filepath (str): Path to file
-        settings (dict): dict with mapping settings
+        mappings (dict): dict with mapping settings
         x (int): Initial icon scene X coordinate
         y (int): Initial icon scene Y coordinate
     """
 
-    def __init__(self, toolbox, name, description, filepath, settings, x, y):
+    def __init__(self, toolbox, name, description, mappings, x, y):
         """Class constructor."""
         super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
@@ -58,7 +57,7 @@ class DataInterface(ProjectItem):
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
             )
         # Variables for saving selections when item is (de)activated
-        self.settings = settings
+        self.settings = mappings
         self.file_model = QStandardItemModel()
         self.all_files = []  # All source files
         self.unchecked_files = []  # Unchecked source files
@@ -316,6 +315,5 @@ class DataInterface(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
-        # TODO: Save Data Interface mapping script path here
         d["mappings"] = self.settings
         return d
