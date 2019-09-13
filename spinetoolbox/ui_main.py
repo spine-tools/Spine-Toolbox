@@ -34,8 +34,7 @@ from PySide2.QtWidgets import (
     QWidgetAction,
     QWidget,
 )
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QIntValidator
-from spinedb_api import SUPPORTED_DIALECTS
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import (
@@ -88,6 +87,7 @@ class ToolboxUI(QMainWindow):
     msg_warning = Signal(str, name="msg_warning")
     msg_proc = Signal(str, name="msg_proc")
     msg_proc_error = Signal(str, name="msg_proc_error")
+    tool_template_model_changed = Signal("QVariant", name="tool_template_model_changed")
 
     def __init__(self):
         """ Initialize application and main window."""
@@ -163,14 +163,13 @@ class ToolboxUI(QMainWindow):
         self.hide_tabs()
         # Finalize init
         self.connect_signals()
-        # self.init_shared_widgets()  # Shared among multiple project items
         self.restore_ui()
-        # self.ui.lineEdit_port.setValidator(QIntValidator())
 
     def load_plugins(self):
         """Loads and activates plugins.
         For now it just handles ProjectItem plugins."""
         self.categories.clear()
+        add_item_actions = list()
         for name in plugin_loader.get_plugins("project_items"):
             self.msg.emit("Loading plugin " + name)
             plugin = plugin_loader.load_plugin(name)
@@ -178,19 +177,19 @@ class ToolboxUI(QMainWindow):
             item_type = plugin.item_type
             item_maker = plugin.item_maker
             icon_maker = plugin.icon_maker
-            properties_ui = plugin.properties_ui
+            properties_ui = plugin.init_properties_ui(self)
             self.categories[item_category] = dict(
                 item_maker=item_maker, icon_maker=icon_maker, properties_ui=properties_ui
             )
-            # Setup properties UI
-            widget = QWidget()
-            properties_ui.setupUi(widget)
-            self.ui.tabWidget_item_properties.addTab(widget, item_type)
             # Create action for adding items of this type
-            action = self.ui.menuEdit.addAction(f"Add {item_type}")
-            action.triggered.connect(
+            add_item_action = QAction(f"Add {item_type}")
+            add_item_action.triggered.connect(
                 lambda checked=False, c=item_category, t=item_type: self.show_add_project_item_form(c, t)
             )
+            add_item_actions.append(add_item_action)
+        # Add actions to menu
+        remove_all_action = self.ui.menuEdit.actions()[0]
+        self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -202,9 +201,6 @@ class ToolboxUI(QMainWindow):
         self.msg_warning.connect(self.add_warning_message)
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
-        # Custom signals
-        # self.ui.treeView_dc_references.del_key_pressed.connect(self.remove_refs_with_del_key)
-        # self.ui.treeView_dc_data.del_key_pressed.connect(self.remove_data_with_del_key)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -454,7 +450,7 @@ class ToolboxUI(QMainWindow):
         Args:
             tool_template_paths (list): List of tool definition file paths used in this project
         """
-        # self.ui.comboBox_tool.setModel(QStandardItemModel())  # Reset combo box by setting and empty model to it
+        self.tool_template_model_changed.emit(QStandardItemModel())
         self.tool_template_model = ToolTemplateModel()
         n_tools = 0
         self.msg.emit("Loading Tool templates...")
@@ -475,7 +471,7 @@ class ToolboxUI(QMainWindow):
         # Set model to the tool template list view
         self.ui.listView_tool_templates.setModel(self.tool_template_model)
         # Set model to Tool project item combo box
-        # self.ui.comboBox_tool.setModel(self.tool_template_model)
+        self.tool_template_model_changed.emit(self.tool_template_model)
         # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
         # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
         n_recv_sig1 = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
@@ -504,21 +500,6 @@ class ToolboxUI(QMainWindow):
         self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
         self.ui.tableView_connections.itemDelegate().data_committed.connect(self.connection_data_changed)
         self.ui.graphicsView.set_connection_model(self.connection_model)
-
-    def init_shared_widgets(self):
-        """Initialize widgets that are shared among all ProjectItems of the same type."""
-        # Data Stores
-        self.ui.comboBox_dialect.addItems(list(SUPPORTED_DIALECTS.keys()))
-        self.ui.comboBox_dialect.setCurrentIndex(-1)
-        # Data Connections
-        self.ui.treeView_dc_references.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
-        # Tools (Tool template combobox is initialized in init_tool_template_model)
-        self.ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
-        # Views
-        self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
-        # Data Interfaces
-        self.ui.treeView_data_interface_files.setStyleSheet(TREEVIEW_HEADER_SS)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1523,30 +1504,6 @@ class ToolboxUI(QMainWindow):
         elif option == "Open directory...":
             di.open_directory()
         return
-
-    @Slot(name="remove_refs_with_del_key")
-    def remove_refs_with_del_key(self):
-        """Slot that removes selected references from the currently selected Data Connection.
-        Used when removing DC references by pressing the Delete key on keyboard (Qt.Key_Delete)."""
-        cur_index = self.ui.treeView_project.currentIndex()  # Find selected dc index
-        if not cur_index.isValid():
-            return
-        dc = self.project_item_model.project_item(cur_index)
-        if not dc:
-            return
-        dc.remove_references()
-
-    @Slot(name="remove_data_with_del_key")
-    def remove_data_with_del_key(self):
-        """Slot that removes selected data files from the currently selected Data Connection.
-        Used when removing DC data files by pressing the Delete key on keyboard (Qt.Key_Delete)."""
-        cur_index = self.ui.treeView_project.currentIndex()  # Find selected dc index
-        if not cur_index.isValid():
-            return
-        dc = self.project_item_model.project_item(cur_index)
-        if not dc:
-            return
-        dc.remove_files()
 
     def close_view_forms(self):
         """Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in

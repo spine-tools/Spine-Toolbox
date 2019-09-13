@@ -81,6 +81,8 @@ class DataConnection(ProjectItem):
         s[self._properties_ui.treeView_dc_references.files_dropped] = self.add_files_to_references
         s[self._properties_ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
         s[self.get_icon().scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
+        s[self._properties_ui.treeView_dc_references.del_key_pressed] = lambda: self.remove_references()
+        s[self._properties_ui.treeView_dc_data.del_key_pressed] = lambda: self.remove_files()
         return s
 
     def activate(self):

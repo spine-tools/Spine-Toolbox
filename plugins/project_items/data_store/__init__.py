@@ -20,9 +20,22 @@ Data store plugin.
 from .ui.data_store_properties import Ui_Form
 from .data_store import DataStore
 from .data_store_icon import DataStoreIcon
+from PySide2.QtWidgets import QWidget
+from PySide2.QtGui import QIntValidator
+from spinedb_api import SUPPORTED_DIALECTS
 
 item_category = "Data Stores"
 item_type = "Data Store"
 item_maker = DataStore
 icon_maker = DataStoreIcon
-properties_ui = Ui_Form()
+
+
+def init_properties_ui(toolbox):
+    properties_ui = Ui_Form()
+    properties_widget = QWidget()
+    properties_ui.setupUi(properties_widget)
+    properties_ui.comboBox_dialect.addItems(list(SUPPORTED_DIALECTS.keys()))
+    properties_ui.comboBox_dialect.setCurrentIndex(-1)
+    properties_ui.lineEdit_port.setValidator(QIntValidator())
+    toolbox.ui.tabWidget_item_properties.addTab(properties_widget, item_type)
+    return properties_ui

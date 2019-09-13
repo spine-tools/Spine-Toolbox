@@ -157,12 +157,14 @@ class Tool(ProjectItem):
             tool_template (ToolTemplate): Template for this Tool. None removes the template.
         """
         self._tool_template = tool_template
-        # self.update_tool_ui()
         self.item_changed.emit()
+        self.update_tool_ui()
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details. Used when Tool template is changed.
         Overrides execution mode (work or source) with the template default."""
+        if not self._properties_ui:
+            return
         if not self.tool_template():
             self._properties_ui.lineEdit_tool_args.setText("")
             self.populate_source_file_model(None)

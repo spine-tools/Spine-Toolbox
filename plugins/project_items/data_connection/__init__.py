@@ -19,9 +19,20 @@ Data store plugin.
 from .ui.data_connection_properties import Ui_Form
 from .data_connection import DataConnection
 from .data_connection_icon import DataConnectionIcon
+from PySide2.QtWidgets import QWidget
+from config import TREEVIEW_HEADER_SS
 
 item_category = "Data Connections"
 item_type = "Data Connection"
 item_maker = DataConnection
 icon_maker = DataConnectionIcon
-properties_ui = Ui_Form()
+
+
+def init_properties_ui(toolbox):
+    properties_ui = Ui_Form()
+    properties_widget = QWidget()
+    properties_ui.setupUi(properties_widget)
+    properties_ui.treeView_dc_references.setStyleSheet(TREEVIEW_HEADER_SS)
+    properties_ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
+    toolbox.ui.tabWidget_item_properties.addTab(properties_widget, item_type)
+    return properties_ui

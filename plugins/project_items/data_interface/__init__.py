@@ -20,9 +20,20 @@ Data store plugin.
 from .ui.data_interface_properties import Ui_Form
 from .data_interface import DataInterface
 from .data_interface_icon import DataInterfaceIcon
+from PySide2.QtWidgets import QWidget
+from config import TREEVIEW_HEADER_SS
 
 item_category = "Data Interfaces"
 item_type = "Data Interface"
 item_maker = DataInterface
 icon_maker = DataInterfaceIcon
-properties_ui = Ui_Form()
+
+
+def init_properties_ui(toolbox):
+    properties_ui = Ui_Form()
+    properties_widget = QWidget()
+    properties_ui.setupUi(properties_widget)
+    properties_ui.treeView_data_interface_files.setStyleSheet(TREEVIEW_HEADER_SS)
+    # Add page to properties tab_widget
+    toolbox.ui.tabWidget_item_properties.addTab(properties_widget, item_type)
+    return properties_ui
