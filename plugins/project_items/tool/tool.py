@@ -726,7 +726,7 @@ class Tool(ProjectItem):
                 self._toolbox.msg.emit("\tFound <b>{0}</b> files matching pattern <b>{1}</b>".format(len(v), k))
             if not self.copy_optional_input_files(optional_file_paths):
                 self._toolbox.msg_warning.emit("Copying optional input files failed")
-        self._graphics_item.start_animation()
+        self.get_icon().start_animation()
         self.update_instance()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.execute_finished)
         self.instance.execute()
@@ -783,7 +783,7 @@ class Tool(ProjectItem):
         Args:
             return_code (int): Process exit code
         """
-        self._graphics_item.stop_animation()
+        self.get_icon().stop_animation()
         # Disconnect instance finished signal
         self.instance.instance_finished_signal.disconnect(self.execute_finished)
         if return_code == 0:
@@ -797,7 +797,7 @@ class Tool(ProjectItem):
 
     def stop_execution(self):
         """Stops executing this Tool."""
-        self._graphics_item.stop_animation()
+        self.get_icon().stop_animation()
         self.instance.instance_finished_signal.disconnect(self.execute_finished)
         self._toolbox.msg_warning.emit("Stopping Tool <b>{0}</b>".format(self.name))
         self.instance.terminate_instance()

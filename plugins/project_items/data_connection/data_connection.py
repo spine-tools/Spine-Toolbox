@@ -128,7 +128,7 @@ class DataConnection(ProjectItem):
     def receive_files_dropped_on_dc(self, item, file_paths):
         """Called when files are dropped onto a data connection graphics item.
         If the item is this Data Connection's graphics item, add the files to data."""
-        if item == self._graphics_item:
+        if item == self.get_icon():
             self.add_files_to_data_dir(file_paths)
 
     @Slot("QVariant", name="add_files_to_data_dir")
