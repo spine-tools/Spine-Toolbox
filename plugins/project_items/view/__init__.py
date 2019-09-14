@@ -20,6 +20,7 @@ from .ui.view_properties import Ui_Form
 from .view import View
 from .view_icon import ViewIcon
 from .widgets.view_properties_widget import ViewPropertiesWidget
+from .widgets.add_view_widget import AddViewWidget
 
 item_category = "Views"
 item_type = "View"
@@ -27,12 +28,4 @@ item_icon = ":/icons/project_item_icons/binoculars.svg"
 item_maker = View
 icon_maker = ViewIcon
 properties_widget_maker = ViewPropertiesWidget
-
-
-def init_properties_ui(toolbox):
-    properties_ui = Ui_Form()
-    properties_widget = QWidget()
-    properties_ui.setupUi(properties_widget)
-    properties_ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
-    toolbox.ui.tabWidget_item_properties.addTab(properties_widget, item_type)
-    return properties_ui
+add_form_maker = AddViewWidget

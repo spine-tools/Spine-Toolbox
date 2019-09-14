@@ -210,7 +210,7 @@ class ToolboxUI(QMainWindow):
         For now it just handles ProjectItem plugins."""
         self.categories.clear()
         add_item_actions = list()
-        category_type_icon = list()
+        category_icon = list()
         for name in plugin_loader.get_plugins("project_items"):
             self.msg.emit("Loading plugin " + name)  # Dummy, since open_project will clear the event log
             plugin = plugin_loader.load_plugin(name)
@@ -219,24 +219,23 @@ class ToolboxUI(QMainWindow):
             item_icon = plugin.item_icon
             item_maker = plugin.item_maker
             icon_maker = plugin.icon_maker
+            add_form_maker = plugin.add_form_maker
             properties_widget = plugin.properties_widget_maker(self)
             properties_ui = properties_widget.ui
             self.categories[item_category] = dict(
-                item_maker=item_maker, icon_maker=icon_maker, properties_ui=properties_ui
+                item_maker=item_maker, icon_maker=icon_maker, add_form_maker=add_form_maker, properties_ui=properties_ui
             )
             # Create action for adding items of this type
             add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
-            add_item_action.triggered.connect(
-                lambda checked=False, c=item_category, t=item_type: self.show_add_project_item_form(c, t)
-            )
+            add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
             add_item_actions.append(add_item_action)
             # Update category type icon
-            category_type_icon.append((item_category, item_type, item_icon))
+            category_icon.append((item_category, item_icon))
         # Add actions to menu
         remove_all_action = self.ui.menuEdit.actions()[0]
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
         # Add draggable widgets to toolbar
-        self.item_toolbar.add_draggable_widgets(category_type_icon)
+        self.item_toolbar.add_draggable_widgets(category_icon)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -1134,13 +1133,18 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot("str", "str", "float", "float", name="show_add_project_item_form")
-    def show_add_project_item_form(self, item_category, item_type, x=0, y=0):
+    @Slot("str", "float", "float", name="show_add_project_item_form")
+    def show_add_project_item_form(self, item_category, x=0, y=0):
         """Show add project item widget."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        self.add_project_item_form = AddProjectItemWidget(self, item_category, item_type, x, y)
+        category_ind = self.project_item_model.find_category(item_category)
+        if not category_ind:
+            self.msg_error.emit("Category {0} not found".format(item_category))
+            return
+        category = self.project_item_model.project_item(category_ind)
+        self.add_project_item_form = category._add_form_maker(self, x, y)
         self.add_project_item_form.show()
 
     @Slot(name="show_tool_template_form")

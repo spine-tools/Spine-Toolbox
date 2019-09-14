@@ -21,6 +21,7 @@ from .ui.data_store_properties import Ui_Form
 from .data_store import DataStore
 from .data_store_icon import DataStoreIcon
 from .widgets.data_store_properties_widget import DataStorePropertiesWidget
+from .widgets.add_data_store_widget import AddDataStoreWidget
 
 
 item_category = "Data Stores"
@@ -29,3 +30,4 @@ item_icon = ":/icons/project_item_icons/database.svg"
 item_maker = DataStore
 icon_maker = DataStoreIcon
 properties_widget_maker = DataStorePropertiesWidget
+add_form_maker = AddDataStoreWidget

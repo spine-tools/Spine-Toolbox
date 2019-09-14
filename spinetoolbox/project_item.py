@@ -126,16 +126,18 @@ class CategoryProjectItem(BaseProjectItem):
     Attributes:
         name (str): Category name
         description (str): Category description
-        item_maker (ProjectItem): A method for creating items of this category
-        icon_maker (ProjectItemIcon): A method for creating icons (QGraphicsItems) for items of this category
-        properties_ui: The Item Properties UI
+        item_maker (function): A function for creating items in this category
+        icon_maker (function): A function for creating icons (QGraphicsItems) for items in this category
+        add_form_maker (function): A function for creating the form to add items to this category
+        properties_ui (object): An object holding the Item Properties UI
     """
 
-    def __init__(self, name, description, item_maker, icon_maker, properties_ui):
+    def __init__(self, name, description, item_maker, icon_maker, add_form_maker, properties_ui):
         """Class constructor."""
         super().__init__(name, description)
         self._item_maker = item_maker
         self._icon_maker = icon_maker
+        self._add_form_maker = add_form_maker
         self._properties_ui = properties_ui
 
     def item_maker(self):
@@ -180,7 +182,9 @@ class ProjectItem(BaseProjectItem):
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
-        This is to enable simpler connecting and disconnecting."""
+        This is to enable simpler connecting and disconnecting.
+        Must be implemented in subclasses.
+        """
         return dict()
 
     def connect_signals(self):

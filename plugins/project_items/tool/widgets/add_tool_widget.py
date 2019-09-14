@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Widget shown to user when a new Project Item is created.
+Widget shown to user when a new Tool is created.
 
 :author: P. Savolainen (VTT)
 :date:   19.1.2017
@@ -18,12 +18,12 @@ Widget shown to user when a new Project Item is created.
 
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
-from ui.add_project_item import Ui_Form
+from ..ui.add_tool import Ui_Form
 from config import STATUSBAR_SS, INVALID_CHARS
 
 
-class AddProjectItemWidget(QWidget):
-    """A widget to query user's preferences for a new item.
+class AddToolWidget(QWidget):
+    """A widget that queries user's preferences for a new item.
 
     Attributes:
         toolbox (ToolboxUI): Parent widget
@@ -50,8 +50,10 @@ class AddProjectItemWidget(QWidget):
         # Class attributes
         self.name = ''
         self.description = ''
-        self.connect_signals()
+        # Init
+        self.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
         self.ui.lineEdit_name.setFocus()
+        self.connect_signals()
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
 
@@ -60,6 +62,26 @@ class AddProjectItemWidget(QWidget):
         self.ui.lineEdit_name.textChanged.connect(self.name_changed)  # Name -> folder name connection
         self.ui.pushButton_ok.clicked.connect(self.ok_clicked)
         self.ui.pushButton_cancel.clicked.connect(self.close)
+        self.ui.comboBox_tool.currentIndexChanged.connect(self.update_args)
+
+    @Slot(int, name='update_args')
+    def update_args(self, row):
+        """Show Tool template command line arguments in text input.
+
+        Args:
+            row (int): Selected row number
+        """
+        if row == 0:
+            # No Tool selected
+            self.ui.lineEdit_tool_args.setText("")
+            return
+        selected_tool = self._toolbox.tool_template_model.tool_template(row)
+        args = selected_tool.cmdline_args
+        if not args:
+            # Tool cmdline_args is None if the line does not exist in Tool definition file
+            args = ''
+        self.ui.lineEdit_tool_args.setText("{0}".format(args))
+        return
 
     @Slot(name='name_changed')
     def name_changed(self):
@@ -101,8 +123,10 @@ class AddProjectItemWidget(QWidget):
         self.close()
 
     def call_add_item(self):
-        """Creates new Item according to user's selections.
-        Must be implemented by subclasses."""
+        """Creates new Item according to user's selections."""
+        tool = self.ui.comboBox_tool.currentText()
+        item = dict(name=self.name, description=self.description, x=self._x, y=self._y, tool=tool, execute_in_work=True)
+        self._project.add_project_items("Tools", item, set_selected=True)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

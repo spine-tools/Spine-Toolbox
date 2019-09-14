@@ -129,16 +129,15 @@ class CustomQGraphicsScene(QGraphicsScene):
             event.ignore()
             return
         event.acceptProposedAction()
-        category, type_ = event.mimeData().text().split(",")
+        category = event.mimeData().text()
         pos = event.scenePos()
         w = 70
         h = 70
         x = pos.x() - w / 2
         y = pos.y() - h / 2
         icon_maker = self._toolbox.categories[category]["icon_maker"]
-        item_type = self._toolbox.categories[category]["icon_maker"]
         self.item_shadow = icon_maker(self._toolbox, x, y, w, h, "...")
-        self._toolbox.show_add_project_item_form(category, type_, pos.x(), pos.y())
+        self._toolbox.show_add_project_item_form(category, pos.x(), pos.y())
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

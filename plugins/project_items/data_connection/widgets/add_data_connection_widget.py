@@ -10,22 +10,30 @@
 ######################################################################################################################
 
 """
-Data connection plugin.
+Widget shown to user when a new Data Connection is created.
 
-:author: M. Marin (KTH)
-:date:   12.9.2019
+:author: P. Savolainen (VTT)
+:date:   19.1.2017
 """
 
+from widgets.add_project_item_widget import AddProjectItemWidget
 
-from .data_connection import DataConnection
-from .data_connection_icon import DataConnectionIcon
-from .widgets.data_connection_properties_widget import DataConnectionPropertiesWidget
-from .widgets.add_data_connection_widget import AddDataConnectionWidget
 
-item_category = "Data Connections"
-item_type = "Data Connection"
-item_icon = ":/icons/project_item_icons/file-alt.svg"
-item_maker = DataConnection
-icon_maker = DataConnectionIcon
-properties_widget_maker = DataConnectionPropertiesWidget
-add_form_maker = AddDataConnectionWidget
+class AddDataConnectionWidget(AddProjectItemWidget):
+    """A widget to query user's preferences for a new item.
+
+    Attributes:
+        toolbox (ToolboxUI): Parent widget
+        x (int): X coordinate of new item
+        y (int): Y coordinate of new item
+    """
+
+    def __init__(self, toolbox, x, y):
+        """Initialize class."""
+        super().__init__(toolbox, x, y)
+        self.setWindowTitle(f"Add Data Connection")
+
+    def call_add_item(self):
+        """Creates new Item according to user's selections."""
+        item = dict(name=self.name, description=self.description, x=self._x, y=self._y, references=list())
+        self._project.add_project_items("Data Connections", item, set_selected=True)

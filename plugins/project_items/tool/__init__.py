@@ -21,6 +21,7 @@ from .ui.tool_properties import Ui_Form
 from .tool import Tool
 from .tool_icon import ToolIcon
 from .widgets.tool_properties_widget import ToolPropertiesWidget
+from .widgets.add_tool_widget import AddToolWidget
 
 item_category = "Tools"
 item_type = "Tool"
@@ -28,13 +29,4 @@ item_icon = ":/icons/project_item_icons/hammer.svg"
 item_maker = Tool
 icon_maker = ToolIcon
 properties_widget_maker = ToolPropertiesWidget
-
-
-def init_properties_ui(toolbox):
-    properties_ui = Ui_Form()
-    properties_widget = QWidget()
-    properties_ui.setupUi(properties_widget)
-    properties_ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
-    toolbox.tool_template_model_changed.connect(properties_ui.comboBox_tool.setModel)
-    toolbox.ui.tabWidget_item_properties.addTab(properties_widget, item_type)
-    return properties_ui
+add_form_maker = AddToolWidget

@@ -21,6 +21,7 @@ from .ui.data_interface_properties import Ui_Form
 from .data_interface import DataInterface
 from .data_interface_icon import DataInterfaceIcon
 from .widgets.data_interface_properties_widget import DataInterfacePropertiesWidget
+from .widgets.add_data_interface_widget import AddDataInterfaceWidget
 
 item_category = "Data Interfaces"
 item_type = "Data Interface"
@@ -28,3 +29,4 @@ item_icon = ":/icons/project_item_icons/map-solid.svg"
 item_maker = DataInterface
 icon_maker = DataInterfaceIcon
 properties_widget_maker = DataInterfacePropertiesWidget
+add_form_maker = AddDataInterfaceWidget

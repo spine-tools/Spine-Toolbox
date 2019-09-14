@@ -83,17 +83,16 @@ class ItemToolBar(QToolBar):
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
 
-    def add_draggable_widgets(self, category_type_icon):
+    def add_draggable_widgets(self, category_icon):
         """Adds dragable widgets from the given list.
 
         Args:
-            category_type_icon (list): List of tuples (item category (str), item type (str), icon path (str))
+            category_icon (list): List of tuples (item category (str), icon path (str))
         """
         widgets = list()
-        for category, type_, icon in category_type_icon:
+        for category, icon in category_icon:
             pixmap = QIcon(icon).pixmap(24, 24)
-            category_type = category + "," + type_
-            widget = DraggableWidget(self, pixmap, category_type)
+            widget = DraggableWidget(self, pixmap, category)
             widgets.append(widget)
         for widget in widgets:
             self.insertWidget(self.separator, widget)
