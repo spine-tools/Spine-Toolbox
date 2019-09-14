@@ -370,8 +370,12 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                     dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
                     src = self._project_item_model.find_item(src_name)
-                    src_item = self._project_item_model.project_item(src)
                     dst = self._project_item_model.find_item(dst_name)
+                    if src is None or dst is None:
+                        # Might happen, for instance if the link involves a Data Store and I failed to load
+                        # the Data Store plugin
+                        continue
+                    src_item = self._project_item_model.project_item(src)
                     dst_item = self._project_item_model.project_item(dst)
                     # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
                     src_icon = src_item.get_icon()

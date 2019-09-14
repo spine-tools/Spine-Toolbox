@@ -191,20 +191,25 @@ class ToolboxUI(QMainWindow):
         """Loads and activates plugins.
         For now it just handles ProjectItem plugins."""
         # TODO: Handle AttributeError with nice even log messages
+        self.msg.emit("Loading plugins...")
+        loaded = list()
         self.categories.clear()
         add_item_actions = list()
         category_icon = list()
         for name in plugin_loader.get_plugins("project_items"):
-            self.msg.emit("Loading plugin " + name)  # Dummy, since open_project will clear the event log
             plugin = plugin_loader.load_plugin(name)
-            item_category = plugin.item_category
-            item_type = plugin.item_type
-            item_icon = plugin.item_icon
-            item_maker = plugin.item_maker
-            icon_maker = plugin.icon_maker
-            add_form_maker = plugin.add_form_maker
-            properties_widget = plugin.properties_widget_maker(self)
-            properties_ui = properties_widget.ui
+            try:
+                item_category = plugin.item_category
+                item_type = plugin.item_type
+                item_icon = plugin.item_icon
+                item_maker = plugin.item_maker
+                icon_maker = plugin.icon_maker
+                add_form_maker = plugin.add_form_maker
+                properties_widget = plugin.properties_widget_maker(self)
+                properties_ui = properties_widget.ui
+            except AttributeError as e:
+                self.msg_error.emit("Can't load plugin <b>{0}</b>: {1}".format(name, e))
+                continue
             self.categories[item_category] = dict(
                 item_maker=item_maker, icon_maker=icon_maker, add_form_maker=add_form_maker, properties_ui=properties_ui
             )
@@ -214,11 +219,13 @@ class ToolboxUI(QMainWindow):
             add_item_actions.append(add_item_action)
             # Update category type icon
             category_icon.append((item_category, item_icon))
+            loaded.append("<b>" + name + "</b>")
         # Add actions to menu
         remove_all_action = self.ui.menuEdit.actions()[0]
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
         # Add draggable widgets to toolbar
         self.item_toolbar.add_draggable_widgets(category_icon)
+        self.msg_success.emit("The following plugins have been successfully loaded: {0}".format(", ".join(loaded)))
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -251,7 +258,7 @@ class ToolboxUI(QMainWindow):
             msg = "Could not load previous project. File '{0}' not found.".format(project_file_path)
             self.ui.statusbar.showMessage(msg, 10000)
             return
-        if not self.open_project(project_file_path):
+        if not self.open_project(project_file_path, clear_event_log=False):
             self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
             logging.error("Loading project file '%s' failed", project_file_path)
         return
@@ -280,7 +287,7 @@ class ToolboxUI(QMainWindow):
 
     # noinspection PyUnusedLocal
     @Slot(name="open_project")
-    def open_project(self, load_path=None):
+    def open_project(self, load_path=None, clear_event_log=True):
         """Load project from a save file (.proj) file.
 
         Args:
@@ -341,7 +348,8 @@ class ToolboxUI(QMainWindow):
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear QTextBrowsers
-        self.ui.textBrowser_eventlog.clear()
+        if clear_event_log:
+            self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_process_output.clear()
         # Populate project model with items read from JSON file
         self.init_models(tool_template_paths)
