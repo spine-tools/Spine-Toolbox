@@ -294,10 +294,6 @@ class ProjectItemModel(QAbstractItemModel):
         # Force save project
         self._toolbox.save_project()
         self._toolbox.msg_success.emit("Project item <b>{0}</b> renamed to <b>{1}</b>".format(old_name, value))
-        # If item is a Data Store and an SQLite path is set, give the user a notice that this must be updated manually
-        if item.item_type == "Data Store":
-            if not self._toolbox.ui.lineEdit_database.text().strip() == "":
-                self._toolbox.msg_warning.emit("<b>Note: Please update database path</b>")
         return True
 
     def items(self, category_name=None):

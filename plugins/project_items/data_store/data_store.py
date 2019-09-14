@@ -611,6 +611,13 @@ class DataStore(ProjectItem):
         elif action == "Open tabular view...":
             self.open_tabular_view()
 
+    def rename(self, new_name):
+        """Rename this item."""
+        super().rename(new_name)
+        # If SQLite path is set, give the user a notice that this must be updated manually
+        if self._properties_ui.lineEdit_database.text().strip() != "":
+            self._toolbox.msg_warning.emit("<b>Note: Please update database path</b>")
+
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing.
         Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened by this item.
