@@ -342,3 +342,8 @@ class ProjectItem(BaseProjectItem):
         res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
+
+    def tear_down(self):
+        """Tears down this item. Called by toolbox just before closing.
+        Implement in subclasses to eg close all QMainWindows opened by this item.
+        """

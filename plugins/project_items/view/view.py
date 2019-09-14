@@ -144,15 +144,6 @@ class View(ProjectItem):
         view_window.destroyed.connect(lambda: view_store.pop(view_id))
         view_store[view_id] = view_window
 
-    def close_all_views(self):
-        """Closes all view windows."""
-        for view in self._graph_views.values():
-            view.close()
-        for view in self._tabular_views.values():
-            view.close()
-        for view in self._tree_views.values():
-            view.close()
-
     def populate_reference_list(self, items):
         """Add given list of items to the reference model. If None or
         an empty list given, the model is cleared."""
@@ -244,11 +235,11 @@ class View(ProjectItem):
             return TreeViewForm(self._project, db_maps)
         raise RuntimeError("view_store must be self._graph_views, self._tabular_views or self._tree_views")
 
-
-def activate(toolbox):
-    """Activate the plugin for using with given toolbox.
-
-    Args:
-        toolbox (ToolboxUI): activate the pluging for this toolbox
-    """
-    toolbox.item_categories["Views"] = View
+    def tear_down(self):
+        """Tears down this item. Called by toolbox just before closing. Closes all view windows."""
+        for view in self._graph_views.values():
+            view.close()
+        for view in self._tabular_views.values():
+            view.close()
+        for view in self._tree_views.values():
+            view.close()

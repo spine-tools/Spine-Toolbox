@@ -406,11 +406,8 @@ class DataConnection(ProjectItem):
         d["references"] = self.file_references()
         return d
 
-
-def activate(toolbox):
-    """Activate the plugin for using with given toolbox.
-
-    Args:
-        toolbox (ToolboxUI): activate the pluging for this toolbox
-    """
-    toolbox.item_categories["Data Connections"] = DataConnection
+    def tear_down(self):
+        """Tears down this item. Called by toolbox just before closing.
+        Closes the SpineDatapackageWidget instances opened."""
+        if self.spine_datapackage_form:
+            self.spine_datapackage_form.close()

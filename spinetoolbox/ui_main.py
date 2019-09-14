@@ -1280,26 +1280,13 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
 
-    def close_view_forms(self):
-        """Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in
-        Data Stores and Views. Ensures that close() method is called on all corresponding
-        DiffDatabaseMapping instances, which cleans up the databases. Also closes all
-        SpineDatapackageWidget instances opened in Data Connections.
+    def tear_down_items(self):
+        """Calls the tear_down method on all project items, so they can clean up their mess if needed.
         """
         if not self._project:
             return
-        for data_store in self.project_item_model.items("Data Stores"):
-            if data_store.tree_view_form:
-                data_store.tree_view_form.close()
-            if data_store.tabular_view_form:
-                data_store.tabular_view_form.close()
-            if data_store.graph_view_form:
-                data_store.graph_view_form.close()
-        for data_connection in self.project_item_model.items("Data Connections"):
-            if data_connection.spine_datapackage_form:
-                data_connection.spine_datapackage_form.close()
-        for view in self.project_item_model.items("Views"):
-            view.close_all_views()
+        for item in self.project_item_model.items():
+            item.tear_down()
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.
@@ -1395,7 +1382,7 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
         self.python_repl.shutdown_kernel()
-        self.close_view_forms()
+        self.tear_down_items()
         if event:
             event.accept()
         # noinspection PyArgumentList

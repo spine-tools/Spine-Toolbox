@@ -610,3 +610,14 @@ class DataStore(ProjectItem):
             self.open_graph_view()
         elif action == "Open tabular view...":
             self.open_tabular_view()
+
+    def tear_down(self):
+        """Tears down this item. Called by toolbox just before closing.
+        Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened by this item.
+        """
+        if self.tree_view_form:
+            self.tree_view_form.close()
+        if self.tabular_view_form:
+            self.tabular_view_form.close()
+        if self.graph_view_form:
+            self.graph_view_form.close()
