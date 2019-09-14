@@ -18,8 +18,8 @@ Contains DataInterface class.
 
 import logging
 import os
-from PySide2.QtCore import Qt, Slot, QUrl, QFileInfo
-from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel
+from PySide2.QtCore import Qt, Slot, QFileInfo
+from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QMainWindow, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
 from project_item import ProjectItem
 from helpers import create_dir, create_log_file_timestamp
@@ -43,17 +43,14 @@ class DataInterface(ProjectItem):
     def __init__(self, toolbox, name, description, x, y, mappings=None):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
-        self._project = self._toolbox.project()
         self.item_type = "Data Interface"
-        # Make data directory and logs subdirectory for this item
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        # Make logs subdirectory for this item
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
-            create_dir(self.data_dir)
             create_dir(self.logs_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
+                "[OSError] Creating directory {0} failed. Check permissions.".format(self.logs_dir)
             )
         # Variables for saving selections when item is (de)activated
         if mappings is None:
@@ -81,8 +78,8 @@ class DataInterface(ProjectItem):
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
-        s = dict()
-        s[self._properties_ui.toolButton_di_open_dir.clicked] = self.open_directory
+        s = super().make_signal_handler_dict()
+        s[self._properties_ui.toolButton_di_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_import_editor.clicked] = self._handle_import_editor_clicked
         s[self._properties_ui.treeView_data_interface_files.doubleClicked] = self._handle_files_double_clicked
         return s
@@ -114,15 +111,6 @@ class DataInterface(ProjectItem):
     def update_name_label(self):
         """Update Data Interface tab name label. Used only when renaming project items."""
         self._properties_ui.label_di_name.setText(self.name)
-
-    @Slot(bool, name="open_directory")
-    def open_directory(self, checked=False):
-        """Opens file explorer in Data Interface directory."""
-        url = "file:///" + self.data_dir
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-        if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(bool, name="_handle_import_editor_clicked")
     def _handle_import_editor_clicked(self, checked=False):

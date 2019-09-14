@@ -21,7 +21,7 @@ import locale
 import logging
 import json
 import plugin_loader
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QTimeLine
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, SIGNAL
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -38,7 +38,7 @@ from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStan
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import (
-    ProjectItemContextMenu,
+    ProjectItemModelContextMenu,
     ToolTemplateContextMenu,
     LinkContextMenu,
     AddToolTemplatePopupMenu,
@@ -181,7 +181,7 @@ class ToolboxUI(QMainWindow):
         # Event Log & Process output
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
         # Context-menus
-        # self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
+        self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
         # Main menu
         self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
@@ -190,6 +190,7 @@ class ToolboxUI(QMainWindow):
     def load_plugins(self):
         """Loads and activates plugins.
         For now it just handles ProjectItem plugins."""
+        # TODO: Handle AttributeError with nice even log messages
         self.categories.clear()
         add_item_actions = list()
         category_icon = list()
@@ -1209,51 +1210,23 @@ class ToolboxUI(QMainWindow):
         """
         if not self.project():
             return
-        self.project_item_context_menu = ProjectItemContextMenu(self, pos, ind)
-        option = self.project_item_context_menu.get_action()
-        d = self.project_item_model.project_item(ind)
-        if option == "Open directory...":
-            d.open_directory()  # Open data_dir of Data Connection or Data Store
-        elif option == "Open tree view...":
-            d.open_tree_view()  # Open tree view of Data Store
-        elif option == "Open graph view...":
-            d.open_graph_view()  # Open graph view of Data Store
-        elif option == "Open tabular view...":
-            d.open_tabular_view()  # Open tabular view of Data Store
-        elif option == "Results...":
-            d.open_results()
-        elif option == "Stop":
-            # Check that the wheel is still visible, because execution may have stopped before the user clicks Stop
-            if d.get_icon().timer.state() != QTimeLine.Running:
-                self.msg.emit("Tool <b>{0}</b> is not running".format(d.name))
-            else:
-                d.stop_execution()  # Proceed with stopping
-        elif option == "Edit Tool template":
-            d.edit_tool_template()
-        elif option == "Edit main program file...":
-            d.open_tool_main_program_file()
-        elif option == "Rename":
-            # noinspection PyCallByClass
-            answer = QInputDialog.getText(
-                self, "Rename Item", "New name:", text=d.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
-            )
-            # answer[str, bool]
-            if not answer[1]:
+        if not ind.isValid():
+            # Clicked on a blank area, show the project item model context menu
+            self.project_item_context_menu = ProjectItemModelContextMenu(self, pos)
+            action = self.project_item_context_menu.get_action()
+            if action == "Open project directory...":
+                file_url = "file:///" + self._project.project_dir
+                self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
+            elif action == "Export project to GraphML":
+                self.project().export_graphs()
+            else:  # No option selected
                 pass
-            else:
-                new_name = answer[0]
-                self.project_item_model.setData(ind, new_name)
-        elif option == "Remove item":
-            delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            self.remove_item(ind, delete_item=delete_bool, check_dialog=True)
-        elif option == "Open project directory...":
-            file_url = "file:///" + self._project.project_dir
-            self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
-        elif option == "Export project to GraphML":
-            self.project().export_graphs()
-        else:  # No option selected
-            pass
+        else:
+            # Clicked on an item, show the custom context menu for that item
+            item = self.project_item_model.project_item(ind)
+            self.project_item_context_menu = item.custom_context_menu(self, pos)
+            action = self.project_item_context_menu.get_action()
+            item.apply_context_menu_action(self, action)
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None
 

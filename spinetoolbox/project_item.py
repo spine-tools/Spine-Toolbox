@@ -17,9 +17,14 @@ BaseProjectItem and ProjectItem classes.
 :date:   4.10.2018
 """
 
+import os
 import logging
 from metaobject import MetaObject
-from PySide2.QtCore import Signal, Slot
+from PySide2.QtCore import Qt, Signal, Slot, QUrl
+from PySide2.QtWidgets import QInputDialog
+from PySide2.QtGui import QDesktopServices
+import widgets.custom_menus
+from helpers import create_dir
 
 
 class BaseProjectItem(MetaObject):
@@ -101,6 +106,17 @@ class BaseProjectItem(MetaObject):
         child._parent = None
         return True
 
+    def custom_context_menu(self):
+        """Returns the context menu for this item. Implement in subclasses as needed."""
+        return NotImplemented
+
+    def apply_context_menu_action(self, action):
+        """Applies given action from context menu. Implement in subclasses as needed.
+
+        Args:
+            action (str): The selected action
+        """
+
 
 class RootProjectItem(BaseProjectItem):
     """Class for the root project items.
@@ -156,6 +172,28 @@ class CategoryProjectItem(BaseProjectItem):
         logging.error("You can only add project items as a child of categories")
         return False
 
+    def custom_context_menu(self, parent, pos):
+        """Returns the context menu for this item.
+
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            pos (QPoint): Position on screen
+        """
+        return widgets.custom_menus.CategoryProjectItemContextMenu(parent, pos)
+
+    def apply_context_menu_action(self, parent, action):
+        """Applies given action from context menu. Implement in subclasses as needed.
+
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            action (str): The selected action
+        """
+        if action == "Open project directory...":
+            file_url = "file:///" + parent._project.project_dir
+            parent.open_anchor(QUrl(file_url, QUrl.TolerantMode))
+        else:  # No option selected
+            pass
+
 
 class ProjectItem(BaseProjectItem):
     """Class for project items that are not category nor root.
@@ -175,10 +213,19 @@ class ProjectItem(BaseProjectItem):
         """Class constructor."""
         super().__init__(name, description)
         self._toolbox = toolbox
+        self._project = self._toolbox.project()
         self.x = x
         self.y = y
         self._properties_ui = None
         self._icon = None
+        # Make project directory for this Item
+        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        try:
+            create_dir(self.data_dir)
+        except OSError:
+            self._toolbox.msg_error.emit(
+                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
+            )
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -248,3 +295,50 @@ class ProjectItem(BaseProjectItem):
             "x": self.get_icon().sceneBoundingRect().center().x(),
             "y": self.get_icon().sceneBoundingRect().center().y(),
         }
+
+    def custom_context_menu(self, parent, pos):
+        """Returns the context menu for this item.
+
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            pos (QPoint): Position on screen
+        """
+        return widgets.custom_menus.ProjectItemContextMenu(parent, pos)
+
+    def apply_context_menu_action(self, parent, action):
+        """Applies given action from context menu. Implement in subclasses as needed.
+
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            action (str): The selected action
+        """
+        if action == "Open directory...":
+            self.open_directory()
+        elif action == "Rename":
+            # noinspection PyCallByClass
+            answer = QInputDialog.getText(
+                self._toolbox,
+                "Rename Item",
+                "New name:",
+                text=self.name,
+                flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint,
+            )
+            if not answer[1]:
+                pass
+            else:
+                new_name = answer[0]
+                ind = self._toolbox.project_item_model.find_item(self.name)
+                self._toolbox.project_item_model.setData(ind, new_name)
+        elif action == "Remove item":
+            delete_int = int(self._toolbox._qsettings.value("appSettings/deleteData", defaultValue="0"))
+            delete_bool = delete_int != 0
+            ind = self._toolbox.project_item_model.find_item(self.name)
+            self._toolbox.remove_item(ind, delete_item=delete_bool, check_dialog=True)
+
+    def open_directory(self):
+        """Open this item's data directory in file explorer."""
+        url = "file:///" + self.data_dir
+        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
+        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
+        if not res:
+            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))

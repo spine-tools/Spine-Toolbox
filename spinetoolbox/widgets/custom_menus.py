@@ -20,7 +20,7 @@ import logging
 from operator import itemgetter
 from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox
 from PySide2.QtGui import QIcon
-from PySide2.QtCore import Qt, Signal, Slot, QPoint, QTimeLine
+from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from helpers import fix_name_ambiguity, tuple_itemgetter
 from plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
 from widgets.custom_qwidgets import FilterWidget
@@ -41,12 +41,14 @@ class CustomContextMenu(QMenu):
 
     Attributes:
         parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, position):
         """Constructor."""
         super().__init__(parent=parent)
         self._parent = parent
+        self.position = position
         self.option = "None"
 
     def add_action(self, text, icon=QIcon(), enabled=True):
@@ -71,71 +73,55 @@ class CustomContextMenu(QMenu):
 
     def get_action(self):
         """Returns the clicked action, a string with a description."""
+        self.exec_(self.position)
         return self.option
 
 
-class ProjectItemContextMenu(CustomContextMenu):
-    """Context menu for project items both in the QTreeView and in the QGraphicsView.
+class CategoryProjectItemContextMenu(CustomContextMenu):
+    """Context menu for category project items in the QTreeView.
 
     Attributes:
         parent (QWidget): Parent for menu widget (ToolboxUI)
         position (QPoint): Position on screen
-        index (QModelIndex): Index of item that requested the context-menu
     """
 
-    def __init__(self, parent, position, index):
+    def __init__(self, parent, position):
         """Class constructor."""
-        super().__init__(parent)
-        if not index.isValid():
-            # If no item at index
-            if not self._parent.project():
-                return
-            self.add_action("Open project directory...")
-            self.addSeparator()
-            self.add_action("Export project to GraphML")
-            self.exec_(position)
-            return
-        if not index.parent().isValid():
-            if not self._parent.project():
-                return
-            # If index is at a category item
-            self.add_action("Open project directory...")
-            self.exec_(position)
-            return
-        d = self._parent.project_item_model.project_item(index)
-        if d.item_type == "Data Connection":
-            self.add_action("Open directory...")
-        elif d.item_type == "Data Store":
-            self.add_action("Open tree view...")
-            self.add_action("Open graph view...")
-            self.add_action("Open tabular view...")
-            self.addSeparator()
-            self.add_action("Open directory...")
-        elif d.item_type == "Tool":
-            self.add_action("Results...")
-            # TODO: Do we still want to have the stop action here???
-            if d.get_icon().timer.state() == QTimeLine.Running:
-                self.add_action("Stop")
-            else:
-                self.add_action("Stop", enabled=False)
-            self.addSeparator()
-            if not d.tool_template():
-                enabled = False
-            else:
-                enabled = True
-            self.add_action("Edit Tool template", enabled=enabled)
-            self.add_action("Edit main program file...", enabled=enabled)
-        elif d.item_type == "View":
-            self.add_action("Open directory...")
-        elif d.item_type == "Data Interface":
-            self.add_action("Open directory...")
-        else:
-            logging.error("Unknown item type: %s", d.item_type)
-            return
+        super().__init__(parent, position)
+        self.add_action("Open project directory...")
+
+
+class ProjectItemModelContextMenu(CustomContextMenu):
+    """Context menu for project item model in the QTreeView.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+    """
+
+    def __init__(self, parent, position):
+        """Class constructor."""
+        super().__init__(parent, position)
+        self.add_action("Open project directory...")
+        self.addSeparator()
+        self.add_action("Export project to GraphML")
+
+
+class ProjectItemContextMenu(CustomContextMenu):
+    """Context menu for project items in the QTreeView and in the QGraphicsView.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+    """
+
+    def __init__(self, parent, position):
+        """Class constructor."""
+        super().__init__(parent, position)
+        self.add_action("Open directory...")
         self.addSeparator()
         self.add_action("Rename")
         self.add_action("Remove item")
-        self.exec_(position)
 
 
 class LinkContextMenu(CustomContextMenu):
@@ -150,14 +136,13 @@ class LinkContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index, parallel_link=None):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             return
         self.add_action("Remove connection")
         self.add_action("Take connection")
         if parallel_link:
             self.add_action("Send to bottom")
-        self.exec_(position)
 
 
 class ToolTemplateContextMenu(CustomContextMenu):
@@ -171,7 +156,7 @@ class ToolTemplateContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             # If no item at index
             return
@@ -181,7 +166,6 @@ class ToolTemplateContextMenu(CustomContextMenu):
         self.add_action("Open Tool template definition file...")
         self.addSeparator()
         self.add_action("Remove Tool template")
-        self.exec_(position)
 
 
 class ObjectTreeContextMenu(CustomContextMenu):
@@ -195,7 +179,7 @@ class ObjectTreeContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             return
         copy_icon = self._parent.ui.actionCopy.icon()
@@ -236,7 +220,6 @@ class ObjectTreeContextMenu(CustomContextMenu):
         if item_type != 'root':
             self.addSeparator()
             self.add_action("Remove selection", remove_icon)
-        self.exec_(position)
 
 
 class RelationshipTreeContextMenu(CustomContextMenu):
@@ -250,7 +233,7 @@ class RelationshipTreeContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             return
         copy_icon = self._parent.ui.actionCopy.icon()
@@ -271,7 +254,6 @@ class RelationshipTreeContextMenu(CustomContextMenu):
         if item_type != 'root':
             self.addSeparator()
             self.add_action("Remove selection", remove_icon)
-        self.exec_(position)
 
 
 class ParameterContextMenu(CustomContextMenu):
@@ -285,7 +267,7 @@ class ParameterContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             return
         copy_icon = self._parent.ui.actionCopy.icon()
@@ -295,7 +277,6 @@ class ParameterContextMenu(CustomContextMenu):
         self.add_action("Paste", paste_icon)
         self.addSeparator()
         self.add_action("Remove selection", remove_icon)
-        self.exec_(position)
 
 
 class SimpleEditableParameterValueContextMenu(CustomContextMenu):
@@ -310,13 +291,12 @@ class SimpleEditableParameterValueContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             return
         self.add_action("Open in editor...")
         self.addSeparator()
         self.add_action("Plot")
-        self.exec_(position)
 
 
 class EditableParameterValueContextMenu(CustomContextMenu):
@@ -330,7 +310,7 @@ class EditableParameterValueContextMenu(CustomContextMenu):
     """
 
     def __init__(self, parent, position, index):
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             return
         copy_icon = self._parent.ui.actionCopy.icon()
@@ -344,7 +324,6 @@ class EditableParameterValueContextMenu(CustomContextMenu):
         self.add_action("Paste", paste_icon)
         self.addSeparator()
         self.add_action("Remove selection", remove_icon)
-        self.exec_(position)
 
 
 class ParameterValueListContextMenu(CustomContextMenu):
@@ -358,7 +337,7 @@ class ParameterValueListContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             return
         copy_icon = self._parent.ui.actionCopy.icon()
@@ -366,7 +345,6 @@ class ParameterValueListContextMenu(CustomContextMenu):
         self.add_action("Copy", copy_icon)
         self.addSeparator()
         self.add_action("Remove selection", remove_icon)
-        self.exec_(position)
 
 
 class GraphViewContextMenu(CustomContextMenu):
@@ -379,13 +357,12 @@ class GraphViewContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         self.add_action("Hide selected items", enabled=len(parent.object_item_selection) > 0)
         self.add_action("Show hidden items", enabled=len(parent.hidden_items) > 0)
         self.addSeparator()
         self.add_action("Prune selected items", enabled=len(parent.object_item_selection) > 0)
         self.add_action("Reinstate pruned items", enabled=len(parent.rejected_items) > 0)
-        self.exec_(position)
 
 
 class ObjectItemContextMenu(CustomContextMenu):
@@ -399,7 +376,7 @@ class ObjectItemContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, graphics_item):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         self.relationship_class_dict = dict()
         object_item_selection_length = len(parent.object_item_selection)
         self.add_action('Hide')
@@ -443,7 +420,6 @@ class ObjectItemContextMenu(CustomContextMenu):
                     'object_name_list': fixed_object_class_name_list,
                     'dimension': i,
                 }
-        self.exec_(position)
 
 
 class CustomPopupMenu(QMenu):

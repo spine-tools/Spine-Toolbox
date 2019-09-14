@@ -20,8 +20,7 @@ import sys
 import os
 import logging
 import spinedb_api
-from PySide2.QtGui import QDesktopServices
-from PySide2.QtCore import Slot, QUrl, Qt
+from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
@@ -30,7 +29,7 @@ from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
-import qsubprocess
+from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
@@ -48,21 +47,18 @@ class DataStore(ProjectItem):
     def __init__(self, toolbox, name, description, x, y, url=None):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
-        self._project = self._toolbox.project()
         self.item_type = "Data Store"
         self._url = self.parse_url(url)
         self.tree_view_form = None
         self.graph_view_form = None
         self.tabular_view_form = None
-        # Make project directory for this Data Store
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
+        # Make logs directory for this Data Store
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
-            create_dir(self.data_dir)
             create_dir(self.logs_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed. Check permissions.".format(self.data_dir)
+                "[OSError] Creating directory {0} failed. Check permissions.".format(self.logs_dir)
             )
 
     def parse_url(self, url):
@@ -79,8 +75,8 @@ class DataStore(ProjectItem):
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
-        s = dict()
-        s[self._properties_ui.toolButton_ds_open_dir.clicked] = self.open_directory
+        s = super().make_signal_handler_dict()
+        s[self._properties_ui.toolButton_ds_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_ds_tree_view.clicked] = self.open_tree_view
         s[self._properties_ui.pushButton_ds_graph_view.clicked] = self.open_graph_view
         s[self._properties_ui.pushButton_ds_tabular_view.clicked] = self.open_tabular_view
@@ -451,15 +447,6 @@ class DataStore(ProjectItem):
     def tabular_view_form_destroyed(self):
         self.tabular_view_form = None
 
-    @Slot(bool, name="open_directory")
-    def open_directory(self, checked=False):
-        """Open file explorer in this Data Store's data directory."""
-        url = "file:///" + self.data_dir
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-        if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
-
     def data_files(self):
         """Return a list of files that are in this items data directory."""
         if not os.path.isdir(self.data_dir):
@@ -599,3 +586,27 @@ class DataStore(ProjectItem):
         d = super().item_dict()
         d["url"] = self.url()
         return d
+
+    def custom_context_menu(self, parent, pos):
+        """Returns the context menu for this item.
+
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            pos (QPoint): Position on screen
+        """
+        return DataStoreContextMenu(parent, pos)
+
+    def apply_context_menu_action(self, parent, action):
+        """Applies given action from context menu. Implement in subclasses as needed.
+
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            action (str): The selected action
+        """
+        super().apply_context_menu_action(parent, action)
+        if action == "Open tree view...":
+            self.open_tree_view()
+        elif action == "Open graph view...":
+            self.open_graph_view()
+        elif action == "Open tabular view...":
+            self.open_tabular_view()

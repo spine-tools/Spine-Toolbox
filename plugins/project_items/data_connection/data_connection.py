@@ -24,7 +24,7 @@ from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, Q
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
 from project_item import ProjectItem
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
-from helpers import busy_effect, create_dir
+from helpers import busy_effect
 from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
@@ -43,21 +43,11 @@ class DataConnection(ProjectItem):
     def __init__(self, toolbox, name, description, x, y, references=None):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
-        self._project = self._toolbox.project()
         self.item_type = "Data Connection"
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
         self.data_dir_watcher = QFileSystemWatcher(self)
-        # Make project directory for this Data Connection
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
-        try:
-            create_dir(self.data_dir)
-            self.data_dir_watcher.addPath(self.data_dir)
-        except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
-            )
         # Populate references model
         if references is None:
             references = list()
@@ -71,8 +61,8 @@ class DataConnection(ProjectItem):
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
-        s = dict()
-        s[self._properties_ui.toolButton_dc_open_dir.clicked] = self.open_directory
+        s = super().make_signal_handler_dict()
+        s[self._properties_ui.toolButton_dc_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.toolButton_plus.clicked] = self.add_references
         s[self._properties_ui.toolButton_minus.clicked] = self.remove_references
         s[self._properties_ui.toolButton_add.clicked] = self.copy_to_project
@@ -143,16 +133,6 @@ class DataConnection(ProjectItem):
                 self._toolbox.msg_error.emit("[OSError] Copying failed")
                 return
         data_files = self.data_files()
-        self.populate_data_list(data_files)
-
-    @Slot(bool, name="open_directory")
-    def open_directory(self, checked=False):
-        """Open file explorer in Data Connection data directory."""
-        url = "file:///" + self.data_dir
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-        if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     @Slot(bool, name="add_references")
     def add_references(self, checked=False):

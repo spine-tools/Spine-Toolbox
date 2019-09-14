@@ -16,7 +16,8 @@ Classes for custom context menus and pop-up menus.
 :date:   9.1.2018
 """
 
-from widgets.custom_menus import CustomContextMenu
+from widgets.custom_menus import CustomContextMenu, ProjectItemContextMenu
+from PySide2.QtCore import QTimeLine
 
 
 class ToolPropertiesContextMenu(CustomContextMenu):
@@ -38,3 +39,25 @@ class ToolPropertiesContextMenu(CustomContextMenu):
         self.addSeparator()
         self.add_action("Open directory...")
         self.exec_(position)
+
+
+class ToolContextMenu(ProjectItemContextMenu):
+    """Context menu for Tools in the QTreeView and in the QGraphicsView.
+
+    Attributes:
+        parent (QWidget): Parent for menu widget (ToolboxUI)
+        position (QPoint): Position on screen
+    """
+
+    def __init__(self, parent, tool, position):
+        """Class constructor."""
+        super().__init__(parent, position)
+        self.addSeparator()
+        self.add_action("Results...")
+        # TODO: Do we still want to have the stop action here???
+        enabled = tool.get_icon().timer.state() == QTimeLine.Running
+        self.add_action("Stop", enabled=False)
+        self.addSeparator()
+        enabled = bool(tool.tool_template())
+        self.add_action("Edit Tool template", enabled=enabled)
+        self.add_action("Edit main program file...", enabled=enabled)

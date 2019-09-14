@@ -20,14 +20,14 @@ import logging
 import os
 import shutil
 import sys
-from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
+from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from project_item import ProjectItem
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
-from helpers import create_dir
+from .widgets.custom_menus import ToolContextMenu
 
 
 class Tool(ProjectItem):
@@ -46,7 +46,6 @@ class Tool(ProjectItem):
     def __init__(self, toolbox, name, description, x, y, tool="", execute_in_work=True):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
-        self._project = self._toolbox.project()
         self.item_type = "Tool"
         self.source_file_model = QStandardItemModel()
         self.populate_source_file_model(None)
@@ -76,22 +75,14 @@ class Tool(ProjectItem):
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
         self.execute_in_work = execute_in_work  # Enables overriding the template default setting
-        # Make project directory for this Tool
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
-        try:
-            create_dir(self.data_dir)
-        except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
-            )
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
-        s = dict()
-        s[self._properties_ui.toolButton_tool_open_dir.clicked] = self.open_directory
+        s = super().make_signal_handler_dict()
+        s[self._properties_ui.toolButton_tool_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
         s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
@@ -645,15 +636,6 @@ class Tool(ProjectItem):
         """Update Tool tab name label. Used only when renaming project items."""
         self._properties_ui.label_tool_name.setText(self.name)
 
-    @Slot(bool, name="open_directory")
-    def open_directory(self, checked=False):
-        """Open file explorer in Tool data directory."""
-        url = "file:///" + self.data_dir
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-        if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
-
     def execute(self):
         """Executes this Tool."""
         if not self.tool_template():
@@ -831,11 +813,32 @@ class Tool(ProjectItem):
         d["execute_in_work"] = self.execute_in_work
         return d
 
+    def custom_context_menu(self, parent, pos):
+        """Returns the context menu for this item.
 
-def activate(toolbox):
-    """Activate the plugin for using with given toolbox.
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            pos (QPoint): Position on screen
+        """
+        return ToolContextMenu(parent, self, pos)
 
-    Args:
-        toolbox (ToolboxUI): activate the pluging for this toolbox
-    """
-    toolbox.item_categories["Tools"] = Tool
+    def apply_context_menu_action(self, parent, action):
+        """Applies given action from context menu. Implement in subclasses as needed.
+
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            action (str): The selected action
+        """
+        super().apply_context_menu_action(parent, action)
+        if action == "Results...":
+            self.open_results()
+        elif action == "Stop":
+            # Check that the wheel is still visible, because execution may have stopped before the user clicks Stop
+            if self.get_icon().timer.state() != QTimeLine.Running:
+                self._toolbox.msg.emit("Tool <b>{0}</b> is not running".format(self.name))
+            else:
+                self.stop_execution()  # Proceed with stopping
+        elif action == "Edit Tool template":
+            self.edit_tool_template()
+        elif action == "Edit main program file...":
+            self.open_tool_main_program_file()

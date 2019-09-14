@@ -18,15 +18,14 @@ Module for view class.
 
 import logging
 import os
-from PySide2.QtCore import Qt, Slot, QUrl
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap, QDesktopServices
+from PySide2.QtCore import Qt, Slot
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from project_item import ProjectItem
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from widgets.tree_view_widget import TreeViewForm
-from helpers import create_dir
 from .view_icon import ViewIcon
 
 
@@ -44,7 +43,6 @@ class View(ProjectItem):
 
     def __init__(self, toolbox, name, description, x, y):
         super().__init__(toolbox, name, description, x, y)
-        self._project = self._toolbox.project()
         self.item_type = "View"
         self._graph_views = {}
         self._tabular_views = {}
@@ -52,20 +50,12 @@ class View(ProjectItem):
         self._references = list()
         self.reference_model = QStandardItemModel()  # References to databases
         self._spine_ref_icon = QIcon(QPixmap(":/icons/Spine_db_ref_icon.png"))
-        # Make project directory for this View
-        self.data_dir = os.path.join(self._project.project_dir, self.short_name)
-        try:
-            create_dir(self.data_dir)
-        except OSError:
-            self._toolbox.msg_error.emit(
-                "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
-            )
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
-        s = dict()
-        s[self._properties_ui.toolButton_view_open_dir.clicked] = self.open_directory
+        s = super().make_signal_handler_dict()
+        s[self._properties_ui.toolButton_view_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_view_open_graph_view.clicked] = self.open_graph_view_btn_clicked
         s[self._properties_ui.pushButton_view_open_tabular_view.clicked] = self.open_tabular_view_btn_clicked
         s[self._properties_ui.pushButton_view_open_tree_view.clicked] = self.open_tree_view_btn_clicked
@@ -178,15 +168,6 @@ class View(ProjectItem):
     def update_name_label(self):
         """Update View tab name label. Used only when renaming project items."""
         self._properties_ui.label_view_name.setText(self.name)
-
-    @Slot(bool, name="open_directory")
-    def open_directory(self, checked=False):
-        """Open file explorer in View data directory."""
-        url = "file:///" + self.data_dir
-        # noinspection PyTypeChecker, PyCallByClass, PyArgumentList
-        res = QDesktopServices.openUrl(QUrl(url, QUrl.TolerantMode))
-        if not res:
-            self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     def execute(self):
         """Executes this View."""
