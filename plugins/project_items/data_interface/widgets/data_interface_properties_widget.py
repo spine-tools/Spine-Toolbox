@@ -10,29 +10,29 @@
 ######################################################################################################################
 
 """
-View plugin.
+Data interface properties widget.
 
 :author: M. Marin (KTH)
 :date:   12.9.2019
 """
 
-from .ui.view_properties import Ui_Form
-from .view import View
-from .view_icon import ViewIcon
-from .widgets.view_properties_widget import ViewPropertiesWidget
-
-item_category = "Views"
-item_type = "View"
-item_icon = ":/icons/project_item_icons/binoculars.svg"
-item_maker = View
-icon_maker = ViewIcon
-properties_widget_maker = ViewPropertiesWidget
+from PySide2.QtWidgets import QWidget
+from ..ui.data_interface_properties import Ui_Form
+from config import TREEVIEW_HEADER_SS
 
 
-def init_properties_ui(toolbox):
-    properties_ui = Ui_Form()
-    properties_widget = QWidget()
-    properties_ui.setupUi(properties_widget)
-    properties_ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
-    toolbox.ui.tabWidget_item_properties.addTab(properties_widget, item_type)
-    return properties_ui
+class DataInterfacePropertiesWidget(QWidget):
+    """Widget for the Data Interface Item Properties.
+
+    Args:
+        toolbox (ToolboxUI): The toolbox instance where this widget should be embeded
+    """
+
+    def __init__(self, toolbox):
+        """Init class."""
+        super().__init__()
+        self._toolbox = toolbox
+        self.ui = Ui_Form()
+        self.ui.setupUi(self)
+        self.ui.treeView_data_interface_files.setStyleSheet(TREEVIEW_HEADER_SS)
+        toolbox.ui.tabWidget_item_properties.addTab(self, "Data Interface")

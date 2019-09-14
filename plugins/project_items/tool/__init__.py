@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Data store plugin.
+Tool plugin.
 
 :author: M. Marin (KTH)
 :date:   12.9.2019
@@ -20,14 +20,14 @@ Data store plugin.
 from .ui.tool_properties import Ui_Form
 from .tool import Tool
 from .tool_icon import ToolIcon
-from PySide2.QtWidgets import QWidget
-from config import TREEVIEW_HEADER_SS
+from .widgets.tool_properties_widget import ToolPropertiesWidget
 
 item_category = "Tools"
 item_type = "Tool"
 item_icon = ":/icons/project_item_icons/hammer.svg"
 item_maker = Tool
 icon_maker = ToolIcon
+properties_widget_maker = ToolPropertiesWidget
 
 
 def init_properties_ui(toolbox):

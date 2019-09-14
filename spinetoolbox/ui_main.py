@@ -103,7 +103,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
-        self.categories = dict()
+        self.categories = dict()  # Holds category data parsed from project item plugins
         self._project = None
         self.project_item_model = None
         self.tool_template_model = None
@@ -140,7 +140,6 @@ class ToolboxUI(QMainWindow):
         # Make Python REPL
         self.python_repl = PythonReplWidget(self)
         self.ui.dockWidgetContents_python_repl.layout().addWidget(self.python_repl)
-        self.load_plugins()
         # Setup main window menu
         self.setup_zoom_action()
         self.add_toggle_view_actions()
@@ -154,38 +153,7 @@ class ToolboxUI(QMainWindow):
         # Finalize init
         self.connect_signals()
         self.restore_ui()
-
-    def load_plugins(self):
-        """Loads and activates plugins.
-        For now it just handles ProjectItem plugins."""
-        self.categories.clear()
-        add_item_actions = list()
-        category_type_icon = list()
-        for name in plugin_loader.get_plugins("project_items"):
-            self.msg.emit("Loading plugin " + name)
-            plugin = plugin_loader.load_plugin(name)
-            item_category = plugin.item_category
-            item_type = plugin.item_type
-            item_icon = plugin.item_icon
-            item_maker = plugin.item_maker
-            icon_maker = plugin.icon_maker
-            properties_ui = plugin.init_properties_ui(self)
-            self.categories[item_category] = dict(
-                item_maker=item_maker, icon_maker=icon_maker, properties_ui=properties_ui
-            )
-            # Create action for adding items of this type
-            add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
-            add_item_action.triggered.connect(
-                lambda checked=False, c=item_category, t=item_type: self.show_add_project_item_form(c, t)
-            )
-            add_item_actions.append(add_item_action)
-            # Update category icon dict
-            category_type_icon.append((item_category, item_type, item_icon))
-        # Add actions to menu
-        remove_all_action = self.ui.menuEdit.actions()[0]
-        self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
-        # Add draggable widgets to toolbar
-        self.item_toolbar.add_draggable_widgets(category_type_icon)
+        self.load_plugins()
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -236,6 +204,39 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
         self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+
+    def load_plugins(self):
+        """Loads and activates plugins.
+        For now it just handles ProjectItem plugins."""
+        self.categories.clear()
+        add_item_actions = list()
+        category_type_icon = list()
+        for name in plugin_loader.get_plugins("project_items"):
+            self.msg.emit("Loading plugin " + name)  # Dummy, since open_project will clear the event log
+            plugin = plugin_loader.load_plugin(name)
+            item_category = plugin.item_category
+            item_type = plugin.item_type
+            item_icon = plugin.item_icon
+            item_maker = plugin.item_maker
+            icon_maker = plugin.icon_maker
+            properties_widget = plugin.properties_widget_maker(self)
+            properties_ui = properties_widget.ui
+            self.categories[item_category] = dict(
+                item_maker=item_maker, icon_maker=icon_maker, properties_ui=properties_ui
+            )
+            # Create action for adding items of this type
+            add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
+            add_item_action.triggered.connect(
+                lambda checked=False, c=item_category, t=item_type: self.show_add_project_item_form(c, t)
+            )
+            add_item_actions.append(add_item_action)
+            # Update category type icon
+            category_type_icon.append((item_category, item_type, item_icon))
+        # Add actions to menu
+        remove_all_action = self.ui.menuEdit.actions()[0]
+        self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
+        # Add draggable widgets to toolbar
+        self.item_toolbar.add_draggable_widgets(category_type_icon)
 
     def project(self):
         """Returns current project or None if no project open."""
