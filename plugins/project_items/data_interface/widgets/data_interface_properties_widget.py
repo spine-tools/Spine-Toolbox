@@ -16,8 +16,10 @@ Data interface properties widget.
 :date:   12.9.2019
 """
 
+from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
 from ..ui.data_interface_properties import Ui_Form
+from .custom_menus import DiFilesContextMenu
 from config import TREEVIEW_HEADER_SS
 
 
@@ -36,3 +38,31 @@ class DataInterfacePropertiesWidget(QWidget):
         self.ui.setupUi(self)
         self.ui.treeView_data_interface_files.setStyleSheet(TREEVIEW_HEADER_SS)
         toolbox.ui.tabWidget_item_properties.addTab(self, "Data Interface")
+        # Class attributes
+        self.di_files_context_menu = None
+        self.connect_signals()
+
+    def connect_signals(self):
+        """Connect signals to slots."""
+        self.ui.treeView_data_interface_files.customContextMenuRequested.connect(self.show_di_files_context_menu)
+
+    @Slot("QPoint", name="show_di_files_context_menu")
+    def show_di_files_context_menu(self, pos):
+        """Create and show a context-menu in Data Interface properties source files view.
+
+        Args:
+            pos (QPoint): Mouse position
+        """
+        ind = self.ui.treeView_data_interface_files.indexAt(pos)  # Index of selected item in DI references tree view.
+        cur_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected DI
+        di = self._toolbox.project_item_model.project_item(cur_index)
+        global_pos = self.ui.treeView_data_interface_files.viewport().mapToGlobal(pos)
+        self.di_files_context_menu = DiFilesContextMenu(self, global_pos, ind)
+        option = self.di_files_context_menu.get_action()
+        if option == "Open import editor":
+            di.open_import_editor(ind)
+        elif option == "Select connector type":
+            di.select_connector_type(ind)
+        elif option == "Open directory...":
+            di.open_directory()
+        return
