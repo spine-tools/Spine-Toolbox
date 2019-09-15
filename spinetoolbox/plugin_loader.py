@@ -45,7 +45,7 @@ def get_plugins(subpath):
 
 
 def load_plugin(plugin_name):
-    """Loads (imports) a plugin by using the given plugin spec.
+    """Loads (imports) a plugin given its name.
 
     Args:
         plugin_name (str): Name of the plugin (module) to load
