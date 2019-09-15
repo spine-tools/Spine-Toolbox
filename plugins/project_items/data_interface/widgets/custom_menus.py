@@ -30,7 +30,7 @@ class DiFilesContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             self.add_action("Open directory...")
         else:
@@ -38,4 +38,3 @@ class DiFilesContextMenu(CustomContextMenu):
             self.add_action("Select connector type")
             self.addSeparator()
             self.add_action("Open directory...")
-        self.exec_(position)

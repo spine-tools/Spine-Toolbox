@@ -30,7 +30,7 @@ class DcRefContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             # If no item at index
             self.add_action("Add reference(s)")
@@ -43,7 +43,6 @@ class DcRefContextMenu(CustomContextMenu):
             self.add_action("Add reference(s)")
             self.add_action("Remove reference(s)")
             self.add_action("Copy reference(s) to project")
-        self.exec_(position)
 
 
 class DcDataContextMenu(CustomContextMenu):
@@ -57,7 +56,7 @@ class DcDataContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         if not index.isValid():
             # If no item at index
             self.add_action("New file...")
@@ -71,4 +70,3 @@ class DcDataContextMenu(CustomContextMenu):
             self.addSeparator()
             self.add_action("Open Spine Datapackage Editor")
             self.add_action("Open directory...")
-        self.exec_(position)

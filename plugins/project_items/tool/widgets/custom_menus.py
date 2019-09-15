@@ -31,14 +31,13 @@ class ToolPropertiesContextMenu(CustomContextMenu):
 
     def __init__(self, parent, position, index):
         """Class constructor."""
-        super().__init__(parent)
+        super().__init__(parent, position)
         self.add_action("Edit Tool template")
         self.add_action("Edit main program file...")
         self.add_action("Open main program directory...")
         self.add_action("Open Tool template definition file...")
         self.addSeparator()
         self.add_action("Open directory...")
-        self.exec_(position)
 
 
 class ToolContextMenu(ProjectItemContextMenu):

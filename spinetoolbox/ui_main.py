@@ -701,11 +701,6 @@ class ToolboxUI(QMainWindow):
                 tool.set_tool_template(template)
                 tool.execute_in_work = template.execute_in_work
                 self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
-        # Set execution mode radioButton depending on Tool template setting
-        if template.execute_in_work:
-            self.ui.radioButton_execute_in_work.setChecked(True)
-        else:
-            self.ui.radioButton_execute_in_source.setChecked(True)
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):

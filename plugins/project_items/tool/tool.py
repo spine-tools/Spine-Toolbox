@@ -112,7 +112,7 @@ class Tool(ProjectItem):
             tool_template = self._toolbox.tool_template_model.find_tool_template(self._tool_template_name)
             row = self._toolbox.tool_template_model.tool_template_row(self._tool_template_name)
             self._properties_ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
-            self.restore_tool_template(tool_template)
+            self.set_tool_template(tool_template)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
@@ -148,68 +148,46 @@ class Tool(ProjectItem):
             tool_template (ToolTemplate): Template for this Tool. None removes the template.
         """
         self._tool_template = tool_template
-        self.item_changed.emit()
+        self.update_tool_models()
         self.update_tool_ui()
+        self.item_changed.emit()
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details. Used when Tool template is changed.
         Overrides execution mode (work or source) with the template default."""
         if not self._properties_ui:
+            # This happens when calling self.set_tool_template() in the __init__ method,
+            # because the UI only becomes available *after* adding the item to the project_item_model... problem??
             return
         if not self.tool_template():
             self._properties_ui.lineEdit_tool_args.setText("")
+            self._properties_ui.radioButton_execute_in_work.setChecked(True)
+        else:
+            self._properties_ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+            if self.execute_in_work:
+                self._properties_ui.radioButton_execute_in_work.setChecked(True)
+            else:
+                self._properties_ui.radioButton_execute_in_source.setChecked(True)
+        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
+        self._properties_ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
+        self._properties_ui.treeView_template.expandAll()
+
+    def update_tool_models(self):
+        """Update Tool models with Tool template details. Used when Tool template is changed.
+        Overrides execution mode (work or source) with the template default."""
+        if not self.tool_template():
             self.populate_source_file_model(None)
             self.populate_input_file_model(None)
             self.populate_opt_input_file_model(None)
             self.populate_output_file_model(None)
             self.populate_template_model(populate=False)
-            self._properties_ui.radioButton_execute_in_work.setChecked(True)
         else:
-            self._properties_ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
             self.populate_source_file_model(self.tool_template().includes)
             self.populate_input_file_model(self.tool_template().inputfiles)
             self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
             self.populate_output_file_model(self.tool_template().outputfiles)
             self.populate_template_model(populate=True)
             self.execute_in_work = self.tool_template().execute_in_work
-            if self.execute_in_work:
-                self._properties_ui.radioButton_execute_in_work.setChecked(True)
-            else:
-                self._properties_ui.radioButton_execute_in_source.setChecked(True)
-        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
-        self._properties_ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
-        self._properties_ui.treeView_template.expandAll()
-
-    def restore_tool_template(self, tool_template):
-        """Restores the Tool Template of this Tool. Removes Tool Template if None given as argument.
-        Needed in order to override tool template default execution mode (work or source).
-
-        Args:
-            tool_template (ToolTemplate): Template for this Tool. None removes the template.
-        """
-        self._tool_template = tool_template
-        if not tool_template:
-            self._properties_ui.lineEdit_tool_args.setText("")
-            self.populate_source_file_model(None)
-            self.populate_input_file_model(None)
-            self.populate_opt_input_file_model(None)
-            self.populate_output_file_model(None)
-            self.populate_template_model(populate=False)
-            self._properties_ui.radioButton_execute_in_work.setChecked(True)
-        else:
-            self._properties_ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
-            self.populate_source_file_model(self.tool_template().includes)
-            self.populate_input_file_model(self.tool_template().inputfiles)
-            self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
-            self.populate_output_file_model(self.tool_template().outputfiles)
-            self.populate_template_model(populate=True)
-            if self.execute_in_work:
-                self._properties_ui.radioButton_execute_in_work.setChecked(True)
-            else:
-                self._properties_ui.radioButton_execute_in_source.setChecked(True)
-        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
-        self._properties_ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
-        self._properties_ui.treeView_template.expandAll()
 
     @Slot(bool, name="open_results")
     def open_results(self, checked=False):
