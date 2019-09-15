@@ -217,7 +217,9 @@ class ToolboxUI(QMainWindow):
                 add_form_maker=add_form_maker,
                 properties_ui=properties_ui,
             )
+        # Sort categories by rank
         self.categories = dict(sorted(self.categories.items(), key=lambda kv: kv[1]["item_rank"]))
+        # Create actions for Edit menu, and draggable widgets to toolbar
         add_item_actions = list()
         category_icon = list()
         for item_category, item_dict in self.categories.items():
@@ -227,10 +229,9 @@ class ToolboxUI(QMainWindow):
             add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
             add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
             add_item_actions.append(add_item_action)
-            # Update category type icon
             category_icon.append((item_category, item_icon))
             loaded.append("<b>" + name + "</b>")
-        # Add actions to menu
+        # Add actions to Edit menu
         remove_all_action = self.ui.menuEdit.actions()[0]
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
         # Add draggable widgets to toolbar
