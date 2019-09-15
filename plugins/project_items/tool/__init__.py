@@ -16,13 +16,13 @@ Tool plugin.
 :date:   12.9.2019
 """
 
-
 from .ui.tool_properties import Ui_Form
 from .tool import Tool
 from .tool_icon import ToolIcon
 from .widgets.tool_properties_widget import ToolPropertiesWidget
 from .widgets.add_tool_widget import AddToolWidget
 
+item_rank = 2
 item_category = "Tools"
 item_type = "Tool"
 item_icon = ":/icons/project_item_icons/hammer.svg"

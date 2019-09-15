@@ -16,14 +16,13 @@ Data store plugin.
 :date:   12.9.2019
 """
 
-
 from .ui.data_store_properties import Ui_Form
 from .data_store import DataStore
 from .data_store_icon import DataStoreIcon
 from .widgets.data_store_properties_widget import DataStorePropertiesWidget
 from .widgets.add_data_store_widget import AddDataStoreWidget
 
-
+item_rank = 0
 item_category = "Data Stores"
 item_type = "Data Store"
 item_icon = ":/icons/project_item_icons/database.svg"

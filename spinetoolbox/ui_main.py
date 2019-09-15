@@ -190,14 +190,12 @@ class ToolboxUI(QMainWindow):
     def load_plugins(self):
         """Loads and activates plugins.
         For now it just handles ProjectItem plugins."""
-        # TODO: Handle AttributeError with nice even log messages
         self.msg.emit("Loading plugins...")
         loaded = list()
         self.categories.clear()
-        add_item_actions = list()
-        category_icon = list()
         for name in plugin_loader.get_plugins("project_items"):
             plugin = plugin_loader.load_plugin(name)
+            item_rank = plugin.__dict__.get("item_rank", 0)
             try:
                 item_category = plugin.item_category
                 item_type = plugin.item_type
@@ -211,9 +209,21 @@ class ToolboxUI(QMainWindow):
                 self.msg_error.emit("Can't load plugin <b>{0}</b>: {1}".format(name, e))
                 continue
             self.categories[item_category] = dict(
-                item_maker=item_maker, icon_maker=icon_maker, add_form_maker=add_form_maker, properties_ui=properties_ui
+                item_rank=item_rank,
+                item_type=item_type,
+                item_icon=item_icon,
+                item_maker=item_maker,
+                icon_maker=icon_maker,
+                add_form_maker=add_form_maker,
+                properties_ui=properties_ui,
             )
+        self.categories = dict(sorted(self.categories.items(), key=lambda kv: kv[1]["item_rank"]))
+        add_item_actions = list()
+        category_icon = list()
+        for item_category, item_dict in self.categories.items():
             # Create action for adding items of this type
+            item_icon = item_dict["item_icon"]
+            item_type = item_dict["item_type"]
             add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
             add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
             add_item_actions.append(add_item_action)
@@ -425,7 +435,11 @@ class ToolboxUI(QMainWindow):
         root_item = RootProjectItem()
         self.project_item_model = ProjectItemModel(self, root=root_item)
         for category, category_dict in self.categories.items():
-            category_item = CategoryProjectItem(category, "", **category_dict)
+            item_maker = category_dict["item_maker"]
+            icon_maker = category_dict["icon_maker"]
+            add_form_maker = category_dict["add_form_maker"]
+            properties_ui = category_dict["properties_ui"]
+            category_item = CategoryProjectItem(category, "", item_maker, icon_maker, add_form_maker, properties_ui)
             self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()

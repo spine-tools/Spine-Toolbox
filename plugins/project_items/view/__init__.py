@@ -22,6 +22,7 @@ from .view_icon import ViewIcon
 from .widgets.view_properties_widget import ViewPropertiesWidget
 from .widgets.add_view_widget import AddViewWidget
 
+item_rank = 3
 item_category = "Views"
 item_type = "View"
 item_icon = ":/icons/project_item_icons/binoculars.svg"
