@@ -220,28 +220,28 @@ class TestSpineToolboxProject(unittest.TestCase):
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
         item = dict(name="DS", description="", url=dict(), x=0, y=0)
-        with mock.patch("data_store.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Stores", item)
         return "DS"
 
     def add_dc(self):
         """Helper method to add Data Connection. Returns created items name."""
         item = dict(name="DC", description="", references=list(), x=0, y=0)
-        with mock.patch("data_connection.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Connections", item)
         return "DC"
 
     def add_tool(self):
         """Helper method to add Tool. Returns created items name."""
         item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
-        with mock.patch("tool.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Tools", item)
         return "tool"
 
     def add_view(self):
         """Helper method to add View. Returns created items name."""
         item = dict(name="view", description="", x=0, y=0)
-        with mock.patch("view.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Views", item)
         return "view"
 
