@@ -23,7 +23,6 @@ from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractListModel, QAbstractT
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
-import project_item
 
 
 class ProjectItemModel(QAbstractItemModel):
@@ -55,9 +54,7 @@ class ProjectItemModel(QAbstractItemModel):
         """
         if not parent.isValid():  # Number of category items (children of root)
             return self.root().child_count()
-        if isinstance(parent.internalPointer(), project_item.CategoryProjectItem):
-            return parent.internalPointer().child_count()  # Number of project items in the category
-        return 0
+        return parent.internalPointer().child_count()
 
     def columnCount(self, parent=QModelIndex()):
         """Returns model column count."""
@@ -69,9 +66,7 @@ class ProjectItemModel(QAbstractItemModel):
         Args:
             index (QModelIndex): Flags of item at this index.
         """
-        if not isinstance(index.internalPointer(), project_item.CategoryProjectItem):
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
-        return Qt.ItemIsEnabled  # | Qt.ItemIsSelectable
+        return index.internalPointer().flags()
 
     def parent(self, index=QModelIndex()):
         """Returns index of the parent of given index.

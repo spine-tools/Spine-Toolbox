@@ -23,7 +23,7 @@ from metaobject import MetaObject
 from PySide2.QtCore import Qt, Signal, Slot, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
-import widgets.custom_menus
+from widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
 from helpers import create_dir
 
 
@@ -40,6 +40,10 @@ class BaseProjectItem(MetaObject):
         super().__init__(name, description)
         self._parent = None  # Parent BaseProjectItem. Set when add_child is called
         self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
+
+    def flags(self):
+        """Returns the item flags."""
+        return Qt.NoItemFlags
 
     def parent(self):
         """Returns parent project item."""
@@ -156,6 +160,10 @@ class CategoryProjectItem(BaseProjectItem):
         self._add_form_maker = add_form_maker
         self._properties_ui = properties_ui
 
+    def flags(self):
+        """Returns the item flags."""
+        return Qt.ItemIsEnabled
+
     def item_maker(self):
         """Returns the item maker method."""
         return self._item_maker
@@ -179,7 +187,7 @@ class CategoryProjectItem(BaseProjectItem):
             parent (QWidget): The widget that is controlling the menu
             pos (QPoint): Position on screen
         """
-        return widgets.custom_menus.CategoryProjectItemContextMenu(parent, pos)
+        return CategoryProjectItemContextMenu(parent, pos)
 
     def apply_context_menu_action(self, parent, action):
         """Applies given action from context menu. Implement in subclasses as needed.
@@ -226,6 +234,10 @@ class ProjectItem(BaseProjectItem):
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
+
+    def flags(self):
+        """Returns the item flags."""
+        return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers.
@@ -303,7 +315,7 @@ class ProjectItem(BaseProjectItem):
             parent (QWidget): The widget that is controlling the menu
             pos (QPoint): Position on screen
         """
-        return widgets.custom_menus.ProjectItemContextMenu(parent, pos)
+        return ProjectItemContextMenu(parent, pos)
 
     def apply_context_menu_action(self, parent, action):
         """Applies given action from context menu. Implement in subclasses as needed.
