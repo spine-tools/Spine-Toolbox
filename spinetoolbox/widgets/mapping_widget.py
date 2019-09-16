@@ -195,7 +195,7 @@ class MappingOptionsWidget(QWidget):
             if self._model._model.import_objects:
                 self._ui.import_objects_check_box.setCheckState(Qt.Checked)
             else:
-                self._ui.import_objects.setCheckState(Qt.Unchecked)
+                self._ui.import_objects_check_box.setCheckState(Qt.Unchecked)
         else:
             self._ui.import_objects_check_box.hide()
             self._ui.dimension_label.hide()
