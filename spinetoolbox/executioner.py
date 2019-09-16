@@ -111,40 +111,23 @@ class DirectedGraphHandler(QObject):
             dst_node (str): Destination project item node name
         """
         dag = self.dag_with_edge(src_node, dst_node)
-        if src_node == dst_node:  # Removing self-loop
-            dag.remove_edge(src_node, dst_node)
-            self.dag_simulation_requested.emit(dag)
-            return
-        # dag_copy = copy.deepcopy(dag)  # Make a copy before messing with the graph
         dag.remove_edge(src_node, dst_node)
-        # Check if src or dst node is isolated (without connections) after removing the edge
-        if self.node_is_isolated(src_node):
-            dag.remove_node(src_node)  # Remove node from original dag
-            self.dag_simulation_requested.emit(dag)
-            g = nx.DiGraph()
-            g.add_node(src_node)  # Make a new graph containing only the isolated node
-            self.add_dag(g)
-            return
-        if self.node_is_isolated(dst_node):
-            dag.remove_node(dst_node)
-            self.dag_simulation_requested.emit(dag)
-            g = nx.DiGraph()
-            g.add_node(dst_node)
-            self.add_dag(g)
-            return
-        # If src node still has a path (ignoring edge directions) to dst node -> return, we're fine
-        if self.nodes_connected(dag, src_node, dst_node):
+        components = list(nx.weakly_connected_components(dag))
+        if len(components) == 1:
+            # Graph wasn't splitted, we're fine
             self.dag_simulation_requested.emit(dag)
             return
-        # Now for the fun part. We need to break the original DAG into two separate DAGs.
-        left_nodes, right_nodes = nx.weakly_connected_components(dag)
+        # Graph was splitted into two
+        left_nodes, right_nodes = components
         left_edges = nx.edges(dag, left_nodes)
         right_edges = nx.edges(dag, right_nodes)
         # Make left graph.
         left_graph = nx.DiGraph()
+        left_graph.add_nodes_from(left_nodes)
         left_graph.add_edges_from(left_edges)
         # Make right graph.
         right_graph = nx.DiGraph()
+        right_graph.add_nodes_from(right_nodes)
         right_graph.add_edges_from(right_edges)
         # Remove old graph and add new graphs instead
         self.remove_dag(dag)
@@ -299,42 +282,6 @@ class DirectedGraphHandler(QObject):
                 # logging.debug("node:{0} is a source node".format(node))
                 s.append(node)
         return s
-
-    @staticmethod
-    def nodes_connected(dag, a, b):
-        """Checks if node a is connected to node b. Edge directions are ignored.
-        If source node a or any of its ancestors have a path
-        to destination node b or any of its descendants, returns True.
-        If destination node b or any of its ancestors have a path
-        to source node a or any of its descendants, also returns True.
-
-        Args:
-            dag (DiGraph): Graph that contains nodes a and b
-            a (str): Node name
-            b (str): Another node name
-
-        Returns:
-            bool: True if a and b are connected, False otherwise
-        """
-        # Check if any src ancestor has a path to any dst descendant
-        src_anc = nx.ancestors(dag, a).union({a})
-        dst_des = nx.descendants(dag, b).union({b})
-        # logging.debug("src {0} ancestors:{1}. dst {2} descendants:{3}".format(a, src_anc, b, dst_des))
-        for anc in src_anc:
-            for des in dst_des:
-                if nx.has_path(dag, anc, des):
-                    # logging.debug("Found path from anc {0} to dst {1}".format(anc, des))
-                    return True
-        # Check if any dst ancestor has a path to any src descendant
-        dst_anc = nx.ancestors(dag, b).union({b})
-        src_des = nx.descendants(dag, a).union({a})
-        # logging.debug("dst {0} ancestors:{1}. src {2} descendants:{3}".format(b, dst_anc, a, src_des))
-        for anc in dst_anc:
-            for des in src_des:
-                if nx.has_path(dag, anc, des):
-                    # logging.debug("Found path from anc {0} to dst {1}".format(anc, des))
-                    return True
-        return False
 
     @staticmethod
     def edges_causing_loops(g):
