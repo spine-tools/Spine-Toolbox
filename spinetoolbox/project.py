@@ -479,7 +479,11 @@ class SpineToolboxProject(MetaObject):
                     )
                 )
                 self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(g.nodes())))
-                self._toolbox.msg.emit("Please edit connections in Design View to execute it.")
+                edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(g)]
+                self._toolbox.msg.emit(
+                    "Please edit connections in Design View to execute it. "
+                    "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
+                )
                 self._toolbox.msg.emit("---------------------------------------")
                 self._executed_graph_index += 1
         self._invalid_graphs.clear()

@@ -341,8 +341,11 @@ class DirectedGraphHandler(QObject):
         """Returns a list of edges whose removal from g results in it becoming acyclic."""
         result = list()
         h = g.copy()  # Let's work on a copy of the graph
-        while not nx.is_directed_acyclic_graph(h):
-            cycle = list(nx.find_cycle(h))
+        while True:
+            try:
+                cycle = list(nx.find_cycle(h))
+            except nx.NetworkXNoCycle:
+                break
             edge = random.choice(cycle)
             h.remove_edge(*edge)
             result.append(edge)
