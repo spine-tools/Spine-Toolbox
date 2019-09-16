@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/gdx_export_settings.ui',
-# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/gdx_export_settings.ui' applies.
+# Form implementation generated from reading ui file '../spinetoolbox/ui/gdx_export_settings.ui',
+# licensing of '../spinetoolbox/ui/gdx_export_settings.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -22,7 +22,7 @@ from PySide2 import QtCore, QtGui, QtWidgets
 class Ui_Form(object):
     def setupUi(self, Form):
         Form.setObjectName("Form")
-        Form.resize(603, 309)
+        Form.resize(603, 325)
         self.verticalLayout_4 = QtWidgets.QVBoxLayout(Form)
         self.verticalLayout_4.setObjectName("verticalLayout_4")
         self.splitter = QtWidgets.QSplitter(Form)
@@ -32,9 +32,9 @@ class Ui_Form(object):
         self.groupBox.setObjectName("groupBox")
         self.horizontalLayout = QtWidgets.QHBoxLayout(self.groupBox)
         self.horizontalLayout.setObjectName("horizontalLayout")
-        self.set_table_view = QtWidgets.QTableView(self.groupBox)
-        self.set_table_view.setObjectName("set_table_view")
-        self.horizontalLayout.addWidget(self.set_table_view)
+        self.set_list_view = QtWidgets.QListView(self.groupBox)
+        self.set_list_view.setObjectName("set_list_view")
+        self.horizontalLayout.addWidget(self.set_list_view)
         self.verticalLayout = QtWidgets.QVBoxLayout()
         self.verticalLayout.setObjectName("verticalLayout")
         spacerItem = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
@@ -59,12 +59,12 @@ class Ui_Form(object):
         self.verticalLayout_2.setObjectName("verticalLayout_2")
         spacerItem2 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem2)
-        self.set_move_up_button_2 = QtWidgets.QPushButton(self.groupBox_2)
-        self.set_move_up_button_2.setObjectName("set_move_up_button_2")
-        self.verticalLayout_2.addWidget(self.set_move_up_button_2)
-        self.set_move_down_button_2 = QtWidgets.QPushButton(self.groupBox_2)
-        self.set_move_down_button_2.setObjectName("set_move_down_button_2")
-        self.verticalLayout_2.addWidget(self.set_move_down_button_2)
+        self.record_move_up_button = QtWidgets.QPushButton(self.groupBox_2)
+        self.record_move_up_button.setObjectName("record_move_up_button")
+        self.verticalLayout_2.addWidget(self.record_move_up_button)
+        self.record_move_down_button = QtWidgets.QPushButton(self.groupBox_2)
+        self.record_move_down_button.setObjectName("record_move_down_button")
+        self.verticalLayout_2.addWidget(self.record_move_down_button)
         spacerItem3 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
         self.verticalLayout_2.addItem(spacerItem3)
         self.horizontalLayout_2.addLayout(self.verticalLayout_2)
@@ -72,6 +72,11 @@ class Ui_Form(object):
         self.horizontalLayout_3 = QtWidgets.QHBoxLayout()
         self.horizontalLayout_3.setObjectName("horizontalLayout_3")
         self.groupBox_3 = QtWidgets.QGroupBox(Form)
+        sizePolicy = QtWidgets.QSizePolicy(QtWidgets.QSizePolicy.Preferred, QtWidgets.QSizePolicy.Fixed)
+        sizePolicy.setHorizontalStretch(0)
+        sizePolicy.setVerticalStretch(0)
+        sizePolicy.setHeightForWidth(self.groupBox_3.sizePolicy().hasHeightForWidth())
+        self.groupBox_3.setSizePolicy(sizePolicy)
         self.groupBox_3.setObjectName("groupBox_3")
         self.verticalLayout_3 = QtWidgets.QVBoxLayout(self.groupBox_3)
         self.verticalLayout_3.setObjectName("verticalLayout_3")
@@ -84,11 +89,9 @@ class Ui_Form(object):
         self.lineEdit.setObjectName("lineEdit")
         self.formLayout.setWidget(0, QtWidgets.QFormLayout.FieldRole, self.lineEdit)
         self.verticalLayout_3.addLayout(self.formLayout)
-        spacerItem4 = QtWidgets.QSpacerItem(20, 40, QtWidgets.QSizePolicy.Minimum, QtWidgets.QSizePolicy.Expanding)
-        self.verticalLayout_3.addItem(spacerItem4)
         self.horizontalLayout_3.addWidget(self.groupBox_3)
-        spacerItem5 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
-        self.horizontalLayout_3.addItem(spacerItem5)
+        spacerItem4 = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
+        self.horizontalLayout_3.addItem(spacerItem4)
         self.verticalLayout_4.addLayout(self.horizontalLayout_3)
         self.button_box = QtWidgets.QDialogButtonBox(Form)
         self.button_box.setStandardButtons(QtWidgets.QDialogButtonBox.Cancel|QtWidgets.QDialogButtonBox.Ok)
@@ -104,8 +107,8 @@ class Ui_Form(object):
         self.set_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
         self.set_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
         self.groupBox_2.setTitle(QtWidgets.QApplication.translate("Form", "Set Contents", None, -1))
-        self.set_move_up_button_2.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
-        self.set_move_down_button_2.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
+        self.record_move_up_button.setText(QtWidgets.QApplication.translate("Form", "Move Up", None, -1))
+        self.record_move_down_button.setText(QtWidgets.QApplication.translate("Form", "Move Down", None, -1))
         self.groupBox_3.setTitle(QtWidgets.QApplication.translate("Form", "Global Parameters", None, -1))
         self.label.setText(QtWidgets.QApplication.translate("Form", "Object Class:", None, -1))
 

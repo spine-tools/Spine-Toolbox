@@ -17,13 +17,13 @@ Functions to export a Spine model database to GAMS .gdx file in TIMES format.
 """
 
 import logging
-
 try:
     import gams
 except ImportError:
     logging.info('No GAMS Python bindings installed. GDX support is unavailable.')
     gams = None
-from spinedb_api import DatabaseMapping, from_database, ParameterValueFormatError
+from spinedb_api import from_database, ParameterValueFormatError
+from helpers import get_db_map
 
 
 class DomainSet:
@@ -51,7 +51,14 @@ class DomainRecord:
 class SetRecord:
     def __init__(self, relationship):
         self.domain_records = [name.strip() for name in relationship.object_name_list.split(',')]
+        self._name = None
         self.parameters = list()
+
+    @property
+    def name(self):
+        if self._name is None:
+            self._name = ', '.join(self.domain_records)
+        return self._name
 
 
 class Parameter:
@@ -148,6 +155,107 @@ def make_gams_workspace():
 
 def make_gams_database(gams_workspace):
     return gams_workspace.add_database()
+
+
+def filter_and_sort_sets(sets, set_names, set_exportable_flags):
+    sets = list(sets)
+    sorted_exportable_sets = list()
+    for name, exportable in zip(set_names, set_exportable_flags):
+        if not exportable:
+            for current_set in sets:
+                if current_set.name == name:
+                    sets.remove(current_set)
+                    break
+            continue
+        for current_set in sets:
+            if current_set.name != name:
+                continue
+            sorted_exportable_sets.append(current_set)
+            sets.remove(current_set)
+            break
+    return sorted_exportable_sets
+
+
+def sort_records_inplace(domains, settings):
+    for domain in domains:
+        current_records = list(domain.records)
+        records = settings.records(domain.name)
+        sorted_records = list()
+        for record in records:
+            for domain_record in current_records:
+                if domain_record.name != record:
+                    continue
+                sorted_records.append(domain_record)
+                current_records.remove(domain_record)
+                break
+        domain.records = sorted_records
+
+
+def to_gams_workspace(database_map, settings):
+    domains = object_classes_to_domains(database_map)
+    domains = filter_and_sort_sets(domains, settings.domain_names, settings.domain_exportable_flags)
+    sort_records_inplace(domains, settings)
+    sets = relationship_classes_to_sets(database_map)
+    sets = filter_and_sort_sets(sets, settings.set_names, settings.set_exportable_flags)
+    sort_records_inplace(sets, settings)
+    gams_workspace = make_gams_workspace()
+    gams_database = make_gams_database(gams_workspace)
+    gams_domains = domains_to_gams(gams_database, domains)
+    sets_to_gams(gams_database, sets, gams_domains)
+    return gams_workspace, gams_database
+
+
+def names(sets):
+    return [element.name for element in sets]
+
+
+def set_records(sets):
+    records = dict()
+    for set_item in sets:
+        records[set_item.name] = [record.name for record in set_item.records]
+    return records
+
+
+def make_settings(database_map):
+    domains = object_classes_to_domains(database_map)
+    sets = relationship_classes_to_sets(database_map)
+    domain_names = names(domains)
+    set_names = names(sets)
+    records = set_records(domains)
+    records.update(set_records(sets))
+    return GdxSettings(domain_names, set_names, records)
+
+
+class GdxSettings:
+    def __init__(self, domain_names, set_names, records, domain_exportable_flags=None, set_exportable_flags=None):
+        self._domain_names = domain_names
+        self._set_names = set_names
+        self._records = records
+        if domain_exportable_flags is None:
+            domain_exportable_flags = len(domain_names) * [True]
+        self._domain_exportable_flags = domain_exportable_flags
+        if set_exportable_flags is None:
+            set_exportable_flags = len(set_names) * [True]
+        self._set_exportable_flags = set_exportable_flags
+
+    @property
+    def domain_names(self):
+        return self._domain_names
+
+    @property
+    def domain_exportable_flags(self):
+        return self._domain_exportable_flags
+
+    @property
+    def set_names(self):
+        return self._set_names
+
+    @property
+    def set_exportable_flags(self):
+        return self._set_exportable_flags
+
+    def records(self, name):
+        return self._records[name]
 
 
 def available():
