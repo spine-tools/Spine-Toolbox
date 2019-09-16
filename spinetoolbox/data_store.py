@@ -40,7 +40,7 @@ class DataStore(ProjectItem):
         name (str): Object name
         description (str): Object description
         url (str or dict): SQLAlchemy url
-        reference (dict): reference, contains SQLAlchemy url (kept for compatibility with older project files)
+        reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
@@ -50,7 +50,7 @@ class DataStore(ProjectItem):
         super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
-        if "url" in reference:
+        if type(reference) == dict and "url" in reference:
             url = reference["url"]
         self._url = self.parse_url(url)
         self.tree_view_form = None
