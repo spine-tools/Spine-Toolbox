@@ -19,6 +19,7 @@ Contains classes for handling project item execution.
 import logging
 import os
 import fnmatch
+import random
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
 
@@ -112,6 +113,7 @@ class DirectedGraphHandler(QObject):
         dag = self.dag_with_edge(src_node, dst_node)
         if src_node == dst_node:  # Removing self-loop
             dag.remove_edge(src_node, dst_node)
+            self.dag_simulation_requested.emit(dag)
             return
         # dag_copy = copy.deepcopy(dag)  # Make a copy before messing with the graph
         dag.remove_edge(src_node, dst_node)
@@ -333,6 +335,20 @@ class DirectedGraphHandler(QObject):
                     # logging.debug("Found path from anc {0} to dst {1}".format(anc, des))
                     return True
         return False
+
+    @staticmethod
+    def edges_causing_loops(g):
+        """Returns a list of edges whose removal from g results in it becoming acyclic."""
+        h = g.copy()  # Let's work on a copy of the graph
+        # Start with the selfloop egdes
+        result = list(nx.selfloop_edges(h))
+        h.remove_edges_from(result)
+        while not nx.is_directed_acyclic_graph(h):
+            # Pick and edge at random, remove it from h and put it into result
+            edge = random.choice(list(nx.edges(h)))
+            h.remove_edge(*edge)
+            result.append(edge)
+        return result
 
     @staticmethod
     def export_to_graphml(g, path):

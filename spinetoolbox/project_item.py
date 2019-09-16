@@ -215,6 +215,20 @@ class ProjectItem(BaseProjectItem):
         self.clear_notifications()
         self.set_rank(inst.rank)
 
+    def invalidate_workflow(self, edges):
+        """Notifies that this item's workflow is not acyclic.
+
+        Args:
+            edges (list): A list of edges that make the graph acyclic after removing them.
+        """
+        edges = ["{0} -> {1}".format(*edge) for edge in edges]
+        self.clear_notifications()
+        self.set_rank("x")
+        self.add_notification(
+            "The workflow defined for this item has loops and thus cannot be executed. "
+            "Possible fix: remove link(s) {0}.".format(", ".join(edges))
+        )
+
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         return {
