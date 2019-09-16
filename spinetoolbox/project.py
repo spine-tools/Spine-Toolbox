@@ -286,7 +286,13 @@ class SpineToolboxProject(MetaObject):
         category_item = self._toolbox.project_item_model.project_item(category_ind)
         item_maker = category_item.item_maker()
         for item_dict in items:
-            item = item_maker(self._toolbox, **item_dict)
+            try:
+                item = item_maker(self._toolbox, **item_dict)
+            except TypeError:
+                self._toolbox.msg_error.emit("Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
+                                             "This is most likely caused by an outdated project file."
+                                             .format(item_dict["name"], category_name))
+                continue
             self._toolbox.project_item_model.insert_item(item, category_ind)
             # Append connection model
             self.append_connection_model(item.name, category_name)
