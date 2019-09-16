@@ -844,7 +844,7 @@ class ToolboxUI(QMainWindow):
             self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
         # Remove item icon and connected links (QGraphicsItems) from scene
         icon = project_item.get_icon()
-        links = set(link for conn in icon.connectors for link in conn.links)
+        links = set(link for conn in icon.connectors.values() for link in conn.links)
         for link in links:
             self.ui.graphicsView.scene().removeItem(link)
         self.ui.graphicsView.scene().removeItem(icon)
