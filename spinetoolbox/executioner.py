@@ -339,13 +339,11 @@ class DirectedGraphHandler(QObject):
     @staticmethod
     def edges_causing_loops(g):
         """Returns a list of edges whose removal from g results in it becoming acyclic."""
+        result = list()
         h = g.copy()  # Let's work on a copy of the graph
-        # Start with the selfloop egdes
-        result = list(nx.selfloop_edges(h))
-        h.remove_edges_from(result)
         while not nx.is_directed_acyclic_graph(h):
-            # Pick and edge at random, remove it from h and put it into result
-            edge = random.choice(list(nx.edges(h)))
+            cycle = list(nx.find_cycle(h))
+            edge = random.choice(cycle)
             h.remove_edge(*edge)
             result.append(edge)
         return result
