@@ -65,6 +65,7 @@ class ConnectorButton(QGraphicsRectItem):
         self._parent = parent
         self._toolbox = toolbox
         self.position = position
+        self.links = list()
         self.setPen(QPen(Qt.black, 0.5, Qt.SolidLine))
         # self.setPen(QPen(Qt.NoPen))
         # Regular and hover brushes
@@ -397,7 +398,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         super().mouseMoveEvent(event)
         selected_icons = set([x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)] + [self])
-        links = set(y for x in selected_icons for y in self._toolbox.connection_model.connected_links(x.name()))
+        links = set(link for icon in selected_icons for conn in icon.connectors.values() for link in conn.links)
         for link in links:
             link.update_geometry()
 
@@ -436,7 +437,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             t.translate(-center.x(), -center.y())
             self.setPos(t.map(self.pos()))
             self.setRotation(self.rotation() + 90)
-            links = self._toolbox.connection_model.connected_links(self.name())
+            links = set(lnk for conn in self.connectors.values() for lnk in conn.links)
             for link in links:
                 link.update_geometry()
             event.accept()
@@ -726,18 +727,11 @@ class Link(QGraphicsPathItem):
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
         self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
-        self.model_index = None
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setCursor(Qt.PointingHandCursor)
         self.update_geometry()
-
-    def find_model_index(self):
-        """Find model index from connection model."""
-        row = self._toolbox.connection_model.header.index(self.src_icon.name())
-        column = self._toolbox.connection_model.header.index(self.dst_icon.name())
-        self.model_index = self._toolbox.connection_model.index(row, column)
 
     def find_parallel_link(self):
         """Find parallel link."""
@@ -779,15 +773,13 @@ class Link(QGraphicsPathItem):
             e (QGraphicsSceneMouseEvent): Mouse event
         """
         self.setSelected(True)
-        self.find_model_index()
         self.find_parallel_link()
         self._toolbox.show_link_context_menu(e.screenPos(), self)
 
     def keyPressEvent(self, event):
         """Remove associated connection if this is selected and delete is pressed."""
         if event.key() == Qt.Key_Delete and self.isSelected():
-            self.find_model_index()
-            self._toolbox.ui.graphicsView.remove_link(self.model_index)
+            self._toolbox.ui.graphicsView.remove_link(self)
 
     def update_geometry(self):
         """Update path."""

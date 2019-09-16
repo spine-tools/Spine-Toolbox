@@ -71,7 +71,7 @@ from config import (
     TREEVIEW_HEADER_SS,
 )
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
-from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
+from models import ProjectItemModel, ToolTemplateModel
 from project_item import RootProjectItem, CategoryProjectItem
 
 
@@ -109,7 +109,6 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self.project_item_model = None
         self.tool_template_model = None
-        self.connection_model = None
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         # Widget and form references
@@ -371,9 +370,7 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.expandAll()
         # Restore connections
         self.msg.emit("Restoring connections...")
-        self.connection_model.reset_model(connections)
-        self.ui.tableView_connections.resizeColumnsToContents()
-        self.ui.graphicsView.restore_links()
+        self.ui.graphicsView.restore_links(connections)
         # Simulate project execution after restoring links
         self._project.simulate_project_execution()
         self._project.connect_signals()
@@ -429,7 +426,6 @@ class ToolboxUI(QMainWindow):
         # self.ui.treeView_project.selectionModel().currentChanged.connect(self.current_item_changed)
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self.init_tool_template_model(tool_template_paths)
-        self.init_connection_model()
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
@@ -491,14 +487,6 @@ class ToolboxUI(QMainWindow):
             pass  # signal already connected
         if n_tools == 0:
             self.msg_warning.emit("Project has no tool templates")
-
-    def init_connection_model(self):
-        """Initializes a model representing connections between project items."""
-        self.connection_model = ConnectionModel(self)
-        self.ui.tableView_connections.setModel(self.connection_model)
-        self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
-        self.ui.tableView_connections.itemDelegate().data_committed.connect(self.connection_data_changed)
-        self.ui.graphicsView.set_connection_model(self.connection_model)
 
     def init_shared_widgets(self):
         """Initialize widgets that are shared among all ProjectItems of the same type."""
@@ -851,14 +839,15 @@ class ToolboxUI(QMainWindow):
             data_dir = project_item.data_dir
         except AttributeError:
             data_dir = None
-        # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
-        if not self.connection_model.remove_item(project_item.name):
-            self.msg_error.emit("Removing item {0} from connection model failed".format(project_item.name))
         # Remove item from project model
         if not self.project_item_model.remove_item(project_item, parent=ind.parent()):
             self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
-        # Remove item icon (QGraphicsItems) from scene
-        self.ui.graphicsView.scene().removeItem(project_item.get_icon())
+        # Remove item icon and connected links (QGraphicsItems) from scene
+        icon = project_item.get_icon()
+        links = set(link for conn in icon.connectors for link in conn.links)
+        for link in links:
+            self.ui.graphicsView.scene().removeItem(link)
+        self.ui.graphicsView.scene().removeItem(icon)
         self._project.dag_handler.remove_node_from_graph(name)
         if delete_item:
             if data_dir:
@@ -975,18 +964,6 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("Please open or create a project first")
             return
         self.project().export_graphs()
-
-    @Slot("QModelIndex", name="connection_data_changed")
-    def connection_data_changed(self, index):
-        """[OBSOLETE?] Called when checkbox delegate wants to
-        edit connection data. Add or remove Link instance accordingly."""
-        d = self.connection_model.data(index, Qt.DisplayRole)  # Current status
-        if d == "False":  # Add link
-            src_name = self.connection_model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
-            dst_name = self.connection_model.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
-            self.ui.graphicsView.add_link(src_name, dst_name, index)
-        else:  # Remove link
-            self.ui.graphicsView.remove_link(index)
 
     @Slot(name="_handle_zoom_widget_minus_pressed")
     def _handle_zoom_widget_minus_pressed(self):
@@ -1331,13 +1308,13 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             link (Link(QGraphicsPathItem)): The concerned link
         """
-        self.link_context_menu = LinkContextMenu(self, pos, link.model_index, link.parallel_link)
+        self.link_context_menu = LinkContextMenu(self, pos, link.parallel_link)
         option = self.link_context_menu.get_action()
         if option == "Remove connection":
-            self.ui.graphicsView.remove_link(link.model_index)
+            self.ui.graphicsView.remove_link(link)
             return
         if option == "Take connection":
-            self.ui.graphicsView.take_link(link.model_index)
+            self.ui.graphicsView.take_link(link)
             return
         if option == "Send to bottom":
             link.send_to_bottom()
