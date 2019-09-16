@@ -380,7 +380,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
                         continue
                     src_item = items[i]
                     dst_item = items[j]
-                    src_anchor, dst_anchor = entry
+                    try:
+                        src_anchor, dst_anchor = entry
+                    except TypeError:
+                        # Happens when first loading a project that wasn't saved with the current version
+                        src_anchor = dst_anchor = "bottom"
                     entry_new = {"from": [src_item.name, src_anchor], "to": [dst_item.name, dst_anchor]}
                     connections.append(entry_new)
         # Now just assume new format
@@ -388,10 +392,16 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_name, src_anchor = conn["from"]
             dst_name, dst_anchor = conn["to"]
             src_ind = self._project_item_model.find_item(src_name)
+            if not src_ind:
+                self._toolbox.msg_warning.emit("Restoring a connection failed")
+                continue
             src_item = self._project_item_model.project_item(src_ind)
             src_icon = src_item.get_icon()
             src_connector = src_icon.conn_button(src_anchor)
             dst_ind = self._project_item_model.find_item(dst_name)
+            if not dst_ind:
+                self._toolbox.msg_warning.emit("Restoring a connection failed")
+                continue
             dst_item = self._project_item_model.project_item(dst_ind)
             dst_icon = dst_item.get_icon()
             dst_connector = dst_icon.conn_button(dst_anchor)
