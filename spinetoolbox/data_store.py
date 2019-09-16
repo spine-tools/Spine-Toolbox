@@ -40,15 +40,18 @@ class DataStore(ProjectItem):
         name (str): Object name
         description (str): Object description
         url (str or dict): SQLAlchemy url
+        reference (dict): reference, contains SQLAlchemy url (kept for compatibility with older project files)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
 
-    def __init__(self, toolbox, name, description, url, x, y):
+    def __init__(self, toolbox, name, description, x, y, url=None, reference=None):
         """Class constructor."""
         super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
+        if "url" in reference:
+            url = reference["url"]
         self._url = self.parse_url(url)
         self.tree_view_form = None
         self.graph_view_form = None
@@ -542,7 +545,8 @@ class DataStore(ProjectItem):
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
             except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
                 self._toolbox.msg_error.emit(
-                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err))
+                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err)
+                )
                 db_map = None
             if db_map:
                 all_import_errors = []
