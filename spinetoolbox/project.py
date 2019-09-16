@@ -182,7 +182,18 @@ class SpineToolboxProject(MetaObject):
             dst_name = dst_connector.parent_name()
             conn = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
             connections.append(conn)
-        project_dict['connections'] = connections
+        # Save connections in old format, to keep compatibility with old toolbox versions
+        # If and when we're ready to adopt the new format, this can be removed
+        item_names = [item.name for item in self._toolbox.project_item_model.items()]
+        n_items = len(item_names)
+        connections_old = [[False for _ in range(n_items)] for __ in range(n_items)]
+        for conn in connections:
+            src_name, src_anchor = conn["from"]
+            dst_name, dst_anchor = conn["to"]
+            i = item_names.index(src_name)
+            j = item_names.index(dst_name)
+            connections_old[i][j] = [src_anchor, dst_anchor]
+        project_dict['connections'] = connections_old
         project_dict["scene_x"] = self._toolbox.ui.graphicsView.scene().sceneRect().x()
         project_dict["scene_y"] = self._toolbox.ui.graphicsView.scene().sceneRect().y()
         project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
