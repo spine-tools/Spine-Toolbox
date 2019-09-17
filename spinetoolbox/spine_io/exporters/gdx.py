@@ -223,11 +223,11 @@ def make_settings(database_map):
     set_names = names(sets)
     records = set_records(domains)
     records.update(set_records(sets))
-    return GdxSettings(domain_names, set_names, records)
+    return Settings(domain_names, set_names, records)
 
 
-class GdxSettings:
-    def __init__(self, domain_names, set_names, records, domain_exportable_flags=None, set_exportable_flags=None):
+class Settings:
+    def __init__(self, domain_names, set_names, records, domain_exportable_flags=None, set_exportable_flags=None, ):
         self._domain_names = domain_names
         self._set_names = set_names
         self._records = records
