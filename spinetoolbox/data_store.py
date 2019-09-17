@@ -16,7 +16,6 @@ Module for data store class.
 :date:   18.12.2017
 """
 
-import sys
 import os
 import logging
 from PySide2.QtGui import QDesktopServices
@@ -31,7 +30,6 @@ from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from graphics_items import DataStoreIcon
 from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
-import qsubprocess
 
 
 class DataStore(ProjectItem):
@@ -42,15 +40,18 @@ class DataStore(ProjectItem):
         name (str): Object name
         description (str): Object description
         url (str or dict): SQLAlchemy url
+        reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
 
-    def __init__(self, toolbox, name, description, url, x, y):
+    def __init__(self, toolbox, name, description, x, y, url=None, reference=None):
         """Class constructor."""
         super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Store"
+        if type(reference) == dict and "url" in reference:
+            url = reference["url"]
         self._url = self.parse_url(url)
         self.tree_view_form = None
         self.graph_view_form = None
@@ -544,9 +545,7 @@ class DataStore(ProjectItem):
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
             except (spinedb_api.SpineDBAPIError, spinedb_api.SpineDBVersionError) as err:
                 self._toolbox.msg_error.emit(
-                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted: {}".format(
-                        self.name, err
-                    )
+                    "<b>{0}:</b> Unable to create database mapping, all import operations will be omitted.".format(err)
                 )
                 db_map = None
             if db_map:

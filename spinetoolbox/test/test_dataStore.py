@@ -77,7 +77,8 @@ class TestDataStore(unittest.TestCase):
     def test_create_new_spine_database(self):
         """Test that a new Spine database is created when clicking on Spine-icon tool button.
         """
-        self.toolbox.project().add_data_store("DS", "", "sqlite:///mock_db.sqlite")  # Create Data Store to project
+        item = dict(name="DS", description="", url="sqlite:///mock_db.sqlite", x=0, y=0)
+        self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         with mock.patch("data_store.QFileDialog.selectedFiles") as mock_sf, mock.patch(
@@ -104,7 +105,8 @@ class TestDataStore(unittest.TestCase):
                 pass
         url = "sqlite:///" + file_path
         create_new_spine_database(url)
-        self.toolbox.project().add_data_store("DS", "", url)  # Create Data Store to project
+        item = dict(name="DS", description="", url=url, x=0, y=0)
+        self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
@@ -120,7 +122,8 @@ class TestDataStore(unittest.TestCase):
         """
         # FIXME: For now it only tests the mysql dialect
         # data_store = DataStore(self.toolbox, "DS", "", dict(), 0, 0)
-        self.toolbox.project().add_data_store("DS", "", "sqlite:///mock_db.sqlite")  # Create Data Store to project
+        item = dict(name="DS", description="", url="sqlite:///mock_db.sqlite", x=0, y=0)
+        self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
@@ -152,7 +155,8 @@ class TestDataStore(unittest.TestCase):
                 pass
         url = "sqlite:///" + file_path
         create_new_spine_database(url)
-        self.toolbox.project().add_data_store("DS", "", url)  # Create Data Store to project
+        item = dict(name="DS", description="", url=url, x=0, y=0)
+        self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()

@@ -22,14 +22,7 @@ import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
-from helpers import project_dir, create_dir, copy_dir, get_db_map, busy_effect
-from data_store import DataStore
-from data_connection import DataConnection
-from gdx_export import GdxExport
-from tool import Tool
-from view import View
-from data_interface import DataInterface
-from widgets.tree_view_widget import TreeViewForm
+from helpers import project_dir, create_dir, copy_dir
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 from executioner import DirectedGraphHandler, ExecutionInstance
@@ -210,76 +203,18 @@ class SpineToolboxProject(MetaObject):
         Returns:
             Boolean value depending on operation success.
         """
-        data_stores = objects_dict.get("Data Stores", dict())
-        data_connections = objects_dict.get("Data Connections", dict())
-        tools = objects_dict.get("Tools", dict())
-        views = objects_dict.get("Views", dict())
-        data_interfaces = objects_dict.get("Data Interfaces", dict())
-        gdx_export_items = objects_dict.get("Exporting", dict())
-        n = len(data_stores) + len(data_connections) + len(tools) + len(views) + len(data_interfaces)
         self._toolbox.msg.emit("Loading project items...")
-        if n == 0:
+        empty = True
+        for category_name, category_dict in objects_dict.items():
+            items = []
+            for name, item_dict in category_dict.items():
+                item_dict.pop("short name", None)
+                item_dict["name"] = name
+                items.append(item_dict)
+                empty = False
+            self.add_project_items(category_name, *items, verbosity=False)
+        if empty:
             self._toolbox.msg_warning.emit("Project has no items")
-        # Recreate Data Stores
-        for name, item_data in data_stores.items():
-            desc = item_data.get('description', '')
-            try:
-                url = item_data["url"]
-            except KeyError:
-                # Keep compatibility with previous version
-                reference = item_data.get("reference", None)
-                if isinstance(reference, dict):
-                    url = reference.get("url", None)
-                else:
-                    url = None
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            self.add_data_store(name, desc, url, x, y, verbosity=False)
-        # Recreate Data Connections
-        for name, item_data in data_connections.items():
-            desc = item_data.get('description', '')
-            refs = item_data.get("references", list())
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            self.add_data_connection(name, desc, refs, x, y, verbosity=False)
-        # Recreate Tools
-        for name, item_data in tools.items():
-            desc = item_data.get('description', '')
-            tool_name = item_data['tool']
-            # Find tool template from model
-            tool_template = self._toolbox.tool_template_model.find_tool_template(tool_name)
-            # Clarifications for user
-            if tool_name != "" and not tool_template:
-                self._toolbox.msg_error.emit(
-                    "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                    "it was not found. Add it to Tool templates and reopen "
-                    "project.".format(name, tool_name)
-                )
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            execute_in_work = item_data.get("execute_in_work", True)  # boolean
-            self.add_tool(name, desc, tool_template, execute_in_work, x, y, verbosity=False)
-        # Recreate Views
-        for name, item_data in views.items():
-            desc = item_data.get('description', '')
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            self.add_view(name, desc, x, y, verbosity=False)
-        # Recreate Data Interfaces
-        for name, item_data in data_interfaces.items():
-            desc = item_data["description"]
-            x = item_data.get("x", 0)
-            y = item_data.get("y", 0)
-            mappings = item_data.get("mappings", {})
-            filepath = item_data.get("import_file_path", "")
-            self.add_data_interface(name, desc, filepath, mappings, x, y, verbosity=False)
-        for name, item_data in gdx_export_items.items():
-            description = item_data.get("description", '')
-            x = item_data.get("x", 0.0)
-            y = item_data.get("y", 0.0)
-            database_urls = item_data.get("database_urls", None)
-            database_to_file_name_map = item_data.get("database_to_file_name_map", None)
-            self.add_gdx_export(name, description, database_urls, database_to_file_name_map, x, y, verbosity=False)
         return True
 
     def load_tool_template_from_file(self, jsonfile):
@@ -302,11 +237,8 @@ class SpineToolboxProject(MetaObject):
         except FileNotFoundError:
             self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(jsonfile))
             return None
-        # Infer path to the main program
-        try:
-            includes_main_path = definition["includes_main_path"]  # path to main program relative to definition file
-        except KeyError:
-            includes_main_path = "."  # assume main program and definition file are on the same path
+        # Path to main program relative to definition file
+        includes_main_path = definition.get("includes_main_path", ".")
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
         return self.load_tool_template_from_dict(definition, path)
 
@@ -338,119 +270,39 @@ class SpineToolboxProject(MetaObject):
         self._toolbox.msg_warning.emit("Tool type <b>{}</b> not available".format(_tooltype))
         return None
 
-    def _add_project_item(self, item, category_name, item_type_name, set_selected, verbosity):
-        """
-        Adds a project item to project.
+    def add_project_items(self, category_name, *items, set_selected=False, verbosity=True):
+        """Adds item to project.
 
         Args:
-            item (ProjectItem): an item to add
-            category_name (str): category's name into which the item is added
-            item_type_name (str): the type of the item for logging purposes
-            set_selected (bool): whether to set item selected after the item has been added to project
-            vebosity (bool): if True logs a message
-        """
-        category = self._toolbox.project_item_model.find_category(category_name)
-        self._toolbox.project_item_model.insert_item(item, category)
-        self.append_connection_model(item.name, category_name)
-        self.add_to_dag(item.name)
-        if verbosity:
-            self._toolbox.msg.emit("{} <b>{}</b> added to project.".format(item_type_name, item.name))
-        if set_selected:
-            self.set_item_selected(item)
-
-    def add_data_store(self, name, description, url, x=0, y=0, set_selected=False, verbosity=True):
-        """Adds a Data Store to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            url (dict): Url information
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
+            category_name (str): The items' category
+            items (dict): one or more dict of items to add
             set_selected (bool): Whether to set item selected after the item has been added to project
             verbosity (bool): If True, prints message
         """
-        data_store = DataStore(self._toolbox, name, description, url, x, y)
-        self._add_project_item(data_store, "Data Stores", "Data Store", set_selected, verbosity)
-
-    def add_data_connection(self, name, description, references, x=0, y=0, set_selected=False, verbosity=True):
-        """Adds a Data Connection to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            references (list(str)): List of file paths
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        data_connection = DataConnection(self._toolbox, name, description, references, x, y)
-        self._add_project_item(data_connection, "Data Connections", "Data Connection", set_selected, verbosity)
-
-    def add_tool(self, name, description, tool_template, use_work=True, x=0, y=0, set_selected=False, verbosity=True):
-        """Adds a Tool to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            tool_template (ToolTemplate): Tool template of this tool
-            use_work (bool): Execute in work directory
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        tool = Tool(self._toolbox, name, description, tool_template, use_work, x, y)
-        self._add_project_item(tool, "Tools", "Tool", set_selected, verbosity)
-
-    def add_view(self, name, description, x=0, y=0, set_selected=False, verbosity=True):
-        """Adds a View to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        view = View(self._toolbox, name, description, x, y)
-        self._add_project_item(view, "Views", "View", set_selected, verbosity)
-
-    def add_data_interface(
-        self, name, description, import_file_path="", mappings=None, x=0, y=0, set_selected=False, verbosity=True
-    ):
-        """Adds a Data Interface to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        if mappings is None:
-            mappings = {}
-        data_interface = DataInterface(self._toolbox, name, description, import_file_path, mappings, x, y)
-        self._add_project_item(data_interface, "Data Interfaces", "Data Interface", set_selected, verbosity)
-
-    def add_gdx_export(self, name, description, database_urls=None, database_to_file_name_map=None, x=0.0, y=0.0, set_selected=False, verbosity=True):
-        """Adds a Gdx Export item to project item model.
-
-        Args:
-            name (str): Name
-            description (str): Description of item
-            database_urls (list): A list of database urls
-            database_to_file_name_map (dict): Mapping between database paths and output file names
-            x (int): X coordinate of item on scene
-            y (int): Y coordinate of item on scene
-            set_selected (bool): Whether to set item selected after the item has been added to project
-            verbosity (bool): If True, prints message
-        """
-        gdx_export = GdxExport(self._toolbox, name, description, database_urls, database_to_file_name_map, x, y)
-        self._add_project_item(gdx_export, "Exporting", "Export item", set_selected, verbosity)
+        category_ind = self._toolbox.project_item_model.find_category(category_name)
+        if not category_ind:
+            self._toolbox.msg_error.emit("Category {0} not found".format(category_name))
+            return
+        category_item = self._toolbox.project_item_model.project_item(category_ind)
+        item_maker = category_item.item_maker()
+        for item_dict in items:
+            try:
+                item = item_maker(self._toolbox, **item_dict)
+            except TypeError:
+                self._toolbox.msg_error.emit(
+                    "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
+                    "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
+                )
+                continue
+            self._toolbox.project_item_model.insert_item(item, category_ind)
+            # Append connection model
+            self.append_connection_model(item.name, category_name)
+            # Append new node to networkx graph
+            self.add_to_dag(item.name)
+            if verbosity:
+                self._toolbox.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type, item.name))
+            if set_selected:
+                self.set_item_selected(item)
 
     def append_connection_model(self, item_name, category):
         """Adds new item to connection model to keep project and connection model synchronized."""
@@ -627,7 +479,11 @@ class SpineToolboxProject(MetaObject):
                     )
                 )
                 self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(g.nodes())))
-                self._toolbox.msg.emit("Please edit connections in Design View to execute it.")
+                edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(g)]
+                self._toolbox.msg.emit(
+                    "Please edit connections in Design View to execute it. "
+                    "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
+                )
                 self._toolbox.msg.emit("---------------------------------------")
                 self._executed_graph_index += 1
         self._invalid_graphs.clear()
@@ -652,6 +508,12 @@ class SpineToolboxProject(MetaObject):
         """Simulates the execution of the given dag."""
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
+            # Not a dag, invalidate workflow
+            edges = self.dag_handler.edges_causing_loops(dag)
+            for node in dag.nodes():
+                ind = self._toolbox.project_item_model.find_item(node)
+                project_item = self._toolbox.project_item_model.project_item(ind)
+                project_item.invalidate_workflow(edges)
             return
         # Make execution instance and run simulation
         execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)

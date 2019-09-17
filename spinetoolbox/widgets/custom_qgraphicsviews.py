@@ -378,8 +378,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
                     dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
                     src = self._project_item_model.find_item(src_name)
+                    if not src:
+                        self._toolbox.msg_warning.emit("Restoring a connection failed")
+                        continue
                     src_item = self._project_item_model.project_item(src)
                     dst = self._project_item_model.find_item(dst_name)
+                    if not dst:
+                        self._toolbox.msg_warning.emit("Restoring a connection failed")
+                        continue
                     dst_item = self._project_item_model.project_item(dst)
                     # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
                     src_icon = src_item.get_icon()

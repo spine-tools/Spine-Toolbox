@@ -102,7 +102,8 @@ class AddGdxExportWidget(QWidget):
 
     def __call_add_item(self):
         """Creates new Item according to user's selections."""
-        self._project.add_gdx_export(self._name, self._description, x=self._x, y=self._y, set_selected=True)
+        item = dict(name=self._name, description=self._description, x=self._x, y=self._y)
+        self._project.add_project_items("Exporting", item, set_selected=True)
 
     def keyPressEvent(self, e):
         """

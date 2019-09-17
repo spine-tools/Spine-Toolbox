@@ -124,14 +124,9 @@ class AddToolWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections."""
-        selected_row = self.ui.comboBox_tool.currentIndex()
-        if selected_row == -1:
-            selected_tool_template = None
-        else:
-            selected_tool_template = self._toolbox.tool_template_model.tool_template(selected_row)
-        self._project.add_tool(
-            self.name, self.description, selected_tool_template, True, self._x, self._y, set_selected=True
-        )
+        tool = self.ui.comboBox_tool.currentText()
+        item = dict(name=self.name, description=self.description, tool=tool, execute_in_work=True, x=self._x, y=self._y)
+        self._project.add_project_items("Tools", item, set_selected=True)
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

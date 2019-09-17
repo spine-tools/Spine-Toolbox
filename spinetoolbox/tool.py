@@ -38,13 +38,13 @@ class Tool(ProjectItem):
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Object name
         description (str): Object description
-        tool_template (ToolTemplate): Template for this Tool
-        use_work (bool): Execute associated Tool template in work (True) or source directory (False)
+        tool (str): Template name for this Tool
+        execute_in_work (bool): Execute associated Tool template in work (True) or source directory (False)
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
     """
 
-    def __init__(self, toolbox, name, description, tool_template, use_work, x, y):
+    def __init__(self, toolbox, name, description, tool, execute_in_work, x, y):
         """Class constructor."""
         super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
@@ -60,8 +60,15 @@ class Tool(ProjectItem):
         self.template_model = QStandardItemModel()
         self.populate_template_model(False)
         self.source_files = list()
-        self._tool_template = None
-        self.set_tool_template(tool_template)
+        self._tool_template = self._toolbox.tool_template_model.find_tool_template(tool)
+        if tool != "" and not self._tool_template:
+            # Clarifications for user
+            self._toolbox.msg_error.emit(
+                "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
+                "it was not found. Add it to Tool templates and reopen "
+                "project.".format(self.name, tool)
+            )
+        self.set_tool_template(self._tool_template)
         if not self._tool_template:
             self._tool_template_name = ""
         else:
@@ -69,7 +76,7 @@ class Tool(ProjectItem):
         self.tool_template_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
-        self.execute_in_work = use_work  # Enables overriding the template default setting
+        self.execute_in_work = execute_in_work  # Enables overriding the template default setting
         # Make project directory for this Tool
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -145,7 +152,6 @@ class Tool(ProjectItem):
         else:
             new_tool = self._toolbox.tool_template_model.tool_template(row)
             self.set_tool_template(new_tool)
-        self.item_changed.emit()
 
     def set_tool_template(self, tool_template):
         """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
@@ -155,6 +161,7 @@ class Tool(ProjectItem):
         """
         self._tool_template = tool_template
         self.update_tool_ui()
+        self.item_changed.emit()
 
     def update_tool_ui(self):
         """Update Tool UI to show Tool template details. Used when Tool template is changed.
