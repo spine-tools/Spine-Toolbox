@@ -304,14 +304,23 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """Set project item model."""
         self._project_item_model = model
 
+    def remove_icon(self, icon):
+        """Removes icon and all connected links from scene."""
+        links = set(link for conn in icon.connectors.values() for link in conn.links)
+        for link in links:
+            self.scene().removeItem(link)
+            # Remove Link from connectors
+            link.src_connector.links.remove(link)
+            link.dst_connector.links.remove(link)
+        self.scene().removeItem(icon)
+
     def links(self):
         """Returns all Links in the scene.
         Used for saving the project."""
         return [item for item in self.items() if type(item) == Link]
 
     def add_link(self, src_connector, dst_connector):
-        """Draws link between source and sink items on scene and
-        appends connection model. Refreshes View references if needed.
+        """Draws link between source and destination connectors on scene.
 
         Args:
             src_connector (ConnectorButton): Source connector button
@@ -327,9 +336,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
-    def remove_link(self, link):
-        """Removes link between source and sink items on scene and
-        updates connection model. Refreshes View references if needed."""
+    def remove_link(self, link, from_dag=True):
+        """Removes link from scene."""
         self.scene().removeItem(link)
         # Remove Link from connectors
         link.src_connector.links.remove(link)
