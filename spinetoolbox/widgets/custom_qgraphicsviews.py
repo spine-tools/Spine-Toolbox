@@ -356,8 +356,8 @@ class DesignQGraphicsView(CustomQGraphicsView):
         .. code-block::
 
             [
-                [false, false, ["right", "left"], false],
-                [false, ["bottom", "left"], false, false],
+                [False, False, ["right", "left"], False],
+                [False, ["bottom", "left"], False, False],
                 ...
             ]
 
@@ -366,7 +366,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         .. code-block::
 
             [
-                ["from": ["DC1", "right"], "to": ["Tool1", "left"]],
+                {"from": ["DC1", "right"], "to": ["Tool1", "left"]},
                 ...
             ]
 
@@ -398,19 +398,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
             src_name, src_anchor = conn["from"]
             dst_name, dst_anchor = conn["to"]
             src_ind = self._project_item_model.find_item(src_name)
-            if not src_ind:
+            dst_ind = self._project_item_model.find_item(dst_name)
+            if not src_ind or not dst_ind:
                 self._toolbox.msg_warning.emit("Restoring a connection failed")
                 continue
             src_item = self._project_item_model.project_item(src_ind)
-            src_icon = src_item.get_icon()
-            src_connector = src_icon.conn_button(src_anchor)
-            dst_ind = self._project_item_model.find_item(dst_name)
-            if not dst_ind:
-                self._toolbox.msg_warning.emit("Restoring a connection failed")
-                continue
+            src_connector = src_item.get_icon().conn_button(src_anchor)
             dst_item = self._project_item_model.project_item(dst_ind)
-            dst_icon = dst_item.get_icon()
-            dst_connector = dst_icon.conn_button(dst_anchor)
+            dst_connector = dst_item.get_icon().conn_button(dst_anchor)
             self.add_link(src_connector, dst_connector)
 
     def draw_links(self, connector):
