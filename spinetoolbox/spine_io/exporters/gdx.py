@@ -294,6 +294,28 @@ class Settings:
     def global_parameters_domain_name(self, name):
         self._global_parameters_domain_name = name
 
+    def to_dict(self):
+        as_dictionary = {
+            "domain names": self._domain_names,
+            "domain exportable flags": self._domain_exportable_flags,
+            "set names": self._set_names,
+            "set exportable flags": self._set_exportable_flags,
+            "records": self._records,
+            "global parameters domain name": self._global_parameters_domain_name
+        }
+        return as_dictionary
+
+    @staticmethod
+    def from_dict(dictionary):
+        domain_names = dictionary.get("domain names", list())
+        domain_exportable_flags = dictionary.get("domain exportable flags", None)
+        set_names = dictionary.get("set names", list())
+        set_exportable_flags = dictionary.get("set exportable flags", None)
+        records = dictionary.get("records", list())
+        global_parameters_domain_name = dictionary.get("global parameters domain name", "")
+        settings = Settings(domain_names, set_names, records, domain_exportable_flags, set_exportable_flags, global_parameters_domain_name)
+        return settings
+
 
 def available():
     return gams is not None

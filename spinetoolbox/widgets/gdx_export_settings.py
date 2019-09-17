@@ -56,6 +56,7 @@ class GdxExportSettings(QMainWindow):
         self._central_widget_ui.set_as_global_parameters_object_class_button.clicked.connect(self.__set_selected_set_as_global_parameters_object_class)
         self._central_widget_ui.record_move_up_button.clicked.connect(self.__move_records_up)
         self._central_widget_ui.record_move_down_button.clicked.connect(self.__move_records_down)
+        self._central_widget_ui.global_parameters_object_class_line_edit.setText(settings.global_parameters_domain_name)
         self._central_widget_ui.global_parameters_object_class_line_edit.textChanged.connect(self.__update_global_parameters_object_class)
         self._settings = settings
         set_list_model = GAMSSetListModel(settings)

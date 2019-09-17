@@ -17,6 +17,7 @@ Tool class.
 """
 
 from copy import deepcopy
+import json
 import logging
 import os.path
 from PySide2.QtCore import QUrl, Slot
@@ -43,7 +44,7 @@ class GdxExport(ProjectItem):
         x (int): initial X coordinate of item icon
         y (int): initial Y coordinate of item icon
     """
-    def __init__(self, toolbox, name, description, database_urls=None, database_to_file_name_map=None, x=0.0, y=0.0):
+    def __init__(self, toolbox, name, description, database_urls=None, database_to_file_name_map=None, settings_file_names=None, x=0.0, y=0.0):
         super().__init__(toolbox, name, description)
         self.item_type = "Gdx Export"
         self._settings_windows = dict()
@@ -59,6 +60,13 @@ class GdxExport(ProjectItem):
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
+        if settings_file_names is not None:
+            for file_name in settings_file_names:
+                with open(file_name) as input_file:
+                    data = json.load(input_file)
+                    database_path = data["database path"]
+                    settings = gdx.Settings.from_dict(data)
+                    self._settings[database_path] = settings
         self._graphics_item = GdxExportIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._sigs = self.make_signal_handler_dict()
 
@@ -183,6 +191,8 @@ class GdxExport(ProjectItem):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
         d["database_to_file_name_map"] = self._database_to_file_name_map
+        settings_file_names = self.__save_settings()
+        d["settings_file_names"] = settings_file_names
         return d
 
     def __settings_approved(self, database_path):
@@ -195,3 +205,14 @@ class GdxExport(ProjectItem):
         settings_window = self._settings_windows[database_path]
         settings_window.deleteLater()
         del self._settings_windows[database_path]
+
+    def __save_settings(self):
+        file_names = list()
+        for index, (database_path, settings) in enumerate(self._settings.items()):
+            settings_dictionary = settings.to_dict()
+            settings_dictionary["database path"] = database_path
+            file_name = os.path.join(self.data_dir, "export_settings_{}.json".format(index + 1))
+            with open(file_name, "w") as output_file:
+                json.dump(settings_dictionary, output_file, sort_keys=True, indent=4)
+                file_names.append(file_name)
+        return file_names
