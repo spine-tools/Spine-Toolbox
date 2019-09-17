@@ -349,18 +349,24 @@ class DesignQGraphicsView(CustomQGraphicsView):
 
     def restore_links(self, connections):
         """Creates Links from the given connections list.
-        Two formats are accepted:
-        - Old format: List of lists, e.g.:
+        Two formats are accepted.
+
+        - Old format. List of lists, e.g.
+
+        .. code-block::
+
             [
                 [false, false, ["right", "left"], false],
                 [false, ["bottom", "left"], false, false],
                 ...
             ]
-        - New format: List of dicts, e.g.:
+
+        - New format. List of dicts, e.g.
+
+        .. code-block::
+
             [
-                {
-                    "from": ["DC1", "right"], "to": ["Tool1", "left"]
-                },
+                ["from": ["DC1", "right"], "to": ["Tool1", "left"]],
                 ...
             ]
 
