@@ -53,14 +53,17 @@ class GdxExportSettings(QMainWindow):
         self._central_widget_ui.button_box.rejected.connect(self.close)
         self._central_widget_ui.set_move_up_button.clicked.connect(self.__move_sets_up)
         self._central_widget_ui.set_move_down_button.clicked.connect(self.__move_sets_down)
+        self._central_widget_ui.set_as_global_parameters_object_class_button.clicked.connect(self.__set_selected_set_as_global_parameters_object_class)
         self._central_widget_ui.record_move_up_button.clicked.connect(self.__move_records_up)
         self._central_widget_ui.record_move_down_button.clicked.connect(self.__move_records_down)
+        self._central_widget_ui.global_parameters_object_class_line_edit.textChanged.connect(self.__update_global_parameters_object_class)
         self._settings = settings
         set_list_model = GAMSSetListModel(settings)
         self._central_widget_ui.set_list_view.setModel(set_list_model)
         record_list_model = GAMSRecordListModel()
         self._central_widget_ui.record_list_view.setModel(record_list_model)
         self._central_widget_ui.set_list_view.selectionModel().selectionChanged.connect(self.__populate_set_contents)
+        self._central_widget_ui.set_list_view.selectionModel().currentChanged.connect(self.__update_as_global_button_enabled_state)
 
     @property
     def settings(self):
@@ -85,6 +88,29 @@ class GdxExportSettings(QMainWindow):
     @Slot(bool)
     def __move_records_down(self, checked=False):
         _move_selected_elements_by(self._central_widget_ui.record_list_view, 1)
+
+    @Slot("QModelIndex", "QModelIndex")
+    def __update_as_global_button_enabled_state(self, current, previous):
+        model = current.model()
+        is_previous_domain = model.is_domain(previous)
+        is_current_domain = model.is_domain(current)
+        if is_current_domain != is_previous_domain:
+            self._central_widget_ui.set_as_global_parameters_object_class_button.setEnabled(is_current_domain)
+
+    @Slot(bool)
+    def __set_selected_set_as_global_parameters_object_class(self, checked=False):
+        selection_model = self._central_widget_ui.set_list_view.selectionModel()
+        current_index = selection_model.currentIndex()
+        model = current_index.model()
+        if not current_index.isValid() or not model.is_domain(current_index):
+            return
+        set_name = current_index.data()
+        self._central_widget_ui.global_parameters_object_class_line_edit.setText(set_name)
+        model.setData(current_index, Qt.Unchecked, Qt.CheckStateRole)
+
+    @Slot(str)
+    def __update_global_parameters_object_class(self, text):
+        self._settings.global_parameters_domain_name = text
 
     @Slot("QItemSelection", "QItemSelection")
     def __populate_set_contents(self, selected, deselected):
@@ -144,6 +170,11 @@ class GAMSSetListModel(QAbstractListModel):
             return ''
         return section + 1
 
+    def is_domain(self, index):
+        if not index.isValid():
+            return False
+        return index.row() < len(self._settings.domain_names)
+
     def moveRows(self, sourceParent, sourceRow, count, destinationParent, destinationChild):
         row_count = self.rowCount()
         if destinationChild < 0 or destinationChild >= row_count:
@@ -185,6 +216,7 @@ class GAMSSetListModel(QAbstractListModel):
             self._settings.domain_exportable_flags[row] = value != Qt.Unchecked
         else:
             self._settings.set_exportable_flags[row - domain_count] = value != Qt.Unchecked
+        self.dataChanged.emit(index, index, [Qt.CheckStateRole])
         return True
 
 

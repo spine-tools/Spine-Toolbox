@@ -103,6 +103,23 @@ def sets_to_gams(gams_database, sets, gams_domains):
                 gams_parameter.add_record(record.domain_records).value = parameter.value
 
 
+def domain_parameters_to_gams(gams_database, domain):
+    """
+    Adds the parameters from given domain as scalars to GAMS database.
+
+    Args:
+        gams_database (GamsDatabase): a GAMS database to which the scalars are added
+        domain (DomainSet): a domain that holds the parameters
+    """
+    for record in domain.records:
+        for parameter in record.parameters:
+            try:
+                gams_parameter = gams_database.get_parameter(parameter.name)
+            except gams.workspace.GamsException:
+                gams_parameter = gams_database.add_parameter(parameter.name, dimension=0)
+            gams_parameter.add_record().value = parameter.value
+
+
 def object_classes_to_domains(db_map):
     class_list = db_map.object_class_list().all()
     domains = list()
@@ -191,8 +208,17 @@ def sort_records_inplace(domains, settings):
         domain.records = sorted_records
 
 
+def extract_domain(domains, name_to_extract):
+    for index, domain in enumerate(domains):
+        if domain.name == name_to_extract:
+            del domains[index]
+            return domains, domain
+    return domains, None
+
+
 def to_gams_workspace(database_map, settings):
     domains = object_classes_to_domains(database_map)
+    domains, global_parameters_domain = extract_domain(domains, settings.global_parameters_domain_name)
     domains = filter_and_sort_sets(domains, settings.domain_names, settings.domain_exportable_flags)
     sort_records_inplace(domains, settings)
     sets = relationship_classes_to_sets(database_map)
@@ -202,6 +228,8 @@ def to_gams_workspace(database_map, settings):
     gams_database = make_gams_database(gams_workspace)
     gams_domains = domains_to_gams(gams_database, domains)
     sets_to_gams(gams_database, sets, gams_domains)
+    if global_parameters_domain is not None:
+        domain_parameters_to_gams(gams_database, global_parameters_domain)
     return gams_workspace, gams_database
 
 
@@ -227,7 +255,7 @@ def make_settings(database_map):
 
 
 class Settings:
-    def __init__(self, domain_names, set_names, records, domain_exportable_flags=None, set_exportable_flags=None, ):
+    def __init__(self, domain_names, set_names, records, domain_exportable_flags=None, set_exportable_flags=None, global_parameters_domain_name=''):
         self._domain_names = domain_names
         self._set_names = set_names
         self._records = records
@@ -237,6 +265,7 @@ class Settings:
         if set_exportable_flags is None:
             set_exportable_flags = len(set_names) * [True]
         self._set_exportable_flags = set_exportable_flags
+        self._global_parameters_domain_name = global_parameters_domain_name
 
     @property
     def domain_names(self):
@@ -256,6 +285,14 @@ class Settings:
 
     def records(self, name):
         return self._records[name]
+
+    @property
+    def global_parameters_domain_name(self):
+        return self._global_parameters_domain_name
+
+    @global_parameters_domain_name.setter
+    def global_parameters_domain_name(self, name):
+        self._global_parameters_domain_name = name
 
 
 def available():
