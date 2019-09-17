@@ -7,7 +7,7 @@ Data store views
 This section describes the different interfaces for viewing and editing data in a Spine database.
 
 .. contents::
-    :local:
+   :local:
 
 To open any of the viewing interfaces, select a **Data Store** and click the corresponding button
 in its *Properties*:

@@ -10,6 +10,6 @@ Welcome to the Spine Toolbox's tutorials page.
 The following tutorials are available:
 
 .. toctree::
-   :maxdepth: 1
+   :titlesonly:
 
-   case_study_a5
+   case_study_a5.rst

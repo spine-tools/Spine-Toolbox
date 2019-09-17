@@ -10,7 +10,7 @@ Settings
 Spine Toolbox settings are categorized in the following way
 
 .. contents::
-    :local:
+   :local:
 
 Application settings
 --------------------

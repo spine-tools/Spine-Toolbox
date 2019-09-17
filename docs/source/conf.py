@@ -43,7 +43,6 @@ release = SPINE_TOOLBOX_VERSION
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.ifconfig',
@@ -52,7 +51,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'recommonmark',
-    'autoapi.extension',
+    'autoapi.extension'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
