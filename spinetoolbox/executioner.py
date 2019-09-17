@@ -85,23 +85,19 @@ class DirectedGraphHandler(QObject):
         """
         src_graph = self.dag_with_node(src_node)
         dst_graph = self.dag_with_node(dst_node)
-        if src_node == dst_node:
-            # Add self-loop to src graph and return
-            src_graph.add_edge(src_node, dst_node)
-            return
         if src_graph == dst_graph:
             # src and dst are already in same graph. Just add edge to src_graph and return
             src_graph.add_edge(src_node, dst_node)
             self.dag_simulation_requested.emit(src_graph)
-            return
-        # Unify graphs
-        union_dag = nx.union(src_graph, dst_graph)
-        union_dag.add_edge(src_node, dst_node)
-        self.add_dag(union_dag)
-        # Remove src and dst graphs
-        self.remove_dag(src_graph)
-        self.remove_dag(dst_graph)
-        return
+        else:
+            # Unify graphs
+            union_dag = nx.union(src_graph, dst_graph)
+            union_dag.add_edge(src_node, dst_node)
+            # Remove src and dst graphs
+            self.remove_dag(src_graph)
+            self.remove_dag(dst_graph)
+            # Add union graph
+            self.add_dag(union_dag)
 
     def remove_graph_edge(self, src_node, dst_node):
         """Removes edge from a directed graph.
