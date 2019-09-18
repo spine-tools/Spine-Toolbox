@@ -30,19 +30,18 @@ from graphics_items import DataConnectionIcon
 
 
 class DataConnection(ProjectItem):
-    """Data Connection class.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Object name
-        description (str): Object description
-        references (list): List of file references
-        x (int): Initial X coordinate of item icon
-        y (int): Initial Y coordinate of item icon
-    """
 
     def __init__(self, toolbox, name, description, references, x, y):
-        """Class constructor."""
+        """Data Connection class.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Object name
+            description (str): Object description
+            references (list): List of file references
+            x (int): Initial X coordinate of item icon
+            y (int): Initial Y coordinate of item icon
+        """
         super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Connection"

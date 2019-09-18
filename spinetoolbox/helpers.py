@@ -371,8 +371,7 @@ def tuple_itemgetter(itemgetter_func, num_indexes):
 
 
 def format_string_list(str_list):
-    """
-    Return an unordered html list with all elements in str_list.
+    """Return an unordered html list with all elements in str_list.
     Intended to print error logs as returned by spinedb_api.
 
     Args:
@@ -458,9 +457,7 @@ class IconListManager:
         self.model.invisibleRootItem().appendRows(items)
 
     def _model_data(self, index, role):
-        """
-        Replacement method for model.data().
-
+        """Replacement method for model.data().
         Create pixmaps as they're requested by the data() method, to reduce loading time.
         """
         if role == Qt.DisplayRole:
