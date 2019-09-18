@@ -79,6 +79,7 @@ exclude_patterns = []
 pygments_style = 'sphinx'
 
 # Settings for Sphinx AutoAPI
+autoapi_python_class_content = "both"
 autoapi_dirs = ['../../spinetoolbox']  # package to be documented
 autoapi_ignore = [
     '*_rc.py',
