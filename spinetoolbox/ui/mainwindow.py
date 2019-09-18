@@ -19,7 +19,6 @@
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
-
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -56,7 +55,7 @@ class Ui_MainWindow(object):
         self.graphicsView.setFrameShadow(QtWidgets.QFrame.Raised)
         self.graphicsView.setMidLineWidth(0)
         self.graphicsView.setAlignment(QtCore.Qt.AlignCenter)
-        self.graphicsView.setRenderHints(QtGui.QPainter.Antialiasing | QtGui.QPainter.TextAntialiasing)
+        self.graphicsView.setRenderHints(QtGui.QPainter.Antialiasing|QtGui.QPainter.TextAntialiasing)
         self.graphicsView.setDragMode(QtWidgets.QGraphicsView.ScrollHandDrag)
         self.graphicsView.setResizeAnchor(QtWidgets.QGraphicsView.AnchorUnderMouse)
         self.graphicsView.setViewportUpdateMode(QtWidgets.QGraphicsView.FullViewportUpdate)
@@ -477,75 +476,34 @@ class Ui_MainWindow(object):
         self.menuToolbars.setTitle(QtWidgets.QApplication.translate("MainWindow", "Toolbars", None, -1))
         self.menuDock_Widgets.setTitle(QtWidgets.QApplication.translate("MainWindow", "Dock widgets", None, -1))
         self.dockWidget_eventlog.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Event Log", None, -1))
-        self.dockWidget_process_output.setWindowTitle(
-            QtWidgets.QApplication.translate("MainWindow", "Process Log", None, -1)
-        )
+        self.dockWidget_process_output.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Process Log", None, -1))
         self.dockWidget_item.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Properties", None, -1))
-        self.label_no_selection.setText(
-            QtWidgets.QApplication.translate("MainWindow", "Select a project item to view its properties", None, -1)
-        )
-        self.tabWidget_item_properties.setTabText(
-            self.tabWidget_item_properties.indexOf(self.tab_no_selection),
-            QtWidgets.QApplication.translate("MainWindow", "No Selection", None, -1),
-        )
-        self.dockWidget_julia_repl.setWindowTitle(
-            QtWidgets.QApplication.translate("MainWindow", "Julia Console", None, -1)
-        )
+        self.label_no_selection.setText(QtWidgets.QApplication.translate("MainWindow", "Select a project item to view its properties", None, -1))
+        self.tabWidget_item_properties.setTabText(self.tabWidget_item_properties.indexOf(self.tab_no_selection), QtWidgets.QApplication.translate("MainWindow", "No Selection", None, -1))
+        self.dockWidget_julia_repl.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Julia Console", None, -1))
         self.dockWidget_project.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Project", None, -1))
         self.label_4.setText(QtWidgets.QApplication.translate("MainWindow", "Items", None, -1))
         self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Tool templates", None, -1))
-        self.listView_tool_templates.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow",
-                "<html><head/><body><p>Tool Templates available in this project</p></body></html>",
-                None,
-                -1,
-            )
-        )
-        self.toolButton_add_tool_template.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow",
-                "<html><head/><body><p>Create new or add an existing Tool template to project</p></body></html>",
-                None,
-                -1,
-            )
-        )
-        self.toolButton_remove_tool_template.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow",
-                "<html><head/><body><p>Remove (selected) Tool template from project</p></body></html>",
-                None,
-                -1,
-            )
-        )
-        self.tabWidget.setTabText(
-            self.tabWidget.indexOf(self.tab_items), QtWidgets.QApplication.translate("MainWindow", "Items", None, -1)
-        )
-        self.tabWidget.setTabText(
-            self.tabWidget.indexOf(self.tab_connections),
-            QtWidgets.QApplication.translate("MainWindow", "Connections", None, -1),
-        )
-        self.dockWidget_python_repl.setWindowTitle(
-            QtWidgets.QApplication.translate("MainWindow", "Python Console", None, -1)
-        )
+        self.listView_tool_templates.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Tool Templates available in this project</p></body></html>", None, -1))
+        self.toolButton_add_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Create new or add an existing Tool template to project</p></body></html>", None, -1))
+        self.toolButton_remove_tool_template.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove (selected) Tool template from project</p></body></html>", None, -1))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_items), QtWidgets.QApplication.translate("MainWindow", "Items", None, -1))
+        self.tabWidget.setTabText(self.tabWidget.indexOf(self.tab_connections), QtWidgets.QApplication.translate("MainWindow", "Connections", None, -1))
+        self.dockWidget_python_repl.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Python Console", None, -1))
         self.actionQuit.setText(QtWidgets.QApplication.translate("MainWindow", "Quit", None, -1))
         self.actionQuit.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Q", None, -1))
         self.actionData_Store.setText(QtWidgets.QApplication.translate("MainWindow", "Data Store", None, -1))
         self.actionDocumentation.setText(QtWidgets.QApplication.translate("MainWindow", "Documentation", None, -1))
         self.actionAbout.setText(QtWidgets.QApplication.translate("MainWindow", "About...", None, -1))
         self.actionAbout.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F12", None, -1))
-        self.actionAdd_Data_Connection.setText(
-            QtWidgets.QApplication.translate("MainWindow", "Add Data Connection", None, -1)
-        )
+        self.actionAdd_Data_Connection.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Connection", None, -1))
         self.actionAdd_Data_Store.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Store", None, -1))
         self.actionAdd_Tool.setText(QtWidgets.QApplication.translate("MainWindow", "Add Tool", None, -1))
         self.actionAdd_View.setText(QtWidgets.QApplication.translate("MainWindow", "Add View", None, -1))
         self.actionSave.setText(QtWidgets.QApplication.translate("MainWindow", "Save project", None, -1))
         self.actionSave.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+S", None, -1))
         self.actionSave_As.setText(QtWidgets.QApplication.translate("MainWindow", "Save project as...", None, -1))
-        self.actionSave_As.setToolTip(
-            QtWidgets.QApplication.translate("MainWindow", "Duplicate project under a new name", None, -1)
-        )
+        self.actionSave_As.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate project under a new name", None, -1))
         self.actionSave_As.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Shift+S", None, -1))
         self.actionOpen.setText(QtWidgets.QApplication.translate("MainWindow", "Open project...", None, -1))
         self.actionOpen.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+O", None, -1))
@@ -554,75 +512,31 @@ class Ui_MainWindow(object):
         self.actionSettings.setText(QtWidgets.QApplication.translate("MainWindow", "Settings...", None, -1))
         self.actionSettings.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F1", None, -1))
         self.actionItem_Toolbar.setText(QtWidgets.QApplication.translate("MainWindow", "Item Toolbar", None, -1))
-        self.actionAdd_Item_Toolbar.setText(
-            QtWidgets.QApplication.translate("MainWindow", "Add Item Toolbar", None, -1)
-        )
-        self.actionAdd_Item_Toolbar.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow", "<html><head/><body><p>Make Add Item Toolbar visible</p></body></html>", None, -1
-            )
-        )
+        self.actionAdd_Item_Toolbar.setText(QtWidgets.QApplication.translate("MainWindow", "Add Item Toolbar", None, -1))
+        self.actionAdd_Item_Toolbar.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Add Item Toolbar visible</p></body></html>", None, -1))
         self.actionEvent_Log.setText(QtWidgets.QApplication.translate("MainWindow", "Event Log", None, -1))
-        self.actionEvent_Log.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow", "<html><head/><body><p>Make Event Log widget visible</p></body></html>", None, -1
-            )
-        )
-        self.actionSubprocess_Output.setText(
-            QtWidgets.QApplication.translate("MainWindow", "Subprocess Output", None, -1)
-        )
-        self.actionSubprocess_Output.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow", "<html><head/><body><p>Make Subprocess Output widget visible</p></body></html>", None, -1
-            )
-        )
+        self.actionEvent_Log.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Event Log widget visible</p></body></html>", None, -1))
+        self.actionSubprocess_Output.setText(QtWidgets.QApplication.translate("MainWindow", "Subprocess Output", None, -1))
+        self.actionSubprocess_Output.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Subprocess Output widget visible</p></body></html>", None, -1))
         self.actionSelected_Item.setText(QtWidgets.QApplication.translate("MainWindow", "Selected Item", None, -1))
-        self.actionSelected_Item.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow", "<html><head/><body><p>Make Selected Item widget visible</p></body></html>", None, -1
-            )
-        )
+        self.actionSelected_Item.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Selected Item widget visible</p></body></html>", None, -1))
         self.actionJulia_REPL.setText(QtWidgets.QApplication.translate("MainWindow", "Julia REPL", None, -1))
-        self.actionJulia_REPL.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow", "<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None, -1
-            )
-        )
+        self.actionJulia_REPL.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Make Julia REPL widget visible</p></body></html>", None, -1))
         self.actionUser_Guide.setText(QtWidgets.QApplication.translate("MainWindow", "User guide", None, -1))
         self.actionUser_Guide.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F2", None, -1))
-        self.actionRestore_Dock_Widgets.setText(
-            QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1)
-        )
-        self.actionRestore_Dock_Widgets.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow",
-                "<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>",
-                None,
-                -1,
-            )
-        )
+        self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
+        self.actionRestore_Dock_Widgets.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Dock all floating and/or hidden dock widgets back to main window.</p></body></html>", None, -1))
         self.actionAbout_Qt.setText(QtWidgets.QApplication.translate("MainWindow", "About Qt...", None, -1))
         self.actionAbout_Qt.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F11", None, -1))
-        self.actionPackages.setText(
-            QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1)
-        )
+        self.actionPackages.setText(QtWidgets.QApplication.translate("MainWindow", "Tool configuration assistant...", None, -1))
         self.actionPackages.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F5", None, -1))
         self.actionRemove_all.setText(QtWidgets.QApplication.translate("MainWindow", "Remove all", None, -1))
-        self.actionRemove_all.setToolTip(
-            QtWidgets.QApplication.translate(
-                "MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1
-            )
-        )
-        self.actionExport_project_to_GraphML.setText(
-            QtWidgets.QApplication.translate("MainWindow", "Export project to GraphML", None, -1)
-        )
-        self.actionAdd_Data_Interface.setText(
-            QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1)
-        )
+        self.actionRemove_all.setToolTip(QtWidgets.QApplication.translate("MainWindow", "<html><head/><body><p>Remove all items project</p></body></html>", None, -1))
+        self.actionExport_project_to_GraphML.setText(QtWidgets.QApplication.translate("MainWindow", "Export project to GraphML", None, -1))
+        self.actionAdd_Data_Interface.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1))
         self.actionGetting_started.setText(QtWidgets.QApplication.translate("MainWindow", "Getting started", None, -1))
         self.actionGetting_started.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc
