@@ -23,10 +23,9 @@ from indexed_value_table_model import IndexedValueTableModel
 
 
 class TimePatternModel(IndexedValueTableModel):
-    """A model for time pattern type parameter values."""
 
     def __init__(self, value):
-        """Class constructor.
+        """A model for time pattern type parameter values.
 
         Args:
             value(TimePattern): a time pattern value
