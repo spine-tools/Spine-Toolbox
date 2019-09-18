@@ -26,17 +26,18 @@ from config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 class ToolTemplate(MetaObject):
     """Super class for various tool templates.
 
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Name of the tool
-        description (str): Short description of the tool
+        tooltype (str): Type of Tool (e.g. Python, Julia, ..)
         path (str): Path to tool
-        includes (str): List of files belonging to the tool template (relative to 'path')  # TODO: Change to src_files
+        includes (str): List of files belonging to the tool template (relative to 'path')
+        description (str): Description of the Tool template
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
         cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
-        execute_in_work (bool): Execute in work folder?
+        execute_in_work (bool): Execute in work folder
     """
 
     def __init__(
@@ -125,12 +126,14 @@ class ToolTemplate(MetaObject):
 class GAMSTool(ToolTemplate):
     """Class for GAMS tool templates.
 
-    Attributes:
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): GAMS Tool name
-        description (str): GAMS Tool description
+        tooltype (str): Tool template type
         path (str): Path to model main file
         includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main GAMS program.
+        description (str): GAMS Tool description
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
@@ -231,12 +234,14 @@ class GAMSTool(ToolTemplate):
 class JuliaTool(ToolTemplate):
     """Class for Julia tool templates.
 
-    Attributes:
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Julia Tool name
-        description (str): Julia Tool description
+        tooltype (str): Tool template type
         path (str): Path to model main file
         includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main Julia program.
+        description (str): Julia Tool description
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
@@ -310,12 +315,14 @@ class JuliaTool(ToolTemplate):
 class PythonTool(ToolTemplate):
     """Class for Python tool templates.
 
-    Attributes:
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Python Tool name
-        description (str): Python Tool description
+        tooltype (str): Tool template type
         path (str): Path to model main file
         includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main Python program.
+        description (str): Python Tool description
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
@@ -389,12 +396,14 @@ class PythonTool(ToolTemplate):
 class ExecutableTool(ToolTemplate):
     """Class for Executable tool templates.
 
-    Attributes:
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
         name (str): Tool name
-        description (str): Tool description
+        tooltype (str): Tool template type
         path (str): Path to main script file
         includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main script file.
+        description (str): Tool description
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
