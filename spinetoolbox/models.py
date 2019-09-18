@@ -27,15 +27,14 @@ from project_item import CategoryProjectItem
 
 
 class ProjectItemModel(QAbstractItemModel):
-    """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        root (ProjectItem): Root item for the project item tree
-    """
 
     def __init__(self, toolbox, root):
-        """Class constructor."""
+        """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            root (ProjectItem): Root item for the project item tree
+        """
         super().__init__()
         self._toolbox = toolbox
         self._root = root
@@ -853,14 +852,13 @@ class ConnectionModel(QAbstractTableModel):
 
 
 class MinimalTableModel(QAbstractTableModel):
-    """Table model for outlining simple tabular data.
-
-    Attributes:
-        parent (QMainWindow): the parent widget, usually an instance of TreeViewForm
-    """
 
     def __init__(self, parent=None):
-        """Initialize class"""
+        """Table model for outlining simple tabular data.
+
+        Args:
+            parent (QMainWindow): the parent widget, usually an instance of TreeViewForm
+        """
         super().__init__(parent)
         self._parent = parent
         self._main_data = list()  # DisplayRole and EditRole
@@ -1365,14 +1363,14 @@ class HybridTableModel(MinimalTableModel):
 
 
 class DatapackageResourcesModel(MinimalTableModel):
-    """A model of datapackage resource data, used by SpineDatapackageWidget.
-
-    Attributes:
-        parent (SpineDatapackageWidget)
-    """
 
     def __init__(self, parent):
-        """Initialize class"""
+        """A model of datapackage resource data, used by SpineDatapackageWidget.
+
+        Args:
+            parent (SpineDatapackageWidget)
+        """
+
         super().__init__(parent)
 
     def reset_model(self, resources):
@@ -1392,14 +1390,13 @@ class DatapackageResourcesModel(MinimalTableModel):
 
 
 class DatapackageFieldsModel(MinimalTableModel):
-    """A model of datapackage field data, used by SpineDatapackageWidget.
-
-    Attributes:
-        parent (SpineDatapackageWidget)
-    """
 
     def __init__(self, parent):
-        """Initialize class"""
+        """A model of datapackage field data, used by SpineDatapackageWidget.
+
+        Args:
+            parent (SpineDatapackageWidget)
+        """
         super().__init__(parent)
 
     def reset_model(self, schema):
@@ -1415,14 +1412,13 @@ class DatapackageFieldsModel(MinimalTableModel):
 
 
 class DatapackageForeignKeysModel(EmptyRowModel):
-    """A model of datapackage foreign key data, used by SpineDatapackageWidget.
-
-    Attributes:
-        parent (SpineDatapackageWidget)
-    """
 
     def __init__(self, parent):
-        """Initialize class"""
+        """A model of datapackage foreign key data, used by SpineDatapackageWidget.
+
+        Args:
+            parent (SpineDatapackageWidget)
+        """
         super().__init__(parent)
         self._parent = parent
 
