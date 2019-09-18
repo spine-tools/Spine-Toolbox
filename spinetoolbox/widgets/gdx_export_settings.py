@@ -53,18 +53,24 @@ class GdxExportSettings(QMainWindow):
         self._central_widget_ui.button_box.rejected.connect(self.close)
         self._central_widget_ui.set_move_up_button.clicked.connect(self.__move_sets_up)
         self._central_widget_ui.set_move_down_button.clicked.connect(self.__move_sets_down)
-        self._central_widget_ui.set_as_global_parameters_object_class_button.clicked.connect(self.__set_selected_set_as_global_parameters_object_class)
+        self._central_widget_ui.set_as_global_parameters_object_class_button.clicked.connect(
+            self.__set_selected_set_as_global_parameters_object_class
+        )
         self._central_widget_ui.record_move_up_button.clicked.connect(self.__move_records_up)
         self._central_widget_ui.record_move_down_button.clicked.connect(self.__move_records_down)
         self._central_widget_ui.global_parameters_object_class_line_edit.setText(settings.global_parameters_domain_name)
-        self._central_widget_ui.global_parameters_object_class_line_edit.textChanged.connect(self.__update_global_parameters_object_class)
+        self._central_widget_ui.global_parameters_object_class_line_edit.textChanged.connect(
+            self.__update_global_parameters_object_class
+        )
         self._settings = settings
         set_list_model = GAMSSetListModel(settings)
         self._central_widget_ui.set_list_view.setModel(set_list_model)
         record_list_model = GAMSRecordListModel()
         self._central_widget_ui.record_list_view.setModel(record_list_model)
         self._central_widget_ui.set_list_view.selectionModel().selectionChanged.connect(self.__populate_set_contents)
-        self._central_widget_ui.set_list_view.selectionModel().currentChanged.connect(self.__update_as_global_button_enabled_state)
+        self._central_widget_ui.set_list_view.selectionModel().currentChanged.connect(
+            self.__update_as_global_button_enabled_state
+        )
 
     @property
     def settings(self):
@@ -127,8 +133,8 @@ class GdxExportSettings(QMainWindow):
 
 def move_list_elements(originals, first, last, target):
     trashable = list(originals)
-    elements_to_move = list(originals[first:last + 1])
-    del trashable[first:last + 1]
+    elements_to_move = list(originals[first : last + 1])
+    del trashable[first : last + 1]
     elements_that_come_before = trashable[:target]
     elements_that_come_after = trashable[target:]
     brave_new_list = elements_that_come_before + elements_to_move + elements_that_come_after

@@ -17,13 +17,13 @@ Functions to export a Spine model database to GAMS .gdx file in TIMES format.
 """
 
 import logging
+
 try:
     import gams
 except ImportError:
     logging.info('No GAMS Python bindings installed. GDX support is unavailable.')
     gams = None
 from spinedb_api import from_database, ParameterValueFormatError
-from helpers import get_db_map
 
 
 class DomainSet:
@@ -255,7 +255,15 @@ def make_settings(database_map):
 
 
 class Settings:
-    def __init__(self, domain_names, set_names, records, domain_exportable_flags=None, set_exportable_flags=None, global_parameters_domain_name=''):
+    def __init__(
+        self,
+        domain_names,
+        set_names,
+        records,
+        domain_exportable_flags=None,
+        set_exportable_flags=None,
+        global_parameters_domain_name='',
+    ):
         self._domain_names = domain_names
         self._set_names = set_names
         self._records = records
@@ -301,7 +309,7 @@ class Settings:
             "set names": self._set_names,
             "set exportable flags": self._set_exportable_flags,
             "records": self._records,
-            "global parameters domain name": self._global_parameters_domain_name
+            "global parameters domain name": self._global_parameters_domain_name,
         }
         return as_dictionary
 
@@ -313,7 +321,14 @@ class Settings:
         set_exportable_flags = dictionary.get("set exportable flags", None)
         records = dictionary.get("records", list())
         global_parameters_domain_name = dictionary.get("global parameters domain name", "")
-        settings = Settings(domain_names, set_names, records, domain_exportable_flags, set_exportable_flags, global_parameters_domain_name)
+        settings = Settings(
+            domain_names,
+            set_names,
+            records,
+            domain_exportable_flags,
+            set_exportable_flags,
+            global_parameters_domain_name,
+        )
         return settings
 
 

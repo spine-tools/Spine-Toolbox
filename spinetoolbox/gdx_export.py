@@ -47,7 +47,17 @@ class GdxExport(ProjectItem):
 
     item_type = "Gdx Export"
 
-    def __init__(self, toolbox, name, description, database_urls=None, database_to_file_name_map=None, settings_file_names=None, x=0.0, y=0.0):
+    def __init__(
+        self,
+        toolbox,
+        name,
+        description,
+        database_urls=None,
+        database_to_file_name_map=None,
+        settings_file_names=None,
+        x=0.0,
+        y=0.0,
+    ):
         super().__init__(toolbox, name, description)
         self._settings_windows = dict()
         self._settings = dict()
@@ -74,9 +84,7 @@ class GdxExport(ProjectItem):
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers."""
-        s = {
-            self._toolbox.ui.toolButton_gdx_export_open_dir.clicked: lambda checked: self.open_directory(checked)
-        }
+        s = {self._toolbox.ui.toolButton_gdx_export_open_dir.clicked: lambda checked: self.open_directory(checked)}
         return s
 
     def activate(self):
@@ -181,8 +189,8 @@ class GdxExport(ProjectItem):
         inst.append_dc_files(self.name, paths)
         if not paths:
             self.add_notification(
-                "Currently this item does not export anything. ".format(self.item_type) +
-                "See the settings in the {} Properties panel.".format(self.item_type)
+                "Currently this item does not export anything. ".format(self.item_type)
+                + "See the settings in the {} Properties panel.".format(self.item_type)
             )
 
     def __show_settings(self, database_url):

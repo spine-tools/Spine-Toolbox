@@ -484,7 +484,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 elif dst_item_type == "Gdx Export":
                     self._toolbox.msg_warning.emit(
                         "Link established. Gdx Export <b>{}</b> will export Data Store <b>{}</b> into GDX format when executing.".format(
-                            self.dst_item_name, self.src_item_name))
+                            self.dst_item_name, self.src_item_name
+                        )
+                    )
                     return
             elif src_item_type == "Tool":
                 if dst_item_type in ["Data Connection", "Data Store"]:
@@ -504,7 +506,11 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     return
             elif src_item_type == "Gdx Export":
                 if dst_item_type == "Tool":
-                    self._toolbox.msg_warning.emit("Link established. GDX file from <b>{}</b> will be passed to Tool <b>{}</b> upon execution.".format(self.src_item_name, self.dst_item_name))
+                    self._toolbox.msg_warning.emit(
+                        "Link established. GDX file from <b>{}</b> will be passed to Tool <b>{}</b> upon execution.".format(
+                            self.src_item_name, self.dst_item_name
+                        )
+                    )
                     return
             if src_item_type in ["Data Connection", "Data Store", "Data Interface"] and dst_item_type in [
                 "Data Connection",
