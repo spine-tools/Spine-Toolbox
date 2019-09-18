@@ -44,9 +44,11 @@ class GdxExport(ProjectItem):
         x (int): initial X coordinate of item icon
         y (int): initial Y coordinate of item icon
     """
+
+    item_type = "Gdx Export"
+
     def __init__(self, toolbox, name, description, database_urls=None, database_to_file_name_map=None, settings_file_names=None, x=0.0, y=0.0):
         super().__init__(toolbox, name, description)
-        self.item_type = "Gdx Export"
         self._settings_windows = dict()
         self._settings = dict()
         self._database_urls = database_urls if database_urls is not None else list()
@@ -136,7 +138,7 @@ class GdxExport(ProjectItem):
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.data_dir))
 
     def execute(self):
-        """Executes this Tool."""
+        """Executes this item."""
         if not gdx.available():
             self._toolbox.msg_error.emit('No GAMS Python bindings installed. GDX export is disabled.')
             abort = -1
@@ -160,11 +162,28 @@ class GdxExport(ProjectItem):
                 return
             out_path = os.path.join(self.data_dir, file_name)
             gdx.export_to_gdx(gams_database, out_path)
+        execution_instance = self._toolbox.project().execution_instance
+        paths = [os.path.join(self.data_dir, file_name) for file_name in self._database_to_file_name_map.values()]
+        execution_instance.append_dc_files(self.name, paths)
         success = 0
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(success)
 
     def stop_execution(self):
-        """Stops executing this Tool."""
+        """Stops executing this item."""
+        self._toolbox.msg.emit("Stopping {0}".format(self.name))
+        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-2)
+
+    def simulate_execution(self, inst):
+        """Simulates executing this item."""
+        super().simulate_execution(inst)
+        files = self._database_to_file_name_map.values()
+        paths = [os.path.join(self.data_dir, file_name) for file_name in files]
+        inst.append_dc_files(self.name, paths)
+        if not paths:
+            self.add_notification(
+                "Currently this item does not export anything. ".format(self.item_type) +
+                "See the settings in the {} Properties panel.".format(self.item_type)
+            )
 
     def __show_settings(self, database_url):
         """Opens the item's settings window."""
