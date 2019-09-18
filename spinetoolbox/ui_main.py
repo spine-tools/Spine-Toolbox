@@ -205,6 +205,7 @@ class ToolboxUI(QMainWindow):
                 add_form_maker = plugin.add_form_maker
                 properties_widget = plugin.properties_widget_maker(self)
                 properties_ui = properties_widget.ui
+                loaded.append("<b>" + name + "</b>")
             except AttributeError as e:
                 self.msg_error.emit("Can't load plugin <b>{0}</b>: {1}".format(name, e))
                 continue
@@ -230,7 +231,6 @@ class ToolboxUI(QMainWindow):
             add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
             add_item_actions.append(add_item_action)
             category_icon.append((item_category, item_icon))
-            loaded.append("<b>" + name + "</b>")
         # Add actions to Edit menu
         remove_all_action = self.ui.menuEdit.actions()[0]
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
