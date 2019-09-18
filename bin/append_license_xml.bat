@@ -28,7 +28,7 @@ TYPE %1 | FIND /V /I "<?xml version=""1.0"" encoding=""utf-8""?>" > tmp.ui
 
 (
 echo ^<?xml version="1.0" encoding="utf-8"?^>
-echo ^<!--
+echo ^<^^!--
 echo ######################################################################################################################
 echo # Copyright ^(C^) 2017 - 2019 Spine project consortium
 echo # This file is part of Spine Toolbox.

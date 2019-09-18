@@ -374,6 +374,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     if src is None or dst is None:
                         # Might happen, for instance if the link involves a Data Store and I failed to load
                         # the Data Store plugin
+                        self._toolbox.msg_warning.emit("Restoring a connection failed")
                         continue
                     src_item = self._project_item_model.project_item(src)
                     dst_item = self._project_item_model.project_item(dst)

@@ -22,7 +22,7 @@ import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
 from metaobject import MetaObject
-from helpers import project_dir, create_dir, copy_dir, get_db_map, busy_effect
+from helpers import project_dir, create_dir, copy_dir
 from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from config import DEFAULT_WORK_DIR, INVALID_CHARS
 from executioner import DirectedGraphHandler, ExecutionInstance
@@ -286,7 +286,14 @@ class SpineToolboxProject(MetaObject):
         category_item = self._toolbox.project_item_model.project_item(category_ind)
         item_maker = category_item.item_maker()
         for item_dict in items:
-            item = item_maker(self._toolbox, **item_dict)
+            try:
+                item = item_maker(self._toolbox, **item_dict)
+            except TypeError:
+                self._toolbox.msg_error.emit(
+                    "Loading project item <b>{0}</b> into category <b>{1}</b> failed. "
+                    "This is most likely caused by an outdated project file.".format(item_dict["name"], category_name)
+                )
+                continue
             self._toolbox.project_item_model.insert_item(item, category_ind)
             # Append connection model
             self.append_connection_model(item.name, category_name)
@@ -472,7 +479,11 @@ class SpineToolboxProject(MetaObject):
                     )
                 )
                 self._toolbox.msg.emit("Items in graph: {0}".format(", ".join(g.nodes())))
-                self._toolbox.msg.emit("Please edit connections in Design View to execute it.")
+                edges = ["{0} -> {1}".format(*edge) for edge in self.dag_handler.edges_causing_loops(g)]
+                self._toolbox.msg.emit(
+                    "Please edit connections in Design View to execute it. "
+                    "Possible fix: remove connection(s) {0}.".format(", ".join(edges))
+                )
                 self._toolbox.msg.emit("---------------------------------------")
                 self._executed_graph_index += 1
         self._invalid_graphs.clear()
@@ -497,6 +508,12 @@ class SpineToolboxProject(MetaObject):
         """Simulates the execution of the given dag."""
         ordered_nodes = self.dag_handler.calc_exec_order(dag)
         if not ordered_nodes:
+            # Not a dag, invalidate workflow
+            edges = self.dag_handler.edges_causing_loops(dag)
+            for node in dag.nodes():
+                ind = self._toolbox.project_item_model.find_item(node)
+                project_item = self._toolbox.project_item_model.project_item(ind)
+                project_item.invalidate_workflow(edges)
             return
         # Make execution instance and run simulation
         execution_instance = ExecutionInstance(self._toolbox, ordered_nodes)

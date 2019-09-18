@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/tabular_view_form.ui',
-# licensing of '../spinetoolbox/ui/tabular_view_form.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/tabular_view_form.ui',
+# licensing of 'spinetoolbox/ui/tabular_view_form.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -187,6 +187,6 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
+from widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
 from widgets.custom_qlistview import TestListView
 import resources_icons_rc

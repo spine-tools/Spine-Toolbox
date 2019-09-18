@@ -23,14 +23,13 @@ from indexed_value_table_model import IndexedValueTableModel
 
 
 class TimePatternModel(IndexedValueTableModel):
-    """
-    A model for time pattern type parameter values.
-
-    Attributes:
-        value (TimePattern): a time pattern value
-    """
 
     def __init__(self, value):
+        """A model for time pattern type parameter values.
+
+        Args:
+            value(TimePattern): a time pattern value
+        """
         super().__init__(value, "Time period", "Value")
 
     def flags(self, index):
@@ -70,10 +69,11 @@ class TimePatternModel(IndexedValueTableModel):
         """
         Removes time period - value pairs from the pattern.
 
-        Attributes:
+        Args:
             row (int): an index where to remove the data
             count (int): number of time period - value pairs to remove
             parent (QModelIndex): an index to a parent model
+            
         Returns:
             True if the operation was successful
         """

@@ -30,14 +30,13 @@ from widgets.plot_widget import PlotWidget
 
 
 class PlottingError(Exception):
-    """
-    An exception signalling failure in plotting.
-
-    Attributes:
-        message (str): an error message
-    """
 
     def __init__(self, message):
+        """An exception signalling failure in plotting.
+
+        Args:
+            message (str): an error message
+        """
         super().__init__()
         self._message = message
 
@@ -258,8 +257,7 @@ def tree_graph_view_parameter_value_name(index, table_view):
 
 
 class PlottingHints:
-    """
-    A base class for plotting hints.
+    """A base class for plotting hints.
 
     The functionality in this class allows the plotting functions to work
     without explicit knowledge of the underlying table model or widget.
@@ -291,14 +289,13 @@ class PlottingHints:
 
 
 class GraphAndTreeViewPlottingHints(PlottingHints):
-    """
-    Support for plotting data in Graph and Tree views.
-
-    Attributes:
-        table_view (QTableView): a parameter value or definition widget
-    """
 
     def __init__(self, table_view):
+        """Support for plotting data in Graph and Tree views.
+
+        Args:
+            table_view (QTableView): a parameter value or definition widget
+        """
         self._table_view = table_view
 
     def cell_label(self, model, index):

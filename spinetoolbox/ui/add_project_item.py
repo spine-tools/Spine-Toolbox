@@ -11,13 +11,14 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/add_project_item.ui',
-# licensing of '../spinetoolbox/ui/add_project_item.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/add_data_store.ui',
+# licensing of 'spinetoolbox/ui/add_data_store.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
 
 from PySide2 import QtCore, QtGui, QtWidgets
+
 
 class Ui_Form(object):
     def setupUi(self, Form):
@@ -110,12 +111,30 @@ class Ui_Form(object):
 
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Add Project Item", None, -1))
-        self.lineEdit_name.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item name (required)</p></body></html>", None, -1))
-        self.lineEdit_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type item name here...", None, -1))
-        self.lineEdit_description.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Item description (optional)</p></body></html>", None, -1))
-        self.lineEdit_description.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type item description here...", None, -1))
-        self.label_folder.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Folder name that is created to project folder</p></body></html>", None, -1))
+        self.lineEdit_name.setToolTip(
+            QtWidgets.QApplication.translate(
+                "Form", "<html><head/><body><p>Item name (required)</p></body></html>", None, -1
+            )
+        )
+        self.lineEdit_name.setPlaceholderText(
+            QtWidgets.QApplication.translate("Form", "Type item name here...", None, -1)
+        )
+        self.lineEdit_description.setToolTip(
+            QtWidgets.QApplication.translate(
+                "Form", "<html><head/><body><p>Item description (optional)</p></body></html>", None, -1
+            )
+        )
+        self.lineEdit_description.setPlaceholderText(
+            QtWidgets.QApplication.translate("Form", "Type item description here...", None, -1)
+        )
+        self.label_folder.setToolTip(
+            QtWidgets.QApplication.translate(
+                "Form",
+                "<html><head/><body><p>Folder name that is created to project folder</p></body></html>",
+                None,
+                -1,
+            )
+        )
         self.label_folder.setText(QtWidgets.QApplication.translate("Form", "Folder:", None, -1))
         self.pushButton_ok.setText(QtWidgets.QApplication.translate("Form", "Ok", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("Form", "Cancel", None, -1))
-

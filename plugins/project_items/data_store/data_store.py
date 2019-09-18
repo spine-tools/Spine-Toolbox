@@ -16,7 +16,6 @@ Module for data store class.
 :date:   18.12.2017
 """
 
-import sys
 import os
 import logging
 import spinedb_api
@@ -42,12 +41,15 @@ class DataStore(ProjectItem):
         x (int): Initial X coordinate of item icon
         y (int): Initial Y coordinate of item icon
         url (str or dict): SQLAlchemy url
+        reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
     """
 
-    def __init__(self, toolbox, name, description, x, y, url=None):
+    def __init__(self, toolbox, name, description, x, y, url=None, reference=None):
         """Class constructor."""
         super().__init__(toolbox, name, description, x, y)
         self.item_type = "Data Store"
+        if type(reference) == dict and "url" in reference:
+            url = reference["url"]
         self._url = self.parse_url(url)
         self.tree_view_form = None
         self.graph_view_form = None

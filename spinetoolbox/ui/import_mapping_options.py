@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/import_mapping_options.ui',
-# licensing of '../spinetoolbox/ui/import_mapping_options.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/import_mapping_options.ui',
+# licensing of 'spinetoolbox/ui/import_mapping_options.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

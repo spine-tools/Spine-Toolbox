@@ -87,24 +87,6 @@ class View(ProjectItem):
         """Returns a list of url strings that are in this item as references."""
         return self._references
 
-    def find_input_items(self):
-        """Find input project items (only Data Stores now) that are connected to this View.
-
-        Returns:
-            List of Data Store items.
-        """
-        item_list = list()
-        for input_item in self._toolbox.connection_model.input_items(self.name):
-            found_index = self._toolbox.project_item_model.find_item(input_item)
-            if not found_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(input_item))
-                continue
-            item = self._toolbox.project_item_model.project_item(found_index)
-            if item.item_type not in ("Data Store", "Tool"):
-                continue
-            item_list.append(item)
-        return item_list
-
     @Slot(bool, name="open_graph_view_btn_clicked")
     def open_graph_view_btn_clicked(self, checked=False):
         """Slot for handling the signal emitted by clicking on 'Graph view' button."""

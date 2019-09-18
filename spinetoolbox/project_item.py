@@ -9,7 +9,6 @@
 # this program. If not, see <http://www.gnu.org/licenses/>.
 ######################################################################################################################
 
-
 """
 BaseProjectItem and ProjectItem classes.
 
@@ -28,15 +27,13 @@ from helpers import create_dir
 
 
 class BaseProjectItem(MetaObject):
-    """Base class for all project items.
-
-    Attributes:
-        name (str): Object name
-        description (str): Object description
-    """
-
     def __init__(self, name, description):
-        """Class constructor."""
+        """Base class for all project items.
+
+        Args:
+            name (str): Object name
+            description (str): Object description
+        """
         super().__init__(name, description)
         self._parent = None  # Parent BaseProjectItem. Set when add_child is called
         self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
@@ -50,7 +47,7 @@ class BaseProjectItem(MetaObject):
         return self._parent
 
     def child_count(self):
-        """Returns the number of child project items for this object."""
+        """Returns the number of child project items."""
         return len(self._children)
 
     def children(self):
@@ -82,16 +79,7 @@ class BaseProjectItem(MetaObject):
         return 0
 
     def add_child(self, child_item):
-        """Append child project item as the last item in the children list.
-        Set parent of this items parent as this item. This method is called by
-        ProjectItemModel when new items are added.
-
-        Args:
-            child_item (BaseProjectItem): Project item to add
-
-        Returns:
-            True if operation succeeded, False otherwise
-        """
+        """Base method that shall be overridden in subclasses."""
         return False
 
     def remove_child(self, row):
@@ -123,20 +111,25 @@ class BaseProjectItem(MetaObject):
 
 
 class RootProjectItem(BaseProjectItem):
-    """Class for the root project items.
-    """
+    """Class for the root project item."""
 
     def __init__(self):
-        """Class constructor."""
         super().__init__("root", "The Root Project Item.")
 
     def add_child(self, child_item):
-        """Append child project item as the last item in the children list if it's a category item."""
+        """Adds given category item as the child of this root project item. New item is added as the last item.
+
+        Args:
+            child_item (CategoryProjectItem): Item to add
+
+        Returns:
+            True for success, False otherwise
+        """
         if isinstance(child_item, CategoryProjectItem):
             self._children.append(child_item)
             child_item._parent = self
             return True
-        logging.error("You can only add category items as a child of root")
+        logging.error("You can only add a category item as a child of the root item")
         return False
 
 
@@ -169,7 +162,14 @@ class CategoryProjectItem(BaseProjectItem):
         return self._item_maker
 
     def add_child(self, child_item):
-        """Append child project item as the last item in the children list if it's a project item."""
+        """Adds given project item as the child of this category item. New item is added as the last item.
+
+        Args:
+            child_item (ProjectItem): Item to add
+
+        Returns:
+            True for success, False otherwise
+        """
         if isinstance(child_item, ProjectItem):
             self._children.append(child_item)
             child_item._parent = self
@@ -177,7 +177,7 @@ class CategoryProjectItem(BaseProjectItem):
             child_item.set_icon(icon)
             child_item.set_properties_ui(self._properties_ui)
             return True
-        logging.error("You can only add project items as a child of categories")
+        logging.error("You can only add a project item as a child of a category item")
         return False
 
     def custom_context_menu(self, parent, pos):
@@ -216,6 +216,7 @@ class ProjectItem(BaseProjectItem):
     """
 
     item_changed = Signal(name="item_changed")
+    """This is a class attribute."""
 
     def __init__(self, toolbox, name, description, x, y):
         """Class constructor."""
@@ -295,9 +296,23 @@ class ProjectItem(BaseProjectItem):
         """Executes this item."""
 
     def simulate_execution(self, inst):
-        """Simulates executing this Item."""
+        """Simulates executing this item."""
         self.clear_notifications()
         self.set_rank(inst.rank)
+
+    def invalidate_workflow(self, edges):
+        """Notifies that this item's workflow is not acyclic.
+
+        Args:
+            edges (list): A list of edges that make the graph acyclic after removing them.
+        """
+        edges = ["{0} -> {1}".format(*edge) for edge in edges]
+        self.clear_notifications()
+        self.set_rank("x")
+        self.add_notification(
+            "The workflow defined for this item has loops and thus cannot be executed. "
+            "Possible fix: remove link(s) {0}.".format(", ".join(edges))
+        )
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
