@@ -25,7 +25,6 @@ from PySide2.QtWidgets import (
     QToolButton,
     QApplication,
     QGraphicsScene,
-    QGraphicsRectItem,
     QAction,
     QWidgetAction,
     QAbstractItemView,

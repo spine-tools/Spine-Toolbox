@@ -28,7 +28,7 @@ def _move_selected_elements_by(list_view, delta):
     if not selected_rows:
         return
     first_row = selected_rows[0].row()
-    contiguous_selections = [(first_row, 1)]
+    contiguous_selections = [[first_row, 1]]
     current_contiguous_chunk = contiguous_selections[0]
     for row in selected_rows[1:]:
         if row == current_contiguous_chunk[0] + 1:
@@ -189,11 +189,11 @@ class GAMSSetListModel(QAbstractListModel):
         last_source_row = sourceRow + count - 1
         domain_count = len(self._settings.domain_names)
         # Cannot move domains to ordinary sets and vice versa.
-        if sourceRow < domain_count and last_source_row >= domain_count:
+        if sourceRow < domain_count <= last_source_row:
             return False
-        if sourceRow < domain_count and destinationChild >= domain_count:
+        if sourceRow < domain_count <= destinationChild:
             return False
-        if sourceRow >= domain_count and destinationChild < domain_count:
+        if destinationChild < domain_count <= sourceRow:
             return False
         row_after = destinationChild if sourceRow > destinationChild else destinationChild + 1
         self.beginMoveRows(sourceParent, sourceRow, last_source_row, destinationParent, row_after)

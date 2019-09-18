@@ -84,7 +84,7 @@ class GdxExport(ProjectItem):
 
     def make_signal_handler_dict(self):
         """Returns a dictionary of all shared signals and their handlers."""
-        s = {self._toolbox.ui.toolButton_gdx_export_open_dir.clicked: lambda checked: self.open_directory(checked)}
+        s = {self._toolbox.ui.toolButton_gdx_export_open_dir.clicked: self.open_directory}
         return s
 
     def activate(self):
@@ -111,11 +111,12 @@ class GdxExport(ProjectItem):
         while not database_list_storage.isEmpty():
             widget_to_remove = database_list_storage.takeAt(0)
             widget_to_remove.widget().deleteLater()
-        for row, url in enumerate(self._database_urls):
+        for url in self._database_urls:
             database_path = url.database
             file_name = self._database_to_file_name_map.get(database_path, '')
             item = ExportListItem(database_path, file_name)
             database_list_storage.insertWidget(0, item)
+            # pylint: disable=cell-var-from-loop
             item.settings_button.clicked.connect(lambda checked: self.__show_settings(url))
             item.out_file_name_edit.textChanged.connect(lambda text: self.__update_out_file_name(text, database_path))
 
@@ -131,10 +132,6 @@ class GdxExport(ProjectItem):
             if not isinstance(item, DataStore):
                 continue
             self._database_urls.append(item.make_url())
-
-    def data_files(self):
-        """Returns a list of exported file names."""
-        return list()
 
     @Slot(bool, name="open_directory")
     def open_directory(self, checked=False):
@@ -189,8 +186,8 @@ class GdxExport(ProjectItem):
         inst.append_dc_files(self.name, paths)
         if not paths:
             self.add_notification(
-                "Currently this item does not export anything. ".format(self.item_type)
-                + "See the settings in the {} Properties panel.".format(self.item_type)
+                "Currently this item does not export anything. "
+                "See the settings in the {} Properties panel.".format(self.item_type)
             )
 
     def __show_settings(self, database_url):

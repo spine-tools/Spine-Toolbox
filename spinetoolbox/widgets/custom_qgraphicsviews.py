@@ -475,13 +475,13 @@ class DesignQGraphicsView(CustomQGraphicsView):
                         "be passed to Tool <b>{1}</b> when executing.".format(self.src_item_name, self.dst_item_name)
                     )
                     return
-                elif dst_item_type == "View":
+                if dst_item_type == "View":
                     self._toolbox.msg_warning.emit(
                         "Link established. You can visualize Data Store "
                         "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
                     )
                     return
-                elif dst_item_type == "Gdx Export":
+                if dst_item_type == "Gdx Export":
                     self._toolbox.msg_warning.emit(
                         "Link established. Gdx Export <b>{}</b> will export Data Store <b>{}</b> into GDX format when executing.".format(
                             self.dst_item_name, self.src_item_name
@@ -495,13 +495,13 @@ class DesignQGraphicsView(CustomQGraphicsView):
                         "passed to item <b>{1}</b> after execution.".format(self.src_item_name, self.dst_item_name)
                     )
                     return
-                elif dst_item_type == "View":
+                if dst_item_type == "View":
                     self._toolbox.msg_warning.emit(
                         "Link established. You can visualize the output from Tool "
                         "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
                     )
                     return
-                elif dst_item_type == "Tool":
+                if dst_item_type == "Tool":
                     self._toolbox.msg_warning.emit("Link established.")
                     return
             elif src_item_type == "Gdx Export":

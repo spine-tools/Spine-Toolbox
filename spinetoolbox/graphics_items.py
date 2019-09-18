@@ -40,14 +40,12 @@ from PySide2.QtGui import (
     QBrush,
     QPainterPath,
     QFont,
-    QTextCursor,
     QTransform,
     QPalette,
     QTextBlockFormat,
     QTextCursor,
 )
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from helpers import format_string_list
 
 
 class ConnectorButton(QGraphicsRectItem):
@@ -581,17 +579,11 @@ class ToolIcon(ProjectItemIcon):
         self.timer = QTimeLine()
         self.timer.setLoopCount(0)  # loop forever
         self.timer.setFrameRange(0, 10)
-        # self.timer.setCurveShape(QTimeLine.CosineCurve)
-        self.timer.valueForTime = self.value_for_time
+        self.timer.valueForTime = lambda msecs: 1.0 - (msecs % 1000) / 1000
         self.tool_animation = QGraphicsItemAnimation()
         self.tool_animation.setItem(self.svg_item)
         self.tool_animation.setTimeLine(self.timer)
-        # self.timer.frameChanged.connect(self.test)
         self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
-
-    def value_for_time(self, msecs):
-        rem = (msecs % 1000) / 1000
-        return 1.0 - rem
 
     def start_animation(self):
         """Start the animation that plays when the Tool associated to this GraphicsItem is running.
