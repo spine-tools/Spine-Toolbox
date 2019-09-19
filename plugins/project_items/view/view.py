@@ -30,18 +30,17 @@ from .view_icon import ViewIcon
 
 
 class View(ProjectItem):
-    """
-    View class.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Object name
-        description (str): Object description
-        x (int): Initial X coordinate of item icon
-        y (int): Initial Y coordinate of item icon
-    """
-
     def __init__(self, toolbox, name, description, x, y):
+        """
+        View class.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Object name
+            description (str): Object description
+            x (int): Initial X coordinate of item icon
+            y (int): Initial Y coordinate of item icon
+        """
         super().__init__(toolbox, name, description, x, y)
         self.item_type = "View"
         self._graph_views = {}

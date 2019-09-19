@@ -22,21 +22,17 @@ from PySide2.QtCore import Qt
 
 
 class DataStoreIcon(ProjectItemIcon):
-    """Data Store item that is drawn into QGraphicsScene. NOTE: Make sure
-    to set self._master as the parent of all drawn items. This groups the
-    individual QGraphicsItems together.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
     def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
+        """Data Store icon for the Design View.
+
+        Args:
+            toolbox (ToolBoxUI): QMainWindow instance
+            x (int): Icon x coordinate
+            y (int): Icon y coordinate
+            w (int): Width of master icon
+            h (int): Height of master icon
+            name (str): Item name
+        """
         super().__init__(toolbox, x, y, w, h, name)
         self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
         self.brush = QBrush(QColor("#f9e6ff"))  # Brush for filling the bg rect

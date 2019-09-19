@@ -39,16 +39,14 @@ from helpers import format_string_list
 
 
 class ConnectorButton(QGraphicsRectItem):
-    """Connector button graphics item. Used for Link drawing between project items.
-
-    Attributes:
-        parent (QGraphicsItem): Project item bg rectangle
-        toolbox (ToolBoxUI): QMainWindow instance
-        position (str): Either "top", "left", "bottom", or "right"
-    """
-
     def __init__(self, parent, toolbox, position="left"):
-        """Class constructor."""
+        """Connector button graphics item. Used for Link drawing between project items.
+
+        Args:
+            parent (QGraphicsItem): Project item bg rectangle
+            toolbox (ToolBoxUI): QMainWindow instance
+            position (str): Either "top", "left", "bottom", or "right"
+        """
         super().__init__()
         self._parent = parent
         self._toolbox = toolbox
@@ -117,15 +115,13 @@ class ConnectorButton(QGraphicsRectItem):
 
 
 class ExclamationIcon(QGraphicsSvgItem):
-    """Exclamation icon graphics item.
-    Used to notify that a ProjectItem is missing some configuration.
-
-    Attributes:
-        parent (ProjectItemIcon): the parent item
-    """
-
     def __init__(self, parent):
-        """Class constructor."""
+        """Exclamation icon graphics item.
+        Used to notify that a ProjectItem is missing some configuration.
+
+        Args:
+            parent (ProjectItemIcon): the parent item
+        """
         super().__init__()
         self._parent = parent
         self._notifications = list()
@@ -181,12 +177,10 @@ class ExclamationIcon(QGraphicsSvgItem):
 
 
 class NotificationListItem(QGraphicsTextItem):
-    """Notification list graphics item.
-    Used to show notifications for a ProjectItem
-    """
-
     def __init__(self):
-        """Init class."""
+        """Notification list graphics item.
+        Used to show notifications for a ProjectItem
+        """
         super().__init__()
         self.bg = QGraphicsRectItem(self.boundingRect(), self)
         bg_brush = QApplication.palette().brush(QPalette.ToolTipBase)
@@ -201,15 +195,13 @@ class NotificationListItem(QGraphicsTextItem):
 
 
 class RankIcon(QGraphicsTextItem):
-    """Rank icon graphics item.
-    Used to show the rank of a ProjectItem within its DAG
-
-    Attributes:
-        parent (ProjectItemIcon): the parent item
-    """
-
     def __init__(self, parent):
-        """Init class."""
+        """Rank icon graphics item.
+        Used to show the rank of a ProjectItem within its DAG
+
+        Args:
+            parent (ProjectItemIcon): the parent item
+        """
         super().__init__(parent)
         self._parent = parent
         rect_w = parent.rect().width()  # Parent rect width
@@ -242,19 +234,17 @@ class RankIcon(QGraphicsTextItem):
 
 
 class ProjectItemIcon(QGraphicsRectItem):
-    """Base class for project item icons drawn in Design View.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Icon width
-        h (int): Icon height
-        name (str): Item name
-    """
-
     def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
+        """Base class for project item icons drawn in Design View.
+
+        Args:
+            toolbox (ToolBoxUI): QMainWindow instance
+            x (int): Icon x coordinate
+            y (int): Icon y coordinate
+            w (int): Icon width
+            h (int): Icon height
+            name (str): Item name
+        """
         super().__init__()
         self._toolbox = toolbox
         self.renderer = QSvgRenderer()
@@ -454,16 +444,14 @@ class ProjectItemIcon(QGraphicsRectItem):
 
 
 class Link(QGraphicsPathItem):
-    """An item that represents a connection between project items.
-
-    Attributes:
-        toolbox (ToolboxUI): main UI class instance
-        src_connector (ConnectorButton): Source connector button
-        dst_connector (ConnectorButton): Destination connector button
-    """
-
     def __init__(self, toolbox, src_connector, dst_connector):
-        """Initializes item."""
+        """An item that represents a connection between project items.
+
+        Args:
+            toolbox (ToolboxUI): main UI class instance
+            src_connector (ConnectorButton): Source connector button
+            dst_connector (ConnectorButton): Destination connector button
+        """
         super().__init__()
         self._toolbox = toolbox
         self.src_connector = src_connector  # QGraphicsRectItem
@@ -632,10 +620,8 @@ class Link(QGraphicsPathItem):
 
 
 class LinkDrawer(QGraphicsPathItem):
-    """An item that allows one to draw links between slot buttons in QGraphicsView."""
-
     def __init__(self):
-        """Initializes instance."""
+        """An item that allows one to draw links between slot buttons in QGraphicsView."""
         super().__init__()
         self.src = None  # source point
         self.dst = None  # destination point
@@ -739,21 +725,6 @@ class LinkDrawer(QGraphicsPathItem):
 
 
 class ObjectItem(QGraphicsPixmapItem):
-    """Object item to use with GraphViewForm.
-
-    Attributes:
-        graph_view_form (GraphViewForm): 'owner'
-        object_name (str): object name
-        object_class_id (int): object class id
-        object_class_name (str): object class name
-        x (float): x-coordinate of central point
-        y (float): y-coordinate of central point
-        extent (int): preferred extent
-        object_id (int): object id (for filtering parameters)
-        label_font (QFont): label font
-        label_color (QColor): label bg color
-    """
-
     def __init__(
         self,
         graph_view_form,
@@ -766,6 +737,20 @@ class ObjectItem(QGraphicsPixmapItem):
         object_id=0,
         label_color=Qt.transparent,
     ):
+        """Object item to use with GraphViewForm.
+
+        Args:
+            graph_view_form (GraphViewForm): 'owner'
+            object_name (str): object name
+            object_class_id (int): object class id
+            object_class_name (str): object class name
+            x (float): x-coordinate of central point
+            y (float): y-coordinate of central point
+            extent (int): preferred extent
+            object_id (int): object id (for filtering parameters)
+            label_font (QFont): label font
+            label_color (QColor): label bg color
+        """
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id = object_id
@@ -1056,21 +1041,6 @@ class ObjectItem(QGraphicsPixmapItem):
 
 
 class ArcItem(QGraphicsLineItem):
-    """Arc item to use with GraphViewForm.
-
-    Attributes:
-        graph_view_form (GraphViewForm): 'owner'
-        relationship_class_id (int): relationship class id
-        src_item (ObjectItem): source item
-        dst_item (ObjectItem): destination item
-        width (int): Preferred line width
-        arc_color (QColor): arc color
-        object_id_list (str): object id comma separated list
-        token_object_extent (int): token preferred extent
-        token_color (QColor): token bg color
-        token_object_name_tuple_list (list): token (object class name, object name) tuple list
-    """
-
     def __init__(
         self,
         graph_view_form,
@@ -1085,7 +1055,20 @@ class ArcItem(QGraphicsLineItem):
         token_object_label_color=QColor(),
         token_object_name_tuple_list=(),
     ):
-        """Init class."""
+        """Arc item to use with GraphViewForm.
+
+        Args:
+            graph_view_form (GraphViewForm): 'owner'
+            relationship_class_id (int): relationship class id
+            src_item (ObjectItem): source item
+            dst_item (ObjectItem): destination item
+            width (int): Preferred line width
+            arc_color (QColor): arc color
+            object_id_list (str): object id comma separated list
+            token_object_extent (int): token preferred extent
+            token_color (QColor): token bg color
+            token_object_name_tuple_list (list): token (object class name, object name) tuple list
+        """
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id_list = object_id_list
@@ -1182,16 +1165,14 @@ class ArcItem(QGraphicsLineItem):
 
 
 class ObjectLabelItem(QGraphicsTextItem):
-    """Object label item to use with GraphViewForm.
-
-    Attributes:
-        object_item (ObjectItem): the ObjectItem instance
-        text (str): text
-        bg_color (QColor): color to paint the label
-    """
-
     def __init__(self, object_item, text, bg_color):
-        """Init class."""
+        """Object label item to use with GraphViewForm.
+
+        Args:
+            object_item (ObjectItem): the ObjectItem instance
+            text (str): text
+            bg_color (QColor): color to paint the label
+        """
         super().__init__(object_item)
         self.object_item = object_item
         self._font = QApplication.font()
@@ -1236,18 +1217,16 @@ class ObjectLabelItem(QGraphicsTextItem):
 
 
 class ArcTokenItem(QGraphicsEllipseItem):
-    """Arc token item to use with GraphViewForm.
-
-    Attributes:
-        arc_item (ArcItem): the ArcItem instance
-        color (QColor): color to paint the token
-        object_extent (int): Preferred extent
-        object_label_color (QColor): Preferred extent
-        object_name_tuples (Iterable): one or more (object class name, object name) tuples
-    """
-
     def __init__(self, arc_item, color, object_extent, object_label_color, *object_name_tuples):
-        """A QGraphicsRectItem with a relationship to use as arc label"""
+        """Arc token item to use with GraphViewForm.
+
+        Args:
+            arc_item (ArcItem): the ArcItem instance
+            color (QColor): color to paint the token
+            object_extent (int): Preferred extent
+            object_label_color (QColor): Preferred extent
+            object_name_tuples (Iterable): one or more (object class name, object name) tuples
+        """
         super().__init__(arc_item)
         self.arc_item = arc_item
         x = 0
@@ -1313,17 +1292,16 @@ class ArcTokenItem(QGraphicsEllipseItem):
 
 
 class SimpleObjectItem(QGraphicsPixmapItem):
-    """Object item to use with GraphViewForm.
-
-    Attributes:
-        parent (ArcTokenItem): arc token item
-        extent (int): preferred extent
-        label_color (QColor): label bg color
-        object_class_name (str): object class name
-        object_name (str): object name
-    """
-
     def __init__(self, parent, extent, label_color, object_class_name, object_name):
+        """Object item to use with GraphViewForm.
+
+        Args:
+            parent (ArcTokenItem): arc token item
+            extent (int): preferred extent
+            label_color (QColor): label bg color
+            object_class_name (str): object class name
+            object_name (str): object name
+        """
         super().__init__(parent)
         pixmap = parent.arc_item._graph_view_form.icon_mngr.object_pixmap(object_class_name).scaledToWidth(extent)
         self.setPixmap(pixmap)
@@ -1344,17 +1322,15 @@ class SimpleObjectItem(QGraphicsPixmapItem):
 
 
 class OutlinedTextItem(QGraphicsSimpleTextItem):
-    """Outlined text item to use with GraphViewForm.
-
-    Attributes:
-        text (str): text to show
-        font (QFont): font to display the text
-        brush (QBrus)
-        outline_pen (QPen)
-    """
-
     def __init__(self, text="", font=QFont(), brush=QBrush(Qt.black), outline_pen=QPen(Qt.white, 3, Qt.SolidLine)):
-        """Init class."""
+        """Outlined text item to use with GraphViewForm.
+
+        Args:
+            text (str): text to show
+            font (QFont): font to display the text
+            brush (QBrus)
+            outline_pen (QPen)
+        """
         super().__init__()
         self.setText(text)
         font.setWeight(QFont.Black)
@@ -1364,14 +1340,13 @@ class OutlinedTextItem(QGraphicsSimpleTextItem):
 
 
 class CustomTextItem(QGraphicsTextItem):
-    """Custom text item to use with GraphViewForm.
-
-    Attributes:
-        html (str): text to show
-        font (QFont): font to display the text
-    """
-
     def __init__(self, html, font):
+        """Custom text item to use with GraphViewForm.
+
+        Args:
+            html (str): text to show
+            font (QFont): font to display the text
+        """
         super().__init__()
         self.setHtml(html)
         # font.setWeight(QFont.Black)

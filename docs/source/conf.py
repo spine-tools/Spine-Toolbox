@@ -80,6 +80,8 @@ pygments_style = 'sphinx'
 
 # Settings for Sphinx AutoAPI
 autoapi_python_class_content = "both"
+autoapi_add_toctree_entry = True
+autoapi_root = "autoapi"
 autoapi_dirs = ['../../spinetoolbox']  # package to be documented
 autoapi_ignore = [
     '*_rc.py',
@@ -87,8 +89,9 @@ autoapi_ignore = [
     '*/spinetoolbox/dist/*',
     '*/spinetoolbox/test/*',
     '*/spinetoolbox/ui/*',
-    '*/spinetoolbox/setup.py',
+    '*/spinetoolbox/setup.py'
 ]  # ignored modules
+
 
 # -- Options for HTML output -------------------------------------------------
 

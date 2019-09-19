@@ -31,15 +31,14 @@ from widgets.custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMen
 
 
 class ToolTemplateWidget(QWidget):
-    """A widget to query user's preferences for a new tool template.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        tool_template (ToolTemplate): If given, the form is pre-filled with this template
-    """
 
     def __init__(self, toolbox, tool_template=None):
-        """ Initialize class."""
+        """A widget to query user's preferences for a new tool template.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            tool_template (ToolTemplate): If given, the form is pre-filled with this template
+        """
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()

@@ -22,19 +22,17 @@ from PySide2.QtCore import Qt
 
 
 class DataConnectionIcon(ProjectItemIcon):
-    """Data Connection icon for the Design View.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
     def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
+        """Data Connection icon for the Design View.
+
+        Args:
+            toolbox (ToolBoxUI): QMainWindow instance
+            x (int): Icon x coordinate
+            y (int): Icon y coordinate
+            w (int): Width of master icon
+            h (int): Height of master icon
+            name (str): Item name
+        """
         super().__init__(toolbox, x, y, w, h, name)
         self.pen = QPen(Qt.NoPen)  # QPen for the background rectangle
         self.brush = QBrush(QColor("#e6e6ff"))  # QBrush for the background rectangle

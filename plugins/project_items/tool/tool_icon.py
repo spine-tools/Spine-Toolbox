@@ -23,19 +23,17 @@ from PySide2.QtWidgets import QGraphicsItemAnimation
 
 
 class ToolIcon(ProjectItemIcon):
-    """Tool image with a rectangular background, an SVG icon, a name label, and a connector button.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
     def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
+        """Tool icon for the Design View.
+
+        Args:
+            toolbox (ToolBoxUI): QMainWindow instance
+            x (int): Icon x coordinate
+            y (int): Icon y coordinate
+            w (int): Width of master icon
+            h (int): Height of master icon
+            name (str): Item name
+        """
         super().__init__(toolbox, x, y, w, h, name)
         self.pen = QPen(Qt.NoPen)  # Background rectangle pen
         self.brush = QBrush(QColor("#ffe6e6"))  # Background rectangle brush

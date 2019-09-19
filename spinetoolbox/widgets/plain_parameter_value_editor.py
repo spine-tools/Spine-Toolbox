@@ -22,14 +22,14 @@ from ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
 
 
 class _ValueModel:
-    """A model to handle the parameter value in the editor.
-    Mostly useful because of the handy conversion of strings to floats or booleans.
-
-    Args:
-        value (float, bool): a parameter value
-    """
 
     def __init__(self, value):
+        """A model to handle the parameter value in the editor.
+        Mostly useful because of the handy conversion of strings to floats or booleans.
+
+        Args:
+            value (float, bool): a parameter value
+        """
         self._value = value
 
     @property

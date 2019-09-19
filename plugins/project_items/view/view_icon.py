@@ -22,19 +22,17 @@ from PySide2.QtCore import Qt
 
 
 class ViewIcon(ProjectItemIcon):
-    """View icon for the Design View
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of background rectangle
-        h (int): Height of background rectangle
-        name (str): Item name
-    """
-
     def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
+        """View icon for the Design View.
+
+        Args:
+            toolbox (ToolBoxUI): QMainWindow instance
+            x (int): Icon x coordinate
+            y (int): Icon y coordinate
+            w (int): Width of background rectangle
+            h (int): Height of background rectangle
+            name (str): Item name
+        """
         super().__init__(toolbox, x, y, w, h, name)
         self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
         self.brush = QBrush(QColor("#ebfaeb"))  # Brush for filling the bg rect

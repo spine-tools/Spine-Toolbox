@@ -32,20 +32,18 @@ from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
-    """Data Store class.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Object name
-        description (str): Object description
-        x (int): Initial X coordinate of item icon
-        y (int): Initial Y coordinate of item icon
-        url (str or dict): SQLAlchemy url
-        reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
-    """
-
     def __init__(self, toolbox, name, description, x, y, url=None, reference=None):
-        """Class constructor."""
+        """Data Store class.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Object name
+            description (str): Object description
+            x (int): Initial X coordinate of item icon
+            y (int): Initial Y coordinate of item icon
+            url (str or dict): SQLAlchemy url
+            reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
+        """
         super().__init__(toolbox, name, description, x, y)
         self.item_type = "Data Store"
         if type(reference) == dict and "url" in reference:

@@ -29,19 +29,17 @@ from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
 class DataConnection(ProjectItem):
-    """Data Connection class.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Object name
-        description (str): Object description
-        x (int): Initial X coordinate of item icon
-        y (int): Initial Y coordinate of item icon
-        references (list): List of file references
-    """
-
     def __init__(self, toolbox, name, description, x, y, references=None):
-        """Class constructor."""
+        """Data Connection class.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Object name
+            description (str): Object description
+            x (int): Initial X coordinate of item icon
+            y (int): Initial Y coordinate of item icon
+            references (list): List of file references
+        """
         super().__init__(toolbox, name, description, x, y)
         self.item_type = "Data Connection"
         self.reference_model = QStandardItemModel()  # References to files

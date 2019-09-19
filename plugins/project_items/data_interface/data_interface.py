@@ -29,19 +29,17 @@ from widgets.import_preview_window import ImportPreviewWindow
 
 
 class DataInterface(ProjectItem):
-    """DataInterface class.
+    def __init__(self, toolbox, name, description, mappings, x, y):
+        """DataInterface class.
 
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Project item name
-        description (str): Project item description
-        x (int): Initial icon scene X coordinate
-        y (int): Initial icon scene Y coordinate
-        mappings (dict): dict with mapping settings
-    """
-
-    def __init__(self, toolbox, name, description, x, y, mappings=None):
-        """Class constructor."""
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Project item name
+            description (str): Project item description
+            x (int): Initial icon scene X coordinate
+            y (int): Initial icon scene Y coordinate
+            mappings (dict): dict with mapping settings
+        """
         super().__init__(toolbox, name, description, x, y)
         self.item_type = "Data Interface"
         # Make logs subdirectory for this item

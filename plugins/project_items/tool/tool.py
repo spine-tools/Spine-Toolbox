@@ -31,20 +31,18 @@ from .widgets.custom_menus import ToolContextMenu
 
 
 class Tool(ProjectItem):
-    """Tool class.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Object name
-        description (str): Object description
-        x (int): Initial X coordinate of item icon
-        y (int): Initial Y coordinate of item icon
-        tool (str): Template name for this Tool
-        execute_in_work (bool): Execute associated Tool template in work (True) or source directory (False)
-    """
-
     def __init__(self, toolbox, name, description, x, y, tool="", execute_in_work=True):
-        """Class constructor."""
+        """Tool class.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Object name
+            description (str): Object description
+            x (int): Initial X coordinate of item icon
+            y (int): Initial Y coordinate of item icon
+            tool (str): Template name for this Tool
+            execute_in_work (bool): Execute associated Tool template in work (True) or source directory (False)
+        """
         super().__init__(toolbox, name, description, x, y)
         self.item_type = "Tool"
         self.source_file_model = QStandardItemModel()
