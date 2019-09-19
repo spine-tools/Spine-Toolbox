@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/mainwindow.ui',
-# licensing of '../spinetoolbox/ui/mainwindow.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/mainwindow.ui',
+# licensing of 'spinetoolbox/ui/mainwindow.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -1473,8 +1473,8 @@ class Ui_MainWindow(object):
         self.actionGetting_started.setText(QtWidgets.QApplication.translate("MainWindow", "Getting started", None, -1))
         self.actionGetting_started.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
-from widgets.custom_qlineedit import CustomQLineEdit
 from widgets.custom_qtextbrowser import CustomQTextBrowser
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
+from widgets.custom_qlineedit import CustomQLineEdit
+from widgets.custom_qgraphicsviews import DesignQGraphicsView
 import resources_icons_rc

@@ -22,15 +22,14 @@ from PySide2.QtCore import Signal, Slot
 
 
 class BaseProjectItem(MetaObject):
-    """Base class for all project items.
-
-    Attributes:
-        name (str): Object name
-        description (str): Object description
-    """
 
     def __init__(self, name, description):
-        """Class constructor."""
+        """Base class for all project items.
+
+        Args:
+            name (str): Object name
+            description (str): Object description
+        """
         super().__init__(name, description)
         self._parent = None  # Parent BaseProjectItem. Set when add_child is called
         self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
@@ -96,7 +95,6 @@ class RootProjectItem(BaseProjectItem):
     """Class for the root project item."""
 
     def __init__(self):
-        """Class constructor."""
         super().__init__("root", "The Root Project Item.")
 
     def add_child(self, child_item):
@@ -117,16 +115,15 @@ class RootProjectItem(BaseProjectItem):
 
 
 class CategoryProjectItem(BaseProjectItem):
-    """Class for category project items.
-
-    Attributes:
-        name (str): Category name
-        description (str): Category description
-        item_maker (function): A method for creating items of this category
-    """
 
     def __init__(self, name, description, item_maker):
-        """Class constructor."""
+        """Class for category project items.
+
+        Args:
+            name (str): Category name
+            description (str): Category description
+            item_maker (function): A method for creating items of this category
+        """
         super().__init__(name, description)
         self._item_maker = item_maker
 
@@ -152,19 +149,19 @@ class CategoryProjectItem(BaseProjectItem):
 
 
 class ProjectItem(BaseProjectItem):
-    """Class for project items that are not category nor root.
-    These items can be executed, refreshed, and so on.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Item name
-        description (str): Item description
-    """
 
     item_changed = Signal(name="item_changed")
+    """This is a class attribute."""
 
     def __init__(self, toolbox, name, description):
-        """Class constructor."""
+        """Class for project items that are not category nor root.
+        These items can be executed, refreshed, and so on.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Item name
+            description (str): Item description
+        """
         super().__init__(name, description)
         self._toolbox = toolbox
         self._graphics_item = None
@@ -214,6 +211,20 @@ class ProjectItem(BaseProjectItem):
         """Simulates executing this item."""
         self.clear_notifications()
         self.set_rank(inst.rank)
+
+    def invalidate_workflow(self, edges):
+        """Notifies that this item's workflow is not acyclic.
+
+        Args:
+            edges (list): A list of edges that make the graph acyclic after removing them.
+        """
+        edges = ["{0} -> {1}".format(*edge) for edge in edges]
+        self.clear_notifications()
+        self.set_rank("x")
+        self.add_notification(
+            "The workflow defined for this item has loops and thus cannot be executed. "
+            "Possible fix: remove link(s) {0}.".format(", ".join(edges))
+        )
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""

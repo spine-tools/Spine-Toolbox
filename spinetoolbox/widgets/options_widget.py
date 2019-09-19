@@ -32,11 +32,11 @@ class OptionsWidget(QWidget):
         """Creates OptionWidget
 
         Arguments:
-            options {Dict} -- Dict describing what options to build a widget around.
+            options (Dict): Dict describing what options to build a widget around.
 
         Keyword Arguments:
-            header {str} -- Title of groupbox (default: {"Options"})
-            parent {[type]} -- parent of widget (default: {None})
+            header (str): Title of groupbox (default: {"Options"})
+            parent (QWidget, None): parent of widget
         """
         super().__init__(parent)
         self._options = options

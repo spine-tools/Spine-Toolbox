@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/tool_configuration_assistant.ui',
-# licensing of '../spinetoolbox/ui/tool_configuration_assistant.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/tool_configuration_assistant.ui',
+# licensing of 'spinetoolbox/ui/tool_configuration_assistant.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

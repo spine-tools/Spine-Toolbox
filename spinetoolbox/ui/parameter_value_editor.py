@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/parameter_value_editor.ui',
-# licensing of '../spinetoolbox/ui/parameter_value_editor.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/parameter_value_editor.ui',
+# licensing of 'spinetoolbox/ui/parameter_value_editor.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

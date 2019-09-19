@@ -20,16 +20,15 @@ from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 
 
 class IndexedValueTableModel(QAbstractTableModel):
-    """
-    A base class for time pattern and time series models.
-
-    Attributes:
-        value (TimePattern, TimeSeriesFixedStep, TimeSeriesVariableStep): a parameter value
-        index_header (str): a header for the index column
-        value_header (str): a header for the value column
-    """
 
     def __init__(self, value, index_header, value_header):
+        """A base class for time pattern and time series models.
+
+        Args:
+            value (TimePattern, TimeSeriesFixedStep, TimeSeriesVariableStep): a parameter value
+            index_header (str): a header for the index column
+            value_header (str): a header for the value column
+        """
         super().__init__(parent=None)
         self._value = value
         self._index_header = index_header

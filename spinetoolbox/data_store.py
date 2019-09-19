@@ -33,20 +33,19 @@ from helpers import create_dir, busy_effect, get_db_map, create_log_file_timesta
 
 
 class DataStore(ProjectItem):
-    """Data Store class.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Object name
-        description (str): Object description
-        url (str or dict): SQLAlchemy url
-        reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
-        x (int): Initial X coordinate of item icon
-        y (int): Initial Y coordinate of item icon
-    """
 
     def __init__(self, toolbox, name, description, x, y, url=None, reference=None):
-        """Class constructor."""
+        """Data Store class.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Object name
+            description (str): Object description
+            url (str or dict): SQLAlchemy url
+            reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
+            x (int): Initial X coordinate of item icon
+            y (int): Initial Y coordinate of item icon
+        """
         super().__init__(toolbox, name, description)
         self._project = self._toolbox.project()
         self.item_type = "Data Store"

@@ -20,15 +20,14 @@ from PySide2.QtCore import QObject
 
 
 class MetaObject(QObject):
-    """Class for an object which has a name, type, and some description.
-
-    Attributes:
-        name (str): Object name
-        description (str): Object description
-    """
 
     def __init__(self, name, description):
-        """Class constructor."""
+        """Class for an object which has a name, type, and some description.
+
+        Args:
+            name (str): Object name
+            description (str): Object description
+        """
         QObject.__init__(self)
         self.name = name
         self.short_name = name.lower().replace(' ', '_')

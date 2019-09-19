@@ -16,7 +16,7 @@ All version numbers are minimum versions except for pyside2, where the version s
 than 5.12, which is not supported (yet).
 
 Required packages
-^^^^^^^^^^^^^^^^^
+-----------------
 
 The following packages are available from ``requirements.txt``
 
