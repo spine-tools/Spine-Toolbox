@@ -4,7 +4,6 @@
 
 .. |ds_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/database.svg
             :width: 16
-
 .. |plus| image:: ../../spinetoolbox/ui/resources/plus.svg
           :width: 16
 .. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg

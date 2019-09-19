@@ -232,7 +232,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         super().__init__(parent=parent)  # Parent is passed to QWidget's constructor
         self._scene = None
         self._toolbox = None
-        self._connection_model = None
         self._project_item_model = None
         self.link_drawer = None
         self.src_connector = None  # Source connector of a link drawing operation
@@ -305,109 +304,117 @@ class DesignQGraphicsView(CustomQGraphicsView):
         """Set project item model."""
         self._project_item_model = model
 
-    def set_connection_model(self, model):
-        """Set connection model and connect signals."""
-        self._connection_model = model
-        self._connection_model.rowsAboutToBeRemoved.connect(self.connection_rows_removed)
-        self._connection_model.columnsAboutToBeRemoved.connect(self.connection_columns_removed)
+    def remove_icon(self, icon):
+        """Removes icon and all connected links from scene."""
+        links = set(link for conn in icon.connectors.values() for link in conn.links)
+        for link in links:
+            self.scene().removeItem(link)
+            # Remove Link from connectors
+            link.src_connector.links.remove(link)
+            link.dst_connector.links.remove(link)
+        self.scene().removeItem(icon)
 
-    def add_link(self, src_connector, dst_connector, index):
-        """Draws link between source and sink items on scene and
-        appends connection model. Refreshes View references if needed.
+    def links(self):
+        """Returns all Links in the scene.
+        Used for saving the project."""
+        return [item for item in self.items() if type(item) == Link]
+
+    def add_link(self, src_connector, dst_connector):
+        """Draws link between source and destination connectors on scene.
 
         Args:
             src_connector (ConnectorButton): Source connector button
             dst_connector (ConnectorButton): Destination connector button
-            index (QModelIndex): Index in connection model
         """
         link = Link(self._toolbox, src_connector, dst_connector)
         self.scene().addItem(link)
-        self._connection_model.setData(index, link)
+        # Store Link in connectors, so it can be found *from* the Project Item
+        src_connector.links.append(link)
+        dst_connector.links.append(link)
         # Add edge (connection link) to a dag as well
-        src_name = src_connector.parent_name()  # Project item name
-        dst_name = dst_connector.parent_name()  # Project item name
+        src_name = link.src_icon.name()
+        dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
 
-    def remove_link(self, index):
-        """Removes link between source and sink items on scene and
-        updates connection model. Refreshes View references if needed."""
-        link = self._connection_model.data(index, Qt.UserRole)
-        if not link:
-            logging.error("Link not found. This should not happen.")
-            return False
+    def remove_link(self, link, from_dag=True):
+        """Removes link from scene."""
         self.scene().removeItem(link)
-        self._connection_model.setData(index, None)
+        # Remove Link from connectors
+        link.src_connector.links.remove(link)
+        link.dst_connector.links.remove(link)
         # Remove edge (connection link) from dag
         src_name = link.src_icon.name()
         dst_name = link.dst_icon.name()
         self._toolbox.project().dag_handler.remove_graph_edge(src_name, dst_name)
 
-    def take_link(self, index):
+    def take_link(self, link):
         """Remove link, then start drawing another one from the same source connector."""
-        link = self._connection_model.data(index, Qt.UserRole)
-        self.remove_link(index)
+        self.remove_link(link)
         self.draw_links(link.src_connector)
         # noinspection PyArgumentList
         self.link_drawer.dst = self.mapToScene(self.mapFromGlobal(QCursor.pos()))
         self.link_drawer.update_geometry()
 
-    def restore_links(self):
-        """Iterates connection model and draws links for each valid entry.
-        Should be called only when a project is loaded from a save file."""
-        rows = self._connection_model.rowCount()
-        columns = self._connection_model.columnCount()
-        for row in range(rows):
-            for column in range(columns):
-                index = self._connection_model.index(row, column)
-                data = self._connection_model.data(index, Qt.UserRole)
-                # NOTE: data UserRole returns a list with source and destination positions
-                if data:
+    def restore_links(self, connections):
+        """Creates Links from the given connections list.
+        Two formats are accepted.
+
+        - Old format. List of lists, e.g.
+
+        .. code-block::
+
+            [
+                [False, False, ["right", "left"], False],
+                [False, ["bottom", "left"], False, False],
+                ...
+            ]
+
+        - New format. List of dicts, e.g.
+
+        .. code-block::
+
+            [
+                {"from": ["DC1", "right"], "to": ["Tool1", "left"]},
+                ...
+            ]
+
+        Args:
+            connections (list): list of connections.
+        """
+        if not connections:
+            return
+        # Convert old format to new format
+        if type(connections[0]) == list:
+            connections_old = connections.copy()
+            connections.clear()
+            items = self._project_item_model.items()
+            for i, row in enumerate(connections_old):
+                for j, entry in enumerate(row):
+                    if entry is False:
+                        continue
+                    src_item = items[i]
+                    dst_item = items[j]
                     try:
-                        src_pos, dst_pos = data
+                        src_anchor, dst_anchor = entry
                     except TypeError:
                         # Happens when first loading a project that wasn't saved with the current version
-                        src_pos = dst_pos = "bottom"
-                    src_name = self._connection_model.headerData(row, Qt.Vertical, Qt.DisplayRole)
-                    dst_name = self._connection_model.headerData(column, Qt.Horizontal, Qt.DisplayRole)
-                    src = self._project_item_model.find_item(src_name)
-                    if not src:
-                        self._toolbox.msg_warning.emit("Restoring a connection failed")
-                        continue
-                    src_item = self._project_item_model.project_item(src)
-                    dst = self._project_item_model.find_item(dst_name)
-                    if not dst:
-                        self._toolbox.msg_warning.emit("Restoring a connection failed")
-                        continue
-                    dst_item = self._project_item_model.project_item(dst)
-                    # logging.debug("Cell ({0},{1}):{2} -> Adding link".format(row, column, data))
-                    src_icon = src_item.get_icon()
-                    dst_icon = dst_item.get_icon()
-                    link = Link(self._toolbox, src_icon.conn_button(src_pos), dst_icon.conn_button(dst_pos))
-                    self.scene().addItem(link)
-                    self._connection_model.setData(index, link)
-                    # Add edge (connection link) to dag handler as well
-                    self._toolbox.project().dag_handler.add_graph_edge(src_name, dst_name)
-                else:
-                    # logging.debug("Cell ({0},{1}):{2} -> No link".format(row, column, data))
-                    self._connection_model.setData(index, None)
-
-    @Slot("QModelIndex", "int", "int", name='connection_rows_removed')
-    def connection_rows_removed(self, index, first, last):
-        """Update view when connection model changes."""
-        for i in range(first, last + 1):
-            for j in range(self._connection_model.columnCount()):
-                link = self._connection_model.link(i, j)
-                if link:
-                    self.scene().removeItem(link)
-
-    @Slot("QModelIndex", "int", "int", name='connection_columns_removed')
-    def connection_columns_removed(self, index, first, last):
-        """Update view when connection model changes."""
-        for j in range(first, last + 1):
-            for i in range(self._connection_model.rowCount()):
-                link = self._connection_model.link(i, j)
-                if link:
-                    self.scene().removeItem(link)
+                        src_anchor = dst_anchor = "bottom"
+                    entry_new = {"from": [src_item.name, src_anchor], "to": [dst_item.name, dst_anchor]}
+                    connections.append(entry_new)
+        # Now just assume new format
+        for conn in connections:
+            src_name, src_anchor = conn["from"]
+            dst_name, dst_anchor = conn["to"]
+            src_ind = self._project_item_model.find_item(src_name)
+            dst_ind = self._project_item_model.find_item(dst_name)
+            if not src_ind or not dst_ind:
+                self._toolbox.msg_warning.emit("Restoring a connection failed")
+                continue
+            src_item = self._project_item_model.project_item(src_ind)
+            src_connector = src_item.get_icon().conn_button(src_anchor)
+            dst_item = self._project_item_model.project_item(dst_ind)
+            dst_connector = dst_item.get_icon().conn_button(dst_anchor)
+            self.add_link(src_connector, dst_connector)
 
     def draw_links(self, connector):
         """Draw links when slot button is clicked.
@@ -427,13 +434,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.src_item_name = self.src_connector.parent_name()
             self.dst_item_name = self.dst_connector.parent_name()
             # create connection
-            row = self._connection_model.header.index(self.src_item_name)
-            column = self._connection_model.header.index(self.dst_item_name)
-            index = self._connection_model.createIndex(row, column)
-            if self._connection_model.data(index, Qt.DisplayRole) == "True":
-                # Remove current link, so it gets updated
-                self.remove_link(index)
-            self.add_link(self.src_connector, self.dst_connector, index)
+            self.add_link(self.src_connector, self.dst_connector)
             self.emit_connection_information_message()
 
     def emit_connection_information_message(self):

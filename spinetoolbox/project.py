@@ -171,12 +171,29 @@ class SpineToolboxProject(MetaObject):
         project_dict['description'] = self.description
         project_dict['work_dir'] = self.work_dir
         project_dict['tool_templates'] = tool_def_paths
-        connection_table = self._toolbox.connection_model.get_connections()
-        from_to_conn_table = [
-            [False if not j else (j.src_connector.position, j.dst_connector.position) for j in connection_table[i]]
-            for i in range(len(connection_table))
-        ]
-        project_dict['connections'] = from_to_conn_table
+        # Compute connections directly from Links in scene
+        connections = list()
+        for link in self._toolbox.ui.graphicsView.links():
+            src_connector = link.src_connector
+            src_anchor = src_connector.position
+            src_name = src_connector.parent_name()
+            dst_connector = link.dst_connector
+            dst_anchor = dst_connector.position
+            dst_name = dst_connector.parent_name()
+            conn = {"from": [src_name, src_anchor], "to": [dst_name, dst_anchor]}
+            connections.append(conn)
+        # Save connections in old format, to keep compatibility with old toolbox versions
+        # If and when we're ready to adopt the new format, this can be removed
+        item_names = [item.name for item in self._toolbox.project_item_model.items()]
+        n_items = len(item_names)
+        connections_old = [[False for _ in range(n_items)] for __ in range(n_items)]
+        for conn in connections:
+            src_name, src_anchor = conn["from"]
+            dst_name, dst_anchor = conn["to"]
+            i = item_names.index(src_name)
+            j = item_names.index(dst_name)
+            connections_old[i][j] = [src_anchor, dst_anchor]
+        project_dict['connections'] = connections_old
         project_dict["scene_x"] = self._toolbox.ui.graphicsView.scene().sceneRect().x()
         project_dict["scene_y"] = self._toolbox.ui.graphicsView.scene().sceneRect().y()
         project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
@@ -295,19 +312,12 @@ class SpineToolboxProject(MetaObject):
                 )
                 continue
             self._toolbox.project_item_model.insert_item(item, category_ind)
-            # Append connection model
-            self.append_connection_model(item.name, category_name)
             # Append new node to networkx graph
             self.add_to_dag(item.name)
             if verbosity:
                 self._toolbox.msg.emit("{0} <b>{1}</b> added to project.".format(item.item_type, item.name))
             if set_selected:
                 self.set_item_selected(item)
-
-    def append_connection_model(self, item_name, category):
-        """Adds new item to connection model to keep project and connection model synchronized."""
-        row_in_con_model = self._toolbox.project_item_model.new_item_index(category)
-        self._toolbox.connection_model.append_item(item_name, row_in_con_model)
 
     def add_to_dag(self, item_name):
         """Add new directed graph object."""
