@@ -22,10 +22,10 @@ import os
 from unittest import mock
 import logging
 import sys
+from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
 from spinedb_api import create_new_spine_database
-from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 
 
 # noinspection PyUnusedLocal
@@ -83,8 +83,8 @@ class TestDataStore(unittest.TestCase):
         self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
-        with mock.patch("data_store.data_store.QFileDialog.selectedFiles") as mock_sf, mock.patch(
-            "data_store.data_store.QFileDialog.exec_"
+        with mock.patch("project_items.data_store.data_store.QFileDialog.selectedFiles") as mock_sf, mock.patch(
+            "project_items.data_store.data_store.QFileDialog.exec_"
         ) as mock_exec:
             file_path = os.path.join(data_store.data_dir, "mock_db.sqlite")
             mock_sf.return_value = [file_path]
