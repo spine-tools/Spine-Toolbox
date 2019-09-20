@@ -133,7 +133,6 @@ class ToolboxUI(QMainWindow):
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
-        self.connections_tab = None
         self.zoom_widget = None
         self.zoom_widget_action = None
         # Make and initialize toolbars
@@ -149,12 +148,11 @@ class ToolboxUI(QMainWindow):
         self.setup_zoom_action()
         self.add_toggle_view_actions()
         # Hidden QActions for debugging or testing
-        self.show_connections_tab = QAction(self)  # self is for PySide 5.6
-        self.show_item_tabbar = QAction(self)
+        self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
         self.test_variable_push = QAction(self)
         self.set_debug_qactions()
-        self.hide_tabs()
+        self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
         self.connect_signals()
         self.init_shared_widgets()  # Shared among multiple project items
@@ -215,8 +213,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # Debug QActions
-        self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
-        self.show_connections_tab.triggered.connect(self.toggle_connections_tab_visibility)
+        self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
         self.test_variable_push.triggered.connect(self.python_repl.test_push_vars)
         # Tool templates tab
@@ -374,7 +371,6 @@ class ToolboxUI(QMainWindow):
         # Simulate project execution after restoring links
         self._project.simulate_project_execution()
         self._project.connect_signals()
-        self.ui.tabWidget.setCurrentIndex(0)  # Activate 'Items' tab
         # Initialize Design View scene
         self.ui.graphicsView.init_scene()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
@@ -537,7 +533,7 @@ class ToolboxUI(QMainWindow):
         for name in item_names:
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind)
-        self.activate_no_selection_tab()  # Clear widget info from QDockWidget
+        self.activate_no_selection_tab()  # Clear properties widget
         if self._project:
             self._project.deleteLater()
         self._project = None
@@ -996,21 +992,12 @@ class ToolboxUI(QMainWindow):
 
     def set_debug_qactions(self):
         """Set shortcuts for QActions that may be needed in debugging."""
-        self.show_item_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
-        self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
+        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
         self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
         self.test_variable_push.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_7))
-        self.addAction(self.show_item_tabbar)
-        self.addAction(self.show_connections_tab)
+        self.addAction(self.show_properties_tabbar)
         self.addAction(self.show_supported_img_formats)
         self.addAction(self.test_variable_push)
-
-    def hide_tabs(self):
-        """Hides project item info tab bar and connections tab in project item QTreeView.
-        Makes (hidden) actions on how to show them if needed for debugging purposes."""
-        self.ui.tabWidget_item_properties.tabBar().hide()  # Hide project item info QTabBar
-        self.connections_tab = self.ui.tabWidget.widget(1)
-        self.ui.tabWidget.removeTab(1)  # Remove connections tab
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
@@ -1022,20 +1009,12 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_repl.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
 
-    def toggle_tabbar_visibility(self):
-        """Shows or hides the tab bar in project item info tab widget. For debugging purposes."""
+    def toggle_properties_tabbar_visibility(self):
+        """Shows or hides the tab bar in properties dock widget. For debugging purposes."""
         if self.ui.tabWidget_item_properties.tabBar().isVisible():
             self.ui.tabWidget_item_properties.tabBar().hide()
         else:
             self.ui.tabWidget_item_properties.tabBar().show()
-
-    def toggle_connections_tab_visibility(self):
-        """Shows or hides connections tab in the project item QTreeView. For debugging purposes."""
-        if self.ui.tabWidget.count() == 1:  # Connections tab hidden
-            self.ui.tabWidget.insertTab(1, self.connections_tab, "Connections")
-        else:
-            self.connections_tab = self.ui.tabWidget.widget(1)
-            self.ui.tabWidget.removeTab(1)
 
     def update_datetime(self):
         """Returns a boolean, which determines whether
