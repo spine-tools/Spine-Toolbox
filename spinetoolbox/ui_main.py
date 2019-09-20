@@ -62,7 +62,7 @@ from config import (
     TREEVIEW_HEADER_SS,
 )
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
-from models import ProjectItemModel, ToolTemplateModel, ConnectionModel
+from models import ProjectItemModel, ToolTemplateModel
 from project_item import RootProjectItem, CategoryProjectItem
 
 
@@ -101,7 +101,6 @@ class ToolboxUI(QMainWindow):
         self._project = None
         self.project_item_model = None
         self.tool_template_model = None
-        self.connection_model = None
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         # Widget and form references
@@ -117,7 +116,6 @@ class ToolboxUI(QMainWindow):
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
-        self.connections_tab = None
         self.zoom_widget = None
         self.zoom_widget_action = None
         # Make and initialize toolbars
@@ -133,12 +131,11 @@ class ToolboxUI(QMainWindow):
         self.setup_zoom_action()
         self.add_toggle_view_actions()
         # Hidden QActions for debugging or testing
-        self.show_connections_tab = QAction(self)  # self is for PySide 5.6
-        self.show_item_tabbar = QAction(self)
+        self.show_properties_tabbar = QAction(self)
         self.show_supported_img_formats = QAction(self)
         self.test_variable_push = QAction(self)
         self.set_debug_qactions()
-        self.hide_tabs()
+        self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
         self.connect_signals()
         self.restore_ui()
@@ -170,8 +167,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
         # Debug QActions
-        self.show_item_tabbar.triggered.connect(self.toggle_tabbar_visibility)
-        self.show_connections_tab.triggered.connect(self.toggle_connections_tab_visibility)
+        self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
         self.test_variable_push.triggered.connect(self.python_repl.test_push_vars)
         # Tool templates tab
@@ -370,13 +366,10 @@ class ToolboxUI(QMainWindow):
         self.ui.treeView_project.expandAll()
         # Restore connections
         self.msg.emit("Restoring connections...")
-        self.connection_model.reset_model(connections)
-        self.ui.tableView_connections.resizeColumnsToContents()
-        self.ui.graphicsView.restore_links()
+        self.ui.graphicsView.restore_links(connections)
         # Simulate project execution after restoring links
         self._project.simulate_project_execution()
         self._project.connect_signals()
-        self.ui.tabWidget.setCurrentIndex(0)  # Activate 'Items' tab
         # Initialize Design View scene
         self.ui.graphicsView.init_scene()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
@@ -428,7 +421,6 @@ class ToolboxUI(QMainWindow):
         # self.ui.treeView_project.selectionModel().currentChanged.connect(self.current_item_changed)
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self.init_tool_template_model(tool_template_paths)
-        self.init_connection_model()
 
     def init_project_item_model(self):
         """Initializes project item model. Create root and category items and
@@ -495,14 +487,6 @@ class ToolboxUI(QMainWindow):
         if n_tools == 0:
             self.msg_warning.emit("Project has no tool templates")
 
-    def init_connection_model(self):
-        """Initializes a model representing connections between project items."""
-        self.connection_model = ConnectionModel(self)
-        self.ui.tableView_connections.setModel(self.connection_model)
-        self.ui.tableView_connections.setItemDelegate(CheckBoxDelegate(self))
-        self.ui.tableView_connections.itemDelegate().data_committed.connect(self.connection_data_changed)
-        self.ui.graphicsView.set_connection_model(self.connection_model)
-
     def restore_ui(self):
         """Restore UI state from previous session."""
         window_size = self._qsettings.value("mainWindow/windowSize", defaultValue="false")
@@ -537,7 +521,7 @@ class ToolboxUI(QMainWindow):
         for name in item_names:
             ind = self.project_item_model.find_item(name)
             self.remove_item(ind)
-        self.activate_no_selection_tab()  # Clear widget info from QDockWidget
+        self.activate_no_selection_tab()  # Clear properties widget
         if self._project:
             self._project.deleteLater()
         self._project = None
@@ -834,14 +818,12 @@ class ToolboxUI(QMainWindow):
             data_dir = project_item.data_dir
         except AttributeError:
             data_dir = None
-        # Remove item from connection model. This also removes Link QGraphicsItems associated to this item
-        if not self.connection_model.remove_item(project_item.name):
-            self.msg_error.emit("Removing item {0} from connection model failed".format(project_item.name))
         # Remove item from project model
         if not self.project_item_model.remove_item(project_item, parent=ind.parent()):
             self.msg_error.emit("Removing item <b>{0}</b> from project failed".format(name))
-        # Remove item icon (QGraphicsItems) from scene
-        self.ui.graphicsView.scene().removeItem(project_item.get_icon())
+        # Remove item icon and connected links (QGraphicsItems) from scene
+        icon = project_item.get_icon()
+        self.ui.graphicsView.remove_icon(icon)
         self._project.dag_handler.remove_node_from_graph(name)
         if delete_item:
             if data_dir:
@@ -959,18 +941,6 @@ class ToolboxUI(QMainWindow):
             return
         self.project().export_graphs()
 
-    @Slot("QModelIndex", name="connection_data_changed")
-    def connection_data_changed(self, index):
-        """[OBSOLETE?] Called when checkbox delegate wants to
-        edit connection data. Add or remove Link instance accordingly."""
-        d = self.connection_model.data(index, Qt.DisplayRole)  # Current status
-        if d == "False":  # Add link
-            src_name = self.connection_model.headerData(index.row(), Qt.Vertical, Qt.DisplayRole)
-            dst_name = self.connection_model.headerData(index.column(), Qt.Horizontal, Qt.DisplayRole)
-            self.ui.graphicsView.add_link(src_name, dst_name, index)
-        else:  # Remove link
-            self.ui.graphicsView.remove_link(index)
-
     @Slot(name="_handle_zoom_widget_minus_pressed")
     def _handle_zoom_widget_minus_pressed(self):
         """Slot for handling case when '-' button in menu is pressed."""
@@ -1005,21 +975,12 @@ class ToolboxUI(QMainWindow):
 
     def set_debug_qactions(self):
         """Set shortcuts for QActions that may be needed in debugging."""
-        self.show_item_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
-        self.show_connections_tab.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_9))
+        self.show_properties_tabbar.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_0))
         self.show_supported_img_formats.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_8))
         self.test_variable_push.setShortcut(QKeySequence(Qt.CTRL + Qt.Key_7))
-        self.addAction(self.show_item_tabbar)
-        self.addAction(self.show_connections_tab)
+        self.addAction(self.show_properties_tabbar)
         self.addAction(self.show_supported_img_formats)
         self.addAction(self.test_variable_push)
-
-    def hide_tabs(self):
-        """Hides project item info tab bar and connections tab in project item QTreeView.
-        Makes (hidden) actions on how to show them if needed for debugging purposes."""
-        self.ui.tabWidget_item_properties.tabBar().hide()  # Hide project item info QTabBar
-        self.connections_tab = self.ui.tabWidget.widget(1)
-        self.ui.tabWidget.removeTab(1)  # Remove connections tab
 
     def add_toggle_view_actions(self):
         """Add toggle view actions to View menu."""
@@ -1031,20 +992,12 @@ class ToolboxUI(QMainWindow):
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_python_repl.toggleViewAction())
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_julia_repl.toggleViewAction())
 
-    def toggle_tabbar_visibility(self):
-        """Shows or hides the tab bar in project item info tab widget. For debugging purposes."""
+    def toggle_properties_tabbar_visibility(self):
+        """Shows or hides the tab bar in properties dock widget. For debugging purposes."""
         if self.ui.tabWidget_item_properties.tabBar().isVisible():
             self.ui.tabWidget_item_properties.tabBar().hide()
         else:
             self.ui.tabWidget_item_properties.tabBar().show()
-
-    def toggle_connections_tab_visibility(self):
-        """Shows or hides connections tab in the project item QTreeView. For debugging purposes."""
-        if self.ui.tabWidget.count() == 1:  # Connections tab hidden
-            self.ui.tabWidget.insertTab(1, self.connections_tab, "Connections")
-        else:
-            self.connections_tab = self.ui.tabWidget.widget(1)
-            self.ui.tabWidget.removeTab(1)
 
     def update_datetime(self):
         """Returns a boolean, which determines whether
@@ -1255,13 +1208,13 @@ class ToolboxUI(QMainWindow):
             pos (QPoint): Mouse position
             link (Link(QGraphicsPathItem)): The concerned link
         """
-        self.link_context_menu = LinkContextMenu(self, pos, link.model_index, link.parallel_link)
+        self.link_context_menu = LinkContextMenu(self, pos, link.parallel_link)
         option = self.link_context_menu.get_action()
         if option == "Remove connection":
-            self.ui.graphicsView.remove_link(link.model_index)
+            self.ui.graphicsView.remove_link(link)
             return
         if option == "Take connection":
-            self.ui.graphicsView.take_link(link.model_index)
+            self.ui.graphicsView.take_link(link)
             return
         if option == "Send to bottom":
             link.send_to_bottom()

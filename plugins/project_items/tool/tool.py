@@ -409,23 +409,6 @@ class Tool(ProjectItem):
         self._toolbox.msg.emit("\tCopied <b>{0}</b> optional input file(s)".format(n_copied_files))
         return True
 
-    def find_output_items(self):
-        # NOTE: Not in use at the moment
-        """Find output items of this Tool.
-
-        Returns:
-            List of Data Store and Data Connection items.
-        """
-        item_list = list()
-        for output_item in self._toolbox.connection_model.output_items(self.name):
-            found_index = self._toolbox.project_item_model.find_item(output_item)
-            if not found_index:
-                self._toolbox.msg_error.emit("Item {0} not found. Something is seriously wrong.".format(output_item))
-                continue
-            item_data = self._toolbox.project_item_model.project_item(found_index)
-            item_list.append(item_data)
-        return item_list
-
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. This is where Tool
         type specific initialization happens (whether the tool is GAMS, Python or Julia script)."""
@@ -627,12 +610,6 @@ class Tool(ProjectItem):
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
             self._toolbox.msg.emit("*** Checking Tool template requirements ***")
-            # Abort if there are no input items connected to this Tool. TODO: Is this needed anymore?
-            inputs = self._toolbox.connection_model.input_items(self.name)
-            if not inputs:
-                self._toolbox.msg_error.emit("This Tool has no input connections. Cannot find required input files.")
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(-1)  # abort
-                return
             n_dirs, n_files = self.count_files_and_dirs()
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_files > 0:

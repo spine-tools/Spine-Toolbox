@@ -130,15 +130,12 @@ class LinkContextMenu(CustomContextMenu):
     Attributes:
         parent (QWidget): Parent for menu widget (ToolboxUI)
         position (QPoint): Position on screen
-        index (QModelIndex): Index of item that requested the context-menu
         parallel_link (Link(QGraphicsPathItem)): Link that is parallel to the one that requested the menu
     """
 
-    def __init__(self, parent, position, index, parallel_link=None):
+    def __init__(self, parent, position, parallel_link=None):
         """Class constructor."""
         super().__init__(parent, position)
-        if not index.isValid():
-            return
         self.add_action("Remove connection")
         self.add_action("Take connection")
         if parallel_link:

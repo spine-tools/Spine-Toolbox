@@ -74,10 +74,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Data Store
         self.assertEqual(found_item.item_type, "Data Store")
-        # Check that connection model has been updated
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -101,10 +97,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Data Connection
         self.assertEqual(found_item.item_type, "Data Connection")
-        # Check that connection model has been updated
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -117,10 +109,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Tool
         self.assertEqual(found_item.item_type, "Tool")
-        # Check that connection model has been updated
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -133,10 +121,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(found_item.name, name)
         # Check that the created item is a View
         self.assertEqual(found_item.item_type, "View")
-        # Check that connection model has been updated
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -158,14 +142,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(tool.name, tool_name)
         view = self.toolbox.project_item_model.project_item(self.toolbox.project_item_model.find_item(view_name))
         self.assertEqual(view.name, view_name)
-        # Connection model should now have four rows and four columns
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 4)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 4)
-        # Check that added names are found in connection model header in the correct order
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(ds_name), 0)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(dc_name), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(tool_name), 2)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(view_name), 3)
         # DAG handler should now have four graphs, each with one item
         dag_hndlr = self.toolbox.project().dag_handler
         n_dags = len(dag_hndlr.dags())
