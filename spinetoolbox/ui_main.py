@@ -64,6 +64,7 @@ from config import (
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel
 from project_item import RootProjectItem, CategoryProjectItem
+from project_items import data_store, data_connection, tool, view, data_interface
 
 
 class ToolboxUI(QMainWindow):
@@ -139,7 +140,7 @@ class ToolboxUI(QMainWindow):
         # Finalize init
         self.connect_signals()
         self.restore_ui()
-        self.load_plugins()
+        self.parse_project_item_modules()
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -183,28 +184,21 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
         self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
 
-    def load_plugins(self):
-        """Loads and activates plugins.
-        For now it just handles ProjectItem plugins."""
-        self.msg.emit("Loading plugins...")
-        loaded = list()
+    def parse_project_item_modules(self):
+        """Collects attributes from project item modules into a dict.
+        This dict is then used to perform all project item related tasks.
+        """
         self.categories.clear()
-        for name in plugin_loader.get_plugins("project_items"):
-            plugin = plugin_loader.load_plugin(name)
-            item_rank = plugin.__dict__.get("item_rank", 0)
-            try:
-                item_category = plugin.item_category
-                item_type = plugin.item_type
-                item_icon = plugin.item_icon
-                item_maker = plugin.item_maker
-                icon_maker = plugin.icon_maker
-                add_form_maker = plugin.add_form_maker
-                properties_widget = plugin.properties_widget_maker(self)
-                properties_ui = properties_widget.ui
-                loaded.append("<b>" + name + "</b>")
-            except AttributeError as e:
-                self.msg_error.emit("Can't load plugin <b>{0}</b>: {1}".format(name, e))
-                continue
+        for module in (data_store, data_connection, tool, view, data_interface):
+            item_rank = module.item_rank
+            item_category = module.item_category
+            item_type = module.item_type
+            item_icon = module.item_icon
+            item_maker = module.item_maker
+            icon_maker = module.icon_maker
+            add_form_maker = module.add_form_maker
+            properties_widget = module.properties_widget_maker(self)
+            properties_ui = properties_widget.ui
             self.categories[item_category] = dict(
                 item_rank=item_rank,
                 item_type=item_type,
@@ -232,7 +226,6 @@ class ToolboxUI(QMainWindow):
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
         # Add draggable widgets to toolbar
         self.item_toolbar.add_draggable_widgets(category_icon)
-        self.msg_success.emit("The following plugins have been successfully loaded: {0}".format(", ".join(loaded)))
 
     def project(self):
         """Returns current project or None if no project open."""
