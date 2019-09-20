@@ -26,7 +26,7 @@ pushd $path/..
 
 ui_path="spinetoolbox/ui"
 spinetoolbox_path="spinetoolbox"
-plugins_path="plugins"
+project_items_path="spinetoolbox/project_items"
 
 for ui_file in $(find $ui_path -name '*.ui'); do
   py_file="${ui_file%.ui}.py"
@@ -47,10 +47,11 @@ for qrc_file in $(find $ui_path -name '*.qrc'); do
   sed -i '/# Created:/d;/#      by:/d' $py_file
 done
 
-# Build plugins ui
-echo --- Building Spine Toolbox Plugins GUI ---
+# Build project items ui
+printf '\n'
+echo --- Building Spine Toolbox Project Items GUI ---
 
-for ui_file in $(find $plugins_path -name '*.ui'); do
+for ui_file in $(find $project_items_path -name '*.ui'); do
     py_file="${ui_file%.ui}.py"
     echo building $(basename "$py_file")
     pyside2-uic $ui_file -o $py_file
