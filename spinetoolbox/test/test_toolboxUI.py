@@ -166,13 +166,7 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIsNone(self.toolbox.project())
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "project.create_dir"
-        ) as mock_create_dir, mock.patch("data_store.create_dir") as mock_create_dir, mock.patch(
-            "data_connection.create_dir"
-        ) as mock_create_dir, mock.patch(
-            "tool.create_dir"
-        ) as mock_create_dir, mock.patch(
-            "view.create_dir"
-        ) as mock_create_dir:
+        ) as mock_create_dir, mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.open_project(test_project_path)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
@@ -549,14 +543,14 @@ class TestToolboxUI(unittest.TestCase):
     def add_ds(self, name, x=0, y=0):
         """Helper method to create a Data Store with the given name and coordinates."""
         item = dict(name=name, description="", url=dict(), x=x, y=y)
-        with mock.patch("data_store.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Stores", item)
         return
 
     def add_dc(self, name, x=0, y=0):
         """Helper method to create a Data Connection with the given name and coordinates."""
         item = dict(name=name, description="", references=list(), x=x, y=y)
-        with mock.patch("data_connection.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Connections", item)
         return
 

@@ -20,7 +20,8 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, SIGNAL, QTimeLine
+import plugin_loader
+from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, SIGNAL
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -31,30 +32,20 @@ from PySide2.QtWidgets import (
     QDockWidget,
     QAction,
     QWidgetAction,
+    QWidget,
 )
-from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon, QIntValidator
-from spinedb_api import SUPPORTED_DIALECTS
+from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from ui.mainwindow import Ui_MainWindow
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import (
-    ProjectItemContextMenu,
+    ProjectItemModelContextMenu,
     ToolTemplateContextMenu,
     LinkContextMenu,
     AddToolTemplatePopupMenu,
-    DcRefContextMenu,
-    DcDataContextMenu,
-    ToolPropertiesContextMenu,
-    ViewPropertiesContextMenu,
-    DiFilesContextMenu,
 )
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
-from widgets.add_data_store_widget import AddDataStoreWidget
-from widgets.add_data_connection_widget import AddDataConnectionWidget
-from widgets.add_tool_widget import AddToolWidget
-from widgets.add_view_widget import AddViewWidget
-from widgets.add_data_interface_widget import AddDataInterfaceWidget
 from widgets.tool_template_widget import ToolTemplateWidget
 from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import ZoomWidget
@@ -73,6 +64,7 @@ from config import (
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from models import ProjectItemModel, ToolTemplateModel
 from project_item import RootProjectItem, CategoryProjectItem
+from project_items import data_store, data_connection, tool, view, data_interface
 
 
 class ToolboxUI(QMainWindow):
@@ -85,6 +77,7 @@ class ToolboxUI(QMainWindow):
     msg_warning = Signal(str, name="msg_warning")
     msg_proc = Signal(str, name="msg_proc")
     msg_proc_error = Signal(str, name="msg_proc_error")
+    tool_template_model_changed = Signal("QVariant", name="tool_template_model_changed")
 
     def __init__(self):
         """ Initialize application and main window."""
@@ -105,7 +98,7 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_process_output.setStyleSheet(TEXTBROWSER_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class variables
-        self.item_categories = dict()
+        self.categories = dict()  # Holds category data parsed from project item plugins
         self._project = None
         self.project_item_model = None
         self.tool_template_model = None
@@ -119,17 +112,8 @@ class ToolboxUI(QMainWindow):
         self.project_item_context_menu = None
         self.link_context_menu = None
         self.process_output_context_menu = None
-        self.dc_ref_context_menu = None
-        self.dc_data_context_menu = None
-        self.tool_prop_context_menu = None
-        self.view_prop_context_menu = None
-        self.di_files_context_menu = None
         self.project_form = None
-        self.add_data_store_form = None
-        self.add_data_connection_form = None
-        self.add_tool_form = None
-        self.add_view_form = None
-        self.add_data_interface_form = None
+        self.add_project_item_form = None
         self.tool_template_form = None
         self.placing_item = ""
         self.add_tool_template_popup_menu = None
@@ -155,29 +139,8 @@ class ToolboxUI(QMainWindow):
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
         self.connect_signals()
-        self.init_shared_widgets()  # Shared among multiple project items
         self.restore_ui()
-        self.ui.lineEdit_port.setValidator(QIntValidator())
-        self.load_project_item_plugins()
-
-    def load_project_item_plugins(self):
-        """Loads plugins for project items.
-        For now, it just imports project item constructors and puts them in a dictionary indexed by category."""
-        # NOTE: Once we really adopt the plugin approach we can soft-code all this...
-
-        from data_store import DataStore
-        from data_connection import DataConnection
-        from tool import Tool
-        from view import View
-        from data_interface import DataInterface
-
-        self.item_categories = {
-            "Data Stores": DataStore,
-            "Data Connections": DataConnection,
-            "Tools": Tool,
-            "Views": View,
-            "Data Interfaces": DataInterface,
-        }
+        self.parse_project_item_modules()
 
     # noinspection PyArgumentList, PyUnresolvedReferences
     def connect_signals(self):
@@ -189,9 +152,6 @@ class ToolboxUI(QMainWindow):
         self.msg_warning.connect(self.add_warning_message)
         self.msg_proc.connect(self.add_process_message)
         self.msg_proc_error.connect(self.add_process_error_message)
-        # Custom signals
-        self.ui.treeView_dc_references.del_key_pressed.connect(self.remove_refs_with_del_key)
-        self.ui.treeView_dc_data.del_key_pressed.connect(self.remove_data_with_del_key)
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
@@ -201,11 +161,6 @@ class ToolboxUI(QMainWindow):
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
         self.ui.actionQuit.triggered.connect(self.closeEvent)
-        self.ui.actionAdd_Data_Store.triggered.connect(self.show_add_data_store_form)
-        self.ui.actionAdd_Data_Connection.triggered.connect(self.show_add_data_connection_form)
-        self.ui.actionAdd_Tool.triggered.connect(self.show_add_tool_form)
-        self.ui.actionAdd_View.triggered.connect(self.show_add_view_form)
-        self.ui.actionAdd_Data_Interface.triggered.connect(self.show_add_data_interface_form)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
@@ -224,17 +179,53 @@ class ToolboxUI(QMainWindow):
         self.ui.textBrowser_eventlog.anchorClicked.connect(self.open_anchor)
         # Context-menus
         self.ui.treeView_project.customContextMenuRequested.connect(self.show_item_context_menu)
-        self.ui.treeView_dc_references.customContextMenuRequested.connect(self.show_dc_ref_properties_context_menu)
-        self.ui.treeView_dc_data.customContextMenuRequested.connect(self.show_dc_data_properties_context_menu)
-        self.ui.treeView_template.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
-        self.ui.treeView_view.customContextMenuRequested.connect(self.show_view_properties_context_menu)
-        self.ui.treeView_data_interface_files.customContextMenuRequested.connect(
-            self.show_di_files_properties_context_menu
-        )
         # Main menu
         self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
         self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
+
+    def parse_project_item_modules(self):
+        """Collects attributes from project item modules into a dict.
+        This dict is then used to perform all project item related tasks.
+        """
+        self.categories.clear()
+        for module in (data_store, data_connection, tool, view, data_interface):
+            item_rank = module.item_rank
+            item_category = module.item_category
+            item_type = module.item_type
+            item_icon = module.item_icon
+            item_maker = module.item_maker
+            icon_maker = module.icon_maker
+            add_form_maker = module.add_form_maker
+            properties_widget = module.properties_widget_maker(self)
+            properties_ui = properties_widget.ui
+            self.categories[item_category] = dict(
+                item_rank=item_rank,
+                item_type=item_type,
+                item_icon=item_icon,
+                item_maker=item_maker,
+                icon_maker=icon_maker,
+                add_form_maker=add_form_maker,
+                properties_ui=properties_ui,
+            )
+        # Sort categories by rank
+        self.categories = dict(sorted(self.categories.items(), key=lambda kv: kv[1]["item_rank"]))
+        # Create actions for Edit menu, and draggable widgets to toolbar
+        add_item_actions = list()
+        category_icon = list()
+        for item_category, item_dict in self.categories.items():
+            # Create action for adding items of this type
+            item_icon = item_dict["item_icon"]
+            item_type = item_dict["item_type"]
+            add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
+            add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
+            add_item_actions.append(add_item_action)
+            category_icon.append((item_category, item_icon))
+        # Add actions to Edit menu
+        remove_all_action = self.ui.menuEdit.actions()[0]
+        self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
+        # Add draggable widgets to toolbar
+        self.item_toolbar.add_draggable_widgets(category_icon)
 
     def project(self):
         """Returns current project or None if no project open."""
@@ -267,7 +258,7 @@ class ToolboxUI(QMainWindow):
             msg = "Could not load previous project. File '{0}' not found.".format(project_file_path)
             self.ui.statusbar.showMessage(msg, 10000)
             return
-        if not self.open_project(project_file_path):
+        if not self.open_project(project_file_path, clear_event_log=False):
             self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
             logging.error("Loading project file '%s' failed", project_file_path)
         return
@@ -296,7 +287,7 @@ class ToolboxUI(QMainWindow):
 
     # noinspection PyUnusedLocal
     @Slot(name="open_project")
-    def open_project(self, load_path=None):
+    def open_project(self, load_path=None, clear_event_log=True):
         """Load project from a save file (.proj) file.
 
         Args:
@@ -357,7 +348,8 @@ class ToolboxUI(QMainWindow):
         # Init models and views
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         # Clear QTextBrowsers
-        self.ui.textBrowser_eventlog.clear()
+        if clear_event_log:
+            self.ui.textBrowser_eventlog.clear()
         self.ui.textBrowser_process_output.clear()
         # Populate project model with items read from JSON file
         self.init_models(tool_template_paths)
@@ -428,8 +420,12 @@ class ToolboxUI(QMainWindow):
         add them to the model."""
         root_item = RootProjectItem()
         self.project_item_model = ProjectItemModel(self, root=root_item)
-        for category_name, item_maker in self.item_categories.items():
-            category_item = CategoryProjectItem(category_name, "", item_maker)
+        for category, category_dict in self.categories.items():
+            item_maker = category_dict["item_maker"]
+            icon_maker = category_dict["icon_maker"]
+            add_form_maker = category_dict["add_form_maker"]
+            properties_ui = category_dict["properties_ui"]
+            category_item = CategoryProjectItem(category, "", item_maker, icon_maker, add_form_maker, properties_ui)
             self.project_item_model.insert_item(category_item)
         self.ui.treeView_project.setModel(self.project_item_model)
         self.ui.treeView_project.header().hide()
@@ -441,7 +437,7 @@ class ToolboxUI(QMainWindow):
         Args:
             tool_template_paths (list): List of tool definition file paths used in this project
         """
-        self.ui.comboBox_tool.setModel(QStandardItemModel())  # Reset combo box by setting and empty model to it
+        self.tool_template_model_changed.emit(QStandardItemModel())
         self.tool_template_model = ToolTemplateModel()
         n_tools = 0
         self.msg.emit("Loading Tool templates...")
@@ -462,7 +458,7 @@ class ToolboxUI(QMainWindow):
         # Set model to the tool template list view
         self.ui.listView_tool_templates.setModel(self.tool_template_model)
         # Set model to Tool project item combo box
-        self.ui.comboBox_tool.setModel(self.tool_template_model)
+        self.tool_template_model_changed.emit(self.tool_template_model)
         # Note: If ToolTemplateModel signals are in use, they should be reconnected here.
         # Reconnect ToolTemplateModel and QListView signals. Make sure that signals are connected only once.
         n_recv_sig1 = self.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
@@ -483,21 +479,6 @@ class ToolboxUI(QMainWindow):
             pass  # signal already connected
         if n_tools == 0:
             self.msg_warning.emit("Project has no tool templates")
-
-    def init_shared_widgets(self):
-        """Initialize widgets that are shared among all ProjectItems of the same type."""
-        # Data Stores
-        self.ui.comboBox_dialect.addItems(list(SUPPORTED_DIALECTS.keys()))
-        self.ui.comboBox_dialect.setCurrentIndex(-1)
-        # Data Connections
-        self.ui.treeView_dc_references.setStyleSheet(TREEVIEW_HEADER_SS)
-        self.ui.treeView_dc_data.setStyleSheet(TREEVIEW_HEADER_SS)
-        # Tools (Tool template combobox is initialized in init_tool_template_model)
-        self.ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
-        # Views
-        self.ui.treeView_view.setStyleSheet(TREEVIEW_HEADER_SS)
-        # Data Interfaces
-        self.ui.treeView_data_interface_files.setStyleSheet(TREEVIEW_HEADER_SS)
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -698,11 +679,6 @@ class ToolboxUI(QMainWindow):
                 tool.set_tool_template(template)
                 tool.execute_in_work = template.execute_in_work
                 self.msg.emit("Tool template <b>{0}</b> reattached to Tool <b>{1}</b>".format(template.name, tool.name))
-        # Set execution mode radioButton depending on Tool template setting
-        if template.execute_in_work:
-            self.ui.radioButton_execute_in_work.setChecked(True)
-        else:
-            self.ui.radioButton_execute_in_source.setChecked(True)
 
     @Slot(name="remove_selected_tool_template")
     def remove_selected_tool_template(self):
@@ -1104,50 +1080,19 @@ class ToolboxUI(QMainWindow):
         # noinspection PyArgumentList
         QApplication.processEvents()
 
-    @Slot("float", "float", name="show_add_data_store_form")
-    def show_add_data_store_form(self, x=0, y=0):
-        """Show add data store widget."""
+    @Slot("str", "float", "float", name="show_add_project_item_form")
+    def show_add_project_item_form(self, item_category, x=0, y=0):
+        """Show add project item widget."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        self.add_data_store_form = AddDataStoreWidget(self, x, y)
-        self.add_data_store_form.show()
-
-    @Slot("float", "float", name="show_add_data_connection_form")
-    def show_add_data_connection_form(self, x=0, y=0):
-        """Show add data connection widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
+        category_ind = self.project_item_model.find_category(item_category)
+        if not category_ind:
+            self.msg_error.emit("Category {0} not found".format(item_category))
             return
-        self.add_data_connection_form = AddDataConnectionWidget(self, x, y)
-        self.add_data_connection_form.show()
-
-    @Slot("float", "float", name="show_add_data_interface_form")
-    def show_add_data_interface_form(self, x=0, y=0):
-        """Show add data interface widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_data_interface_form = AddDataInterfaceWidget(self, x, y)
-        self.add_data_interface_form.show()
-
-    @Slot("float", "float", name="show_add_tool_form")
-    def show_add_tool_form(self, x=0, y=0):
-        """Show add tool widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_tool_form = AddToolWidget(self, x, y)
-        self.add_tool_form.show()
-
-    @Slot("float", "float", name="show_add_view_form")
-    def show_add_view_form(self, x=0, y=0):
-        """Show add view widget."""
-        if not self._project:
-            self.msg.emit("Please open or create a project first")
-            return
-        self.add_view_form = AddViewWidget(self, x, y)
-        self.add_view_form.show()
+        category = self.project_item_model.project_item(category_ind)
+        self.add_project_item_form = category._add_form_maker(self, x, y)
+        self.add_project_item_form.show()
 
     @Slot(name="show_tool_template_form")
     def show_tool_template_form(self, tool_template=None):
@@ -1229,51 +1174,23 @@ class ToolboxUI(QMainWindow):
         """
         if not self.project():
             return
-        self.project_item_context_menu = ProjectItemContextMenu(self, pos, ind)
-        option = self.project_item_context_menu.get_action()
-        d = self.project_item_model.project_item(ind)
-        if option == "Open directory...":
-            d.open_directory()  # Open data_dir of Data Connection or Data Store
-        elif option == "Open tree view...":
-            d.open_tree_view()  # Open tree view of Data Store
-        elif option == "Open graph view...":
-            d.open_graph_view()  # Open graph view of Data Store
-        elif option == "Open tabular view...":
-            d.open_tabular_view()  # Open tabular view of Data Store
-        elif option == "Results...":
-            d.open_results()
-        elif option == "Stop":
-            # Check that the wheel is still visible, because execution may have stopped before the user clicks Stop
-            if d.get_icon().timer.state() != QTimeLine.Running:
-                self.msg.emit("Tool <b>{0}</b> is not running".format(d.name))
-            else:
-                d.stop_execution()  # Proceed with stopping
-        elif option == "Edit Tool template":
-            d.edit_tool_template()
-        elif option == "Edit main program file...":
-            d.open_tool_main_program_file()
-        elif option == "Rename":
-            # noinspection PyCallByClass
-            answer = QInputDialog.getText(
-                self, "Rename Item", "New name:", text=d.name, flags=Qt.WindowTitleHint | Qt.WindowCloseButtonHint
-            )
-            # answer[str, bool]
-            if not answer[1]:
+        if not ind.isValid():
+            # Clicked on a blank area, show the project item model context menu
+            self.project_item_context_menu = ProjectItemModelContextMenu(self, pos)
+            action = self.project_item_context_menu.get_action()
+            if action == "Open project directory...":
+                file_url = "file:///" + self._project.project_dir
+                self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
+            elif action == "Export project to GraphML":
+                self.project().export_graphs()
+            else:  # No option selected
                 pass
-            else:
-                new_name = answer[0]
-                self.project_item_model.setData(ind, new_name)
-        elif option == "Remove item":
-            delete_int = int(self._qsettings.value("appSettings/deleteData", defaultValue="0"))
-            delete_bool = delete_int != 0
-            self.remove_item(ind, delete_item=delete_bool, check_dialog=True)
-        elif option == "Open project directory...":
-            file_url = "file:///" + self._project.project_dir
-            self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
-        elif option == "Export project to GraphML":
-            self.project().export_graphs()
-        else:  # No option selected
-            pass
+        else:
+            # Clicked on an item, show the custom context menu for that item
+            item = self.project_item_model.project_item(ind)
+            self.project_item_context_menu = item.custom_context_menu(self, pos)
+            action = self.project_item_context_menu.get_action()
+            item.apply_context_menu_action(self, action)
         self.project_item_context_menu.deleteLater()
         self.project_item_context_menu = None
 
@@ -1327,186 +1244,13 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu.deleteLater()
         self.tool_template_context_menu = None
 
-    @Slot("QPoint", name="show_dc_ref_properties_context_menu")
-    def show_dc_ref_properties_context_menu(self, pos):
-        """Create and show a context-menu in data connection properties
-        references view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        ind = self.ui.treeView_dc_references.indexAt(pos)
-        global_pos = self.ui.treeView_dc_references.viewport().mapToGlobal(pos)
-        self.dc_ref_context_menu = DcRefContextMenu(self, global_pos, ind)
-        option = self.dc_ref_context_menu.get_action()
-        # Get selected Data Connection from project item model
-        cur_index = self.ui.treeView_project.currentIndex()
-        dc = self.project_item_model.project_item(cur_index)
-        if not dc:
-            self.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(cur_index))
-            return
-        if option == "Open containing directory...":
-            ref_path = self.ui.treeView_dc_references.model().itemFromIndex(ind).data(Qt.DisplayRole)
-            ref_dir = os.path.split(ref_path)[0]
-            file_url = "file:///" + ref_dir
-            self.open_anchor(QUrl(file_url, QUrl.TolerantMode))
-        elif option == "Edit...":
-            dc.open_reference(ind)
-        elif option == "Add reference(s)":
-            dc.add_references()
-        elif option == "Remove reference(s)":
-            dc.remove_references()
-        elif option == "Copy reference(s) to project":
-            dc.copy_to_project()
-        return
-
-    @Slot("QPoint", name="show_dc_data_properties_context_menu")
-    def show_dc_data_properties_context_menu(self, pos):
-        """Create and show a context-menu in data connection properties
-        data view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        ind = self.ui.treeView_dc_data.indexAt(pos)
-        global_pos = self.ui.treeView_dc_data.viewport().mapToGlobal(pos)
-        self.dc_data_context_menu = DcDataContextMenu(self, global_pos, ind)
-        option = self.dc_data_context_menu.get_action()
-        # Get selected Data Connection from project item model
-        cur_index = self.ui.treeView_project.currentIndex()
-        dc = self.project_item_model.project_item(cur_index)
-        if not dc:
-            self.msg_error.emit("FIXME: Data Connection {0} not found in project items".format(cur_index))
-            return
-        if option == "New file...":
-            dc.make_new_file()
-        elif option == "Edit...":
-            dc.open_data_file(ind)
-        elif option == "Remove file(s)":
-            dc.remove_files()
-        elif option == "Open Spine Datapackage Editor":
-            dc.show_spine_datapackage_form()
-        elif option == "Open directory...":
-            dc.open_directory()
-        return
-
-    @Slot("QPoint", name="show_tool_properties_context_menu")
-    def show_tool_properties_context_menu(self, pos):
-        """Create and show a context-menu in Tool properties
-        if selected Tool has a Tool template.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        ind = self.ui.treeView_template.indexAt(pos)  # Index of selected QStandardItem in Tool properties tree view.
-        cur_index = self.ui.treeView_project.currentIndex()  # Get selected Tool
-        tool = self.project_item_model.project_item(cur_index)
-        if not tool.tool_template():
-            return
-        # Find index of Tool template
-        name = tool.tool_template().name
-        tool_index = self.tool_template_model.tool_template_index(name)
-        global_pos = self.ui.treeView_template.viewport().mapToGlobal(pos)
-        self.tool_prop_context_menu = ToolPropertiesContextMenu(self, global_pos, ind)
-        option = self.tool_prop_context_menu.get_action()
-        if option == "Edit Tool template":
-            self.edit_tool_template(tool_index)  # index in tool template model
-        elif option == "Edit main program file...":
-            self.open_tool_main_program_file(tool_index)  # index in tool template model
-        elif option == "Open main program directory...":
-            tool.open_tool_main_directory()
-        elif option == "Open Tool template definition file...":
-            self.open_tool_template_file(tool_index)
-        elif option == "Open directory...":
-            tool.open_directory()
-        return
-
-    @Slot("QPoint", name="show_view_properties_context_menu")
-    def show_view_properties_context_menu(self, pos):
-        """Create and show a context-menu in View properties.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        ind = self.ui.treeView_view.indexAt(pos)  # Index of selected item in View references tree view.
-        cur_index = self.ui.treeView_project.currentIndex()  # Get selected View
-        view = self.project_item_model.project_item(cur_index)
-        global_pos = self.ui.treeView_view.viewport().mapToGlobal(pos)
-        self.view_prop_context_menu = ViewPropertiesContextMenu(self, global_pos, ind)
-        option = self.view_prop_context_menu.get_action()
-        if option == "Open tree view":
-            view.open_tree_view_btn_clicked()
-        elif option == "Open graph view":
-            view.open_graph_view_btn_clicked()
-        elif option == "Open tabular view":
-            view.open_tabular_view_btn_clicked()
-        return
-
-    @Slot("QPoint", name="show_di_files_properties_context_menu")
-    def show_di_files_properties_context_menu(self, pos):
-        """Create and show a context-menu in Data Interface properties source files view.
-
-        Args:
-            pos (QPoint): Mouse position
-        """
-        ind = self.ui.treeView_data_interface_files.indexAt(pos)  # Index of selected item in DI references tree view.
-        cur_index = self.ui.treeView_project.currentIndex()  # Get selected DI
-        di = self.project_item_model.project_item(cur_index)
-        global_pos = self.ui.treeView_data_interface_files.viewport().mapToGlobal(pos)
-        self.di_files_context_menu = DiFilesContextMenu(self, global_pos, ind)
-        option = self.di_files_context_menu.get_action()
-        if option == "Open import editor":
-            di.open_import_editor(ind)
-        elif option == "Select connector type":
-            di.select_connector_type(ind)
-        elif option == "Open directory...":
-            di.open_directory()
-        return
-
-    @Slot(name="remove_refs_with_del_key")
-    def remove_refs_with_del_key(self):
-        """Slot that removes selected references from the currently selected Data Connection.
-        Used when removing DC references by pressing the Delete key on keyboard (Qt.Key_Delete)."""
-        cur_index = self.ui.treeView_project.currentIndex()  # Find selected dc index
-        if not cur_index.isValid():
-            return
-        dc = self.project_item_model.project_item(cur_index)
-        if not dc:
-            return
-        dc.remove_references()
-
-    @Slot(name="remove_data_with_del_key")
-    def remove_data_with_del_key(self):
-        """Slot that removes selected data files from the currently selected Data Connection.
-        Used when removing DC data files by pressing the Delete key on keyboard (Qt.Key_Delete)."""
-        cur_index = self.ui.treeView_project.currentIndex()  # Find selected dc index
-        if not cur_index.isValid():
-            return
-        dc = self.project_item_model.project_item(cur_index)
-        if not dc:
-            return
-        dc.remove_files()
-
-    def close_view_forms(self):
-        """Closes all GraphViewForm, TreeViewForm, and TabularViewForm instances opened in
-        Data Stores and Views. Ensures that close() method is called on all corresponding
-        DiffDatabaseMapping instances, which cleans up the databases. Also closes all
-        SpineDatapackageWidget instances opened in Data Connections.
+    def tear_down_items(self):
+        """Calls the tear_down method on all project items, so they can clean up their mess if needed.
         """
         if not self._project:
             return
-        for data_store in self.project_item_model.items("Data Stores"):
-            if data_store.tree_view_form:
-                data_store.tree_view_form.close()
-            if data_store.tabular_view_form:
-                data_store.tabular_view_form.close()
-            if data_store.graph_view_form:
-                data_store.graph_view_form.close()
-        for data_connection in self.project_item_model.items("Data Connections"):
-            if data_connection.spine_datapackage_form:
-                data_connection.spine_datapackage_form.close()
-        for view in self.project_item_model.items("Views"):
-            view.close_all_views()
+        for item in self.project_item_model.items():
+            item.tear_down()
 
     def show_confirm_exit(self):
         """Shows confirm exit message box.
@@ -1602,7 +1346,7 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("mainWindow/n_screens", len(QGuiApplication.screens()))
         self.julia_repl.shutdown_jupyter_kernel()
         self.python_repl.shutdown_kernel()
-        self.close_view_forms()
+        self.tear_down_items()
         if event:
             event.accept()
         # noinspection PyArgumentList

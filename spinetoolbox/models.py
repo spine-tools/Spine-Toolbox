@@ -23,7 +23,6 @@ from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractListModel, QAbstractT
 from PySide2.QtWidgets import QMessageBox
 from config import INVALID_CHARS, TOOL_OUTPUT_DIR
 from helpers import rename_dir
-from project_item import CategoryProjectItem
 
 
 class ProjectItemModel(QAbstractItemModel):
@@ -54,9 +53,7 @@ class ProjectItemModel(QAbstractItemModel):
         """
         if not parent.isValid():  # Number of category items (children of root)
             return self.root().child_count()
-        if isinstance(parent.internalPointer(), CategoryProjectItem):  # Number of project items in the category
-            return parent.internalPointer().child_count()
-        return 0
+        return parent.internalPointer().child_count()
 
     def columnCount(self, parent=QModelIndex()):
         """Returns model column count."""
@@ -68,9 +65,7 @@ class ProjectItemModel(QAbstractItemModel):
         Args:
             index (QModelIndex): Flags of item at this index.
         """
-        if not isinstance(index.internalPointer(), CategoryProjectItem):
-            return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsEditable
-        return Qt.ItemIsEnabled  # | Qt.ItemIsSelectable
+        return index.internalPointer().flags()
 
     def parent(self, index=QModelIndex()):
         """Returns index of the parent of given index.
@@ -289,10 +284,6 @@ class ProjectItemModel(QAbstractItemModel):
         # Force save project
         self._toolbox.save_project()
         self._toolbox.msg_success.emit("Project item <b>{0}</b> renamed to <b>{1}</b>".format(old_name, value))
-        # If item is a Data Store and an SQLite path is set, give the user a notice that this must be updated manually
-        if item.item_type == "Data Store":
-            if not self._toolbox.ui.lineEdit_database.text().strip() == "":
-                self._toolbox.msg_warning.emit("<b>Note: Please update database path</b>")
         return True
 
     def items(self, category_name=None):

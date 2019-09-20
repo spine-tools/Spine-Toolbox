@@ -392,8 +392,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
                 for j, entry in enumerate(row):
                     if entry is False:
                         continue
-                    src_item = items[i]
-                    dst_item = items[j]
+                    try:
+                        src_item = items[i]
+                        dst_item = items[j]
+                    except IndexError:
+                        # Might happen when e.g. the project file contains project items
+                        # that couldn't be restored because the corresponding project item plugin wasn't found
+                        self._toolbox.msg_warning.emit("Restoring a connection failed")
+                        continue
                     try:
                         src_anchor, dst_anchor = entry
                     except TypeError:
