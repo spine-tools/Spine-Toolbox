@@ -18,7 +18,7 @@ Module for tool icon class.
 
 from graphics_items import ProjectItemIcon
 from PySide2.QtGui import QColor, QPen, QBrush
-from PySide2.QtCore import Qt, QTimeLine, QPointF, QTimer
+from PySide2.QtCore import Qt, QTimeLine, QPointF
 from PySide2.QtWidgets import QGraphicsItemAnimation
 
 
