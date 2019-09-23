@@ -496,6 +496,6 @@ class Ui_MainWindow(object):
         self.actionGetting_started.setText(QtWidgets.QApplication.translate("MainWindow", "Getting started", None, -1))
         self.actionGetting_started.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
 
-from widgets.custom_qtextbrowser import CustomQTextBrowser
 from widgets.custom_qgraphicsviews import DesignQGraphicsView
+from widgets.custom_qtextbrowser import CustomQTextBrowser
 import resources_icons_rc

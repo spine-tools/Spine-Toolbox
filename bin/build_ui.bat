@@ -25,7 +25,11 @@ PUSHD %~dp0\..
 
 SET spinetoolbox_path=spinetoolbox
 SET ui_path=spinetoolbox\ui
-SET plugins_path=plugins_path
+SET dc_ui_path=spinetoolbox\project_items\data_connection\ui
+SET di_ui_path=spinetoolbox\project_items\data_interface\ui
+SET ds_ui_path=spinetoolbox\project_items\data_store\ui
+SET tool_ui_path=spinetoolbox\project_items\tool\ui
+SET view_ui_path=spinetoolbox\project_items\view\ui
 
 
 FOR %%f IN (%ui_path%\*.ui) DO (
@@ -38,6 +42,7 @@ FOR %%f IN (%ui_path%\*.ui) DO (
     DEL !py_file!.o > NUL
     CALL bin\append_license_xml.bat !ui_file!
     CALL bin\append_license_py.bat !py_file!
+    ECHO.
 )
 FOR %%f IN (%ui_path%\*.qrc) DO (
     SET qrc_file=%%f
@@ -45,14 +50,66 @@ FOR %%f IN (%ui_path%\*.qrc) DO (
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-rcc
     pyside2-rcc -o !py_file! !qrc_file:\=/!
+    ECHO.
 )
 
 ECHO.
-ECHO --- Building Spine Toolbox Plugins GUI ---
-
-FOR %%f IN (%plugins_path%\*.ui) DO (
+ECHO --- Building Spine Toolbox Project Item Data Connection UI ---
+FOR %%f IN (%dc_ui_path%\*.ui) DO (
     SET ui_file=%%f
-    SET py_file=%plugins_path%\%%~nf.py
+    SET py_file=%dc_ui_path%\%%~nf.py
+    ECHO building !py_file!
+    REM Replace backslashes with forward slashes for pyside2-uic
+    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
+    DEL !py_file!.o > NUL
+    CALL bin\append_license_xml.bat !ui_file!
+    CALL bin\append_license_py.bat !py_file!
+)
+ECHO.
+ECHO --- Building Spine Toolbox Project Item Data Interface UI ---
+FOR %%f IN (%di_ui_path%\*.ui) DO (
+    SET ui_file=%%f
+    SET py_file=%di_ui_path%\%%~nf.py
+    ECHO building !py_file!
+    REM Replace backslashes with forward slashes for pyside2-uic
+    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
+    DEL !py_file!.o > NUL
+    CALL bin\append_license_xml.bat !ui_file!
+    CALL bin\append_license_py.bat !py_file!
+)
+ECHO.
+ECHO --- Building Spine Toolbox Project Item Data Store UI ---
+FOR %%f IN (%ds_ui_path%\*.ui) DO (
+    SET ui_file=%%f
+    SET py_file=%ds_ui_path%\%%~nf.py
+    ECHO building !py_file!
+    REM Replace backslashes with forward slashes for pyside2-uic
+    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
+    DEL !py_file!.o > NUL
+    CALL bin\append_license_xml.bat !ui_file!
+    CALL bin\append_license_py.bat !py_file!
+)
+ECHO.
+ECHO --- Building Spine Toolbox Project Item Tool UI ---
+FOR %%f IN (%tool_ui_path%\*.ui) DO (
+    SET ui_file=%%f
+    SET py_file=%tool_ui_path%\%%~nf.py
+    ECHO building !py_file!
+    REM Replace backslashes with forward slashes for pyside2-uic
+    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
+    DEL !py_file!.o > NUL
+    CALL bin\append_license_xml.bat !ui_file!
+    CALL bin\append_license_py.bat !py_file!
+)
+ECHO.
+ECHO --- Building Spine Toolbox Project View UI ---
+FOR %%f IN (%view_ui_path%\*.ui) DO (
+    SET ui_file=%%f
+    SET py_file=%view_ui_path%\%%~nf.py
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-uic
     pyside2-uic -o !py_file!.o !ui_file:\=/!
