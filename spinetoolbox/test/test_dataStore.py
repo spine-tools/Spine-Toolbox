@@ -22,10 +22,10 @@ import os
 from unittest import mock
 import logging
 import sys
+from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
 from spinedb_api import create_new_spine_database
-from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 
 
 # noinspection PyUnusedLocal
@@ -134,6 +134,10 @@ class TestDataStore(unittest.TestCase):
         self.ds_properties_ui.lineEdit_port.setText('8080')
         self.ds_properties_ui.lineEdit_database.setText('foo')
         self.ds_properties_ui.lineEdit_username.setText('bar')
+        self.ds_properties_ui.lineEdit_host.editingFinished.emit()
+        self.ds_properties_ui.lineEdit_port.editingFinished.emit()
+        self.ds_properties_ui.lineEdit_database.editingFinished.emit()
+        self.ds_properties_ui.lineEdit_username.editingFinished.emit()
         data_store.deactivate()
         data_store.activate()
         dialect = self.ds_properties_ui.comboBox_dialect.currentText()

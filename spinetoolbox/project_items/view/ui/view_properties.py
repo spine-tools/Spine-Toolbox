@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'plugins/project_items/view/ui/view_properties.ui',
-# licensing of 'plugins/project_items/view/ui/view_properties.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/project_items/view/ui/view_properties.ui',
+# licensing of 'spinetoolbox/project_items/view/ui/view_properties.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

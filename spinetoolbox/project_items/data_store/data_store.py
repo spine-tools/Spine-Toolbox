@@ -85,11 +85,11 @@ class DataStore(ProjectItem):
         s[self._properties_ui.toolButton_copy_url.clicked] = self.copy_url
         s[self._properties_ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
         s[self._properties_ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
-        s[self._properties_ui.lineEdit_username.textChanged] = self.refresh_username
-        s[self._properties_ui.lineEdit_password.textChanged] = self.refresh_password
-        s[self._properties_ui.lineEdit_host.textChanged] = self.refresh_host
-        s[self._properties_ui.lineEdit_port.textChanged] = self.refresh_port
-        s[self._properties_ui.lineEdit_database.textChanged] = self.refresh_database
+        s[self._properties_ui.lineEdit_username.editingFinished] = self.refresh_username
+        s[self._properties_ui.lineEdit_password.editingFinished] = self.refresh_password
+        s[self._properties_ui.lineEdit_host.editingFinished] = self.refresh_host
+        s[self._properties_ui.lineEdit_port.editingFinished] = self.refresh_port
+        s[self._properties_ui.lineEdit_database.editingFinished] = self.refresh_database
         return s
 
     def activate(self):
@@ -220,29 +220,34 @@ class DataStore(ProjectItem):
         self._url[key] = value
         self.item_changed.emit()
 
-    @Slot("QString", name="refresh_host")
-    def refresh_host(self, host):
+    @Slot(name="refresh_host")
+    def refresh_host(self):
         """Refresh host from selections."""
+        host = self._properties_ui.lineEdit_host.text()
         self.set_url_key("host", host)
 
-    @Slot("QString", name="refresh_port")
-    def refresh_port(self, port):
+    @Slot(name="refresh_port")
+    def refresh_port(self):
         """Refresh port from selections."""
+        port = self._properties_ui.lineEdit_port.text()
         self.set_url_key("port", port)
 
-    @Slot("QString", name="refresh_database")
-    def refresh_database(self, database):
+    @Slot(name="refresh_database")
+    def refresh_database(self):
         """Refresh database from selections."""
+        database = self._properties_ui.lineEdit_database.text()
         self.set_url_key("database", database)
 
-    @Slot("QString", name="refresh_username")
-    def refresh_username(self, username):
+    @Slot(name="refresh_username")
+    def refresh_username(self):
         """Refresh username from selections."""
+        username = self._properties_ui.lineEdit_username.text()
         self.set_url_key("username", username)
 
-    @Slot("QString", name="refresh_password")
-    def refresh_password(self, password):
+    @Slot(name="refresh_password")
+    def refresh_password(self):
         """Refresh password from selections."""
+        password = self._properties_ui.lineEdit_password.text()
         self.set_url_key("password", password)
 
     @Slot("QString", name="refresh_dialect")
