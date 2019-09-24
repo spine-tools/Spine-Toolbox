@@ -17,8 +17,9 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
+import os
 from operator import itemgetter
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox, QWidget, QFrame, QLabel, QHBoxLayout
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from helpers import fix_name_ambiguity, tuple_itemgetter
@@ -511,6 +512,77 @@ class CreateMainProgramPopupMenu(CustomPopupMenu):
         # Open a tool template file
         self.add_action("Make new main program", self._parent.new_main_program_file)
         self.add_action("Select existing main program", self._parent.browse_main_program)
+
+
+class RecentProjectsPopupMenu(CustomPopupMenu):
+    """Popup menu for recent projects list embedded to File menu."""
+
+    def __init__(self, parent):
+        """
+
+        Args:
+            parent (QWidget): Parent widget of this pop-up menu (ToolboxUI)
+        """
+        super().__init__(parent=parent)
+        self._parent = parent
+        # self.add_recent_projects_section()
+        self.add_recent_projects()
+
+    def add_recent_projects(self):
+        """Loads previous project paths from QSettings
+        and ads them to the QMenu as QActions.
+        """
+        recents = self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None)
+        if recents:
+            recents = str(recents)
+            recents_list = recents.split("\n")
+            for filepath in recents_list:
+                self.add_action(filepath, lambda checked=False, filepath=filepath: self.call_open_project(
+                        checked, filepath))
+
+    def add_recent_projects_section(self):
+        """Add a non-interactive section item with lines and a label."""
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        line1 = QFrame()
+        line1.setFrameShape(QFrame.HLine)
+        line2 = QFrame()
+        line2.setFrameShape(QFrame.HLine)
+        label = QLabel("Recent projects")
+        layout.addWidget(line1)
+        layout.addWidget(label)
+        layout.addWidget(line2)
+        widget.layout().setStretch(0, 1)
+        widget.layout().setStretch(1, 0)
+        widget.layout().setStretch(2, 1)
+        line_ss = "QFrame{color: gray;}"
+        label_ss = "QLabel{color: gray;}"
+        line1.setStyleSheet(line_ss)
+        label.setStyleSheet(label_ss)
+        line2.setStyleSheet(line_ss)
+        section = QWidgetAction(self)
+        section.setDefaultWidget(widget)
+        self.addAction(section)
+
+    @Slot(bool, str, name="call_open_project")
+    def call_open_project(self, checked, p):
+        """Slot for catching the user selected action from the recent projects menu.
+
+        Args:
+            checked (bool): Argument sent by triggered signal
+            p (str): Full path to a project file
+        """
+        if not os.path.exists(p):
+            # Project has been removed, remove it from recent projects list
+            self._parent.remove_path_from_recent_projects(p)
+            return
+        # Check if the same project is already open
+        if self._parent.project():
+            if p == self._parent.project().path:
+                self._parent.msg.emit("Project already open")
+                return
+        if not self._parent.open_project(p):
+            return
 
 
 class FilterMenu(QMenu):
