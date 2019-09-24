@@ -19,7 +19,7 @@ Unit tests for the IndexedValueTableModel class.
 import unittest
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
-from indexed_value_table_model import IndexedValueTableModel
+from mvcmodels.indexed_value_table_model import IndexedValueTableModel
 
 
 class MockValue:

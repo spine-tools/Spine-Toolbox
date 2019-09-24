@@ -20,8 +20,9 @@ import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel, QAbstractItemModel
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QGuiApplication
 from helpers import busy_effect, format_string_list
-from models import MinimalTableModel, EmptyRowModel
-from parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
+from mvcmodels.minimal_table_model import MinimalTableModel
+from mvcmodels.empty_row_model import EmptyRowModel
+from mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
 class ObjectClassListModel(QStandardItemModel):
@@ -1550,12 +1551,9 @@ class SubParameterDefinitionModel(SubParameterModel):
 
 
 class EmptyParameterModel(EmptyRowModel):
-    """An empty parameter model.
-    It implements `bath_set_data` for all 'EmptyParameter' models.
-    """
+    """An empty parameter model. Implements `batch_set_data` for all 'EmptyParameter' models."""
 
     def __init__(self, parent):
-        """Initialize class."""
         super().__init__(parent)
         self._parent = parent
         self.error_log = []
@@ -1592,6 +1590,9 @@ class EmptyParameterValueModel(EmptyParameterModel):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
+
+    def items_to_add(self, indexes):
+        raise NotImplementedError()
 
     @busy_effect
     def add_items_to_db(self, items_to_add):
@@ -1704,7 +1705,7 @@ class EmptyObjectParameterValueModel(EmptyParameterValueModel):
 
 class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
     """An empty relationship parameter value model.
-    Reimplements alsmot all methods from the super class EmptyParameterModel.
+    Reimplements almost all methods from the super class EmptyParameterModel.
     """
 
     def __init__(self, parent):
@@ -1916,6 +1917,9 @@ class EmptyParameterDefinitionModel(EmptyParameterModel):
         """Initialize class."""
         super().__init__(parent)
         self._parent = parent
+
+    def items_to_add(self, indexes):
+        raise NotImplementedError()
 
     @busy_effect
     def add_items_to_db(self, items_to_add):

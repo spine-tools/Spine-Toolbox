@@ -19,7 +19,7 @@ Unit tests for PivotModel class.
 import unittest
 from unittest import mock
 from PySide2.QtCore import Qt
-from tabularview_models import FilterCheckboxListModel
+from mvcmodels.tabularview_models import FilterCheckboxListModel
 
 
 class TestPivotModel(unittest.TestCase):
@@ -58,9 +58,9 @@ class TestPivotModel(unittest.TestCase):
         new_item = ['aaaa']
         model = FilterCheckboxListModel()
         model.set_list(self.data)
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endInsertRows"
-        ) as eir, mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endInsertRows"
+        ) as eir, mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             model.add_item(new_item)
         self.assertEqual(model._data, sorted(self.data + new_item))
         self.assertEqual(model._data_set, set(self.data + new_item))
@@ -69,16 +69,16 @@ class TestPivotModel(unittest.TestCase):
         new_item = ['aaaa']
         model = FilterCheckboxListModel()
         model.set_list(self.data)
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endInsertRows"
-        ) as eir, mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endInsertRows"
+        ) as eir, mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             model.add_item(new_item, selected=False)
         self.assertFalse(model._all_selected)
 
     def test_click_select_all_when_all_selected(self):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(0, 0)
             model.click_index(index)
         self.assertFalse(model._all_selected)
@@ -87,7 +87,7 @@ class TestPivotModel(unittest.TestCase):
     def test_click_selected_item(self):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(2, 0)
             model.click_index(index)
         self.assertEqual(model._selected, set(self.data).difference(set(['a'])))
@@ -97,7 +97,7 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model._selected.discard('a')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(2, 0)
             model.click_index(index)
         self.assertEqual(model._selected, set(self.data))
@@ -106,7 +106,7 @@ class TestPivotModel(unittest.TestCase):
     def test_click_select_empty_when_selected(self):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(1, 0)
             model.click_index(index)
         self.assertFalse(model._empty_selected)
@@ -116,7 +116,7 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model._empty_selected = False
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(1, 0)
             model.click_index(index)
         self.assertTrue(model._empty_selected)
@@ -125,7 +125,7 @@ class TestPivotModel(unittest.TestCase):
     def test_click_select_all_when_not_all_selected(self):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(2, 0)
             model.click_index(index)
             index = model.index(0, 0)
@@ -169,7 +169,7 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model.set_filter('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(0, 0)
             model.click_index(index)
         self.assertFalse(model._all_selected)
@@ -180,7 +180,7 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model.set_filter('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(2, 0)
             model.click_index(index)
             index = model.index(0, 0)
@@ -193,7 +193,7 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model.set_filter('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(2, 0)
             model.click_index(index)
         self.assertEqual(model._selected_filtered, set(self.data[4:]))
@@ -204,7 +204,7 @@ class TestPivotModel(unittest.TestCase):
         model.set_list(self.data)
         model.set_filter('b')
         model._selected_filtered.discard('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(2, 0)
             model.click_index(index)
         self.assertEqual(model._selected_filtered, set(self.data[3:]))
@@ -246,9 +246,9 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model.set_filter('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endInsertRows"
-        ) as eir, mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endInsertRows"
+        ) as eir, mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             model.add_item(new_item)
         self.assertEqual(model._data, sorted(self.data + new_item))
         self.assertEqual(model._data_set, set(self.data + new_item))
@@ -261,9 +261,9 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model.set_filter('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endInsertRows"
-        ) as eir, mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endInsertRows"
+        ) as eir, mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             model.add_item(new_item)
         self.assertEqual(model._filter_index, [0, 4, 5, 6])
         self.assertEqual(model.data(model.index(0 + 2, 0)), new_item[0])
@@ -273,9 +273,9 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model.set_filter('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endInsertRows"
-        ) as eir, mock.patch("tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginInsertRows") as bir, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endInsertRows"
+        ) as eir, mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.dataChanged") as dc:
             model.add_item(new_item)
         self.assertEqual(model._filter_index, [3, 4, 5, 6])
         self.assertEqual(model.data(model.index(1 + 2, 0)), new_item[0])
@@ -284,8 +284,8 @@ class TestPivotModel(unittest.TestCase):
         items = set('a')
         model = FilterCheckboxListModel()
         model.set_list(self.data)
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endResetModel"
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endResetModel"
         ) as er:
             model.remove_items(items)
         self.assertEqual(model._data, self.data[1:])
@@ -295,8 +295,8 @@ class TestPivotModel(unittest.TestCase):
         items = set('a')
         model = FilterCheckboxListModel()
         model.set_list(self.data)
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endResetModel"
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endResetModel"
         ) as er:
             model.remove_items(items)
         self.assertEqual(model._selected, set(self.data[1:]))
@@ -308,8 +308,8 @@ class TestPivotModel(unittest.TestCase):
         model.set_list(self.data)
         model._selected.discard('a')
         model._all_selected = False
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endResetModel"
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endResetModel"
         ) as er:
             model.remove_items(items)
         self.assertEqual(model._selected, set(self.data[1:]))
@@ -320,8 +320,8 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model.set_filter('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endResetModel"
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endResetModel"
         ) as er:
             model.remove_items(items)
         self.assertEqual(model._filter_index, [3, 4])
@@ -332,8 +332,8 @@ class TestPivotModel(unittest.TestCase):
         model = FilterCheckboxListModel()
         model.set_list(self.data)
         model.set_filter('b')
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endResetModel"
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endResetModel"
         ) as er:
             model.remove_items(items)
         self.assertEqual(model._filter_index, [3, 4])
@@ -345,8 +345,8 @@ class TestPivotModel(unittest.TestCase):
         model.set_filter('b')
         model._selected_filtered.discard('a')
         model._all_selected = False
-        with mock.patch("tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
-            "tabularview_models.FilterCheckboxListModel.endResetModel"
+        with mock.patch("mvcmodels.tabularview_models.FilterCheckboxListModel.beginResetModel") as br, mock.patch(
+            "mvcmodels.tabularview_models.FilterCheckboxListModel.endResetModel"
         ) as er:
             model.remove_items(items)
         self.assertEqual(model._selected_filtered, set(self.data[4:]))

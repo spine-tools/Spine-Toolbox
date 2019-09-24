@@ -20,7 +20,7 @@ import unittest
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
-from time_series_model_variable_resolution import TimeSeriesModelVariableResolution
+from mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 
 
 class TestTimeSeriesModelFixedStep(unittest.TestCase):

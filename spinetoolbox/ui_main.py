@@ -20,7 +20,6 @@ import os
 import locale
 import logging
 import json
-import plugin_loader
 from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, SIGNAL
 from PySide2.QtWidgets import (
     QMainWindow,
@@ -32,10 +31,11 @@ from PySide2.QtWidgets import (
     QDockWidget,
     QAction,
     QWidgetAction,
-    QWidget,
 )
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
 from ui.mainwindow import Ui_MainWindow
+from mvcmodels.project_item_model import ProjectItemModel
+from mvcmodels.tool_template_model import ToolTemplateModel
 from widgets.about_widget import AboutWidget
 from widgets.custom_menus import (
     ProjectItemModelContextMenu,
@@ -47,7 +47,6 @@ from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
 from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 from widgets.tool_template_widget import ToolTemplateWidget
-from widgets.custom_delegates import CheckBoxDelegate
 from widgets.custom_qwidgets import ZoomWidget
 from widgets.julia_repl_widget import JuliaREPLWidget
 from widgets.python_repl_widget import PythonReplWidget
@@ -59,10 +58,8 @@ from config import (
     TEXTBROWSER_SS,
     MAINWINDOW_SS,
     DOCUMENTATION_PATH,
-    TREEVIEW_HEADER_SS,
 )
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
-from models import ProjectItemModel, ToolTemplateModel
 from project_item import RootProjectItem, CategoryProjectItem
 from project_items import data_store, data_connection, tool, view, data_interface
 
