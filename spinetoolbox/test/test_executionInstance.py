@@ -24,6 +24,7 @@ from PySide2.QtWidgets import QApplication, QWidget
 from ui_main import ToolboxUI
 from project import SpineToolboxProject
 from executioner import ExecutionInstance
+from project_item import ProjectItemResource
 from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 
 
@@ -70,31 +71,28 @@ class TestExecutionInstance(unittest.TestCase):
         self.toolbox.deleteLater()
         self.toolbox = None
 
-    def test_advertising_same_file_through_merging_branches(self):
-        """Test that the same file coming through merging branches is advertised only once."""
-        dc0 = mock.Mock()
+    def test_advertising_files_from_two_data_connections_to_a_data_interface(self):
+        """Test that advertising files from a DC to a DI works fine."""
         dc1 = mock.Mock()
         dc2 = mock.Mock()
         di3 = mock.Mock()
-        exec_order = {dc0: [dc1, dc2], dc1: [di3], dc2: [di3]}
+        exec_order = {dc1: [di3], dc2: [di3]}
         inst = ExecutionInstance(self.toolbox, exec_order)
-        dc0.simulate_execution.side_effect = lambda x: x.append_dc_refs(dc0, ["file1"])
+        resource1 = ProjectItemResource(None, "data_connection_file", "file1")
+        resource2 = ProjectItemResource(None, "data_connection_file", "file2")
+        dc1.simulate_execution.side_effect = lambda inst: inst.advertise_resources(dc1, resource1)
+        dc2.simulate_execution.side_effect = lambda inst: inst.advertise_resources(dc2, resource2)
         inst.simulate_execution()
-        self.assertEqual(inst.dc_refs_at_sight(dc1), {"file1"})
-        self.assertEqual(inst.dc_refs_at_sight(dc2), {"file1"})
-        self.assertEqual(inst.dc_refs_at_sight(di3), {"file1"})
+        self.assertEqual(inst.available_resources(di3), [resource1, resource2])
 
-    def test_advertising_same_file_in_dc_refs_and_data(self):
+    def test_advertising_file_and_reference_from_a_data_connection_to_a_data_interface(self):
         """Test that the same file in dc refs and data is advertised only once."""
         dc0 = mock.Mock()
         di1 = mock.Mock()
         exec_order = {dc0: [di1]}
         inst = ExecutionInstance(self.toolbox, exec_order)
-
-        def dc0_simul_exec_side_effect(x):
-            x.append_dc_refs(dc0, ["file1"])
-            x.append_dc_files(dc0, ["file1"])
-
-        dc0.simulate_execution.side_effect = dc0_simul_exec_side_effect
+        resource1 = ProjectItemResource(None, "data_connection_reference", "ref1")
+        resource2 = ProjectItemResource(None, "data_connection_file", "file2")
+        dc0.simulate_execution.side_effect = lambda inst: inst.advertise_resources(dc0, resource1, resource2)
         inst.simulate_execution()
-        self.assertEqual(inst.dc_refs_at_sight(di1), {"file1"})
+        self.assertEqual(inst.available_resources(di1), [resource1, resource2])

@@ -378,3 +378,20 @@ class ProjectItem(BaseProjectItem):
         """Tears down this item. Called by toolbox just before closing.
         Implement in subclasses to eg close all QMainWindows opened by this item.
         """
+
+
+class ProjectItemResource:
+    """Class to hold a resource made available by a project item
+    and that may be consumed by another project item."""
+
+    def __init__(self, provider, type_, data):
+        """Init class.
+
+        Args:
+            provider (ProjectItem): The item that provides the resource
+            type_ (str): The resource type
+            data (object): The data in the resource
+        """
+        self.provider = provider
+        self.type_ = type_
+        self.data = data

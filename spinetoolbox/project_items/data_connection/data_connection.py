@@ -22,7 +22,7 @@ import logging
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from project_item import ProjectItem
+from project_item import ProjectItem, ProjectItemResource
 from widgets.spine_datapackage_widget import SpineDatapackageWidget
 from helpers import busy_effect
 from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
@@ -310,7 +310,7 @@ class DataConnection(ProjectItem):
     def data_files(self):
         """Returns a list of files that are in the data directory."""
         if not os.path.isdir(self.data_dir):
-            return None
+            return []
         files = list()
         with os.scandir(self.data_dir) as scan_iterator:
             for entry in scan_iterator:
@@ -364,6 +364,14 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._properties_ui.label_dc_name.setText(self.name)
 
+    def resources_for_advertising(self):
+        """Returns list of references and files to advertise to the execution instance."""
+        refs = self.file_references()
+        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        resources = [ProjectItemResource(self, "data_connection_reference", ref) for ref in refs]
+        resources += [ProjectItemResource(self, "data_connection_file", f) for f in f_list]
+        return resources
+
     def execute(self):
         """Executes this Data Connection."""
         self._toolbox.msg.emit("")
@@ -372,14 +380,13 @@ class DataConnection(ProjectItem):
         inst = self._toolbox.project().execution_instance
         # Update Data Connection based on project items that are already executed
         # Add previously executed Tool's output file paths to references
-        self.references += inst.tool_output_files_at_sight(self.name)
+        tool_output_files = [r for r in inst.available_resources(self.name) if r.type_ == "tool_output_file"]
+        self.references += tool_output_files
         self.populate_reference_list(self.references, emit_item_changed=False)
         # Update execution instance for project items downstream
         # Add data file references and data files into execution instance
-        refs = self.file_references()
-        inst.append_dc_refs(self.name, refs)
-        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        inst.append_dc_files(self.name, f_list)
+        resources = self.resources_for_advertising()
+        inst.advertise_resources(self.name, *resources)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
@@ -390,11 +397,9 @@ class DataConnection(ProjectItem):
     def simulate_execution(self, inst):
         """Simulates executing this Data Connection."""
         super().simulate_execution(inst)
-        refs = self.file_references()
-        inst.append_dc_refs(self.name, refs)
-        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()] if self.data_files() else []
-        inst.append_dc_files(self.name, f_list)
-        if not refs + f_list:
+        resources = self.resources_for_advertising()
+        inst.advertise_resources(self.name, *resources)
+        if not resources:
             self.add_notification(
                 "This Data Connection does not have any references or data. "
                 "Add some in the Data Connection Properties panel."

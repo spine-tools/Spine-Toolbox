@@ -146,14 +146,16 @@ class View(ProjectItem):
         self._toolbox.msg.emit("***")
         inst = self._toolbox.project().execution_instance
         self._references.clear()
-        for url in inst.ds_urls_at_sight(self.name):
-            drivername = url.drivername.lower()
-            if drivername.startswith('sqlite'):
-                self._references.append(url)
-        for filepath in inst.tool_output_files_at_sight(self.name):
-            if filepath.lower().endswith('.sqlite'):
-                url = URL("sqlite", database=filepath)
-                self._references.append(url)
+        for resource in inst.available_resources(self.name):
+            if resource.type_ == "data_store_url":
+                url = resource.data
+                if url.drivername.lower().startswith('sqlite'):
+                    self._references.append(url)
+            elif resource.type_ == "tool_output_file":
+                filepath = resource.data
+                if filepath.lower().endswith('.sqlite'):
+                    url = URL("sqlite", database=filepath)
+                    self._references.append(url)
         self.populate_reference_list(self._references)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
@@ -165,10 +167,11 @@ class View(ProjectItem):
         """Update the list of references that this item is viewing."""
         super().simulate_execution(inst)
         self._references.clear()
-        for url in inst.ds_urls_at_sight(self.name):
-            drivername = url.drivername.lower()
-            if drivername.startswith('sqlite'):
-                self._references.append(url)
+        for resource in inst.available_resources(self.name):
+            if resource.type_ == "data_store_url":
+                url = resource.data
+                if url.drivername.lower().startswith('sqlite'):
+                    self._references.append(url)
         self.populate_reference_list(self._references)
 
     def _selected_indexes(self):

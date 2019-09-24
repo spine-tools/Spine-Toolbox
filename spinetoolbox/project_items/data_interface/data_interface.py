@@ -21,7 +21,7 @@ import os
 from PySide2.QtCore import Qt, Slot, QFileInfo
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
-from project_item import ProjectItem
+from project_item import ProjectItem, ProjectItemResource
 from helpers import create_dir, create_log_file_timestamp
 from spine_io.importers.csv_reader import CSVConnector
 from spine_io.importers.excel_reader import ExcelConnector
@@ -279,7 +279,8 @@ class DataInterface(ProjectItem):
         if all_data:
             # Add mapped data to a dict in the execution instance.
             # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
-            inst.add_di_data(self.name, all_data)
+            resource = ProjectItemResource(self, "data_interface_resource", all_data)
+            inst.advertise_resources(self.name, resource)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
@@ -289,8 +290,12 @@ class DataInterface(ProjectItem):
     def simulate_execution(self, inst):
         """Simulates executing this Item."""
         super().simulate_execution(inst)
-        file_list = inst.dc_refs_at_sight(self.name).union(inst.dc_files_at_sight(self.name))
-        self.update_file_model(file_list)
+        file_list = [
+            r.data
+            for r in inst.available_resources(self.name)
+            if r.type_ in ("data_connection_file", "data_connection_reference")
+        ]
+        self.update_file_model(set(file_list))
         if not file_list:
             self.add_notification(
                 "This Data Interface does not have any input data. "

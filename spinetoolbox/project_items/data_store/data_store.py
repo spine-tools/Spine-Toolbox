@@ -23,7 +23,7 @@ from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
-from project_item import ProjectItem
+from project_item import ProjectItem, ProjectItemResource
 from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
@@ -523,7 +523,8 @@ class DataStore(ProjectItem):
                 "& <i>password</i> for other database dialects."
             )
         else:
-            inst.add_ds_url(self.name, url)
+            resource = ProjectItemResource(self, "data_store_url", url)
+            inst.advertise_resources(self.name, resource)
             # Import mapped data from Data Interfaces in the execution instance
             try:
                 db_map = spinedb_api.DiffDatabaseMapping(url, upgrade=False, username="Mapper")
@@ -534,7 +535,10 @@ class DataStore(ProjectItem):
                 db_map = None
             if db_map:
                 all_import_errors = []
-                for (di_name, all_data) in inst.di_data_at_sight(self.name):
+                di_resources = [r for r in inst.available_resources(self.name) if r.type_ == "data_interface_resource"]
+                for resource in di_resources:
+                    di_name = resource.provider.name
+                    all_data = resource.data
                     self._toolbox.msg_proc.emit("Importing data from <b>{0}</b> into '{1}'".format(di_name, url))
                     for data in all_data:
                         import_num, import_errors = spinedb_api.import_data(db_map, **data)
@@ -580,7 +584,8 @@ class DataStore(ProjectItem):
         super().simulate_execution(inst)
         url = self.make_url(log_errors=False)
         if url:
-            inst.add_ds_url(self.name, url)
+            resource = ProjectItemResource(self, "data_store_url", url)
+            inst.advertise_resources(self.name, resource)
         else:
             self.add_notification(
                 "The URL for this Data Store is not correctly set. " "Set it in the Data Store Properties panel."

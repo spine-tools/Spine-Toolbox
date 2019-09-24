@@ -23,6 +23,7 @@ import logging
 import tempfile
 from PySide2.QtCore import QObject, Signal, Slot
 import qsubprocess
+from project_item import ProjectItemResource
 from helpers import create_output_dir_timestamp, create_dir
 
 
@@ -463,7 +464,8 @@ class ToolInstance(QObject):
                         self._toolbox.msg_error.emit(
                             "[OSError] Copying pattern {0} to {1} failed".format(fname_path, dst)
                         )
-                    self._toolbox.project().execution_instance.append_tool_output_file(self.tool.name, dst)
+                    resource = ProjectItemResource(self.tool, "tool_output_file", dst)
+                    self._toolbox.project().execution_instance.advertise_resources(self.tool.name, resource)
                     saved_files.append(os.path.join(dst_subdir, fname))
             else:
                 output_file = os.path.join(self.basedir, pattern)
@@ -480,7 +482,8 @@ class ToolInstance(QObject):
                     self._toolbox.msg_error.emit(
                         "[OSError] Copying output file {0} to {1} failed".format(output_file, dst)
                     )
-                self._toolbox.project().execution_instance.append_tool_output_file(self.tool.name, dst)
+                resource = ProjectItemResource(self.tool, "tool_output_file", dst)
+                self._toolbox.project().execution_instance.advertise_resources(self.tool.name, resource)
                 saved_files.append(pattern)
         return saved_files, failed_files
 
