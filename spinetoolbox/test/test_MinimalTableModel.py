@@ -17,7 +17,7 @@ Unit tests for the MinimalTableModel class.
 """
 
 import unittest
-from models import MinimalTableModel
+from mvcmodels.minimal_table_model import MinimalTableModel
 from PySide2.QtCore import Qt
 
 

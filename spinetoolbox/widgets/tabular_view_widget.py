@@ -37,7 +37,7 @@ from widgets.custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHori
 from widgets.custom_qdialog import CommitDialog
 from widgets.parameter_value_editor import ParameterValueEditor
 from helpers import fix_name_ambiguity, tuple_itemgetter, busy_effect
-from tabularview_models import PivotTableSortFilterProxy, PivotTableModel
+from mvcmodels.tabularview_models import PivotTableSortFilterProxy, PivotTableModel
 from config import MAINWINDOW_SS
 
 # TODO: connect to all add, delete relationship/object classes widgets to this.

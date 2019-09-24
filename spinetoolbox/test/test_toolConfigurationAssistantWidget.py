@@ -22,6 +22,8 @@ from unittest.mock import patch
 import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
+from PySide2.QtCore import Qt
+from PySide2.QtGui import QCursor
 from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 
 
@@ -247,6 +249,12 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
             self.widget._handle_py_call_reconfiguration_finished(0)
         mock_add_succ_msg.assert_called()
         self.assertIsNone(self.widget.q_process)
+
+    def test_restore_override_cursor_at_close(self):
+        """Test that no override cursor is set after closing the widget."""
+        QApplication.setOverrideCursor(QCursor(Qt.BusyCursor))
+        self.widget.close()
+        self.assertIsNone(QApplication.overrideCursor())
 
 
 if __name__ == '__main__':

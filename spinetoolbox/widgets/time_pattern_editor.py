@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimePattern
 from ui.time_pattern_editor import Ui_TimePatternEditor
-from time_pattern_model import TimePatternModel
+from mvcmodels.time_pattern_model import TimePatternModel
 from widgets.custom_qtableview import IndexedValueTableView
 from widgets.indexed_value_table_context_menu import handle_table_context_menu
 

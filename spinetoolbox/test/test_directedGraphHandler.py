@@ -775,9 +775,8 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertTrue(d.has_edge("b", "c"))
         exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(len(exec_order), 3)
-        self.assertEqual(exec_order[0], "a")
-        self.assertEqual(exec_order[1], "b")
-        self.assertEqual(exec_order[2], "c")
+        self.assertEqual(list(exec_order.keys()), ["a", "b", "c"])
+        self.assertEqual(list(exec_order.values()), [["b"], ["c"], []])
 
     def test_execution_order2(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -796,9 +795,11 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertTrue(d.has_edge("b", "c"))
         exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(len(exec_order), 3)
-        self.assertTrue(exec_order[0] == "a" or exec_order[0] == "b")
-        self.assertTrue(exec_order[1] == "a" or exec_order[1] == "b")
-        self.assertEqual(exec_order[2], "c")
+        exec_list = list(exec_order)
+        self.assertTrue(exec_list in (["a", "b", "c"], ["b", "a", "c"]))
+        self.assertTrue(exec_order["a"] == ["c"])
+        self.assertTrue(exec_order["b"] == ["c"])
+        self.assertTrue(exec_order["c"] == [])
 
     def test_execution_order3(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -815,10 +816,11 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(d.edges()), 3)
         exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(4, len(exec_order))
-        self.assertTrue(exec_order[0] == "a" or exec_order[0] == "c")
-        self.assertTrue(exec_order[1] == "b" or exec_order[1] == "c" or exec_order[1] == "a")
-        self.assertTrue(exec_order[2] == "c" or exec_order[2] == "b")
-        self.assertTrue(exec_order[3] == "d")
+        exec_list = list(exec_order)
+        self.assertTrue(exec_list in (["a", "b", "c", "d"], ["a", "c", "b", "d"], ["c", "a", "b", "d"]))
+        self.assertTrue(exec_order["a"] == ["b"])
+        self.assertTrue(exec_order["b"] == ["d"])
+        self.assertTrue(exec_order["c"] == ["d"])
 
     def test_execution_order4(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -835,10 +837,11 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(d.edges()), 4)
         exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(4, len(exec_order))
-        self.assertTrue(exec_order[0] == "a")
-        self.assertTrue(exec_order[1] == "b" or exec_order[1] == "c")
-        self.assertTrue(exec_order[2] == "b" or exec_order[2] == "c")
-        self.assertTrue(exec_order[3] == "d")
+        exec_list = list(exec_order)
+        self.assertTrue(exec_list in (["a", "b", "c", "d"], ["a", "c", "b", "d"]))
+        self.assertTrue(exec_order["a"] in (["b", "c"], ["c", "b"]))
+        self.assertTrue(exec_order["b"] == ["d"])
+        self.assertTrue(exec_order["c"] == ["d"])
 
     def test_execution_order5(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -855,7 +858,7 @@ class TestDirectedGraphHandler(unittest.TestCase):
         self.assertEqual(len(d.edges()), 0)
         exec_order = self.dag_handler.calc_exec_order(d)
         self.assertEqual(1, len(exec_order))
-        self.assertTrue(exec_order[0] == "a")
+        self.assertTrue(exec_order["a"] == [])
 
     def test_execution_order6(self):
         """Test that execution order is correct with all kinds of graphs.
@@ -890,6 +893,20 @@ class TestDirectedGraphHandler(unittest.TestCase):
         exec_order = self.dag_handler.calc_exec_order(d)
         # Execution order for this graph should be empty since it's not a DAG
         self.assertEqual(0, len(exec_order))
+
+    def test_execution_order_to_node_1(self):
+        """Test that execution order to node is correct with all kinds of graphs.
+        Graph Nodes: [a, b, c, d]. Edges: [a->b, a->c, b->d]
+        Expected order: a-b-c-d or a-c-b-d
+        """
+        d = nx.DiGraph()
+        d.add_edges_from([("a", "b"), ("a", "c"), ("b", "d")])
+        self.dag_handler.add_dag(d)
+        # Check that the graph was created successfully
+        self.assertTrue(len(self.dag_handler.dags()) == 1)
+        d = self.dag_handler.dags()[0]
+        exec_order = self.dag_handler.calc_exec_order_to_node(d, "d")
+        self.assertEqual(exec_order, {'a': ['b'], 'b': ['d'], 'd': []})
 
     def test_remove_node_from_graph1(self):
         """Test that graphs are updated correctly when project items are removed.

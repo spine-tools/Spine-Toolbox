@@ -19,35 +19,39 @@ Contains classes for handling project item execution.
 import logging
 import os
 import fnmatch
+import random
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
 
 
-class DirectedGraphHandler:
+class DirectedGraphHandler(QObject):
     """Class for manipulating graphs according to user's actions.
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
     """
 
+    dag_simulation_requested = Signal("QVariant", name="dag_simulation_requested")
+
     def __init__(self, toolbox):
         """Class constructor."""
+        QObject.__init__(self)
         self._toolbox = toolbox
-        self.running_dag = None
-        self.running_item = None
         self._dags = list()
 
     def dags(self):
         """Returns a list of graphs (DiGraph) in the project."""
         return self._dags
 
-    def add_dag(self, dag):
+    def add_dag(self, dag, request_simulation=True):
         """Add graph to list.
 
         Args:
             dag (DiGraph): Graph to add
         """
         self._dags.append(dag)
+        if request_simulation:
+            self.dag_simulation_requested.emit(dag)
 
     def remove_dag(self, dag):
         """Remove graph from instance variable list.
@@ -65,7 +69,7 @@ class DirectedGraphHandler:
         """
         dag = nx.DiGraph()
         dag.add_node(node_name)
-        self._dags.append(dag)
+        self.add_dag(dag)
 
     def add_graph_edge(self, src_node, dst_node):
         """Adds an edge between the src and dst nodes. If nodes are in
@@ -81,22 +85,19 @@ class DirectedGraphHandler:
         """
         src_graph = self.dag_with_node(src_node)
         dst_graph = self.dag_with_node(dst_node)
-        if src_node == dst_node:
-            # Add self-loop to src graph and return
-            src_graph.add_edge(src_node, dst_node)
-            return
         if src_graph == dst_graph:
             # src and dst are already in same graph. Just add edge to src_graph and return
             src_graph.add_edge(src_node, dst_node)
-            return
-        # Unify graphs
-        union_dag = nx.union(src_graph, dst_graph)
-        union_dag.add_edge(src_node, dst_node)
-        self.add_dag(union_dag)
-        # Remove src and dst graphs
-        self.remove_dag(src_graph)
-        self.remove_dag(dst_graph)
-        return
+            self.dag_simulation_requested.emit(src_graph)
+        else:
+            # Unify graphs
+            union_dag = nx.union(src_graph, dst_graph)
+            union_dag.add_edge(src_node, dst_node)
+            # Remove src and dst graphs
+            self.remove_dag(src_graph)
+            self.remove_dag(dst_graph)
+            # Add union graph
+            self.add_dag(union_dag)
 
     def remove_graph_edge(self, src_node, dst_node):
         """Removes edge from a directed graph.
@@ -106,54 +107,28 @@ class DirectedGraphHandler:
             dst_node (str): Destination project item node name
         """
         dag = self.dag_with_edge(src_node, dst_node)
-        if src_node == dst_node:  # Removing self-loop
-            dag.remove_edge(src_node, dst_node)
-            return
-        # dag_copy = copy.deepcopy(dag)  # Make a copy before messing with the graph
         dag.remove_edge(src_node, dst_node)
-        # Check if src or dst node is isolated (without connections) after removing the edge
-        if self.node_is_isolated(src_node):
-            dag.remove_node(src_node)  # Remove node from original dag
-            g = nx.DiGraph()
-            g.add_node(src_node)  # Make a new graph containing only the isolated node
-            self.add_dag(g)
+        components = list(nx.weakly_connected_components(dag))
+        if len(components) == 1:
+            # Graph wasn't splitted, we're fine
+            self.dag_simulation_requested.emit(dag)
             return
-        if self.node_is_isolated(dst_node):
-            dag.remove_node(dst_node)
-            g = nx.DiGraph()
-            g.add_node(dst_node)
-            self.add_dag(g)
-            return
-        # If src node still has a path (ignoring edge directions) to dst node -> return, we're fine
-        if self.nodes_connected(dag, src_node, dst_node):
-            return
-        # Now for the fun part. We need to break the original DAG into two separate DAGs.
-        # Get src node descendant edges, ancestor edges, and its own edges
-        src_descendants = nx.descendants(dag, src_node)
-        src_descendant_edges = nx.edges(dag, src_descendants)
-        src_ancestors = nx.ancestors(dag, src_node)
-        src_ancestor_edges = nx.edges(dag, src_ancestors)
-        src_edges = nx.edges(dag, src_node)
-        # Get dst node descendant edges, ancestor edges, and its own edges
-        dst_descendants = nx.descendants(dag, dst_node)
-        dst_descendant_edges = nx.edges(dag, dst_descendants)
-        dst_ancestors = nx.ancestors(dag, dst_node)
-        dst_ancestor_edges = nx.edges(dag, dst_ancestors)
-        dst_edges = nx.edges(dag, dst_node)
-        # Make descendant graph. This graph contains src node and all its neighbors.
-        descendant_graph = nx.DiGraph()
-        descendant_graph.add_edges_from(src_descendant_edges)
-        descendant_graph.add_edges_from(src_ancestor_edges)
-        descendant_graph.add_edges_from(src_edges)
-        # Make ancestor graph. This graph contains the dst node and all its neighbors.
-        ancestor_graph = nx.DiGraph()
-        ancestor_graph.add_edges_from(dst_descendant_edges)
-        ancestor_graph.add_edges_from(dst_ancestor_edges)
-        ancestor_graph.add_edges_from(dst_edges)
+        # Graph was splitted into two
+        left_nodes, right_nodes = components
+        left_edges = nx.edges(dag, left_nodes)
+        right_edges = nx.edges(dag, right_nodes)
+        # Make left graph.
+        left_graph = nx.DiGraph()
+        left_graph.add_nodes_from(left_nodes)
+        left_graph.add_edges_from(left_edges)
+        # Make right graph.
+        right_graph = nx.DiGraph()
+        right_graph.add_nodes_from(right_nodes)
+        right_graph.add_edges_from(right_edges)
         # Remove old graph and add new graphs instead
         self.remove_dag(dag)
-        self.add_dag(descendant_graph)
-        self.add_dag(ancestor_graph)
+        self.add_dag(left_graph)
+        self.add_dag(right_graph)
 
     def remove_node_from_graph(self, node_name):
         """Removes node from a graph that contains
@@ -162,7 +137,7 @@ class DirectedGraphHandler:
         Args:
             node_name (str): Project item name
         """
-        # This is called every time a previous project is closed and another is opened.
+        # This is called every time a previous project is closed and another is opened. --Really?
         g = self.dag_with_node(node_name)
         edges_to_remove = list()
         for edge in g.edges():
@@ -184,6 +159,8 @@ class DirectedGraphHandler:
         g.remove_nodes_from(nodes_to_remove)
         if not g.nodes():
             self.remove_dag(g)
+        else:
+            self.dag_simulation_requested.emit(g)
 
     def rename_node(self, old_name, new_name):
         """Handles renaming the node and edges in a graph when a project item is renamed.
@@ -231,47 +208,29 @@ class DirectedGraphHandler:
         return None
 
     def calc_exec_order(self, g):
-        """Returns an bfs-ordered list of nodes in the given graph.
-        Adds a dummy source node to the graph if there are more than
-        one nodes that have no inbound connections. The dummy source
-        node is needed for the bfs-algorithm.
+        """Returns a dict of nodes in the given graph in topological sort order.
+        Key is the node, value is a list of its direct successors
+        (the successors are important to do the advertising).
+        A topological sort is a nonunique permutation of the nodes such that an edge from u to v
+        implies that u appears before v in the topological sort order.
 
         Args:
             g (DiGraph): Directed graph to process
 
         Returns:
-            list: bfs-ordered list of node names (first item at index 0).
-            Empty list if given graph is not a DAG.
+            dict: key is the node name, value is its direct successors
+            Empty dict if given graph is not a DAG.
         """
-        exec_order = list()
         if not nx.is_directed_acyclic_graph(g):
-            return exec_order
-        sources = self.source_nodes(g)  # Project items that have no inbound connections
-        if not sources:
-            # Should not happen if nx.is_directed_acyclic_graph() works
-            logging.error("This graph has no source nodes. Execution failed.")
-            return exec_order
-        if len(sources) > 1:
-            # Make an invisible source node for all nodes that have no inbound connections
-            invisible_src_node = 0  # This is unique name since it's an integer. Item called "0" can still be created
-            g.add_node(invisible_src_node)
-            for src in sources:
-                g.add_edge(invisible_src_node, src)
-            # Calculate bfs-order by using the invisible dummy source node
-            edges_to_execute = list(nx.bfs_edges(g, invisible_src_node))
-            # Now remove the invisible dummy source node
-            for src in sources:
-                g.remove_edge(invisible_src_node, src)
-            g.remove_node(invisible_src_node)
-        else:
-            # The dag contains only one source item, so it can be used as the source node directly
-            # Calculate bfs-order
-            edges_to_execute = list(nx.bfs_edges(g, sources[0]))
-            exec_order.append(sources[0])  # Add source node
-        # Collect dst nodes from bfs-edge iterator
-        for src, dst in edges_to_execute:
-            exec_order.append(dst)
-        return exec_order
+            return {}
+        return {n: list(g.successors(n)) for n in nx.topological_sort(g)}
+
+    def calc_exec_order_to_node(self, g, node):
+        # NOTE: Not in use at the moment
+        """Like calc_exec_order but only until node,
+        and ignoring all nodes that are not its ancestors."""
+        bunch = list(nx.ancestors(g, node)) + [node]
+        return self.calc_exec_order(g.subgraph(bunch))
 
     def node_is_isolated(self, node, allow_self_loop=False):
         """Checks if the project item with the given name has any connections.
@@ -321,44 +280,19 @@ class DirectedGraphHandler:
         return s
 
     @staticmethod
-    def nodes_connected(dag, a, b):
-        """Checks if node a is connected to node b. Edge directions are ignored.
-        If any of source node a's ancestors or descendants have a path to destination
-        node b, returns True. Also returns True if destination node b has a path to
-        any of source node a's ancestors or descendants.
-
-        Args:
-            dag (DiGraph): Graph that contains nodes a and b
-            a (str): Node name
-            b (str): Another node name
-
-        Returns:
-            bool: True if a and b are connected, False otherwise
-        """
-        src_anc = nx.ancestors(dag, a)
-        src_des = nx.descendants(dag, a)
-        # logging.debug("src {0} ancestors:{1}. descendants:{2}".format(a, src_anc, src_des))
-        # Check ancestors
-        for anc in src_anc:
-            # Check if any src ancestor has a path to dst node
-            if nx.has_path(dag, anc, b):
-                # logging.debug("Found path from anc {0} to dst {1}".format(anc, b))
-                return True
-            # Check if dst node has a path to any src ancestor
-            if nx.has_path(dag, b, anc):
-                # logging.debug("Found path from dst {0} to anc {1}".format(b, anc))
-                return True
-        # Check descendants
-        for des in src_des:
-            # Check if any src descendant has a path to dst node
-            if nx.has_path(dag, des, b):
-                # logging.debug("Found path from des {0} to dst {1}".format(des, b))
-                return True
-            # Check if dst node has a path to any src descendant
-            if nx.has_path(dag, b, des):
-                # logging.debug("Found path from dst {0} to des {1}".format(b, des))
-                return True
-        return False
+    def edges_causing_loops(g):
+        """Returns a list of edges whose removal from g results in it becoming acyclic."""
+        result = list()
+        h = g.copy()  # Let's work on a copy of the graph
+        while True:
+            try:
+                cycle = list(nx.find_cycle(h))
+            except nx.NetworkXNoCycle:
+                break
+            edge = random.choice(cycle)
+            h.remove_edge(*edge)
+            result.append(edge)
+        return result
 
     @staticmethod
     def export_to_graphml(g, path):
@@ -383,35 +317,38 @@ class ExecutionInstance(QObject):
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
-        execution_list (list): Ordered list of nodes to execute
+        ordered_nodes (dict): dict of nodes to execute; key is the node, value is its direct successors
     """
 
     graph_execution_finished_signal = Signal(int, name="graph_execution_finished_signal")
     project_item_execution_finished_signal = Signal(int, name="project_item_execution_finished_signal")
 
-    def __init__(self, toolbox, execution_list):
+    def __init__(self, toolbox, ordered_nodes):
         """Class constructor."""
         QObject.__init__(self)
         self._toolbox = toolbox
-        self.execution_list = execution_list  # Ordered list of nodes to execute. First node at index 0
+        self._ordered_nodes = ordered_nodes
+        self.execution_list = list(ordered_nodes)  # Ordered list of nodes to execute. First node at index 0
         self.running_item = None
-        self.dc_refs = list()  # Data Connection reference list
-        self.dc_files = list()  # Data Connection file list
-        self.ds_refs = dict()  # DS refs. Key is dialect, value is a list of paths or urls depending on dialect
-        self.di_data = dict()  # Data Interface data. Key is DI name, value is data for import
-        self.tool_output_files = list()  # Paths to result files from ToolInstance
+        # Data seen by project items in the list
+        self.dc_refs = dict()  # Key is DC item name, value is reference list
+        self.dc_files = dict()  # Key is DC item name, value is file list
+        self.ds_urls = dict()  # Key is DS item name, value is url
+        self.di_data = dict()  # Key is DI item name, value is data for import
+        self.tool_output_files = dict()  # Key is Tool item name, value is list of paths to output files
+        self.rank = 0  # The number in the list of the item currently simulated
 
     def start_execution(self):
         """Pops the next item from the execution list and starts executing it."""
-        self.running_item = self.execution_list.pop(0)
-        self.execute_project_item()
+        item_name = self.execution_list.pop(0)
+        self.execute_project_item(item_name)
 
-    def execute_project_item(self):
+    def execute_project_item(self, item_name):
         """Starts executing project item."""
+        item_ind = self._toolbox.project_item_model.find_item(item_name)
+        self.running_item = self._toolbox.project_item_model.project_item(item_ind)
         self.project_item_execution_finished_signal.connect(self.item_execution_finished)
-        item_ind = self._toolbox.project_item_model.find_item(self.running_item)
-        item = self._toolbox.project_item_model.project_item(item_ind)
-        item.execute()
+        self.running_item.execute()
 
     @Slot(int, name="item_execution_finished")
     def item_execution_finished(self, item_finish_state):
@@ -430,12 +367,13 @@ class ExecutionInstance(QObject):
             # User pressed Stop button
             self.graph_execution_finished_signal.emit(-2)
             return
+        self.propagate_data(self.running_item.name)
         try:
-            self.running_item = self.execution_list.pop(0)
+            item_name = self.execution_list.pop(0)
         except IndexError:
             self.graph_execution_finished_signal.emit(0)
             return
-        self.execute_project_item()
+        self.execute_project_item(item_name)
 
     def stop(self):
         """Stops running project item and terminates current graph execution."""
@@ -443,159 +381,200 @@ class ExecutionInstance(QObject):
             self._toolbox.msg.emit("No running item")
             self.graph_execution_finished_signal.emit(-2)
             return
-        item_ind = self._toolbox.project_item_model.find_item(self.running_item)
-        item = self._toolbox.project_item_model.project_item(item_ind)
-        item.stop_execution()
+        self.running_item.stop_execution()
         return
 
-    def add_ds_ref(self, dialect, ref):
-        """Adds given database reference to a dictionary. Key is the dialect.
-        If dialect is sqlite, value is a list of full paths to sqlite files.
-        For other dialects, key is the dialect and value is a list of URLs to
-        database servers.
-
-        Args:
-            dialect (str): Dialect name (lower case)
-            ref (str): Database reference
+    def simulate_execution(self):
+        """Simulates execution of all items in the execution list.
         """
-        try:
-            self.ds_refs[dialect].append(ref)
-        except KeyError:
-            self.ds_refs[dialect] = [ref]
+        for self.rank, item in enumerate(self.execution_list):
+            ind = self._toolbox.project_item_model.find_item(item)
+            project_item = self._toolbox.project_item_model.project_item(ind)
+            project_item.simulate_execution(self)
+            self.propagate_data(item)
 
-    def add_di_data(self, di_name, data):
-        """Adds given data from data interface to a list.
+    def add_ds_url(self, ds_item, url):
+        """Adds given url to the list of urls seen by ds_item output items.
 
         Args:
-            di_name (str): Data interface name
-            data (dict): Data to import
+            ds_item (str): name of Data store item that provides the url
+            url (URL): Url
         """
-        self.di_data[di_name] = data
+        for item in self._ordered_nodes[ds_item]:
+            self.ds_urls.setdefault(item, set()).add(url)
 
-    def append_dc_refs(self, refs):
-        """Adds given file paths (Data Connection file references) to a list.
+    def add_di_data(self, di_item, data):
+        """Adds given import data to the list seen by di_item output items.
 
         Args:
+            di_item (str): name of Data interface item that provides the data
+            data (list): Data to import
+        """
+        for item in self._ordered_nodes[di_item]:
+            self.di_data.setdefault(item, list()).append((di_item, data))
+
+    def append_dc_refs(self, dc_item, refs):
+        """Adds given file paths (Data Connection file references) to the list seen by dc_item output items.
+
+        Args:
+            dc_item (str): name of Data connection item that provides the file references
             refs (list): List of file paths (references)
         """
-        self.dc_refs += refs
+        for item in self._ordered_nodes[dc_item]:
+            self.dc_refs.setdefault(item, set()).update(refs)
 
-    def append_dc_files(self, files):
-        """Adds given project data file paths to a list.
+    def append_dc_files(self, dc_item, files):
+        """Adds given project data file paths to the list seen by dc_item output items.
 
         Args:
-            files (list): List of file paths
+            dc_item (str): name of Data connection item that provides the files
+            refs (list): List of file paths (references)
         """
-        self.dc_files += files
+        for item in self._ordered_nodes[dc_item]:
+            self.dc_files.setdefault(item, set()).update(files)
 
-    def append_tool_output_file(self, filepath):
-        """Adds given file path to a list containing paths to Tool output files.
+    def append_tool_output_file(self, tool_item, filepath):
+        """Adds given file path provided to the list seen by tool_item output items.
 
         Args:
+            tool_item (str): name of Tool item that provides the file
             filepath (str): Path to a tool output file (in tool result directory)
         """
-        self.tool_output_files.append(filepath)
+        for item in self._ordered_nodes[tool_item]:
+            self.tool_output_files.setdefault(item, set()).add(filepath)
 
-    def find_file(self, filename):
-        """Returns the first occurrence to full path to given file name or None if file was not found.
+    def ds_urls_at_sight(self, item):
+        """Returns ds urls currently seen by the given item.
+
+        Args:
+            item (str): item name
+        """
+        return self.ds_urls.get(item, set())
+
+    def di_data_at_sight(self, item):
+        """Returns di data currently seen by the given item.
+
+        Args:
+            item (str): item name
+        """
+        return self.di_data.get(item, list())
+
+    def dc_refs_at_sight(self, item):
+        """Returns dc refs currently seen by the given item.
+
+        Args:
+            item (str): item name
+        """
+        return self.dc_refs.get(item, set())
+
+    def dc_files_at_sight(self, item):
+        """Returns dc files currently seen by the given item.
+
+        Args:
+            item (str): item name
+        """
+        return self.dc_files.get(item, set())
+
+    def tool_output_files_at_sight(self, item):
+        """Returns tool output files currently seen by the given item.
+
+        Args:
+            item (str): item name
+        """
+        return self.tool_output_files.get(item, set())
+
+    def propagate_data(self, input_item):
+        """Propagate data seen by given item into output items.
+        This is called after successful execution of input_item.
+        Note that executing DAGs in BFS-order ensures data is correctly propagated.
+
+        Args:
+            input_item (str): Project item name whose data needs to be propagated
+        """
+        # Everything that the input item sees...
+        ds_urls_at_sight = self.ds_urls_at_sight(input_item)
+        di_data_at_sight = self.di_data_at_sight(input_item)
+        dc_refs_at_sight = self.dc_refs_at_sight(input_item)
+        dc_files_at_sight = self.dc_files_at_sight(input_item)
+        tool_output_files_at_sight = self.tool_output_files_at_sight(input_item)
+        # ...make it seeable also by output items
+        for item in self._ordered_nodes[input_item]:
+            self.ds_urls.setdefault(item, set()).update(ds_urls_at_sight)
+            self.di_data.setdefault(item, list()).extend(di_data_at_sight)
+            self.dc_refs.setdefault(item, set()).update(dc_refs_at_sight)
+            self.dc_files.setdefault(item, set()).update(dc_files_at_sight)
+            self.tool_output_files.setdefault(item, set()).update(tool_output_files_at_sight)
+
+    def find_file(self, filename, item):
+        """Returns the first occurrence of full path to given file name in files seen by the given item,
+        or None if file was not found.
 
         Args:
             filename (str): Searched file name (no path) TODO: Change to pattern
+            item (str): item name
 
         Returns:
             str: Full path to file if found, None if not found
         """
         # Look in Data Stores
-        # SQLITE
-        try:
-            for sqlite_ref in self.ds_refs["sqlite"]:
-                _, file_candidate = os.path.split(sqlite_ref)
+        for url in self.ds_urls_at_sight(item):
+            drivername = url.drivername.lower()
+            if drivername.startswith('sqlite'):
+                filepath = url.database
+                _, file_candidate = os.path.split(filepath)
                 if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, sqlite_ref))
-                    return sqlite_ref
-        except KeyError:
-            pass
-        # MYSQL
-        try:
-            for mysql_url in self.ds_refs["mysql"]:
-                _, file_candidate = os.path.split(mysql_url)
-                if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, mysql_url))
-                    return mysql_url
-        except KeyError:
-            pass
-        # MSSQL
-        try:
-            for mssql_url in self.ds_refs["mssql"]:
-                _, file_candidate = os.path.split(mssql_url)
-                if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, mssql_url))
-                    return mssql_url
-        except KeyError:
-            pass
-        # POSTGRESQL
-        try:
-            for postgresql_url in self.ds_refs["postgresql"]:
-                _, file_candidate = os.path.split(postgresql_url)
-                if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds refs: {1}".format(filename, postgresql_url))
-                    return postgresql_url
-        except KeyError:
-            pass
-        # ORACLE
-        try:
-            for oracle_url in self.ds_refs["oracle"]:
-                _, file_candidate = os.path.split(oracle_url)
-                if file_candidate == filename:
-                    logging.debug("Found path for % from ds refs: %s", filename, oracle_url)
-                    return oracle_url
-        except KeyError:
-            pass
+                    # logging.debug("Found path for {0} from ds urls: {1}".format(filename, url))
+                    return filepath
+            else:
+                # TODO: Other dialects
+                pass
         # Look in Data Connections
-        for dc_ref in self.dc_refs:
+        for dc_ref in self.dc_refs_at_sight(item):
             _, file_candidate = os.path.split(dc_ref)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
                 return dc_ref
-        for dc_file in self.dc_files:
+        for dc_file in self.dc_files_at_sight(item):
             _, file_candidate = os.path.split(dc_file)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
                 return dc_file
         # Look in Tool output files
-        for tool_file in self.tool_output_files:
+        for tool_file in self.tool_output_files_at_sight(item):
             _, file_candidate = os.path.split(tool_file)
             if file_candidate == filename:
                 # logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
                 return tool_file
         return None
 
-    def find_optional_files(self, pattern):
-        """Returns a list of found paths to files that match the given pattern.
+    def find_optional_files(self, pattern, item):
+        """Returns a list of found paths to files that match the given pattern in files seen by item.
 
         Returns:
             list: List of (full) paths
+            item (str): item name
         """
         # logging.debug("Searching optional input files. Pattern: '{0}'".format(pattern))
         matches = list()
         # Find matches when pattern includes wildcards
         if ('*' in pattern) or ('?' in pattern):
-            # Find matches in Data Store references
-            try:
-                # NOTE: Only sqlite files are checked
-                ds_matches = fnmatch.filter(self.ds_refs["sqlite"], pattern)
-            except KeyError:
-                ds_matches = list()
+            # Find matches in Data Store urls. NOTE: Only sqlite urls are considered
+            ds_urls = self.ds_urls_at_sight(item)
+            ds_files = [url.database for url in ds_urls if url.drivername.lower().startswith('sqlite')]
+            ds_matches = fnmatch.filter(ds_files, pattern)
             # Find matches in Data Connection references
-            dc_ref_matches = fnmatch.filter(self.dc_refs, pattern)
+            dc_refs = self.dc_refs_at_sight(item)
+            dc_ref_matches = fnmatch.filter(dc_refs, pattern)
             # Find matches in Data Connection data files
-            dc_file_matches = fnmatch.filter(self.dc_files, pattern)
+            dc_files = self.dc_files_at_sight(item)
+            dc_file_matches = fnmatch.filter(dc_files, pattern)
             # Find matches in Tool output files
-            tool_matches = fnmatch.filter(self.tool_output_files, pattern)
+            tool_output_files = self.tool_output_files_at_sight(item)
+            tool_matches = fnmatch.filter(tool_output_files, pattern)
             matches += ds_matches + dc_ref_matches + dc_file_matches + tool_matches
         else:
             # Pattern is an exact filename (no wildcards)
-            match = self.find_file(pattern)
+            match = self.find_file(pattern, item)
             if match is not None:
                 matches.append(match)
         # logging.debug("Matches:{0}".format(matches))

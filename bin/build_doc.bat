@@ -2,4 +2,4 @@
 @TITLE Build Spine Toolbox docs
 
 ECHO Building Spine Toolbox documentation
-..\docs\make.bat html
+%~dp0\..\docs\make.bat html

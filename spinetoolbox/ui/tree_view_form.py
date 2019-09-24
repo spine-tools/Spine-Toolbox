@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file '../spinetoolbox/ui/tree_view_form.ui',
-# licensing of '../spinetoolbox/ui/tree_view_form.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/tree_view_form.ui',
+# licensing of 'spinetoolbox/ui/tree_view_form.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -412,6 +412,6 @@ class Ui_MainWindow(object):
         self.actionRemove_selection.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Del", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
+from widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
 import resources_icons_rc
