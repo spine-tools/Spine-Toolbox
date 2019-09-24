@@ -25,7 +25,6 @@ from PySide2.QtWidgets import (
     QToolButton,
     QApplication,
     QGraphicsScene,
-    QGraphicsRectItem,
     QAction,
     QWidgetAction,
     QAbstractItemView,
@@ -38,7 +37,7 @@ from widgets.data_store_widget import DataStoreForm
 from widgets.custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from widgets.custom_qwidgets import ZoomWidget
 from widgets.report_plotting_failure import report_plotting_failure
-from treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
+from mvcmodels.treeview_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from graphics_items import ObjectItem, ArcItem, CustomTextItem
 from helpers import busy_effect, fix_name_ambiguity
 from plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints

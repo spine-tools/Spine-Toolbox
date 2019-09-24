@@ -34,7 +34,9 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QIcon
-from models import EmptyRowModel, MinimalTableModel, HybridTableModel
+from mvcmodels.minimal_table_model import MinimalTableModel
+from mvcmodels.empty_row_model import EmptyRowModel
+from mvcmodels.hybrid_table_model import HybridTableModel
 from widgets.custom_delegates import (
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,

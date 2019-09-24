@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Spine Toolbox grid view
+Contains models for the Tabular View.
 
 :author: P. Vennström (VTT)
 :date:   1.11.2018
@@ -21,7 +21,7 @@ import operator
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel, QAbstractListModel
 from PySide2.QtGui import QColor, QFont
 from helpers import tuple_itemgetter
-from parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
+from mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
 
 
 class PivotModel:
@@ -944,7 +944,7 @@ class PivotModel:
         return new_indexes
 
     def is_valid_index(self, index, index_name):
-        """checks if if given index value is a valid value for given index"""
+        """checks if given index value is a valid value for given index"""
         if not index:
             # index value cannot be empty/None
             return False

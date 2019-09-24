@@ -20,7 +20,7 @@ from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution
 from plotting import add_time_series_plot
-from time_series_model_variable_resolution import TimeSeriesModelVariableResolution
+from mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
 from ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
 from widgets.custom_qtableview import IndexedValueTableView
 from widgets.indexed_value_table_context_menu import handle_table_context_menu

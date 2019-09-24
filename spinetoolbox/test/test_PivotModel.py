@@ -17,7 +17,7 @@ Unit tests for PivotModel class.
 """
 
 import unittest
-from tabularview_models import PivotModel
+from mvcmodels.tabularview_models import PivotModel
 
 
 class TestPivotModel(unittest.TestCase):
