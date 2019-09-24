@@ -750,7 +750,6 @@ class Tool(ProjectItem):
             list: List of (full) paths
         """
         filepaths = self.available_filepath_resources(exec_inst)
-        matches = list()
         # Find matches when pattern includes wildcards
         if ('*' in pattern) or ('?' in pattern):
             return fnmatch.filter(filepaths, pattern)
