@@ -18,8 +18,8 @@ Data interface properties widget.
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
-from ..ui.data_interface_properties import Ui_Form
-from .custom_menus import DiFilesContextMenu
+from project_items.data_interface.ui.data_interface_properties import Ui_Form
+from project_items.data_interface.widgets.custom_menus import DiFilesContextMenu
 from config import TREEVIEW_HEADER_SS
 
 

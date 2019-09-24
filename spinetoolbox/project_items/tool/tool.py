@@ -27,7 +27,7 @@ from project_item import ProjectItem
 from tool_instance import ToolInstance
 from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
-from .widgets.custom_menus import ToolContextMenu
+from project_items.tool.widgets.custom_menus import ToolContextMenu
 from helpers import create_dir
 
 

@@ -17,7 +17,6 @@ Module for view class.
 """
 
 import logging
-import os
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
 from sqlalchemy.engine.url import URL
@@ -26,7 +25,6 @@ from project_item import ProjectItem
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from widgets.tree_view_widget import TreeViewForm
-from .view_icon import ViewIcon
 
 
 class View(ProjectItem):

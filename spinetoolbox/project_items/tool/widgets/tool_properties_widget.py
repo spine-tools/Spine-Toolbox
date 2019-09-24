@@ -18,8 +18,8 @@ Tool properties widget.
 
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Slot
-from ..ui.tool_properties import Ui_Form
-from .custom_menus import ToolPropertiesContextMenu
+from project_items.tool.ui.tool_properties import Ui_Form
+from project_items.tool.widgets.custom_menus import ToolPropertiesContextMenu
 from config import TREEVIEW_HEADER_SS
 
 

@@ -18,7 +18,7 @@ Data store properties widget.
 
 from PySide2.QtWidgets import QWidget
 from PySide2.QtGui import QIntValidator
-from ..ui.data_store_properties import Ui_Form
+from project_items.data_store.ui.data_store_properties import Ui_Form
 from spinedb_api import SUPPORTED_DIALECTS
 
 
