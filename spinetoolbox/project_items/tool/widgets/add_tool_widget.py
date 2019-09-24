@@ -18,7 +18,7 @@ Widget shown to user when a new Tool is created.
 
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
-from ..ui.add_tool import Ui_Form
+from project_items.tool.ui.add_tool import Ui_Form
 from config import STATUSBAR_SS, INVALID_CHARS
 
 

@@ -16,10 +16,10 @@ Data connection plugin.
 :date:   12.9.2019
 """
 
-from .data_connection import DataConnection
-from .data_connection_icon import DataConnectionIcon
-from .widgets.data_connection_properties_widget import DataConnectionPropertiesWidget
-from .widgets.add_data_connection_widget import AddDataConnectionWidget
+from project_items.data_connection.data_connection import DataConnection
+from project_items.data_connection.data_connection_icon import DataConnectionIcon
+from project_items.data_connection.widgets.data_connection_properties_widget import DataConnectionPropertiesWidget
+from project_items.data_connection.widgets.add_data_connection_widget import AddDataConnectionWidget
 
 item_rank = 1
 item_category = "Data Connections"

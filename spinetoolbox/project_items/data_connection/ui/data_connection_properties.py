@@ -209,5 +209,5 @@ class Ui_Form(object):
         self.pushButton_datapackage.setText(QtWidgets.QApplication.translate("Form", "Datapackage", None, -1))
         self.toolButton_dc_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Data Connection\'s project directory in file browser</p></body></html>", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView, DataTreeView
+from widgets.custom_qtreeview import DataTreeView, ReferencesTreeView
 import resources_icons_rc

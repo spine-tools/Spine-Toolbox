@@ -28,7 +28,7 @@ from widgets.tree_view_widget import TreeViewForm
 from widgets.graph_view_widget import GraphViewForm
 from widgets.tabular_view_widget import TabularViewForm
 from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
-from .widgets.custom_menus import DataStoreContextMenu
+from project_items.data_store.widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):

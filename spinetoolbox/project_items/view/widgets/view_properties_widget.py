@@ -18,8 +18,8 @@ View properties widget.
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
-from ..ui.view_properties import Ui_Form
-from .custom_menus import ViewPropertiesContextMenu
+from project_items.view.ui.view_properties import Ui_Form
+from project_items.view.widgets.custom_menus import ViewPropertiesContextMenu
 from config import TREEVIEW_HEADER_SS
 
 

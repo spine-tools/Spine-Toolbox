@@ -19,8 +19,8 @@ Data connection properties widget.
 import os
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, Slot, QUrl
-from ..ui.data_connection_properties import Ui_Form
-from .custom_menus import DcRefContextMenu, DcDataContextMenu
+from project_items.data_connection.ui.data_connection_properties import Ui_Form
+from project_items.data_connection.widgets.custom_menus import DcRefContextMenu, DcDataContextMenu
 from config import TREEVIEW_HEADER_SS
 
 

@@ -16,11 +16,11 @@ Tool plugin.
 :date:   12.9.2019
 """
 
-from .ui.tool_properties import Ui_Form
-from .tool import Tool
-from .tool_icon import ToolIcon
-from .widgets.tool_properties_widget import ToolPropertiesWidget
-from .widgets.add_tool_widget import AddToolWidget
+from project_items.tool.ui.tool_properties import Ui_Form
+from project_items.tool.tool import Tool
+from project_items.tool.tool_icon import ToolIcon
+from project_items.tool.widgets.tool_properties_widget import ToolPropertiesWidget
+from project_items.tool.widgets.add_tool_widget import AddToolWidget
 
 item_rank = 2
 item_category = "Tools"
