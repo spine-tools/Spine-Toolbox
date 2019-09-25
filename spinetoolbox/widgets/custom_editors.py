@@ -50,7 +50,7 @@ from PySide2.QtWidgets import (
     QLabel,
 )
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from treeview_models import LazyLoadingArrayModel
+from mvcmodels.treeview_models import LazyLoadingArrayModel
 from widgets.custom_qtableview import CopyPasteTableView
 from helpers import IconListManager, interpret_icon_id, make_icon_id
 

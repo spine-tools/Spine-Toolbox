@@ -16,18 +16,11 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
+import logging
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import (
-    DataConnectionIcon,
-    ToolIcon,
-    DataStoreIcon,
-    ViewIcon,
-    DataInterfaceIcon,
-    GdxExportIcon,
-    ProjectItemIcon,
-)
+from graphics_items import ProjectItemIcon, Link
 from widgets.toolbars import DraggableWidget
 
 
@@ -136,30 +129,15 @@ class CustomQGraphicsScene(QGraphicsScene):
             event.ignore()
             return
         event.acceptProposedAction()
-        text = event.mimeData().text()
+        category = event.mimeData().text()
         pos = event.scenePos()
         w = 70
         h = 70
         x = pos.x() - w / 2
         y = pos.y() - h / 2
-        if text == "Data Store":
-            self.item_shadow = DataStoreIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_data_store_form(pos.x(), pos.y())
-        elif text == "Data Connection":
-            self.item_shadow = DataConnectionIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_data_connection_form(pos.x(), pos.y())
-        elif text == "Tool":
-            self.item_shadow = ToolIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_tool_form(pos.x(), pos.y())
-        elif text == "View":
-            self.item_shadow = ViewIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_view_form(pos.x(), pos.y())
-        elif text == "Data Interface":
-            self.item_shadow = DataInterfaceIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_data_interface_form(pos.x(), pos.y())
-        elif text == "Gdx Export":
-            self.item_shadow = GdxExportIcon(self._toolbox, x, y, w, h, "...")
-            self._toolbox.show_add_gdx_export_form(pos.x(), pos.y())
+        icon_maker = self._toolbox.categories[category]["icon_maker"]
+        self.item_shadow = icon_maker(self._toolbox, x, y, w, h, "...")
+        self._toolbox.show_add_project_item_form(category, pos.x(), pos.y())
 
     def drawBackground(self, painter, rect):
         """Reimplemented method to make a custom background.

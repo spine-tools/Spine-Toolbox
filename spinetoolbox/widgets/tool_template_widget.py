@@ -31,15 +31,14 @@ from widgets.custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMen
 
 
 class ToolTemplateWidget(QWidget):
-    """A widget to query user's preferences for a new tool template.
-
-    Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        tool_template (ToolTemplate): If given, the form is pre-filled with this template
-    """
 
     def __init__(self, toolbox, tool_template=None):
-        """ Initialize class."""
+        """A widget to query user's preferences for a new tool template.
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            tool_template (ToolTemplate): If given, the form is pre-filled with this template
+        """
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
@@ -256,34 +255,34 @@ class ToolTemplateWidget(QWidget):
         self.ui.lineEdit_main_program.setText(file_path)
         self.ui.label_mainpath.setText(self.program_path)
 
-    @Slot(name="new_main_program_file")
-    def new_main_program_file(self):
-        """Creates a new blank main program file. Let's user decide the file name and path.
-        Alternative version using only one getSaveFileName dialog.
-        """
-        # noinspection PyCallByClass
-        answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
-        file_path = answer[0]
-        if not file_path:  # Cancel button clicked
-            return
-        # Remove file if it exists. getSaveFileName has asked confirmation for us.
-        try:
-            os.remove(file_path)
-        except OSError:
-            pass
-        try:
-            with open(file_path, "w"):
-                pass
-        except OSError:
-            msg = "Please check directory permissions."
-            # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-            QMessageBox.information(self, "Creating file failed", msg)
-            return
-        main_dir = os.path.dirname(file_path)
-        self.program_path = os.path.abspath(main_dir)
-        # Update UI
-        self.ui.lineEdit_main_program.setText(file_path)
-        self.ui.label_mainpath.setText(self.program_path)
+    # @Slot(name="new_main_program_file")
+    # def new_main_program_file(self):
+    #     """Creates a new blank main program file. Let's user decide the file name and path.
+    #     Alternative version using only one getSaveFileName dialog.
+    #     """
+    #     # noinspection PyCallByClass
+    #     answer = QFileDialog.getSaveFileName(self, "Create new main program", APPLICATION_PATH)
+    #     file_path = answer[0]
+    #     if not file_path:  # Cancel button clicked
+    #         return
+    #     # Remove file if it exists. getSaveFileName has asked confirmation for us.
+    #     try:
+    #         os.remove(file_path)
+    #     except OSError:
+    #         pass
+    #     try:
+    #         with open(file_path, "w"):
+    #             pass
+    #     except OSError:
+    #         msg = "Please check directory permissions."
+    #         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
+    #         QMessageBox.information(self, "Creating file failed", msg)
+    #         return
+    #     main_dir = os.path.dirname(file_path)
+    #     self.program_path = os.path.abspath(main_dir)
+    #     # Update UI
+    #     self.ui.lineEdit_main_program.setText(file_path)
+    #     self.ui.label_mainpath.setText(self.program_path)
 
     @Slot(name="new_source_file")
     def new_source_file(self):
@@ -329,6 +328,7 @@ class ToolTemplateWidget(QWidget):
 
     @Slot("QVariant", name="add_dropped_includes")
     def add_dropped_includes(self, file_paths):
+        """Adds dropped file paths to Source files list."""
         for path in file_paths:
             if not self.add_single_include(path):
                 continue

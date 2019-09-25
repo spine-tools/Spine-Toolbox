@@ -43,7 +43,6 @@ release = SPINE_TOOLBOX_VERSION
 # extensions coming with Sphinx (named 'sphinx.ext.*') or your custom
 # ones.
 extensions = [
-    'sphinx.ext.autodoc',
     'sphinx.ext.todo',
     'sphinx.ext.coverage',
     'sphinx.ext.ifconfig',
@@ -52,7 +51,7 @@ extensions = [
     'sphinx.ext.napoleon',
     'sphinx.ext.intersphinx',
     'recommonmark',
-    'autoapi.extension',
+    'autoapi.extension'
 ]
 
 # Add any paths that contain templates here, relative to this directory.
@@ -80,6 +79,9 @@ exclude_patterns = []
 pygments_style = 'sphinx'
 
 # Settings for Sphinx AutoAPI
+autoapi_python_class_content = "both"
+autoapi_add_toctree_entry = True
+autoapi_root = "autoapi"
 autoapi_dirs = ['../../spinetoolbox']  # package to be documented
 autoapi_ignore = [
     '*_rc.py',
@@ -87,8 +89,9 @@ autoapi_ignore = [
     '*/spinetoolbox/dist/*',
     '*/spinetoolbox/test/*',
     '*/spinetoolbox/ui/*',
-    '*/spinetoolbox/setup.py',
+    '*/spinetoolbox/setup.py'
 ]  # ignored modules
+
 
 # -- Options for HTML output -------------------------------------------------
 

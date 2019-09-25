@@ -47,37 +47,13 @@ class ItemToolBar(QToolBar):
         label = QLabel("Drag & Drop Icon")
         self.addWidget(label)
         icon_size = 24
-        # Data Store
-        data_store_pixmap = QIcon(":/icons/project_item_icons/database.svg").pixmap(icon_size, icon_size)
-        data_store_widget = DraggableWidget(self, data_store_pixmap, "Data Store")
-        self.addWidget(data_store_widget)
-        # Data Connection
-        data_connection_pixmap = QIcon(":/icons/project_item_icons/file-alt.svg").pixmap(icon_size, icon_size)
-        data_connection_widget = DraggableWidget(self, data_connection_pixmap, "Data Connection")
-        self.addWidget(data_connection_widget)
-        # Tool
-        tool_pixmap = QIcon(":/icons/project_item_icons/hammer.svg").pixmap(icon_size, icon_size)
-        tool_widget = DraggableWidget(self, tool_pixmap, "Tool")
-        self.addWidget(tool_widget)
-        # View
-        view_pixmap = QIcon(":/icons/project_item_icons/binoculars.svg").pixmap(icon_size, icon_size)
-        view_widget = DraggableWidget(self, view_pixmap, "View")
-        self.addWidget(view_widget)
-        # Data Interface
-        data_interface_pixmap = QIcon(":/icons/project_item_icons/map-solid.svg").pixmap(icon_size, icon_size)
-        data_interface_widget = DraggableWidget(self, data_interface_pixmap, "Data Interface")
-        self.addWidget(data_interface_widget)
-        # Gdx Export
-        gdx_export_pixmap = QIcon(":/icons/project_item_icons/file-export-solid.svg").pixmap(icon_size, icon_size)
-        gdx_export_widget = DraggableWidget(self, gdx_export_pixmap, "Gdx Export")
-        self.addWidget(gdx_export_widget)
         # set remove all action
         remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(icon_size, icon_size)
         remove_all = QToolButton(parent)
         remove_all.setIcon(remove_all_icon)
         remove_all.clicked.connect(self.remove_all)
         remove_all.setToolTip("Remove all items from project.")
-        self.addSeparator()
+        self.tool_separator = self.addSeparator()
         self.addWidget(remove_all)
         # Execute label and button
         self.addSeparator()
@@ -107,6 +83,20 @@ class ItemToolBar(QToolBar):
         # Set stylesheet
         self.setStyleSheet(ICON_TOOLBAR_SS)
         self.setObjectName("ItemToolbar")
+
+    def add_draggable_widgets(self, category_icon):
+        """Adds dragable widgets from the given list.
+
+        Args:
+            category_icon (list): List of tuples (item category (str), icon path (str))
+        """
+        widgets = list()
+        for category, icon in category_icon:
+            pixmap = QIcon(icon).pixmap(24, 24)
+            widget = DraggableWidget(self, pixmap, category)
+            widgets.append(widget)
+        for widget in widgets:
+            self.insertWidget(self.tool_separator, widget)
 
     @Slot(bool, name="remove_all")
     def remove_all(self, checked=False):

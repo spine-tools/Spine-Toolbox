@@ -26,7 +26,7 @@ from spinedb_api import (
     TimeSeriesFixedResolution,
 )
 from plotting import add_time_series_plot
-from time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
+from mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
 from widgets.custom_qtableview import TimeSeriesFixedResolutionTableView
 from widgets.indexed_value_table_context_menu import handle_table_context_menu

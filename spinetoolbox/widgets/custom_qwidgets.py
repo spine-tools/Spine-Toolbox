@@ -31,7 +31,7 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import QTimer, Signal
 from PySide2.QtGui import QPainter
-from tabularview_models import FilterCheckboxListModel
+from mvcmodels.tabularview_models import FilterCheckboxListModel
 
 
 class FilterWidget(QWidget):

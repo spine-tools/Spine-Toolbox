@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'C:/data/src/toolbox/spinetoolbox/ui/time_series_fixed_resolution_editor.ui',
-# licensing of 'C:/data/src/toolbox/spinetoolbox/ui/time_series_fixed_resolution_editor.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/time_series_fixed_resolution_editor.ui',
+# licensing of 'spinetoolbox/ui/time_series_fixed_resolution_editor.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!

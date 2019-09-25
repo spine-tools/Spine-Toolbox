@@ -143,15 +143,6 @@ class TestToolboxUI(unittest.TestCase):
         # Check that there's still no items in the model
         self.assertEqual(self.toolbox.tool_template_model.rowCount(), 0)
 
-    def test_init_connection_model(self):
-        """Test that ConnectionModel is empty when initialized."""
-        self.assertIsNone(self.toolbox.project())  # Make sure that there is no project open
-        self.toolbox.init_connection_model()
-        rows = self.toolbox.connection_model.rowCount()
-        columns = self.toolbox.connection_model.columnCount()
-        self.assertEqual(rows, 0)
-        self.assertEqual(columns, 0)
-
     def test_create_project(self):
         """Test that create_project method makes a SpineToolboxProject instance.
         Skips creating a .proj file and creating directories.
@@ -175,57 +166,46 @@ class TestToolboxUI(unittest.TestCase):
         self.assertIsNone(self.toolbox.project())
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "project.create_dir"
-        ) as mock_create_dir, mock.patch("data_store.create_dir") as mock_create_dir, mock.patch(
-            "data_connection.create_dir"
-        ) as mock_create_dir, mock.patch(
-            "tool.create_dir"
-        ) as mock_create_dir, mock.patch(
-            "view.create_dir"
-        ) as mock_create_dir:
+        ) as mock_create_dir, mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.open_project(test_project_path)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
         self.assertEqual(self.toolbox.project_item_model.n_items(), 4)
-        # Check that connection model has four rows and columns
-        rows = self.toolbox.connection_model.rowCount()
-        columns = self.toolbox.connection_model.columnCount()
-        self.assertEqual(rows, 4)
-        self.assertEqual(columns, 4)
-        # Check that connection model headers are equal and they are in order a, b, c, d
-        # Note: orientation is not actually used in headerData (on purpose)
-        self.assertEqual(self.toolbox.connection_model.headerData(0, Qt.Vertical, role=Qt.DisplayRole), "a")
-        self.assertEqual(self.toolbox.connection_model.headerData(1, Qt.Vertical, role=Qt.DisplayRole), "b")
-        self.assertEqual(self.toolbox.connection_model.headerData(2, Qt.Vertical, role=Qt.DisplayRole), "c")
-        self.assertEqual(self.toolbox.connection_model.headerData(3, Qt.Vertical, role=Qt.DisplayRole), "d")
-        self.assertEqual(self.toolbox.connection_model.headerData(0, Qt.Horizontal, role=Qt.DisplayRole), "a")
-        self.assertEqual(self.toolbox.connection_model.headerData(1, Qt.Horizontal, role=Qt.DisplayRole), "b")
-        self.assertEqual(self.toolbox.connection_model.headerData(2, Qt.Horizontal, role=Qt.DisplayRole), "c")
-        self.assertEqual(self.toolbox.connection_model.headerData(3, Qt.Horizontal, role=Qt.DisplayRole), "d")
-        # Check input and output items of each project item
-        a_inputs = self.toolbox.connection_model.input_items("a")  # []
-        b_inputs = self.toolbox.connection_model.input_items("b")  # [a]
-        c_inputs = self.toolbox.connection_model.input_items("c")  # [b]
-        d_inputs = self.toolbox.connection_model.input_items("d")  # [c]
-        a_outputs = self.toolbox.connection_model.output_items("a")  # [b]
-        b_outputs = self.toolbox.connection_model.output_items("b")  # [c]
-        c_outputs = self.toolbox.connection_model.output_items("c")  # [d]
-        d_outputs = self.toolbox.connection_model.output_items("d")  # []
-        # Input items
-        self.assertEqual(len(a_inputs), 0)
-        self.assertEqual(len(b_inputs), 1)
-        self.assertEqual(b_inputs[0], "a")
-        self.assertEqual(len(c_inputs), 1)
-        self.assertEqual(c_inputs[0], "b")
-        self.assertEqual(len(d_inputs), 1)
-        self.assertEqual(d_inputs[0], "c")
-        # Output items
-        self.assertEqual(len(a_outputs), 1)
-        self.assertEqual(a_outputs[0], "b")
-        self.assertEqual(len(b_outputs), 1)
-        self.assertEqual(b_outputs[0], "c")
-        self.assertEqual(len(c_outputs), 1)
-        self.assertEqual(c_outputs[0], "d")
-        self.assertEqual(len(d_outputs), 0)
+        # Check that design view has three links
+        links = self.toolbox.ui.graphicsView.links()
+        self.assertEqual(len(links), 3)
+        # Check project items have the right links
+        index_a = self.toolbox.project_item_model.find_item("a")
+        item_a = self.toolbox.project_item_model.project_item(index_a)
+        icon_a = item_a.get_icon()
+        links_a = [link for conn in icon_a.connectors.values() for link in conn.links]
+        index_b = self.toolbox.project_item_model.find_item("b")
+        item_b = self.toolbox.project_item_model.project_item(index_b)
+        icon_b = item_b.get_icon()
+        links_b = [link for conn in icon_b.connectors.values() for link in conn.links]
+        index_c = self.toolbox.project_item_model.find_item("c")
+        item_c = self.toolbox.project_item_model.project_item(index_c)
+        icon_c = item_c.get_icon()
+        links_c = [link for conn in icon_c.connectors.values() for link in conn.links]
+        index_d = self.toolbox.project_item_model.find_item("d")
+        item_d = self.toolbox.project_item_model.project_item(index_d)
+        icon_d = item_d.get_icon()
+        links_d = [link for conn in icon_d.connectors.values() for link in conn.links]
+        self.assertEqual(len(links_a), 1)
+        self.assertEqual(links_a[0].src_connector._parent, icon_a)
+        self.assertEqual(links_a[0].dst_connector._parent, icon_b)
+        self.assertEqual(len(links_b), 2)
+        self.assertTrue(links_a[0] in links_b)
+        links_b.remove(links_a[0])
+        self.assertEqual(links_b[0].src_connector._parent, icon_b)
+        self.assertEqual(links_b[0].dst_connector._parent, icon_c)
+        self.assertEqual(len(links_c), 2)
+        self.assertTrue(links_b[0] in links_c)
+        links_c.remove(links_b[0])
+        self.assertEqual(links_c[0].src_connector._parent, icon_c)
+        self.assertEqual(links_c[0].dst_connector._parent, icon_d)
+        self.assertEqual(len(links_d), 1)
+        self.assertEqual(links_c[0], links_d[0])
         # Check that DAG graph is correct
         dag_hndlr = self.toolbox.project().dag_handler
         self.assertTrue(len(dag_hndlr.dags()) == 1)  # Only one graph
@@ -423,13 +403,13 @@ class TestToolboxUI(unittest.TestCase):
         gv = self.toolbox.ui.graphicsView
         dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
         dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
-        row = self.toolbox.connection_model.header.index(dc1)
-        column = self.toolbox.connection_model.header.index(dc2)
-        index = self.toolbox.connection_model.createIndex(row, column)
         # Add link between dc1 and dc2
-        gv.add_link(dc1_item.icon.conn_button("bottom"), dc2_item.icon.conn_button("bottom"), index)
+        gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"))
         # Find link
-        links = self.toolbox.connection_model.connected_links(dc1)
+        dc1_links = dc1_item.get_icon().conn_button("bottom").links
+        dc2_links = dc2_item.get_icon().conn_button("bottom").links
+        self.assertEqual(dc1_links, dc2_links)
+        links = dc2_links
         self.assertEqual(1, len(links))
         link_center_point = self.find_click_point_of_link(links[0], gv)
         # Mouse click on link
@@ -465,13 +445,13 @@ class TestToolboxUI(unittest.TestCase):
         gv = self.toolbox.ui.graphicsView
         dc1_item = self.toolbox.project_item_model.project_item(dc1_index)
         dc2_item = self.toolbox.project_item_model.project_item(dc2_index)
-        row = self.toolbox.connection_model.header.index(dc1)
-        column = self.toolbox.connection_model.header.index(dc2)
-        index = self.toolbox.connection_model.createIndex(row, column)
         # Add link between dc1 and dc2
-        gv.add_link(dc1_item.icon.conn_button("bottom"), dc2_item.icon.conn_button("bottom"), index)
+        gv.add_link(dc1_item.get_icon().conn_button("bottom"), dc2_item.get_icon().conn_button("bottom"))
         # Find link
-        links = self.toolbox.connection_model.connected_links(dc1)
+        dc1_links = dc1_item.get_icon().conn_button("bottom").links
+        dc2_links = dc2_item.get_icon().conn_button("bottom").links
+        self.assertEqual(dc1_links, dc2_links)
+        links = dc2_links
         self.assertEqual(1, len(links))
         dc1_center_point = self.find_click_point_of_pi(dc1_item, gv)
         link_center_point = self.find_click_point_of_link(links[0], gv)
@@ -535,11 +515,6 @@ class TestToolboxUI(unittest.TestCase):
         # Check the size of project item model
         n_items = self.toolbox.project_item_model.n_items()
         self.assertEqual(n_items, 1)
-        # Check connection model
-        rows_in_connection_model = self.toolbox.connection_model.rowCount()
-        columns_in_connection_model = self.toolbox.connection_model.columnCount()
-        self.assertEqual(rows_in_connection_model, 1)
-        self.assertEqual(columns_in_connection_model, 1)
         # Check DAG handler
         dags = self.toolbox.project().dag_handler.dags()
         self.assertEqual(1, len(dags))  # Number of DAGs (DiGraph objects) in project
@@ -551,10 +526,6 @@ class TestToolboxUI(unittest.TestCase):
         # NOW REMOVE DC1
         self.toolbox.remove_item(dc1_index, delete_item=False)
         self.assertEqual(self.toolbox.project_item_model.n_items(), 0)  # Check the number of project items
-        rows_in_connection_model = self.toolbox.connection_model.rowCount()
-        columns_in_connection_model = self.toolbox.connection_model.columnCount()
-        self.assertEqual(rows_in_connection_model, 0)
-        self.assertEqual(columns_in_connection_model, 0)
         dags = self.toolbox.project().dag_handler.dags()
         self.assertEqual(0, len(dags))  # Number of DAGs (DiGraph) objects in project
         items_in_design_view = self.toolbox.ui.graphicsView.scene().items()
@@ -572,14 +543,14 @@ class TestToolboxUI(unittest.TestCase):
     def add_ds(self, name, x=0, y=0):
         """Helper method to create a Data Store with the given name and coordinates."""
         item = dict(name=name, description="", url=dict(), x=x, y=y)
-        with mock.patch("data_store.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Stores", item)
         return
 
     def add_dc(self, name, x=0, y=0):
         """Helper method to create a Data Connection with the given name and coordinates."""
         item = dict(name=name, description="", references=list(), x=x, y=y)
-        with mock.patch("data_connection.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Connections", item)
         return
 
@@ -596,9 +567,9 @@ class TestToolboxUI(unittest.TestCase):
         """
         # We need to map item coordinates to scene coordinates to graphics view viewport coordinates
         # Get project item icon rectangle
-        qrectf = pi.icon.rect()  # Returns a rectangle in item coordinate system
+        qrectf = pi.get_icon().rect()  # Returns a rectangle in item coordinate system
         # Map project item icon rectangle center point to scene coordinates
-        qpointf = pi.icon.mapToScene(qrectf.center())  # Returns a point in scene coordinate system
+        qpointf = pi.get_icon().mapToScene(qrectf.center())  # Returns a point in scene coordinate system
         # Map scene coordinates to graphics view viewport coordinates
         qpoint = gv.mapFromScene(qpointf)  # Returns a point in Graphics view viewport coordinate system
         return qpoint

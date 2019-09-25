@@ -21,7 +21,7 @@ import unittest
 from PySide2.QtCore import QItemSelectionModel
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesFixedResolution
-from time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
+from mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 from widgets.custom_qtableview import TimeSeriesFixedResolutionTableView
 
 

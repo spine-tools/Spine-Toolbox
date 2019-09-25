@@ -41,7 +41,7 @@ from widgets.custom_qdialog import (
 )
 from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.toolbars import ParameterTagToolBar
-from treeview_models import (
+from mvcmodels.treeview_models import (
     ObjectParameterDefinitionModel,
     ObjectParameterValueModel,
     RelationshipParameterDefinitionModel,

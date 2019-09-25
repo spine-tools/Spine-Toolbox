@@ -28,7 +28,8 @@ from datapackage.exceptions import DataPackageException
 from datapackage_import_export import DatapackageToSpineConverter
 from ui.spine_datapackage_form import Ui_MainWindow
 from widgets.custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
-from models import MinimalTableModel, DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
+from mvcmodels.minimal_table_model import MinimalTableModel
+from mvcmodels.data_package_models import DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
 from helpers import busy_effect
 from config import STATUSBAR_SS
 

@@ -18,7 +18,7 @@ Classes for drawing graphics items on QGraphicsScene.
 
 from math import atan2, degrees, sin, cos, pi
 import os
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimeLine, QTimer
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimer
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -26,7 +26,6 @@ from PySide2.QtWidgets import (
     QGraphicsEllipseItem,
     QGraphicsSimpleTextItem,
     QGraphicsRectItem,
-    QGraphicsItemAnimation,
     QGraphicsPixmapItem,
     QGraphicsLineItem,
     QStyle,
@@ -34,25 +33,25 @@ from PySide2.QtWidgets import (
     QGraphicsDropShadowEffect,
     QApplication,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTransform, QPalette, QTextBlockFormat, QTextCursor
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QPalette, QTextBlockFormat
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
+from helpers import format_string_list
 
 
 class ConnectorButton(QGraphicsRectItem):
-    """Connector button graphics item. Used for Link drawing between project items.
-
-    Attributes:
-        parent (QGraphicsItem): Project item bg rectangle
-        toolbox (ToolBoxUI): QMainWindow instance
-        position (str): Either "top", "left", "bottom", or "right"
-    """
-
     def __init__(self, parent, toolbox, position="left"):
-        """Class constructor."""
+        """Connector button graphics item. Used for Link drawing between project items.
+
+        Args:
+            parent (QGraphicsItem): Project item bg rectangle
+            toolbox (ToolBoxUI): QMainWindow instance
+            position (str): Either "top", "left", "bottom", or "right"
+        """
         super().__init__()
         self._parent = parent
         self._toolbox = toolbox
         self.position = position
+        self.links = list()
         self.setPen(QPen(Qt.black, 0.5, Qt.SolidLine))
         # self.setPen(QPen(Qt.NoPen))
         # Regular and hover brushes
@@ -117,15 +116,13 @@ class ConnectorButton(QGraphicsRectItem):
 
 
 class ExclamationIcon(QGraphicsSvgItem):
-    """Exclamation icon graphics item.
-    Used to notify that a ProjectItem is missing some configuration.
-
-    Attributes:
-        parent (ProjectItemIcon): the parent item
-    """
-
     def __init__(self, parent):
-        """Class constructor."""
+        """Exclamation icon graphics item.
+        Used to notify that a ProjectItem is missing some configuration.
+
+        Args:
+            parent (ProjectItemIcon): the parent item
+        """
         super().__init__()
         self._parent = parent
         self._notifications = list()
@@ -181,12 +178,10 @@ class ExclamationIcon(QGraphicsSvgItem):
 
 
 class NotificationListItem(QGraphicsTextItem):
-    """Notification list graphics item.
-    Used to show notifications for a ProjectItem
-    """
-
     def __init__(self):
-        """Init class."""
+        """Notification list graphics item.
+        Used to show notifications for a ProjectItem
+        """
         super().__init__()
         self.bg = QGraphicsRectItem(self.boundingRect(), self)
         bg_brush = QApplication.palette().brush(QPalette.ToolTipBase)
@@ -201,15 +196,13 @@ class NotificationListItem(QGraphicsTextItem):
 
 
 class RankIcon(QGraphicsTextItem):
-    """Rank icon graphics item.
-    Used to show the rank of a ProjectItem within its DAG
-
-    Attributes:
-        parent (ProjectItemIcon): the parent item
-    """
-
     def __init__(self, parent):
-        """Init class."""
+        """Rank icon graphics item.
+        Used to show the rank of a ProjectItem within its DAG
+
+        Args:
+            parent (ProjectItemIcon): the parent item
+        """
         super().__init__(parent)
         self._parent = parent
         rect_w = parent.rect().width()  # Parent rect width
@@ -242,19 +235,17 @@ class RankIcon(QGraphicsTextItem):
 
 
 class ProjectItemIcon(QGraphicsRectItem):
-    """Base class for project item icons drawn in Design View.
+    def __init__(self, toolbox, x, y, w, h, name):
+        """Base class for project item icons drawn in Design View.
 
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Icon width
-        h (int): Icon height
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name, icon_path, icon_color_code, bg_color_code, accept_drops):
-        """Class constructor."""
+        Args:
+            toolbox (ToolBoxUI): QMainWindow instance
+            x (int): Icon x coordinate
+            y (int): Icon y coordinate
+            w (int): Icon width
+            h (int): Icon height
+            name (str): Item name
+        """
         super().__init__()
         self._toolbox = toolbox
         self.renderer = QSvgRenderer()
@@ -278,11 +269,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         # Make exclamation and rank icons
         self.exclamation_icon = ExclamationIcon(self)
         self.rank_icon = RankIcon(self)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor(bg_color_code))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, icon_path, QColor(icon_color_code))
-        self.setAcceptDrops(accept_drops)
         # Group the drawn items together by setting the background rectangle as the parent of other QGraphicsItems
         # NOTE: setting the parent item moves the items as one!
         self.name_item.setParentItem(self)
@@ -291,8 +277,6 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item.setParentItem(self)
         self.exclamation_icon.setParentItem(self)
         self.rank_icon.setParentItem(self)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
 
     def setup(self, pen, brush, svg, svg_color):
         """Setup item's attributes according to project item type.
@@ -392,7 +376,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         super().mouseMoveEvent(event)
         selected_icons = set([x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)] + [self])
-        links = set(y for x in selected_icons for y in self._toolbox.connection_model.connected_links(x.name()))
+        links = set(link for icon in selected_icons for conn in icon.connectors.values() for link in conn.links)
         for link in links:
             link.update_geometry()
 
@@ -431,7 +415,7 @@ class ProjectItemIcon(QGraphicsRectItem):
             t.translate(-center.x(), -center.y())
             self.setPos(t.map(self.pos()))
             self.setRotation(self.rotation() + 90)
-            links = self._toolbox.connection_model.connected_links(self.name())
+            links = set(lnk for conn in self.connectors.values() for lnk in conn.links)
             for link in links:
                 link.update_geometry()
             event.accept()
@@ -460,267 +444,15 @@ class ProjectItemIcon(QGraphicsRectItem):
         self._toolbox.ui.treeView_project.setCurrentIndex(ind)
 
 
-class DataConnectionIcon(ProjectItemIcon):
-    """Data Connection icon for the Design View.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/file-alt.svg",
-            icon_color_code="#0000a0",
-            bg_color_code="#e6e6ff",
-            accept_drops=True,
-        )
-        self.drag_over = False
-
-    def dragEnterEvent(self, event):
-        """Drag and drop action enters.
-        Accept file drops from the filesystem.
-
-        Args:
-            event (QGraphicsSceneDragDropEvent): Event
-        """
-        urls = event.mimeData().urls()
-        for url in urls:
-            if not url.isLocalFile():
-                event.ignore()
-                return
-            if not os.path.isfile(url.toLocalFile()):
-                event.ignore()
-                return
-        event.accept()
-        event.setDropAction(Qt.CopyAction)
-        if self.drag_over:
-            return
-        self.drag_over = True
-        QTimer.singleShot(100, self.select_on_drag_over)
-
-    def dragLeaveEvent(self, event):
-        """Drag and drop action leaves.
-
-        Args:
-            event (QGraphicsSceneDragDropEvent): Event
-        """
-        event.accept()
-        self.drag_over = False
-
-    def dragMoveEvent(self, event):
-        """Accept event."""
-        event.accept()
-
-    def dropEvent(self, event):
-        """Emit files_dropped_on_dc signal from scene,
-        with this instance, and a list of files for each dropped url."""
-        self.scene().files_dropped_on_dc.emit(self, [url.toLocalFile() for url in event.mimeData().urls()])
-
-    def select_on_drag_over(self):
-        """Called when the timer started in drag_enter_event is elapsed.
-        Select this item if the drag action is still over it.
-        """
-        if not self.drag_over:
-            return
-        self.drag_over = False
-        self._toolbox.ui.graphicsView.scene().clearSelection()
-        self.setSelected(True)
-        self.show_item_info()
-
-
-class ToolIcon(ProjectItemIcon):
-    """Tool image with a rectangular background, an SVG icon, a name label, and a connector button.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/hammer.svg",
-            icon_color_code="red",
-            bg_color_code="#ffe6e6",
-            accept_drops=False,
-        )
-        # animation stuff
-        self.timer = QTimeLine()
-        self.timer.setLoopCount(0)  # loop forever
-        self.timer.setFrameRange(0, 10)
-        self.timer.valueForTime = lambda msecs: 1.0 - (msecs % 1000) / 1000
-        self.tool_animation = QGraphicsItemAnimation()
-        self.tool_animation.setItem(self.svg_item)
-        self.tool_animation.setTimeLine(self.timer)
-        self.delta = 0.25 * self.svg_item.sceneBoundingRect().height()
-
-    def start_animation(self):
-        """Start the animation that plays when the Tool associated to this GraphicsItem is running.
-        """
-        self.svg_item.moveBy(0, -self.delta)
-        offset = 0.75 * self.svg_item.sceneBoundingRect().height()
-        for angle in range(1, 45):
-            step = angle / 45.0
-            self.tool_animation.setTranslationAt(step, 0, offset)
-            self.tool_animation.setRotationAt(step, angle)
-            self.tool_animation.setTranslationAt(step, 0, -offset)
-            self.tool_animation.setPosAt(step, QPointF(self.svg_item.pos().x(), self.svg_item.pos().y() + offset))
-        self.timer.start()
-
-    def stop_animation(self):
-        """Stop animation"""
-        self.timer.stop()
-        self.svg_item.moveBy(0, self.delta)
-        self.timer.setCurrentTime(999)
-
-
-class DataStoreIcon(ProjectItemIcon):
-    """Data Store item that is drawn into QGraphicsScene. NOTE: Make sure
-    to set self._master as the parent of all drawn items. This groups the
-    individual QGraphicsItems together.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/database.svg",
-            icon_color_code="#cc33ff",
-            bg_color_code="#f9e6ff",
-            accept_drops=False,
-        )
-
-
-class ViewIcon(ProjectItemIcon):
-    """View icon for the Design View
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of background rectangle
-        h (int): Height of background rectangle
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/binoculars.svg",
-            icon_color_code="#33cc33",
-            bg_color_code="#ebfaeb",
-            accept_drops=False,
-        )
-
-
-class DataInterfaceIcon(ProjectItemIcon):
-    """Data Interface item that is drawn into QGraphicsScene. NOTE: Make sure
-    to set self._master as the parent of all drawn items. This groups the
-    individual QGraphicsItems together.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/map-solid.svg",
-            icon_color_code="#990000",
-            bg_color_code="#ffcccc",
-            accept_drops=False,
-        )
-
-
-class GdxExportIcon(ProjectItemIcon):
-    """
-    Gdx Export item that is drawn into QGraphicsScene.
-
-    Attributes:
-        toolbox (ToolBoxUI): QMainWindow instance
-        x (int): Icon x coordinate
-        y (int): Icon y coordinate
-        w (int): Width of master icon
-        h (int): Height of master icon
-        name (str): Item name
-    """
-
-    def __init__(self, toolbox, x, y, w, h, name):
-        """Class constructor."""
-        super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/file-export-solid.svg",
-            icon_color_code="#990000",
-            bg_color_code="#ffcccc",
-            accept_drops=False,
-        )
-
-
 class Link(QGraphicsPathItem):
-    """An item that represents a connection between project items.
-
-    Attributes:
-        toolbox (ToolboxUI): main UI class instance
-        src_connector (ConnectorButton): Source connector button
-        dst_connector (ConnectorButton): Destination connector button
-    """
-
     def __init__(self, toolbox, src_connector, dst_connector):
-        """Initializes item."""
+        """An item that represents a connection between project items.
+
+        Args:
+            toolbox (ToolboxUI): main UI class instance
+            src_connector (ConnectorButton): Source connector button
+            dst_connector (ConnectorButton): Destination connector button
+        """
         super().__init__()
         self._toolbox = toolbox
         self.src_connector = src_connector  # QGraphicsRectItem
@@ -762,18 +494,11 @@ class Link(QGraphicsPathItem):
         self.setBrush(QBrush(QColor(255, 255, 0, 204)))
         self.selected_pen = QPen(Qt.black, 1, Qt.DashLine)
         self.normal_pen = QPen(Qt.black, 0.5)
-        self.model_index = None
         self.parallel_link = None
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setCursor(Qt.PointingHandCursor)
         self.update_geometry()
-
-    def find_model_index(self):
-        """Find model index from connection model."""
-        row = self._toolbox.connection_model.header.index(self.src_icon.name())
-        column = self._toolbox.connection_model.header.index(self.dst_icon.name())
-        self.model_index = self._toolbox.connection_model.index(row, column)
 
     def find_parallel_link(self):
         """Find parallel link."""
@@ -815,15 +540,13 @@ class Link(QGraphicsPathItem):
             e (QGraphicsSceneMouseEvent): Mouse event
         """
         self.setSelected(True)
-        self.find_model_index()
         self.find_parallel_link()
         self._toolbox.show_link_context_menu(e.screenPos(), self)
 
     def keyPressEvent(self, event):
         """Remove associated connection if this is selected and delete is pressed."""
         if event.key() == Qt.Key_Delete and self.isSelected():
-            self.find_model_index()
-            self._toolbox.ui.graphicsView.remove_link(self.model_index)
+            self._toolbox.ui.graphicsView.remove_link(self)
 
     def update_geometry(self):
         """Update path."""
@@ -889,10 +612,8 @@ class Link(QGraphicsPathItem):
 
 
 class LinkDrawer(QGraphicsPathItem):
-    """An item that allows one to draw links between slot buttons in QGraphicsView."""
-
     def __init__(self):
-        """Initializes instance."""
+        """An item that allows one to draw links between slot buttons in QGraphicsView."""
         super().__init__()
         self.src = None  # source point
         self.dst = None  # destination point
@@ -996,21 +717,6 @@ class LinkDrawer(QGraphicsPathItem):
 
 
 class ObjectItem(QGraphicsPixmapItem):
-    """Object item to use with GraphViewForm.
-
-    Attributes:
-        graph_view_form (GraphViewForm): 'owner'
-        object_name (str): object name
-        object_class_id (int): object class id
-        object_class_name (str): object class name
-        x (float): x-coordinate of central point
-        y (float): y-coordinate of central point
-        extent (int): preferred extent
-        object_id (int): object id (for filtering parameters)
-        label_font (QFont): label font
-        label_color (QColor): label bg color
-    """
-
     def __init__(
         self,
         graph_view_form,
@@ -1023,6 +729,20 @@ class ObjectItem(QGraphicsPixmapItem):
         object_id=0,
         label_color=Qt.transparent,
     ):
+        """Object item to use with GraphViewForm.
+
+        Args:
+            graph_view_form (GraphViewForm): 'owner'
+            object_name (str): object name
+            object_class_id (int): object class id
+            object_class_name (str): object class name
+            x (float): x-coordinate of central point
+            y (float): y-coordinate of central point
+            extent (int): preferred extent
+            object_id (int): object id (for filtering parameters)
+            label_font (QFont): label font
+            label_color (QColor): label bg color
+        """
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id = object_id
@@ -1313,21 +1033,6 @@ class ObjectItem(QGraphicsPixmapItem):
 
 
 class ArcItem(QGraphicsLineItem):
-    """Arc item to use with GraphViewForm.
-
-    Attributes:
-        graph_view_form (GraphViewForm): 'owner'
-        relationship_class_id (int): relationship class id
-        src_item (ObjectItem): source item
-        dst_item (ObjectItem): destination item
-        width (int): Preferred line width
-        arc_color (QColor): arc color
-        object_id_list (str): object id comma separated list
-        token_object_extent (int): token preferred extent
-        token_color (QColor): token bg color
-        token_object_name_tuple_list (list): token (object class name, object name) tuple list
-    """
-
     def __init__(
         self,
         graph_view_form,
@@ -1342,7 +1047,20 @@ class ArcItem(QGraphicsLineItem):
         token_object_label_color=QColor(),
         token_object_name_tuple_list=(),
     ):
-        """Init class."""
+        """Arc item to use with GraphViewForm.
+
+        Args:
+            graph_view_form (GraphViewForm): 'owner'
+            relationship_class_id (int): relationship class id
+            src_item (ObjectItem): source item
+            dst_item (ObjectItem): destination item
+            width (int): Preferred line width
+            arc_color (QColor): arc color
+            object_id_list (str): object id comma separated list
+            token_object_extent (int): token preferred extent
+            token_color (QColor): token bg color
+            token_object_name_tuple_list (list): token (object class name, object name) tuple list
+        """
         super().__init__()
         self._graph_view_form = graph_view_form
         self.object_id_list = object_id_list
@@ -1439,16 +1157,14 @@ class ArcItem(QGraphicsLineItem):
 
 
 class ObjectLabelItem(QGraphicsTextItem):
-    """Object label item to use with GraphViewForm.
-
-    Attributes:
-        object_item (ObjectItem): the ObjectItem instance
-        text (str): text
-        bg_color (QColor): color to paint the label
-    """
-
     def __init__(self, object_item, text, bg_color):
-        """Init class."""
+        """Object label item to use with GraphViewForm.
+
+        Args:
+            object_item (ObjectItem): the ObjectItem instance
+            text (str): text
+            bg_color (QColor): color to paint the label
+        """
         super().__init__(object_item)
         self.object_item = object_item
         self._font = QApplication.font()
@@ -1493,18 +1209,16 @@ class ObjectLabelItem(QGraphicsTextItem):
 
 
 class ArcTokenItem(QGraphicsEllipseItem):
-    """Arc token item to use with GraphViewForm.
-
-    Attributes:
-        arc_item (ArcItem): the ArcItem instance
-        color (QColor): color to paint the token
-        object_extent (int): Preferred extent
-        object_label_color (QColor): Preferred extent
-        object_name_tuples (Iterable): one or more (object class name, object name) tuples
-    """
-
     def __init__(self, arc_item, color, object_extent, object_label_color, *object_name_tuples):
-        """A QGraphicsRectItem with a relationship to use as arc label"""
+        """Arc token item to use with GraphViewForm.
+
+        Args:
+            arc_item (ArcItem): the ArcItem instance
+            color (QColor): color to paint the token
+            object_extent (int): Preferred extent
+            object_label_color (QColor): Preferred extent
+            object_name_tuples (Iterable): one or more (object class name, object name) tuples
+        """
         super().__init__(arc_item)
         self.arc_item = arc_item
         x = 0
@@ -1570,17 +1284,16 @@ class ArcTokenItem(QGraphicsEllipseItem):
 
 
 class SimpleObjectItem(QGraphicsPixmapItem):
-    """Object item to use with GraphViewForm.
-
-    Attributes:
-        parent (ArcTokenItem): arc token item
-        extent (int): preferred extent
-        label_color (QColor): label bg color
-        object_class_name (str): object class name
-        object_name (str): object name
-    """
-
     def __init__(self, parent, extent, label_color, object_class_name, object_name):
+        """Object item to use with GraphViewForm.
+
+        Args:
+            parent (ArcTokenItem): arc token item
+            extent (int): preferred extent
+            label_color (QColor): label bg color
+            object_class_name (str): object class name
+            object_name (str): object name
+        """
         super().__init__(parent)
         pixmap = parent.arc_item._graph_view_form.icon_mngr.object_pixmap(object_class_name).scaledToWidth(extent)
         self.setPixmap(pixmap)
@@ -1601,17 +1314,15 @@ class SimpleObjectItem(QGraphicsPixmapItem):
 
 
 class OutlinedTextItem(QGraphicsSimpleTextItem):
-    """Outlined text item to use with GraphViewForm.
-
-    Attributes:
-        text (str): text to show
-        font (QFont): font to display the text
-        brush (QBrus)
-        outline_pen (QPen)
-    """
-
     def __init__(self, text="", font=QFont(), brush=QBrush(Qt.black), outline_pen=QPen(Qt.white, 3, Qt.SolidLine)):
-        """Init class."""
+        """Outlined text item to use with GraphViewForm.
+
+        Args:
+            text (str): text to show
+            font (QFont): font to display the text
+            brush (QBrus)
+            outline_pen (QPen)
+        """
         super().__init__()
         self.setText(text)
         font.setWeight(QFont.Black)
@@ -1621,14 +1332,13 @@ class OutlinedTextItem(QGraphicsSimpleTextItem):
 
 
 class CustomTextItem(QGraphicsTextItem):
-    """Custom text item to use with GraphViewForm.
-
-    Attributes:
-        html (str): text to show
-        font (QFont): font to display the text
-    """
-
     def __init__(self, html, font):
+        """Custom text item to use with GraphViewForm.
+
+        Args:
+            html (str): text to show
+            font (QFont): font to display the text
+        """
         super().__init__()
         self.setHtml(html)
         # font.setWeight(QFont.Black)

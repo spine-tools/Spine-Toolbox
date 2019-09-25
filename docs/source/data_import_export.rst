@@ -1,3 +1,6 @@
+..  Importing and exporting data
+    Created: 15.5.2019
+
 ****************************
 Importing and exporting data
 ****************************
@@ -5,9 +8,6 @@ Importing and exporting data
 .. note:: This section is a work in progress.
 
 This section explains the different ways of importing and exporting data to and from a Spine database.
-
-.. contents::
-    :local:
 
 Excel
 -----

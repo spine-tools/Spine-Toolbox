@@ -34,7 +34,9 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QIcon
-from models import EmptyRowModel, MinimalTableModel, HybridTableModel
+from mvcmodels.minimal_table_model import MinimalTableModel
+from mvcmodels.empty_row_model import EmptyRowModel
+from mvcmodels.hybrid_table_model import HybridTableModel
 from widgets.custom_delegates import (
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
@@ -1117,7 +1119,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
                 return
             # Update
             if [tag, description] != self.orig_data[i]:
-                for db_map, parameter_tag in db_maps:
+                for db_map in db_maps:
                     parameter_tag = self.db_map_dicts[i][db_map]
                     item = {'id': parameter_tag.id, 'tag': tag, 'description': description}
                     items_to_update.setdefault(db_map, []).append(item)
@@ -1125,7 +1127,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         items_to_add = {}
         offset = self.model.existing_item_model.rowCount()
         for i in range(self.model.new_item_model.rowCount() - 1):  # last row will always be empty
-            tag, description, db_names = self.model.new_item_model.row_data(i)
+            tag, description, db_names, _ = self.model.new_item_model.row_data(i)
             db_name_list = db_names.split(",")
             try:
                 db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]

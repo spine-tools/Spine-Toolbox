@@ -74,10 +74,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Data Store
         self.assertEqual(found_item.item_type, "Data Store")
-        # Check that connection model has been updated
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -101,10 +97,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Data Connection
         self.assertEqual(found_item.item_type, "Data Connection")
-        # Check that connection model has been updated
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -117,10 +109,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(found_item.name, name)
         # Check that the created item is a Tool
         self.assertEqual(found_item.item_type, "Tool")
-        # Check that connection model has been updated
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -133,10 +121,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(found_item.name, name)
         # Check that the created item is a View
         self.assertEqual(found_item.item_type, "View")
-        # Check that connection model has been updated
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(name), 0)
         # Check that dag handler has this and only this node
         self.check_dag_handler(name)
 
@@ -158,14 +142,6 @@ class TestSpineToolboxProject(unittest.TestCase):
         self.assertEqual(tool.name, tool_name)
         view = self.toolbox.project_item_model.project_item(self.toolbox.project_item_model.find_item(view_name))
         self.assertEqual(view.name, view_name)
-        # Connection model should now have four rows and four columns
-        self.assertEqual(self.toolbox.connection_model.rowCount(), 4)
-        self.assertEqual(self.toolbox.connection_model.columnCount(), 4)
-        # Check that added names are found in connection model header in the correct order
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(ds_name), 0)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(dc_name), 1)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(tool_name), 2)
-        self.assertEqual(self.toolbox.connection_model.find_index_in_header(view_name), 3)
         # DAG handler should now have four graphs, each with one item
         dag_hndlr = self.toolbox.project().dag_handler
         n_dags = len(dag_hndlr.dags())
@@ -220,28 +196,28 @@ class TestSpineToolboxProject(unittest.TestCase):
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
         item = dict(name="DS", description="", url=dict(), x=0, y=0)
-        with mock.patch("data_store.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Stores", item)
         return "DS"
 
     def add_dc(self):
         """Helper method to add Data Connection. Returns created items name."""
         item = dict(name="DC", description="", references=list(), x=0, y=0)
-        with mock.patch("data_connection.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Connections", item)
         return "DC"
 
     def add_tool(self):
         """Helper method to add Tool. Returns created items name."""
         item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
-        with mock.patch("tool.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Tools", item)
         return "tool"
 
     def add_view(self):
         """Helper method to add View. Returns created items name."""
         item = dict(name="view", description="", x=0, y=0)
-        with mock.patch("view.create_dir") as mock_create_dir:
+        with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Views", item)
         return "view"
 

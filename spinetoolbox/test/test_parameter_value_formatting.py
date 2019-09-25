@@ -25,7 +25,7 @@ from spinedb_api import (
     TimeSeriesFixedResolution,
     TimeSeriesVariableResolution,
 )
-from parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
+from mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
 
 
 class TestParameterValueFormatting(unittest.TestCase):

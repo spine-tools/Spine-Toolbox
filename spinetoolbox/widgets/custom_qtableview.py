@@ -23,7 +23,8 @@ import numpy as np
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView, QMenu, QLineEdit, QWidgetAction
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QSortFilterProxyModel
 from PySide2.QtGui import QKeySequence
-from models import TableModel, MinimalTableModel
+from mvcmodels.table_model import TableModel
+from mvcmodels.minimal_table_model import MinimalTableModel
 
 
 class CopyPasteTableView(QTableView):

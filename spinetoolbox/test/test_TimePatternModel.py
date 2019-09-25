@@ -22,7 +22,7 @@ import numpy.testing
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimePattern
-from time_pattern_model import TimePatternModel
+from mvcmodels.time_pattern_model import TimePatternModel
 
 
 class TestTimePatternModel(unittest.TestCase):
