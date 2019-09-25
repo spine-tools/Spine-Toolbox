@@ -49,9 +49,9 @@ class TestDataStore(unittest.TestCase):
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
-                mock.patch("ui_main.PythonReplWidget") as mock_python_repl, \
-                mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
@@ -89,7 +89,7 @@ class TestDataStore(unittest.TestCase):
         db_line_edit = self.ds_properties_ui.lineEdit_database
         self.assertEqual(dialect_box.currentText(), "")
         self.assertEqual(db_line_edit.text(), "")
-        # CLICK NEW SPINE DB BUTTON
+        # Click New Spine db button
         self.ds_properties_ui.toolButton_create_new_spine_db.click()
         self.assertEqual(dialect_box.currentText(), "sqlite")
         expected_db_path = os.path.join(data_store.data_dir, data_store.name + ".sqlite")
@@ -120,10 +120,10 @@ class TestDataStore(unittest.TestCase):
         db_line_edit = self.ds_properties_ui.lineEdit_database
         self.assertEqual(dialect_box.currentText(), "")
         self.assertEqual(db_line_edit.text(), "")
-        # CHECK CHECKBOX
+        # Check CheckBox
         self.ds_properties_ui.checkBox_for_spine_model.setChecked(True)
         self.assertTrue(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
-        # CLICK NEW SPINE DB BUTTON
+        # Click New Spine db button
         self.ds_properties_ui.toolButton_create_new_spine_db.click()
         self.assertEqual(dialect_box.currentText(), "sqlite")
         expected_db_path = os.path.join(data_store.data_dir, data_store.name + ".sqlite")
@@ -168,17 +168,17 @@ class TestDataStore(unittest.TestCase):
         """Test that selections are saved and restored when deactivating a Data Store and activating it again.
         """
         # FIXME: For now it only tests the mysql dialect
-        # data_store = DataStore(self.toolbox, "DS", "", dict(), 0, 0)
         item = dict(name="DS", description="", url="sqlite:///mock_db.sqlite", x=0, y=0)
         self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         data_store.activate()
-        self.ds_properties_ui.comboBox_dialect.setCurrentText('mysql')
+        self.ds_properties_ui.comboBox_dialect.activated[str].emit('mysql')
         self.ds_properties_ui.lineEdit_host.setText('localhost')
         self.ds_properties_ui.lineEdit_port.setText('8080')
         self.ds_properties_ui.lineEdit_database.setText('foo')
         self.ds_properties_ui.lineEdit_username.setText('bar')
+        self.ds_properties_ui.lineEdit_host.editingFinished.emit()
         self.ds_properties_ui.lineEdit_host.editingFinished.emit()
         self.ds_properties_ui.lineEdit_port.editingFinished.emit()
         self.ds_properties_ui.lineEdit_database.editingFinished.emit()

@@ -83,7 +83,7 @@ class DataStore(ProjectItem):
         s[self._properties_ui.toolButton_open_sqlite_file.clicked] = self.open_sqlite_file
         s[self._properties_ui.toolButton_create_new_spine_db.clicked] = self.create_new_spine_database
         s[self._properties_ui.toolButton_copy_url.clicked] = self.copy_url
-        s[self._properties_ui.comboBox_dialect.currentTextChanged] = self.refresh_dialect
+        s[self._properties_ui.comboBox_dialect.activated[str]] = self.refresh_dialect
         s[self._properties_ui.lineEdit_database.file_dropped] = self.set_path_to_sqlite_file
         s[self._properties_ui.lineEdit_username.editingFinished] = self.refresh_username
         s[self._properties_ui.lineEdit_password.editingFinished] = self.refresh_password
@@ -142,7 +142,7 @@ class DataStore(ProjectItem):
                     "<br>Please make new selections and try again.".format(self.name, e)
                 )
             return None
-        if dialect == "sqlite" and not url.database:
+        if not url.database:
             if log_errors:
                 self._toolbox.msg_error.emit(
                     "Unable to generate URL from <b>{0}</b> selections: database missing. "
@@ -472,13 +472,21 @@ class DataStore(ProjectItem):
     def create_new_spine_database(self, checked=False):
         """Create new (empty) Spine database."""
         for_spine_model = self._properties_ui.checkBox_for_spine_model.isChecked()
+        # Try to make an url from the current status
         url = self.make_url(log_errors=False)
         if not url:
             self._toolbox.msg_warning.emit(
                 "Unable to generate URL from <b>{0}</b> selections. Defaults will be used...".format(self.name)
             )
-            self._properties_ui.comboBox_dialect.setCurrentText("sqlite")
-            self._properties_ui.lineEdit_database.setText(os.path.join(self.data_dir, self.name + ".sqlite"))
+            # Set default dialect and database *manually* (both in the UI and in the self._url attribute)
+            # so we don't emit `item_changed`
+            dialect = "sqlite"
+            database = os.path.join(self.data_dir, self.name + ".sqlite")
+            self._properties_ui.comboBox_dialect.setCurrentText(dialect)
+            self._properties_ui.lineEdit_database.setText(database)
+            self._url["dialect"] = dialect
+            self._url["database"] = database
+            # Try to make the url again --should work
             url = self.make_url(log_errors=True)
             if not url:
                 return
