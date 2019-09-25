@@ -44,7 +44,7 @@ FOR %%f IN (%ui_path%\*.ui) DO (
     CALL bin\append_license_py.bat !py_file!
     ECHO.
 )
-FOR %%f IN (%ui_path%\*.qrc) DO (
+FOR %%f IN (%ui_path%\resources\*.qrc) DO (
     SET qrc_file=%%f
     SET py_file=%spinetoolbox_path%\%%~nf_rc.py
     ECHO building !py_file!
