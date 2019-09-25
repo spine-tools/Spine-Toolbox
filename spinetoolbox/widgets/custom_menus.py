@@ -536,8 +536,9 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
         if recents:
             recents = str(recents)
             recents_list = recents.split("\n")
-            for filepath in recents_list:
-                self.add_action(filepath, lambda checked=False, filepath=filepath: self.call_open_project(
+            for entry in recents_list:
+                name, filepath = entry.split(";")
+                self.add_action(name, lambda checked=False, filepath=filepath: self.call_open_project(
                         checked, filepath))
 
     def add_recent_projects_section(self):
@@ -574,7 +575,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
         """
         if not os.path.exists(p):
             # Project has been removed, remove it from recent projects list
-            self._parent.remove_path_from_recent_projects(p)
+            self._parent.remove_path_from_recent_projects(p)  # TODO: Fix
             return
         # Check if the same project is already open
         if self._parent.project():

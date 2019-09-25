@@ -1324,7 +1324,7 @@ class ToolboxUI(QMainWindow):
         return
 
     def remove_path_from_recent_projects(self, p):
-        """Removes path from the recent project files list in QSettings.
+        """Removes given entry from the recent project files list in QSettings.
 
         Args:
             p (str): Full path to a project file that will be removed
@@ -1334,7 +1334,11 @@ class ToolboxUI(QMainWindow):
             return
         recents = str(recents)
         recents_list = recents.split("\n")
-        recents_list.pop(recents_list.index(p))
+        for entry in recents_list:
+            name, path = entry.split(";")
+            if path == p:
+                recents_list.pop(recents_list.index(entry))
+                break
         updated_recents = "\n".join(recents_list)
         # Save updated recent paths
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)
@@ -1343,22 +1347,21 @@ class ToolboxUI(QMainWindow):
 
     def update_recent_projects(self):
         """Adds a new entry to QSettings variable that remembers the five most recent project paths."""
-        # TODO: Use Project names in menu instead of the path
-        p = self._project.path
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
+        entry = self.project().name + ";" +self.project().path
         if not recents:
-            updated_recents = self._project.path
+            updated_recents = entry
         else:
             recents = str(recents)
             recents_list = recents.split("\n")
             # Add path only if it's not in the list already
-            if p not in recents_list:
-                recents_list.insert(0, p)
+            if entry not in recents_list:
+                recents_list.insert(0, entry)
                 if len(recents_list) > 5:
                     recents_list.pop()
             else:
                 # If path was on the list, move it as the first item
-                recents_list.insert(0, recents_list.pop(recents_list.index(p)))
+                recents_list.insert(0, recents_list.pop(recents_list.index(entry)))
             updated_recents = "\n".join(recents_list)
         # Save updated recent paths
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)
