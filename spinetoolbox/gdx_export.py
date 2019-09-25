@@ -74,11 +74,14 @@ class GdxExport(ProjectItem):
             )
         if settings_file_names is not None:
             for file_name in settings_file_names:
-                with open(file_name) as input_file:
-                    data = json.load(input_file)
-                    database_path = data["database path"]
-                    settings = gdx.Settings.from_dict(data)
-                    self._settings[database_path] = settings
+                try:
+                    with open(file_name) as input_file:
+                        data = json.load(input_file)
+                        database_path = data["database path"]
+                        settings = gdx.Settings.from_dict(data)
+                        self._settings[database_path] = settings
+                except FileNotFoundError:
+                    self._toolbox.msg_error.emit("{} not found. Skipping.".format(file_name))
         self._graphics_item = GdxExportIcon(self._toolbox, x - 35, y - 35, 70, 70, self.name)
         self._sigs = self.make_signal_handler_dict()
 
