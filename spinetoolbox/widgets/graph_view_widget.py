@@ -21,14 +21,7 @@ import logging
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import (
-    QToolButton,
-    QApplication,
-    QGraphicsScene,
-    QAction,
-    QWidgetAction,
-    QAbstractItemView,
-)
+from PySide2.QtWidgets import QToolButton, QApplication, QGraphicsScene, QAction, QWidgetAction, QAbstractItemView
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QSize, QEvent
 from PySide2.QtGui import QIcon, QPalette, QMouseEvent
 from spinedb_api import SpineDBAPIError, SpineIntegrityError

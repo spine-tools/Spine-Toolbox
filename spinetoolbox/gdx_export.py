@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Tool class.
+Gdx Export project item.
 
 :author: A. Soininen (VTT)
 :date:   5.9.2019
@@ -36,13 +36,7 @@ class GdxExport(ProjectItem):
     This project item handles all functionality regarding exporting a database to .gdx file.
 
     Attributes:
-        toolbox (ToolboxUI): a ToolboxUI instance
-        name (str): item name
-        description (str): item description
-        database_urls (list): a list of connected database urls
-        database_to_file_name_map (dict): mapping from database path (str) to an output file name (str)
-        x (int): initial X coordinate of item icon
-        y (int): initial Y coordinate of item icon
+        item_type (str): GdxExport item's type
     """
 
     item_type = "Gdx Export"
@@ -58,6 +52,17 @@ class GdxExport(ProjectItem):
         x=0.0,
         y=0.0,
     ):
+        """
+        Args:
+            toolbox (ToolboxUI): a ToolboxUI instance
+            name (str): item name
+            description (str): item description
+            database_urls (list): a list of connected database urls
+            database_to_file_name_map (dict): mapping from database path (str) to an output file name (str)
+            settings_file_names (dict): mapping from database path (str) to export settings file name (str)
+            x (int): initial X coordinate of item icon
+            y (int): initial Y coordinate of item icon
+        """
         super().__init__(toolbox, name, description)
         self._settings_windows = dict()
         self._settings = dict()
@@ -212,10 +217,11 @@ class GdxExport(ProjectItem):
         settings_window.show()
 
     def __update_out_file_name(self, file_name, database_path):
+        """Updates the output file name for given database"""
         self._database_to_file_name_map[database_path] = file_name
 
     def item_dict(self):
-        """Returns a dictionary corresponding to this item."""
+        """Returns a dictionary corresponding to this item's configuration."""
         d = super().item_dict()
         d["database_to_file_name_map"] = self._database_to_file_name_map
         settings_file_names = self.__save_settings()
@@ -223,17 +229,20 @@ class GdxExport(ProjectItem):
         return d
 
     def __settings_approved(self, database_path):
+        """Updates the export settings for given database from the settings window."""
         settings_window = self._settings_windows[database_path]
         self._settings[database_path] = settings_window.settings
         settings_window.deleteLater()
         del self._settings_windows[database_path]
 
     def __settings_declined(self, database_path):
+        """Discards the settings window for given database."""
         settings_window = self._settings_windows[database_path]
         settings_window.deleteLater()
         del self._settings_windows[database_path]
 
     def __save_settings(self):
+        """Saves all export settings to .json files in the item's data directory."""
         file_names = list()
         for index, (database_path, settings) in enumerate(self._settings.items()):
             settings_dictionary = settings.to_dict()

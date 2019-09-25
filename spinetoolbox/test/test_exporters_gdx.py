@@ -348,17 +348,19 @@ class TextExportersGdx(unittest.TestCase):
             self.assertEqual(gams_record.key(0), expected_name[0])
             self.assertEqual(gams_record.key(1), expected_name[1])
 
-
     @unittest.skipIf(not gdx.available(), "No GAMS Python bindings found.")
     def test_to_gams_workspace_exports_global_parameters_only_not_the_corresponding_domain(self):
         with TemporaryDirectory() as tmp_dir_name:
-            database_map = self._make_database_map(tmp_dir_name, "test_to_gams_workspace_exports_global_parameters_only_not_the_corresponding_domain.sqlite")
-            dbmanip.import_object_classes(database_map, ['global_domain'])
-            dbmanip.import_objects(
-                database_map, [('global_domain', 'record')]
+            database_map = self._make_database_map(
+                tmp_dir_name,
+                "test_to_gams_workspace_exports_global_parameters_only_not_the_corresponding_domain.sqlite",
             )
+            dbmanip.import_object_classes(database_map, ['global_domain'])
+            dbmanip.import_objects(database_map, [('global_domain', 'record')])
             dbmanip.import_object_parameters(database_map, [('global_domain', 'global_parameter')])
-            dbmanip.import_object_parameter_values(database_map, [('global_domain', 'record', 'global_parameter', -4.2)])
+            dbmanip.import_object_parameter_values(
+                database_map, [('global_domain', 'record', 'global_parameter', -4.2)]
+            )
             settings = gdx.make_settings(database_map)
             settings.global_parameters_domain_name = 'global_domain'
             gams_workspace, gams_database = gdx.to_gams_workspace(database_map, settings)

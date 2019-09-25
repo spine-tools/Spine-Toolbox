@@ -69,6 +69,7 @@ class Set:
         name (str): set's name
         records (list): set's elements as a list of SetRecord objects
     """
+
     def __init__(self, relationship_class):
         """Constructs a new Set from a relationship class."""
         self.domain_names = [name.strip() for name in relationship_class.object_class_name_list.split(',')]
@@ -85,6 +86,7 @@ class Record:
         keys (list): a list  of record's keys
         parameters: record's parameters as a list of Parameter objects
     """
+
     def __init__(self, object_or_relationship):
         """Constructs a DomainRecord from a database object."""
         if hasattr(object_or_relationship, "object_name_list"):
@@ -104,6 +106,7 @@ class Parameter:
         name (str): parameter's name
         value (float, int or None): parameter's value
     """
+
     def __init__(self, object_parameter):
         """Constructs a parameter from object or relationship parameter."""
         self.name = object_parameter.parameter_name
