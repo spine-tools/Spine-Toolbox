@@ -17,7 +17,7 @@ Unit tests for the plotting module.
 """
 
 import unittest
-from mvcmodels.tabularview_models import PivotTableModel
+from mvcmodels.pivot_table_models import PivotTableModel
 
 
 class TestPivotTableModel(unittest.TestCase):
