@@ -126,9 +126,9 @@ class GdxExportSettings(QMainWindow):
             return
         set_model = self._central_widget_ui.set_list_view.model()
         selected_set_name = set_model.data(selected_indexes[0])
-        records = self._settings.records(selected_set_name)
+        record_keys = self._settings.sorted_record_key_lists(selected_set_name)
         record_model = self._central_widget_ui.record_list_view.model()
-        record_model.reset(records)
+        record_model.reset(record_keys)
 
 
 def move_list_elements(originals, first, last, target):
@@ -150,11 +150,11 @@ class GAMSSetListModel(QAbstractListModel):
         if not index.isValid() or index.column() != 0 or index.row() >= self.rowCount():
             return None
         row = index.row()
-        domain_count = len(self._settings.domain_names)
+        domain_count = len(self._settings.sorted_domain_names)
         if role == Qt.DisplayRole:
             if row < domain_count:
-                return self._settings.domain_names[row]
-            return self._settings.set_names[row - domain_count]
+                return self._settings.sorted_domain_names[row]
+            return self._settings.sorted_set_names[row - domain_count]
         if role == Qt.BackgroundRole:
             if row < domain_count:
                 return QColor(Qt.lightGray)
@@ -180,14 +180,14 @@ class GAMSSetListModel(QAbstractListModel):
     def is_domain(self, index):
         if not index.isValid():
             return False
-        return index.row() < len(self._settings.domain_names)
+        return index.row() < len(self._settings.sorted_domain_names)
 
     def moveRows(self, sourceParent, sourceRow, count, destinationParent, destinationChild):
         row_count = self.rowCount()
         if destinationChild < 0 or destinationChild >= row_count:
             return False
         last_source_row = sourceRow + count - 1
-        domain_count = len(self._settings.domain_names)
+        domain_count = len(self._settings.sorted_domain_names)
         # Cannot move domains to ordinary sets and vice versa.
         if sourceRow < domain_count <= last_source_row:
             return False
@@ -198,10 +198,10 @@ class GAMSSetListModel(QAbstractListModel):
         row_after = destinationChild if sourceRow > destinationChild else destinationChild + 1
         self.beginMoveRows(sourceParent, sourceRow, last_source_row, destinationParent, row_after)
         if sourceRow < domain_count:
-            names = self._settings.domain_names
+            names = self._settings.sorted_domain_names
             export_flags = self._settings.domain_exportable_flags
         else:
-            names = self._settings.set_names
+            names = self._settings.sorted_set_names
             export_flags = self._settings.set_exportable_flags
             sourceRow -= domain_count
             last_source_row -= domain_count
@@ -212,13 +212,13 @@ class GAMSSetListModel(QAbstractListModel):
         return True
 
     def rowCount(self, parent=QModelIndex()):
-        return len(self._settings.domain_names) + len(self._settings.set_names)
+        return len(self._settings.sorted_domain_names) + len(self._settings.sorted_set_names)
 
     def setData(self, index, value, role=Qt.EditRole):
         if not index.isValid() or role != Qt.CheckStateRole:
             return False
         row = index.row()
-        domain_count = len(self._settings.domain_names)
+        domain_count = len(self._settings.sorted_domain_names)
         if row < domain_count:
             self._settings.domain_exportable_flags[row] = value != Qt.Unchecked
         else:
@@ -236,7 +236,8 @@ class GAMSRecordListModel(QAbstractListModel):
         if not index.isValid():
             return None
         if role == Qt.DisplayRole:
-            return self._records[index.row()]
+            keys = self._records[index.row()]
+            return ', '.join(keys)
         return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
