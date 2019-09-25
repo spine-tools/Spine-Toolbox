@@ -49,9 +49,9 @@ class TestDataStore(unittest.TestCase):
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
+        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, \
+                mock.patch("ui_main.PythonReplWidget") as mock_python_repl, \
+                mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
@@ -76,25 +76,70 @@ class TestDataStore(unittest.TestCase):
         self.toolbox = None
         self.ds_properties_ui = None
 
-    def test_create_new_spine_database(self):
-        """Test that a new Spine database is created when clicking on Spine-icon tool button.
+    def test_create_new_empty_spine_database(self):
+        """Test that a new Spine database is created when clicking on 'New Spine db tool button'
+        with an empty Data Store and 'for Spine model' checkbox UNCHECKED.
         """
-        item = dict(name="DS", description="", url="sqlite:///mock_db.sqlite", x=0, y=0)
+        item = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
         self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
-        with mock.patch("project_items.data_store.data_store.QFileDialog.selectedFiles") as mock_sf, mock.patch(
-            "project_items.data_store.data_store.QFileDialog.exec_"
-        ) as mock_exec:
-            file_path = os.path.join(data_store.data_dir, "mock_db.sqlite")
-            mock_sf.return_value = [file_path]
-            data_store.create_new_spine_database()
-        self.assertTrue(os.path.isfile(file_path), "mock_db.sqlite file not found.")
-        sqlite_file = self.ds_properties_ui.lineEdit_database.text()
-        self.assertEqual(sqlite_file, file_path)
-        database = os.path.basename(self.ds_properties_ui.lineEdit_database.text())
-        basename = os.path.basename(file_path)
-        self.assertEqual(database, basename)
+        data_store.activate()
+        dialect_box = self.ds_properties_ui.comboBox_dialect
+        db_line_edit = self.ds_properties_ui.lineEdit_database
+        self.assertEqual(dialect_box.currentText(), "")
+        self.assertEqual(db_line_edit.text(), "")
+        # CLICK NEW SPINE DB BUTTON
+        self.ds_properties_ui.toolButton_create_new_spine_db.click()
+        self.assertEqual(dialect_box.currentText(), "sqlite")
+        expected_db_path = os.path.join(data_store.data_dir, data_store.name + ".sqlite")
+        self.assertEqual(expected_db_path, db_line_edit.text())
+        self.assertTrue(os.path.exists(db_line_edit.text()))
+        self.assertTrue(os.path.isfile(db_line_edit.text()))
+
+    @unittest.skip("TODO")
+    def test_create_new_empty_spine_database2(self):
+        """Test that a new Spine database is created when clicking on 'New Spine db tool button'
+        with a Data Store that already has an URL. Checkbox 'for Spine model' UNCHECKED.
+        """
+        # These are probably needed here
+        # with mock.patch("project_items.data_store.data_store.QFileDialog.selectedFiles") as mock_sf,
+        #     mock.patch("project_items.data_store.data_store.QFileDialog.exec_") as mock_exec:
+        self.fail()
+
+    def test_create_new_spine_database_for_spine_model(self):
+        """Test that a new Spine database is created when clicking on 'New Spine db tool button'
+        with an empty Data Store and 'for Spine model' checkbox CHECKED.
+        """
+        item = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        data_store.activate()
+        dialect_box = self.ds_properties_ui.comboBox_dialect
+        db_line_edit = self.ds_properties_ui.lineEdit_database
+        self.assertEqual(dialect_box.currentText(), "")
+        self.assertEqual(db_line_edit.text(), "")
+        # CHECK CHECKBOX
+        self.ds_properties_ui.checkBox_for_spine_model.setChecked(True)
+        self.assertTrue(self.ds_properties_ui.checkBox_for_spine_model.isChecked())
+        # CLICK NEW SPINE DB BUTTON
+        self.ds_properties_ui.toolButton_create_new_spine_db.click()
+        self.assertEqual(dialect_box.currentText(), "sqlite")
+        expected_db_path = os.path.join(data_store.data_dir, data_store.name + ".sqlite")
+        self.assertEqual(expected_db_path, db_line_edit.text())
+        self.assertTrue(os.path.exists(db_line_edit.text()))
+        self.assertTrue(os.path.isfile(db_line_edit.text()))
+
+    @unittest.skip("TODO")
+    def test_create_new_spine_database_for_spine_model2(self):
+        """Test that a new Spine database is created when clicking on 'New Spine db tool button'
+        with a Data Store that already has an URL. Checkbox 'for Spine model' CHECKED.
+        """
+        # These are probably needed here
+        # with mock.patch("project_items.data_store.data_store.QFileDialog.selectedFiles") as mock_sf,
+        #     mock.patch("project_items.data_store.data_store.QFileDialog.exec_") as mock_exec:
+        self.fail()
 
     def test_load_reference(self):
         """Test that reference is loaded into selections on Data Store creation,
