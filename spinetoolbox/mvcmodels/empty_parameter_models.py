@@ -22,9 +22,14 @@ from mvcmodels.empty_row_model import EmptyRowModel
 
 
 class EmptyParameterModel(EmptyRowModel):
-    """An empty parameter model. Implements `batch_set_data` for all 'EmptyParameter' models."""
+    """An empty parameter model. Implements `batch_set_data` for all `EmptyParameter` models."""
 
     def __init__(self, parent):
+        """Initialize class.
+
+        Args:
+            parent (ObjectParameterModel or RelationshipParameterModel)
+        """
         super().__init__(parent)
         self._parent = parent
         self.error_log = []
@@ -36,8 +41,8 @@ class EmptyParameterModel(EmptyRowModel):
         Extend set of indexes as additional data is set (for emitting dataChanged at the end).
         """
         # TODO: emit dataChanged? Perhaps we need to call `super().batch_set_data` at the end
-        self.error_log = []
-        self.added_rows = []
+        self.error_log.clear()
+        self.added_rows.clear()
         if not super().batch_set_data(indexes, data):
             return False
         items_to_add = self.items_to_add(indexes)
@@ -52,13 +57,14 @@ class EmptyParameterModel(EmptyRowModel):
 
 
 class EmptyParameterValueModel(EmptyParameterModel):
-    """An empty parameter value model.
-    Implements `add_items_to_db` for both EmptyObjectParameterValueModel
-    and EmptyRelationshipParameterValueModel.
-    """
+    """An empty parameter value model."""
 
     def __init__(self, parent):
-        """Initialize class."""
+        """Initialize class.
+
+        Args:
+            parent (ObjectParameterValueModel or RelationshipParameterValueModel)
+        """
         super().__init__(parent)
         self._parent = parent
 
@@ -68,15 +74,58 @@ class EmptyParameterValueModel(EmptyParameterModel):
     @busy_effect
     def add_items_to_db(self, items_to_add):
         """Add parameter values to database.
+
+        Args:
+            items_to_add (dict): maps DatabaseMapping instances to another dictionary
+                mapping row numbers to parameter value items
         """
         for db_map, row_dict in items_to_add.items():
-            items = list(row_dict.values())
+            rows, items = zip(*row_dict.items())
             parameter_values, error_log = db_map.add_parameter_values(*items)
-            self.added_rows = list(row_dict.keys())
             id_column = self._parent.horizontal_header_labels().index('id')
             for i, parameter_value in enumerate(parameter_values):
-                self._main_data[self.added_rows[i]][id_column] = parameter_value.id
+                self._main_data[rows[i]][id_column] = parameter_value.id
             self.error_log.extend(error_log)
+            self.added_rows.extend(rows)
+
+
+class EmptyParameterDefinitionModel(EmptyParameterModel):
+    """An empty parameter definition model.
+    """
+
+    def __init__(self, parent):
+        """Initialize class.
+
+        Args:
+            parent (ObjectParameterDefinitionModel or RelationshipParameterDefinitionModel)
+        """
+        super().__init__(parent)
+        self._parent = parent
+
+    def items_to_add(self, indexes):
+        raise NotImplementedError()
+
+    @busy_effect
+    def add_items_to_db(self, items_to_add):
+        """Add parameter definitions to database.
+        """
+        for db_map, row_dict in items_to_add.items():
+            rows, items = zip(*row_dict.items())
+            # Pop the `parameter_tag_id_list` from `row_dict` into a new dictionary
+            row_tag_id_list_dict = {row: item.pop("parameter_tag_id_list", None) for row, item in zip(rows, items)}
+            par_defs, error_log = db_map.add_parameter_definitions(*items)
+            id_column = self._parent.horizontal_header_labels().index('id')
+            # Now we have the parameter definition ids we can build the tag_id_list_dict
+            tag_id_list_dict = {}
+            for i, par_def in enumerate(par_defs):
+                row = rows[i]
+                tag_id_list = row_tag_id_list_dict[row]
+                if tag_id_list:
+                    tag_id_list_dict[par_def.id] = tag_id_list
+                self._main_data[rows[i]][id_column] = par_def.id
+            _, def_tag_error_log = db_map.set_parameter_definition_tags(tag_id_list_dict)
+            self.error_log.extend(error_log + def_tag_error_log)
+            self.added_rows.extend(rows)
 
 
 class EmptyObjectParameterValueModel(EmptyParameterValueModel):
@@ -381,42 +430,6 @@ class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
         return items_to_add
 
 
-class EmptyParameterDefinitionModel(EmptyParameterModel):
-    """An empty parameter definition model."""
-
-    def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
-
-    def items_to_add(self, indexes):
-        raise NotImplementedError()
-
-    @busy_effect
-    def add_items_to_db(self, items_to_add):
-        """Add parameter definitions to database.
-        """
-        for db_map, row_dict in items_to_add.items():
-            items = list(row_dict.values())
-            name_tag_dict = dict()
-            for item in items:
-                parameter_tag_id_list = item.pop("parameter_tag_id_list", None)
-                if parameter_tag_id_list is None:
-                    continue
-                name_tag_dict[item["name"]] = parameter_tag_id_list
-            par_defs, error_log = db_map.add_parameter_definitions(*items)
-            self.added_rows = list(row_dict.keys())
-            self.error_log.extend(error_log)
-            id_column = self._parent.horizontal_header_labels().index('id')
-            tag_dict = dict()
-            for i, par_def in enumerate(par_defs):
-                if par_def.name in name_tag_dict:
-                    tag_dict[par_def.id] = name_tag_dict[par_def.name]
-                self._main_data[self.added_rows[i]][id_column] = par_def.id
-            _, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict)
-            self.error_log.extend(def_tag_error_log)
-
-
 class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty object parameter definition model."""
 
@@ -458,29 +471,29 @@ class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
                 d = object_class_dict.setdefault(db_map, {x.name: x.id for x in db_map.object_class_list()})
                 try:
                     object_class_id = d[object_class_name]
+                    self._main_data[row][object_class_id_column] = object_class_id
+                    item["object_class_id"] = object_class_id
                 except KeyError:
                     self.error_log.append("Invalid object class '{}'".format(object_class_name))
-                self._main_data[row][object_class_id_column] = object_class_id
-                item["object_class_id"] = object_class_id
             if parameter_tag_list:
                 d = parameter_tag_dict.setdefault(db_map, {x.tag: x.id for x in db_map.parameter_tag_list()})
                 split_parameter_tag_list = parameter_tag_list.split(",")
                 try:
                     parameter_tag_id_list = ",".join(str(d[x]) for x in split_parameter_tag_list)
+                    self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
+                    item["parameter_tag_id_list"] = parameter_tag_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid parameter tag '{}'".format(e))
-                self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
-                item["parameter_tag_id_list"] = parameter_tag_id_list
             if value_list_name:
                 d = parameter_value_list_dict.setdefault(
                     db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
                 )
                 try:
                     value_list_id = d[value_list_name]
+                    self._main_data[row][value_list_id_column] = value_list_id
+                    item["parameter_value_list_id"] = value_list_id
                 except KeyError:
                     self.error_log.append("Invalid value list '{}'".format(value_list_name))
-                self._main_data[row][value_list_id_column] = value_list_id
-                item["parameter_value_list_id"] = value_list_id
             if not parameter_name or not object_class_id:
                 continue
             default_value = self.index(row, default_value_column).data(Qt.DisplayRole)
@@ -545,35 +558,35 @@ class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
                 )
                 try:
                     relationship_class = d[relationship_class_name]
+                    relationship_class_id = relationship_class['id']
+                    object_class_id_list = relationship_class['object_class_id_list']
+                    object_class_name_list = relationship_class['object_class_name_list']
+                    self._main_data[row][relationship_class_id_column] = relationship_class_id
+                    self._main_data[row][object_class_id_list_column] = object_class_id_list
+                    self._main_data[row][object_class_name_list_column] = object_class_name_list
+                    indexes.append(self.index(row, object_class_name_list_column))
+                    item["relationship_class_id"] = relationship_class_id
                 except KeyError:
                     self.error_log.append("Invalid relationship class '{}'".format(relationship_class_name))
-                relationship_class_id = relationship_class['id']
-                object_class_id_list = relationship_class['object_class_id_list']
-                object_class_name_list = relationship_class['object_class_name_list']
-                self._main_data[row][relationship_class_id_column] = relationship_class_id
-                self._main_data[row][object_class_id_list_column] = object_class_id_list
-                self._main_data[row][object_class_name_list_column] = object_class_name_list
-                indexes.append(self.index(row, object_class_name_list_column))
-                item["relationship_class_id"] = relationship_class_id
             if parameter_tag_list:
                 d = parameter_tag_dict.setdefault(db_map, {x.tag: x.id for x in db_map.parameter_tag_list()})
                 split_parameter_tag_list = parameter_tag_list.split(",")
                 try:
                     parameter_tag_id_list = ",".join(str(d[x]) for x in split_parameter_tag_list)
+                    self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
+                    item["parameter_tag_id_list"] = parameter_tag_id_list
                 except KeyError as e:
                     self.error_log.append("Invalid tag '{}'".format(e))
-                self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
-                item["parameter_tag_id_list"] = parameter_tag_id_list
             if value_list_name:
                 d = parameter_value_list_dict.setdefault(
                     db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
                 )
                 try:
                     value_list_id = d[value_list_name]
+                    self._main_data[row][value_list_id_column] = value_list_id
+                    item["parameter_value_list_id"] = value_list_id
                 except KeyError:
                     self.error_log.append("Invalid value list '{}'".format(value_list_name))
-                self._main_data[row][value_list_id_column] = value_list_id
-                item["parameter_value_list_id"] = value_list_id
             if not parameter_name or not relationship_class_id:
                 continue
             default_value = self.index(row, default_value_column).data(Qt.DisplayRole)
