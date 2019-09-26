@@ -175,6 +175,7 @@ class DataStore(ProjectItem):
     def set_path_to_sqlite_file(self, file_path):
         """Set path to SQLite file."""
         self._properties_ui.lineEdit_database.setText(file_path)
+        self.set_url_key("database", file_path)
 
     @Slot(bool, name='open_sqlite_file')
     def open_sqlite_file(self, checked=False):
@@ -186,7 +187,7 @@ class DataStore(ProjectItem):
         if not file_path:  # Cancel button clicked
             return
         # Update UI
-        self._properties_ui.lineEdit_database.setText(file_path)
+        self.set_path_to_sqlite_file(file_path)
 
     def load_url_into_selections(self):
         """Load url attribute into shared widget selections.
