@@ -200,7 +200,7 @@ class TestDataStore(unittest.TestCase):
         database = os.path.basename(self.ds_properties_ui.lineEdit_database.text())
         username = self.ds_properties_ui.lineEdit_username.text()
         self.assertEqual(dialect, 'sqlite')
-        self.assertEqual(database, 'mock_db.sqlite')
+        self.assertEqual(database, 'temp_db.sqlite')
         self.assertEqual(username, '')
 
     def test_save_and_restore_selections(self):
