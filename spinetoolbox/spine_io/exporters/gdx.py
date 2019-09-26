@@ -37,6 +37,23 @@ except ImportError:
 from spinedb_api import from_database, ParameterValueFormatError
 
 
+class GdxExportException(Exception):
+    """An exception raised when something goes wrong within the gdx module."""
+    def __init__(self, message):
+        """
+        Args:
+            message (str): a message detailing the cause of the exception
+        """
+        self._message = message
+
+    @property
+    def message(self):
+        return self._message
+
+    def __str__(self):
+        return self._message
+
+
 class DomainSet:
     """
     Represents a one-dimensional universal GAMS set.
@@ -130,20 +147,23 @@ def domains_to_gams(gams_database, domains):
     Returns:
         the list of the GamsSet objects that were written to the database
      """
-    gams_domains = dict()
-    for domain in domains:
-        gams_domain = gams_database.add_set(domain.name, domain.dimensions, domain.description)
-        gams_domains[domain.name] = gams_domain
-        for record in domain.records:
-            record_key = record.keys[0]
-            gams_domain.add_record(record_key)
-            for parameter in record.parameters:
-                try:
-                    gams_parameter = gams_database.get_parameter(parameter.name)
-                except gams.workspace.GamsException:
-                    gams_parameter = gams_database.add_parameter_dc(parameter.name, [gams_domain])
-                gams_parameter.add_record(record_key).value = parameter.value
-    return gams_domains
+    try:
+        gams_domains = dict()
+        for domain in domains:
+            gams_domain = gams_database.add_set(domain.name, domain.dimensions, domain.description)
+            gams_domains[domain.name] = gams_domain
+            for record in domain.records:
+                record_key = record.keys[0]
+                gams_domain.add_record(record_key)
+                for parameter in record.parameters:
+                    try:
+                        gams_parameter = gams_database.get_parameter(parameter.name)
+                    except gams.workspace.GamsException:
+                        gams_parameter = gams_database.add_parameter_dc(parameter.name, [gams_domain])
+                    gams_parameter.add_record(record_key).value = parameter.value
+        return gams_domains
+    except gams.GamsException as gams_exception:
+        raise GdxExportException(str(gams_exception)) from gams_exception
 
 
 def sets_to_gams(gams_database, sets, gams_domains):
@@ -159,19 +179,22 @@ def sets_to_gams(gams_database, sets, gams_domains):
         sets (list): a list of Set objects
         gams_domains (dict): a list of GamsSet objects corresponding to DomainSets already written to the database
     """
-    for current_set in sets:
-        required_domains = list()
-        for domain_name in current_set.domain_names:
-            required_domains.append(gams_domains[domain_name])
-        gams_set = gams_database.add_set_dc(current_set.name, required_domains)
-        for record in current_set.records:
-            gams_set.add_record(record.keys)
-            for parameter in record.parameters:
-                try:
-                    gams_parameter = gams_database.get_parameter(parameter.name)
-                except gams.workspace.GamsException:
-                    gams_parameter = gams_database.add_parameter_dc(parameter.name, required_domains)
-                gams_parameter.add_record(record.keys).value = parameter.value
+    try:
+        for current_set in sets:
+            required_domains = list()
+            for domain_name in current_set.domain_names:
+                required_domains.append(gams_domains[domain_name])
+            gams_set = gams_database.add_set_dc(current_set.name, required_domains)
+            for record in current_set.records:
+                gams_set.add_record(record.keys)
+                for parameter in record.parameters:
+                    try:
+                        gams_parameter = gams_database.get_parameter(parameter.name)
+                    except gams.workspace.GamsException:
+                        gams_parameter = gams_database.add_parameter_dc(parameter.name, required_domains)
+                    gams_parameter.add_record(record.keys).value = parameter.value
+    except gams.GamsException as gams_exception:
+        raise GdxExportException(str(gams_exception)) from gams_exception
 
 
 def domain_parameters_to_gams(gams_database, domain):
@@ -182,13 +205,16 @@ def domain_parameters_to_gams(gams_database, domain):
         gams_database (GamsDatabase): a GAMS database to which the scalars are added
         domain (DomainSet): a domain that holds the parameters
     """
-    for record in domain.records:
-        for parameter in record.parameters:
-            try:
-                gams_parameter = gams_database.get_parameter(parameter.name)
-            except gams.workspace.GamsException:
-                gams_parameter = gams_database.add_parameter(parameter.name, dimension=0)
-            gams_parameter.add_record().value = parameter.value
+    try:
+        for record in domain.records:
+            for parameter in record.parameters:
+                try:
+                    gams_parameter = gams_database.get_parameter(parameter.name)
+                except gams.workspace.GamsException:
+                    gams_parameter = gams_database.add_parameter(parameter.name, dimension=0)
+                gams_parameter.add_record().value = parameter.value
+    except gams.GamsException as gams_exception:
+        raise GdxExportException(str(gams_exception)) from gams_exception
 
 
 def object_classes_to_domains(db_map):

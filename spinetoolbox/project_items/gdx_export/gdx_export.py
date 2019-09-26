@@ -131,7 +131,13 @@ class GdxExport(ProjectItem):
             settings = self._settings.get(url.database, None)
             if settings is None:
                 settings = gdx.make_settings(database_map)
-            _, gams_database = gdx.to_gams_workspace(database_map, settings)
+            try:
+                _, gams_database = gdx.to_gams_workspace(database_map, settings)
+            except gdx.GdxExportException as error:
+                self._toolbox.msg_error.emit('Failed to write .gdx file: {}'.format(error.message))
+                abort = -1
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
+                return
             file_name = self._database_to_file_name_map.get(url.database, None)
             if file_name is None:
                 self._toolbox.msg_error.emit('No file name given to export database {}.'.format(url.database))
