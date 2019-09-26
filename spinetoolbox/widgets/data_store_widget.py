@@ -41,13 +41,12 @@ from widgets.custom_qdialog import (
 )
 from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.toolbars import ParameterTagToolBar
-from mvcmodels.treeview_models import (
-    ObjectParameterDefinitionModel,
-    ObjectParameterValueModel,
+from mvcmodels.object_parameter_models import ObjectParameterDefinitionModel, ObjectParameterValueModel
+from mvcmodels.relationship_parameter_models import (
     RelationshipParameterDefinitionModel,
     RelationshipParameterValueModel,
-    ParameterValueListModel,
 )
+from mvcmodels.parameter_value_list_model import ParameterValueListModel
 from helpers import busy_effect, format_string_list, IconManager
 from plotting import tree_graph_view_parameter_value_name
 
