@@ -380,7 +380,6 @@ class ObjectItemContextMenu(CustomContextMenu):
         self.add_action('Hide')
         self.add_action('Prune')
         if parent.read_only:
-            self.exec_(position)
             return
         self.addSeparator()
         if graphics_item.is_template:
@@ -390,7 +389,6 @@ class ObjectItemContextMenu(CustomContextMenu):
         self.add_action("Remove")
         self.addSeparator()
         if graphics_item.is_template or object_item_selection_length > 1:
-            self.exec_(position)
             return
         for item in parent.relationship_class_list_model.findItems('*', Qt.MatchWildcard):
             relationship_class = item.data(Qt.UserRole + 1)
