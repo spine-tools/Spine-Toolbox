@@ -19,7 +19,7 @@ Classes for custom context menus and pop-up menus.
 import logging
 import os
 from operator import itemgetter
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox, QWidget, QFrame, QLabel, QHBoxLayout
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox, QWidget
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from helpers import fix_name_ambiguity, tuple_itemgetter
