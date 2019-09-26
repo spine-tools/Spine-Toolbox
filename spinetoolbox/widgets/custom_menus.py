@@ -17,8 +17,9 @@ Classes for custom context menus and pop-up menus.
 """
 
 import logging
+import os
 from operator import itemgetter
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox, QWidget, QFrame, QLabel, QHBoxLayout
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from helpers import fix_name_ambiguity, tuple_itemgetter
@@ -511,6 +512,51 @@ class CreateMainProgramPopupMenu(CustomPopupMenu):
         # Open a tool template file
         self.add_action("Make new main program", self._parent.new_main_program_file)
         self.add_action("Select existing main program", self._parent.browse_main_program)
+
+
+class RecentProjectsPopupMenu(CustomPopupMenu):
+    """Recent projects menu embedded to 'File-Open recent' QAction."""
+
+    def __init__(self, parent):
+        """
+
+        Args:
+            parent (QWidget): Parent widget of this menu (ToolboxUI)
+        """
+        super().__init__(parent=parent)
+        self._parent = parent
+        self.add_recent_projects()
+
+    def add_recent_projects(self):
+        """Reads the previous project names and paths from QSettings. Ads them to the QMenu as QActions."""
+        recents = self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None)
+        if recents:
+            recents = str(recents)
+            recents_list = recents.split("\n")
+            for entry in recents_list:
+                name, filepath = entry.split("<>")
+                self.add_action(name, lambda checked=False, filepath=filepath: self.call_open_project(
+                        checked, filepath))
+
+    @Slot(bool, str, name="call_open_project")
+    def call_open_project(self, checked, p):
+        """Slot for catching the user selected action from the recent projects menu.
+
+        Args:
+            checked (bool): Argument sent by triggered signal
+            p (str): Full path to a project file
+        """
+        if not os.path.exists(p):
+            # Project has been removed, remove it from recent projects list
+            self._parent.remove_path_from_recent_projects(p)
+            return
+        # Check if the same project is already open
+        if self._parent.project():
+            if p == self._parent.project().path:
+                self._parent.msg.emit("Project already open")
+                return
+        if not self._parent.open_project(p):
+            return
 
 
 class FilterMenu(QMenu):
