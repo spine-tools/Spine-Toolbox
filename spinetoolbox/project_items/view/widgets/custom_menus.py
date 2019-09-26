@@ -37,4 +37,3 @@ class ViewPropertiesContextMenu(CustomContextMenu):
         self.add_action("Open tree view")
         self.add_action("Open graph view")
         self.add_action("Open tabular view")
-        self.exec_(position)

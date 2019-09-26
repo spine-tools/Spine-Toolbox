@@ -1255,8 +1255,7 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu = None
 
     def tear_down_items(self):
-        """Calls the tear_down method on all project items, so they can clean up their mess if needed.
-        """
+        """Calls the tear_down method on all project items, so they can clean up their mess if needed."""
         if not self._project:
             return
         for item in self.project_item_model.items():
