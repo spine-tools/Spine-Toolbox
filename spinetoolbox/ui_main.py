@@ -42,6 +42,7 @@ from widgets.custom_menus import (
     ToolTemplateContextMenu,
     LinkContextMenu,
     AddToolTemplatePopupMenu,
+    RecentProjectsPopupMenu,
 )
 from widgets.project_form_widget import NewProjectForm
 from widgets.settings_widget import SettingsWidget
@@ -116,6 +117,7 @@ class ToolboxUI(QMainWindow):
         self.add_tool_template_popup_menu = None
         self.zoom_widget = None
         self.zoom_widget_action = None
+        self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
         self.item_toolbar = widgets.toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
@@ -152,6 +154,8 @@ class ToolboxUI(QMainWindow):
         # Menu commands
         self.ui.actionNew.triggered.connect(self.new_project)
         self.ui.actionOpen.triggered.connect(self.open_project)
+        self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
+        self.ui.actionOpen_recent.hovered.connect(self.show_recent_projects_menu)
         self.ui.actionSave.triggered.connect(self.save_project)
         self.ui.actionSave_As.triggered.connect(self.save_project_as)
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
@@ -257,7 +261,6 @@ class ToolboxUI(QMainWindow):
             return
         if not self.open_project(project_file_path, clear_event_log=False):
             self.msg_error.emit("Loading project file <b>{0}</b> failed".format(project_file_path))
-            logging.error("Loading project file '%s' failed", project_file_path)
         return
 
     @Slot(name="new_project")
@@ -279,6 +282,7 @@ class ToolboxUI(QMainWindow):
         self.init_models(tool_template_paths=list())  # Start project with no tool templates
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
+        self.update_recent_projects()
         self.msg.emit("New project created")
         self.save_project()
 
@@ -291,6 +295,7 @@ class ToolboxUI(QMainWindow):
             load_path (str): Path to project save file. If default value is used,
             a file explorer dialog is opened where the user can select the
             project file to load.
+            clear_event_log (bool): True clears Event Log, False does not
 
         Returns:
             bool: True when opening the project succeeded, False otherwise
@@ -362,8 +367,16 @@ class ToolboxUI(QMainWindow):
         self._project.connect_signals()
         # Initialize Design View scene
         self.ui.graphicsView.init_scene()
+        self.update_recent_projects()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
+
+    @Slot(name="show_recent_projects_menu")
+    def show_recent_projects_menu(self):
+        """Updates and sets up the recent projects menu to File-Open recent action."""
+        if not self.recent_projects_menu.isVisible():
+            self.recent_projects_menu = RecentProjectsPopupMenu(self)
+            self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
 
     @Slot(name="save_project")
     def save_project(self):
@@ -1242,8 +1255,7 @@ class ToolboxUI(QMainWindow):
         self.tool_template_context_menu = None
 
     def tear_down_items(self):
-        """Calls the tear_down method on all project items, so they can clean up their mess if needed.
-        """
+        """Calls the tear_down method on all project items, so they can clean up their mess if needed."""
         if not self._project:
             return
         for item in self.project_item_model.items():
@@ -1311,6 +1323,51 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("appSettings/saveAtExit", "1")
         return
 
+    def remove_path_from_recent_projects(self, p):
+        """Removes entry that contains given path from the recent project files list in QSettings.
+
+        Args:
+            p (str): Full path to a project file (.proj)
+        """
+        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
+        if not recents:
+            return
+        recents = str(recents)
+        recents_list = recents.split("\n")
+        for entry in recents_list:
+            name, path = entry.split("<>")
+            if path == p:
+                recents_list.pop(recents_list.index(entry))
+                break
+        updated_recents = "\n".join(recents_list)
+        # Save updated recent paths
+        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
+        self._qsettings.sync()  # Commit change immediately
+        self.msg_error.emit("Opening selected project failed. Project file <b>{0}</b> may have been removed."
+                            .format(p))
+
+    def update_recent_projects(self):
+        """Adds a new entry to QSettings variable that remembers the five most recent project paths."""
+        recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
+        entry = self.project().name + "<>" +self.project().path
+        if not recents:
+            updated_recents = entry
+        else:
+            recents = str(recents)
+            recents_list = recents.split("\n")
+            # Add path only if it's not in the list already
+            if entry not in recents_list:
+                recents_list.insert(0, entry)
+                if len(recents_list) > 5:
+                    recents_list.pop()
+            else:
+                # If path was on the list, move it as the first item
+                recents_list.insert(0, recents_list.pop(recents_list.index(entry)))
+            updated_recents = "\n".join(recents_list)
+        # Save updated recent paths
+        self._qsettings.setValue("appSettings/recentProjects", updated_recents)
+        self._qsettings.sync()  # Commit change immediately
+
     def closeEvent(self, event=None):
         """Method for handling application exit.
 
@@ -1328,6 +1385,7 @@ class ToolboxUI(QMainWindow):
             self._qsettings.setValue("appSettings/previousProject", "")
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.path)
+            self.update_recent_projects()
             # Show save project prompt
             self.show_save_project_prompt()
         self._qsettings.setValue("mainWindow/windowSize", self.size())

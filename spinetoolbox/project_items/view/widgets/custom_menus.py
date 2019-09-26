@@ -20,21 +20,20 @@ from widgets.custom_menus import CustomContextMenu
 
 
 class ViewPropertiesContextMenu(CustomContextMenu):
-    """Context menu class for the references tree view of the View project item properties.
-
-    Attributes:
-        parent (QWidget): Parent for menu widget (ToolboxUI)
-        position (QPoint): Position on screen
-        index (QModelIndex): Index of item that requested the context-menu
-    """
+    """Context menu class for the references tree view of the View project item properties."""
 
     def __init__(self, parent, position, index):
-        """Class constructor."""
-        super().__init__(parent)
+        """
+
+        Args:
+            parent (QWidget): Parent for menu widget (ToolboxUI)
+            position (QPoint): Position on screen
+            index (QModelIndex): Index of item that requested the context-menu
+        """
+        super().__init__(parent, position)
         if not index.isValid():
             # If no item at index
             return
         self.add_action("Open tree view")
         self.add_action("Open graph view")
         self.add_action("Open tabular view")
-        self.exec_(position)

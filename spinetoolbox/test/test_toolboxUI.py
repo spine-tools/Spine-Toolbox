@@ -84,7 +84,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "project.create_dir"
         ) as mock_create_dir:
-            self.toolbox.create_project("Unit Test Project", "Project for unit tests.")
+            self.toolbox.create_project("UnitTest Project", "Project for unit tests.")
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
         self.toolbox.init_project_item_model()
         self.check_init_project_item_model()
@@ -150,7 +150,7 @@ class TestToolboxUI(unittest.TestCase):
         with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
             "project.create_dir"
         ) as mock_create_dir:
-            self.toolbox.create_project("Unit Test Project", "Project for unit tests.")
+            self.toolbox.create_project("UnitTest Project", "Project for unit tests.")
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
 
     def test_open_project(self):
@@ -224,7 +224,10 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).
         """
-        self.toolbox.create_project("UnitTest Project", "")
+        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
+                mock.patch("project.create_dir") as mock_create_dir:
+            self.toolbox.create_project("UnitTest Project", "")
+        # self.toolbox.create_project("UnitTest Project", "")
         ds1 = "DS1"
         self.add_ds(ds1)
         n_items = self.toolbox.project_item_model.n_items()
@@ -544,6 +547,7 @@ class TestToolboxUI(unittest.TestCase):
     def add_ds(self, name, x=0, y=0):
         """Helper method to create a Data Store with the given name and coordinates."""
         item = dict(name=name, description="", url=dict(), x=x, y=y)
+        # TODO: Mocking create_dir does not work here since DataStore class was moved to project_items directory
         with mock.patch("project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Stores", item)
         return

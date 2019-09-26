@@ -21,6 +21,7 @@ from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
 from config import STATUSBAR_SS
 import ui.project_form
+from config import INVALID_CHARS
 from helpers import project_dir
 
 
@@ -80,10 +81,7 @@ class NewProjectForm(QWidget):
             self.statusbar.showMessage("No project name given", 5000)
             return
         # Check for invalid characters for a folder name
-        invalid_chars = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
-        # "." is actually valid in a folder name but
-        # this is to prevent creating folders like "...."
-        if any((True for x in self.name if x in invalid_chars)):
+        if any((True for x in self.name if x in INVALID_CHARS)):
             self.statusbar.showMessage("Project name contains invalid character(s) for a folder name", 5000)
             return
         # Check if project with same name already exists
