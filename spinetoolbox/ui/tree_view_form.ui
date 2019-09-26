@@ -313,11 +313,11 @@
        <attribute name="verticalHeaderVisible">
         <bool>false</bool>
        </attribute>
-       <attribute name="verticalHeaderMinimumSectionSize">
-        <number>20</number>
-       </attribute>
        <attribute name="verticalHeaderHighlightSections">
         <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderMinimumSectionSize">
+        <number>20</number>
        </attribute>
       </widget>
      </item>
@@ -516,6 +516,9 @@
          <width>20</width>
          <height>20</height>
         </size>
+       </property>
+       <property name="uniformRowHeights">
+        <bool>true</bool>
        </property>
       </widget>
      </item>

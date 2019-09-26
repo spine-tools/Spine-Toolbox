@@ -21,7 +21,7 @@ import logging
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import QToolButton, QApplication, QGraphicsScene, QAction, QWidgetAction, QAbstractItemView
+from PySide2.QtWidgets import QToolButton, QApplication, QGraphicsScene, QAction, QWidgetAction, QTreeView
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QSize, QEvent
 from PySide2.QtGui import QIcon, QPalette, QMouseEvent
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
@@ -231,7 +231,7 @@ class GraphViewForm(DataStoreForm):
         new_event = QMouseEvent(
             QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
         )
-        QAbstractItemView.mousePressEvent(self.ui.treeView_object, new_event)
+        QTreeView.mousePressEvent(self.ui.treeView_object, new_event)
 
     @Slot(name="restore_dock_widgets")
     def restore_dock_widgets(self):
@@ -319,8 +319,8 @@ class GraphViewForm(DataStoreForm):
             self.ui.menuSession.removeAction(self.ui.actionRollback)
 
     @busy_effect
-    @Slot("bool", name="build_graph")
-    def build_graph(self, checked=True):
+    # @Slot("bool", name="build_graph")
+    def build_graph(self):
         """Initialize graph data and build graph."""
         tic = time.clock()
         self.init_graph_data()
