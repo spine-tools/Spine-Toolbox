@@ -373,6 +373,7 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="show_recent_projects_menu")
     def show_recent_projects_menu(self):
+        """Updates and sets up the recent projects menu to File-Open recent action."""
         if not self.recent_projects_menu.isVisible():
             self.recent_projects_menu = RecentProjectsPopupMenu(self)
             self.ui.actionOpen_recent.setMenu(self.recent_projects_menu)
@@ -1324,10 +1325,10 @@ class ToolboxUI(QMainWindow):
         return
 
     def remove_path_from_recent_projects(self, p):
-        """Removes given entry from the recent project files list in QSettings.
+        """Removes entry that contains given path from the recent project files list in QSettings.
 
         Args:
-            p (str): Full path to a project file that will be removed
+            p (str): Full path to a project file (.proj)
         """
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
         if not recents:
@@ -1335,7 +1336,7 @@ class ToolboxUI(QMainWindow):
         recents = str(recents)
         recents_list = recents.split("\n")
         for entry in recents_list:
-            name, path = entry.split(";")
+            name, path = entry.split("<>")
             if path == p:
                 recents_list.pop(recents_list.index(entry))
                 break
@@ -1343,12 +1344,13 @@ class ToolboxUI(QMainWindow):
         # Save updated recent paths
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)
         self._qsettings.sync()  # Commit change immediately
-        self.msg_error.emit("Project opening failed. Project file <b>{0}</b> may have been removed.".format(p))
+        self.msg_error.emit("Opening selected project failed. Project file <b>{0}</b> may have been removed."
+                            .format(p))
 
     def update_recent_projects(self):
         """Adds a new entry to QSettings variable that remembers the five most recent project paths."""
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        entry = self.project().name + ";" +self.project().path
+        entry = self.project().name + "<>" +self.project().path
         if not recents:
             updated_recents = entry
         else:

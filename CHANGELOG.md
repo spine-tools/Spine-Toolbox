@@ -10,13 +10,13 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   configuration. Hovering the icon shows tips for completing the configuration.
 - A small icon is painted next to the project items in the design view to show the order in which they will be
   executed
+- Main Window menu 'File -> Open recent'. Shortcut for opening a recent project.
 
 ### Changed
 
 ### Deprecated
 
 ### Removed
-- ConnectionModel class
 
 ### Fixed
 - Data advertised by a project item during execution is only accessible by its descendants.

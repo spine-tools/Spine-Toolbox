@@ -515,55 +515,28 @@ class CreateMainProgramPopupMenu(CustomPopupMenu):
 
 
 class RecentProjectsPopupMenu(CustomPopupMenu):
-    """Popup menu for recent projects list embedded to File menu."""
+    """Recent projects menu embedded to 'File-Open recent' QAction."""
 
     def __init__(self, parent):
         """
 
         Args:
-            parent (QWidget): Parent widget of this pop-up menu (ToolboxUI)
+            parent (QWidget): Parent widget of this menu (ToolboxUI)
         """
         super().__init__(parent=parent)
         self._parent = parent
-        # self.add_recent_projects_section()
         self.add_recent_projects()
 
     def add_recent_projects(self):
-        """Loads previous project paths from QSettings
-        and ads them to the QMenu as QActions.
-        """
+        """Reads the previous project names and paths from QSettings. Ads them to the QMenu as QActions."""
         recents = self._parent.qsettings().value("appSettings/recentProjects", defaultValue=None)
         if recents:
             recents = str(recents)
             recents_list = recents.split("\n")
             for entry in recents_list:
-                name, filepath = entry.split(";")
+                name, filepath = entry.split("<>")
                 self.add_action(name, lambda checked=False, filepath=filepath: self.call_open_project(
                         checked, filepath))
-
-    def add_recent_projects_section(self):
-        """Add a non-interactive section item with lines and a label."""
-        widget = QWidget()
-        layout = QHBoxLayout(widget)
-        line1 = QFrame()
-        line1.setFrameShape(QFrame.HLine)
-        line2 = QFrame()
-        line2.setFrameShape(QFrame.HLine)
-        label = QLabel("Recent projects")
-        layout.addWidget(line1)
-        layout.addWidget(label)
-        layout.addWidget(line2)
-        widget.layout().setStretch(0, 1)
-        widget.layout().setStretch(1, 0)
-        widget.layout().setStretch(2, 1)
-        line_ss = "QFrame{color: gray;}"
-        label_ss = "QLabel{color: gray;}"
-        line1.setStyleSheet(line_ss)
-        label.setStyleSheet(label_ss)
-        line2.setStyleSheet(line_ss)
-        section = QWidgetAction(self)
-        section.setDefaultWidget(widget)
-        self.addAction(section)
 
     @Slot(bool, str, name="call_open_project")
     def call_open_project(self, checked, p):
@@ -575,7 +548,7 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
         """
         if not os.path.exists(p):
             # Project has been removed, remove it from recent projects list
-            self._parent.remove_path_from_recent_projects(p)  # TODO: Fix
+            self._parent.remove_path_from_recent_projects(p)
             return
         # Check if the same project is already open
         if self._parent.project():
