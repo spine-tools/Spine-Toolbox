@@ -10,6 +10,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
   configuration. Hovering the icon shows tips for completing the configuration.
 - A small icon is painted next to the project items in the design view to show the order in which they will be
   executed
+- A new project item *Gdx Export* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
 
 ### Changed
 
