@@ -43,7 +43,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 944, 21))
         self.menubar.setObjectName("menubar")
         self.menuGraph = QtWidgets.QMenu(self.menubar)
         self.menuGraph.setObjectName("menuGraph")
@@ -166,8 +166,11 @@ class Ui_MainWindow(object):
         self.treeView_object.setSizePolicy(sizePolicy)
         self.treeView_object.setEditTriggers(QtWidgets.QAbstractItemView.EditKeyPressed)
         self.treeView_object.setSelectionMode(QtWidgets.QAbstractItemView.ExtendedSelection)
+        self.treeView_object.setIconSize(QtCore.QSize(20, 20))
+        self.treeView_object.setIndentation(20)
+        self.treeView_object.setUniformRowHeights(True)
         self.treeView_object.setObjectName("treeView_object")
-        self.treeView_object.header().setVisible(False)
+        self.treeView_object.header().setVisible(True)
         self.verticalLayout.addWidget(self.treeView_object)
         self.dockWidget_object_tree.setWidget(self.dockWidgetContents_2)
         MainWindow.addDockWidget(QtCore.Qt.DockWidgetArea(1), self.dockWidget_object_tree)
@@ -393,7 +396,7 @@ class Ui_MainWindow(object):
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from widgets.custom_qgraphicsviews import GraphQGraphicsView
-from widgets.custom_qlistview import DragListView
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from widgets.custom_qlistview import DragListView
+from widgets.custom_qgraphicsviews import GraphQGraphicsView
 import resources_icons_rc

@@ -65,4 +65,5 @@ class ViewPropertiesWidget(QWidget):
             view.open_graph_view_btn_clicked()
         elif option == "Open tabular view":
             view.open_tabular_view_btn_clicked()
-        return
+        self.view_prop_context_menu.deleteLater()
+        self.view_prop_context_menu = None

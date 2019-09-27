@@ -100,8 +100,7 @@ class View(ProjectItem):
         self._open_view(self._tree_views, supports_multiple_databases=True)
 
     def _open_view(self, view_store, supports_multiple_databases):
-        """
-        Opens references in a view window.
+        """Opens references in a view window.
 
         Args:
             view_store (dict): a dictionary where to store the view window
