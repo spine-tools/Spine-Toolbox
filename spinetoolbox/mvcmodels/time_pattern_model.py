@@ -23,7 +23,6 @@ from mvcmodels.indexed_value_table_model import IndexedValueTableModel
 
 
 class TimePatternModel(IndexedValueTableModel):
-
     def __init__(self, value):
         """A model for time pattern type parameter values.
 

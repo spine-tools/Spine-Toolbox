@@ -21,7 +21,6 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):
-
     def __init__(self, parent=None):
         """Table model for outlining simple tabular data.
 

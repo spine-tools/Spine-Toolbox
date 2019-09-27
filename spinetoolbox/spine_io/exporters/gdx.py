@@ -39,6 +39,7 @@ from spinedb_api import from_database, ParameterValueFormatError
 
 class GdxExportException(Exception):
     """An exception raised when something goes wrong within the gdx module."""
+
     def __init__(self, message):
         """
         Args:

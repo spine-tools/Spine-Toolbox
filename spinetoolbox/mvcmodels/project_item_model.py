@@ -25,7 +25,6 @@ from helpers import rename_dir
 
 
 class ProjectItemModel(QAbstractItemModel):
-
     def __init__(self, toolbox, root):
         """Class to store project items, e.g. Data Stores, Data Connections, Tools, Views.
 
