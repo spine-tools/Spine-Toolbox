@@ -121,7 +121,7 @@ class TextExportersGdx(unittest.TestCase):
         domain_flags = [False, True]
         set_flags = [False, True, False]
         global_domain_name = 'global parameter domain'
-        domain_names, set_names, records, settings = self.make_settings(domain_flags, set_flags, global_domain_name)
+        domain_names, set_names, _, settings = self.make_settings(domain_flags, set_flags, global_domain_name)
         settings_as_dict = settings.to_dict()
         recovered = gdx.Settings.from_dict(settings_as_dict)
         self.assertEqual(recovered.sorted_domain_names, settings.sorted_domain_names)
@@ -264,6 +264,7 @@ class TextExportersGdx(unittest.TestCase):
 
     def test_sort_records_in_place(self):
         class Settings:
+            # pylint: disable=no-self-use
             def sorted_record_key_lists(self, domain_name):
                 if domain_name == "d1":
                     return [["rB"], ["rA"]]
@@ -322,7 +323,7 @@ class TextExportersGdx(unittest.TestCase):
                 'set2': [['record12', 'record21'], ['record11', 'record21']],
             }
             settings = gdx.Settings(sorted_domain_names, sorted_set_names, sorted_records)
-            gams_workspace, gams_database = gdx.to_gams_workspace(database_map, settings)
+            _, gams_database = gdx.to_gams_workspace(database_map, settings)
             database_map.connection.close()
         self.assertEqual(len(gams_database), 4)
         expected_symbol_names = ['domain2', 'domain1', 'set2', 'set1']
@@ -363,7 +364,7 @@ class TextExportersGdx(unittest.TestCase):
             )
             settings = gdx.make_settings(database_map)
             settings.global_parameters_domain_name = 'global_domain'
-            gams_workspace, gams_database = gdx.to_gams_workspace(database_map, settings)
+            _, gams_database = gdx.to_gams_workspace(database_map, settings)
             database_map.connection.close()
         self.assertEqual(len(gams_database), 1)
         expected_symbol_names = ['global_parameter']

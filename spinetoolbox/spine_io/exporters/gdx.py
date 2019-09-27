@@ -45,6 +45,7 @@ class GdxExportException(Exception):
         Args:
             message (str): a message detailing the cause of the exception
         """
+        super().__init__()
         self._message = message
 
     @property
