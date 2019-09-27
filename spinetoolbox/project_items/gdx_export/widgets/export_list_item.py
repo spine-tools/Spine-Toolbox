@@ -34,6 +34,7 @@ class ExportListItem(QWidget):
         self._ui = Ui_Form()
         self._ui.setupUi(self)
         self._ui.url_field.setText(url)
+        self._ui.url_field.setToolTip(url)
         self._ui.out_file_name_edit.setText(file_name)
 
     @property

@@ -12,7 +12,7 @@
 """
 For exporting a database to GAMS .gdx file.
 
-GAMS Python bindings need to be installed before much functionality in this module can be used.
+GAMS Python bindings need to be installed before most functionality in this module can be used.
 The function available() can be used to check if the bindings have been successfully found.
 
 Currently, this module supports databases that are "GAMS-like", that is, they follow the EAV model
@@ -57,17 +57,16 @@ class GdxExportException(Exception):
 
 
 class DomainSet:
-    """
-    Represents a one-dimensional universal GAMS set.
-
-    Attributes:
-        description (str): explanatory text describing the domain
-        name (str): domain's name
-        records (list): domain's elements as a list of DomainRecord objects
-    """
+    """Represents a one-dimensional universal GAMS set."""
 
     def __init__(self, object_class):
-        """Constructs a DomainSet from an object class."""
+        """Constructs a DomainSet from an object class.
+
+        Args:
+            description (str): explanatory text describing the domain
+            name (str): domain's name
+            records (list): domain's elements as a list of DomainRecord objects
+        """
         self.description = object_class.description if object_class.description is not None else ""
         self.name = object_class.name
         self.records = list()
@@ -79,18 +78,17 @@ class DomainSet:
 
 
 class Set:
-    """
-    Represents a (non-domain) GAMS set or a subset.
-
-    Attributes:
-        domain_names (list): a list of superset (DomainSet) names
-        dimensions (int): number of set's dimensions
-        name (str): set's name
-        records (list): set's elements as a list of SetRecord objects
-    """
+    """Represents a (non-domain) GAMS set or a subset."""
 
     def __init__(self, relationship_class):
-        """Constructs a new Set from a relationship class."""
+        """Constructs a new Set from a relationship class.
+
+        Args:
+            domain_names (list): a list of superset (DomainSet) names
+            dimensions (int): number of set's dimensions
+            name (str): set's name
+            records (list): set's elements as a list of SetRecord objects
+        """
         self.domain_names = [name.strip() for name in relationship_class.object_class_name_list.split(',')]
         self.dimensions = len(self.domain_names)
         self.name = relationship_class.name
@@ -98,16 +96,15 @@ class Set:
 
 
 class Record:
-    """
-    Represents a GAMS set element in a DomainSet.
-
-    Attributes:
-        keys (list): a list  of record's keys
-        parameters: record's parameters as a list of Parameter objects
-    """
+    """Represents a GAMS set element in a DomainSet."""
 
     def __init__(self, object_or_relationship):
-        """Constructs a DomainRecord from a database object."""
+        """Constructs a DomainRecord from a database object.
+
+        Args:
+            keys (list): a list  of record's keys
+            parameters: record's parameters as a list of Parameter objects
+        """
         if hasattr(object_or_relationship, "object_name_list"):
             self.keys = [name.strip() for name in object_or_relationship.object_name_list.split(',')]
         else:
@@ -120,14 +117,15 @@ class Parameter:
     Represents a GAMS parameter.
 
     Supports only plain values. Does not support time series, time patterns etc.
-
-    Attributes:
-        name (str): parameter's name
-        value (float, int or None): parameter's value
     """
 
     def __init__(self, object_parameter):
-        """Constructs a parameter from object or relationship parameter."""
+        """Constructs a parameter from object or relationship parameter.
+
+        Args:
+            name (str): parameter's name
+            value (float, int or None): parameter's value
+        """
         self.name = object_parameter.parameter_name
         try:
             value = from_database(object_parameter.value)
