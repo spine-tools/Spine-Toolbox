@@ -414,5 +414,5 @@ class Ui_MainWindow(object):
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
 from widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from widgets.custom_qtreeview import CopyTreeView, ObjectTreeView
+from widgets.custom_qtreeview import ObjectTreeView, CopyTreeView
 import resources_icons_rc

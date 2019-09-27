@@ -18,7 +18,7 @@ Gdx Export item's settings window.
 
 from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Slot
 from PySide2.QtGui import QColor
-from PySide2.QtWidgets import QMainWindow, QWidget
+from PySide2.QtWidgets import QWidget
 from project_items.gdx_export.ui.gdx_export_settings import Ui_Form
 
 
@@ -48,7 +48,7 @@ def _move_selected_elements_by(list_view, delta):
         model.moveRows(QModelIndex(), chunk[0], chunk[1], QModelIndex(), chunk[0] + delta)
 
 
-class GdxExportSettings(QMainWindow):
+class GdxExportSettings(QWidget):
     """A setting window for exporting .gdx files."""
 
     def __init__(self, settings, parent):
@@ -57,32 +57,35 @@ class GdxExportSettings(QMainWindow):
             settings (Settings): export settings
             parent (QWidget): a parent widget
         """
-        super().__init__(parent)
-        central_widget = QWidget()
-        self._central_widget_ui = Ui_Form()
-        self._central_widget_ui.setupUi(central_widget)
-        self.setCentralWidget(central_widget)
+        # super().__init__(parent)
+        super().__init__(parent=parent, f=Qt.Window)
+        # central_widget = QWidget()
+        # self._central_widget_ui = Ui_Form()
+        # self._central_widget_ui.setupUi(central_widget)
+        # self.setCentralWidget(central_widget)
+        self._ui = Ui_Form()
+        self._ui.setupUi(self)
         self.setWindowTitle("Gdx Export settings")
-        self._central_widget_ui.button_box.accepted.connect(self.close)
-        self._central_widget_ui.button_box.rejected.connect(self.close)
-        self._central_widget_ui.set_move_up_button.clicked.connect(self._move_sets_up)
-        self._central_widget_ui.set_move_down_button.clicked.connect(self._move_sets_down)
-        self._central_widget_ui.set_as_global_parameters_object_class_button.clicked.connect(
+        self._ui.button_box.accepted.connect(self.close)
+        self._ui.button_box.rejected.connect(self.close)
+        self._ui.set_move_up_button.clicked.connect(self._move_sets_up)
+        self._ui.set_move_down_button.clicked.connect(self._move_sets_down)
+        self._ui.set_as_global_parameters_object_class_button.clicked.connect(
             self._set_selected_set_as_global_parameters_object_class
         )
-        self._central_widget_ui.record_move_up_button.clicked.connect(self._move_records_up)
-        self._central_widget_ui.record_move_down_button.clicked.connect(self._move_records_down)
-        self._central_widget_ui.global_parameters_object_class_line_edit.setText(settings.global_parameters_domain_name)
-        self._central_widget_ui.global_parameters_object_class_line_edit.textChanged.connect(
+        self._ui.record_move_up_button.clicked.connect(self._move_records_up)
+        self._ui.record_move_down_button.clicked.connect(self._move_records_down)
+        self._ui.global_parameters_object_class_line_edit.setText(settings.global_parameters_domain_name)
+        self._ui.global_parameters_object_class_line_edit.textChanged.connect(
             self._update_global_parameters_object_class
         )
         self._settings = settings
         set_list_model = GAMSSetListModel(settings)
-        self._central_widget_ui.set_list_view.setModel(set_list_model)
+        self._ui.set_list_view.setModel(set_list_model)
         record_list_model = GAMSRecordListModel()
-        self._central_widget_ui.record_list_view.setModel(record_list_model)
-        self._central_widget_ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
-        self._central_widget_ui.set_list_view.selectionModel().currentChanged.connect(
+        self._ui.record_list_view.setModel(record_list_model)
+        self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
+        self._ui.set_list_view.selectionModel().currentChanged.connect(
             self._update_as_global_button_enabled_state
         )
 
@@ -94,27 +97,27 @@ class GdxExportSettings(QMainWindow):
     @property
     def button_box(self):
         """window's dialog button box containing the OK and Cancel buttons"""
-        return self._central_widget_ui.button_box
+        return self._ui.button_box
 
     @Slot(bool)
     def _move_sets_up(self, checked=False):
         """Moves selected domains and sets up one position."""
-        _move_selected_elements_by(self._central_widget_ui.set_list_view, -1)
+        _move_selected_elements_by(self._ui.set_list_view, -1)
 
     @Slot(bool)
     def _move_sets_down(self, checked=False):
         """Moves selected domains and sets down one position."""
-        _move_selected_elements_by(self._central_widget_ui.set_list_view, 1)
+        _move_selected_elements_by(self._ui.set_list_view, 1)
 
     @Slot(bool)
     def _move_records_up(self, checked=False):
         """Moves selected records up and position."""
-        _move_selected_elements_by(self._central_widget_ui.record_list_view, -1)
+        _move_selected_elements_by(self._ui.record_list_view, -1)
 
     @Slot(bool)
     def _move_records_down(self, checked=False):
         """Moves selected records down on position."""
-        _move_selected_elements_by(self._central_widget_ui.record_list_view, 1)
+        _move_selected_elements_by(self._ui.record_list_view, 1)
 
     @Slot("QModelIndex", "QModelIndex")
     def _update_as_global_button_enabled_state(self, current, previous):
@@ -123,18 +126,18 @@ class GdxExportSettings(QMainWindow):
         is_previous_domain = model.is_domain(previous)
         is_current_domain = model.is_domain(current)
         if is_current_domain != is_previous_domain:
-            self._central_widget_ui.set_as_global_parameters_object_class_button.setEnabled(is_current_domain)
+            self._ui.set_as_global_parameters_object_class_button.setEnabled(is_current_domain)
 
     @Slot(bool)
     def _set_selected_set_as_global_parameters_object_class(self, checked=False):
         """Sets the currently selected domain as the global parameters object class."""
-        selection_model = self._central_widget_ui.set_list_view.selectionModel()
+        selection_model = self._ui.set_list_view.selectionModel()
         current_index = selection_model.currentIndex()
         model = current_index.model()
         if not current_index.isValid() or not model.is_domain(current_index):
             return
         set_name = current_index.data()
-        self._central_widget_ui.global_parameters_object_class_line_edit.setText(set_name)
+        self._ui.global_parameters_object_class_line_edit.setText(set_name)
         model.setData(current_index, Qt.Unchecked, Qt.CheckStateRole)
 
     @Slot(str)
@@ -148,10 +151,10 @@ class GdxExportSettings(QMainWindow):
         selected_indexes = selected.indexes()
         if not selected_indexes:
             return
-        set_model = self._central_widget_ui.set_list_view.model()
+        set_model = self._ui.set_list_view.model()
         selected_set_name = set_model.data(selected_indexes[0])
         record_keys = self._settings.sorted_record_key_lists(selected_set_name)
-        record_model = self._central_widget_ui.record_list_view.model()
+        record_model = self._ui.record_list_view.model()
         record_model.reset(record_keys)
 
 
