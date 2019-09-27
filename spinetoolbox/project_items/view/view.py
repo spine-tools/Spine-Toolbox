@@ -19,7 +19,7 @@ Module for view class.
 import logging
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap
-from sqlalchemy.engine.url import URL
+from sqlalchemy.engine.url import URL, make_url
 from spinedb_api import DiffDatabaseMapping, SpineDBAPIError, SpineDBVersionError
 from project_item import ProjectItem
 from widgets.graph_view_widget import GraphViewForm
@@ -127,12 +127,11 @@ class View(ProjectItem):
         an empty list given, the model is cleared."""
         self.reference_model.clear()
         self.reference_model.setHorizontalHeaderItem(0, QStandardItem("References"))  # Add header
-        if items is not None:
-            for item in items:
-                qitem = QStandardItem(item.database)
-                qitem.setFlags(~Qt.ItemIsEditable)
-                qitem.setData(self._spine_ref_icon, Qt.DecorationRole)
-                self.reference_model.appendRow(qitem)
+        for item in items:
+            qitem = QStandardItem(item.database)
+            qitem.setFlags(~Qt.ItemIsEditable)
+            qitem.setData(self._spine_ref_icon, Qt.DecorationRole)
+            self.reference_model.appendRow(qitem)
 
     def update_name_label(self):
         """Update View tab name label. Used only when renaming project items."""
@@ -144,16 +143,7 @@ class View(ProjectItem):
         self._toolbox.msg.emit("Executing View <b>{0}</b>".format(self.name))
         self._toolbox.msg.emit("***")
         inst = self._toolbox.project().execution_instance
-        self._references.clear()
-        for resource in inst.available_resources(self.name):
-            if resource.type_ == "database" and resource.scheme == "sqlite":
-                filepaths.append(resource.url)
-            elif resource.type_ == "file" and resource.metadata.get("is_output"):
-                filepath = resource.path
-                if filepath.lower().endswith('.sqlite'):
-                    url = URL("sqlite", database=filepath)
-                    self._references.append(url)
-        self.populate_reference_list(self._references)
+        self.update_references(inst)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
@@ -163,13 +153,17 @@ class View(ProjectItem):
     def simulate_execution(self, inst):
         """Update the list of references that this item is viewing."""
         super().simulate_execution(inst)
+        self.update_references(inst)
+
+    def update_references(self, inst):
+        """Update references from the execution instance."""
         self._references.clear()
         for resource in inst.available_resources(self.name):
             if resource.type_ == "database" and resource.scheme == "sqlite":
-                filepaths.append(resource.url)
+                self._references.append(make_url(resource.url))
             elif resource.type_ == "file" and resource.metadata.get("is_output"):
                 filepath = resource.path
-                if filepath.lower().endswith('.sqlite'):
+                if os.path.splitext(filepath)[1] == '.sqlite':
                     url = URL("sqlite", database=filepath)
                     self._references.append(url)
         self.populate_reference_list(self._references)
