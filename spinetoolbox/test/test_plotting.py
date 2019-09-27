@@ -29,7 +29,7 @@ from plotting import (
     GraphAndTreeViewPlottingHints,
     PivotTablePlottingHints,
 )
-from mvcmodels.tabularview_models import PivotTableModel
+from mvcmodels.pivot_table_models import PivotTableModel
 from widgets.plot_widget import PlotWidget
 
 

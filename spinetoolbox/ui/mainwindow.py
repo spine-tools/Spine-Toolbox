@@ -63,7 +63,7 @@ class Ui_MainWindow(object):
         self.verticalLayout_10.addWidget(self.graphicsView)
         MainWindow.setCentralWidget(self.centralwidget)
         self.menubar = QtWidgets.QMenuBar(MainWindow)
-        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 28))
+        self.menubar.setGeometry(QtCore.QRect(0, 0, 862, 21))
         self.menubar.setNativeMenuBar(False)
         self.menubar.setObjectName("menubar")
         self.menuFile = QtWidgets.QMenu(self.menubar)
@@ -390,8 +390,11 @@ class Ui_MainWindow(object):
         self.actionGetting_started = QtWidgets.QAction(MainWindow)
         self.actionGetting_started.setIcon(icon13)
         self.actionGetting_started.setObjectName("actionGetting_started")
+        self.actionOpen_recent = QtWidgets.QAction(MainWindow)
+        self.actionOpen_recent.setObjectName("actionOpen_recent")
         self.menuFile.addAction(self.actionNew)
         self.menuFile.addAction(self.actionOpen)
+        self.menuFile.addAction(self.actionOpen_recent)
         self.menuFile.addAction(self.actionSave)
         self.menuFile.addAction(self.actionSave_As)
         self.menuFile.addAction(self.actionExport_project_to_GraphML)
@@ -495,7 +498,8 @@ class Ui_MainWindow(object):
         self.actionAdd_Data_Interface.setText(QtWidgets.QApplication.translate("MainWindow", "Add Data Interface", None, -1))
         self.actionGetting_started.setText(QtWidgets.QApplication.translate("MainWindow", "Getting started", None, -1))
         self.actionGetting_started.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
+        self.actionOpen_recent.setText(QtWidgets.QApplication.translate("MainWindow", "Open recent", None, -1))
 
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
 from widgets.custom_qtextbrowser import CustomQTextBrowser
+from widgets.custom_qgraphicsviews import DesignQGraphicsView
 import resources_icons_rc

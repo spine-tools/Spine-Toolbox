@@ -17,11 +17,17 @@ Unit tests for the MinimalTableModel class.
 """
 
 import unittest
+from PySide2.QtWidgets import QApplication
 from mvcmodels.minimal_table_model import MinimalTableModel
 from PySide2.QtCore import Qt
 
 
 class TestMinimalTableModel(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
     def test_clear(self):
         """Test the clear() method of MinimalTableModel."""
         model = MinimalTableModel()
@@ -159,6 +165,7 @@ class TestMinimalTableModel(unittest.TestCase):
     def test_batch_set_data(self):
         """Test the batch_set_data() method of MinimalTableModel."""
         model = MinimalTableModel()
+
         n_rows = 3
         model.insertRows(0, n_rows)
         n_columns = 3
@@ -168,6 +175,14 @@ class TestMinimalTableModel(unittest.TestCase):
         for row in range(n_rows):
             for column in range(n_columns):
                 indices.append(model.index(row, column))
+
+        def _handle_data_changed(top_left, bottom_right, roles):
+            self.assertEqual(top_left, indices[0])
+            self.assertEqual(bottom_right, indices[-1])
+            self.assertTrue(Qt.EditRole in roles)
+            self.assertTrue(Qt.DisplayRole in roles)
+
+        model.dataChanged.connect(_handle_data_changed)
         self.assertTrue(model.batch_set_data(indices, background))
         for row in range(n_rows):
             for column in range(n_columns):

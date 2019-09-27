@@ -38,10 +38,8 @@ from PySide2.QtWidgets import (
     QLineEdit,
     QTableView,
     QItemDelegate,
-    QTabWidget,
     QWidget,
     QVBoxLayout,
-    QTextEdit,
     QColorDialog,
     QDialog,
     QDialogButtonBox,
@@ -50,8 +48,6 @@ from PySide2.QtWidgets import (
     QLabel,
 )
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from mvcmodels.treeview_models import LazyLoadingArrayModel
-from widgets.custom_qtableview import CopyPasteTableView
 from helpers import IconListManager, interpret_icon_id, make_icon_id
 
 
@@ -469,182 +465,6 @@ class CheckListEditor(QTableView):
         x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
         y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
         self.move(self.pos() - QPoint(x_offset, y_offset))
-
-
-class JSONEditor(QTabWidget):
-    """A double JSON editor, featuring:
-    - A QTextEdit for editing arbitrary json.
-    - A QTableView for editing json array.
-    """
-
-    data_committed = Signal(name="data_committed")
-
-    def __init__(self, parent, elder_sibling, popup=False):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
-        self._elder_sibling = elder_sibling
-        self._popup = popup
-        self.setTabPosition(QTabWidget.South)
-        self.tab_raw = QWidget()
-        vertical_layout = QVBoxLayout(self.tab_raw)
-        vertical_layout.setSpacing(0)
-        vertical_layout.setContentsMargins(0, 0, 0, 0)
-        self.text_edit = QTextEdit(self.tab_raw)
-        self.text_edit.setTabChangesFocus(True)
-        vertical_layout.addWidget(self.text_edit)
-        self.addTab(self.tab_raw, "Raw")
-        self.tab_table = QWidget()
-        vertical_layout = QVBoxLayout(self.tab_table)
-        vertical_layout.setSpacing(0)
-        vertical_layout.setContentsMargins(0, 0, 0, 0)
-        self.table_view = CopyPasteTableView(self.tab_table)
-        self.table_view.horizontalHeader().hide()
-        self.table_view.setTabKeyNavigation(False)
-        vertical_layout.addWidget(self.table_view)
-        self.addTab(self.tab_table, "Table")
-        self.setCurrentIndex(0)
-        self._base_size = None
-        self.model = LazyLoadingArrayModel(self)
-        self.table_view.setModel(self.model)
-        self.text_edit.installEventFilter(self)
-        self.table_view.installEventFilter(self)
-        self.table_view.keyPressEvent = self._view_key_press_event
-        if popup:
-            self.text_edit.setReadOnly(True)
-            self.table_view.setEditTriggers(QTableView.NoEditTriggers)
-            self.setFocusPolicy(Qt.NoFocus)
-
-    def _view_key_press_event(self, event):
-        """Accept key events on the view to avoid weird behaviour, when trying to navigate
-        outside of its limits.
-        """
-        QTableView.keyPressEvent(self.table_view, event)
-        event.accept()
-
-    def eventFilter(self, widget, event):
-        """Intercept events to text_edit and table_view to enable consistent behavior.
-        """
-        if event.type() == QEvent.KeyPress:
-            if event.key() == Qt.Key_Tab:
-                if widget == self.text_edit:
-                    self.setCurrentIndex(1)
-                    return True
-                if widget == self.table_view:
-                    return QCoreApplication.sendEvent(self, event)
-            if event.key() == Qt.Key_Backtab:
-                if widget == self.table_view:
-                    self.setCurrentIndex(0)
-                    return True
-                if widget == self.text_edit:
-                    return QCoreApplication.sendEvent(self, event)
-            if event.key() == Qt.Key_Escape:
-                self.setFocus()
-                return QCoreApplication.sendEvent(self, event)
-            if event.key() in (Qt.Key_Enter, Qt.Key_Return):
-                if widget == self.table_view:
-                    if self.table_view.isPersistentEditorOpen(self.table_view.currentIndex()):
-                        return True
-                    self.setFocus()
-                    return QCoreApplication.sendEvent(self, event)
-                return False
-        if event.type() == QEvent.FocusOut:
-            QTimer.singleShot(0, self.check_focus)
-        return False
-
-    def check_focus(self):
-        """Called when either the text edit or the table view lose focus.
-        Check if the focus is still on this widget (which would mean it was a tab change)
-        otherwise emit signal so this is closed.
-        """
-        if qApp.focusWidget() != self.focusWidget():  # pylint: disable=undefined-variable
-            self.data_committed.emit()
-
-    @Slot("int", name="_handle_current_changed")
-    def _handle_current_changed(self, index):
-        """Update json data on text edit or table view, and set focus.
-        """
-        if index == 0:
-            data = self.model.all_data()
-            if data is not None:
-                formatted_data = json.dumps(data, indent=4)
-                self.text_edit.setText(formatted_data)
-            self.text_edit.setFocus()
-        elif index == 1:
-            text = self.text_edit.toPlainText()
-            try:
-                data = json.loads(text)
-            except json.JSONDecodeError:
-                data = None
-            self.model.reset_model(data)
-            self.table_view.setFocus()
-            self.table_view.setCurrentIndex(self.model.index(0, 0))
-            self.table_view.selectionModel().clearSelection()
-
-    def set_data(self, data, current_index):
-        """Set data on text edit or table view (model) depending on current index.
-        """
-        self.setCurrentIndex(current_index)
-        self.currentChanged.connect(self._handle_current_changed)
-        try:
-            loaded_data = json.loads(data)
-        except (TypeError, json.JSONDecodeError):
-            # NOTE: TypeError happens when data is None
-            loaded_data = None
-        if current_index == 0:
-            if loaded_data is not None:
-                formatted_data = json.dumps(loaded_data, indent=4)
-                self.text_edit.setText(formatted_data)
-        elif current_index == 1:
-            self.model.reset_model(loaded_data)
-        QTimer.singleShot(0, self.start_editing)
-
-    def start_editing(self):
-        """Start editing.
-        """
-        current_index = self.currentIndex()
-        if current_index == 0:
-            self.text_edit.setFocus()
-        elif current_index == 1:
-            self.table_view.setFocus()
-
-    def set_base_size(self, size):
-        self._base_size = size
-
-    def update_geometry(self):
-        """Update geometry.
-        """
-        self.table_view.horizontalHeader().setDefaultSectionSize(self._base_size.width())
-        self.table_view.verticalHeader().setDefaultSectionSize(self._base_size.height())
-        if self._popup:
-            base_width = 0.6 * self._base_size.width()
-            offset = QPoint(0.4 * self._base_size.width(), 0)
-            min_size = QSize(0, 0)
-        else:
-            base_width = self._base_size.width()
-            offset = QPoint(0, 0)
-            min_size = QSize(200, 0)
-        size = QSize(base_width, self._base_size.height() * 16)  # TODO: Try and get rid of the 16 here
-        size = size.boundedTo(self._parent.size())
-        size = size.expandedTo(min_size)
-        self.resize(size)
-        self.move(offset + self.pos() + self._elder_sibling.mapTo(self._parent, self._elder_sibling.parent().pos()))
-        # Adjust position if widget is outside parent's limits
-        bottom_right = self.mapToGlobal(self.rect().bottomRight())
-        parent_bottom_right = self._parent.mapToGlobal(self._parent.rect().bottomRight())
-        x_offset = max(0, bottom_right.x() - parent_bottom_right.x())
-        y_offset = max(0, bottom_right.y() - parent_bottom_right.y())
-        self.move(self.pos() - QPoint(x_offset, y_offset))
-
-    def data(self):
-        index = self.currentIndex()
-        if index == 0:
-            text = self.text_edit.toPlainText()
-            if not text:  # empty string is not valid JSON
-                text = 'null'
-            return text
-        if index == 1:
-            return json.dumps(self.model.all_data())
 
 
 class IconPainterDelegate(QItemDelegate):
