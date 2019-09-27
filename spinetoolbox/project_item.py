@@ -18,11 +18,12 @@ BaseProjectItem and ProjectItem classes.
 
 import os
 import logging
-from metaobject import MetaObject
-from PySide2.QtCore import Qt, Signal, Slot, QUrl
+from PySide2.QtCore import Qt, Signal, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
+from urllib.parse import urlparse
 from widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
+from metaobject import MetaObject
 from helpers import create_dir
 
 
@@ -98,14 +99,19 @@ class BaseProjectItem(MetaObject):
         child._parent = None
         return True
 
-    def custom_context_menu(self):
-        """Returns the context menu for this item. Implement in subclasses as needed."""
+    def custom_context_menu(self, parent, pos):
+        """Returns the context menu for this item. Implement in subclasses as needed.
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            pos (QPoint): Position on screen
+        """
         return NotImplemented
 
-    def apply_context_menu_action(self, action):
+    def apply_context_menu_action(self, parent, action):
         """Applies given action from context menu. Implement in subclasses as needed.
 
         Args:
+            parent (QWidget): The widget that is controlling the menu
             action (str): The selected action
         """
 
@@ -227,6 +233,7 @@ class ProjectItem(BaseProjectItem):
         self.y = y
         self._properties_ui = None
         self._icon = None
+        self._sigs = None
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -384,14 +391,31 @@ class ProjectItemResource:
     """Class to hold a resource made available by a project item
     and that may be consumed by another project item."""
 
-    def __init__(self, provider, type_, data):
+    def __init__(self, provider, type_, url="", data=None, metadata=None):
         """Init class.
 
         Args:
             provider (ProjectItem): The item that provides the resource
-            type_ (str): The resource type
+            type_ (str): The resource type, either "file", "database", or "data" (for now)
+            url (str): The url of the resource
             data (object): The data in the resource
+            metadata (dict): Some metadata providing extra information about the resource
         """
         self.provider = provider
         self.type_ = type_
+        self.url = url
+        self.parsed_url = urlparse(url)
         self.data = data
+        if not metadata:
+            metadata = dict()
+        self.metadata = metadata
+
+    @property
+    def path(self):
+        """Returns the resource path, as obtained from parsing the url."""
+        return self.parsed_url.path
+
+    @property
+    def scheme(self):
+        """Returns the resource scheme, as obtained from parsing the url."""
+        return self.parsed_url.scheme

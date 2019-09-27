@@ -279,7 +279,7 @@ class DataInterface(ProjectItem):
         if all_data:
             # Add mapped data to a dict in the execution instance.
             # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
-            resource = ProjectItemResource(self, "data_interface_resource", all_data)
+            resource = ProjectItemResource(self, "data", data=all_data, metadata=dict(for_import=True))
             inst.advertise_resources(self.name, resource)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
@@ -291,9 +291,7 @@ class DataInterface(ProjectItem):
         """Simulates executing this Item."""
         super().simulate_execution(inst)
         file_list = [
-            r.data
-            for r in inst.available_resources(self.name)
-            if r.type_ in ("data_connection_file", "data_connection_reference")
+            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and not r.metadata.get("is_output")
         ]
         self.update_file_model(set(file_list))
         if not file_list:

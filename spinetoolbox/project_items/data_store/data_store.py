@@ -523,7 +523,7 @@ class DataStore(ProjectItem):
                 "& <i>password</i> for other database dialects."
             )
         else:
-            resource = ProjectItemResource(self, "data_store_url", url)
+            resource = ProjectItemResource(self, "database", url=str(url))
             inst.advertise_resources(self.name, resource)
             # Import mapped data from Data Interfaces in the execution instance
             try:
@@ -535,11 +535,13 @@ class DataStore(ProjectItem):
                 db_map = None
             if db_map:
                 all_import_errors = []
-                di_resources = [r for r in inst.available_resources(self.name) if r.type_ == "data_interface_resource"]
-                for resource in di_resources:
-                    di_name = resource.provider.name
+                import_data_resources = [
+                    r for r in inst.available_resources(self.name) if r.type_ == "data" and r.metadata.get("for_import")
+                ]
+                for resource in import_data_resources:
+                    provider_name = resource.provider.name
                     all_data = resource.data
-                    self._toolbox.msg_proc.emit("Importing data from <b>{0}</b> into '{1}'".format(di_name, url))
+                    self._toolbox.msg_proc.emit("Importing data from <b>{0}</b> into '{1}'".format(provider_name, url))
                     for data in all_data:
                         import_num, import_errors = spinedb_api.import_data(db_map, **data)
                         if import_errors:
@@ -584,7 +586,7 @@ class DataStore(ProjectItem):
         super().simulate_execution(inst)
         url = self.make_url(log_errors=False)
         if url:
-            resource = ProjectItemResource(self, "data_store_url", url)
+            resource = ProjectItemResource(self, "database", url=str(url))
             inst.advertise_resources(self.name, resource)
         else:
             self.add_notification(

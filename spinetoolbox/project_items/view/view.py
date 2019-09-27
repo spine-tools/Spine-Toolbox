@@ -147,12 +147,10 @@ class View(ProjectItem):
         inst = self._toolbox.project().execution_instance
         self._references.clear()
         for resource in inst.available_resources(self.name):
-            if resource.type_ == "data_store_url":
-                url = resource.data
-                if url.drivername.lower().startswith('sqlite'):
-                    self._references.append(url)
-            elif resource.type_ == "tool_output_file":
-                filepath = resource.data
+            if resource.type_ == "database" and resource.scheme == "sqlite":
+                filepaths.append(resource.url)
+            elif resource.type_ == "file" and resource.metadata.get("is_output"):
+                filepath = resource.path
                 if filepath.lower().endswith('.sqlite'):
                     url = URL("sqlite", database=filepath)
                     self._references.append(url)
@@ -168,9 +166,12 @@ class View(ProjectItem):
         super().simulate_execution(inst)
         self._references.clear()
         for resource in inst.available_resources(self.name):
-            if resource.type_ == "data_store_url":
-                url = resource.data
-                if url.drivername.lower().startswith('sqlite'):
+            if resource.type_ == "database" and resource.scheme == "sqlite":
+                filepaths.append(resource.url)
+            elif resource.type_ == "file" and resource.metadata.get("is_output"):
+                filepath = resource.path
+                if filepath.lower().endswith('.sqlite'):
+                    url = URL("sqlite", database=filepath)
                     self._references.append(url)
         self.populate_reference_list(self._references)
 

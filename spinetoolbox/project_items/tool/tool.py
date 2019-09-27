@@ -20,6 +20,7 @@ import logging
 import os
 import shutil
 import sys
+import pathlib
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
@@ -716,12 +717,8 @@ class Tool(ProjectItem):
         """Returns available filepath resources from the given execution instance."""
         filepaths = []
         for resource in exec_inst.available_resources(self.name):
-            if resource.type_ in ("data_connection_file", "data_connection_reference", "tool_output_file"):
-                filepaths.append(resource.data)
-            elif resource.type_ == "data_store_url":
-                url = resource.data
-                if url.drivername.lower().startswith("sqlite"):
-                    filepaths.append(url.database)
+            if resource.type_ == "file" or (resource.type_ == "database" and resource.scheme == "sqlite"):
+                filepaths.append(resource.path)
         return filepaths
 
     def find_file(self, filename, exec_inst):
@@ -802,7 +799,9 @@ class Tool(ProjectItem):
             return
         for i in range(self.output_file_model.rowCount()):
             out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            resource = ProjectItemResource(self, "tool_output_file", out_file_path)
+            resource = ProjectItemResource(
+                self, "file", url=pathlib.Path(out_file_path).as_uri(), metadata=dict(is_output=True)
+            )
             inst.advertise_resources(self.name, resource)
 
     def item_dict(self):

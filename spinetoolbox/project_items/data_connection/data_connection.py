@@ -19,6 +19,7 @@ Module for data connection class.
 import os
 import shutil
 import logging
+import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
@@ -368,8 +369,8 @@ class DataConnection(ProjectItem):
         """Returns list of references and files to advertise to the execution instance."""
         refs = self.file_references()
         f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        resources = [ProjectItemResource(self, "data_connection_reference", ref) for ref in refs]
-        resources += [ProjectItemResource(self, "data_connection_file", f) for f in f_list]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs]
+        resources += [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in f_list]
         return resources
 
     def execute(self):
@@ -380,7 +381,9 @@ class DataConnection(ProjectItem):
         inst = self._toolbox.project().execution_instance
         # Update Data Connection based on project items that are already executed
         # Add previously executed Tool's output file paths to references
-        tool_output_files = [r for r in inst.available_resources(self.name) if r.type_ == "tool_output_file"]
+        tool_output_files = [
+            r for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
+        ]
         self.references += tool_output_files
         self.populate_reference_list(self.references, emit_item_changed=False)
         # Update execution instance for project items downstream
