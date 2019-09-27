@@ -16,17 +16,16 @@ Classes for custom context menus and pop-up menus.
 :date:   9.1.2018
 """
 
-import logging
 import os
 from operator import itemgetter
 from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox, QWidget
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
-from helpers import fix_name_ambiguity, tuple_itemgetter
-from plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
-from widgets.custom_qwidgets import FilterWidget
-from widgets.parameter_value_editor import ParameterValueEditor
-from widgets.report_plotting_failure import report_plotting_failure
+from ..helpers import fix_name_ambiguity, tuple_itemgetter
+from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTablePlottingHints
+from .custom_qwidgets import FilterWidget
+from .parameter_value_editor import ParameterValueEditor
+from .report_plotting_failure import report_plotting_failure
 
 
 def handle_plotting_failure(error):

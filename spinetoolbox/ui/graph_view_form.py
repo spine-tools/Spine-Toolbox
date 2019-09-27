@@ -396,7 +396,7 @@ class Ui_MainWindow(object):
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from widgets.custom_qlistview import DragListView
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from widgets.custom_qgraphicsviews import GraphQGraphicsView
-import resources_icons_rc
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox import resources_icons_rc

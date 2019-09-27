@@ -500,6 +500,6 @@ class Ui_MainWindow(object):
         self.actionGetting_started.setShortcut(QtWidgets.QApplication.translate("MainWindow", "F3", None, -1))
         self.actionOpen_recent.setText(QtWidgets.QApplication.translate("MainWindow", "Open recent", None, -1))
 
-from widgets.custom_qgraphicsviews import DesignQGraphicsView
-from widgets.custom_qtextbrowser import CustomQTextBrowser
-import resources_icons_rc
+from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
+from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
+from spinetoolbox import resources_icons_rc

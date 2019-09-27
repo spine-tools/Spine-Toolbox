@@ -18,10 +18,10 @@ Models for object parameter definitions and values.
 
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QFont
-from helpers import busy_effect, format_string_list
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.empty_parameter_models import EmptyObjectParameterValueModel, EmptyObjectParameterDefinitionModel
-from mvcmodels.sub_parameter_models import SubParameterValueModel, SubParameterDefinitionModel
+from ..helpers import busy_effect, format_string_list
+from .minimal_table_model import MinimalTableModel
+from .empty_parameter_models import EmptyObjectParameterValueModel, EmptyObjectParameterDefinitionModel
+from .sub_parameter_models import SubParameterValueModel, SubParameterDefinitionModel
 
 
 class ObjectParameterModel(MinimalTableModel):

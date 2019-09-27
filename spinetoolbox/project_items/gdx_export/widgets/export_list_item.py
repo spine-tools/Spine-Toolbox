@@ -17,7 +17,6 @@ A small widget to set up a database export in Gdx Export settings.
 """
 
 from PySide2.QtWidgets import QWidget
-from project_items.gdx_export.ui.export_list_item import Ui_Form
 
 
 class ExportListItem(QWidget):
@@ -30,6 +29,8 @@ class ExportListItem(QWidget):
             file_name (str): relative path to the exported file name
             parent (QWidget): a parent widget
         """
+        from ..ui.export_list_item import Ui_Form
+
         super().__init__(parent)
         self._ui = Ui_Form()
         self._ui.setupUi(self)

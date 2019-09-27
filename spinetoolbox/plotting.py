@@ -26,7 +26,7 @@ The main entrance points to plotting are:
 import numpy as np
 from PySide2.QtCore import Qt
 from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
-from widgets.plot_widget import PlotWidget
+from .widgets.plot_widget import PlotWidget
 
 
 class PlottingError(Exception):

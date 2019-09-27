@@ -22,10 +22,10 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
 import networkx as nx
-from ui_main import ToolboxUI
-from project import SpineToolboxProject
-from executioner import DirectedGraphHandler
-from test.mock_helpers import MockQWidget, qsettings_value_side_effect
+from ..ui_main import ToolboxUI
+from ..project import SpineToolboxProject
+from ..executioner import DirectedGraphHandler
+from .mock_helpers import MockQWidget, qsettings_value_side_effect
 
 
 class TestDirectedGraphHandler(unittest.TestCase):
@@ -47,12 +47,12 @@ class TestDirectedGraphHandler(unittest.TestCase):
         """Runs before each test. Makes an instance of ToolboxUI class.
         We want the ToolboxUI to start with the default settings and without a project
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("project.create_dir") as mock_create_dir, mock.patch(
-            "ui_main.ToolboxUI.save_project"
+        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "spinetoolbox.ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, mock.patch(
+            "spinetoolbox.ui_main.ToolboxUI.save_project"
         ) as mock_save_project, mock.patch(
-            "ui_main.QSettings.value"
+            "spinetoolbox.ui_main.QSettings.value"
         ) as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()

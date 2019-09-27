@@ -19,9 +19,8 @@ Contains ImportPreviewWidget, and MappingTableMenu classes.
 from spinedb_api import ObjectClassMapping, Mapping, dict_to_map
 from PySide2.QtWidgets import QWidget, QVBoxLayout, QMenu, QListWidgetItem, QErrorMessage
 from PySide2.QtCore import Signal, Qt, QItemSelectionModel, QPoint
-from widgets.mapping_widget import MappingWidget
-from spine_io.io_models import MappingPreviewModel, MappingListModel
-from ui.import_preview import Ui_ImportPreview
+from .mapping_widget import MappingWidget
+from ..spine_io.io_models import MappingPreviewModel, MappingListModel
 
 
 class ImportPreviewWidget(QWidget):
@@ -38,6 +37,8 @@ class ImportPreviewWidget(QWidget):
     previewDataUpdated = Signal()
 
     def __init__(self, connector, parent=None):
+        from ..ui.import_preview import Ui_ImportPreview
+
         super().__init__(parent)
 
         # state

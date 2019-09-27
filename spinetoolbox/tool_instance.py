@@ -22,8 +22,8 @@ import glob
 import logging
 import tempfile
 from PySide2.QtCore import QObject, Signal, Slot
-import qsubprocess
-from helpers import create_output_dir_timestamp, create_dir
+from .import qsubprocess
+from .helpers import create_output_dir_timestamp, create_dir
 
 
 class ToolInstance(QObject):

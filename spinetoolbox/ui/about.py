@@ -536,5 +536,5 @@ class Ui_Form(object):
 "<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-size:8.25pt;\"><br /></p></body></html>", None, -1))
         self.label_3.setText(QtWidgets.QApplication.translate("Form", "<html><head/><body><p><a href=\"http://www.spine-model.org\"><span style=\" color:#ffffff; text-decoration: none\">www.spine-model.org</span></a></p></body></html>", None, -1))
 
-import resources_icons_rc
-import resources_logos_rc
+from spinetoolbox import resources_icons_rc
+from spinetoolbox import resources_logos_rc

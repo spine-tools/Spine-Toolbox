@@ -16,9 +16,9 @@ Module for data store icon class.
 :date:   4.4.2018
 """
 
-from graphics_items import ProjectItemIcon
 from PySide2.QtGui import QColor, QPen, QBrush
 from PySide2.QtCore import Qt
+from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class DataInterfaceIcon(ProjectItemIcon):

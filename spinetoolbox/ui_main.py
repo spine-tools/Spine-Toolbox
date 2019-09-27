@@ -33,36 +33,35 @@ from PySide2.QtWidgets import (
     QWidgetAction,
 )
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
-from ui.mainwindow import Ui_MainWindow
-from mvcmodels.project_item_model import ProjectItemModel
-from mvcmodels.tool_template_model import ToolTemplateModel
-from widgets.about_widget import AboutWidget
-from widgets.custom_menus import (
+from .mvcmodels.project_item_model import ProjectItemModel
+from .mvcmodels.tool_template_model import ToolTemplateModel
+from .widgets.about_widget import AboutWidget
+from .widgets.custom_menus import (
     ProjectItemModelContextMenu,
     ToolTemplateContextMenu,
     LinkContextMenu,
     AddToolTemplatePopupMenu,
     RecentProjectsPopupMenu,
 )
-from widgets.project_form_widget import NewProjectForm
-from widgets.settings_widget import SettingsWidget
-from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
-from widgets.tool_template_widget import ToolTemplateWidget
-from widgets.custom_qwidgets import ZoomWidget
-from widgets.julia_repl_widget import JuliaREPLWidget
-from widgets.python_repl_widget import PythonReplWidget
-import widgets.toolbars
-from project import SpineToolboxProject
-from config import (
+from .widgets.project_form_widget import NewProjectForm
+from .widgets.settings_widget import SettingsWidget
+from .widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
+from .widgets.tool_template_widget import ToolTemplateWidget
+from .widgets.custom_qwidgets import ZoomWidget
+from .widgets.julia_repl_widget import JuliaREPLWidget
+from .widgets.python_repl_widget import PythonReplWidget
+from .widgets import toolbars
+from .project import SpineToolboxProject
+from .config import (
     SPINE_TOOLBOX_VERSION,
     STATUSBAR_SS,
     TEXTBROWSER_SS,
     MAINWINDOW_SS,
     DOCUMENTATION_PATH,
 )
-from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
-from project_item import RootProjectItem, CategoryProjectItem
-from project_items import data_store, data_connection, gdx_export, tool, view, data_interface
+from .helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
+from .project_item import RootProjectItem, CategoryProjectItem
+from .project_items import data_store, data_connection, gdx_export, tool, view, data_interface
 
 
 class ToolboxUI(QMainWindow):
@@ -79,6 +78,7 @@ class ToolboxUI(QMainWindow):
 
     def __init__(self):
         """ Initialize application and main window."""
+        from .ui.mainwindow import Ui_MainWindow
         super().__init__(flags=Qt.Window)
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set number formatting to use user's default settings
@@ -117,7 +117,7 @@ class ToolboxUI(QMainWindow):
         self.zoom_widget_action = None
         self.recent_projects_menu = RecentProjectsPopupMenu(self)
         # Make and initialize toolbars
-        self.item_toolbar = widgets.toolbars.ItemToolBar(self)
+        self.item_toolbar = toolbars.ItemToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.item_toolbar)
         # Make julia REPL
         self.julia_repl = JuliaREPLWidget(self)
@@ -243,7 +243,7 @@ class ToolboxUI(QMainWindow):
         if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
             p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
             getting_started_anchor = (
-                "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
+                    "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
             )
             self.msg.emit(
                 "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(getting_started_anchor)

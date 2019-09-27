@@ -16,8 +16,8 @@ Classes for custom context menus and pop-up menus.
 :date:   9.1.2018
 """
 
-from widgets.custom_menus import CustomContextMenu, ProjectItemContextMenu
 from PySide2.QtCore import QTimeLine
+from spinetoolbox.widgets.custom_menus import CustomContextMenu, ProjectItemContextMenu
 
 
 class ToolPropertiesContextMenu(CustomContextMenu):

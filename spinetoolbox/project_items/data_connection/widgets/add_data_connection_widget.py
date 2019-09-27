@@ -16,7 +16,7 @@ Widget shown to user when a new Data Connection is created.
 :date:   19.1.2017
 """
 
-from widgets.add_project_item_widget import AddProjectItemWidget
+from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 
 
 class AddDataConnectionWidget(AddProjectItemWidget):

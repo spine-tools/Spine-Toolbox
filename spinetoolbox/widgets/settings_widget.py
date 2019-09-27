@@ -20,8 +20,7 @@ import os
 from PySide2.QtWidgets import QWidget, QFileDialog, QMessageBox, QColorDialog
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QPixmap
-import ui.settings
-from config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, SETTINGS_SS
+from ..config import DEFAULT_PROJECT_DIR, DEFAULT_WORK_DIR, SETTINGS_SS
 
 
 class SettingsWidget(QWidget):
@@ -35,6 +34,8 @@ class SettingsWidget(QWidget):
         """Initialize class."""
         # FIXME: setting the parent to toolbox causes the checkboxes in the
         # groupBox_general to not layout correctly, this might be caused elsewhere?
+        from ..ui import settings
+
         super().__init__(parent=None)  # Do not set parent. Uses own stylesheet.
         self._toolbox = toolbox  # QWidget parent
         self._project = self._toolbox.project()
@@ -44,7 +45,7 @@ class SettingsWidget(QWidget):
         # Initial scene bg color. Is overridden immediately in read_settings() if it exists in qSettings
         self.bg_color = self._toolbox.ui.graphicsView.scene().bg_color
         # Set up the ui from Qt Designer files
-        self.ui = ui.settings.Ui_SettingsForm()
+        self.ui = settings.Ui_SettingsForm()
         self.ui.setupUi(self)
         # NOTE: Commented so we can try fontawesome icons (issue #286)
         # self.ui.toolButton_browse_gams.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))

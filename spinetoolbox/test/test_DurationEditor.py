@@ -19,7 +19,7 @@ Unit tests for the DuratonEditor widget.
 import unittest
 from PySide2.QtWidgets import QApplication
 from spinedb_api import Duration
-from widgets.duration_editor import DurationEditor
+from ..widgets.duration_editor import DurationEditor
 
 
 class TestDurationEditor(unittest.TestCase):

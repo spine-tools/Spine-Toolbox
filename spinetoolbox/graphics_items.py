@@ -17,8 +17,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, degrees, sin, cos, pi
-import os
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, QTimer
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -35,7 +34,6 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform, QPalette, QTextBlockFormat
 from PySide2.QtSvg import QGraphicsSvgItem, QSvgRenderer
-from helpers import format_string_list
 
 
 class ConnectorButton(QGraphicsRectItem):

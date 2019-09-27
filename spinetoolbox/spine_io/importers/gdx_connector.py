@@ -20,7 +20,7 @@ from enum import Enum
 from collections import defaultdict
 import sys
 from PySide2.QtWidgets import QFileDialog
-from spine_io.io_api import SourceConnection
+from ..io_api import SourceConnection
 
 IMPORT_ERROR = ""
 try:

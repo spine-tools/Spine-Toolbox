@@ -2,12 +2,9 @@
 *.pyc
 *.sqlite
 .spyderproject
-spinetoolbox/__pycache__/
-spinetoolbox/ui/__pycache__/
-spinetoolbox/widgets/__pycache__/
-spinetoolbox/build/
-spinetoolbox/dist/
-docs/build/
+build/
+dist/
+__pycache__/
 tool_templates/Swedish_hydro/
 tool_templates/executables/
 projects/

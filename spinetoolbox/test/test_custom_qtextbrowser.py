@@ -20,7 +20,7 @@ import logging
 import unittest
 import sys
 from PySide2.QtWidgets import QApplication
-from widgets.custom_qtextbrowser import CustomQTextBrowser
+from ..widgets.custom_qtextbrowser import CustomQTextBrowser
 
 
 class TestCustomQTextBrowser(unittest.TestCase):

@@ -18,7 +18,6 @@ Contains OptionsWidget class.
 
 from PySide2.QtWidgets import QLabel, QLineEdit, QComboBox, QCheckBox, QSpinBox, QWidget
 from PySide2.QtCore import Signal
-from ui.import_options import Ui_ImportOptions
 
 
 class OptionsWidget(QWidget):
@@ -38,6 +37,7 @@ class OptionsWidget(QWidget):
             header (str): Title of groupbox (default: {"Options"})
             parent (QWidget, None): parent of widget
         """
+        from ..ui.import_options import Ui_ImportOptions
         super().__init__(parent)
         self._options = options
 

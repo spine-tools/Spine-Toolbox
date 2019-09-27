@@ -17,7 +17,7 @@ Unit tests for the indexed_value_table_context_menu module.
 """
 
 import unittest
-from widgets.indexed_value_table_context_menu import _remove_rows
+from ..widgets.indexed_value_table_context_menu import _remove_rows
 
 
 class _MockModel:

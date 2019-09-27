@@ -18,9 +18,8 @@ View properties widget.
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
-from project_items.view.ui.view_properties import Ui_Form
-from project_items.view.widgets.custom_menus import ViewPropertiesContextMenu
-from config import TREEVIEW_HEADER_SS
+from .custom_menus import ViewPropertiesContextMenu
+from spinetoolbox.config import TREEVIEW_HEADER_SS
 
 
 class ViewPropertiesWidget(QWidget):
@@ -32,6 +31,7 @@ class ViewPropertiesWidget(QWidget):
 
     def __init__(self, toolbox):
         """Init class."""
+        from ..ui.view_properties import Ui_Form
         super().__init__()
         self._toolbox = toolbox
         self.ui = Ui_Form()

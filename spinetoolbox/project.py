@@ -21,11 +21,11 @@ import logging
 import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
-from metaobject import MetaObject
-from helpers import project_dir, create_dir, copy_dir
-from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from config import DEFAULT_WORK_DIR, INVALID_CHARS
-from executioner import DirectedGraphHandler, ExecutionInstance
+from .metaobject import MetaObject
+from .helpers import project_dir, create_dir, copy_dir
+from .tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
+from .config import DEFAULT_WORK_DIR, INVALID_CHARS
+from .executioner import DirectedGraphHandler, ExecutionInstance
 
 
 class SpineToolboxProject(MetaObject):

@@ -21,7 +21,7 @@ import io
 from PySide2.QtWidgets import QFileDialog
 from openpyxl import load_workbook
 from spinedb_api import RelationshipClassMapping, ObjectClassMapping, from_database, ParameterValueFormatError
-from spine_io.io_api import SourceConnection
+from ..io_api import SourceConnection
 
 
 def select_excel_file(parent=None):

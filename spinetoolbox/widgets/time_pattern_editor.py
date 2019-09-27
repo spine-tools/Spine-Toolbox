@@ -19,10 +19,9 @@ An editor widget for editing a time pattern type (relationship) parameter values
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimePattern
-from ui.time_pattern_editor import Ui_TimePatternEditor
-from mvcmodels.time_pattern_model import TimePatternModel
-from widgets.custom_qtableview import IndexedValueTableView
-from widgets.indexed_value_table_context_menu import handle_table_context_menu
+from ..mvcmodels.time_pattern_model import TimePatternModel
+from .custom_qtableview import IndexedValueTableView
+from .indexed_value_table_context_menu import handle_table_context_menu
 
 
 class TimePatternEditor(QWidget):
@@ -34,6 +33,7 @@ class TimePatternEditor(QWidget):
     """
 
     def __init__(self, parent=None):
+        from ..ui.time_pattern_editor import Ui_TimePatternEditor
         super().__init__(parent)
         self._model = TimePatternModel(TimePattern(["1-7d"], [0.0]))
         self._ui = Ui_TimePatternEditor()

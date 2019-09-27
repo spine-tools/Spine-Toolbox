@@ -18,7 +18,7 @@ Models for object and relationship classes.
 
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon
-from helpers import busy_effect
+from ..helpers import busy_effect
 
 
 class ObjectClassListModel(QStandardItemModel):

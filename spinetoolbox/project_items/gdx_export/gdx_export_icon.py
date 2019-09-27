@@ -18,7 +18,7 @@ Icon class for the Gdx Export project item.
 
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QBrush, QColor, QPen
-from graphics_items import ProjectItemIcon
+from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class GdxExportIcon(ProjectItemIcon):

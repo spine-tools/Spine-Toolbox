@@ -24,7 +24,7 @@ import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QCursor
-from widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
+from ..widgets.tool_configuration_assistant_widget import ToolConfigurationAssistantWidget
 
 
 class TestToolConfigurationAssistantWidget(unittest.TestCase):
@@ -44,7 +44,7 @@ class TestToolConfigurationAssistantWidget(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test."""
-        with patch("widgets.tool_configuration_assistant_widget.SpineModelConfigurationAssistant"):
+        with patch("spinetoolbox.widgets.tool_configuration_assistant_widget.SpineModelConfigurationAssistant"):
             self.widget = ToolConfigurationAssistantWidget(QWidget(), autorun=False)
             self.assistant = self.widget.spine_model_config_asst
 

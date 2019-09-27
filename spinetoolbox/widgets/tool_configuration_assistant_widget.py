@@ -20,9 +20,8 @@ import sys
 from PySide2.QtWidgets import QWidget, QApplication, QMessageBox
 from PySide2.QtGui import QCursor, QTextCursor
 from PySide2.QtCore import Slot, Qt
-import ui.tool_configuration_assistant
-from config import TEXTBROWSER_SS
-from tool_configuration_assistants import SpineModelConfigurationAssistant
+from ..config import TEXTBROWSER_SS
+from ..tool_configuration_assistants import SpineModelConfigurationAssistant
 
 
 class ToolConfigurationAssistantWidget(QWidget):
@@ -35,13 +34,15 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     def __init__(self, toolbox, autorun=True):
         """ Initialize class. """
+        from ..ui import tool_configuration_assistant
+
         super().__init__(parent=toolbox, f=Qt.Window)
         self._toolbox = toolbox  # QWidget parent
         self.spine_model_config_asst = SpineModelConfigurationAssistant(toolbox)
         self.q_process = None
         self.py_call_installed = False  # Whether or not PyCall has been installed
         # Set up the ui from Qt Designer files
-        self.ui = ui.tool_configuration_assistant.Ui_PackagesForm()
+        self.ui = tool_configuration_assistant.Ui_PackagesForm()
         self.ui.setupUi(self)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
