@@ -21,7 +21,15 @@ from project_items.gdx_export.ui.export_list_item import Ui_Form
 
 
 class ExportListItem(QWidget):
+    """A widget with few controls to select the output file name and open a settings window."""
+
     def __init__(self, url, file_name, parent=None):
+        """
+        Args:
+            url (str): database's identifier to be shown on a label
+            file_name (str): relative path to the exported file name
+            parent (QWidget): a parent widget
+        """
         super().__init__(parent)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
@@ -30,8 +38,10 @@ class ExportListItem(QWidget):
 
     @property
     def settings_button(self):
+        """a QButton which should open a setting window"""
         return self._ui.settings_button
 
     @property
     def out_file_name_edit(self):
+        """export file name QLineEdit"""
         return self._ui.out_file_name_edit

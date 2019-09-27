@@ -23,7 +23,7 @@ from graphics_items import ProjectItemIcon
 
 class GdxExportIcon(ProjectItemIcon):
     def __init__(self, toolbox, x, y, w, h, name):
-        """Data Connection icon for the Design View.
+        """Gdx Export icon for the Design View.
 
         Args:
             toolbox (ToolBoxUI): QMainWindow instance

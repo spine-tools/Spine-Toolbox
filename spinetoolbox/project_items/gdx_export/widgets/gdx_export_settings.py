@@ -23,6 +23,13 @@ from project_items.gdx_export.ui.gdx_export_settings import Ui_Form
 
 
 def _move_selected_elements_by(list_view, delta):
+    """
+    Moves selected items in a QListView by given delta.
+
+    Args:
+        list_view (QListView): a list view
+        delta (int): positive values move the items up, negative down
+    """
     selection_model = list_view.selectionModel()
     selected_rows = sorted(selection_model.selectedRows())
     if not selected_rows:
@@ -42,7 +49,14 @@ def _move_selected_elements_by(list_view, delta):
 
 
 class GdxExportSettings(QMainWindow):
+    """A setting window for exporting .gdx files."""
+
     def __init__(self, settings, parent):
+        """
+        Args:
+            settings (Settings): export settings
+            parent (QWidget): a parent widget
+        """
         super().__init__(parent)
         central_widget = QWidget()
         self._central_widget_ui = Ui_Form()
@@ -51,53 +65,60 @@ class GdxExportSettings(QMainWindow):
         self.setWindowTitle("Gdx Export settings")
         self._central_widget_ui.button_box.accepted.connect(self.close)
         self._central_widget_ui.button_box.rejected.connect(self.close)
-        self._central_widget_ui.set_move_up_button.clicked.connect(self.__move_sets_up)
-        self._central_widget_ui.set_move_down_button.clicked.connect(self.__move_sets_down)
+        self._central_widget_ui.set_move_up_button.clicked.connect(self._move_sets_up)
+        self._central_widget_ui.set_move_down_button.clicked.connect(self._move_sets_down)
         self._central_widget_ui.set_as_global_parameters_object_class_button.clicked.connect(
-            self.__set_selected_set_as_global_parameters_object_class
+            self._set_selected_set_as_global_parameters_object_class
         )
-        self._central_widget_ui.record_move_up_button.clicked.connect(self.__move_records_up)
-        self._central_widget_ui.record_move_down_button.clicked.connect(self.__move_records_down)
+        self._central_widget_ui.record_move_up_button.clicked.connect(self._move_records_up)
+        self._central_widget_ui.record_move_down_button.clicked.connect(self._move_records_down)
         self._central_widget_ui.global_parameters_object_class_line_edit.setText(settings.global_parameters_domain_name)
         self._central_widget_ui.global_parameters_object_class_line_edit.textChanged.connect(
-            self.__update_global_parameters_object_class
+            self._update_global_parameters_object_class
         )
         self._settings = settings
         set_list_model = GAMSSetListModel(settings)
         self._central_widget_ui.set_list_view.setModel(set_list_model)
         record_list_model = GAMSRecordListModel()
         self._central_widget_ui.record_list_view.setModel(record_list_model)
-        self._central_widget_ui.set_list_view.selectionModel().selectionChanged.connect(self.__populate_set_contents)
+        self._central_widget_ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
         self._central_widget_ui.set_list_view.selectionModel().currentChanged.connect(
-            self.__update_as_global_button_enabled_state
+            self._update_as_global_button_enabled_state
         )
 
     @property
     def settings(self):
+        """the settings object"""
         return self._settings
 
     @property
     def button_box(self):
+        """window's dialog button box containing the OK and Cancel buttons"""
         return self._central_widget_ui.button_box
 
     @Slot(bool)
-    def __move_sets_up(self, checked=False):
+    def _move_sets_up(self, checked=False):
+        """Moves selected domains and sets up one position."""
         _move_selected_elements_by(self._central_widget_ui.set_list_view, -1)
 
     @Slot(bool)
-    def __move_sets_down(self, checked=False):
+    def _move_sets_down(self, checked=False):
+        """Moves selected domains and sets down one position."""
         _move_selected_elements_by(self._central_widget_ui.set_list_view, 1)
 
     @Slot(bool)
-    def __move_records_up(self, checked=False):
+    def _move_records_up(self, checked=False):
+        """Moves selected records up and position."""
         _move_selected_elements_by(self._central_widget_ui.record_list_view, -1)
 
     @Slot(bool)
-    def __move_records_down(self, checked=False):
+    def _move_records_down(self, checked=False):
+        """Moves selected records down on position."""
         _move_selected_elements_by(self._central_widget_ui.record_list_view, 1)
 
     @Slot("QModelIndex", "QModelIndex")
-    def __update_as_global_button_enabled_state(self, current, previous):
+    def _update_as_global_button_enabled_state(self, current, previous):
+        """Enables or disables the *As Global* button depending if the selected element is a domain or a set."""
         model = current.model()
         is_previous_domain = model.is_domain(previous)
         is_current_domain = model.is_domain(current)
@@ -105,7 +126,8 @@ class GdxExportSettings(QMainWindow):
             self._central_widget_ui.set_as_global_parameters_object_class_button.setEnabled(is_current_domain)
 
     @Slot(bool)
-    def __set_selected_set_as_global_parameters_object_class(self, checked=False):
+    def _set_selected_set_as_global_parameters_object_class(self, checked=False):
+        """Sets the currently selected domain as the global parameters object class."""
         selection_model = self._central_widget_ui.set_list_view.selectionModel()
         current_index = selection_model.currentIndex()
         model = current_index.model()
@@ -116,11 +138,13 @@ class GdxExportSettings(QMainWindow):
         model.setData(current_index, Qt.Unchecked, Qt.CheckStateRole)
 
     @Slot(str)
-    def __update_global_parameters_object_class(self, text):
+    def _update_global_parameters_object_class(self, text):
+        """Sets the global parameters domain name to `text` in the settings."""
         self._settings.global_parameters_domain_name = text
 
     @Slot("QItemSelection", "QItemSelection")
-    def __populate_set_contents(self, selected, deselected):
+    def _populate_set_contents(self, selected, deselected):
+        """Populates the record list by the selected domain's or set's records."""
         selected_indexes = selected.indexes()
         if not selected_indexes:
             return
@@ -131,7 +155,19 @@ class GdxExportSettings(QMainWindow):
         record_model.reset(record_keys)
 
 
-def move_list_elements(originals, first, last, target):
+def _move_list_elements(originals, first, last, target):
+    """
+    Moves elements in a list.
+
+    Args:
+        originals (list): a list
+        first (int): index of the first element to move
+        last (int): index of the last element to move
+        target (int): index where the elements `[first:last]` should be inserted
+
+    Return:
+        a new list with the elements moved
+    """
     trashable = list(originals)
     elements_to_move = list(originals[first : last + 1])
     del trashable[first : last + 1]
@@ -142,11 +178,38 @@ def move_list_elements(originals, first, last, target):
 
 
 class GAMSSetListModel(QAbstractListModel):
+    """
+    A model to configure the domain and set name lists in gdx export settings.
+
+    This model combines the domain and set name lists into a single list.
+    The two 'parts' are differentiated by different background colors.
+    Items from each part cannot be mixed with the other.
+    Both the ordering of the items within each list as well as their exportability flags are handled here.
+    """
+
     def __init__(self, settings):
+        """
+        Args:
+            settings (spine_io.exporters.gdx.Settings): settings whose domain and set name lists should be modelled
+        """
         super().__init__()
         self._settings = settings
 
     def data(self, index, role=Qt.DisplayRole):
+        """
+        Returns the value for given role at given index.
+
+        Qt.DisplayRole returns the name of the domain or set
+        while Qt.CheckStateRole returns whether the exportable flag has been set or not.
+        Qt.BackgroundRole gives the item's background depending whether it is a domain or a set.
+
+        Args:
+            index (QModelIndex): an index to the model
+            role (int): the query's role
+
+        Returns:
+            the requested value or `None`
+        """
         if not index.isValid() or index.column() != 0 or index.row() >= self.rowCount():
             return None
         row = index.row()
@@ -168,21 +231,39 @@ class GAMSSetListModel(QAbstractListModel):
         return None
 
     def flags(self, index):
+        """Returns an item's flags."""
         if not index.isValid():
             return Qt.NoItemFlags
         return Qt.ItemIsEnabled | Qt.ItemIsSelectable | Qt.ItemIsUserCheckable
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
+        """Returns an empty string for horizontal header and row number for vertical header."""
         if orientation == Qt.Horizontal:
             return ''
         return section + 1
 
     def is_domain(self, index):
+        """Returns True if index points to a domain name, otherwise returns False."""
         if not index.isValid():
             return False
         return index.row() < len(self._settings.sorted_domain_names)
 
     def moveRows(self, sourceParent, sourceRow, count, destinationParent, destinationChild):
+        """
+        Moves the domain and set names around.
+
+        The names cannot be mixed between domains and sets.
+
+        Args:
+            sourceParent (QModelIndex): parent from which the rows are moved
+            sourceRow (int): index of the first row to be moved
+            count (int): number of rows to move
+            destinationParent (QModelIndex): parent to which the rows are moved
+            destinationChild (int): index where to insert the moved rows
+
+        Returns:
+            True if the operation was successful, False otherwise
+        """
         row_count = self.rowCount()
         if destinationChild < 0 or destinationChild >= row_count:
             return False
@@ -206,15 +287,17 @@ class GAMSSetListModel(QAbstractListModel):
             sourceRow -= domain_count
             last_source_row -= domain_count
             destinationChild -= domain_count
-        names[:] = move_list_elements(names, sourceRow, last_source_row, destinationChild)
-        export_flags[:] = move_list_elements(export_flags, sourceRow, last_source_row, destinationChild)
+        names[:] = _move_list_elements(names, sourceRow, last_source_row, destinationChild)
+        export_flags[:] = _move_list_elements(export_flags, sourceRow, last_source_row, destinationChild)
         self.endMoveRows()
         return True
 
     def rowCount(self, parent=QModelIndex()):
+        """Returns the number of rows."""
         return len(self._settings.sorted_domain_names) + len(self._settings.sorted_set_names)
 
     def setData(self, index, value, role=Qt.EditRole):
+        """Sets the exportable flag status for given row."""
         if not index.isValid() or role != Qt.CheckStateRole:
             return False
         row = index.row()
@@ -228,11 +311,14 @@ class GAMSSetListModel(QAbstractListModel):
 
 
 class GAMSRecordListModel(QAbstractListModel):
+    """A model to manage record ordering within domains and sets."""
+
     def __init__(self):
         super().__init__()
         self._records = list()
 
     def data(self, index, role=Qt.DisplayRole):
+        """With `role == Qt.DisplayRole` returns the record's keys as comma separated string."""
         if not index.isValid():
             return None
         if role == Qt.DisplayRole:
@@ -241,25 +327,41 @@ class GAMSRecordListModel(QAbstractListModel):
         return None
 
     def headerData(self, section, orientation, role=Qt.DisplayRole):
+        """Returns row and column header data."""
         if orientation == Qt.Horizontal:
             return ''
         return section + 1
 
     def moveRows(self, sourceParent, sourceRow, count, destinationParent, destinationChild):
+        """
+        Moves the records around.
+
+        Args:
+            sourceParent (QModelIndex): parent from which the rows are moved
+            sourceRow (int): index of the first row to be moved
+            count (int): number of rows to move
+            destinationParent (QModelIndex): parent to which the rows are moved
+            destinationChild (int): index where to insert the moved rows
+
+        Returns:
+            True if the operation was successful, False otherwise
+        """
         row_count = self.rowCount()
         if destinationChild < 0 or destinationChild >= row_count:
             return False
         last_source_row = sourceRow + count - 1
         row_after = destinationChild if sourceRow > destinationChild else destinationChild + 1
         self.beginMoveRows(sourceParent, sourceRow, last_source_row, destinationParent, row_after)
-        self._records[:] = move_list_elements(self._records, sourceRow, last_source_row, destinationChild)
+        self._records[:] = _move_list_elements(self._records, sourceRow, last_source_row, destinationChild)
         self.endMoveRows()
         return True
 
     def reset(self, records):
+        """Resets the model's record data."""
         self.beginResetModel()
         self._records = records
         self.endResetModel()
 
     def rowCount(self, parent=QModelIndex()):
+        """Return the number of records in the model."""
         return len(self._records)
