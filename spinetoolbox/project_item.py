@@ -399,7 +399,9 @@ class ProjectItemResource:
             type_ (str): The resource type, either "file", "database", or "data" (for now)
             url (str): The url of the resource
             data (object): The data in the resource
-            metadata (dict): Some metadata providing extra information about the resource
+            metadata (dict): Some metadata providing extra information about the resource. For now it has two keys:
+                - is_output (bool): whether the resource is an output from a process, e.g., a Tool ouput file
+                - for_import (bool): whether the resource is data to be imported into a Spine db
         """
         self.provider = provider
         self.type_ = type_
