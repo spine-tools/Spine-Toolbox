@@ -412,6 +412,27 @@ class ProjectItemResource:
             metadata = dict()
         self.metadata = metadata
 
+    def __eq__(self, other):
+        if not isinstance(other, ProjectItemResource):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+        return (
+            self.provider == other.provider
+            and self.type_ == other.type_
+            and self.url == other.url
+            and self.data == other.data
+            and self.metadata == other.metadata
+        )
+
+    def __repr__(self):
+        result = "ProjectItemResource("
+        result += f"provider={self.provider}, "
+        result += f"type_={self.type_}, "
+        result += f"url={self.url}, "
+        result += f"data={self.data}, "
+        result += f"metadata={self.metadata})"
+        return result
+
     @property
     def path(self):
         """Returns the resource path, as obtained from parsing the url."""
