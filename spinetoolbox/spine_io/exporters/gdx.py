@@ -547,6 +547,15 @@ class Settings:
         return settings
 
 
-def available():
-    """Returns True if GAMS Python bindings are found and all functionality is available."""
-    return gams is not None
+def gams_import_error():
+    """
+    Checks if sufficiently recent GAMS Python binding have been installed.
+
+    Returns:
+         an empty string if usable bindings are found, otherwise the string contains an error message
+    """
+    if gams is None:
+        return "Could not load the `gams` package. No GAMS Python binding found."
+    if gams.GamsWorkspace.api_major_rel_number < 24 and gams.GamsWorkspace.api_gold_rel_number < 1:
+        return "GAMS version {} is too old. Minimum version required 24.0.1.".format(gams.GamsWorkspace.api_version)
+    return ""

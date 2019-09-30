@@ -118,8 +118,9 @@ class GdxExport(ProjectItem):
 
     def execute(self):
         """Executes this item."""
-        if not gdx.available():
-            self._toolbox.msg_error.emit('No GAMS Python bindings installed. GDX export is disabled.')
+        availability_error = gdx.gams_import_error()
+        if availability_error:
+            self._toolbox.msg_error.emit(availability_error)
             abort = -1
             self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
             return

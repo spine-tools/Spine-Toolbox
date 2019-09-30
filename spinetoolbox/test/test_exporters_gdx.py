@@ -187,7 +187,7 @@ class TextExportersGdx(unittest.TestCase):
         self.assertEqual(parameter.name, 'parameter')
         self.assertEqual(parameter.value, 3.14)
 
-    @unittest.skipIf(not gdx.available(), "No GAMS Python bindings found.")
+    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
     def test_domains_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
@@ -212,7 +212,7 @@ class TextExportersGdx(unittest.TestCase):
         self.assertEqual(gams_parameter.number_records, 1)
         self.assertEqual(gams_parameter.first_record().value, float(self._MockParameter.value))
 
-    @unittest.skipIf(not gdx.available(), "No GAMS Python bindings found.")
+    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
     def test_sets_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
@@ -239,7 +239,7 @@ class TextExportersGdx(unittest.TestCase):
         self.assertEqual(gams_parameter.number_records, 1)
         self.assertEqual(gams_parameter.first_record().value, float(self._MockParameter.value))
 
-    @unittest.skipIf(not gdx.available(), "No GAMS Python bindings found.")
+    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
     def test_domain_parameters_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
@@ -296,7 +296,7 @@ class TextExportersGdx(unittest.TestCase):
         self.assertFalse(domains)
         self.assertEqual(extracted.name, "domain1")
 
-    @unittest.skipIf(not gdx.available(), "No GAMS Python bindings found.")
+    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
     def test_to_gams_workspace_sorts_domains_sets_records_correctly(self):
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(tmp_dir_name, "test_to_gams_workspace.sqlite")
@@ -349,7 +349,7 @@ class TextExportersGdx(unittest.TestCase):
             self.assertEqual(gams_record.key(0), expected_name[0])
             self.assertEqual(gams_record.key(1), expected_name[1])
 
-    @unittest.skipIf(not gdx.available(), "No GAMS Python bindings found.")
+    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
     def test_to_gams_workspace_exports_global_parameters_only_not_the_corresponding_domain(self):
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(
