@@ -17,19 +17,20 @@ Contains ToolInstance class.
 """
 
 import os
+import sys
 import shutil
-import glob
-import logging
 from PySide2.QtCore import QObject, Signal, Slot
 import qsubprocess
-from helpers import create_dir
+from config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 
 
 class ToolInstance(QObject):
     """Class for Tool instances.
 
     Args:
-        tool (Tool): Tool for which this instance is created
+        toolbox (ToolboxUI): QMainWindow instance
+        tool_template (ToolTemplate): the tool template for this instance
+        basedir (str): the path to the directory where this instance should run
 
     Class Variables:
         instance_finished_signal (Signal): Signal to emit when a Tool instance has finished processing
@@ -44,214 +45,8 @@ class ToolInstance(QObject):
         self.tool_template = tool_template
         self.basedir = basedir
         self.tool_process = None
-        self.julia_repl_command = None
-        self.ipython_command_list = list()
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
-        # Checkout Tool template to work directory
-
-    def execute(self):
-        """Starts executing Tool template instance in Julia Console, Python Console or in a sub-process."""
-        self._toolbox.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
-        if self.tool_template.tooltype == "julia":
-            if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
-                self.tool_process = self._toolbox.julia_repl
-                self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
-                # self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
-                self.tool_process.execute_instance(self.julia_repl_command)
-            else:
-                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
-                self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
-                # On Julia the Qprocess workdir must be set to the path where the main script is
-                # Otherwise it doesn't find input files in subdirectories
-                self.tool_process.start_process(workdir=self.basedir)
-        if self.tool_template.tooltype == "python":
-            if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
-                self.tool_process = self._toolbox.python_repl
-                self.tool_process.execution_finished_signal.connect(self.python_console_tool_finished)
-                k_tuple = self.tool_process.python_kernel_name()
-                if not k_tuple:
-                    self.python_console_tool_finished(-999)
-                    return
-                kern_name = k_tuple[0]
-                kern_display_name = k_tuple[1]
-                # Check if this kernel is already running
-                if self.tool_process.kernel_manager and self.tool_process.kernel_name == kern_name:
-                    self.tool_process.execute_instance(self.ipython_command_list)
-                else:
-                    # Append command to buffer and start executing when kernel is up and running
-                    self.tool_process.commands = self.ipython_command_list
-                    self.tool_process.launch_kernel(kern_name, kern_display_name)
-            else:
-                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
-                self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
-                self.tool_process.start_process(workdir=self.basedir)
-        elif self.tool_template.tooltype == "gams":
-            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
-            self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
-            # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
-            # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
-            self.tool_process.start_process(workdir=self.basedir)
-        elif self.tool_template.tooltype == "executable":
-            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
-            self.tool_process.subprocess_finished_signal.connect(self.executable_tool_finished)
-            self.tool_process.start_process(workdir=self.basedir)
-
-    @Slot(int, name="julia_repl_tool_finished")
-    def julia_repl_tool_finished(self, ret):
-        """Runs when Julia tool using Julia Console has finished processing.
-
-        Args:
-            ret (int): Tool template process return value
-        """
-        self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)  # Disconnect after exec.
-        if ret != 0:
-            if self.tool_process.execution_failed_to_start:
-                # TODO: This should be a choice given to the user. It's a bit confusing now.
-                self._toolbox.msg.emit("")
-                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
-                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
-                self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
-                self.tool_process.start_process(workdir=self.basedir)
-                return
-            try:
-                return_msg = self.tool_template.return_codes[ret]
-                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-            except KeyError:
-                self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
-        else:
-            self._toolbox.msg.emit("\tTool template execution finished")
-        self.tool_process = None
-        self.instance_finished_signal.emit(ret)
-
-    @Slot(int, name="julia_tool_finished")
-    def julia_tool_finished(self, ret):
-        """Runs when Julia tool from command line (without REPL) has finished processing.
-
-        Args:
-            ret (int): Tool template process return value
-        """
-        self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)  # Disconnect signal
-        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
-            if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit(
-                    "\t<b>{0}</b> failed to start. Make sure that "
-                    "Julia is installed properly on your computer.".format(self.tool_process.program())
-                )
-            else:
-                try:
-                    return_msg = self.tool_template.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-                except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
-        else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
-        self.tool_process.deleteLater()
-        self.tool_process = None
-        self.instance_finished_signal.emit(ret)
-
-    @Slot(int, name="python_console_tool_finished")
-    def python_console_tool_finished(self, ret):
-        """Runs when Python Tool in Python Console has finished processing.
-
-        Args:
-            ret (int): Tool template process return value
-        """
-        self.tool_process.execution_finished_signal.disconnect(self.python_console_tool_finished)
-        if ret != 0:
-            if self.tool_process.execution_failed_to_start:
-                # TODO: This should be a choice given to the user. It's a bit confusing now.
-                self._toolbox.msg.emit("")
-                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
-                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
-                self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
-                self.tool_process.start_process(workdir=self.basedir)
-                return
-            try:
-                return_msg = self.tool_template.return_codes[ret]
-                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-            except KeyError:
-                self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
-        else:
-            self._toolbox.msg.emit("\tTool template execution finished")
-        self.tool_process = None
-        self.instance_finished_signal.emit(ret)
-
-    @Slot(int, name="python_tool_finished")
-    def python_tool_finished(self, ret):
-        """Runs when Python tool from command line has finished processing.
-
-        Args:
-            ret (int): Tool template process return value
-        """
-        self.tool_process.subprocess_finished_signal.disconnect(self.python_tool_finished)  # Disconnect signal
-        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
-            if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit(
-                    "\t<b>{0}</b> failed to start. Make sure that "
-                    "Python is installed properly on your computer.".format(self.tool_process.program())
-                )
-            else:
-                try:
-                    return_msg = self.tool_template.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-                except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
-        else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
-        self.tool_process.deleteLater()
-        self.tool_process = None
-        self.instance_finished_signal.emit(ret)
-
-    @Slot(int, name="gams_tool_finished")
-    def gams_tool_finished(self, ret):
-        """Runs when GAMS tool has finished processing.
-
-        Args:
-            ret (int): Tool template process return value
-        """
-        self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)  # Disconnect after execution
-        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
-            if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit(
-                    "\t<b>{0}</b> failed to start. Make sure that "
-                    "GAMS is installed properly on your computer "
-                    "and GAMS directory is given in Settings (F1).".format(self.tool_process.program())
-                )
-            else:
-                try:
-                    return_msg = self.tool_template.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-                except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
-        else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
-        self.tool_process.deleteLater()
-        self.tool_process = None
-        self.instance_finished_signal.emit(ret)
-
-    @Slot(int, name="executable_tool_finished")
-    def executable_tool_finished(self, ret):
-        """Runs when an executable tool has finished processing.
-
-        Args:
-            ret (int): Tool template process return value
-        """
-        self.tool_process.subprocess_finished_signal.disconnect(self.executable_tool_finished)
-        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
-            if self.tool_process.process_failed_to_start:
-                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.tool_process.program()))
-            else:
-                try:
-                    return_msg = self.tool_template.return_codes[ret]
-                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
-                except KeyError:
-                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
-        else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
-        self.tool_process.deleteLater()
-        self.tool_process = None
-        self.instance_finished_signal.emit(ret)
 
     def terminate_instance(self):
         """Terminates Tool instance execution."""
@@ -272,3 +67,375 @@ class ToolInstance(QObject):
     def remove(self):
         """[Obsolete] Removes Tool instance files from work directory."""
         shutil.rmtree(self.basedir, ignore_errors=True)
+
+    def prepare(self):
+        """Prepare this instance for execution.
+        Implement in subclasses to perform specific initialization.
+        """
+        raise NotImplementedError
+
+    def execute(self):
+        """Execute this instance that must have been prepared prealably.
+        Implement in subclasses.
+        """
+        raise NotImplementedError
+
+    @Slot(int, name="handle_execution_finished")
+    def handle_execution_finished(self, ret):
+        """Handles execution finished.
+
+        Args:
+            ret (int)
+        """
+        raise NotImplementedError
+
+    def append_cmdline_args(self):
+        """Appends Tool template command line args into instance args list.
+
+        Args:
+            instance (ToolInstance)
+        """
+        self.args += self.tool_template.get_cmdline_args()
+
+
+class GAMSToolInstance(ToolInstance):
+    """Class for GAMS Tool instances.
+
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
+        tool_template (ToolTemplate): the tool template for this instance
+        basedir (str): the path to the directory where this instance should run
+    """
+
+    def prepare(self):
+        """Prepare this instance for execution.
+        """
+        gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
+        if gams_path != '':
+            gams_exe = gams_path
+        else:
+            gams_exe = GAMS_EXECUTABLE
+        self.program = gams_exe
+        self.args.append(self.tool_template.main_prgm)
+        self.args.append("curDir=")
+        self.args.append("{0}".format(self.basedir))
+        self.args.append("logoption=3")  # TODO: This should be an option in Settings
+        self.append_cmdline_args()  # Append Tool specific cmd line args into args list
+
+    def execute(self):
+        """Execute this instance that must have been prepared prealably.
+        """
+        self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+        self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
+        # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
+        # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
+        self.tool_process.start_process(workdir=self.basedir)
+
+    @Slot(int, name="handle_execution_finished")
+    def handle_execution_finished(self, ret):
+        """Handles execution finished.
+
+        Args:
+            ret (int)
+        """
+        self.tool_process.subprocess_finished_signal.disconnect(self.handle_execution_finished)
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self._toolbox.msg_error.emit(
+                    "\t<b>{0}</b> failed to start. Make sure that "
+                    "GAMS is installed properly on your computer "
+                    "and GAMS directory is given in Settings (F1).".format(self.tool_process.program())
+                )
+            else:
+                try:
+                    return_msg = self.tool_template.return_codes[ret]
+                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:  # Return code 0: success
+            self._toolbox.msg.emit("\tTool template execution finished")
+        self.tool_process.deleteLater()
+        self.tool_process = None
+        self.instance_finished_signal.emit(ret)
+
+
+class JuliaToolInstance(ToolInstance):
+    """Class for Julia Tool instances.
+
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
+        tool_template (ToolTemplate): the tool template for this instance
+        basedir (str): the path to the directory where this instance should run
+    """
+
+    def __init__(self, toolbox, tool_template, basedir):
+        super().__init__(toolbox, tool_template, basedir)
+        self.julia_repl_command = None
+
+    def prepare(self):
+        """Prepare this instance for execution.
+        """
+        # Prepare command "julia --project={PROJECT_DIR} script.jl"
+        # Do this regardless of the `useEmbeddedJulia` setting since we may need to fallback
+        # to `julia --project={PROJECT_DIR} script.jl`
+        julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
+        if julia_path != "":
+            julia_exe = julia_path
+        else:
+            julia_exe = JULIA_EXECUTABLE
+        julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
+        if julia_project_path == "":
+            julia_project_path = "@."
+        work_dir = self.basedir
+        script_path = os.path.join(work_dir, self.tool_template.main_prgm)
+        self.program = julia_exe
+        self.args.append(f"--project={julia_project_path}")
+        self.args.append(script_path)
+        self.append_cmdline_args()
+        use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
+        if use_embedded_julia == "2":
+            # Prepare Julia REPL command
+            # TODO: See if this can be simplified
+            mod_work_dir = work_dir.__repr__().strip("'")
+            args = r'["' + r'", "'.join(self.tool_template.get_cmdline_args()) + r'"]'
+            self.julia_repl_command = (
+                r'cd("{}");'
+                r'empty!(ARGS);'
+                r'append!(ARGS, {});'
+                r'include("{}")'.format(mod_work_dir, args, self.tool_template.main_prgm)
+            )
+
+    def execute(self):
+        """Execute this instance that must have been prepared prealably.
+        """
+        if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
+            self.tool_process = self._toolbox.julia_repl
+            self.tool_process.execution_finished_signal.connect(self.handle_repl_execution_finished)
+            # self._toolbox.msg.emit("\tCommand:<b>{0}</b>".format(self.julia_repl_command))
+            self.tool_process.execute_instance(self.julia_repl_command)
+        else:
+            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+            self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
+            # On Julia the Qprocess workdir must be set to the path where the main script is
+            # Otherwise it doesn't find input files in subdirectories
+            self.tool_process.start_process(workdir=self.basedir)
+
+    @Slot(int, name="handle_repl_execution_finished")
+    def handle_repl_execution_finished(self, ret):
+        """Handles repl-execution finished.
+
+        Args:
+            ret (int)
+        """
+        if ret != 0:
+            if self.tool_process.execution_failed_to_start:
+                # TODO: This should be a choice given to the user. It's a bit confusing now.
+                self._toolbox.msg.emit("")
+                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
+                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+                self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
+                self.tool_process.start_process(workdir=self.basedir)
+                return
+            try:
+                return_msg = self.tool_template.return_codes[ret]
+                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+            except KeyError:
+                self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:
+            self._toolbox.msg.emit("\tTool template execution finished")
+        self.tool_process = None
+        self.instance_finished_signal.emit(ret)
+
+    @Slot(int, name="handle_execution_finished")
+    def handle_execution_finished(self, ret):
+        """Handles execution finished.
+
+        Args:
+            ret (int)
+        """
+        self.tool_process.subprocess_finished_signal.disconnect(self.handle_execution_finished)
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self._toolbox.msg_error.emit(
+                    "\t<b>{0}</b> failed to start. Make sure that "
+                    "Julia is installed properly on your computer.".format(self.tool_process.program())
+                )
+            else:
+                try:
+                    return_msg = self.tool_template.return_codes[ret]
+                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:  # Return code 0: success
+            self._toolbox.msg.emit("\tTool template execution finished")
+        self.tool_process.deleteLater()
+        self.tool_process = None
+        self.instance_finished_signal.emit(ret)
+
+
+class PythonToolInstance(ToolInstance):
+    """Class for Python Tool instances.
+
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
+        tool_template (ToolTemplate): the tool template for this instance
+        basedir (str): the path to the directory where this instance should run
+    """
+
+    def __init__(self, toolbox, tool_template, basedir):
+        super().__init__(toolbox, tool_template, basedir)
+        self.ipython_command_list = list()
+
+    def prepare(self):
+        """Prepare this instance for execution.
+        """
+        # Prepare command "python script.py"
+        python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
+        if python_path != "":
+            python_cmd = python_path
+        else:
+            python_cmd = PYTHON_EXECUTABLE
+        work_dir = self.basedir
+        script_path = os.path.join(work_dir, self.tool_template.main_prgm)
+        self.program = python_cmd
+        self.args.append(script_path)  # TODO: Why are we doing this?
+        self.append_cmdline_args()
+        use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0")
+        if use_embedded_python == "2":
+            # Prepare a command list (FIFO queue) with two commands for Python Console
+            # 1st cmd: Change current work directory
+            # 2nd cmd: Run script with given args
+            # Cast args in list to strings and combine them to a single string
+            args = " ".join([str(x) for x in self.tool_template.get_cmdline_args()])
+            cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
+            run_script_cmd = "%run \"{0}\" {1}".format(self.tool_template.main_prgm, args)
+            # Populate FIFO command queue
+            self.ipython_command_list.append(cd_work_dir_cmd)
+            self.ipython_command_list.append(run_script_cmd)
+
+    def execute(self):
+        """Execute this instance that must have been prepared prealably.
+        """
+        if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
+            self.tool_process = self._toolbox.python_repl
+            self.tool_process.execution_finished_signal.connect(self.handle_console_execution_finished)
+            k_tuple = self.tool_process.python_kernel_name()
+            if not k_tuple:
+                self.handle_console_execution_finished(-999)
+                return
+            kern_name = k_tuple[0]
+            kern_display_name = k_tuple[1]
+            # Check if this kernel is already running
+            if self.tool_process.kernel_manager and self.tool_process.kernel_name == kern_name:
+                self.tool_process.execute_instance(self.ipython_command_list)
+            else:
+                # Append command to buffer and start executing when kernel is up and running
+                self.tool_process.commands = self.ipython_command_list
+                self.tool_process.launch_kernel(kern_name, kern_display_name)
+        else:
+            self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+            self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
+            self.tool_process.start_process(workdir=self.basedir)
+
+    @Slot(int, name="handle_console_execution_finished")
+    def handle_console_execution_finished(self, ret):
+        """Handles console-execution finished.
+
+        Args:
+            ret (int)
+        """
+        if ret != 0:
+            if self.tool_process.execution_failed_to_start:
+                # TODO: This should be a choice given to the user. It's a bit confusing now.
+                self._toolbox.msg.emit("")
+                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
+                self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+                self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
+                self.tool_process.start_process(workdir=self.basedir)
+                return
+            try:
+                return_msg = self.tool_template.return_codes[ret]
+                self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+            except KeyError:
+                self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:
+            self._toolbox.msg.emit("\tTool template execution finished")
+        self.tool_process = None
+        self.instance_finished_signal.emit(ret)
+
+    @Slot(int, name="handle_execution_finished")
+    def handle_execution_finished(self, ret):
+        """Handles execution finished.
+
+        Args:
+            ret (int)
+        """
+        self.tool_process.subprocess_finished_signal.disconnect(self.handle_execution_finished)
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self._toolbox.msg_error.emit(
+                    "\t<b>{0}</b> failed to start. Make sure that "
+                    "Python is installed properly on your computer.".format(self.tool_process.program())
+                )
+            else:
+                try:
+                    return_msg = self.tool_template.return_codes[ret]
+                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:  # Return code 0: success
+            self._toolbox.msg.emit("\tTool template execution finished")
+        self.tool_process.deleteLater()
+        self.tool_process = None
+        self.instance_finished_signal.emit(ret)
+
+
+class ExecutableToolInstance(ToolInstance):
+    """Class for Executable Tool instances.
+
+    Args:
+        toolbox (ToolboxUI): QMainWindow instance
+        tool_template (ToolTemplate): the tool template for this instance
+        basedir (str): the path to the directory where this instance should run
+    """
+
+    def prepare(self):
+        """Prepare this instance for execution.
+        """
+        batch_path = os.path.join(self.basedir, self.tool_template.main_prgm)
+        if sys.platform != "win32":
+            self.program = "sh"
+            self.args.append(batch_path)
+        else:
+            self.program = batch_path
+        self.append_cmdline_args()  # Append Tool specific cmd line args into args list
+
+    def execute(self):
+        """Execute this instance that must have been prepared prealably.
+        """
+        self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
+        self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
+        self.tool_process.start_process(workdir=self.basedir)
+
+    @Slot(int, name="handle_execution_finished")
+    def handle_execution_finished(self, ret):
+        """Handles execution finished.
+
+        Args:
+            ret (int)
+        """
+        self.tool_process.subprocess_finished_signal.disconnect(self.handle_execution_finished)
+        if self.tool_process.process_failed:  # process_failed should be True if ret != 0
+            if self.tool_process.process_failed_to_start:
+                self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.tool_process.program()))
+            else:
+                try:
+                    return_msg = self.tool_template.return_codes[ret]
+                    self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
+                except KeyError:
+                    self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
+        else:  # Return code 0: success
+            self._toolbox.msg.emit("\tTool template execution finished")
+        self.tool_process.deleteLater()
+        self.tool_process = None
+        self.instance_finished_signal.emit(ret)

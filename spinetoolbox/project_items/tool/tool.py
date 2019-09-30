@@ -19,7 +19,6 @@ Tool class.
 import logging
 import os
 import shutil
-import sys
 import tempfile
 import pathlib
 import glob
@@ -28,10 +27,9 @@ from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
 from project_item import ProjectItem, ProjectItemResource
-from tool_instance import ToolInstance
-from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 from widgets.custom_menus import ToolTemplateOptionsPopupMenu
 from project_items.tool.widgets.custom_menus import ToolContextMenu
+from config import TOOL_OUTPUT_DIR
 from helpers import create_dir, create_output_dir_timestamp
 
 
@@ -238,97 +236,6 @@ class Tool(ProjectItem):
         """Returns Tool template."""
         return self._tool_template
 
-    def update_instance(self):
-        """Initialize and update instance so that it is ready for processing. This is where Tool
-        type specific initialization happens (whether the tool is GAMS, Python or Julia script)."""
-        if self.tool_template().tooltype == "gams":
-            gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
-            if not gams_path == '':
-                gams_exe = gams_path
-            else:
-                gams_exe = GAMS_EXECUTABLE
-            self.instance.program = gams_exe
-            self.instance.args.append(self.tool_template().main_prgm)
-            self.instance.args.append("curDir=")
-            self.instance.args.append("{0}".format(self.instance.basedir))
-            self.instance.args.append("logoption=3")  # TODO: This should be an option in Settings
-            self.append_instance_args()  # Append Tool specific cmd line args into args list
-        elif self.tool_template().tooltype == "julia":
-            # Prepare command "julia --project={PROJECT_DIR} script.jl"
-            # Do this regardless of the `useEmbeddedJulia` setting since we may need to fallback
-            # to `julia --project={PROJECT_DIR} script.jl`
-            julia_path = self._toolbox.qsettings().value("appSettings/juliaPath", defaultValue="")
-            if julia_path != "":
-                julia_exe = julia_path
-            else:
-                julia_exe = JULIA_EXECUTABLE
-            julia_project_path = self._toolbox.qsettings().value("appSettings/juliaProjectPath", defaultValue="")
-            if julia_project_path == "":
-                julia_project_path = "@."
-            work_dir = self.instance.basedir
-            script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-            self.instance.program = julia_exe
-            self.instance.args.append(f"--project={julia_project_path}")
-            self.instance.args.append(script_path)
-            self.append_instance_args()
-            use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
-            if use_embedded_julia == "2":
-                # Prepare Julia REPL command
-                # TODO: See if this can be simplified
-                mod_work_dir = work_dir.__repr__().strip("'")
-                args = r'["' + r'", "'.join(self.get_instance_args()) + r'"]'
-                self.instance.julia_repl_command = (
-                    r'cd("{}");'
-                    r'empty!(ARGS);'
-                    r'append!(ARGS, {});'
-                    r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
-                )
-        elif self.tool_template().tooltype == "python":
-            # Prepare command "python script.py"
-            python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
-            if not python_path == "":
-                python_cmd = python_path
-            else:
-                python_cmd = PYTHON_EXECUTABLE
-            work_dir = self.instance.basedir
-            script_path = os.path.join(work_dir, self.tool_template().main_prgm)
-            self.instance.program = python_cmd
-            self.instance.args.append(script_path)  # TODO: Why are we doing this?
-            self.append_instance_args()
-            use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0")
-            if use_embedded_python == "2":
-                # Prepare a command list (FIFO queue) with two commands for Python Console
-                # 1st cmd: Change current work directory
-                # 2nd cmd: Run script with given args
-                # Cast args in list to strings and combine them to a single string
-                # Skip first arg since it's the script path (see above)
-                args = " ".join([str(x) for x in self.instance.args[1:]])
-                cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
-                run_script_cmd = "%run \"{0}\" {1}".format(self.tool_template().main_prgm, args)
-                # Populate FIFO command queue
-                self.instance.ipython_command_list.append(cd_work_dir_cmd)
-                self.instance.ipython_command_list.append(run_script_cmd)
-        elif self.tool_template().tooltype == "executable":
-            batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
-            if sys.platform != "win32":
-                self.instance.program = "sh"
-                self.instance.args.append(batch_path)
-            else:
-                self.instance.program = batch_path
-            self.append_instance_args()  # Append Tool specific cmd line args into args list
-
-    def append_instance_args(self):
-        """Append Tool template command line args into instance args list."""
-        self.instance.args += self.get_instance_args()
-
-    def get_instance_args(self):
-        """Return instance args as list."""
-        # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
-        if (self.tool_template().cmdline_args is not None) and (self.tool_template().cmdline_args != ''):
-            # Tool template cmdline args is a space delimited string. Return them as a list.
-            return self.tool_template().cmdline_args.split(" ")
-        return []
-
     def populate_source_file_model(self, items):
         """Add required source files (includes) into a model.
         If items is None or an empty list, model is cleared."""
@@ -518,9 +425,12 @@ class Tool(ProjectItem):
             exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
             return
         self.get_icon().start_animation()
-        self.instance = ToolInstance(self._toolbox, self.tool_template(), self.basedir)
-        self.update_instance()  # Make command and stuff
+        self.instance = self.tool_template().create_tool_instance(self.basedir)
+        self.instance.prepare()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.handle_execution_finished)
+        self._toolbox.msg.emit(
+            "*** Starting instance of Tool template <b>{0}</b> ***".format(self.tool_template().name)
+        )
         self.instance.execute()
 
     def count_files_and_dirs(self):
@@ -875,7 +785,6 @@ class Tool(ProjectItem):
             + "'>results directory</a>"
         )
         self._toolbox.msg.emit("*** Archiving output files to {0} ***".format(result_anchor))
-        outputfiles = [os.path.join(self.basedir, f) for f in self.tool_template().outputfiles]
         if self.opt_input_file_model.rowCount() > 0:
             saved_files, failed_files = self.copy_output_files(result_path)
             if not saved_files:

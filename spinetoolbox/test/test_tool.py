@@ -17,20 +17,20 @@ Unit tests for Tool class.
 """
 
 import unittest
+from unittest import mock
 import shutil
 import os
 import logging
 import sys
 import tempfile
-from unittest import mock
 from pathlib import Path
 from test.mock_helpers import MockQWidget, qsettings_value_side_effect
 from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtCore import Qt
-import project_items
+import tool_templates
+from tool_templates import ExecutableTool
 from ui_main import ToolboxUI
-from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from project_item import ProjectItemResource
 
 
@@ -58,8 +58,6 @@ class TestTool(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of ToolboxUI class.
-        Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
-        is not called in tearDown().
         """
         with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
             "ui_main.PythonReplWidget"
@@ -246,10 +244,9 @@ class TestTool(unittest.TestCase):
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         mock_exec_inst = tool._project.execution_instance = mock.Mock()
-        with mock.patch("project_items.tool.tool.ToolInstance") as MockToolInstance:
-            tool.execute()
+        tool.execute()
         mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(0)
-        MockToolInstance.assert_not_called()
+        self.assertIsNone(tool.instance)
 
     def test_input_file_not_found_at_execution(self):
         """Tests that execution fails if one input file is not found."""
@@ -274,10 +271,9 @@ class TestTool(unittest.TestCase):
         mock_exec_inst.available_resources.side_effect = lambda n: [
             ProjectItemResource(None, "file", url=Path(input_path).as_uri())
         ]
-        with mock.patch("project_items.tool.tool.ToolInstance") as MockToolInstance:
-            tool.execute()
+        tool.execute()
         mock_exec_inst.project_item_execution_finished_signal.emit.assert_called_with(-1)
-        MockToolInstance.assert_not_called()
+        self.assertIsNone(tool.instance)
         # Check that no resources are advertised
         mock_exec_inst.advertise_resources.assert_not_called()
 
@@ -308,7 +304,7 @@ class TestTool(unittest.TestCase):
         with mock.patch("project_items.tool.tool.shutil") as mock_shutil, mock.patch(
             "project_items.tool.tool.create_output_dir_timestamp"
         ) as mock_create_output_dir_timestamp, mock.patch.object(
-            project_items.tool.tool.ToolInstance, "execute"
+            tool_templates.ExecutableToolInstance, "execute"
         ) as mock_execute_tool_instance:
             mock_create_output_dir_timestamp.return_value = "mock_timestamp"
 
@@ -321,6 +317,8 @@ class TestTool(unittest.TestCase):
                 output_paths = [os.path.join(basedir, fn) for fn in output_files]
                 for filepath in output_paths:
                     Path(filepath).touch()
+                print(tool.instance.program)
+                print(tool.instance.args)
                 # Emit signal as if the tool had failed
                 tool.instance.instance_finished_signal.emit(-1)
 
@@ -380,7 +378,7 @@ class TestTool(unittest.TestCase):
         ) as mock_tempfile, mock.patch(
             "project_items.tool.tool.create_output_dir_timestamp"
         ) as mock_create_output_dir_timestamp, mock.patch.object(
-            project_items.tool.tool.ToolInstance, "execute"
+            tool_templates.ExecutableToolInstance, "execute"
         ) as mock_execute_tool_instance:
             mock_create_output_dir_timestamp.return_value = "mock_timestamp"
             mock_tempfile.mkdtemp.return_value = basedir
