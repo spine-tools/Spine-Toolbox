@@ -103,6 +103,7 @@ class ToolboxUI(QMainWindow):
         self.show_datetime = self.update_datetime()
         self.active_project_item = None
         # Widget and form references
+        self.settings_form = None
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
         self.link_context_menu = None
@@ -1103,14 +1104,18 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="show_tool_template_form")
     def show_tool_template_form(self, tool_template=None):
-        """Show create tool template widget."""
-        self.__show_form(ToolTemplateWidget(self, tool_template))
+        """Show tool template widget."""
+        if not self._project:
+            self.msg.emit("Please open or create a project first")
+            return
+        form = ToolTemplateWidget(self, tool_template)
+        form.show()
 
     @Slot(name="show_settings")
     def show_settings(self):
         """Show Settings widget."""
-        form = SettingsWidget(self)
-        form.show()
+        self.settings_form = SettingsWidget(self)
+        self.settings_form.show()
 
     @Slot(name="show_tool_config_asst")
     def show_tool_config_asst(self):
