@@ -555,7 +555,9 @@ def gams_import_error():
          an empty string if usable bindings are found, otherwise the string contains an error message
     """
     if gams is None:
-        return "Could not load the `gams` package. No GAMS Python binding found."
+        return "Could not load the `gams` package. No GAMS Python bindings found."
+    if not hasattr(gams, "GamsWorkspace"):
+        return "Could not find `GamsWorkspace` in `gams` package. GAMS Python bindings seem to be broken."
     if gams.GamsWorkspace.api_major_rel_number < 24 and gams.GamsWorkspace.api_gold_rel_number < 1:
         return "GAMS version {} is too old. Minimum version required 24.0.1.".format(gams.GamsWorkspace.api_version)
     return ""
