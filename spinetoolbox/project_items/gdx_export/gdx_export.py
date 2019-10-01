@@ -118,15 +118,15 @@ class GdxExport(ProjectItem):
 
     def execute(self):
         """Executes this item."""
+        self._toolbox.msg.emit("")
+        self._toolbox.msg.emit("Executing Gdx Export <b>{}</b>".format(self.name))
+        self._toolbox.msg.emit("***")
         availability_error = gdx.gams_import_error()
         if availability_error:
             self._toolbox.msg_error.emit(availability_error)
             abort = -1
             self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
             return
-        self._toolbox.msg.emit("")
-        self._toolbox.msg.emit("Executing Gdx Export <b>{}</b>".format(self.name))
-        self._toolbox.msg.emit("***")
         for url in self._database_urls:
             database_map = get_db_map(url)
             settings = self._settings.get(url.database, None)
