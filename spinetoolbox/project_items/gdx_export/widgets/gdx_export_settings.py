@@ -16,7 +16,7 @@ Gdx Export item's settings window.
 :date:   9.9.2019
 """
 
-from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Slot
+from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QWidget
 from project_items.gdx_export.ui.gdx_export_settings import Ui_Form
@@ -49,9 +49,16 @@ def _move_selected_elements_by(list_view, delta):
 
 
 class GdxExportSettings(QWidget):
-    """A setting window for exporting .gdx files."""
+    """
+    A setting window for exporting .gdx files.
 
-    def __init__(self, settings, parent):
+    Attributes:
+        window_closing (Signal): fired when the settings window is closing
+    """
+
+    window_closing = Signal()
+
+    def __init__(self, settings, database_path, parent):
         """
         Args:
             settings (Settings): export settings
@@ -59,14 +66,10 @@ class GdxExportSettings(QWidget):
         """
         # super().__init__(parent)
         super().__init__(parent=parent, f=Qt.Window)
-        # central_widget = QWidget()
-        # self._central_widget_ui = Ui_Form()
-        # self._central_widget_ui.setupUi(central_widget)
-        # self.setCentralWidget(central_widget)
         self._ui = Ui_Form()
         self._ui.setupUi(self)
-        self.setWindowTitle("Gdx Export settings")
-        self._ui.button_box.accepted.connect(self.close)
+        self.setWindowTitle("Gdx Export settings    -- {} --".format(database_path))
+        self.setAttribute(Qt.WA_DeleteOnClose, True)
         self._ui.button_box.rejected.connect(self.close)
         self._ui.set_move_up_button.clicked.connect(self._move_sets_up)
         self._ui.set_move_down_button.clicked.connect(self._move_sets_down)
@@ -156,6 +159,10 @@ class GdxExportSettings(QWidget):
         record_keys = self._settings.sorted_record_key_lists(selected_set_name)
         record_model = self._ui.record_list_view.model()
         record_model.reset(record_keys)
+
+    def closeEvent(self, event):
+        self.window_closing.emit()
+        super().closeEvent(event)
 
 
 def _move_list_elements(originals, first, last, target):

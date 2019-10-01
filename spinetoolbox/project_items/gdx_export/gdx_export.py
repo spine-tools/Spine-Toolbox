@@ -187,10 +187,10 @@ class GdxExport(ProjectItem):
         settings = deepcopy(settings)
         settings_window = self._settings_windows.get(database_path, None)
         if settings_window is None:
-            settings_window = GdxExportSettings(settings, self._toolbox)
+            settings_window = GdxExportSettings(settings, database_path, self._toolbox)
             self._settings_windows[database_path] = settings_window
-        settings_window.button_box.accepted.connect(lambda: self._settings_approved(database_path))
-        settings_window.button_box.rejected.connect(lambda: self._settings_declined(database_path))
+        settings_window.button_box.accepted.connect(lambda: self._update_settings_from_settings_window(database_path))
+        settings_window.window_closing.connect(lambda: self._discard_settings_window(database_path))
         settings_window.show()
 
     def _update_out_file_name(self, file_name, database_path):
@@ -205,17 +205,14 @@ class GdxExport(ProjectItem):
         d["settings_file_names"] = settings_file_names
         return d
 
-    def _settings_approved(self, database_path):
+    def _update_settings_from_settings_window(self, database_path):
         """Updates the export settings for given database from the settings window."""
         settings_window = self._settings_windows[database_path]
         self._settings[database_path] = settings_window.settings
-        settings_window.deleteLater()
-        del self._settings_windows[database_path]
+        settings_window.close()
 
-    def _settings_declined(self, database_path):
+    def _discard_settings_window(self, database_path):
         """Discards the settings window for given database."""
-        settings_window = self._settings_windows[database_path]
-        settings_window.deleteLater()
         del self._settings_windows[database_path]
 
     def _save_settings(self):
