@@ -22,7 +22,7 @@ from project_items.gdx_export.widgets.add_gdx_export_widget import AddGdxExportW
 from project_items.gdx_export.widgets.gdx_export_properties import GdxExportProperties
 
 item_rank = 5
-item_category = "Exporting"
+item_category = "Data Exporters"
 item_type = "Gdx Export"
 item_icon = ":/icons/project_item_icons/file-export-solid.svg"
 item_maker = GdxExport

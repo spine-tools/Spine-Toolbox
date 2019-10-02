@@ -123,7 +123,7 @@ class TestToolboxUI(unittest.TestCase):
             isinstance(item5.parent(), RootProjectItem), "Parent item of category item on row 4 should be root"
         )
         item6 = self.toolbox.project_item_model.root().child(5)
-        self.assertTrue(item6.name == "Exporting", "Item on row 5 is not 'Exporting'")
+        self.assertTrue(item6.name == "Data Exporters", "Item on row 5 is not 'Data Exporters'")
         self.assertTrue(
             isinstance(item6.parent(), RootProjectItem), "Parent item of category item on row 5 should be root"
         )
