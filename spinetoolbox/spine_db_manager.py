@@ -42,7 +42,6 @@ class SpineDBManager(QObject):
         self.fetched = {"entity_class": set(), "entity": set()}
         self.entity = {db_map: dict() for db_map in self._db_maps.values()}
         self.entity_class = {db_map: dict() for db_map in self._db_maps.values()}
-        self.entity_class_relation_membership = {db_map: dict() for db_map in self._db_maps.values()}
         self.db_name_to_map = {db_name: db_map for db_name, db_map in self._db_maps.items()}
         self.db_map_to_name = {db_map: db_name for db_name, db_map in self._db_maps.items()}
         self.icon_manager = IconManager()
@@ -107,13 +106,13 @@ class SpineDBManager(QObject):
             r.pop("class_id", None)
 
         updated_objects, _ = db_map.update_objects(*objects, strict=True)
-        updated_relationship, _ = db_map.update_wide_relationships(*relationships, strict=True)
+        updated_relationships, _ = db_map.update_wide_relationships(*relationships, strict=True)
 
         updated_objects = self._obj_to_dict(updated_objects)
-        updated_relationship = self._rel_to_dict(updated_relationship)
+        updated_relationships = self._rel_to_dict(updated_relationships)
         self.entity[db_map].update(updated_objects)
-        self.entity[db_map].update(updated_relationship)
-        updated_ids = set(updated_objects.keys()).union(set(updated_relationship.keys()))
+        self.entity[db_map].update(updated_relationships)
+        updated_ids = set(updated_objects.keys()).union(set(updated_relationships.keys()))
         entity_data = self.entity[db_map]
         for entity_id in self.entity[db_map].keys():
             if entity_id in updated_ids:
@@ -137,14 +136,14 @@ class SpineDBManager(QObject):
             r.pop("class_id", None)
 
         updated_objects, _ = db_map.update_object_classes(*objects, strict=True)
-        updated_relationship, _ = db_map.update_wide_relationship_classes(*relationships, strict=True)
+        updated_relationships, _ = db_map.update_wide_relationship_classes(*relationships, strict=True)
 
         updated_objects = self._obj_class_to_dict(updated_objects)
-        updated_relationship = self._rel_class_to_dict(updated_relationship)
+        updated_relationships = self._rel_class_to_dict(updated_relationships)
 
         self.entity_class[db_map].update(updated_objects)
-        self.entity_class[db_map].update(updated_relationship)
-        updated_ids = set(updated_objects.keys()).union(set(updated_relationship.keys()))
+        self.entity_class[db_map].update(updated_relationships)
+        updated_ids = set(updated_objects.keys()).union(set(updated_relationships.keys()))
         entity_data = self.entity_class[db_map]
         for entity_class_id in self.entity_class[db_map].keys():
             if entity_class_id in updated_ids:
@@ -191,14 +190,17 @@ class SpineDBManager(QObject):
                 entity_id for entity_id in entity_ids if entity_dict[entity_id]["entity_type"] == "relationship"
             )
             db_map.remove_items(object_ids=object_ids, relationship_ids=relationship_ids)
-            entity_data = self.entity[db_map]
+            # Update entity_ids with cascade-removed member objects in relationship
             for entity_id in self.entity[db_map].keys():
                 if entity_id in entity_ids:
                     continue
-                if entity_data[entity_id]["entity_type"] == "relationship" and any(
-                    entity_ids.intersection(set(entity_data[entity_id]["object_id_list"]))
+                if entity_dict[entity_id]["entity_type"] == "relationship" and any(
+                    entity_ids.intersection(set(entity_dict[entity_id]["object_id_list"].split(",")))
                 ):
                     entity_ids.add(entity_id)
+            # Remove entries in the internal dictionary
+            for entity_id in entity_ids:
+                self.entity[db_map].pop(entity_id)
         if entity_ids:
             self.entities_deleted.emit(db_map, entity_ids)
         return entity_ids
@@ -206,22 +208,25 @@ class SpineDBManager(QObject):
     def delete_entity_classes(self, db_map: DiffDatabaseMapping, entity_class_ids: Set[int]):
         """Delete entitiy classes from the given database."""
         if db_map in self.db_map_to_name:
-            entity_dict = self.entity_class[db_map]
-            object_ids = set(
-                class_id for class_id in entity_class_ids if entity_dict[class_id]["class_type"] == "object"
+            entity_class_dict = self.entity_class[db_map]
+            object_class_ids = set(
+                class_id for class_id in entity_class_ids if entity_class_dict[class_id]["class_type"] == "object"
             )
-            relationship_ids = set(
-                class_id for class_id in entity_class_ids if entity_dict[class_id]["class_type"] == "relationship"
+            relationship_class_ids = set(
+                class_id for class_id in entity_class_ids if entity_class_dict[class_id]["class_type"] == "relationship"
             )
-            db_map.remove_items(object_class_ids=object_ids, relationship_class_ids=relationship_ids)
-            entity_data = self.entity_class[db_map]
+            db_map.remove_items(object_class_ids=object_class_ids, relationship_class_ids=relationship_class_ids)
+            # Update entity_ids with cascade-removed member object classes in relationship classes
             for class_id in self.entity_class[db_map].keys():
                 if class_id in entity_class_ids:
                     continue
-                if entity_data[class_id]["class_type"] == "relationship" and any(
-                    entity_class_ids.intersection(set(entity_data[class_id]["object_class_id_list"]))
+                if entity_class_dict[class_id]["class_type"] == "relationship" and any(
+                    entity_class_ids.intersection(set(entity_class_dict[class_id]["object_class_id_list"].split(",")))
                 ):
                     entity_class_ids.add(class_id)
+            # Remove entries in the internal dictionary
+            for class_id in entity_class_ids:
+                self.entity_class[db_map].pop(class_id)
         if entity_class_ids:
             self.entity_classes_deleted.emit(db_map, entity_class_ids)
         return entity_class_ids
