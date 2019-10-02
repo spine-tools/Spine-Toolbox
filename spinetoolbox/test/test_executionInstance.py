@@ -98,3 +98,7 @@ class TestExecutionInstance(unittest.TestCase):
         dc0.simulate_execution.side_effect = dc0_simul_exec_side_effect
         inst.simulate_execution()
         self.assertEqual(inst.dc_refs_at_sight(di1), {"file1"})
+
+
+if __name__ == '__main__':
+    unittest.main()

@@ -46,19 +46,20 @@ class ItemToolBar(QToolBar):
         self._toolbox = parent
         label = QLabel("Drag & Drop Icon")
         self.addWidget(label)
+        icon_size = 24
         # set remove all action
-        remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(24, 24)
+        remove_all_icon = QIcon(":/icons/menu_icons/trash-alt.svg").pixmap(icon_size, icon_size)
         remove_all = QToolButton(parent)
         remove_all.setIcon(remove_all_icon)
         remove_all.clicked.connect(self.remove_all)
         remove_all.setToolTip("Remove all items from project.")
-        self.separator = self.addSeparator()
+        self.tool_separator = self.addSeparator()
         self.addWidget(remove_all)
         # Execute label and button
         self.addSeparator()
         ex_label = QLabel("Execute")
         self.addWidget(ex_label)
-        execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(24, 24)
+        execute_project_icon = QIcon(":/icons/project_item_icons/play-circle-solid.svg").pixmap(icon_size, icon_size)
         execute_project = QToolButton(parent)
         execute_project.setIcon(execute_project_icon)
         execute_project.clicked.connect(self.execute_project)
@@ -66,14 +67,14 @@ class ItemToolBar(QToolBar):
         self.addWidget(execute_project)
         # ex_selected_label = QLabel("Execute Selected")
         # self.addWidget(ex_selected_label)
-        execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(24, 24)
+        execute_selected_icon = QIcon(":/icons/project_item_icons/play-circle-regular.svg").pixmap(icon_size, icon_size)
         execute_selected = QToolButton(parent)
         execute_selected.setIcon(execute_selected_icon)
         execute_selected.clicked.connect(self.execute_selected)
         execute_selected.setToolTip("Execute selection.")
         self.addWidget(execute_selected)
         self.addSeparator()
-        stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(24, 24)
+        stop_icon = QIcon(":/icons/project_item_icons/stop-circle-regular.svg").pixmap(icon_size, icon_size)
         stop = QToolButton(parent)
         stop.setIcon(stop_icon)
         stop.clicked.connect(self.stop_execution)
@@ -95,7 +96,7 @@ class ItemToolBar(QToolBar):
             widget = DraggableWidget(self, pixmap, category)
             widgets.append(widget)
         for widget in widgets:
-            self.insertWidget(self.separator, widget)
+            self.insertWidget(self.tool_separator, widget)
 
     @Slot(bool, name="remove_all")
     def remove_all(self, checked=False):

@@ -31,7 +31,6 @@ from widgets.custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMen
 
 
 class ToolTemplateWidget(QWidget):
-
     def __init__(self, toolbox, tool_template=None):
         """A widget to query user's preferences for a new tool template.
 

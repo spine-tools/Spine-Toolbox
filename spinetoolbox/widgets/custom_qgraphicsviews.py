@@ -475,6 +475,18 @@ class DesignQGraphicsView(CustomQGraphicsView):
                     "Link established. Tool <b>{0}</b> output files will be "
                     "passed to item <b>{1}</b> after execution.".format(self.src_item_name, self.dst_item_name)
                 )
+            elif src_item_type == "Data Store" and dst_item_type == "Gdx Export":
+                self._toolbox.msg.emit(
+                    "Link established. Data Store <b>{0}</b> will be "
+                    "exported to a .gdx file by <b>{1}</b> when executing.".format(
+                        self.src_item_name, self.dst_item_name
+                    )
+                )
+            elif src_item_type == "Gdx Export" and dst_item_type == "Tool":
+                self._toolbox.msg.emit(
+                    "Link established. Gdx Export <b>{0}</b> exported file will "
+                    "be passed to Tool <b>{1}</b> when executing.".format(self.src_item_name, self.dst_item_name)
+                )
             elif src_item_type in ["Data Connection", "Data Store", "Data Interface"] and dst_item_type in [
                 "Data Connection",
                 "Data Store",

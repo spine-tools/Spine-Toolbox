@@ -10,43 +10,29 @@
 ######################################################################################################################
 
 """
-MetaObject class.
+Widget shown to user when a new Gdx Export item is created.
 
-:authors: E. Rinne (VTT), P. Savolainen (VTT)
-:date:   18.12.2017
+:author: A. Soininen (VTT)
+:date:   6.9.2019
 """
 
-from PySide2.QtCore import QObject
+from widgets.add_project_item_widget import AddProjectItemWidget
 
 
-class MetaObject(QObject):
-    def __init__(self, name, description):
-        """Class for an object which has a name, type, and some description.
+class AddGdxExportWidget(AddProjectItemWidget):
+    """A widget to query user's preferences for a new item."""
 
-        Args:
-            name (str): Object name
-            description (str): Object description
+    def __init__(self, toolbox, x, y):
         """
-        QObject.__init__(self)
-        self.name = name
-        self.short_name = name.lower().replace(' ', '_')
-        self.description = description
-
-    def set_name(self, new_name):
-        """Set object name and short name.
-        Note: Check conflicts (e.g. name already exists)
-        before calling this method.
-
         Args:
-            new_name (str): New (long) name for this object
+            toolbox (ToolboxUI): Parent widget
+            x (int): X coordinate of new item
+            y (int): Y coordinate of new item
         """
-        self.name = new_name
-        self.short_name = new_name.lower().replace(' ', '_')
+        super().__init__(toolbox, x, y)
+        self.setWindowTitle(f"Add Gdx Export")
 
-    def set_description(self, desc):
-        """Set object description.
-
-        Args:
-            desc (str): Object description
-        """
-        self.description = desc
+    def call_add_item(self):
+        """Creates new Item according to user's selections."""
+        item = dict(name=self.name, description=self.description, x=self._x, y=self._y)
+        self._project.add_project_items("Exporting", item, set_selected=True)

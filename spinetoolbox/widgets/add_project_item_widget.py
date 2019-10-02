@@ -102,7 +102,10 @@ class AddProjectItemWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections.
-        Must be implemented by subclasses."""
+
+        Must be reimplemented by subclasses.
+        """
+        raise NotImplementedError()
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

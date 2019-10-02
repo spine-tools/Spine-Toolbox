@@ -23,7 +23,6 @@ from mvcmodels.empty_row_model import EmptyRowModel
 
 
 class DatapackageResourcesModel(MinimalTableModel):
-
     def __init__(self, parent):
         """A model of datapackage resource data, used by SpineDatapackageWidget.
 
@@ -50,7 +49,6 @@ class DatapackageResourcesModel(MinimalTableModel):
 
 
 class DatapackageFieldsModel(MinimalTableModel):
-
     def __init__(self, parent):
         """A model of datapackage field data, used by SpineDatapackageWidget.
 
@@ -72,7 +70,6 @@ class DatapackageFieldsModel(MinimalTableModel):
 
 
 class DatapackageForeignKeysModel(EmptyRowModel):
-
     def __init__(self, parent):
         """A model of datapackage foreign key data, used by SpineDatapackageWidget.
 

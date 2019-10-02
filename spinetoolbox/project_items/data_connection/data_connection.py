@@ -392,7 +392,8 @@ class DataConnection(ProjectItem):
         super().simulate_execution(inst)
         refs = self.file_references()
         inst.append_dc_refs(self.name, refs)
-        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()] if self.data_files() else []
+        files = self.data_files()
+        f_list = [os.path.join(self.data_dir, f) for f in files] if files is not None else []
         inst.append_dc_files(self.name, f_list)
         if not refs + f_list:
             self.add_notification(
