@@ -96,6 +96,7 @@ class SpineDBManager(QObject):
         return d
 
     def update_entities(self, db_map: DiffDatabaseMapping, updated_entities):
+        """Update entities in the given database."""
         if db_map not in self.db_map_to_name:
             return
         objects = [entity for entity in updated_entities if entity["entity_type"] == "object"]
@@ -124,13 +125,14 @@ class SpineDBManager(QObject):
         if updated_ids:
             self.entities_updated.emit(db_map, updated_ids)
 
-    def update_entity_classes(self, db_map: DiffDatabaseMapping, updated_entities):
+    def update_entity_classes(self, db_map: DiffDatabaseMapping, updated_entity_classes):
+        """Update entities classes in the given database."""
         if db_map not in self.db_map_to_name:
             return
-        objects = [entity for entity in updated_entities if entity["class_type"] == "object"]
+        objects = [entity for entity in updated_entity_classes if entity["class_type"] == "object"]
         for o in objects:
             o.pop("class_id", None)
-        relationships = [entity for entity in updated_entities if entity["class_type"] == "relationship"]
+        relationships = [entity for entity in updated_entity_classes if entity["class_type"] == "relationship"]
         for r in relationships:
             r.pop("class_id", None)
 
@@ -155,6 +157,7 @@ class SpineDBManager(QObject):
             self.entity_classes_updated.emit(db_map, updated_ids)
 
     def add_entities(self, db_map: DiffDatabaseMapping, new_entities):
+        """Add entities to the given database."""
         objects = [entity for entity in new_entities if entity["entity_type"] == "object"]
         relationships = [entity for entity in new_entities if entity["entity_type"] == "relationship"]
         new_obj, _ = db_map.add_objects(*objects)
@@ -166,9 +169,10 @@ class SpineDBManager(QObject):
         if new_obj or new_rel:
             self.entities_added.emit(db_map, set(new_obj.keys()).union(set(new_rel.keys())))
 
-    def add_entity_classes(self, db_map: DiffDatabaseMapping, new_entities):
-        objects = [entity for entity in new_entities if entity["class_type"] == "object"]
-        relationships = [entity for entity in new_entities if entity["class_type"] == "relationship"]
+    def add_entity_classes(self, db_map: DiffDatabaseMapping, new_entity_classes):
+        """Add entitiy classes to the given database."""
+        objects = [entity for entity in new_entity_classes if entity["class_type"] == "object"]
+        relationships = [entity for entity in new_entity_classes if entity["class_type"] == "relationship"]
         new_obj, _ = db_map.add_object_classes(*objects, strict=True)
         new_rel, _ = db_map.add_wide_relationship_classes(*relationships, strict=True)
         new_obj = self._obj_class_to_dict(new_obj)
@@ -179,6 +183,7 @@ class SpineDBManager(QObject):
             self.entity_classes_added.emit(db_map, set(new_obj.keys()).union(set(new_rel.keys())))
 
     def delete_entities(self, db_map: DiffDatabaseMapping, entity_ids: Set[int]):
+        """Delete entities from the given database."""
         if db_map in self.db_map_to_name:
             entity_dict = self.entity[db_map]
             object_ids = set(entity_id for entity_id in entity_ids if entity_dict[entity_id]["entity_type"] == "object")
@@ -199,6 +204,7 @@ class SpineDBManager(QObject):
         return entity_ids
 
     def delete_entity_classes(self, db_map: DiffDatabaseMapping, entity_class_ids: Set[int]):
+        """Delete entitiy classes from the given database."""
         if db_map in self.db_map_to_name:
             entity_dict = self.entity_class[db_map]
             object_ids = set(
@@ -221,6 +227,7 @@ class SpineDBManager(QObject):
         return entity_class_ids
 
     def get_entities(self, entity_type: Tuple[str, ...] = ("object", "relationship"), filters: dict = None):
+        """Fetches and returns entities in all databases."""
         if filters is None:
             filters = dict()
         entities = []
@@ -241,6 +248,7 @@ class SpineDBManager(QObject):
         return entities
 
     def get_entity_classes(self, entity_class_type: Tuple[str, ...] = ("object", "relationship"), filters: dict = None):
+        """Fetches and returns entity classes in all databases."""
         if filters is None:
             filters = dict()
         classes = []
