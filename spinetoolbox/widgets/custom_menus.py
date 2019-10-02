@@ -533,8 +533,9 @@ class RecentProjectsPopupMenu(CustomPopupMenu):
             recents_list = recents.split("\n")
             for entry in recents_list:
                 name, filepath = entry.split("<>")
-                self.add_action(name, lambda checked=False, filepath=filepath: self.call_open_project(
-                        checked, filepath))
+                self.add_action(
+                    name, lambda checked=False, filepath=filepath: self.call_open_project(checked, filepath)
+                )
 
     @Slot(bool, str, name="call_open_project")
     def call_open_project(self, checked, p):

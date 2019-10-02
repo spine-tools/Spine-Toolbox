@@ -235,8 +235,9 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("project.create_dir") as mock_create_dir:
+        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "project.create_dir"
+        ) as mock_create_dir:
             self.toolbox.create_project("UnitTest Project", "")
         # self.toolbox.create_project("UnitTest Project", "")
         ds1 = "DS1"

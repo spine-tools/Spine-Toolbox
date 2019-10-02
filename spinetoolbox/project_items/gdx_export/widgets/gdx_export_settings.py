@@ -88,9 +88,7 @@ class GdxExportSettings(QWidget):
         record_list_model = GAMSRecordListModel()
         self._ui.record_list_view.setModel(record_list_model)
         self._ui.set_list_view.selectionModel().selectionChanged.connect(self._populate_set_contents)
-        self._ui.set_list_view.selectionModel().currentChanged.connect(
-            self._update_as_global_button_enabled_state
-        )
+        self._ui.set_list_view.selectionModel().currentChanged.connect(self._update_as_global_button_enabled_state)
 
     @property
     def settings(self):
