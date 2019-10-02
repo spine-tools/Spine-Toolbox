@@ -35,4 +35,4 @@ class AddGdxExportWidget(AddProjectItemWidget):
     def call_add_item(self):
         """Creates new Item according to user's selections."""
         item = dict(name=self.name, description=self.description, x=self._x, y=self._y)
-        self._project.add_project_items("Exporting", item, set_selected=True)
+        self._project.add_project_items("Data Exporters", item, set_selected=True)
