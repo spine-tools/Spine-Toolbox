@@ -60,8 +60,7 @@ If a *Tool* is to use such a file, remember to add the file as one of the *Tool 
 
 .. note::
    You need to have GAMS Python bindings installed to use this functionality.
-   See the GAMS `Python tutorial <https://www.gams.com/latest/docs/API_PY_TUTORIAL.html>`__ for instructions
-   on how to install the bindings.
+   See :ref:`here <GAMS Python bindings>` for more information on how to install the bindings.
 
 The mapping between a database and GAMS is as follows:
 

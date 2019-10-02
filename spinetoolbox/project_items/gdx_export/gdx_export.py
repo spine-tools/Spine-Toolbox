@@ -127,13 +127,14 @@ class GdxExport(ProjectItem):
             abort = -1
             self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
             return
+        gams_system_directory = self._resolve_gams_system_directory()
         for url in self._database_urls:
             database_map = get_db_map(url)
             settings = self._settings.get(url.database, None)
             if settings is None:
                 settings = gdx.make_settings(database_map)
             try:
-                _, gams_database = gdx.to_gams_workspace(database_map, settings)
+                _, gams_database = gdx.to_gams_workspace(database_map, settings, gams_system_directory)
             except gdx.GdxExportException as error:
                 self._toolbox.msg_error.emit('Failed to write .gdx file: {}'.format(error.message))
                 abort = -1
@@ -230,3 +231,18 @@ class GdxExport(ProjectItem):
     def update_name_label(self):
         """See `ProjectItem.update_name_label()`."""
         self._properties_ui.item_name_label.setText(self.name)
+
+    def _resolve_gams_system_directory(self):
+        """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
+        path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue=None)
+        if not path:
+            path = None
+        if path is not None:
+            if not os.path.isfile(path):
+                self._toolbox.msg_warning.emit(
+                    "GAMS program '{}' in Toolbox settings does not exists. Using system default.".format(path)
+                )
+                path = None
+            else:
+                path = os.path.dirname(path)
+        return path

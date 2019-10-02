@@ -290,11 +290,19 @@ def export_to_gdx(gams_database, file_name):
     gams_database.export(file_name)
 
 
-def make_gams_workspace():
-    """Returns a freshly created GamsWorkspace object."""
+def make_gams_workspace(gams_system_directory=None):
+    """
+    Returns a freshly created GamsWorkspace object.
+
+    Args:
+        gams_system_directory (str): path to GAMS system directory or None to let GAMS choose one for you
+
+    Returns:
+        a GAMS workspace
+    """
     # This may emit a ResourceWarning (unclosed file).
     # It is harmless but don't know how to suppress it.
-    return gams.GamsWorkspace()
+    return gams.GamsWorkspace(system_directory=gams_system_directory)
 
 
 def make_gams_database(gams_workspace):
@@ -377,7 +385,21 @@ def extract_domain(domains, name_to_extract):
     return domains, None
 
 
-def to_gams_workspace(database_map, settings):
+def to_gams_workspace(database_map, settings, gams_system_directory=None):
+    """
+    Exports given database map into GAMS database.
+
+    This high-level function reads the data from `database_map` and writes it to a GAMS database
+     returning the database and corresponding GAMS workspace.
+
+    Args:
+        database_map (spinedb_api.DatabaseMapping): a database to export
+        settings (Settings): export settings
+        gams_system_directory (str): path to GAMS system directory or None to let GAMS choose one for you
+
+    Returns:
+        a tuple of (GamsWorkspace, GamsDatabase)
+    """
     domains = object_classes_to_domains(database_map)
     domains, global_parameters_domain = extract_domain(domains, settings.global_parameters_domain_name)
     domains = filter_and_sort_sets(domains, settings.sorted_domain_names, settings.domain_exportable_flags)
@@ -385,7 +407,7 @@ def to_gams_workspace(database_map, settings):
     sets = relationship_classes_to_sets(database_map)
     sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_exportable_flags)
     sort_records_inplace(sets, settings)
-    gams_workspace = make_gams_workspace()
+    gams_workspace = make_gams_workspace(gams_system_directory)
     gams_database = make_gams_database(gams_workspace)
     gams_domains = domains_to_gams(gams_database, domains)
     sets_to_gams(gams_database, sets, gams_domains)
