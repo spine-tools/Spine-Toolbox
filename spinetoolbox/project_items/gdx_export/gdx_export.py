@@ -122,9 +122,10 @@ class GdxExport(ProjectItem):
         self._toolbox.msg.emit("Executing Gdx Export <b>{}</b>".format(self.name))
         self._toolbox.msg.emit("***")
         availability_error = gdx.gams_import_error()
+        success = 0
+        abort = -1
         if availability_error:
             self._toolbox.msg_error.emit(availability_error)
-            abort = -1
             self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
             return
         gams_system_directory = self._resolve_gams_system_directory()
@@ -136,22 +137,28 @@ class GdxExport(ProjectItem):
             try:
                 _, gams_database = gdx.to_gams_workspace(database_map, settings, gams_system_directory)
             except gdx.GdxExportException as error:
-                self._toolbox.msg_error.emit('Failed to write .gdx file: {}'.format(error.message))
-                abort = -1
+                self._toolbox.msg_error.emit("Failed to write .gdx file: {}".format(error.message))
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
+                return
+            except RuntimeError as gams_error:
+                # Happens when there's a mismatch in bitness between selected (in app Settings)
+                # GAMS and installed GAMS Python bindings package.
+                self._toolbox.msg_error.emit("{0}".format(gams_error))
+                self._toolbox.msg_warning.emit("Please select another <i>GAMS program</i> "
+                                               "in <b>File->Settings (F1)</b>")
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
                 return
             file_name = self._database_to_file_name_map.get(url.database, None)
             if file_name is None:
-                self._toolbox.msg_error.emit('No file name given to export database {}.'.format(url.database))
-                abort = -1
+                self._toolbox.msg_error.emit("No file name given to export database {}.".format(url.database))
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
                 return
             out_path = os.path.join(self.data_dir, file_name)
             gdx.export_to_gdx(gams_database, out_path)
+            self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
         execution_instance = self._toolbox.project().execution_instance
         paths = [os.path.join(self.data_dir, file_name) for file_name in self._database_to_file_name_map.values()]
         execution_instance.append_dc_files(self.name, paths)
-        success = 0
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(success)
 
     def stop_execution(self):
