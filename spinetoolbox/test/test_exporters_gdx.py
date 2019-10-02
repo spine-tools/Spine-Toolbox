@@ -196,7 +196,10 @@ class TextExportersGdx(unittest.TestCase):
         domain.records.append(record)
         domains = list()
         domains.append(domain)
-        workspace = gdx.make_gams_workspace()
+        try:
+            workspace = gdx.make_gams_workspace()
+        except gdx.GdxExportException:
+            self.skipTest("Broken GAMS Python bindings installation.")
         database = gdx.make_gams_database(workspace)
         gdx.domains_to_gams(database, domains)
         gams_domain = database.get_set(self._MockObjectClass.name)
@@ -217,7 +220,10 @@ class TextExportersGdx(unittest.TestCase):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
         domain.records.append(record)
-        workspace = gdx.make_gams_workspace()
+        try:
+            workspace = gdx.make_gams_workspace()
+        except gdx.GdxExportException:
+            self.skipTest("Broken GAMS Python bindings installation.")
         database = gdx.make_gams_database(workspace)
         gams_domains = gdx.domains_to_gams(database, [domain])
         set_item = gdx.Set(self._MockRelationshipClass())
@@ -246,7 +252,10 @@ class TextExportersGdx(unittest.TestCase):
         domain.records.append(record)
         parameter = gdx.Parameter(self._MockParameter())
         record.parameters.append(parameter)
-        workspace = gdx.make_gams_workspace()
+        try:
+            workspace = gdx.make_gams_workspace()
+        except gdx.GdxExportException:
+            self.skipTest("Broken GAMS Python bindings installation.")
         database = gdx.make_gams_database(workspace)
         gdx.domain_parameters_to_gams(database, domain)
         gams_parameter = database.get_parameter(self._MockParameter.parameter_name)
@@ -323,7 +332,10 @@ class TextExportersGdx(unittest.TestCase):
                 'set2': [['record12', 'record21'], ['record11', 'record21']],
             }
             settings = gdx.Settings(sorted_domain_names, sorted_set_names, sorted_records)
-            _, gams_database = gdx.to_gams_workspace(database_map, settings)
+            try:
+                _, gams_database = gdx.to_gams_workspace(database_map, settings)
+            except gdx.GdxExportException:
+                self.skipTest("Broken GAMS Python bindings installation.")
             database_map.connection.close()
         self.assertEqual(len(gams_database), 4)
         expected_symbol_names = ['domain2', 'domain1', 'set2', 'set1']
@@ -364,7 +376,10 @@ class TextExportersGdx(unittest.TestCase):
             )
             settings = gdx.make_settings(database_map)
             settings.global_parameters_domain_name = 'global_domain'
-            _, gams_database = gdx.to_gams_workspace(database_map, settings)
+            try:
+                _, gams_database = gdx.to_gams_workspace(database_map, settings)
+            except gdx.GdxExportException:
+                self.skipTest("Broken GAMS Python bindings installation.")
             database_map.connection.close()
         self.assertEqual(len(gams_database), 1)
         expected_symbol_names = ['global_parameter']

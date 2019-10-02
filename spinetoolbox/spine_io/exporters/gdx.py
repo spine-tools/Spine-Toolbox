@@ -302,7 +302,10 @@ def make_gams_workspace(gams_system_directory=None):
     """
     # This may emit a ResourceWarning (unclosed file).
     # It is harmless but don't know how to suppress it.
-    return gams.GamsWorkspace(system_directory=gams_system_directory)
+    try:
+        return gams.GamsWorkspace(system_directory=gams_system_directory)
+    except gams.workspace.GamsException as error:
+        raise GdxExportException("Failed to construct a GamsWorkspace.") from error
 
 
 def make_gams_database(gams_workspace):
@@ -407,10 +410,7 @@ def to_gams_workspace(database_map, settings, gams_system_directory=None):
     sets = relationship_classes_to_sets(database_map)
     sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_exportable_flags)
     sort_records_inplace(sets, settings)
-    try:
-        gams_workspace = make_gams_workspace(gams_system_directory)
-    except gams.workspace.GamsException as gams_exc:
-        raise RuntimeError(gams_exc)
+    gams_workspace = make_gams_workspace(gams_system_directory)
     gams_database = make_gams_database(gams_workspace)
     gams_domains = domains_to_gams(gams_database, domains)
     sets_to_gams(gams_database, sets, gams_domains)

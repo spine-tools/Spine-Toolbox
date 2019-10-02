@@ -137,15 +137,19 @@ class GdxExport(ProjectItem):
             try:
                 _, gams_database = gdx.to_gams_workspace(database_map, settings, gams_system_directory)
             except gdx.GdxExportException as error:
-                self._toolbox.msg_error.emit("Failed to write .gdx file: {}".format(error.message))
+                self._toolbox.msg_error.emit(
+                    "Failed to write .gdx file: {}".format(error.message)
+                    + " Check that the correct <i>GAMS executable</i> is selected in <b>File->Settings (F1)</b>."
+                )
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
                 return
             except RuntimeError as gams_error:
                 # Happens when there's a mismatch in bitness between selected (in app Settings)
                 # GAMS and installed GAMS Python bindings package.
                 self._toolbox.msg_error.emit("{0}".format(gams_error))
-                self._toolbox.msg_warning.emit("Please select another <i>GAMS program</i> "
-                                               "in <b>File->Settings (F1)</b>")
+                self._toolbox.msg_warning.emit(
+                    "Please select another <i>GAMS program</i> " "in <b>File->Settings (F1)</b>"
+                )
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
                 return
             file_name = self._database_to_file_name_map.get(url.database, None)
