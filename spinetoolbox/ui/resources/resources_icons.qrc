@@ -59,5 +59,6 @@
     <file>menu_icons/sync.svg</file>
     <file>menu_icons/trash-alt.svg</file>
     <file>menu_icons/undo.svg</file>
+    <file>project_item_icons/file-export-solid.svg</file>
   </qresource>
 </RCC>

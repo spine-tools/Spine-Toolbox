@@ -10,43 +10,30 @@
 ######################################################################################################################
 
 """
-MetaObject class.
+Gdx Export properties widget.
 
-:authors: E. Rinne (VTT), P. Savolainen (VTT)
-:date:   18.12.2017
+:author: A. Soininen (VTT)
+:date:   25.9.2019
 """
 
-from PySide2.QtCore import QObject
+from PySide2.QtWidgets import QWidget
+from project_items.gdx_export.ui.gdx_export_properties import Ui_Form
 
 
-class MetaObject(QObject):
-    def __init__(self, name, description):
-        """Class for an object which has a name, type, and some description.
+class GdxExportProperties(QWidget):
+    """A main window widget to show Gdx Export item's properties."""
 
-        Args:
-            name (str): Object name
-            description (str): Object description
+    def __init__(self, toolbox):
         """
-        QObject.__init__(self)
-        self.name = name
-        self.short_name = name.lower().replace(' ', '_')
-        self.description = description
-
-    def set_name(self, new_name):
-        """Set object name and short name.
-        Note: Check conflicts (e.g. name already exists)
-        before calling this method.
-
         Args:
-            new_name (str): New (long) name for this object
+            toolbox (ToolboxUI): a main window instance
         """
-        self.name = new_name
-        self.short_name = new_name.lower().replace(' ', '_')
+        super().__init__()
+        self._ui = Ui_Form()
+        self._ui.setupUi(self)
+        toolbox.ui.tabWidget_item_properties.addTab(self, "Gdx Export")
 
-    def set_description(self, desc):
-        """Set object description.
-
-        Args:
-            desc (str): Object description
-        """
-        self.description = desc
+    @property
+    def ui(self):
+        """The UI form of this widget."""
+        return self._ui

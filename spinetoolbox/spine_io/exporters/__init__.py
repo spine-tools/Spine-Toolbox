@@ -10,8 +10,8 @@
 ######################################################################################################################
 
 """
-Init file for spine_io package. Intentionally empty.
+Init file for spine_io.exporters package. Intentionally empty.
 
-:author: P. Vennström (VTT)
-:date:   1.6.2019
+:author: A. Soininen (VTT)
+:date:   30.8.2019
 """

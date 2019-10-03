@@ -222,7 +222,6 @@ class ProjectItem(BaseProjectItem):
     """
 
     item_changed = Signal(name="item_changed")
-    """This is a class attribute."""
 
     def __init__(self, toolbox, name, description, x, y):
         """Class constructor."""
@@ -385,6 +384,14 @@ class ProjectItem(BaseProjectItem):
         """Tears down this item. Called by toolbox just before closing.
         Implement in subclasses to eg close all QMainWindows opened by this item.
         """
+
+    def update_name_label(self):
+        """
+        Updates the name label on the properties widget when renaming an item.
+
+        Must be reimplemented by subclasses.
+        """
+        raise NotImplementedError()
 
 
 class ProjectItemResource:

@@ -76,7 +76,7 @@ class TestToolboxUI(unittest.TestCase):
         self.check_init_project_item_model()
 
     def test_init_project_item_model_with_project(self):
-        """Test that a new project item model contains 4 items (Data Stores, Data Connections, Tools, and Views).
+        """Test that project item model is initialized successfully.
         Note: This test is done WITH a project.
         Mock save_project() and create_dir() so that .proj file and project directory (and work directory) are
         not actually created.
@@ -92,7 +92,8 @@ class TestToolboxUI(unittest.TestCase):
     def check_init_project_item_model(self):
         """Checks that category items are created as expected."""
         n = self.toolbox.project_item_model.rowCount()
-        self.assertEqual(n, 5)
+        # Data Stores, Data Connections, Tools, Views, Data Interfaces, Exporting
+        self.assertEqual(n, 6)
         # Check that there's only one column
         self.assertEqual(self.toolbox.project_item_model.columnCount(), 1)
         # Check that the items DisplayRoles are (In this particular order)
@@ -115,6 +116,16 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(item4.name == "Views", "Item on row 3 is not 'Views'")
         self.assertTrue(
             isinstance(item4.parent(), RootProjectItem), "Parent item of category item on row 3 should be root"
+        )
+        item5 = self.toolbox.project_item_model.root().child(4)
+        self.assertTrue(item5.name == "Data Interfaces", "Item on row 4 is not 'Data Interfaces'")
+        self.assertTrue(
+            isinstance(item5.parent(), RootProjectItem), "Parent item of category item on row 4 should be root"
+        )
+        item6 = self.toolbox.project_item_model.root().child(5)
+        self.assertTrue(item6.name == "Data Exporters", "Item on row 5 is not 'Data Exporters'")
+        self.assertTrue(
+            isinstance(item6.parent(), RootProjectItem), "Parent item of category item on row 5 should be root"
         )
 
     def test_init_tool_template_model(self):
@@ -224,8 +235,9 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("project.create_dir") as mock_create_dir:
+        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "project.create_dir"
+        ) as mock_create_dir:
             self.toolbox.create_project("UnitTest Project", "")
         # self.toolbox.create_project("UnitTest Project", "")
         ds1 = "DS1"

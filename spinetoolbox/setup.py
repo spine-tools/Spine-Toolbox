@@ -76,7 +76,7 @@ def main(argv):
             "scipy.spatial.ckdtree",
             "pymysql",
             "tabulator.loaders.local",
-            "tabulator.parsers.csv"
+            "tabulator.parsers.csv",
         ],
         "include_files": [
             (doc_path, "docs/"),
@@ -86,7 +86,8 @@ def main(argv):
             readme_file,
             copying_file,
             copying_lesser_file,
-        ] + alembic_version_files,
+        ]
+        + alembic_version_files,
         "include_msvcr": True,
     }
     # Windows specific options

@@ -62,7 +62,7 @@ from config import (
 )
 from helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from project_item import RootProjectItem, CategoryProjectItem
-from project_items import data_store, data_connection, tool, view, data_interface
+from project_items import data_store, data_connection, gdx_export, tool, view, data_interface
 
 
 class ToolboxUI(QMainWindow):
@@ -104,8 +104,6 @@ class ToolboxUI(QMainWindow):
         self.active_project_item = None
         # Widget and form references
         self.settings_form = None
-        self.tool_config_asst_form = None
-        self.about_form = None
         self.tool_template_context_menu = None
         self.project_item_context_menu = None
         self.link_context_menu = None
@@ -190,7 +188,7 @@ class ToolboxUI(QMainWindow):
         This dict is then used to perform all project item related tasks.
         """
         self.categories.clear()
-        for module in (data_store, data_connection, tool, view, data_interface):
+        for module in (data_store, data_connection, tool, view, data_interface, gdx_export):
             item_rank = module.item_rank
             item_category = module.item_category
             item_type = module.item_type
@@ -1106,12 +1104,12 @@ class ToolboxUI(QMainWindow):
 
     @Slot(name="show_tool_template_form")
     def show_tool_template_form(self, tool_template=None):
-        """Show create tool template widget."""
+        """Show tool template widget."""
         if not self._project:
             self.msg.emit("Please open or create a project first")
             return
-        self.tool_template_form = ToolTemplateWidget(self, tool_template)
-        self.tool_template_form.show()
+        form = ToolTemplateWidget(self, tool_template)
+        form.show()
 
     @Slot(name="show_settings")
     def show_settings(self):
@@ -1122,14 +1120,14 @@ class ToolboxUI(QMainWindow):
     @Slot(name="show_tool_config_asst")
     def show_tool_config_asst(self):
         """Show Tool configuration assistant widget."""
-        self.tool_config_asst_form = ToolConfigurationAssistantWidget(self)
-        self.tool_config_asst_form.show()
+        form = ToolConfigurationAssistantWidget(self)
+        form.show()
 
     @Slot(name="show_about")
     def show_about(self):
         """Show About Spine Toolbox form."""
-        self.about_form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
-        self.about_form.show()
+        form = AboutWidget(self, SPINE_TOOLBOX_VERSION)
+        form.show()
 
     @Slot(name="show_user_guide")
     def show_user_guide(self):

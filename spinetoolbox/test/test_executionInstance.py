@@ -96,3 +96,7 @@ class TestExecutionInstance(unittest.TestCase):
         dc0.simulate_execution.side_effect = lambda inst: inst.advertise_resources(dc0, resource1, resource2)
         inst.simulate_execution()
         self.assertEqual(inst.available_resources(di1), [resource1, resource2])
+
+
+if __name__ == '__main__':
+    unittest.main()
