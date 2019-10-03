@@ -16,580 +16,632 @@ Empty models for parameter definitions and values.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt
+from sqlalchemy.sql import and_, or_
+from PySide2.QtCore import Qt, QModelIndex
 from helpers import busy_effect
 from mvcmodels.empty_row_model import EmptyRowModel
+from mvcmodels.parameter_item import (
+    ObjectParameterDefinitionItem,
+    ObjectParameterValueItem,
+    RelationshipParameterDefinitionItem,
+    RelationshipParameterValueItem,
+)
 
 
 class EmptyParameterModel(EmptyRowModel):
-    """An empty parameter model. Implements `batch_set_data` for all `EmptyParameter` models."""
+    """An empty parameter model."""
 
-    def __init__(self, parent):
+    def __init__(self, parent, item_maker):
         """Initialize class.
 
         Args:
-            parent (ObjectParameterModel or RelationshipParameterModel)
+            parent (ParameterModel): the parent object
+            item_maker (function): a function to create items to put in the model rows
         """
         super().__init__(parent)
         self._parent = parent
+        self.db_name_to_map = parent.db_name_to_map
+        self.item_maker = item_maker
         self.error_log = []
         self.added_rows = []
 
-    def batch_set_data(self, indexes, data):
-        """Batch set data for indexes.
-        Set data in model first, then check if the database needs to be updated as well.
-        Extend set of indexes as additional data is set (for emitting dataChanged at the end).
+    def insertRows(self, row, count, parent=QModelIndex()):
+        """Inserts count rows into the model before the given row.
+        Items in the new row will be children of the item represented
+        by the parent model index.
+
+        Args:
+            row (int): Row number where new rows are inserted
+            count (int): Number of inserted rows
+            parent (QModelIndex): Parent index
+
+        Returns:
+            True if rows were inserted successfully, False otherwise
         """
-        # TODO: emit dataChanged? Perhaps we need to call `super().batch_set_data` at the end
+        if row < 0 or row > self.rowCount():
+            return False
+        if count < 1:
+            return False
+        self.beginInsertRows(parent, row, row + count - 1)
+        for i in range(count):
+            # Create the new row using the `item_maker` attribute
+            new_main_row = self.item_maker(self.horizontal_header_labels())
+            # Notice if insert index > rowCount(), new object is inserted to end
+            self._main_data.insert(row + i, new_main_row)
+        self.endInsertRows()
+        return True
+
+    def batch_set_data(self, indexes, data):
+        """Sets data for indexes in batch.
+        Set data in model first, then set internal data for modified items.
+        Finally add successfully modified items to the db.
+        """
         self.error_log.clear()
         self.added_rows.clear()
         if not super().batch_set_data(indexes, data):
             return False
-        items_to_add = self.items_to_add(indexes)
-        self.add_items_to_db(items_to_add)
+        unique_rows = {ind.row() for ind in indexes}
+        items = [self._main_data[row] for row in unique_rows]
+        self.batch_set_internal_data(items)
+        self.batch_set_entity_data(items)
+        self.add_items_to_db(unique_rows)
         return True
 
-    def items_to_add(self, indexes):
-        raise NotImplementedError()
-
-    def add_items_to_db(self, items_to_add):
-        raise NotImplementedError()
-
-
-class EmptyParameterValueModel(EmptyParameterModel):
-    """An empty parameter value model."""
-
-    def __init__(self, parent):
-        """Initialize class.
+    def batch_set_internal_data(self, items):
+        """Sets internal data for indexes in batch.
+        Reimplement in subclasses to set id from names etc.
 
         Args:
-            parent (ObjectParameterValueModel or RelationshipParameterValueModel)
+            items (list): A list of items that need treatment
         """
-        super().__init__(parent)
-        self._parent = parent
+        raise NotImplementedError
 
-    def items_to_add(self, indexes):
-        raise NotImplementedError()
-
-    @busy_effect
-    def add_items_to_db(self, items_to_add):
-        """Add parameter values to database.
+    def batch_set_entity_data(self, items):
+        """Sets entity data for indexes in batch.
+        Reimplement in subclasses to set data related to the entity.
 
         Args:
-            items_to_add (dict): maps DatabaseMapping instances to another dictionary
-                mapping row numbers to parameter value items
+            items (list): A list of items that need treatment
         """
-        for db_map, row_dict in items_to_add.items():
-            rows, items = zip(*row_dict.items())
-            parameter_values, error_log = db_map.add_parameter_values(*items)
-            id_column = self._parent.horizontal_header_labels().index('id')
-            for i, parameter_value in enumerate(parameter_values):
-                self._main_data[rows[i]][id_column] = parameter_value.id
-            self.error_log.extend(error_log)
-            self.added_rows.extend(rows)
+        raise NotImplementedError
+
+    def add_items_to_db(self, rows):
+        """Adds items to database. Reimplement in subclasses.
+
+        Args:
+            rows (list): A list of model rows whose items should be added to the db
+        """
+        raise NotImplementedError
 
 
 class EmptyParameterDefinitionModel(EmptyParameterModel):
     """An empty parameter definition model.
+    Provides methods common to all parameter definitions regardless of the entity class.
     """
 
-    def __init__(self, parent):
-        """Initialize class.
+    def batch_set_internal_data(self, items):
+        """Sets internal data for model items in batch.
+        Set parameter tag ids and value list ids in accordance with the names.
 
         Args:
-            parent (ObjectParameterDefinitionModel or RelationshipParameterDefinitionModel)
+            items (list): A list of items that need treatment
         """
-        super().__init__(parent)
-        self._parent = parent
-
-    def items_to_add(self, indexes):
-        raise NotImplementedError()
-
-    @busy_effect
-    def add_items_to_db(self, items_to_add):
-        """Add parameter definitions to database.
-        """
-        for db_map, row_dict in items_to_add.items():
-            rows, items = zip(*row_dict.items())
-            # Pop the `parameter_tag_id_list` from `row_dict` into a new dictionary
-            row_tag_id_list_dict = {row: item.pop("parameter_tag_id_list", None) for row, item in zip(rows, items)}
-            par_defs, error_log = db_map.add_parameter_definitions(*items)
-            id_column = self._parent.horizontal_header_labels().index('id')
-            # Now we have the parameter definition ids we can build the tag_id_list_dict
-            tag_id_list_dict = {}
-            for i, par_def in enumerate(par_defs):
-                row = rows[i]
-                tag_id_list = row_tag_id_list_dict[row]
-                if tag_id_list:
-                    tag_id_list_dict[par_def.id] = tag_id_list
-                self._main_data[rows[i]][id_column] = par_def.id
-            _, def_tag_error_log = db_map.set_parameter_definition_tags(tag_id_list_dict)
-            self.error_log.extend(error_log + def_tag_error_log)
-            self.added_rows.extend(rows)
-
-
-class EmptyObjectParameterValueModel(EmptyParameterValueModel):
-    """An empty object parameter value model.
-    Implements `items_to_add`.
-    """
-
-    def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
-
-    def items_to_add(self, indexes):
-        """A dictionary of rows (int) to items (dict) to add to the db.
-        Extend set of indexes as additional data is set."""
-        items_to_add = dict()
-        # Get column numbers
-        header_index = self._parent.horizontal_header_labels().index
-        db_column = header_index('database')
-        object_class_id_column = header_index('object_class_id')
-        object_class_name_column = header_index('object_class_name')
-        object_id_column = header_index('object_id')
-        object_name_column = header_index('object_name')
-        parameter_id_column = header_index('parameter_id')
-        parameter_name_column = header_index('parameter_name')
-        value_column = header_index('value')
-        # Lookup dicts (these are filled below as needed with data from the db corresponding to each row)
-        object_class_dict = {}
-        object_class_name_dict = {}
-        object_dict = {}
-        parameter_dict = {}
-        unique_rows = {ind.row() for ind in indexes}
-        for row in unique_rows:
-            db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map.get(db_name)
+        # Collect value list names and parameter tags for which we need to query the id
+        value_list_names = dict()
+        parameter_tags = dict()
+        for item in items:
+            database = item.database
+            if not database:
+                continue
+            value_list_names.setdefault(database, set()).add(item.value_list_name)
+            if item.parameter_tag_list:
+                tags = item.parameter_tag_list.split(",")
+                parameter_tags.setdefault(database, set()).update(tags)
+        # Do the queries
+        value_list_dict = dict()
+        parameter_tag_dict = dict()
+        for database, names in value_list_names.items():
+            db_map = self.db_name_to_map.get(database)
             if not db_map:
                 continue
-            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
-            object_name = self.index(row, object_name_column).data(Qt.DisplayRole)
-            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            object_class_id = None
-            object_ = None
-            parameter = None
-            if object_class_name:
-                d = object_class_dict.setdefault(db_map, {x.name: x.id for x in db_map.object_class_list()})
-                try:
-                    object_class_id = d[object_class_name]
-                    self._main_data[row][object_class_id_column] = object_class_id
-                except KeyError:
-                    self.error_log.append("Invalid object class '{}'".format(object_class_name))
-            if object_name:
-                d = object_dict.setdefault(
-                    db_map, {x.name: {'id': x.id, 'class_id': x.class_id} for x in db_map.object_list()}
-                )
-                try:
-                    object_ = d[object_name]
-                    self._main_data[row][object_id_column] = object_['id']
-                except KeyError:
-                    self.error_log.append("Invalid object '{}'".format(object_name))
-            if parameter_name:
-                d = parameter_dict.setdefault(db_map, {})
-                for x in db_map.object_parameter_definition_list():
-                    d.setdefault(x.parameter_name, {}).update(
-                        {x.object_class_id: {'id': x.id, 'object_class_id': x.object_class_id}}
-                    )
-                try:
-                    dup_parameters = d[parameter_name]
-                    if len(dup_parameters) == 1:
-                        parameter = list(dup_parameters.values())[0]
-                    elif object_class_id in dup_parameters:
-                        parameter = dup_parameters[object_class_id]
-                    if parameter is not None:
-                        self._main_data[row][parameter_id_column] = parameter['id']
-                except KeyError:
-                    self.error_log.append("Invalid parameter '{}'".format(parameter_name))
-            if object_class_id is None:
-                d = object_class_name_dict.setdefault(db_map, {x.id: x.name for x in db_map.object_class_list()})
-                if object_ is not None:
-                    object_class_id = object_['class_id']
-                    object_class_name = d[object_class_id]
-                    self._main_data[row][object_class_id_column] = object_class_id
-                    self._main_data[row][object_class_name_column] = object_class_name
-                    indexes.append(self.index(row, object_class_name_column))
-                elif parameter is not None:
-                    object_class_id = parameter['object_class_id']
-                    object_class_name = d[object_class_id]
-                    self._main_data[row][object_class_id_column] = object_class_id
-                    self._main_data[row][object_class_name_column] = object_class_name
-                    indexes.append(self.index(row, object_class_name_column))
-            if object_ is None or parameter is None:
-                continue
-            value = self.index(row, value_column).data(Qt.DisplayRole)
-            item = {"object_id": object_['id'], "parameter_definition_id": parameter['id'], "value": value}
-            items_to_add.setdefault(db_map, {})[row] = item
-        return items_to_add
-
-
-class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
-    """An empty relationship parameter value model.
-    Reimplements almost all methods from the super class EmptyParameterModel.
-    """
-
-    def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
-
-    def batch_set_data(self, indexes, data):
-        """Batch set data for indexes.
-        A little different from the base class implementation,
-        since here we need to support creating relationships on the fly.
-        """
-        self.error_log = []
-        self.added_rows = []
-        if not indexes:
-            return False
-        if len(indexes) != len(data):
-            return False
-        for k, index in enumerate(indexes):
-            self._main_data[index.row()][index.column()] = data[k]
-        relationships_on_the_fly = self.relationships_on_the_fly(indexes)
-        items_to_add = self.items_to_add(indexes, relationships_on_the_fly)
-        self.add_items_to_db(items_to_add)
-        # Find square envelope of indexes to emit dataChanged
-        top = min(ind.row() for ind in indexes)
-        bottom = max(ind.row() for ind in indexes)
-        left = min(ind.column() for ind in indexes)
-        right = max(ind.column() for ind in indexes)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
-        return True
-
-    def relationships_on_the_fly(self, indexes):
-        """A dict of row (int) to relationship item (KeyedTuple),
-        which can be either retrieved or added on the fly.
-        Extend set of indexes as additional data is set.
-        """
-        relationships_on_the_fly = dict()
-        relationships_to_add = dict()
-        # Get column numbers
-        header_index = self._parent.horizontal_header_labels().index
-        db_column = header_index('database')
-        relationship_class_id_column = header_index('relationship_class_id')
-        relationship_class_name_column = header_index('relationship_class_name')
-        object_class_id_list_column = header_index('object_class_id_list')
-        object_class_name_list_column = header_index('object_class_name_list')
-        object_id_list_column = header_index('object_id_list')
-        object_name_list_column = header_index('object_name_list')
-        parameter_id_column = header_index('parameter_id')
-        parameter_name_column = header_index('parameter_name')
-        # Lookup dicts (these are filled below as needed with data from the db corresponding to each row)
-        relationship_class_dict = {}
-        relationship_class_name_dict = {}
-        parameter_dict = {}
-        relationship_dict = {}
-        object_dict = {}
-        unique_rows = {ind.row() for ind in indexes}
-        for row in unique_rows:
-            db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map.get(db_name)
+            parameter_value_list = db_map.wide_parameter_value_list_sq
+            value_list_dict[database] = {
+                x.name: x.id for x in db_map.query(parameter_value_list).filter(parameter_value_list.c.name.in_(names))
+            }
+        for database, tags in parameter_tags.items():
+            db_map = self.db_name_to_map.get(database)
             if not db_map:
                 continue
-            relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
-            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            object_name_list = self.index(row, object_name_list_column).data(Qt.DisplayRole)
-            relationship_class_id = None
-            object_id_list = None
-            parameter = None
-            if relationship_class_name:
-                d = relationship_class_dict.setdefault(
-                    db_map,
-                    {
-                        x.name: {
-                            "id": x.id,
-                            "object_class_id_list": x.object_class_id_list,
-                            "object_class_name_list": x.object_class_name_list,
-                        }
-                        for x in db_map.wide_relationship_class_list()
-                    },
-                )
-                try:
-                    relationship_class = d[relationship_class_name]
-                    relationship_class_id = relationship_class['id']
-                    object_class_id_list = relationship_class['object_class_id_list']
-                    object_class_name_list = relationship_class['object_class_name_list']
-                    self._main_data[row][relationship_class_id_column] = relationship_class_id
-                    self._main_data[row][object_class_id_list_column] = object_class_id_list
-                    self._main_data[row][object_class_name_list_column] = object_class_name_list
-                    indexes.append(self.index(row, object_class_name_list_column))
-                except KeyError:
-                    self.error_log.append("Invalid relationship class '{}'".format(relationship_class_name))
-            if object_name_list:
-                d = object_dict.setdefault(db_map, {x.name: x.id for x in db_map.object_list()})
-                try:
-                    object_id_list = [d[x] for x in object_name_list.split(",")]
-                    join_object_id_list = ",".join(str(x) for x in object_id_list)
-                    self._main_data[row][object_id_list_column] = join_object_id_list
-                except KeyError as e:
-                    self.error_log.append("Invalid object '{}'".format(e))
-            if parameter_name:
-                d = parameter_dict.setdefault(db_map, {})
-                for x in db_map.relationship_parameter_definition_list():
-                    d.setdefault(x.parameter_name, {}).update(
-                        {x.relationship_class_id: {'id': x.id, 'relationship_class_id': x.relationship_class_id}}
-                    )
-                try:
-                    dup_parameters = d[parameter_name]
-                    if len(dup_parameters) == 1:
-                        parameter = list(dup_parameters.values())[0]
-                    elif relationship_class_id in dup_parameters:
-                        parameter = dup_parameters[relationship_class_id]
-                    if parameter is not None:
-                        self._main_data[row][parameter_id_column] = parameter['id']
-                except KeyError:
-                    self.error_log.append("Invalid parameter '{}'".format(parameter_name))
-            if relationship_class_id is None and parameter is not None:
-                relationship_class_id = parameter['relationship_class_id']
-                d1 = relationship_class_name_dict.setdefault(
-                    db_map, {x.id: x.name for x in db_map.wide_relationship_class_list()}
-                )
-                d2 = relationship_class_dict.setdefault(
-                    db_map,
-                    {
-                        x.name: {
-                            "id": x.id,
-                            "object_class_id_list": x.object_class_id_list,
-                            "object_class_name_list": x.object_class_name_list,
-                        }
-                        for x in db_map.wide_relationship_class_list()
-                    },
-                )
-                relationship_class_name = d1[relationship_class_id]
-                relationship_class = d2[relationship_class_name]
-                object_class_id_list = relationship_class['object_class_id_list']
-                object_class_name_list = relationship_class['object_class_name_list']
-                self._main_data[row][relationship_class_id_column] = relationship_class_id
-                self._main_data[row][relationship_class_name_column] = relationship_class_name
-                self._main_data[row][object_class_id_list_column] = object_class_id_list
-                self._main_data[row][object_class_name_list_column] = object_class_name_list
-                indexes.append(self.index(row, relationship_class_name_column))
-                indexes.append(self.index(row, object_class_name_list_column))
-            if relationship_class_id is None or object_id_list is None:
-                continue
-            d = relationship_dict.setdefault(
-                db_map, {(x.class_id, x.object_id_list): x.id for x in db_map.wide_relationship_list()}
-            )
-            try:
-                relationship_id = d[relationship_class_id, join_object_id_list]
-                relationships_on_the_fly[row] = relationship_id
-            except KeyError:
-                relationship_name = relationship_class_name + "_" + object_name_list.replace(",", "__")
-                relationship = {
-                    "name": relationship_name,
-                    "object_id_list": object_id_list,
-                    "class_id": relationship_class_id,
-                }
-                relationships_to_add.setdefault(db_map, {})[row] = relationship
-        added_relationships = self.add_relationships(relationships_to_add)
-        if added_relationships:
-            relationships_on_the_fly.update(added_relationships)
-        return relationships_on_the_fly
+            parameter_tag = db_map.parameter_tag_sq
+            parameter_tag_dict[database] = {
+                x.tag: x.id for x in db_map.query(parameter_tag).filter(parameter_tag.c.tag.in_(tags))
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_value_list_dict = value_list_dict.get(database)
+            if db_value_list_dict:
+                item.value_list_id = db_value_list_dict.get(item.value_list_name)
+            db_parameter_tag_dict = parameter_tag_dict.get(database)
+            if db_parameter_tag_dict and item.parameter_tag_list:
+                tags = item.parameter_tag_list.split(",")
+                tag_ids = [db_parameter_tag_dict.get(tag) for tag in tags]
+                if None in tag_ids:
+                    item.parameter_tag_id_list = None
+                else:
+                    item.parameter_tag_id_list = ",".join([str(id_) for id_ in tag_ids])
 
-    def add_relationships(self, relationships_to_add):
-        """Add relationships to database on the fly and return them."""
-        added_relationships = {}
-        for db_map, row_dict in relationships_to_add.items():
-            items = list(row_dict.values())
-            rows = list(row_dict.keys())
-            added, error_log = db_map.add_wide_relationships(*items)
-            self._parent._parent.object_tree_model.add_relationships(db_map, added)
-            self._parent._parent.relationship_tree_model.add_relationships(db_map, added)
-            added_ids = [x.id for x in added]
+    def add_items_to_db(self, rows):
+        """Adds items to database.
+
+        Args:
+            rows (list): A list of model rows whose items should be added to the db
+        """
+        self.error_log.clear()
+        self.added_rows.clear()
+        tags_dict = dict()
+        for row in rows:
+            item = self._main_data[row]
+            database = item.database
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            item_for_insert = item.for_insert()
+            if not item_for_insert:
+                continue
+            new_items, error_log = db_map.add_parameter_definitions(item_for_insert)
+            if error_log:
+                self.error_log.extend(error_log)
+                continue
+            new_item = new_items.first()
+            item.id = new_item.id
+            # Populate tags dict
+            if item.parameter_tag_id_list:
+                tags_dict.setdefault(db_map, dict())[item.id] = item.parameter_tag_id_list
+            self.added_rows.append(row)
+        # Set tags
+        for db_map, tags in tags_dict.items():
+            _, error_log = db_map.set_parameter_definition_tags(tags)
             self.error_log.extend(error_log)
-            added_relationships.update(dict(zip(rows, added_ids)))
-        return added_relationships
-
-    def items_to_add(self, indexes, relationships_on_the_fly):
-        """A dictionary of rows (int) to items (dict) to add to the db.
-        Extend set of indexes as additional data is set."""
-        items_to_add = dict()
-        # Get column numbers
-        header_index = self._parent.horizontal_header_labels().index
-        db_column = header_index('database')
-        relationship_id_column = header_index('relationship_id')
-        parameter_id_column = header_index('parameter_id')
-        value_column = header_index('value')
-        unique_rows = {ind.row() for ind in indexes}
-        for row in unique_rows:
-            db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map.get(db_name)
-            if not db_map:
-                continue
-            parameter_id = self.index(row, parameter_id_column).data(Qt.DisplayRole)
-            if parameter_id is None:
-                continue
-            relationship_id = relationships_on_the_fly.get(row, None)
-            if not relationship_id:
-                continue
-            self._main_data[row][relationship_id_column] = relationship_id
-            value = self.index(row, value_column).data(Qt.DisplayRole)
-            item = {"relationship_id": relationship_id, "parameter_definition_id": parameter_id, "value": value}
-            items_to_add.setdefault(db_map, {})[row] = item
-        return items_to_add
 
 
 class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty object parameter definition model."""
 
     def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
+        super().__init__(parent, item_maker=ObjectParameterDefinitionItem)
 
-    def items_to_add(self, indexes):
-        """Return a dictionary of rows (int) to items (dict) to add to the db."""
-        items_to_add = dict()
-        # Get column numbers
-        header_index = self._parent.horizontal_header_labels().index
-        db_column = header_index('database')
-        object_class_id_column = header_index('object_class_id')
-        object_class_name_column = header_index('object_class_name')
-        parameter_name_column = header_index('parameter_name')
-        parameter_tag_list_column = header_index('parameter_tag_list')
-        parameter_tag_id_list_column = header_index('parameter_tag_id_list')
-        value_list_id_column = header_index('value_list_id')
-        value_list_name_column = header_index('value_list_name')
-        default_value_column = header_index('default_value')
-        # Lookup dicts (these are filled below as needed with data from the db corresponding to each row)
-        object_class_dict = {}
-        parameter_tag_dict = {}
-        parameter_value_list_dict = {}
-        for row in {ind.row() for ind in indexes}:
-            db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map.get(db_name)
+    def batch_set_entity_data(self, items):
+        """Sets entity data for model items in batch.
+        Set object class ids in accordance with the object class names.
+
+        Args:
+            items (list): A list of items that need treatment
+        """
+        # Collect object class names for which we need to query the id
+        object_class_names = dict()
+        for item in items:
+            database = item.database
+            if not database:
+                continue
+            object_class_names.setdefault(database, set()).add(item.object_class_name)
+        # Do the queries
+        object_class_dict = dict()
+        for database, names in object_class_names.items():
+            db_map = self.db_name_to_map.get(database)
             if not db_map:
                 continue
-            object_class_name = self.index(row, object_class_name_column).data(Qt.DisplayRole)
-            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            parameter_tag_list = self.index(row, parameter_tag_list_column).data(Qt.DisplayRole)
-            value_list_name = self.index(row, value_list_name_column).data(Qt.DisplayRole)
-            object_class_id = None
-            item = {"name": parameter_name}
-            if object_class_name:
-                d = object_class_dict.setdefault(db_map, {x.name: x.id for x in db_map.object_class_list()})
-                try:
-                    object_class_id = d[object_class_name]
-                    self._main_data[row][object_class_id_column] = object_class_id
-                    item["object_class_id"] = object_class_id
-                except KeyError:
-                    self.error_log.append("Invalid object class '{}'".format(object_class_name))
-            if parameter_tag_list:
-                d = parameter_tag_dict.setdefault(db_map, {x.tag: x.id for x in db_map.parameter_tag_list()})
-                split_parameter_tag_list = parameter_tag_list.split(",")
-                try:
-                    parameter_tag_id_list = ",".join(str(d[x]) for x in split_parameter_tag_list)
-                    self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
-                    item["parameter_tag_id_list"] = parameter_tag_id_list
-                except KeyError as e:
-                    self.error_log.append("Invalid parameter tag '{}'".format(e))
-            if value_list_name:
-                d = parameter_value_list_dict.setdefault(
-                    db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
-                )
-                try:
-                    value_list_id = d[value_list_name]
-                    self._main_data[row][value_list_id_column] = value_list_id
-                    item["parameter_value_list_id"] = value_list_id
-                except KeyError:
-                    self.error_log.append("Invalid value list '{}'".format(value_list_name))
-            if not parameter_name or not object_class_id:
-                continue
-            default_value = self.index(row, default_value_column).data(Qt.DisplayRole)
-            item["default_value"] = default_value
-            items_to_add.setdefault(db_map, {})[row] = item
-        return items_to_add
+            object_class = db_map.object_class_sq
+            object_class_dict[database] = {
+                x.name: x.id for x in db_map.query(object_class).filter(object_class.c.name.in_(names))
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_object_class_dict = object_class_dict.get(database)
+            if db_object_class_dict:
+                item.object_class_id = db_object_class_dict.get(item.object_class_name)
 
 
 class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty relationship parameter definition model."""
 
     def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
+        super().__init__(parent, item_maker=RelationshipParameterDefinitionItem)
 
-    def items_to_add(self, indexes):
-        """Return a dictionary of rows (int) to items (dict) to add to the db.
-        Extend set of indexes as additional data is set."""
-        items_to_add = dict()
-        # Get column numbers
-        header_index = self._parent.horizontal_header_labels().index
-        db_column = header_index('database')
-        relationship_class_id_column = header_index('relationship_class_id')
-        relationship_class_name_column = header_index('relationship_class_name')
-        object_class_id_list_column = header_index('object_class_id_list')
-        object_class_name_list_column = header_index('object_class_name_list')
-        parameter_name_column = header_index('parameter_name')
-        parameter_tag_list_column = header_index('parameter_tag_list')
-        parameter_tag_id_list_column = header_index('parameter_tag_id_list')
-        value_list_id_column = header_index('value_list_id')
-        value_list_name_column = header_index('value_list_name')
-        default_value_column = header_index('default_value')
-        # Lookup dicts (these are filled below as needed with data from the db corresponding to each row)
-        relationship_class_dict = {}
-        parameter_tag_dict = {}
-        parameter_value_list_dict = {}
-        unique_rows = {ind.row() for ind in indexes}
-        for row in unique_rows:
-            db_name = self.index(row, db_column).data(Qt.DisplayRole)
-            db_map = self._parent.db_name_to_map.get(db_name)
+    def batch_set_entity_data(self, items):
+        """Sets entity data for model items in batch.
+        Set relationship class ids and object class id and name lists
+        in accordance with the relationship class names.
+
+        Args:
+            items (list): A list of items that need treatment
+        """
+        super().batch_set_internal_data(items)
+        # Collect object class names for which we need to query the data
+        relationship_class_names = dict()
+        for item in items:
+            database = item.database
+            if not database:
+                continue
+            relationship_class_names.setdefault(database, set()).add(item.relationship_class_name)
+        # Do the queries
+        relationship_class_dict = dict()
+        for database, names in relationship_class_names.items():
+            db_map = self.db_name_to_map.get(database)
             if not db_map:
                 continue
-            relationship_class_name = self.index(row, relationship_class_name_column).data(Qt.DisplayRole)
-            object_class_name_list = self.index(row, object_class_name_list_column).data(Qt.DisplayRole)
-            parameter_name = self.index(row, parameter_name_column).data(Qt.DisplayRole)
-            parameter_tag_list = self.index(row, parameter_tag_list_column).data(Qt.DisplayRole)
-            value_list_name = self.index(row, value_list_name_column).data(Qt.DisplayRole)
-            relationship_class_id = None
-            item = {"name": parameter_name}
-            if relationship_class_name:
-                d = relationship_class_dict.setdefault(
-                    db_map,
-                    {
-                        x.name: {
-                            'id': x.id,
-                            'object_class_id_list': x.object_class_id_list,
-                            'object_class_name_list': x.object_class_name_list,
-                        }
-                        for x in db_map.wide_relationship_class_list()
-                    },
-                )
-                try:
-                    relationship_class = d[relationship_class_name]
-                    relationship_class_id = relationship_class['id']
-                    object_class_id_list = relationship_class['object_class_id_list']
-                    object_class_name_list = relationship_class['object_class_name_list']
-                    self._main_data[row][relationship_class_id_column] = relationship_class_id
-                    self._main_data[row][object_class_id_list_column] = object_class_id_list
-                    self._main_data[row][object_class_name_list_column] = object_class_name_list
-                    indexes.append(self.index(row, object_class_name_list_column))
-                    item["relationship_class_id"] = relationship_class_id
-                except KeyError:
-                    self.error_log.append("Invalid relationship class '{}'".format(relationship_class_name))
-            if parameter_tag_list:
-                d = parameter_tag_dict.setdefault(db_map, {x.tag: x.id for x in db_map.parameter_tag_list()})
-                split_parameter_tag_list = parameter_tag_list.split(",")
-                try:
-                    parameter_tag_id_list = ",".join(str(d[x]) for x in split_parameter_tag_list)
-                    self._main_data[row][parameter_tag_id_list_column] = parameter_tag_id_list
-                    item["parameter_tag_id_list"] = parameter_tag_id_list
-                except KeyError as e:
-                    self.error_log.append("Invalid tag '{}'".format(e))
-            if value_list_name:
-                d = parameter_value_list_dict.setdefault(
-                    db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
-                )
-                try:
-                    value_list_id = d[value_list_name]
-                    self._main_data[row][value_list_id_column] = value_list_id
-                    item["parameter_value_list_id"] = value_list_id
-                except KeyError:
-                    self.error_log.append("Invalid value list '{}'".format(value_list_name))
-            if not parameter_name or not relationship_class_id:
+            relationship_class = db_map.wide_relationship_class_sq
+            relationship_class_dict[database] = {
+                x.name: x for x in db_map.query(relationship_class).filter(relationship_class.c.name.in_(names))
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_relationship_class_dict = relationship_class_dict.get(database)
+            if db_relationship_class_dict:
+                relationship_class = db_relationship_class_dict.get(item.relationship_class_name)
+                if not relationship_class:
+                    item.relationship_class_id = None
+                    item.object_class_id_list = None
+                    item.object_class_name_list = None
+                else:
+                    item.relationship_class_id = relationship_class.id
+                    item.object_class_id_list = relationship_class.object_class_id_list
+                    item.object_class_name_list = relationship_class.object_class_name_list
+
+
+class EmptyParameterValueModel(EmptyParameterModel):
+    """An empty parameter value model."""
+
+    def batch_set_internal_data(self, items):
+        """Sets internal data for model items in batch.
+        Set possible parameter definition ids in accordance with the names.
+
+        Args:
+            items (list): A list of items that need treatment
+        """
+        # Collect definition names for which we need to query the id
+        definition_names = dict()
+        for item in items:
+            database = item.database
+            if not database:
                 continue
-            default_value = self.index(row, default_value_column).data(Qt.DisplayRole)
-            item["default_value"] = default_value
-            items_to_add.setdefault(db_map, {})[row] = item
-        return items_to_add
+            definition_names.setdefault(database, set()).add(item.parameter_name)
+        # Do the queries
+        definition_dict = dict()
+        for database, names in definition_names.items():
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            parameter_definition = db_map.parameter_definition_sq
+            definition_dict[database] = {
+                name: {
+                    x.object_class_id or x.relationship_class_id: x.id
+                    for x in db_map.query(parameter_definition).filter(parameter_definition.c.name == name)
+                }
+                for name in names
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_definition_dict = definition_dict.get(database)
+            if db_definition_dict:
+                item._definition_dict = db_definition_dict.get(item.parameter_name, {})
+
+    def add_items_to_db(self, rows):
+        """Adds items to database.
+
+        Args:
+            rows (list): A list of model rows whose items should be added to the db
+        """
+        for row in rows:
+            item = self._main_data[row]
+            database = item.database
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            item_for_insert = item.for_insert()
+            if not item_for_insert:
+                continue
+            new_items, error_log = db_map.add_parameter_values(item_for_insert)
+            if error_log:
+                self.error_log.extend(error_log)
+                continue
+            new_item = new_items.first()
+            item.id = new_item.id
+            self.added_rows.append(row)
+
+
+class EmptyObjectParameterValueModel(EmptyParameterValueModel):
+    """An empty object parameter value model."""
+
+    def __init__(self, parent):
+        super().__init__(parent, item_maker=ObjectParameterValueItem)
+
+    def batch_set_entity_data(self, items):
+        """Sets entity data for model items in batch.
+
+        Args:
+            items (list): A list of items that need treatment
+        """
+        self.batch_set_entity_data_phase_1(items)
+        self.batch_set_entity_data_phase_2(items)
+
+    def batch_set_entity_data_phase_1(self, items):
+        """Set possible object ids and object class ids in accordance with names."""
+        # Collect object and object class names for which we need to query the data
+        object_names = dict()
+        object_class_names = dict()
+        for item in items:
+            database = item.database
+            if not database:
+                continue
+            object_names.setdefault(database, set()).add(item.object_name)
+            object_class_names.setdefault(database, set()).add(item.object_class_name)
+        # Do the queries
+        object_dict = dict()
+        object_class_dict = dict()
+        for database, names in object_names.items():
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            object_ = db_map.object_sq
+            object_dict[database] = {
+                name: {x.class_id: x.id for x in db_map.query(object_).filter(object_.c.name == name)} for name in names
+            }
+        for database, names in object_class_names.items():
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            object_class = db_map.object_class_sq
+            object_class_dict[database] = {
+                x.name: x.id for x in db_map.query(object_class).filter(object_class.c.name.in_(names))
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_object_dict = object_dict.get(database)
+            if db_object_dict:
+                item._object_dict = db_object_dict.get(item.object_name, {})
+            db_object_class_dict = object_class_dict.get(database)
+            if db_object_class_dict:
+                item.object_class_id = db_object_class_dict.get(item.object_class_name)
+
+    def batch_set_entity_data_phase_2(self, items):
+        """Try and figure out object class id automatically, and then the name.
+        Also pick the right object_id and parameter_id according to object class id.
+        """
+        object_class_ids = dict()
+        for item in items:
+            database = item.database
+            if not database:
+                continue
+            if item.object_class_id is None:
+                # Try and see if we can figure out the object class id
+                if item._object_dict and item._definition_dict:
+                    object_class_id = item._object_dict.keys() & item._definition_dict.keys()
+                elif item._object_dict:
+                    object_class_id = set(item._object_dict.keys())
+                elif item._definition_dict:
+                    object_class_id = set(item._definition_dict.keys())
+                else:
+                    object_class_id = {}
+                if len(object_class_id) != 1:
+                    continue
+                item.object_class_id = object_class_id.pop()
+                item.object_class_name = True  # Mark the item somehow
+                object_class_ids.setdefault(database, set()).add(item.object_class_id)
+            # Pick the right object_id and parameter_id
+            item.object_id = item._object_dict.get(item.object_class_id)
+            item.parameter_id = item._definition_dict.get(item.object_class_id)
+        # Do the queries
+        object_class_dict = dict()
+        for database, ids in object_class_ids.items():
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            object_class = db_map.object_class_sq
+            object_class_dict[database] = {
+                x.id: x.name for x in db_map.query(object_class).filter(object_class.c.id.in_(ids))
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_object_class_dict = object_class_dict.get(database)
+            if db_object_class_dict and item.object_class_name is True:
+                item.object_class_name = db_object_class_dict.get(item.object_class_id)
+
+
+class EmptyRelationshipParameterValueModel(EmptyParameterValueModel):
+    """An empty relationship parameter value model.
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent, item_maker=RelationshipParameterValueItem)
+
+    def batch_set_entity_data(self, items):
+        """Sets entity data for model items in batch.
+        Set object ids in accordance with names.
+        Then set object class names in accordance with ids set in the previous step.
+
+        Args:
+            items (list): A list of items that need treatment
+        """
+        self.batch_set_entity_data_phase_1(items)
+        self.batch_set_entity_data_phase_2(items)
+        self.batch_set_entity_data_phase_3(items)
+
+    def batch_set_entity_data_phase_1(self, items):
+        """Set possible relationship ids and relationship class ids in accordance with names."""
+        # Collect object name lists and relationship class names for which we need to query the data
+        object_name_lists = dict()
+        relationship_class_names = dict()
+        for item in items:
+            database = item.database
+            if not database:
+                continue
+            object_name_lists.setdefault(database, set()).add(item.object_name_list)
+            relationship_class_names.setdefault(database, set()).add(item.relationship_class_name)
+        # Do the queries
+        relationship_dict = dict()
+        relationship_class_dict = dict()
+        for database, name_lists in object_name_lists.items():
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            relationship = db_map.wide_relationship_sq
+            relationship_dict[database] = {
+                name_list: {
+                    x.class_id: x
+                    for x in db_map.query(relationship).filter(relationship.c.object_name_list == name_list)
+                }
+                for name_list in name_lists
+            }
+        for database, names in relationship_class_names.items():
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            relationship_class = db_map.wide_relationship_class_sq
+            relationship_class_dict[database] = {
+                x.name: x for x in db_map.query(relationship_class).filter(relationship_class.c.name.in_(names))
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_relationship_dict = relationship_dict.get(database)
+            if db_relationship_dict:
+                item._relationship_dict = db_relationship_dict.get(item.object_name_list, {})
+                relationship_class = db_relationship_dict.get(item.relationship_class_name)
+                if relationship_class:
+                    item.relationship_class_id = relationship_class.id
+                    item.object_class_id_list = relationship_class.object_class_id_list
+                    item.object_class_name_list = relationship_class.object_class_name_list
+                else:
+                    item.relationship_class_id = None
+                    item.object_class_id_list = None
+                    item.object_class_name_list = None
+
+    def batch_set_entity_data_phase_2(self, items):
+        """Try and figure out relationship class id automatically, and then the name.
+        Also pick the right relationship_id and parameter_id according to relationship class id.
+        """
+        relationship_class_ids = dict()
+        for item in items:
+            database = item.database
+            if not database:
+                continue
+            if item.relationship_class_id is None:
+                # Try and see if we can figure out the object class id
+                if item._relationship_dict and item._definition_dict:
+                    relationship_class_id = item._relationship_dict.keys() & item._definition_dict.keys()
+                elif item._relationship_dict:
+                    relationship_class_id = set(item._relationship_dict.keys())
+                elif item._definition_dict:
+                    relationship_class_id = set(item._definition_dict.keys())
+                else:
+                    relationship_class_id = {}
+                if len(relationship_class_id) != 1:
+                    continue
+                item.relationship_class_id = relationship_class_id.pop()
+                item.relationship_class_name = True  # Mark the item somehow
+                relationship_class_ids.setdefault(database, set()).add(item.relationship_class_id)
+            # Pick the right object_id and parameter_id
+            relationship = item._relationship_dict.get(item.relationship_class_id)
+            if relationship:
+                item.relationship_id = relationship.id
+                item.object_id_list = relationship.object_id_list
+            item.parameter_id = item._definition_dict.get(item.relationship_class_id)
+        # Do the queries
+        relationship_class_dict = dict()
+        for database, ids in relationship_class_ids.items():
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            relationship_class = db_map.wide_relationship_class_sq
+            relationship_class_dict[database] = {
+                x.id: x for x in db_map.query(relationship_class).filter(relationship_class.c.id.in_(ids))
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_relationship_class_dict = relationship_class_dict.get(database)
+            if db_relationship_class_dict and item.relationship_class_name is True:
+                relationship_class = db_relationship_class_dict.get(item.relationship_class_id)
+                if relationship_class:
+                    item.relationship_class_name = relationship_class.name
+                    item.object_class_id_list = relationship_class.object_class_id_list
+                    item.object_class_name_list = relationship_class.object_class_name_list
+                else:
+                    item.relationship_class_id = None
+                    item.object_class_id_list = None
+                    item.object_class_name_list = None
+
+    def batch_set_entity_data_phase_3(self, items):
+        """Set object_id_list if not set and possible.
+        """
+        # Collect tuples (class_id, name) of objects for which we need to query the data
+        object_name_class_id_tuples = dict()
+        for item in items:
+            database = item.database
+            if not database:
+                continue
+            if not item.object_id_list and item.object_name_list and item.object_class_id_list:
+                # We must set the object_id_list
+                object_names = item.object_name_list.split(",")
+                object_class_ids = [int(x) for x in item.object_class_id_list.split(",")]
+                item._object_name_class_id_tups = set(zip(object_names, object_class_ids))
+                object_name_class_id_tuples.setdefault(database, set()).update(item._object_name_class_id_tups)
+            else:
+                item._object_name_class_id_tups = None
+        # Do the queries
+        object_dict = dict()
+        for database, tups in object_name_class_id_tuples.items():
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            object_ = db_map.object_sq
+            object_dict[database] = {
+                (x.name, x.class_id): x.id
+                for x in db_map.query(object_).filter(
+                    or_(*(and_(object_.c.name == name, object_.c.class_id == class_id) for (name, class_id) in tups))
+                )
+            }
+        # Update the items
+        for item in items:
+            database = item.database
+            db_object_dict = object_dict.get(database)
+            tups = item._object_name_class_id_tups
+            if db_object_dict and tups:
+                object_id_list = [db_object_dict.get((name, class_id)) for (name, class_id) in tups]
+                if None in object_id_list:
+                    item.object_id_list = None
+                else:
+                    item.object_id_list = ",".join([str(id_) for id_ in object_id_list])
+
+    def add_items_to_db(self, rows):
+        """Adds items to database. Add relationships on the fly first,
+        then proceed to add parameter values by calling the super() method.
+
+        Args:
+            rows (list): A list of model rows whose items should be added to the db
+        """
+        for row in rows:
+            item = self._main_data[row]
+            database = item.database
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            relationship_for_insert = item.relationship_for_insert()
+            if not relationship_for_insert:
+                continue
+            new_relationships, error_log = db_map.add_wide_relationships(relationship_for_insert)
+            if error_log:
+                self.error_log.extend(error_log)
+                continue
+            new_relationship = new_relationships.first()
+            item.relationship_id = new_relationship.id
+        # TODO:
+        # self._parent._parent.object_tree_model.add_relationships(db_map, new_relationships)
+        # self._parent._parent.relationship_tree_model.add_relationships(db_map, new_relationships)
+        super().add_items_to_db(rows)
