@@ -13,7 +13,7 @@
 cx-Freeze setup file for Spine Toolbox.
 
 Usage:
-- Build the application into build/ directory with command 'python setup.py build'
+- Build the application into build/ directory with command 'python cx_Freeze_setup.py build'
 - Package the built application into an installer file for distribution:
 1. On Windows, compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
 2. On other platforms, use setup.py (this file) and Cx_Freeze (see Cx_Freeze documentation for help)
@@ -29,7 +29,7 @@ from spinetoolbox.config import SPINE_TOOLBOX_VERSION, APPLICATION_PATH
 
 
 def main(argv):
-    """Main of cx_Freeze setup.py."""
+    """Main of cx_Freeze_setup.py."""
     python_dir = os.path.dirname(sys.executable)
     os.environ['TCL_LIBRARY'] = os.path.join(python_dir, "tcl", "tcl8.6")
     os.environ['TK_LIBRARY'] = os.path.join(python_dir, "tcl", "tk8.6")
