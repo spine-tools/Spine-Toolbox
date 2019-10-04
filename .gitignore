@@ -1,6 +1,7 @@
 .idea
 *.pyc
 *.sqlite
+*.egg-info
 .spyderproject
 build/
 dist/

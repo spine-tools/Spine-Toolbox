@@ -10,14 +10,37 @@
 ######################################################################################################################
 
 """
-Starts Spinetoolbox.
+Provides the main() function.
 
 :author: A. Soininen (VTT)
-:date:   3.10.2019
+:date:   4.10.2019
 """
 
+import sys
+import logging
+from PySide2.QtGui import QFontDatabase
+from PySide2.QtWidgets import QApplication
+from .ui_main import ToolboxUI
+from .helpers import spinedb_api_version_check, pyside2_version_check
 
-if __name__ == "__main__":
-    import sys
-    from spinetoolbox.main import main
-    sys.exit(main())
+def main():
+    """Starts the Spinetooblox GUI."""
+    logging.basicConfig(
+        stream=sys.stderr,
+        level=logging.DEBUG,
+        format='%(asctime)s %(levelname)s: %(message)s',
+        datefmt='%Y-%m-%d %H:%M:%S',
+    )
+    if not pyside2_version_check():
+        return 1
+    if not spinedb_api_version_check():
+        return 1
+    # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
+    app = QApplication(sys.argv)
+    QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+    window = ToolboxUI()
+    window.show()
+    window.init_project()
+    # Enter main event loop and wait until exit() is called
+    return_code = app.exec_()
+    return return_code
