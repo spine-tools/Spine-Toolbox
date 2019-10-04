@@ -2,9 +2,11 @@
 *.pyc
 *.sqlite
 *.egg-info
+.eggs/
 .spyderproject
 build/
 dist/
+pip-wheel-metadata/
 __pycache__/
 tool_templates/Swedish_hydro/
 tool_templates/executables/

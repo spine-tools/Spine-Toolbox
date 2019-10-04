@@ -23,17 +23,29 @@ from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, SPINE_TOOLBOX_VERS
 with open("README.md", encoding="utf8") as readme_file:
     readme = readme_file.read()
 
-with open("requirements.txt") as requirements_file:
-    requirements = [line.strip() for line in requirements_file.readlines()]
-
-# Replace the git link to spinedb_api by the package's real name
-for index, requirement in enumerate(requirements):
-    if requirement == "git+https://github.com/Spine-project/Spine-Database-API.git#egg=spinedb_api":
-        requirements[index] = "spinedb_api == {}".format(REQUIRED_SPINEDB_API_VERSION)
-        break
+requirements = [
+    'pyside2 < 5.12',
+    'datapackage >= 1.2.3',
+    'jupyter-client < 5.3.2',
+    'qtconsole >= 4.3.1',
+    'sqlalchemy >= 1.2.6',
+    'spinedb_api >= 0.0.36',
+    'openpyxl >= 2.5.0',
+    'numpy >= 1.15.1',
+    'matplotlib >= 3.0',
+    'scipy >= 1.1.0',
+    'networkx > 2.2',
+    'pymysql >= 0.9.2',
+    'pyodbc >= 4.0.23',
+    'psycopg2 >= 2.7.4',
+    'cx_Oracle >= 6.3.1',
+    'python-dateutil >= 2.8.0',
+    'pandas >= 0.24.0',
+    'jsonschema == 2.6',
+]
 
 setup(
-    name="Spine-Toolbox",
+    name="spinetoolbox",
     version=SPINE_TOOLBOX_VERSION,
     description="An application to define, manage, and execute various energy system simulation models",
     long_description=readme,
@@ -53,5 +65,5 @@ setup(
     classifiers=[
     ],
     install_requires=requirements,
-    test_suite='test',
+    test_suite='spinetoolbox.test',
 )
