@@ -22,6 +22,7 @@ from helpers import busy_effect, format_string_list
 from mvcmodels.minimal_table_model import MinimalTableModel
 from mvcmodels.empty_parameter_models import EmptyObjectParameterValueModel, EmptyObjectParameterDefinitionModel
 from mvcmodels.sub_parameter_models import SubParameterValueModel, SubParameterDefinitionModel
+from mvcmodels.parameter_item import ObjectParameterValueItem
 
 
 class ObjectParameterModel(MinimalTableModel):
@@ -357,11 +358,14 @@ class ObjectParameterValueModel(ObjectParameterModel):
             for parameter_value in db_map.object_parameter_value_list():
                 object_class_id = (db_map, parameter_value.object_class_id)
                 data_dict.setdefault(object_class_id, list()).append(
-                    list(parameter_value) + [self._parent.db_map_to_name[db_map]]
+                    # list(parameter_value) + [self._parent.db_map_to_name[db_map]]
+                    ObjectParameterValueItem(
+                        header, database=self._parent.db_map_to_name[db_map], **parameter_value._asdict()
+                    )
                 )
         for object_class_id, data in data_dict.items():
             source_model = SubParameterValueModel(self)
-            source_model.reset_model([list(x) for x in data])
+            source_model.reset_model(data)
             model = ObjectParameterValueFilterProxyModel(
                 self, parameter_definition_id_column, object_id_column, db_column
             )

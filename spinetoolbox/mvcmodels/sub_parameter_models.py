@@ -20,20 +20,28 @@ from PySide2.QtCore import Qt
 from PySide2.QtGui import QGuiApplication
 from helpers import busy_effect
 from mvcmodels.minimal_table_model import MinimalTableModel
+from mvcmodels.parameter_mixins import BaseParameterMixin, ParameterDefinitionMixin
 from mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
-class SubParameterModel(MinimalTableModel):
-    """A parameter model which corresponds to a slice of the entire table.
-    The idea is to combine several of these into one big model.
-    Allows specifying set of columns that are non-editable (e.g., object_class_name)
-    TODO: how column insertion/removal impacts fixed_columns?
-    """
+class SubParameterModel(BaseParameterMixin, MinimalTableModel):
+    """A parameter model for a single entity class."""
 
-    def __init__(self, parent):
-        """Initialize class."""
+    # TODO: how column insertion/removal impacts fixed_columns?
+
+    def __init__(self, parent, item_updater_attr, json_fields=()):
+        """Initialize class.
+
+        Args:
+            parent (ParameterModel): the parent object
+            item_maker (function): a function to create items to put in the model rows
+            item_injector_attr (str): the name of the method in DiffDatabaseMapping to add items to the db
+        """
         super().__init__(parent)
-        self.gray_brush = QGuiApplication.palette().button()
+        self.db_name_to_map = parent.db_name_to_map
+        self._item_updater_attr = item_updater_attr
+        self._json_fields = json_fields
+        self._gray_brush = QGuiApplication.palette().button()
         self.error_log = []
         self.updated_count = 0
 
@@ -45,191 +53,76 @@ class SubParameterModel(MinimalTableModel):
         return flags
 
     def data(self, index, role=Qt.DisplayRole):
-        """Paint background of fixed indexes gray."""
-        if role != Qt.BackgroundRole:
-            return super().data(index, role)
-        if index.column() in self._parent.fixed_columns:
-            return self.gray_brush
+        """Paint background of fixed indexes gray and apply custom format to JSON fields."""
+        column = index.column()
+        if column in self._parent.fixed_columns and role == Qt.BackgroundRole:
+            return self._gray_brush
+        if self._parent.header[column] in self._json_fields:
+            if role == Qt.ToolTipRole:
+                return format_for_ToolTipRole(super().data(index, Qt.EditRole))
+            if role == Qt.DisplayRole:
+                return format_for_DisplayRole(super().data(index, Qt.EditRole))
         return super().data(index, role)
 
     def batch_set_data(self, indexes, data):
-        """Batch set data for indexes.
-        Try and update data in the database first, and if successful set data in the model.
+        """Sets data for indexes in batch.
+        Set data in model first, then set internal data for modified items.
+        Finally update successfully modified items in the db.
         """
-        self.error_log = []
+        self.error_log.clear()
         self.updated_count = 0
-        if not indexes:
+        if not super().batch_set_data(indexes, data):
             return False
-        if len(indexes) != len(data):
-            return False
-        items_to_update = self.items_to_update(indexes, data)
-        upd_ids = self.update_items_in_db(items_to_update)
-        header = self._parent.horizontal_header_labels()
-        id_column = header.index('id')
-        db_column = header.index('database')
-        for k, index in enumerate(indexes):
-            db_name = self._main_data[index.row()][db_column]
-            db_map = self._parent.db_name_to_map[db_name]
-            id_ = self._main_data[index.row()][id_column]
-            if (db_map, id_) not in upd_ids:
-                continue
-            self._main_data[index.row()][index.column()] = data[k]
+        rows = {ind.row(): self._main_data[ind.row()] for ind in indexes}
+        self.batch_autocomplete_data(rows)
+        self.update_items_in_db(rows)
         return True
 
-    def items_to_update(self, indexes, data):
-        """A list of items (dict) to update in the database."""
-        raise NotImplementedError()
+    def update_items_in_db(self, rows):
+        """Updates items in database.
 
-    def update_items_in_db(self, items_to_update):
-        """A list of ids of items updated in the database."""
-        raise NotImplementedError()
+        Args:
+            rows (dict): A dict mapping row numbers to items that should be updated in the db
+        """
+        for row, item in rows.items():
+            database = item.database
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            item_for_update = item.for_update()
+            if not item_for_update:
+                continue
+            item_updater = db_map.__getattribute__(self._item_updater_attr)
+            upd_items, error_log = item_updater(item_for_update)
+            if error_log:
+                self.error_log.extend(error_log)
+                item.revert()
+                # TODO: emit dataChanged when revert
+            item.clear_cache()
+            self.updated_count += 1
+
+
+class SubParameterDefinitionModel(ParameterDefinitionMixin, SubParameterModel):
+    """A parameter definition model for a single entity class.
+    """
+
+    def __init__(self, parent):
+        super().__init__(parent, item_updater_attr="update_parameter_definitions", json_fields=("default_value"))
+
+    def update_items_in_db(self, rows):
+        """Updates items in database.
+        Call the super method to update parameter definitions, then the method to set tags.
+
+        Args:
+            rows (dict): A dict mapping row numbers to items that should be updated in the db
+        """
+        super().update_items_in_db(rows)
+        self.set_parameter_definition_tags_in_db(rows)
 
 
 class SubParameterValueModel(SubParameterModel):
-    """A parameter model which corresponds to a slice of an entire parameter value table.
-    The idea is to combine several of these into one big model.
+    """A parameter value model for a single entity class.
     """
 
     def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
-
-    def items_to_update(self, indexes, data):
-        """A list of items (dict) for updating in the database."""
-        items_to_update = dict()
-        header = self._parent.horizontal_header_labels()
-        db_column = header.index('database')
-        id_column = header.index('id')
-        for k, index in enumerate(indexes):
-            row = index.row()
-            db_name = index.sibling(row, db_column).data(Qt.EditRole)
-            db_map = self._parent.db_name_to_map[db_name]
-            id_ = index.sibling(row, id_column).data(Qt.EditRole)
-            if not id_:
-                continue
-            field_name = header[index.column()]
-            if field_name != "value":
-                continue
-            value = data[k]
-            if value == index.data(Qt.EditRole):
-                # nothing to do really
-                continue
-            item = {"id": id_, "value": value}
-            items_to_update.setdefault(db_map, {}).setdefault(id_, {}).update(item)
-        return {db_map: list(item_d.values()) for db_map, item_d in items_to_update.items()}
-
-    @busy_effect
-    def update_items_in_db(self, items_to_update):
-        """Try and update parameter values in database."""
-        upd_ids = []
-        for db_map, items in items_to_update.items():
-            upd_items, error_log = db_map.update_parameter_values(*items)
-            self.updated_count += upd_items.count()
-            self.error_log += error_log
-            upd_ids += [(db_map, x.id) for x in upd_items]
-        return upd_ids
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Limit the display of JSON data."""
-        if self._parent.header[index.column()] == 'value':
-            if role == Qt.ToolTipRole:
-                return format_for_ToolTipRole(super().data(index, Qt.EditRole))
-            if role == Qt.DisplayRole:
-                return format_for_DisplayRole(super().data(index, Qt.EditRole))
-        return super().data(index, role)
-
-
-class SubParameterDefinitionModel(SubParameterModel):
-    """A parameter model which corresponds to a slice of an entire parameter definition table.
-    The idea is to combine several of these into one big model.
-    """
-
-    def __init__(self, parent):
-        """Initialize class."""
-        super().__init__(parent)
-        self._parent = parent
-
-    def items_to_update(self, indexes, data):
-        """A list of items (dict) for updating in the database."""
-        items_to_update = dict()
-        header = self._parent.horizontal_header_labels()
-        db_column = header.index('database')
-        id_column = header.index('id')
-        parameter_tag_id_list_column = header.index('parameter_tag_id_list')
-        value_list_id_column = header.index('value_list_id')
-        parameter_tag_dict = {}
-        parameter_value_list_dict = {}
-        new_indexes = []
-        new_data = []
-        for index, value in zip(indexes, data):
-            row = index.row()
-            db_name = index.sibling(row, db_column).data(Qt.EditRole)
-            db_map = self._parent.db_name_to_map[db_name]
-            id_ = index.sibling(row, id_column).data(Qt.EditRole)
-            if not id_:
-                continue
-            field_name = header[index.column()]
-            item = {"id": id_}
-            # Handle changes in parameter tag list: update tag id list accordingly
-            if field_name == "parameter_tag_list":
-                split_parameter_tag_list = value.split(",") if value else []
-                d = parameter_tag_dict.setdefault(db_map, {x.tag: x.id for x in db_map.parameter_tag_list()})
-                try:
-                    parameter_tag_id_list = ",".join(str(d[x]) for x in split_parameter_tag_list)
-                    new_indexes.append(index.sibling(row, parameter_tag_id_list_column))
-                    new_data.append(parameter_tag_id_list)
-                    item.update({'parameter_tag_id_list': parameter_tag_id_list})
-                except KeyError as e:
-                    self.error_log.append("Invalid parameter tag '{}'.".format(e))
-            # Handle changes in value_list name: update value_list id accordingly
-            elif field_name == "value_list_name":
-                value_list_name = value
-                d = parameter_value_list_dict.setdefault(
-                    db_map, {x.name: x.id for x in db_map.wide_parameter_value_list_list()}
-                )
-                try:
-                    value_list_id = d[value_list_name]
-                    new_indexes.append(index.sibling(row, value_list_id_column))
-                    new_data.append(value_list_id)
-                    item.update({'parameter_value_list_id': value_list_id})
-                except KeyError:
-                    self.error_log.append("Invalid value list '{}'.".format(value_list_name))
-            elif field_name == "parameter_name":
-                item.update({"name": value})
-            elif field_name == "default_value":
-                default_value = value
-                if default_value != index.data(Qt.EditRole):
-                    item.update({"default_value": default_value})
-            items_to_update.setdefault(db_map, {}).setdefault(id_, {}).update(item)
-        indexes.extend(new_indexes)
-        data.extend(new_data)
-        return {db_map: list(item_d.values()) for db_map, item_d in items_to_update.items()}
-
-    @busy_effect
-    def update_items_in_db(self, items_to_update):
-        """Try and update parameter definitions in database."""
-        upd_ids = []
-        for db_map, items in items_to_update.items():
-            tag_dict = dict()
-            for item in items:
-                parameter_tag_id_list = item.pop("parameter_tag_id_list", None)
-                if parameter_tag_id_list is None:
-                    continue
-                tag_dict[item["id"]] = parameter_tag_id_list
-            upd_def_tag_list, def_tag_error_log = db_map.set_parameter_definition_tags(tag_dict)
-            upd_params, param_error_log = db_map.update_parameter_definitions(*items)
-            self.updated_count += len(upd_def_tag_list) + upd_params.count()
-            self.error_log += def_tag_error_log + param_error_log
-            upd_ids += [(db_map, x.parameter_definition_id) for x in upd_def_tag_list]
-            upd_ids += [(db_map, x.id) for x in upd_params]
-        return upd_ids
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Limit the display of JSON data."""
-        if self._parent.header[index.column()] == 'default_value':
-            if role == Qt.ToolTipRole:
-                return format_for_ToolTipRole(super().data(index, Qt.EditRole))
-            if role == Qt.DisplayRole:
-                return format_for_DisplayRole(super().data(index, Qt.EditRole))
-        return super().data(index, role)
+        super().__init__(parent, item_updater_attr="update_parameter_values", json_fields=("value"))
