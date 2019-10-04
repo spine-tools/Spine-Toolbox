@@ -22,33 +22,86 @@ class ParameterItem:
     It provides __getitem__ and __setitem__ methods so the item behaves more or less like a list.
     """
 
-    def __init__(self, header, database=None, id_=None):
+    def __init__(self, header, database=None, id=None):
         """Init class.
 
         Args:
             header (list): header from the model where this item belong
             database (str): the database where this item comes from
-            id_ (int): the id of the item in the database table
+            id (int): the id of the item in the database table
         """
         self._header = header
         self.database = database
-        self.id = id_
+        self.id = id
+        self._cache = {}  # A dict for storing changes before an update
+        self._attr_field_map = {}  # Map from attribute name to db field name in case they differ
+        self._mandatory_attrs_for_insert = []
+        self._optional_attrs_for_insert = []
+        self._updatable_attrs = []
 
     def __getitem__(self, index):
         """Returns the item corresponding to the given index."""
-        return getattr(self, self._header[index])
+        attr = self._header[index]
+        return self.__getattribute__(attr)
 
     def __setitem__(self, index, value):
         """Sets the value for the item corresponding to the given index."""
-        fieldname = self._header[index]
-        setattr(self, fieldname, value)
+        attr = self._header[index]
+        self.__setattr__(attr, value)
+
+    def __setattr__(self, attr, value):
+        """Sets the value for the given attribute and caches the old one."""
+        try:
+            self._cache[attr] = self.__getattribute__(attr)
+        except AttributeError:
+            pass
+        super().__setattr__(attr, value)
 
     def __len__(self):
         return len(self._header)
 
     def for_insert(self):
         """Returns a dictionary corresponding to this item for adding to the db."""
-        raise NotImplementedError
+        item = {
+            self._attr_field_map.get(attr, attr): self.__getattribute__(attr)
+            for attr in self._mandatory_attrs_for_insert
+        }
+        if not all(item.values()):
+            return None
+        item.update(
+            {
+                self._attr_field_map.get(attr, attr): self.__getattribute__(attr)
+                for attr in self._optional_attrs_for_insert
+                if self.__getattribute__(attr)
+            }
+        )
+        return item
+
+    def for_update(self):
+        """Returns a dictionary with recorded changes in this item for updating in the db."""
+        if not self.id or not self._cache:
+            return None
+        return {
+            "id": self.id,
+            **{
+                self._attr_field_map.get(attr, attr): getattr(self, attr)
+                for attr in self._updatable_attrs
+                if attr in self._cache
+            },
+        }
+
+    def revert(self):
+        """Reverts the item to it's cached values.
+        Call this after failing to update the item.
+        """
+        for attr, value in self._cache.items():
+            self.__setattr__(attr, value)
+
+    def clear_cache(self):
+        """Clears the item's cache.
+        Call this after successfully updating the item.
+        """
+        self._cache.clear()
 
 
 class ParameterDefinitionItem(ParameterItem):
@@ -61,7 +114,7 @@ class ParameterDefinitionItem(ParameterItem):
         self,
         header,
         database=None,
-        id_=None,
+        id=None,
         parameter_name=None,
         value_list_id=None,
         value_list_name=None,
@@ -71,22 +124,23 @@ class ParameterDefinitionItem(ParameterItem):
     ):
         """Init class.
         """
-        super().__init__(header, database, id_)
+        super().__init__(header, database, id)
         self.parameter_name = parameter_name
         self.value_list_id = value_list_id
         self.value_list_name = value_list_name
         self.parameter_tag_list = parameter_tag_list
         self.parameter_tag_id_list = parameter_tag_id_list
         self.default_value = default_value
+        self._attr_field_map.update({"parameter_name": "name", "value_list_id": "parameter_value_list_id"})
+        self._mandatory_attrs_for_insert.append("parameter_name")
+        self._optional_attrs_for_insert.extend(["value_list_id", "default_value"])
+        self._updatable_attrs.extend(["parameter_name", "value_list_id", "default_value"])
 
-    def for_insert(self):
-        """Returns a dictionary corresponding to this item for adding to the db."""
-        if not self.parameter_name:
+    def tag_spec(self):
+        """Returns a mapping from id to tag_list for setting in the db."""
+        if not self.id or not self.parameter_tag_id_list:
             return None
-        item = {"name": self.parameter_name, "default_value": self.default_value}
-        if self.value_list_id is not None:
-            item["parameter_value_list_id"] = self.value_list_id
-        return item
+        return {self.id: self.parameter_tag_id_list}
 
 
 class ObjectParameterDefinitionItem(ParameterDefinitionItem):
@@ -99,7 +153,7 @@ class ObjectParameterDefinitionItem(ParameterDefinitionItem):
         self,
         header,
         database=None,
-        id_=None,
+        id=None,
         parameter_name=None,
         value_list_id=None,
         value_list_name=None,
@@ -113,7 +167,7 @@ class ObjectParameterDefinitionItem(ParameterDefinitionItem):
         super().__init__(
             header,
             database,
-            id_,
+            id,
             parameter_name,
             value_list_id,
             value_list_name,
@@ -123,15 +177,7 @@ class ObjectParameterDefinitionItem(ParameterDefinitionItem):
         )
         self.object_class_id = object_class_id
         self.object_class_name = object_class_name
-
-    def for_insert(self):
-        """Returns a dictionary corresponding to this item for adding to the db."""
-        if not self.object_class_id:
-            return None
-        item = super().for_insert()
-        if item:
-            item["object_class_id"] = self.object_class_id
-        return item
+        self._mandatory_attrs_for_insert.append("object_class_id")
 
 
 class RelationshipParameterDefinitionItem(ParameterDefinitionItem):
@@ -144,7 +190,7 @@ class RelationshipParameterDefinitionItem(ParameterDefinitionItem):
         self,
         header,
         database=None,
-        id_=None,
+        id=None,
         parameter_name=None,
         value_list_id=None,
         value_list_name=None,
@@ -160,7 +206,7 @@ class RelationshipParameterDefinitionItem(ParameterDefinitionItem):
         super().__init__(
             header,
             database,
-            id_,
+            id,
             parameter_name,
             value_list_id,
             value_list_name,
@@ -172,15 +218,7 @@ class RelationshipParameterDefinitionItem(ParameterDefinitionItem):
         self.relationship_class_name = relationship_class_name
         self.object_class_id_list = object_class_id_list
         self.object_class_name_list = object_class_name_list
-
-    def for_insert(self):
-        """Returns a dictionary corresponding to this item for adding to the db."""
-        if not self.relationship_class_id:
-            return None
-        item = super().for_insert()
-        if item:
-            item["relationship_class_id"] = self.relationship_class_id
-        return item
+        self._mandatory_attrs_for_insert.append("relationship_class_id")
 
 
 class ParameterValueItem(ParameterItem):
@@ -189,20 +227,18 @@ class ParameterValueItem(ParameterItem):
     regardless of the entity.
     """
 
-    def __init__(self, header, database=None, id_=None, parameter_id=None, parameter_name=None, value=None):
+    def __init__(self, header, database=None, id=None, parameter_id=None, parameter_name=None, value=None):
         """Init class.
         """
-        super().__init__(header, database, id_)
+        super().__init__(header, database, id)
         self.parameter_id = parameter_id
         self.parameter_name = parameter_name
         self.value = value
-        self._definition_dict = dict()
-
-    def for_insert(self):
-        """Returns a dictionary corresponding to this item for adding to the db."""
-        if not self.parameter_id:
-            return None
-        return {"value": self.value, "parameter_definition_id": self.parameter_id}
+        self._attr_field_map.update({"parameter_id": "parameter_definition_id"})
+        self._mandatory_attrs_for_insert.append("parameter_id")
+        self._optional_attrs_for_insert.append("value")  # TODO: optional or mandatory?
+        self._updatable_attrs.append("value")
+        self._parameter_dict = dict()
 
 
 class ObjectParameterValueItem(ParameterValueItem):
@@ -215,7 +251,7 @@ class ObjectParameterValueItem(ParameterValueItem):
         self,
         header,
         database=None,
-        id_=None,
+        id=None,
         parameter_id=None,
         parameter_name=None,
         value=None,
@@ -225,21 +261,13 @@ class ObjectParameterValueItem(ParameterValueItem):
         object_class_name=None,
     ):
         """Init class."""
-        super().__init__(header, database, id_, parameter_id, parameter_name, value)
+        super().__init__(header, database, id, parameter_id, parameter_name, value)
         self.object_id = object_id
         self.object_name = object_name
         self.object_class_id = object_class_id
         self.object_class_name = object_class_name
+        self._mandatory_attrs_for_insert.append("object_id")
         self._object_dict = dict()
-
-    def for_insert(self):
-        """Returns a dictionary corresponding to this item for adding to the db."""
-        if not self.object_id:
-            return None
-        item = super().for_insert()
-        if item:
-            item["object_id"] = self.object_id
-        return item
 
 
 class RelationshipParameterValueItem(ParameterValueItem):
@@ -252,7 +280,7 @@ class RelationshipParameterValueItem(ParameterValueItem):
         self,
         header,
         database=None,
-        id_=None,
+        id=None,
         parameter_id=None,
         parameter_name=None,
         value=None,
@@ -265,7 +293,7 @@ class RelationshipParameterValueItem(ParameterValueItem):
         relationship_class_name=None,
     ):
         """Init class."""
-        super().__init__(header, database, id_, parameter_id, parameter_name, value)
+        super().__init__(header, database, id, parameter_id, parameter_name, value)
         self.relationship_id = relationship_id
         self.object_id_list = object_id_list
         self.object_name_list = object_name_list
@@ -273,17 +301,9 @@ class RelationshipParameterValueItem(ParameterValueItem):
         self.object_class_name_list = object_class_name_list
         self.relationship_class_id = relationship_class_id
         self.relationship_class_name = relationship_class_name
+        self._mandatory_attrs_for_insert.append("relationship_id")
         self._relationship_dict = dict()
         self._object_name_class_id_tups = list()
-
-    def for_insert(self):
-        """Returns a dictionary corresponding to this item for adding to the db."""
-        if not self.relationship_id:
-            return None
-        item = super().for_insert()
-        if item:
-            item["relationship_id"] = self.relationship_id
-        return item
 
     def relationship_for_insert(self):
         """Returns a dictionary corresponding to
