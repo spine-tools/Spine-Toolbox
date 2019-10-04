@@ -34,9 +34,9 @@ Step-by-step instructions:
 1. Clone either the `master` or `dev` branch onto your computer
 2. Install Python (3.6->)
 3. Install requirements (see below)
-4. Go to directory `spinetoolbox` and run 
+4. Run 
 
-        python spinetoolbox.py
+        python -m spinetoolbox
 
 Remember to update your clone occasionally with the 
 [git pull](https://www.atlassian.com/git/tutorials/syncing/git-pull) command.
