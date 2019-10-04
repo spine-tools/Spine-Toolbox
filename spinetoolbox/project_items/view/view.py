@@ -36,11 +36,10 @@ class View(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
-            x (int): Initial X coordinate of item icon
-            y (int): Initial Y coordinate of item icon
+            x (float): Initial X coordinate of item icon
+            y (float): Initial Y coordinate of item icon
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "View"
+        super().__init__(toolbox, "View", name, description, x, y)
         self._graph_views = {}
         self._tabular_views = {}
         self._tree_views = {}
@@ -221,3 +220,18 @@ class View(ProjectItem):
             view.close()
         for view in self._tree_views.values():
             view.close()
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Tool":
+            self._toolbox.msg.emit(
+                "Link established. You can visualize the ouput from Tool "
+                "<b>{0}</b> in View <b>{1}</b>.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type == "Data Store":
+            self._toolbox.msg.emit(
+                "Link established. You can visualize Data Store "
+                "<b>{0}</b> in View <b>{1}</b>.".format(source_item.name, self.name)
+            )
+        else:
+            super().notify_destination(source_item)

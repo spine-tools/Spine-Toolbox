@@ -39,13 +39,12 @@ class Tool(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
-            x (int): Initial X coordinate of item icon
-            y (int): Initial Y coordinate of item icon
+            x (float): Initial X coordinate of item icon
+            y (float): Initial Y coordinate of item icon
             tool (str): Template name for this Tool
             execute_in_work (bool): Execute associated Tool template in work (True) or source directory (False)
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Tool"
+        super().__init__(toolbox, "Tool", name, description, x, y)
         self.source_file_model = QStandardItemModel()
         self.populate_source_file_model(None)
         self.input_file_model = QStandardItemModel()
@@ -796,3 +795,25 @@ class Tool(ProjectItem):
             self.edit_tool_template()
         elif action == "Edit main program file...":
             self.open_tool_main_program_file()
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Data Store":
+            self._toolbox.msg.emit(
+                "Link established. Data Store <b>{0}</b> reference will "
+                "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type == "Data Connection":
+            self._toolbox.msg.emit(
+                "Link established. Tool <b>{0}</b> will look for input "
+                "files from <b>{1}</b>'s references and data directory.".format(self.name, source_item.name)
+            )
+        elif source_item.item_type == "Gdx Export":
+            self._toolbox.msg.emit(
+                "Link established. Gdx Export <b>{0}</b> exported file will "
+                "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type == "Tool":
+            self._toolbox.msg.emit("Link established.")
+        else:
+            super().notify_destination(source_item)

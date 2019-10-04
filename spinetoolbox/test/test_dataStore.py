@@ -17,9 +17,9 @@ Unit tests for DataStore class.
 """
 
 import unittest
+from unittest import mock
 import shutil
 import os
-from unittest import mock
 import logging
 import sys
 from test.mock_helpers import MockQWidget, qsettings_value_side_effect
@@ -92,6 +92,13 @@ class TestDataStore(unittest.TestCase):
         self.toolbox.deleteLater()
         self.toolbox = None
         self.ds_properties_ui = None
+
+    def test_item_type(self):
+        item = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        self.toolbox.project().add_project_items("Data Stores", item)
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)
+        self.assertEqual(data_store.item_type, "Data Store")
 
     def test_create_new_empty_spine_database(self):
         """Test that a new Spine database is created when clicking on 'New Spine db tool button'
@@ -297,6 +304,66 @@ class TestDataStore(unittest.TestCase):
         self.assertIsInstance(data_store.tree_view_form, TreeViewForm)
         self.assertEqual(str(data_store.tree_view_form.db_maps[0].db_url), str(self.url))
         data_store.tree_view_form.close()
+
+    def test_notify_destination(self):
+        class MockToolbox:
+            class Message:
+                def __init__(self):
+                    self.text = None
+
+                def emit(self, text):
+                    self.text = text
+
+            def __init__(self):
+                self.msg = MockToolbox.Message()
+                self.msg_warning = MockToolbox.Message()
+
+            def reset_messages(self):
+                self.msg = MockToolbox.Message()
+                self.msg_warning = MockToolbox.Message()
+
+        class MockItem:
+            def __init__(self, item_type, name):
+                self.item_type = item_type
+                self.name = name
+
+        item = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        self.toolbox.project().add_project_items("Data Stores", item)
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)
+        toolbox = MockToolbox()
+        data_store._toolbox = toolbox
+        source_item = MockItem("Data Connection", "source name")
+        data_store.notify_destination(source_item)
+        self.assertEqual(toolbox.msg.text, "Link established.")
+        toolbox.reset_messages()
+        source_item.item_type = "Data Interface"
+        data_store.notify_destination(source_item)
+        self.assertEqual(toolbox.msg.text, "Link established.")
+        toolbox.reset_messages()
+        source_item.item_type = "Gdx Export"
+        data_store.notify_destination(source_item)
+        self.assertEqual(
+            toolbox.msg_warning.text,
+            "Link established. Interaction between a "
+            "<b>Gdx Export</b> and a <b>Data Store</b> has not been implemented yet.",
+        )
+        toolbox.reset_messages()
+        source_item.item_type = "Tool"
+        data_store.notify_destination(source_item)
+        self.assertEqual(
+            toolbox.msg.text,
+            "Link established. Tool <b>source name</b> output files will be "
+            "passed to item <b>DS</b> after execution.",
+        )
+        toolbox.reset_messages()
+        source_item.item_type = "View"
+        data_store.notify_destination(source_item)
+        self.assertEqual(
+            toolbox.msg_warning.text,
+            "Link established. Interaction between a "
+            "<b>View</b> and a <b>Data Store</b> has not been implemented yet.",
+        )
 
 
 if __name__ == '__main__':

@@ -240,10 +240,10 @@ class ProjectItemIcon(QGraphicsRectItem):
 
         Args:
             toolbox (ToolBoxUI): QMainWindow instance
-            x (int): Icon x coordinate
-            y (int): Icon y coordinate
-            w (int): Icon width
-            h (int): Icon height
+            x (float): Icon x coordinate
+            y (float): Icon y coordinate
+            w (float): Icon width
+            h (float): Icon height
             name (str): Item name
         """
         super().__init__()

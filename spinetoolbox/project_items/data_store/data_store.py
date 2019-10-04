@@ -39,13 +39,12 @@ class DataStore(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
-            x (int): Initial X coordinate of item icon
-            y (int): Initial Y coordinate of item icon
+            x (float): Initial X coordinate of item icon
+            y (float): Initial Y coordinate of item icon
             url (str or dict): SQLAlchemy url
             reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Data Store"
+        super().__init__(toolbox, "Data Store", name, description, x, y)
         if type(reference) == dict and "url" in reference:
             url = reference["url"]
         self._url = self.parse_url(url)
@@ -642,3 +641,15 @@ class DataStore(ProjectItem):
             self.tabular_view_form.close()
         if self.graph_view_form:
             self.graph_view_form.close()
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Tool":
+            self._toolbox.msg.emit(
+                "Link established. Tool <b>{0}</b> output files will be "
+                "passed to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type in ["Data Connection", "Data Interface"]:
+            self._toolbox.msg.emit("Link established.")
+        else:
+            super().notify_destination(source_item)

@@ -30,12 +30,7 @@ from project_items.gdx_export.widgets.export_list_item import ExportListItem
 class GdxExport(ProjectItem):
     """
     This project item handles all functionality regarding exporting a database to .gdx file.
-
-    Attributes:
-        item_type (str): GdxExport item's type
     """
-
-    item_type = "Gdx Export"
 
     def __init__(
         self,
@@ -56,11 +51,10 @@ class GdxExport(ProjectItem):
             database_urls (list): a list of connected database urls
             database_to_file_name_map (dict): mapping from database path (str) to an output file name (str)
             settings_file_names (dict): mapping from database path (str) to export settings file name (str)
-            x (int): initial X coordinate of item icon
-            y (int): initial Y coordinate of item icon
+            x (float): initial X coordinate of item icon
+            y (float): initial Y coordinate of item icon
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Gdx Export"
+        super().__init__(toolbox, "Gdx Export", name, description, x, y)
         self._settings_windows = dict()
         self._settings = dict()
         self._database_urls = database_urls if database_urls is not None else list()
@@ -257,3 +251,13 @@ class GdxExport(ProjectItem):
             else:
                 path = os.path.dirname(path)
         return path
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Data Store":
+            self._toolbox.msg.emit(
+                "Link established. Data Store <b>{0}</b> will be "
+                "exported to a .gdx file by <b>{1}</b> when executing.".format(source_item.name, self.name)
+            )
+        else:
+            super().notify_destination(source_item)

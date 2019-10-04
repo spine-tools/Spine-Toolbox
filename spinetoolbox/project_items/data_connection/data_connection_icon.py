@@ -28,10 +28,10 @@ class DataConnectionIcon(ProjectItemIcon):
 
         Args:
             toolbox (ToolBoxUI): QMainWindow instance
-            x (int): Icon x coordinate
-            y (int): Icon y coordinate
-            w (int): Width of master icon
-            h (int): Height of master icon
+            x (float): Icon x coordinate
+            y (float): Icon y coordinate
+            w (float): Width of master icon
+            h (float): Height of master icon
             name (str): Item name
         """
         super().__init__(toolbox, x, y, w, h, name)

@@ -12,7 +12,7 @@
 """
 Unit tests for the plotting module.
 
-:author: A. Soininen(VTT)
+:author: A. Soininen (VTT)
 :date:   10.7.2019
 """
 
