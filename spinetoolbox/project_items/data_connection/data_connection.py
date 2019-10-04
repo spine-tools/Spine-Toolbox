@@ -37,12 +37,11 @@ class DataConnection(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
-            x (int): Initial X coordinate of item icon
-            y (int): Initial Y coordinate of item icon
+            x (float): Initial X coordinate of item icon
+            y (float): Initial Y coordinate of item icon
             references (list): List of file references
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Data Connection"
+        super().__init__(toolbox, "Data Connection", name, description, x, y)
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -419,3 +418,15 @@ class DataConnection(ProjectItem):
         Closes the SpineDatapackageWidget instances opened."""
         if self.spine_datapackage_form:
             self.spine_datapackage_form.close()
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Tool":
+            self._toolbox.msg.emit(
+                "Link established. Tool <b>{0}</b> output files will be "
+                "passed to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type in ["Data Store", "Data Interface"]:
+            self._toolbox.msg.emit("Link established.")
+        else:
+            super().notify_destination(source_item)

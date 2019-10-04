@@ -335,6 +335,7 @@ class TextExportersGdx(unittest.TestCase):
             try:
                 _, gams_database = gdx.to_gams_workspace(database_map, settings)
             except gdx.GdxExportException:
+                database_map.connection.close()
                 self.skipTest("Broken GAMS Python bindings installation.")
             database_map.connection.close()
         self.assertEqual(len(gams_database), 4)
@@ -379,6 +380,7 @@ class TextExportersGdx(unittest.TestCase):
             try:
                 _, gams_database = gdx.to_gams_workspace(database_map, settings)
             except gdx.GdxExportException:
+                database_map.connection.close()
                 self.skipTest("Broken GAMS Python bindings installation.")
             database_map.connection.close()
         self.assertEqual(len(gams_database), 1)

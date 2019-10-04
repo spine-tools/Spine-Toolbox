@@ -36,12 +36,11 @@ class DataInterface(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Project item name
             description (str): Project item description
-            x (int): Initial icon scene X coordinate
-            y (int): Initial icon scene Y coordinate
             mappings (dict): dict with mapping settings
+            x (float): Initial icon scene X coordinate
+            y (float): Initial icon scene Y coordinate
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Data Interface"
+        super().__init__(toolbox, "Data Interface", name, description, x, y)
         # Make logs subdirectory for this item
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
@@ -305,3 +304,10 @@ class DataInterface(ProjectItem):
         d = super().item_dict()
         d["mappings"] = self.settings
         return d
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type in ["Data Connection", "Data Store"]:
+            self._toolbox.msg.emit("Link established.")
+        else:
+            super().notify_destination(source_item)

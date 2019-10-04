@@ -214,19 +214,25 @@ class ProjectItem(BaseProjectItem):
     These items can be executed, refreshed, and so on.
 
     Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Item name
-        description (str): Item description
-        x (int): horizontal position in the screen
-        y (int): vertical position in the screen
+        x (float): horizontal position in the screen
+        y (float): vertical position in the screen
     """
 
     item_changed = Signal(name="item_changed")
 
-    def __init__(self, toolbox, name, description, x, y):
-        """Class constructor."""
+    def __init__(self, toolbox, item_type, name, description, x, y):
+        """
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            item_type (str): item type identifier
+            name (str): item name
+            description (str): item description
+            x (float): horizontal position on the scene
+            y (float): vertical position on the scene
+        """
         super().__init__(name, description)
         self._toolbox = toolbox
+        self._item_type = item_type
         self._project = self._toolbox.project()
         self.x = x
         self.y = y
@@ -241,6 +247,11 @@ class ProjectItem(BaseProjectItem):
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
+
+    @property
+    def item_type(self):
+        """Item's type identifier string."""
+        return self._item_type
 
     def flags(self):
         """Returns the item flags."""
@@ -392,6 +403,22 @@ class ProjectItem(BaseProjectItem):
         Must be reimplemented by subclasses.
         """
         raise NotImplementedError()
+
+    def notify_destination(self, source_item):
+        """
+        Informs an item that it has become the destination of a connection between two items.
+
+        The default implementation logs a warning message. Subclasses should reimplement this if they need
+        more specific behavior.
+
+        Args:
+            source_item (ProjectItem): connection source item
+        """
+        self._toolbox.msg_warning.emit(
+            "Link established. Interaction between a "
+            "<b>{0}</b> and a <b>{1}</b> has not been "
+            "implemented yet.".format(source_item.item_type, self.item_type)
+        )
 
 
 class ProjectItemResource:
