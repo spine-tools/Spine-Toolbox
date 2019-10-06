@@ -382,37 +382,39 @@ class DataStoreForm(QMainWindow):
         delegate = RelationshipParameterValueDelegate(self)
         table_view.setItemDelegate(delegate)
 
-    def all_selected_object_class_ids(self, db_map):
+    @property
+    def all_selected_object_class_ids(self):
         """Return object class ids selected in object tree *and* parameter tag toolbar."""
-        tree_object_class_ids = self.selected_object_class_ids.get(db_map)
-        tag_object_class_ids = set(id_ for db, id_ in self.selected_obj_parameter_definition_ids.keys() if db == db_map)
+        tree_object_class_ids = self.selected_object_class_ids
+        tag_object_class_ids = dict()
+        for db_map, id_ in self.selected_obj_parameter_definition_ids.keys():
+            tag_object_class_ids.setdefault(db_map, set()).add(id_)
         if not tag_object_class_ids:
             return tree_object_class_ids
         if not tree_object_class_ids:
             return tag_object_class_ids
-        intersection = tree_object_class_ids.intersection(tag_object_class_ids)
-        if intersection:
-            return intersection
-        return {None}
+        return {
+            key: value.intersection(tag_object_class_ids.get(key, {})) for key, value in tree_object_class_ids.items()
+        }
 
-    def all_selected_relationship_class_ids(self, db_map):
+    @property
+    def all_selected_relationship_class_ids(self):
         """Return relationship class ids selected in relationship tree *and* parameter tag toolbar."""
-        tree_relationship_class_ids = self.selected_relationship_class_ids.get(db_map)
-        tag_relationship_class_ids = set(
-            id_ for db, id_ in self.selected_rel_parameter_definition_ids.keys() if db == db_map
-        )
+        tree_relationship_class_ids = self.selected_relationship_class_ids
+        tag_relationship_class_ids = dict()
+        for db_map, id_ in self.selected_rel_parameter_definition_ids.keys():
+            tag_relationship_class_ids.setdefault(db_map, set()).add(id_)
         if not tag_relationship_class_ids:
             return tree_relationship_class_ids
         if not tree_relationship_class_ids:
             return tag_relationship_class_ids
-        intersection = tree_relationship_class_ids.intersection(tag_relationship_class_ids)
-        if intersection:
-            return intersection
-        return {None}
+        return {
+            key: value.intersection(tag_relationship_class_ids.get(key, {}))
+            for key, value in tree_relationship_class_ids.items()
+        }
 
     def set_default_parameter_rows(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
-        return
         if index is None or index.data(Qt.UserRole) == 'root':
             db_name = self.db_names[0]
             default_row = dict(database=db_name)
@@ -424,7 +426,7 @@ class DataStoreForm(QMainWindow):
             ):
                 model = model.empty_model
                 model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+                model.set_rows_to_default(model.rowCount() - 1)
             return
         item_type = index.data(Qt.UserRole)
         db_map_dict = index.data(Qt.UserRole + 1)
@@ -436,7 +438,7 @@ class DataStoreForm(QMainWindow):
             for model in (self.object_parameter_definition_model, self.object_parameter_value_model):
                 model = model.empty_model
                 model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+                model.set_rows_to_default(model.rowCount() - 1)
         elif item_type == 'object':
             parent_index = index.parent()
             parent_db_map_dict = parent_index.data(Qt.UserRole + 1)
@@ -446,11 +448,11 @@ class DataStoreForm(QMainWindow):
             )
             model = self.object_parameter_definition_model.empty_model
             model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+            model.set_rows_to_default(model.rowCount() - 1)
             default_row.update(dict(object_id=item['id'], object_name=item['name']))
             model = self.object_parameter_value_model.empty_model
             model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+            model.set_rows_to_default(model.rowCount() - 1)
         elif item_type == 'relationship_class':
             default_row = dict(
                 relationship_class_id=item['id'],
@@ -462,7 +464,7 @@ class DataStoreForm(QMainWindow):
             for model in (self.relationship_parameter_definition_model, self.relationship_parameter_value_model):
                 model = model.empty_model
                 model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+                model.set_rows_to_default(model.rowCount() - 1)
         elif item_type == 'relationship':
             parent_index = index.parent()
             parent_db_map_dict = parent_index.data(Qt.UserRole + 1)
@@ -476,7 +478,7 @@ class DataStoreForm(QMainWindow):
             )
             model = self.relationship_parameter_definition_model.empty_model
             model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+            model.set_rows_to_default(model.rowCount() - 1)
             default_row.update(
                 dict(
                     relationship_id=item['id'],
@@ -486,7 +488,7 @@ class DataStoreForm(QMainWindow):
             )
             model = self.relationship_parameter_value_model.empty_model
             model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
+            model.set_rows_to_default(model.rowCount() - 1)
 
     def do_update_filter(self):
         """Apply filter on visible views."""
@@ -905,10 +907,11 @@ class DataStoreForm(QMainWindow):
         """
         if new_value is None:
             return False
-        header = index.model().horizontal_header_labels()
-        db_column = header.index('database')
-        db_name = index.sibling(index.row(), db_column).data(Qt.DisplayRole)
-        db_map = self.db_name_to_map.get(db_name)
+        field = index.model().horizontal_header_labels()
+        item = index.model().item_at_row(index.row())
+        db_map = self.db_name_to_map.get(item.database)
+        return index.model().setData(index, new_value)
+
         if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name' and db_map:
             parameter_id_column = header.index('id')
             parameter_id = index.sibling(index.row(), parameter_id_column).data(Qt.DisplayRole)

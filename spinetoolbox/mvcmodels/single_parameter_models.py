@@ -51,17 +51,22 @@ class SingleParameterModel(QSortFilterProxyModel):
         self._fetched = False
         self._selected_param_def_ids = set()
 
+    @property
+    def error_log(self):
+        return self.sourceModel().error_log
+
+    @property
+    def updated_count(self):
+        return self.sourceModel().updated_count
+
     def canFetchMore(self, parent=None):
         """Return True if the model hasn't been fetched."""
         return not self._fetched
 
     def fetchMore(self, parent=None):
         """Get all data from the database and use it to reset the model."""
-        source = self.create_source_model()
-        self.setSourceModel(source)
         data = self.get_data_from_db()
-        source.reset_model(data)
-        self._fetched = True
+        self.reset_model(data)
 
     def create_source_model(self):
         """Returns a model filled with parameter data for the associated entity class."""
@@ -70,9 +75,25 @@ class SingleParameterModel(QSortFilterProxyModel):
     def get_data_from_db(self):
         raise NotImplementedError()
 
+    def reset_model(self, data):
+        """Resets model."""
+        source = self.create_source_model()
+        self.setSourceModel(source)
+        source.reset_model(data)
+        self._fetched = True
+
     def batch_set_data(self, indexes, data):
         source_inds = [self.mapToSource(ind) for ind in indexes]
         return self.sourceModel().batch_set_data(source_inds, data)
+
+    def item_at_row(self, row):
+        """Returns the item associated with the given row number.
+
+        Args:
+            row (int)
+        """
+        src_row = self.mapToSource(self.index(row, 0)).row()
+        return self.sourceModel().item_at_row(src_row)
 
     def update_filter(self):
         """Updates filter."""
@@ -81,9 +102,6 @@ class SingleParameterModel(QSortFilterProxyModel):
             self.invalidateFilter()
         self.layoutChanged.emit()
 
-    def selected_param_def_ids(self):
-        raise NotImplementedError()
-
     def do_update_filter(self):
         """Does update the filter."""
         selected_param_def_ids = self.selected_param_def_ids()
@@ -91,6 +109,9 @@ class SingleParameterModel(QSortFilterProxyModel):
             self._selected_param_def_ids = selected_param_def_ids
             return True
         return False
+
+    def selected_param_def_ids(self):
+        raise NotImplementedError()
 
     def clear_filter(self):
         """Clears filter."""
@@ -178,7 +199,7 @@ class SingleObjectParameterValueModel(
     def do_update_filter(self):
         """Does update the filter."""
         result = super().do_update_filter()
-        selected_object_ids = self._grand_parent.selected_object_ids.get((self.db_map, self.object_class_id), {})
+        selected_object_ids = self._grand_parent.selected_object_ids.get((self.db_map, self.object_class_id), set())
         if selected_object_ids != self._selected_object_ids:
             self._selected_object_ids = selected_object_ids
             return True
@@ -215,12 +236,12 @@ class SingleRelationshipParameterValueModel(
         """Does update the filter."""
         cond_a = super().do_update_filter()
         selected_object_id_lists = self._grand_parent.selected_object_id_lists.get(
-            (self.db_map, self.relationship_class_id), {}
+            (self.db_map, self.relationship_class_id), set()
         )
         selected_object_ids = set(
             obj_id
             for obj_cls_id in self.object_class_id_list
-            for obj_id in self._grand_parent.selected_object_ids.get((self.db_map, obj_cls_id), {})
+            for obj_id in self._grand_parent.selected_object_ids.get((self.db_map, obj_cls_id), set())
         )
         cond_b = selected_object_id_lists != self._selected_object_id_lists
         cond_c = selected_object_ids != self._selected_object_ids

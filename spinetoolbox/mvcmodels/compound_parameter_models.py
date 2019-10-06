@@ -52,7 +52,7 @@ class CompoundParameterModel(MinimalTableModel):
         self.db_maps = parent.db_maps
         self.db_name_to_map = parent.db_name_to_map
         self.sub_models = []
-        self._last_fetched_index = 0  # Index of the last single model that's already been fetched
+        self._last_fetched_index = 0  # Index of the last submodel that's already been fetched
         self.filtered_out = dict()
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
@@ -64,12 +64,6 @@ class CompoundParameterModel(MinimalTableModel):
     @property
     def empty_model(self):
         return self.sub_models[-1]
-
-    def connect_signals(self):
-        """Connect signals."""
-        self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
-        for model in self.single_models:
-            model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
 
     def canFetchMore(self, parent):
         """Returns True if any of the unfetched single models can fetch more."""
@@ -107,7 +101,7 @@ class CompoundParameterModel(MinimalTableModel):
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Find the right sub-model (or the empty model) and call insertRows on it."""
-        for _, model in self.sub_models:
+        for model in self.sub_models:
             if row < model.rowCount():
                 return model.insertRows(row, count)
             row -= model.rowCount()
@@ -132,6 +126,13 @@ class CompoundParameterModel(MinimalTableModel):
             model.removeRows(min_row, max_row - min_row + 1)
         self.endRemoveRows()
         return True
+
+    def item_at_row(self, row):
+        """Returns the item at given row."""
+        for model in self.sub_models:
+            if row < model.rowCount():
+                return model.item_at_row(row)
+            row -= model.rowCount()
 
     def batch_set_data(self, indexes, data):
         """Set data for indexes in batch.
@@ -164,10 +165,10 @@ class CompoundParameterModel(MinimalTableModel):
         right = max(columns)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         added_rows = self.empty_model.added_rows
-        updated_count = [m.sourceModel().updated_count for m in self.single_models]
-        error_log = [m.sourceModel().error_log for m in self.sub_models]
+        updated_count = sum(m.updated_count for m in self.single_models)
+        error_log = [entry for m in self.sub_models for entry in m.error_log]
         if added_rows:
-            self.move_rows_to_sub_models(added_rows)
+            self.move_rows_to_single_models(added_rows)
             self._parent.commit_available.emit(True)
             self._parent.msg.emit(f"Successfully added {len(added_rows)} entries.")
         if updated_count:
@@ -247,15 +248,45 @@ class CompoundParameterModel(MinimalTableModel):
         """Initialize model."""
         d = dict()
         for database, db_map in self.db_name_to_map.items():
-            for db_item in self.query(db_map):
-                d.setdefault(db_item.name, list()).append((database, db_item))
+            for entity_class in self.entity_class_query(db_map):
+                d.setdefault(entity_class.name, list()).append((database, entity_class))
         self.sub_models = [
-            self.create_single_model(database, db_item)
-            for db_item_list in d.values()
-            for database, db_item in db_item_list
+            self.create_single_model(database, entity_class)
+            for entity_class_list in d.values()
+            for database, entity_class in entity_class_list
         ]
         self.sub_models.append(self.create_empty_model())
-        self.connect_signals()
+        self.connect_model_signals()
+
+    def move_rows_to_single_models(self, rows):
+        """Move rows from empty model to a new single model.
+        Called when the empty row model succesfully inserts new data in the db.
+        """
+        self.layoutAboutToBeChanged.emit()
+        empty_model = self.sub_models.pop()
+        d = {}
+        for row in rows:
+            item = empty_model.item_at_row(row)
+            entity_class = item.entity_class
+            database = item.database
+            d.setdefault((database, entity_class), list()).append(item)
+        single_models = []
+        for (database, entity_class), item_list in d.items():
+            single_model = self.create_single_model(database, entity_class)
+            single_model.reset_model(item_list)
+            self._handle_single_model_reset(single_model)
+            single_models.append(single_model)
+        self.sub_models += single_models
+        for row in reversed(rows):
+            empty_model.removeRows(row, 1)
+        self.sub_models.append(empty_model)
+        self.layoutChanged.emit()
+
+    def connect_model_signals(self):
+        """Connect model signals."""
+        self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        for model in self.single_models:
+            model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
 
     def clear_model(self):
         """Clears model. Runs after rollback or refresh.
@@ -272,8 +303,8 @@ class CompoundParameterModel(MinimalTableModel):
         raise NotImplementedError()
 
     @staticmethod
-    def query(db_map):
-        """Returns a query to populate the model."""
+    def entity_class_query(db_map):
+        """Returns a query of entity classes to populate the model."""
         raise NotImplementedError()
 
     def update_filter(self):
@@ -284,7 +315,6 @@ class CompoundParameterModel(MinimalTableModel):
             model.update_filter()
         self.clear_filter()
         self.layoutChanged.emit()
-        return
 
 
 class CompoundParameterDefinitionModel(CompoundParameterModel):
@@ -316,13 +346,14 @@ class CompoundObjectParameterDefinitionModel(CompoundParameterDefinitionModel):
         self.fixed_fields = ["object_class_name", "database"]
 
     def create_single_model(self, database, db_item):
-        return SingleObjectParameterDefinitionModel(self, database, db_item.id, db_item.name)
+        return SingleObjectParameterDefinitionModel(self, database, db_item.id)
 
     def create_empty_model(self):
         return EmptyObjectParameterDefinitionModel(self)
 
     @staticmethod
-    def query(db_map):
+    def entity_class_query(db_map):
+        """Returns a query of object classes to populate the model."""
         return db_map.query(db_map.object_class_sq)
 
 
@@ -346,15 +377,14 @@ class CompoundRelationshipParameterDefinitionModel(CompoundParameterDefinitionMo
         self.fixed_fields = ["relationship_class_name", "object_class_name_list", "database"]
 
     def create_single_model(self, database, db_item):
-        return SingleRelationshipParameterDefinitionModel(
-            self, database, db_item.id, db_item.object_class_id_list, db_item.object_class_name_list
-        )
+        return SingleRelationshipParameterDefinitionModel(self, database, db_item.id, db_item.object_class_id_list)
 
     def create_empty_model(self):
         return EmptyRelationshipParameterDefinitionModel(self)
 
     @staticmethod
-    def query(db_map):
+    def entity_class_query(db_map):
+        """Returns a query of relationship classes to populate the model."""
         return db_map.query(db_map.wide_relationship_class_sq)
 
 
@@ -380,13 +410,14 @@ class CompoundObjectParameterValueModel(CompoundParameterValueModel):
         self.fixed_fields = ["object_class_name", "object_name", "parameter_name", "database"]
 
     def create_single_model(self, database, db_item):
-        return SingleObjectParameterValueModel(self, database, db_item.id, db_item.name)
+        return SingleObjectParameterValueModel(self, database, db_item.id)
 
     def create_empty_model(self):
         return EmptyObjectParameterValueModel(self)
 
     @staticmethod
-    def query(db_map):
+    def entity_class_query(db_map):
+        """Returns a query of object classes to populate the model."""
         return db_map.query(db_map.object_class_sq)
 
 
@@ -402,13 +433,12 @@ class CompoundRelationshipParameterValueModel(CompoundParameterValueModel):
         self.fixed_fields = ["relationship_class_name", "object_name_list", "parameter_name", "database"]
 
     def create_single_model(self, database, db_item):
-        return SingleRelationshipParameterValueModel(
-            self, database, db_item.id, db_item.object_class_id_list, db_item.object_class_name_list
-        )
+        return SingleRelationshipParameterValueModel(self, database, db_item.id, db_item.object_class_id_list)
 
     def create_empty_model(self):
         return EmptyRelationshipParameterValueModel(self)
 
     @staticmethod
-    def query(db_map):
+    def entity_class_query(db_map):
+        """Returns a query of relationship classes to populate the model."""
         return db_map.query(db_map.wide_relationship_class_sq)

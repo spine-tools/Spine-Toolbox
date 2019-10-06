@@ -46,6 +46,7 @@ class EmptyParameterModel(ParameterAutocompleteMixin, EmptyRowModel):
             parent (ParameterModel): the parent object
         """
         super().__init__(parent)
+        self.header = parent.header
         self.db_name_to_map = parent.db_name_to_map
         self.error_log = []
         self.added_rows = []
@@ -307,7 +308,7 @@ class EmptyRelationshipParameterValueModel(
     def batch_set_possible_relationship_ids(self, rows):
         """Set possible relationship ids in accordance with names."""
         object_name_lists = self._attr_set(rows.values(), "object_name_list")
-        map_func = lambda x: (x.class_id, x.id)
+        map_func = lambda x: (x.class_id, x)
         filter_func = lambda sq, name_list: sq.c.object_name_list == name_list
         relationship_dict = self._attr_dict_v2(object_name_lists, "wide_relationship_sq", map_func, filter_func)
         for item in rows.values():
@@ -339,7 +340,7 @@ class EmptyRelationshipParameterValueModel(
                 item.relationship_class_id = relationship_class_id.pop()
                 item.relationship_class_name = True  # Mark the item somehow
                 relationship_class_ids.setdefault(database, set()).add(item.relationship_class_id)
-            # Pick the right object_id and parameter_id
+            # Pick the right relationship_id and parameter_id
             relationship = item._relationship_dict.get(item.relationship_class_id)
             if relationship:
                 item.relationship_id = relationship.id

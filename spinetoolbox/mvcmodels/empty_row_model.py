@@ -33,11 +33,11 @@ class EmptyRowModel(MinimalTableModel):
         self.rowsRemoved.connect(self._handle_rows_removed)
         self.rowsInserted.connect(self._handle_rows_inserted)
 
-    def canFetchMore(self, parent=None):
+    def canFetchMore(self, parent=QModelIndex()):
         return not self._fetched
 
-    def fetchMore(self, parent=None):
-        self.insertRows(self.rowCount(), 1, QModelIndex())
+    def fetchMore(self, parent=QModelIndex()):
+        self.insertRows(self.rowCount(), 1, parent)
         self._fetched = True
 
     def flags(self, index):
@@ -99,8 +99,12 @@ class EmptyRowModel(MinimalTableModel):
         """Handle rowsInserted signal."""
         self.set_rows_to_default(first, last)
 
-    def set_rows_to_default(self, first, last):
+    def set_rows_to_default(self, first, last=None):
         """Set default data in newly inserted rows."""
+        if last is None:
+            last = first
+        if first >= self.rowCount() or last < 0:
+            return
         left = None
         right = None
         for column in range(self.columnCount()):

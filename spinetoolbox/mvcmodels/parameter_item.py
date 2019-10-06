@@ -16,6 +16,22 @@ Classes to hold parameters.
 :date:   2.10.2019
 """
 
+from collections import namedtuple
+
+
+class ObjectParameterItemMixin:
+    @property
+    def entity_class(self):
+        object_class = namedtuple("object_class", "id")
+        return object_class(self.object_class_id)
+
+
+class RelationshipParameterItemMixin:
+    @property
+    def entity_class(self):
+        relationship_class = namedtuple("relationship_class", "id object_class_id_list")
+        return relationship_class(self.relationship_class_id, self.object_class_id_list)
+
 
 class ParameterItem:
     """Class to hold parameter definitions or values within an EmptyParameterModel or SubParameterModel.
@@ -148,7 +164,7 @@ class ParameterDefinitionItem(ParameterItem):
         return self.id
 
 
-class ObjectParameterDefinitionItem(ParameterDefinitionItem):
+class ObjectParameterDefinitionItem(ObjectParameterItemMixin, ParameterDefinitionItem):
     """Class to hold object parameter definitions within an EmptyParameterModel or SubParameterModel.
     On top of the common parameter definition attributes,
     it adds attributes that are unique to the *object* entity class.
@@ -185,7 +201,7 @@ class ObjectParameterDefinitionItem(ParameterDefinitionItem):
         self._mandatory_attrs_for_insert.append("object_class_id")
 
 
-class RelationshipParameterDefinitionItem(ParameterDefinitionItem):
+class RelationshipParameterDefinitionItem(RelationshipParameterItemMixin, ParameterDefinitionItem):
     """Class to hold relationship parameter definitions within an EmptyParameterModel or SubParameterModel.
     On top of the common parameter definition attributes,
     it adds attributes that are unique to the *relationship* entity class.
@@ -250,7 +266,7 @@ class ParameterValueItem(ParameterItem):
         return self.parameter_id
 
 
-class ObjectParameterValueItem(ParameterValueItem):
+class ObjectParameterValueItem(ObjectParameterItemMixin, ParameterValueItem):
     """Class to hold object parameter values within an EmptyParameterModel or SubParameterModel.
     On top of the common parameter value attributes,
     it adds attributes that are unique to the *object* entity.
@@ -279,7 +295,7 @@ class ObjectParameterValueItem(ParameterValueItem):
         self._object_dict = dict()
 
 
-class RelationshipParameterValueItem(ParameterValueItem):
+class RelationshipParameterValueItem(RelationshipParameterItemMixin, ParameterValueItem):
     """Class to hold relationship parameter values within an EmptyParameterModel or SubParameterModel.
     On top of the common parameter value attributes,
     it adds attributes that are unique to the *relationship* entity.

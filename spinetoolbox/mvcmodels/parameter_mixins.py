@@ -25,6 +25,14 @@ class ParameterAutocompleteMixin:
         """Initialize class."""
         super().__init__(*args, **kwargs)
 
+    def item_at_row(self, row):
+        """Returns the item associated with the given row number.
+
+        Args:
+            row (int)
+        """
+        return self._main_data[row]
+
     def batch_autocomplete_data(self, rows):
         """Autocompletes data for indexes in batch.
         Reimplement in subclasses to automatically set additional data
@@ -239,7 +247,8 @@ class ObjectParameterDecorateMixin:
     def data(self, index, role=Qt.DisplayRole):
         """Return data for given index and role."""
         if role == Qt.DecorationRole and self.header[index.column()] == "object_class_name":
-            return self._parent._parent.icon_mngr.object_icon(self.object_class_name)
+            object_class_name = self.item_at_row(index.row()).object_class_name
+            return self._parent._parent.icon_mngr.object_icon(object_class_name)
         return super().data(index, role)
 
 
@@ -247,35 +256,34 @@ class RelationshipParameterDecorateMixin:
     def data(self, index, role=Qt.DisplayRole):
         """Return data for given index and role."""
         if role == Qt.DecorationRole and self.header[index.column()] == "relationship_class_name":
-            return self._parent._parent.icon_mngr.relationship_icon(self.object_class_name_list)
+            object_class_name_list = self.item_at_row(index.row()).object_class_name_list
+            return self._parent._parent.icon_mngr.relationship_icon(object_class_name_list)
         return super().data(index, role)
 
 
 class SingleObjectParameterMixin:
     """An object parameter mixin for a single object class."""
 
-    def __init__(self, parent, database, object_class_id, object_class_name):
+    def __init__(self, parent, database, object_class_id):
         """Init class.
 
         Args:
             parent (CompoundParameterModel): the parent model
             database (str): the database where the object class associated with this model lives.
             object_class_id (int): the id of the object class
-            object_class_name (str): the name of the object class
         """
         super().__init__(parent, database)
         self.object_class_id = object_class_id
-        self.object_class_name = object_class_name
         self.json_fields = ["value"]
 
     def selected_param_def_ids(self):
-        return self._grand_parent.selected_obj_parameter_definition_ids.get((self.db_map, self.object_class_id), {})
+        return self._grand_parent.selected_obj_parameter_definition_ids.get((self.db_map, self.object_class_id), set())
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model or zero if the
         object class is not selected in the grand parent."""
-        selected_object_class_ids = self._grand_parent.all_selected_object_class_ids(self.db_map)
-        if selected_object_class_ids and self.object_class_id not in selected_object_class_ids:
+        selected_object_class_ids = self._grand_parent.all_selected_object_class_ids
+        if selected_object_class_ids and self.object_class_id not in selected_object_class_ids.get(self.db_map, set()):
             return 0
         return super().rowCount(parent)
 
@@ -283,7 +291,7 @@ class SingleObjectParameterMixin:
 class SingleRelationshipParameterMixin:
     """A relationship parameter mixin for a single relationship class."""
 
-    def __init__(self, parent, database, relationship_class_id, object_class_id_list, object_class_name_list):
+    def __init__(self, parent, database, relationship_class_id, object_class_id_list):
         """Init class.
 
         Args:
@@ -291,28 +299,26 @@ class SingleRelationshipParameterMixin:
             database (str): the database where the relationship class associated with this model lives.
             relationship_class_id (int): the id of the relationship class
             object_class_id_list (str): comma separated string of member object class ids
-            object_class_name_list (str): comma separated string of member object class names
         """
         super().__init__(parent, database)
         self.relationship_class_id = relationship_class_id
         self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
-        self.object_class_name_list = object_class_name_list
         self.json_fields = ["default_value"]
 
     def selected_param_def_ids(self):
         return self._grand_parent.selected_rel_parameter_definition_ids.get(
-            (self.db_map, self.relationship_class_id), {}
+            (self.db_map, self.relationship_class_id), set()
         )
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model or zero if nor the
         relationship class nor any of its object classes is selected in the grand parent."""
-        selected_object_class_ids = self._grand_parent.selected_object_class_ids.get(self.db_map)
-        selected_relationship_class_ids = self._grand_parent.all_selected_relationship_class_ids(self.db_map)
+        selected_object_class_ids = self._grand_parent.selected_object_class_ids
+        selected_relationship_class_ids = self._grand_parent.all_selected_relationship_class_ids
         if selected_object_class_ids:
-            if not selected_object_class_ids.intersection(self.object_class_id_list):
+            if not selected_object_class_ids.get(self.db_map, set()).intersection(self.object_class_id_list):
                 return 0
         if selected_relationship_class_ids:
-            if self.relationship_class_id not in selected_relationship_class_ids:
+            if self.relationship_class_id not in selected_relationship_class_ids.get(self.db_map, set()):
                 return 0
         return super().rowCount(parent)
