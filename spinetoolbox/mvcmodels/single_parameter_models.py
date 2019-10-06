@@ -48,8 +48,10 @@ class SingleParameterModel(QSortFilterProxyModel):
         self.header = parent.header
         self.database = database
         self.db_map = parent.db_name_to_map[database]
-        self._fetched = False
         self._selected_param_def_ids = set()
+        self._fetched = False
+        source = self.create_source_model()
+        self.setSourceModel(source)
 
     @property
     def error_log(self):
@@ -77,9 +79,7 @@ class SingleParameterModel(QSortFilterProxyModel):
 
     def reset_model(self, data):
         """Resets model."""
-        source = self.create_source_model()
-        self.setSourceModel(source)
-        source.reset_model(data)
+        self.sourceModel().reset_model(data)
         self._fetched = True
 
     def batch_set_data(self, indexes, data):
