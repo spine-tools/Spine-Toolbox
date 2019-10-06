@@ -10,54 +10,60 @@
 ######################################################################################################################
 
 """
-Models for parameter definitions and values corresponding to a single class.
+Filled models for parameter definitions and values (as in 'filled with data').
 
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt
+from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
-from helpers import busy_effect
 from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.parameter_mixins import BaseParameterMixin, ParameterDefinitionMixin
+from mvcmodels.parameter_mixins import ParameterAutocompleteMixin, ParameterDefinitionAutocompleteMixin
 from mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
-class SubParameterModel(BaseParameterMixin, MinimalTableModel):
-    """A parameter model for a single entity class."""
+class FilledParameterModel(ParameterAutocompleteMixin, MinimalTableModel):
+    """A parameter model filled with data."""
 
     # TODO: how column insertion/removal impacts fixed_columns?
 
-    def __init__(self, parent, item_updater_attr, json_fields=()):
+    def __init__(self, parent):
         """Initialize class.
 
         Args:
             parent (ParameterModel): the parent object
-            item_maker (function): a function to create items to put in the model rows
-            item_injector_attr (str): the name of the method in DiffDatabaseMapping to add items to the db
         """
         super().__init__(parent)
+        self.header = parent.header
         self.db_name_to_map = parent.db_name_to_map
-        self._item_updater_attr = item_updater_attr
-        self._json_fields = json_fields
         self._gray_brush = QGuiApplication.palette().button()
         self.error_log = []
         self.updated_count = 0
 
+    @staticmethod
+    def do_update_items_in_db(db_map, *args, **kwargs):
+        """Update items in the given database.
+        Must be reimplemented in subclasses.
+        """
+        raise NotImplementedError()
+
+    def get_data_from_db(self):
+        raise NotImplementedError()
+
     def flags(self, index):
         """Make fixed indexes non-editable."""
         flags = super().flags(index)
-        if index.column() in self._parent.fixed_columns:
+        if self.header[index.column()] in self._parent.fixed_fields:
             return flags & ~Qt.ItemIsEditable
         return flags
 
     def data(self, index, role=Qt.DisplayRole):
         """Paint background of fixed indexes gray and apply custom format to JSON fields."""
         column = index.column()
-        if column in self._parent.fixed_columns and role == Qt.BackgroundRole:
+        if self.header[column] in self._parent.fixed_fields and role == Qt.BackgroundRole:
             return self._gray_brush
-        if self._parent.header[column] in self._json_fields:
+        if self.header[column] in self._parent.json_fields:
             if role == Qt.ToolTipRole:
                 return format_for_ToolTipRole(super().data(index, Qt.EditRole))
             if role == Qt.DisplayRole:
@@ -92,22 +98,22 @@ class SubParameterModel(BaseParameterMixin, MinimalTableModel):
             item_for_update = item.for_update()
             if not item_for_update:
                 continue
-            item_updater = db_map.__getattribute__(self._item_updater_attr)
-            upd_items, error_log = item_updater(item_for_update)
+            upd_items, error_log = self.do_update_items_in_db(db_map, item_for_update)
             if error_log:
                 self.error_log.extend(error_log)
                 item.revert()
-                # TODO: emit dataChanged when revert
+                # TODO: emit dataChanged
             item.clear_cache()
             self.updated_count += 1
 
 
-class SubParameterDefinitionModel(ParameterDefinitionMixin, SubParameterModel):
-    """A parameter definition model for a single entity class.
-    """
+class FilledParameterDefinitionModel(ParameterDefinitionAutocompleteMixin, FilledParameterModel):
+    """A parameter definition model filled with data."""
 
-    def __init__(self, parent):
-        super().__init__(parent, item_updater_attr="update_parameter_definitions", json_fields=("default_value"))
+    @staticmethod
+    def do_update_items_in_db(db_map, *args, **kwargs):
+        """Update items in the given database."""
+        return db_map.update_parameter_definitions(*args, **kwargs)
 
     def update_items_in_db(self, rows):
         """Updates items in database.
@@ -120,9 +126,10 @@ class SubParameterDefinitionModel(ParameterDefinitionMixin, SubParameterModel):
         self.set_parameter_definition_tags_in_db(rows)
 
 
-class SubParameterValueModel(SubParameterModel):
-    """A parameter value model for a single entity class.
-    """
+class FilledParameterValueModel(FilledParameterModel):
+    """A parameter value model filled with data."""
 
-    def __init__(self, parent):
-        super().__init__(parent, item_updater_attr="update_parameter_values", json_fields=("value"))
+    @staticmethod
+    def do_update_items_in_db(db_map, *args, **kwargs):
+        """Update items in the given database."""
+        return db_map.update_parameter_values(*args, **kwargs)

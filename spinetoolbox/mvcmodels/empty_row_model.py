@@ -28,9 +28,17 @@ class EmptyRowModel(MinimalTableModel):
         super().__init__(parent)
         self.default_row = {}  # A row of default values to put in any newly inserted row
         self.force_default = False  # Whether or not default values are editable
+        self._fetched = False
         self.dataChanged.connect(self._handle_data_changed)
         self.rowsRemoved.connect(self._handle_rows_removed)
         self.rowsInserted.connect(self._handle_rows_inserted)
+
+    def canFetchMore(self, parent=None):
+        return not self._fetched
+
+    def fetchMore(self, parent=None):
+        self.insertRows(self.rowCount(), 1, QModelIndex())
+        self._fetched = True
 
     def flags(self, index):
         """Return default flags except if forcing defaults."""
@@ -50,12 +58,12 @@ class EmptyRowModel(MinimalTableModel):
         self.default_row = kwargs
 
     def clear(self):
+        self._fetched = False
         super().clear()
-        self.insertRows(self.rowCount(), 1, QModelIndex())
 
     def reset_model(self, main_data=None):
+        self._fetched = False
         super().reset_model(main_data)
-        self.insertRows(self.rowCount(), 1, QModelIndex())
 
     @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_data_changed")
     def _handle_data_changed(self, top_left, bottom_right, roles=None):

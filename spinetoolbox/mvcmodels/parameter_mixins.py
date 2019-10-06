@@ -15,11 +15,11 @@ Mixins for parameter definition models
 :authors: M. Marin (KTH)
 :date:   4.10.2019
 """
+from PySide2.QtCore import Qt, QModelIndex
 
 
-class BaseParameterMixin:
-    """Provides methods to autocomplete data for all parameter models.
-    """
+class ParameterAutocompleteMixin:
+    """Provides basic autocomplete methods for all parameter models."""
 
     def __init__(self, *args, **kwargs):
         """Initialize class."""
@@ -36,7 +36,7 @@ class BaseParameterMixin:
 
     @staticmethod
     def _attr_set(items, attr, func=lambda a: {a}):
-        """Returns a dictionary mapping databases to a set of attributes from the given items.
+        """Returns a dictionary mapping databases to a set of attribute values from the given items.
 
         Args:
             items: an iterable of items to process
@@ -54,14 +54,15 @@ class BaseParameterMixin:
         return d
 
     def _attr_dict(self, attr_set, subqry_name, map_func, filter_func):
-        """Returns a dictionary mapping databases to another dictionary
-        mapping custom fields from a query result.
+        """Takes a dictionary mapping databases to a set of attribute values,
+        and returns another dictionary mapping the same databases to
+        a custom dictionary for those values.
 
         Args:
-            attr_set: a dict mapping databases to an attribute set, as returned by _attr_set(...)
+            attr_set: a dict mapping databases to a set of attribute values, e.g., as returned by _attr_set(...)
             subqry_name (str): a DiffDatabaseMapping subquery attribute
             map_func: a function to produce pairs for each query result
-            filter_func: a function to produce a filter for the subquery from the attribute set
+            filter_func: a function to produce a filter for the subquery from the attribute value set
         """
         d = dict()
         for database, attrs in attr_set.items():
@@ -73,8 +74,9 @@ class BaseParameterMixin:
         return d
 
     def _attr_dict_v2(self, attr_set, subqry_name, map_func, filter_func):
-        """Returns a dictionary mapping databases to another dictionary
-        mapping custom fields from a query result.
+        """Takes a dictionary mapping databases to a set of attribute values,
+        and returns another dictionary mapping the same databases to
+        a custom dictionary for those values.
 
         Args:
             attr_set: a dict mapping databases to an attribute set, as returned by _attr_set(...)
@@ -95,8 +97,8 @@ class BaseParameterMixin:
         return d
 
 
-class ParameterDefinitionMixin:
-    """Provides ad-hoc methods for parameter definition models."""
+class ParameterDefinitionAutocompleteMixin:
+    """Provides autocomplete methods for parameter definition models."""
 
     def __init__(self, *args, **kwargs):
         """Initialize class."""
@@ -111,7 +113,7 @@ class ParameterDefinitionMixin:
         parameter_tags = self._attr_set(rows.values(), "parameter_tag_list", func=lambda a: a.split(","))
         map_func = lambda x: (x.tag, x.id)
         filter_func = lambda sq, tags: sq.c.tag.in_(tags)
-        parameter_tag_dict = self._db_attr_dict(parameter_tags, "parameter_tag_sq", map_func, filter_func)
+        parameter_tag_dict = self._attr_dict(parameter_tags, "parameter_tag_sq", map_func, filter_func)
         for item in rows.values():
             db_parameter_tag_dict = parameter_tag_dict.get(item.database)
             if db_parameter_tag_dict and item.parameter_tag_list:
@@ -153,8 +155,8 @@ class ParameterDefinitionMixin:
             self.error_log.extend(error_log)
 
 
-class ParameterValueMixin:
-    """Provides ad-hoc methods for parameter value models."""
+class ParameterValueAutocompleteMixin:
+    """Provides autocomplete methods for parameter value models."""
 
     def __init__(self, *args, **kwargs):
         """Initialize class."""
@@ -176,8 +178,8 @@ class ParameterValueMixin:
                 item._parameter_dict = db_parameter_dict.get(item.parameter_name, {})
 
 
-class ObjectParameterMixin:
-    """Provides ad-hoc methods for object parameter models."""
+class ObjectParameterAutocompleteMixin:
+    """Provides autocomplete methods for object parameter models."""
 
     def __init__(self, *args, **kwargs):
         """Initialize class."""
@@ -199,8 +201,8 @@ class ObjectParameterMixin:
                 item.object_class_id = db_object_class_dict.get(item.object_class_name)
 
 
-class RelationshipParameterMixin:
-    """Provides ad-hoc methods for relationship parameter models."""
+class RelationshipParameterAutocompleteMixin:
+    """Provides autocomplete methods for relationship parameter models."""
 
     def __init__(self, *args, **kwargs):
         """Initialize class."""
@@ -231,3 +233,86 @@ class RelationshipParameterMixin:
                     item.object_class_id_list = relationship_class.object_class_id_list
                     item.object_class_name_list = relationship_class.object_class_name_list
         # TODO: emit dataChanged after changing `object_class_name_list`
+
+
+class ObjectParameterDecorateMixin:
+    def data(self, index, role=Qt.DisplayRole):
+        """Return data for given index and role."""
+        if role == Qt.DecorationRole and self.header[index.column()] == "object_class_name":
+            return self._parent._parent.icon_mngr.object_icon(self.object_class_name)
+        return super().data(index, role)
+
+
+class RelationshipParameterDecorateMixin:
+    def data(self, index, role=Qt.DisplayRole):
+        """Return data for given index and role."""
+        if role == Qt.DecorationRole and self.header[index.column()] == "relationship_class_name":
+            return self._parent._parent.icon_mngr.relationship_icon(self.object_class_name_list)
+        return super().data(index, role)
+
+
+class SingleObjectParameterMixin:
+    """An object parameter mixin for a single object class."""
+
+    def __init__(self, parent, database, object_class_id, object_class_name):
+        """Init class.
+
+        Args:
+            parent (CompoundParameterModel): the parent model
+            database (str): the database where the object class associated with this model lives.
+            object_class_id (int): the id of the object class
+            object_class_name (str): the name of the object class
+        """
+        super().__init__(parent, database)
+        self.object_class_id = object_class_id
+        self.object_class_name = object_class_name
+        self.json_fields = ["value"]
+
+    def selected_param_def_ids(self):
+        return self._grand_parent.selected_obj_parameter_definition_ids.get((self.db_map, self.object_class_id), {})
+
+    def rowCount(self, parent=QModelIndex()):
+        """Returns the number of rows in the model or zero if the
+        object class is not selected in the grand parent."""
+        selected_object_class_ids = self._grand_parent.all_selected_object_class_ids(self.db_map)
+        if selected_object_class_ids and self.object_class_id not in selected_object_class_ids:
+            return 0
+        return super().rowCount(parent)
+
+
+class SingleRelationshipParameterMixin:
+    """A relationship parameter mixin for a single relationship class."""
+
+    def __init__(self, parent, database, relationship_class_id, object_class_id_list, object_class_name_list):
+        """Init class.
+
+        Args:
+            parent (CompoundParameterModel): the parent model
+            database (str): the database where the relationship class associated with this model lives.
+            relationship_class_id (int): the id of the relationship class
+            object_class_id_list (str): comma separated string of member object class ids
+            object_class_name_list (str): comma separated string of member object class names
+        """
+        super().__init__(parent, database)
+        self.relationship_class_id = relationship_class_id
+        self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
+        self.object_class_name_list = object_class_name_list
+        self.json_fields = ["default_value"]
+
+    def selected_param_def_ids(self):
+        return self._grand_parent.selected_rel_parameter_definition_ids.get(
+            (self.db_map, self.relationship_class_id), {}
+        )
+
+    def rowCount(self, parent=QModelIndex()):
+        """Returns the number of rows in the model or zero if nor the
+        relationship class nor any of its object classes is selected in the grand parent."""
+        selected_object_class_ids = self._grand_parent.selected_object_class_ids.get(self.db_map)
+        selected_relationship_class_ids = self._grand_parent.all_selected_relationship_class_ids(self.db_map)
+        if selected_object_class_ids:
+            if not selected_object_class_ids.intersection(self.object_class_id_list):
+                return 0
+        if selected_relationship_class_ids:
+            if self.relationship_class_id not in selected_relationship_class_ids:
+                return 0
+        return super().rowCount(parent)
