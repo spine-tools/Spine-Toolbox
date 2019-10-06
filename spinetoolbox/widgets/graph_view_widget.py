@@ -630,17 +630,19 @@ class GraphViewForm(DataStoreForm):
         selected_items = scene.selectedItems()
         self.object_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
         self.arc_item_selection = [x for x in selected_items if isinstance(x, ArcItem)]
-        self.selected_object_class_ids = set()
+        self.selected_object_class_ids = dict()
         self.selected_object_ids = dict()
-        self.selected_relationship_class_ids = set()
+        self.selected_relationship_class_ids = dict()
         self.selected_object_id_lists = dict()
         for item in selected_items:
             if isinstance(item, ObjectItem):
-                self.selected_object_class_ids.add(item.object_class_id)
-                self.selected_object_ids.setdefault(item.object_class_id, set()).add(item.object_id)
+                self.selected_object_class_ids.setdefault(self.db_map).add(item.object_class_id)
+                self.selected_object_ids.setdefault((self.db_map, item.object_class_id), set()).add(item.object_id)
             elif isinstance(item, ArcItem):
-                self.selected_relationship_class_ids.add(item.relationship_class_id)
-                self.selected_object_id_lists.setdefault(item.relationship_class_id, set()).add(item.object_id_list)
+                self.selected_relationship_class_ids.setdefault(self.db_map).add(item.relationship_class_id)
+                self.selected_object_id_lists.setdefault((self.db_map, item.relationship_class_id), set()).add(
+                    item.object_id_list
+                )
         self.do_update_filter()
 
     @Slot(list, name="_handle_scene_changed")

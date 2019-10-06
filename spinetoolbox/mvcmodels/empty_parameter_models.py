@@ -20,11 +20,13 @@ from sqlalchemy.sql import and_, or_
 from PySide2.QtCore import Qt, QModelIndex
 from mvcmodels.empty_row_model import EmptyRowModel
 from mvcmodels.parameter_mixins import (
-    BaseParameterMixin,
-    ParameterDefinitionMixin,
-    ParameterValueMixin,
-    ObjectParameterMixin,
-    RelationshipParameterMixin,
+    ParameterAutocompleteMixin,
+    ParameterDefinitionAutocompleteMixin,
+    ParameterValueAutocompleteMixin,
+    ObjectParameterAutocompleteMixin,
+    RelationshipParameterAutocompleteMixin,
+    ObjectParameterDecorateMixin,
+    RelationshipParameterDecorateMixin,
 )
 from mvcmodels.parameter_item import (
     ObjectParameterDefinitionItem,
@@ -34,24 +36,32 @@ from mvcmodels.parameter_item import (
 )
 
 
-class EmptyParameterModel(BaseParameterMixin, EmptyRowModel):
+class EmptyParameterModel(ParameterAutocompleteMixin, EmptyRowModel):
     """An empty parameter model."""
 
-    def __init__(self, parent, item_maker, item_injector_attr):
+    def __init__(self, parent):
         """Initialize class.
 
         Args:
             parent (ParameterModel): the parent object
-            item_maker (function): a function to create items to put in the model rows
-            item_injector_attr (str): the name of the method in DiffDatabaseMapping to add items to the db
         """
         super().__init__(parent)
-        self._parent = parent
         self.db_name_to_map = parent.db_name_to_map
-        self._item_maker = item_maker
-        self._item_injector_attr = item_injector_attr
         self.error_log = []
         self.added_rows = []
+
+    def create_item(self):
+        """Returns an item to put in the model rows.
+        Reimplement in subclasses to return something meaningful.
+        """
+        raise NotImplementedError()
+
+    @staticmethod
+    def do_add_items_to_db(db_map, *items):
+        """Add items to the given database.
+        Reimplement in subclasses.
+        """
+        raise NotImplementedError()
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """Inserts count rows into the model before the given row.
@@ -72,8 +82,8 @@ class EmptyParameterModel(BaseParameterMixin, EmptyRowModel):
             return False
         self.beginInsertRows(parent, row, row + count - 1)
         for i in range(count):
-            # Create the new row using the `item_maker` attribute
-            new_main_row = self._item_maker(self.horizontal_header_labels())
+            # Create the new row using the `create_item` attribute
+            new_main_row = self.create_item()
             # Notice if insert index > rowCount(), new object is inserted to end
             self._main_data.insert(row + i, new_main_row)
         self.endInsertRows()
@@ -94,7 +104,7 @@ class EmptyParameterModel(BaseParameterMixin, EmptyRowModel):
         return True
 
     def add_items_to_db(self, rows):
-        """Adds items to database. Reimplement in subclasses.
+        """Adds items to database.
 
         Args:
             rows (dict): A dict mapping row numbers to items that should be added to the db
@@ -108,8 +118,7 @@ class EmptyParameterModel(BaseParameterMixin, EmptyRowModel):
             item_for_insert = item.for_insert()
             if not item_for_insert:
                 continue
-            item_injector = db_map.__getattribute__(self._item_injector_attr)
-            new_items, error_log = item_injector(item_for_insert)
+            new_items, error_log = self.do_add_items_to_db(db_map, item_for_insert)
             self.error_log.extend(error_log)
             if not error_log:
                 new_item = new_items.first()
@@ -118,13 +127,15 @@ class EmptyParameterModel(BaseParameterMixin, EmptyRowModel):
             self.added_rows.append(row)
 
 
-class EmptyParameterDefinitionModel(ParameterDefinitionMixin, EmptyParameterModel):
+class EmptyParameterDefinitionModel(ParameterDefinitionAutocompleteMixin, EmptyParameterModel):
     """An empty parameter definition model.
-    Provides methods common to all parameter definitions regardless of the entity class.
+    Handles all parameter definitions regardless of the entity class.
     """
 
-    def __init__(self, parent, item_maker):
-        super().__init__(parent, item_maker, "add_parameter_definitions")
+    @staticmethod
+    def do_add_items_to_db(db_map, *items):
+        """Add items to the given database."""
+        return db_map.add_parameter_definitions(*items)
 
     def batch_autocomplete_data(self, rows):
         """Autocompletes data for indexes in batch.
@@ -147,11 +158,14 @@ class EmptyParameterDefinitionModel(ParameterDefinitionMixin, EmptyParameterMode
         self.set_parameter_definition_tags_in_db(rows)
 
 
-class EmptyObjectParameterDefinitionModel(ObjectParameterMixin, EmptyParameterDefinitionModel):
+class EmptyObjectParameterDefinitionModel(
+    ObjectParameterDecorateMixin, ObjectParameterAutocompleteMixin, EmptyParameterDefinitionModel
+):
     """An empty object parameter definition model."""
 
-    def __init__(self, parent):
-        super().__init__(parent, ObjectParameterDefinitionItem)
+    def create_item(self):
+        """Returns an item to put in the model rows."""
+        return ObjectParameterDefinitionItem(self.header)
 
     def batch_autocomplete_data(self, rows):
         """Sets more data for model items in batch.
@@ -163,11 +177,13 @@ class EmptyObjectParameterDefinitionModel(ObjectParameterMixin, EmptyParameterDe
         self.batch_set_object_class_ids(rows)
 
 
-class EmptyRelationshipParameterDefinitionModel(RelationshipParameterMixin, EmptyParameterDefinitionModel):
+class EmptyRelationshipParameterDefinitionModel(
+    RelationshipParameterDecorateMixin, RelationshipParameterAutocompleteMixin, EmptyParameterDefinitionModel
+):
     """An empty relationship parameter definition model."""
 
-    def __init__(self, parent):
-        super().__init__(parent, item_maker=RelationshipParameterDefinitionItem)
+    def create_item(self):
+        return RelationshipParameterDefinitionItem(self.header)
 
     def batch_autocomplete_data(self, rows):
         """Autocompletes data for indexes in batch.
@@ -179,11 +195,15 @@ class EmptyRelationshipParameterDefinitionModel(RelationshipParameterMixin, Empt
         self.batch_set_relationship_class_ids(rows)
 
 
-class EmptyParameterValueModel(ParameterValueMixin, EmptyParameterModel):
-    """An empty parameter value model."""
+class EmptyParameterValueModel(ParameterValueAutocompleteMixin, EmptyParameterModel):
+    """An empty parameter value model.
+    Handles all parameter values regardless of the entity.
+    """
 
-    def __init__(self, parent, item_maker):
-        super().__init__(parent, item_maker, "add_parameter_values")
+    @staticmethod
+    def do_add_items_to_db(db_map, *items):
+        """Add items to the given database."""
+        return db_map.add_parameter_values(*items)
 
     def batch_autocomplete_data(self, rows):
         """Autocompletes data for indexes in batch.
@@ -195,11 +215,14 @@ class EmptyParameterValueModel(ParameterValueMixin, EmptyParameterModel):
         self.batch_set_possible_parameter_ids(rows)
 
 
-class EmptyObjectParameterValueModel(ObjectParameterMixin, EmptyParameterValueModel):
+class EmptyObjectParameterValueModel(
+    ObjectParameterDecorateMixin, ObjectParameterAutocompleteMixin, EmptyParameterValueModel
+):
     """An empty object parameter value model."""
 
-    def __init__(self, parent):
-        super().__init__(parent, ObjectParameterValueItem)
+    def create_item(self):
+        """Returns an item to put in the model rows."""
+        return ObjectParameterValueItem(self.header)
 
     def batch_autocomplete_data(self, rows):
         """Autocompletes data for indexes in batch.
@@ -224,7 +247,7 @@ class EmptyObjectParameterValueModel(ObjectParameterMixin, EmptyParameterValueMo
                 item._object_dict = db_object_dict.get(item.object_name, {})
 
     def batch_consolidate_data(self, rows):
-        """If object clas id is not set, then try and figure it out from possible ones.
+        """If object class id is not set, then try and figure it out from possible ones.
         Then pick the right object_id and parameter_id according to object class id.
         """
         object_class_ids = dict()
@@ -260,12 +283,14 @@ class EmptyObjectParameterValueModel(ObjectParameterMixin, EmptyParameterValueMo
         # TODO: emit dataChanged after changing `object_class_name`
 
 
-class EmptyRelationshipParameterValueModel(RelationshipParameterMixin, EmptyParameterValueModel):
-    """An empty relationship parameter value model.
-    """
+class EmptyRelationshipParameterValueModel(
+    RelationshipParameterDecorateMixin, RelationshipParameterAutocompleteMixin, EmptyParameterValueModel
+):
+    """An empty relationship parameter value model."""
 
-    def __init__(self, parent):
-        super().__init__(parent, item_maker=RelationshipParameterValueItem)
+    def create_item(self):
+        """Returns an item to put in the model rows."""
+        return RelationshipParameterValueItem(self.header)
 
     def batch_autocomplete_data(self, rows):
         """Autocompletes data for indexes in batch.
@@ -291,7 +316,7 @@ class EmptyRelationshipParameterValueModel(RelationshipParameterMixin, EmptyPara
                 item._relationship_dict = db_relationship_dict.get(item.object_name_list, {})
 
     def batch_consolidate_data(self, rows):
-        """If relationship clas id is not set, then try and figure it out from possible ones.
+        """If relationship class id is not set, then try and figure it out from possible ones.
         Then pick the right relationship_id and parameter_id according to relationship class id.
         """
         relationship_class_ids = dict()
@@ -343,6 +368,7 @@ class EmptyRelationshipParameterValueModel(RelationshipParameterMixin, EmptyPara
 
     def batch_set_object_id_lists(self, rows):
         """Set object_id_list if not set and possible.
+        This is needed to add relationships 'on the fly'.
         """
         object_name_class_id_tuples = dict()
         for item in rows.values():
@@ -395,7 +421,7 @@ class EmptyRelationshipParameterValueModel(RelationshipParameterMixin, EmptyPara
                 continue
             new_relationship = new_relationships.first()
             item.relationship_id = new_relationship.id
-        # TODO:
+        # TODO: try and do this with signals and slots
         # self._parent._parent.object_tree_model.add_relationships(db_map, new_relationships)
         # self._parent._parent.relationship_tree_model.add_relationships(db_map, new_relationships)
         super().add_items_to_db(rows)

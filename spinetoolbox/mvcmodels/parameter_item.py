@@ -54,6 +54,7 @@ class ParameterItem:
         try:
             self._cache[attr] = self.__getattribute__(attr)
         except AttributeError:
+            # This happends the first time we set an attribute
             pass
         super().__setattr__(attr, value)
 
@@ -141,6 +142,10 @@ class ParameterDefinitionItem(ParameterItem):
         if not self.id or not self.parameter_tag_id_list:
             return None
         return {self.id: self.parameter_tag_id_list}
+
+    @property
+    def parameter_definition_id(self):
+        return self.id
 
 
 class ObjectParameterDefinitionItem(ParameterDefinitionItem):
@@ -239,6 +244,10 @@ class ParameterValueItem(ParameterItem):
         self._optional_attrs_for_insert.append("value")  # TODO: optional or mandatory?
         self._updatable_attrs.append("value")
         self._parameter_dict = dict()
+
+    @property
+    def parameter_definition_id(self):
+        return self.parameter_id
 
 
 class ObjectParameterValueItem(ParameterValueItem):

@@ -644,24 +644,22 @@ class TreeViewForm(DataStoreForm):
         rel_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in more_rel_inds})
         rel_cls_inds.update(more_rel_cls_inds)
         # Update selected
-        self.selected_object_class_ids = set(
-            (db_map, ind.data(Qt.UserRole + 1)[db_map]['id']) for db_map, ind in obj_cls_inds
-        )
+        self.selected_object_class_ids = dict()
+        for db_map, ind in obj_cls_inds:
+            d = ind.data(Qt.UserRole + 1)[db_map]
+            self.selected_object_class_ids.setdefault(db_map, set()).add(d['id'])
         self.selected_object_ids = dict()
         for db_map, ind in obj_inds:
             d = ind.data(Qt.UserRole + 1)[db_map]
-            self.selected_object_ids.setdefault((db_map, d['class_id']), set()).add(
-                (self.db_map_to_name[db_map], d['id'])
-            )
-        self.selected_relationship_class_ids = set(
-            (db_map, ind.data(Qt.UserRole + 1)[db_map]['id']) for db_map, ind in rel_cls_inds
-        )
+            self.selected_object_ids.setdefault((db_map, d['class_id']), set()).add(d['id'])
+        self.selected_relationship_class_ids = dict()
+        for db_map, ind in rel_cls_inds:
+            d = ind.data(Qt.UserRole + 1)[db_map]
+            self.selected_relationship_class_ids.setdefault(db_map, set()).add(d['id'])
         self.selected_object_id_lists = dict()
         for db_map, ind in rel_inds:
             d = ind.data(Qt.UserRole + 1)[db_map]
-            self.selected_object_id_lists.setdefault((db_map, d['class_id']), set()).add(
-                (self.db_map_to_name[db_map], d['object_id_list'])
-            )
+            self.selected_object_id_lists.setdefault((db_map, d['class_id']), set()).add(d['object_id_list'])
         self.do_update_filter()
 
     @Slot("QPoint", name="show_object_tree_context_menu")

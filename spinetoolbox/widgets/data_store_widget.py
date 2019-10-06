@@ -41,10 +41,11 @@ from widgets.custom_qdialog import (
 )
 from widgets.parameter_value_editor import ParameterValueEditor
 from widgets.toolbars import ParameterTagToolBar
-from mvcmodels.object_parameter_models import ObjectParameterDefinitionModel, ObjectParameterValueModel
-from mvcmodels.relationship_parameter_models import (
-    RelationshipParameterDefinitionModel,
-    RelationshipParameterValueModel,
+from mvcmodels.compound_parameter_models import (
+    CompoundObjectParameterDefinitionModel,
+    CompoundObjectParameterValueModel,
+    CompoundRelationshipParameterDefinitionModel,
+    CompoundRelationshipParameterValueModel,
 )
 from mvcmodels.parameter_value_list_model import ParameterValueListModel
 from helpers import busy_effect, format_string_list, IconManager
@@ -89,9 +90,9 @@ class DataStoreForm(QMainWindow):
             self.icon_mngr.setup_object_pixmaps(db_map.object_class_list())
         # Object tree selected indexes
         self.selected_obj_tree_indexes = {}
-        self.selected_object_class_ids = set()
+        self.selected_object_class_ids = dict()
         self.selected_object_ids = dict()
-        self.selected_relationship_class_ids = set()
+        self.selected_relationship_class_ids = dict()
         self.selected_object_id_lists = dict()
         # Parameter tag stuff
         self.parameter_tag_toolbar = ParameterTagToolBar(self)
@@ -100,10 +101,10 @@ class DataStoreForm(QMainWindow):
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
         # Models
-        self.object_parameter_value_model = ObjectParameterValueModel(self)
-        self.relationship_parameter_value_model = RelationshipParameterValueModel(self)
-        self.object_parameter_definition_model = ObjectParameterDefinitionModel(self)
-        self.relationship_parameter_definition_model = RelationshipParameterDefinitionModel(self)
+        self.object_parameter_value_model = CompoundObjectParameterValueModel(self)
+        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self)
+        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self)
+        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self)
         self.parameter_value_list_model = ParameterValueListModel(self)
         # Setup views
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
@@ -334,40 +335,16 @@ class DataStoreForm(QMainWindow):
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
-        self.object_parameter_value_model.reset_model()
-        h = self.object_parameter_value_model.horizontal_header_labels().index
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_class_id'))
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('object_id'))
-        self.ui.tableView_object_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
+        self.object_parameter_value_model.init_model()
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
-        self.relationship_parameter_value_model.reset_model()
-        h = self.relationship_parameter_value_model.horizontal_header_labels().index
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_class_id'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_id_list'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_class_name_list'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('relationship_id'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('object_id_list'))
-        self.ui.tableView_relationship_parameter_value.horizontalHeader().hideSection(h('parameter_id'))
+        self.relationship_parameter_value_model.init_model()
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_parameter_definition_models(self):
         """Initialize parameter (definition) models from source database."""
-        self.object_parameter_definition_model.reset_model()
-        h = self.object_parameter_definition_model.horizontal_header_labels().index
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('object_class_id'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
-        self.ui.tableView_object_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
+        self.object_parameter_definition_model.init_model()
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
-        self.relationship_parameter_definition_model.reset_model()
-        h = self.relationship_parameter_definition_model.horizontal_header_labels().index
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('id'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('relationship_class_id'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('object_class_id_list'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('parameter_tag_id_list'))
-        self.ui.tableView_relationship_parameter_definition.horizontalHeader().hideSection(h('value_list_id'))
+        self.relationship_parameter_definition_model.init_model()
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
     def init_parameter_value_list_model(self):
@@ -405,10 +382,10 @@ class DataStoreForm(QMainWindow):
         delegate = RelationshipParameterValueDelegate(self)
         table_view.setItemDelegate(delegate)
 
-    def all_selected_object_class_ids(self):
+    def all_selected_object_class_ids(self, db_map):
         """Return object class ids selected in object tree *and* parameter tag toolbar."""
-        tree_object_class_ids = self.selected_object_class_ids
-        tag_object_class_ids = set(self.selected_obj_parameter_definition_ids.keys())
+        tree_object_class_ids = self.selected_object_class_ids.get(db_map)
+        tag_object_class_ids = set(id_ for db, id_ in self.selected_obj_parameter_definition_ids.keys() if db == db_map)
         if not tag_object_class_ids:
             return tree_object_class_ids
         if not tree_object_class_ids:
@@ -418,10 +395,12 @@ class DataStoreForm(QMainWindow):
             return intersection
         return {None}
 
-    def all_selected_relationship_class_ids(self):
+    def all_selected_relationship_class_ids(self, db_map):
         """Return relationship class ids selected in relationship tree *and* parameter tag toolbar."""
-        tree_relationship_class_ids = self.selected_relationship_class_ids
-        tag_relationship_class_ids = set(self.selected_rel_parameter_definition_ids.keys())
+        tree_relationship_class_ids = self.selected_relationship_class_ids.get(db_map)
+        tag_relationship_class_ids = set(
+            id_ for db, id_ in self.selected_rel_parameter_definition_ids.keys() if db == db_map
+        )
         if not tag_relationship_class_ids:
             return tree_relationship_class_ids
         if not tree_relationship_class_ids:
@@ -433,6 +412,7 @@ class DataStoreForm(QMainWindow):
 
     def set_default_parameter_rows(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
+        return
         if index is None or index.data(Qt.UserRole) == 'root':
             db_name = self.db_names[0]
             default_row = dict(database=db_name)
@@ -442,7 +422,7 @@ class DataStoreForm(QMainWindow):
                 self.relationship_parameter_definition_model,
                 self.relationship_parameter_value_model,
             ):
-                model = model.empty_row_model
+                model = model.empty_model
                 model.set_default_row(**default_row)
                 model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
             return
@@ -454,7 +434,7 @@ class DataStoreForm(QMainWindow):
         if item_type == 'object_class':
             default_row = dict(object_class_id=item['id'], object_class_name=item['name'], database=db_name)
             for model in (self.object_parameter_definition_model, self.object_parameter_value_model):
-                model = model.empty_row_model
+                model = model.empty_model
                 model.set_default_row(**default_row)
                 model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
         elif item_type == 'object':
@@ -464,11 +444,11 @@ class DataStoreForm(QMainWindow):
             default_row = dict(
                 object_class_id=parent_item['id'], object_class_name=parent_item['name'], database=db_name
             )
-            model = self.object_parameter_definition_model.empty_row_model
+            model = self.object_parameter_definition_model.empty_model
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
             default_row.update(dict(object_id=item['id'], object_name=item['name']))
-            model = self.object_parameter_value_model.empty_row_model
+            model = self.object_parameter_value_model.empty_model
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
         elif item_type == 'relationship_class':
@@ -480,7 +460,7 @@ class DataStoreForm(QMainWindow):
                 database=db_name,
             )
             for model in (self.relationship_parameter_definition_model, self.relationship_parameter_value_model):
-                model = model.empty_row_model
+                model = model.empty_model
                 model.set_default_row(**default_row)
                 model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
         elif item_type == 'relationship':
@@ -494,7 +474,7 @@ class DataStoreForm(QMainWindow):
                 object_class_name_list=parent_item['object_class_name_list'],
                 database=db_name,
             )
-            model = self.relationship_parameter_definition_model.empty_row_model
+            model = self.relationship_parameter_definition_model.empty_model
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
             default_row.update(
@@ -504,7 +484,7 @@ class DataStoreForm(QMainWindow):
                     object_name_list=item['object_name_list'],
                 )
             )
-            model = self.relationship_parameter_value_model.empty_row_model
+            model = self.relationship_parameter_value_model.empty_model
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1, model.rowCount() - 1)
 
