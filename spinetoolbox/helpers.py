@@ -417,9 +417,9 @@ def do_get_db_map(url, upgrade):
     return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
 
 
-def int_list_to_row_count_tuples(int_list):
-    """Breaks a list of integers into a list of tuples (row, count) corresponding
-    to chunks of successive elements.
+def rows_to_row_count_tuples(int_list):
+    """Breaks a list of rows into a list of (row, count) tuples corresponding
+    to chunks of successive rows.
     """
     sorted_list = sorted(set(int_list))
     break_points = [k + 1 for k in range(len(sorted_list) - 1) if sorted_list[k] + 1 != sorted_list[k + 1]]

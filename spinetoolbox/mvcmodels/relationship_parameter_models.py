@@ -329,6 +329,16 @@ class RelationshipParameterModel(MinimalTableModel):
                 row_data[object_class_name_list_column] = ",".join(object_class_name_list)
         self._emit_data_changed_for_column(object_class_name_list_column)
 
+    def remove_object_classes(self, db_map, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        object_class_ids = {(db_map, x['id']) for x in object_classes}
+        for i, (relationship_class_id, _) in reversed(list(enumerate(self.sub_models))):
+            object_class_id_list = self.object_class_id_lists[relationship_class_id]
+            if object_class_ids.intersection(object_class_id_list):
+                self.sub_models.pop(i)
+        self.layoutChanged.emit()
+
     def rename_relationship_classes(self, db_map, relationship_classes):
         """Rename relationship classes in model."""
         relationship_class_name_column = self.header.index("relationship_class_name")
@@ -340,6 +350,15 @@ class RelationshipParameterModel(MinimalTableModel):
             for row_data in model.sourceModel()._main_data:
                 row_data[relationship_class_name_column] = relationship_class_name
         self._emit_data_changed_for_column(relationship_class_name_column)
+
+    def remove_relationship_classes(self, db_map, relationship_classes):
+        """Remove relationship classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        relationship_class_ids = [(db_map, x['id']) for x in relationship_classes]
+        for i, (relationship_class_id, _) in reversed(list(enumerate(self.sub_models))):
+            if relationship_class_id in relationship_class_ids:
+                self.sub_models.pop(i)
+        self.layoutChanged.emit()
 
     def rename_parameter_tags(self, db_map, parameter_tags):
         """Rename parameter tags in model."""
@@ -366,25 +385,6 @@ class RelationshipParameterModel(MinimalTableModel):
                     split_parameter_tag_list[k] = new_tag
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
         self._emit_data_changed_for_column(parameter_tag_list_column)
-
-    def remove_object_classes(self, db_map, object_classes):
-        """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        object_class_ids = {(db_map, x['id']) for x in object_classes}
-        for i, (relationship_class_id, _) in reversed(list(enumerate(self.sub_models))):
-            object_class_id_list = self.object_class_id_lists[relationship_class_id]
-            if object_class_ids.intersection(object_class_id_list):
-                self.sub_models.pop(i)
-        self.layoutChanged.emit()
-
-    def remove_relationship_classes(self, db_map, relationship_classes):
-        """Remove relationship classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        relationship_class_ids = [(db_map, x['id']) for x in relationship_classes]
-        for i, (relationship_class_id, _) in reversed(list(enumerate(self.sub_models))):
-            if relationship_class_id in relationship_class_ids:
-                self.sub_models.pop(i)
-        self.layoutChanged.emit()
 
     def remove_parameter_tags(self, db_map, parameter_tag_ids):
         """Remove parameter tags from model."""

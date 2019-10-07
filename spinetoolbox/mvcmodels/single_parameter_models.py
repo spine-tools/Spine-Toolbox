@@ -16,7 +16,6 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import QSortFilterProxyModel
 from mvcmodels.filled_parameter_models import FilledParameterDefinitionModel, FilledParameterValueModel
 from mvcmodels.parameter_mixins import (
     SingleObjectParameterMixin,
@@ -32,156 +31,8 @@ from mvcmodels.parameter_item import (
 )
 
 
-class SingleParameterModel(QSortFilterProxyModel):
-    """A parameter model for a single entity class"""
-
-    def __init__(self, parent, database):
-        """Init class.
-
-        Args:
-            parent (CompoundParameterModel): the parent model
-            database (str): the database where the entity class associated with this model lives.
-        """
-        super().__init__(parent)
-        self._parent = parent
-        self._grand_parent = parent._parent  # For a bit of convenience
-        self.header = parent.header
-        self.database = database
-        self.db_map = parent.db_name_to_map[database]
-        self._auto_filtered = dict()
-        self._selected_param_def_ids = set()
-        self._fetched = False
-        source = self.create_source_model()
-        self.setSourceModel(source)
-
-    @property
-    def entity_class_id(self):
-        """Returns the associated entity class id."""
-        raise NotImplementedError()
-
-    @property
-    def error_log(self):
-        return self.sourceModel().error_log
-
-    @property
-    def updated_count(self):
-        return self.sourceModel().updated_count
-
-    def create_source_model(self):
-        """Returns a model filled with parameter data for the associated entity class."""
-        raise NotImplementedError()
-
-    def canFetchMore(self, parent=None):
-        """Return True if the model hasn't been fetched."""
-        return not self._fetched
-
-    def fetchMore(self, parent=None):
-        """Get all data from the database and use it to reset the model."""
-        data = self.get_data_from_db()
-        self.reset_model(data)
-
-    def get_data_from_db(self):
-        """Returns parameter data corresponding to the associated entity class from the database.
-        Used when fetching data for populating the model.
-        Must be reimplemented in subclasses.
-        """
-        raise NotImplementedError()
-
-    def reset_model(self, data):
-        """Resets model."""
-        self.sourceModel().reset_model(data)
-        self._fetched = True
-
-    def batch_set_data(self, indexes, data):
-        """Set data for indexes in batch.
-        Map the indices to the source model and call the source method.
-        """
-        source_inds = [self.mapToSource(ind) for ind in indexes]
-        return self.sourceModel().batch_set_data(source_inds, data)
-
-    def item_at_row(self, row):
-        """Returns the item associated with the given row number.
-        Map the row to the source model and call the source method.
-        """
-        src_row = self.mapToSource(self.index(row, 0)).row()
-        return self.sourceModel().item_at_row(src_row)
-
-    def update_filter(self):
-        """Updates filter."""
-        self.layoutAboutToBeChanged.emit()
-        if self.do_update_filter():
-            self.invalidateFilter()
-        self.layoutChanged.emit()
-
-    def do_update_filter(self):
-        """Does update the filter."""
-        selected_param_def_ids = self.selected_param_def_ids()
-        cond_a = selected_param_def_ids != self._selected_param_def_ids
-        cond_b = bool(self._auto_filtered)
-        if cond_a:
-            self._selected_param_def_ids = selected_param_def_ids
-        if cond_b:
-            self._auto_filtered.clear()
-        return cond_a or cond_b
-
-    def selected_param_def_ids(self):
-        """Return parameter definitions selected in the grand parent.
-        Must be reimplemented in subclasses."""
-        raise NotImplementedError()
-
-    def set_auto_filter_values(self, column, values):
-        """Set auto filter values for given column.
-
-        Args:
-            column (int): the column number
-            values (set): a set of values to be filtered
-        """
-        if values == self._auto_filtered.get(column, {}):
-            return
-        self._auto_filtered[column] = values
-        self.invalidateFilter()
-
-    def filterAcceptsRow(self, source_row, source_parent):
-        """Accept or reject row."""
-        if not self._main_filter_accepts_row(source_row, source_parent):
-            return False
-        if not self._auto_filter_accepts_row(source_row, source_parent):
-            return False
-        return True
-
-    def _main_filter_accepts_row(self, source_row, source_parent):
-        """Applies the main filter, defined by the selections in the grand parent."""
-        if self._selected_param_def_ids:
-            parameter_definition_id = self.sourceModel()._main_data[source_row].parameter_definition_id
-            return parameter_definition_id in self._selected_param_def_ids
-        return True
-
-    def _auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=None):
-        """Aplies the autofilter, defined by the autofilter drop down menu."""
-        if ignored_columns is None:
-            ignored_columns = []
-        for column, values in self._auto_filtered.items():
-            if column in ignored_columns:
-                continue
-            if self.sourceModel()._main_data[source_row][column] in values:
-                return False
-        return True
-
-    def clear_model(self):
-        """Clears model."""
-        self.sourceModel().clear_model()
-        self._fetched = False
-
-
-class SingleParameterDefinitionModel(SingleParameterModel):
-    """A parameter definition model for a single entity class"""
-
-    def create_source_model(self):
-        return FilledParameterDefinitionModel(self._parent)
-
-
 class SingleObjectParameterDefinitionModel(
-    ObjectParameterDecorateMixin, SingleObjectParameterMixin, SingleParameterDefinitionModel
+    ObjectParameterDecorateMixin, SingleObjectParameterMixin, FilledParameterDefinitionModel
 ):
     """An object parameter definition model for a single object class."""
 
@@ -194,7 +45,7 @@ class SingleObjectParameterDefinitionModel(
 
 
 class SingleRelationshipParameterDefinitionModel(
-    RelationshipParameterDecorateMixin, SingleRelationshipParameterMixin, SingleParameterDefinitionModel
+    RelationshipParameterDecorateMixin, SingleRelationshipParameterMixin, FilledParameterDefinitionModel
 ):
     """A relationship parameter definition model for a single relationship class."""
 
@@ -206,21 +57,14 @@ class SingleRelationshipParameterDefinitionModel(
         ]
 
 
-class SingleParameterValueModel(SingleParameterModel):
-    """A parameter value model for a single entity class"""
+class SingleObjectParameterValueModel(
+    ObjectParameterDecorateMixin, SingleObjectParameterMixin, FilledParameterValueModel
+):
+    """An object parameter value model for a single object class."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._selected_object_ids = {}
-
-    def create_source_model(self):
-        return FilledParameterValueModel(self._parent)
-
-
-class SingleObjectParameterValueModel(
-    ObjectParameterDecorateMixin, SingleObjectParameterMixin, SingleParameterValueModel
-):
-    """An object parameter value model for a single object class."""
 
     def get_data_from_db(self):
         sq = self.db_map.object_parameter_value_sq
@@ -229,32 +73,29 @@ class SingleObjectParameterValueModel(
             for param_val in self.db_map.query(sq).filter_by(object_class_id=self.object_class_id)
         ]
 
-    def do_update_filter(self):
-        """Does update the filter."""
-        result = super().do_update_filter()
-        selected_object_ids = self._grand_parent.selected_object_ids.get((self.db_map, self.object_class_id), set())
-        if selected_object_ids != self._selected_object_ids:
-            self._selected_object_ids = selected_object_ids
-            return True
-        return result
+    def update_filter(self, grand_parent):
+        """Update the filter."""
+        super().update_filter(grand_parent)
+        self._selected_object_ids = grand_parent.selected_object_ids.get((self.db_map, self.object_class_id), set())
 
-    def _main_filter_accepts_row(self, source_row, source_parent):
+    def _main_filter_accepts_row(self, row):
         """Reimplemented to filter objects."""
-        if not super()._main_filter_accepts_row(source_row, source_parent):
+        if not super()._main_filter_accepts_row(row):
             return False
         if self._selected_object_ids:
-            object_id = self.sourceModel()._main_data[source_row].object_id
+            object_id = self._main_data[row].object_id
             return object_id in self._selected_object_ids
         return True
 
 
 class SingleRelationshipParameterValueModel(
-    RelationshipParameterDecorateMixin, SingleRelationshipParameterMixin, SingleParameterValueModel
+    RelationshipParameterDecorateMixin, SingleRelationshipParameterMixin, FilledParameterValueModel
 ):
     """A relationship parameter value model for a single relationship class."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self._selected_object_ids = {}
         self._selected_object_id_lists = {}
 
     def get_data_from_db(self):
@@ -264,30 +105,23 @@ class SingleRelationshipParameterValueModel(
             for param_val in self.db_map.query(sq).filter_by(relationship_class_id=self.relationship_class_id)
         ]
 
-    def do_update_filter(self):
-        """Does update the filter."""
-        cond_a = super().do_update_filter()
-        selected_object_id_lists = self._grand_parent.selected_object_id_lists.get(
+    def update_filter(self, grand_parent):
+        """Update update the filter."""
+        super().update_filter(grand_parent)
+        self._selected_object_id_lists = grand_parent.selected_object_id_lists.get(
             (self.db_map, self.relationship_class_id), set()
         )
-        selected_object_ids = set(
+        self._selected_object_ids = set(
             obj_id
             for obj_cls_id in self.object_class_id_list
-            for obj_id in self._grand_parent.selected_object_ids.get((self.db_map, obj_cls_id), set())
+            for obj_id in grand_parent.selected_object_ids.get((self.db_map, obj_cls_id), set())
         )
-        cond_b = selected_object_id_lists != self._selected_object_id_lists
-        cond_c = selected_object_ids != self._selected_object_ids
-        if cond_b:
-            self._selected_object_id_lists = selected_object_id_lists
-        if cond_c:
-            self._selected_object_ids = selected_object_ids
-        return cond_a or cond_b or cond_c
 
-    def _main_filter_accepts_row(self, source_row, source_parent):
+    def _main_filter_accepts_row(self, row):
         """Reimplemented to filter relationships and objects."""
-        if not super()._main_filter_accepts_row(source_row, source_parent):
+        if not super()._main_filter_accepts_row(row):
             return False
-        object_id_list = self.sourceModel()._main_data[source_row].object_id_list
+        object_id_list = self._main_data[row].object_id_list
         if self._selected_object_id_lists:
             return object_id_list in self._selected_object_id_lists
         if self._selected_object_ids:

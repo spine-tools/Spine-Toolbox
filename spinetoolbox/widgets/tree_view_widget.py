@@ -37,7 +37,7 @@ from widgets.report_plotting_failure import report_plotting_failure
 from mvcmodels.object_relationship_models import ObjectTreeModel, RelationshipTreeModel
 from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect, int_list_to_row_count_tuples
+from helpers import busy_effect, rows_to_row_count_tuples
 from plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
@@ -1072,7 +1072,7 @@ class TreeViewForm(DataStoreForm):
             ids = {model.index(i, id_column).data() for i in rows}
             try:
                 db_map.remove_items(parameter_value_ids=ids)
-                for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
+                for row, count in sorted(rows_to_row_count_tuples(rows), reverse=True):
                     model.removeRows(row, count)
                 removed += len(rows)
             except SpineDBAPIError as e:
@@ -1134,7 +1134,7 @@ class TreeViewForm(DataStoreForm):
             ]
             try:
                 db_map.remove_items(parameter_definition_ids={x['id'] for x in parameters})
-                for row, count in sorted(int_list_to_row_count_tuples(rows), reverse=True):
+                for row, count in sorted(rows_to_row_count_tuples(rows), reverse=True):
                     model.removeRows(row, count)
                 value_model.remove_parameters(db_map, parameters)
                 removed += len(rows)

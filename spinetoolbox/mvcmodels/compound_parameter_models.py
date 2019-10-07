@@ -19,7 +19,7 @@ that concatenate several 'single' models and one 'empty' model.
 
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QFont
-from helpers import busy_effect, format_string_list
+from helpers import busy_effect, format_string_list, rows_to_row_count_tuples
 from mvcmodels.minimal_table_model import MinimalTableModel
 from mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
@@ -33,6 +33,7 @@ from mvcmodels.single_parameter_models import (
     SingleRelationshipParameterDefinitionModel,
     SingleRelationshipParameterValueModel,
 )
+from mvcmodels.parameter_mixins import CompoundObjectParameterMixin, CompoundRelationshipParameterMixin
 from mvcmodels.auto_filter_menu_model import AutoFilterMenuItem
 
 
@@ -51,8 +52,10 @@ class CompoundParameterModel(MinimalTableModel):
         self._parent = parent
         self.db_maps = parent.db_maps
         self.db_name_to_map = parent.db_name_to_map
+        self.icon_mngr = parent.icon_mngr
         self.sub_models = []
-        self._last_fetched_index = 0  # Index of the last submodel that's already been fetched
+        self._row_map = []
+        self._fetched = 0  # Index of the last submodel that's already been fetched
         self._auto_filtered = dict()
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
@@ -67,15 +70,15 @@ class CompoundParameterModel(MinimalTableModel):
 
     def canFetchMore(self, parent):
         """Returns True if any of the unfetched single models can fetch more."""
-        for model in self.sub_models[self._last_fetched_index :]:
+        for model in self.sub_models[self._fetched :]:
             if model.canFetchMore():
                 return True
         return False
 
     def fetchMore(self, parent):
         """Fetches the next single model and increments the fetched index."""
-        self.sub_models[self._last_fetched_index].fetchMore()
-        self._last_fetched_index += 1
+        self.sub_models[self._fetched].fetchMore()
+        self._fetched += 1
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Use italic font for columns having an autofilter installed."""
@@ -85,34 +88,24 @@ class CompoundParameterModel(MinimalTableModel):
             return italic_font
         return super().headerData(section, orientation, role)
 
+    def map_to_sub(self, index):
+        """Returns a submodel index corresponding to given one."""
+        row = index.row()
+        column = index.column()
+        sub_model, sub_row = self._row_map[row]
+        return sub_model.index(sub_row, column)
+
     def flags(self, index):
         """Translate the index into the corresponding submodel and return its flags."""
-        row = index.row()
-        column = index.column()
-        for model in self.sub_models:
-            if row < model.rowCount():
-                return model.index(row, column).flags()
-            row -= model.rowCount()
+        return self.map_to_sub(index).flags()
 
     def data(self, index, role=Qt.DisplayRole):
-        """Translate the index into the corresponding submodel and return its data."""
-        row = index.row()
-        column = index.column()
-        for model in self.sub_models:
-            if row < model.rowCount():
-                return model.index(row, column).data(role)
-            row -= model.rowCount()
+        """Maps the index into a submodel and return its data."""
+        return self.map_to_sub(index).data(role)
 
     def rowCount(self, parent=QModelIndex()):
         """Return the sum of rows in all models."""
-        return sum(m.rowCount() for m in self.sub_models)
-
-    def insertRows(self, row, count, parent=QModelIndex()):
-        """Translate the row into the corresponding submodel and call insertRows on it."""
-        for model in self.sub_models:
-            if row < model.rowCount():
-                return model.insertRows(row, count)
-            row -= model.rowCount()
+        return len(self._row_map)
 
     def removeRows(self, row, count, parent=QModelIndex()):
         """Distribute the rows among the different submodels
@@ -121,26 +114,19 @@ class CompoundParameterModel(MinimalTableModel):
         if row < 0 or row + count - 1 >= self.rowCount():
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
-        model_row_set = dict()
-        for i in range(row, row + count):
-            for model in self.sub_models:
-                if i < model.rowCount():
-                    model_row_set.setdefault(model, set()).add(i)
-                    break
-                i -= model.rowCount()
-        for model, row_set in model_row_set.items():
-            min_row = min(row_set)
-            max_row = max(row_set)
-            model.removeRows(min_row, max_row - min_row + 1)
+        d = dict()
+        for sub_model, sub_row in self._row_map[row, row + count]:
+            d.setdefault(sub_model, list()).append(sub_row)
+        for sub_model, sub_rows in d.items():
+            for sub_row, sub_count in rows_to_row_count_tuples(sub_rows):
+                sub_model.removeRows(sub_row, sub_count)
         self.endRemoveRows()
         return True
 
     def item_at_row(self, row):
         """Returns the item at given row."""
-        for model in self.sub_models:
-            if row < model.rowCount():
-                return model.item_at_row(row)
-            row -= model.rowCount()
+        sub_model, sub_row = self._row_map[row]
+        return sub_model.item_at_row(sub_row)
 
     def batch_set_data(self, indexes, data):
         """Set data for indexes in batch.
@@ -148,23 +134,19 @@ class CompoundParameterModel(MinimalTableModel):
         and call batch_set_data on each of them."""
         if not indexes or not data:
             return False
-        model_ind_val_tups = {}  # Maps models to (index, value) tuples
+        d = {}  # Maps models to (index, value) tuples
         rows = []
         columns = []
         for index, value in zip(indexes, data):
             if not index.isValid():
                 continue
-            row = index.row()
-            column = index.column()
-            rows.append(row)
-            columns.append(column)
-            for model in self.sub_models:
-                if row < model.rowCount():
-                    model_ind_val_tups.setdefault(model, list()).append((model.index(row, column), value))
-                    break
-                row -= model.rowCount()
-        for model, ind_val_tups in model_ind_val_tups.items():
-            indexes, values = zip(*ind_val_tups)
+            rows.append(index.row())
+            columns.append(index.column())
+            sub_model, _ = self._row_map[index.row()]
+            sub_index = self.map_to_sub(index)
+            d.setdefault(sub_model, list()).append((sub_index, value))
+        for model, index_value_tuples in d.items():
+            indexes, values = zip(*index_value_tuples)
             model.batch_set_data(indexes, values)
         # Find square envelope of indexes to emit dataChanged
         top = min(rows)
@@ -192,13 +174,26 @@ class CompoundParameterModel(MinimalTableModel):
         """Runs when rows are inserted to the empty model.
         Emit rowsInserted as appropriate so we can actually view the new rows.
         """
-        offset = self.rowCount() - self.empty_model.rowCount()
-        self.rowsInserted.emit(QModelIndex(), offset + first, offset + last)
+        self._row_map += [(self.empty_model, i) for i in range(first, last + 1)]
+        tip = self.rowCount() - self.empty_model.rowCount()
+        self.rowsInserted.emit(QModelIndex(), tip + first, tip + last)
+
+    @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_removed")
+    def _handle_empty_rows_removed(self, parent, first, last):
+        """Runs when rows are inserted to the empty model.
+        Emit rowsRemoved as appropriate so we no longer view the removed rows.
+        """
+        tip = self.rowCount() - self.empty_model.rowCount()
+        self._row_map = self._row_map[:tip] + [(self.empty_model, i) for i in range(self.empty_model.rowCount())]
+        self.rowsRemoved.emit(QModelIndex(), tip + first, tip + last)
 
     def _handle_single_model_reset(self, model):
         """Runs when one of the single models is reset.
         Emit rowsInserted as appropriate so we can actually view the new data.
         """
+        tip = self.rowCount() - self.empty_model.rowCount()
+        self._row_map, empty_row_map = self._row_map[:tip], self._row_map[tip:]
+        self._row_map += [(model, i) for i in range(model.rowCount())] + empty_row_map
         first = self.rowCount() + 1
         last = first + model.rowCount() - 1
         self.rowsInserted.emit(QModelIndex(), first, last)
@@ -252,29 +247,6 @@ class CompoundParameterModel(MinimalTableModel):
             values = auto_filter.get(model.entity_class_id, {})
             model.set_auto_filter_values(column, values)
 
-    def rename_object_classes(self, db_map, object_classes):
-        """Rename object classes in model."""
-        # TODO
-
-    def rename_parameter_tags(self, db_map, parameter_tags):
-        """Rename parameter tags in model."""
-        # TODO
-
-    def remove_object_classes(self, db_map, object_classes):
-        """Remove object classes from model."""
-        # TODO
-
-    def remove_parameter_tags(self, db_map, parameter_tag_ids):
-        """Remove parameter tags from model."""
-        # TODO
-
-    def _emit_data_changed_for_column(self, column):
-        """Emits data changed for an entire column.
-        Used by `rename_` and some `remove_` methods where it's too difficult to find out the exact
-        rows that changed, especially because of filter status.
-        """
-        # TODO
-
     def init_model(self):
         """Initialize model."""
         d = dict()
@@ -293,29 +265,26 @@ class CompoundParameterModel(MinimalTableModel):
         """Move rows with newly added items from the empty model to a new single model.
         Runs when the empty row model succesfully inserts new data into the db.
         """
-        self.layoutAboutToBeChanged.emit()
-        empty_model = self.sub_models.pop()
         d = {}
         for row in rows:
-            item = empty_model.item_at_row(row)
-            entity_class = item.entity_class
-            database = item.database
-            d.setdefault((database, entity_class), list()).append(item)
+            item = self.empty_model.item_at_row(row)
+            d.setdefault((item.database, item.entity_class), list()).append(item)
         single_models = []
         for (database, entity_class), item_list in d.items():
             single_model = self.create_single_model(database, entity_class)
             single_model.reset_model(item_list)
             self._handle_single_model_reset(single_model)
             single_models.append(single_model)
+        empty_model = self.sub_models.pop()
         self.sub_models += single_models
-        for row in reversed(rows):
-            empty_model.removeRows(row, 1)
         self.sub_models.append(empty_model)
-        self.layoutChanged.emit()
+        for row in reversed(rows):
+            self.empty_model.removeRows(row, 1)
 
     def connect_model_signals(self):
         """Connect model signals."""
         self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
+        self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
         for model in self.single_models:
             model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
 
@@ -340,11 +309,33 @@ class CompoundParameterModel(MinimalTableModel):
 
     def update_filter(self):
         """Update filter."""
-        self.layoutAboutToBeChanged.emit()
-        self._auto_filtered.clear()
         for model in self.single_models:
-            model.update_filter()
+            model.update_filter(self._parent)
+        self.invalidate_filter()
+
+    def invalidate_filter(self):
+        """Invalidates the current filter."""
+        self.layoutAboutToBeChanged.emit()
+        self._row_map.clear()
+        self._auto_filtered.clear()
+        for model in self.sub_models:
+            self._row_map += [(model, i) for i in model.accepted_rows()]
         self.layoutChanged.emit()
+
+    def _emit_data_changed_for_column(self, field):
+        """Emits data changed for an entire column.
+        Used by `rename_` and some `remove_` methods whenever it's too difficult to find out the exact
+        rows that changed, especially because of filter status.
+
+        Args:
+            field (str): the column header
+        """
+        column = self.header.index(field)
+        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
+
+    def _models_with_db_map(self, db_map):
+        """Returns a collection of models having the given db_map."""
+        return (m for m in self.single_models if m.db_map == db_map)
 
 
 class CompoundParameterDefinitionModel(CompoundParameterModel):
@@ -357,8 +348,21 @@ class CompoundParameterDefinitionModel(CompoundParameterModel):
         super().__init__(parent)
         self.json_fields = ["default_value"]
 
+    def rename_parameter_tags(self, db_map, parameter_tags):
+        """Rename parameter tags in model."""
+        parameter_tags = {x.id: x.tag for x in parameter_tags}
+        for model in self._models_with_db_map(db_map):
+            model.rename_parameter_tags(parameter_tags)
+        self._emit_data_changed_for_column("parameter_tag_list")
 
-class CompoundObjectParameterDefinitionModel(CompoundParameterDefinitionModel):
+    def remove_parameter_tags(self, db_map, parameter_tag_ids):
+        """Remove parameter tags from model."""
+        for model in self._models_with_db_map(db_map):
+            model.remove_parameter_tags(parameter_tag_ids)
+        self._emit_data_changed_for_column("parameter_tag_list")
+
+
+class CompoundObjectParameterDefinitionModel(CompoundObjectParameterMixin, CompoundParameterDefinitionModel):
     """A model that concatenates several single object parameter definition models
     and one empty object parameter definition model.
     """
@@ -388,7 +392,9 @@ class CompoundObjectParameterDefinitionModel(CompoundParameterDefinitionModel):
         return db_map.query(db_map.object_class_sq)
 
 
-class CompoundRelationshipParameterDefinitionModel(CompoundParameterDefinitionModel):
+class CompoundRelationshipParameterDefinitionModel(
+    CompoundRelationshipParameterMixin, CompoundParameterDefinitionModel
+):
     """A model that concatenates several single relationship parameter definition models
     and one empty relationship parameter definition model.
     """
@@ -429,7 +435,7 @@ class CompoundParameterValueModel(CompoundParameterModel):
         self.json_fields = ["value"]
 
 
-class CompoundObjectParameterValueModel(CompoundParameterValueModel):
+class CompoundObjectParameterValueModel(CompoundObjectParameterMixin, CompoundParameterValueModel):
     """A model that concatenates several single object parameter value models
     and one empty object parameter value model.
     """
@@ -452,7 +458,7 @@ class CompoundObjectParameterValueModel(CompoundParameterValueModel):
         return db_map.query(db_map.object_class_sq)
 
 
-class CompoundRelationshipParameterValueModel(CompoundParameterValueModel):
+class CompoundRelationshipParameterValueModel(CompoundRelationshipParameterMixin, CompoundParameterValueModel):
     """A model that concatenates several single relationship parameter value models
     and one empty relationship parameter value model.
     """

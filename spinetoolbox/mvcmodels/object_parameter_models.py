@@ -262,6 +262,15 @@ class ObjectParameterModel(MinimalTableModel):
                 row_data[object_class_name_column] = object_class_name
         self._emit_data_changed_for_column(object_class_name_column)
 
+    def remove_object_classes(self, db_map, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        object_class_ids = [(db_map, x['id']) for x in object_classes]
+        for i, (object_class_id, _) in reversed(list(enumerate(self.sub_models))):
+            if object_class_id in object_class_ids:
+                self.sub_models.pop(i)
+        self.layoutChanged.emit()
+
     def rename_parameter_tags(self, db_map, parameter_tags):
         """Rename parameter tags in model."""
         parameter_tag_list_column = self.header.index("parameter_tag_list")
@@ -287,15 +296,6 @@ class ObjectParameterModel(MinimalTableModel):
                     split_parameter_tag_list[k] = new_tag
                 row_data[parameter_tag_list_column] = ",".join(split_parameter_tag_list)
         self._emit_data_changed_for_column(parameter_tag_list_column)
-
-    def remove_object_classes(self, db_map, object_classes):
-        """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        object_class_ids = [(db_map, x['id']) for x in object_classes]
-        for i, (object_class_id, _) in reversed(list(enumerate(self.sub_models))):
-            if object_class_id in object_class_ids:
-                self.sub_models.pop(i)
-        self.layoutChanged.emit()
 
     def remove_parameter_tags(self, db_map, parameter_tag_ids):
         """Remove parameter tags from model."""

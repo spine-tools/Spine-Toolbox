@@ -46,7 +46,7 @@ class EmptyParameterModel(ParameterAutocompleteMixin, EmptyRowModel):
             parent (Object): the parent object
         """
         super().__init__(parent)
-        self._grand_parent = parent.parent()
+        self._parent = parent
         self.header = parent.header
         self.db_name_to_map = parent.db_name_to_map
         self.error_log = []
@@ -127,6 +127,10 @@ class EmptyParameterModel(ParameterAutocompleteMixin, EmptyRowModel):
                 item.id = new_item.id
                 item.clear_cache()
             self.added_rows.append(row)
+
+    def accepted_rows(self):
+        """Returns all rows in the model."""
+        return range(self.rowCount())
 
 
 class EmptyParameterDefinitionModel(ParameterDefinitionAutocompleteMixin, EmptyParameterModel):
