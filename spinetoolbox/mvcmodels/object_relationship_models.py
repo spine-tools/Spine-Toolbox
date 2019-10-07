@@ -17,7 +17,7 @@ Models for object and relationship classes.
 """
 
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QColor, QPen
 from ..helpers import busy_effect
 
 
@@ -43,7 +43,13 @@ class ObjectClassListModel(QStandardItemModel):
             object_class_item.setData(object_class.name, Qt.ToolTipRole)
             self.appendRow(object_class_item)
         add_more_item = QStandardItem()
+        add_more_item.setSelectable(False)
         add_more_item.setData("Add more...", Qt.DisplayRole)
+        add_more_item.setData(QBrush(QColor("#e6e6e6")), Qt.BackgroundRole)
+        # add_more_item.setTextAlignment(Qt.AlignHCenter)
+        icon = QIcon(":/icons/menu_icons/cube_plus.svg")
+        add_more_item.setIcon(icon)
+        add_more_item.setData("Add custom object class", Qt.ToolTipRole)
         self.appendRow(add_more_item)
         self.add_more_index = self.indexFromItem(add_more_item)
 
