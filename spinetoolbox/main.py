@@ -23,8 +23,9 @@ from PySide2.QtWidgets import QApplication
 from .ui_main import ToolboxUI
 from .helpers import spinedb_api_version_check, pyside2_version_check
 
+
 def main():
-    """Starts the Spinetooblox GUI."""
+    """Creates main window GUI and starts main event loop."""
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,

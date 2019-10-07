@@ -17,7 +17,6 @@ Setup script for Python's setuptools.
 """
 
 from setuptools import setup, find_packages
-
 from spinetoolbox.config import REQUIRED_SPINEDB_API_VERSION, SPINE_TOOLBOX_VERSION
 
 with open("README.md", encoding="utf8") as readme_file:
