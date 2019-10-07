@@ -244,20 +244,28 @@ class RelationshipParameterAutocompleteMixin:
 
 
 class ObjectParameterDecorateMixin:
+    """Provides decoration features to all object parameter models."""
+
     def data(self, index, role=Qt.DisplayRole):
-        """Return data for given index and role."""
+        """Return data for given index and role.
+        Paint the object class icon next to the name.
+        """
         if role == Qt.DecorationRole and self.header[index.column()] == "object_class_name":
             object_class_name = self.item_at_row(index.row()).object_class_name
-            return self._parent._parent.icon_mngr.object_icon(object_class_name)
+            return self._grand_parent.icon_mngr.object_icon(object_class_name)
         return super().data(index, role)
 
 
 class RelationshipParameterDecorateMixin:
+    """Provides decoration features to all relationship parameter models."""
+
     def data(self, index, role=Qt.DisplayRole):
-        """Return data for given index and role."""
+        """Return data for given index and role.
+        Paint the relationship class icon next to the name.
+        """
         if role == Qt.DecorationRole and self.header[index.column()] == "relationship_class_name":
             object_class_name_list = self.item_at_row(index.row()).object_class_name_list
-            return self._parent._parent.icon_mngr.relationship_icon(object_class_name_list)
+            return self._grand_parent.icon_mngr.relationship_icon(object_class_name_list)
         return super().data(index, role)
 
 
@@ -276,12 +284,20 @@ class SingleObjectParameterMixin:
         self.object_class_id = object_class_id
         self.json_fields = ["value"]
 
+    @property
+    def entity_class_id(self):
+        return self.object_class_id
+
     def selected_param_def_ids(self):
+        """Return parameter definitions selected in the grand parent."""
         return self._grand_parent.selected_obj_parameter_definition_ids.get((self.db_map, self.object_class_id), set())
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model or zero if the
-        object class is not selected in the grand parent."""
+        object class is not selected in the grand parent.
+        This is to apply a fast all-or-nothing filter on the object class
+        (faster than filterAcceptsRow)
+        """
         selected_object_class_ids = self._grand_parent.all_selected_object_class_ids
         if selected_object_class_ids and self.object_class_id not in selected_object_class_ids.get(self.db_map, set()):
             return 0
@@ -305,14 +321,22 @@ class SingleRelationshipParameterMixin:
         self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
         self.json_fields = ["default_value"]
 
+    @property
+    def entity_class_id(self):
+        return self.relationship_class_id
+
     def selected_param_def_ids(self):
+        """Return parameter definitions selected in the grand parent."""
         return self._grand_parent.selected_rel_parameter_definition_ids.get(
             (self.db_map, self.relationship_class_id), set()
         )
 
     def rowCount(self, parent=QModelIndex()):
         """Returns the number of rows in the model or zero if nor the
-        relationship class nor any of its object classes is selected in the grand parent."""
+        relationship class nor any of its object classes are selected in the grand parent.
+        This is to apply a fast all-or-nothing filter on the relationship class
+        (faster than filterAcceptsRow)
+        """
         selected_object_class_ids = self._grand_parent.selected_object_class_ids
         selected_relationship_class_ids = self._grand_parent.all_selected_relationship_class_ids
         if selected_object_class_ids:

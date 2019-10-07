@@ -35,6 +35,7 @@ class FilledParameterModel(ParameterAutocompleteMixin, MinimalTableModel):
             parent (ParameterModel): the parent object
         """
         super().__init__(parent)
+        self._parent = parent
         self.header = parent.header
         self.db_name_to_map = parent.db_name_to_map
         self._gray_brush = QGuiApplication.palette().button()

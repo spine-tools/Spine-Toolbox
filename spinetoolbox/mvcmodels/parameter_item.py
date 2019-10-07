@@ -20,15 +20,21 @@ from collections import namedtuple
 
 
 class ObjectParameterItemMixin:
+    """Provides methods for object parameter items."""
+
     @property
     def entity_class(self):
+        """Returns a named tuple corresponding to the entity associated with this parameter."""
         object_class = namedtuple("object_class", "id")
         return object_class(self.object_class_id)
 
 
 class RelationshipParameterItemMixin:
+    """Provides methods for relationship parameter items."""
+
     @property
     def entity_class(self):
+        """Returns a named tuple corresponding to the entity associated with this parameter."""
         relationship_class = namedtuple("relationship_class", "id object_class_id_list")
         return relationship_class(self.relationship_class_id, self.object_class_id_list)
 
@@ -54,6 +60,13 @@ class ParameterItem:
         self._mandatory_attrs_for_insert = []
         self._optional_attrs_for_insert = []
         self._updatable_attrs = []
+
+    @property
+    def entity_class(self):
+        """Returns a named tuple corresponding to the entity associated with this parameter.
+        Must be reimplemented by subclasses.
+        """
+        raise NotImplementedError()
 
     def __getitem__(self, index):
         """Returns the item corresponding to the given index."""

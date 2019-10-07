@@ -25,14 +25,12 @@ class MinimalTableModel(QAbstractTableModel):
         """Table model for outlining simple tabular data.
 
         Args:
-            parent (QMainWindow): the parent widget, usually an instance of TreeViewForm
+            parent (QObject): the parent object
         """
         super().__init__(parent)
-        self._parent = parent
         self._main_data = list()  # DisplayRole and EditRole
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self.header = list()  # DisplayRole and EditRole
-        self.aux_header = list()  # All the other roles, each entry in the list is a dict
 
     def clear(self):
         """Clear all data in model."""
@@ -58,15 +56,8 @@ class MinimalTableModel(QAbstractTableModel):
             return len(self.header)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
-        """Get headers."""
+        """Returns headers."""
         if role != Qt.DisplayRole:
-            if orientation == Qt.Horizontal:
-                try:
-                    return self.aux_header[section][role]
-                except IndexError:
-                    return None
-                except KeyError:
-                    return None
             return None
         if orientation == Qt.Horizontal:
             try:
@@ -81,7 +72,6 @@ class MinimalTableModel(QAbstractTableModel):
         if not labels:
             return
         self.header = labels
-        self.aux_header = [{} for _ in range(len(labels))]
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(labels) - 1)
 
     def insert_horizontal_header_labels(self, section, labels):
@@ -91,10 +81,8 @@ class MinimalTableModel(QAbstractTableModel):
         for j, value in enumerate(labels):
             if section + j >= self.columnCount():
                 self.header.append(value)
-                self.aux_header.append({})
             else:
                 self.header.insert(section + j, value)
-                self.aux_header.insert(section + j, {})
         self.headerDataChanged.emit(Qt.Horizontal, section, section + len(labels) - 1)
 
     def horizontal_header_labels(self):
@@ -107,12 +95,7 @@ class MinimalTableModel(QAbstractTableModel):
         if orientation != Qt.Horizontal:
             return False
         if role != Qt.EditRole:
-            try:
-                self.aux_header[section][role] = value
-                self.headerDataChanged.emit(orientation, section, section)
-                return True
-            except IndexError:
-                return False
+            return False
         try:
             self.header[section] = value
             self.headerDataChanged.emit(orientation, section, section)

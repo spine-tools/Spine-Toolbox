@@ -33,7 +33,7 @@ from mvcmodels.single_parameter_models import (
     SingleRelationshipParameterDefinitionModel,
     SingleRelationshipParameterValueModel,
 )
-from mvcmodels.parameter_item import ObjectParameterValueItem
+from mvcmodels.auto_filter_menu_model import AutoFilterMenuItem
 
 
 class CompoundParameterModel(MinimalTableModel):
@@ -53,7 +53,7 @@ class CompoundParameterModel(MinimalTableModel):
         self.db_name_to_map = parent.db_name_to_map
         self.sub_models = []
         self._last_fetched_index = 0  # Index of the last submodel that's already been fetched
-        self.filtered_out = dict()
+        self._auto_filtered = dict()
         self.italic_font = QFont()
         self.italic_font.setItalic(True)
 
@@ -76,6 +76,14 @@ class CompoundParameterModel(MinimalTableModel):
         """Fetches the next single model and increments the fetched index."""
         self.sub_models[self._last_fetched_index].fetchMore()
         self._last_fetched_index += 1
+
+    def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
+        """Use italic font for columns having an autofilter installed."""
+        italic_font = QFont()
+        italic_font.setItalic(True)
+        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filtered.get(section):
+            return italic_font
+        return super().headerData(section, orientation, role)
 
     def flags(self, index):
         """Translate the index into the corresponding submodel and return its flags."""
@@ -100,7 +108,7 @@ class CompoundParameterModel(MinimalTableModel):
         return sum(m.rowCount() for m in self.sub_models)
 
     def insertRows(self, row, count, parent=QModelIndex()):
-        """Find the right sub-model (or the empty model) and call insertRows on it."""
+        """Translate the row into the corresponding submodel and call insertRows on it."""
         for model in self.sub_models:
             if row < model.rowCount():
                 return model.insertRows(row, count)
@@ -140,7 +148,7 @@ class CompoundParameterModel(MinimalTableModel):
         and call batch_set_data on each of them."""
         if not indexes or not data:
             return False
-        model_index_value = {}  # Maps models to (index, value) tuples
+        model_ind_val_tups = {}  # Maps models to (index, value) tuples
         rows = []
         columns = []
         for index, value in zip(indexes, data):
@@ -152,11 +160,11 @@ class CompoundParameterModel(MinimalTableModel):
             columns.append(column)
             for model in self.sub_models:
                 if row < model.rowCount():
-                    model_index_value.setdefault(model, list()).append((model.index(row, column), value))
+                    model_ind_val_tups.setdefault(model, list()).append((model.index(row, column), value))
                     break
                 row -= model.rowCount()
-        for model, index_value in model_index_value.items():
-            indexes, values = zip(*index_value)
+        for model, ind_val_tups in model_ind_val_tups.items():
+            indexes, values = zip(*ind_val_tups)
             model.batch_set_data(indexes, values)
         # Find square envelope of indexes to emit dataChanged
         top = min(rows)
@@ -196,30 +204,53 @@ class CompoundParameterModel(MinimalTableModel):
         self.rowsInserted.emit(QModelIndex(), first, last)
 
     def invalidate_filter(self):
-        """Invalidates filter."""
+        """Triggers the filtering process.
+        layoutAboutToBeChanged and layoutChanged are emitted so the model has to count rows again (I think).
+        invalidateFilter is call on each single model so the filter is run.
+        """
         self.layoutAboutToBeChanged.emit()
         for model in self.single_models:
             model.invalidateFilter()
         self.layoutChanged.emit()
 
     @busy_effect
-    def auto_filter_values(self, column):
-        """Returns values that should be used to populate the auto filter menu
-        for the given column.
-        Each 'row' in the result has the following three elements:
-        1) The 'checked' state, True if the value *hasn't* been filtered out already
-        2) The value itself (an object name, a parameter name, a numerical value...)
-        3) A set of object class ids where the value is found.
+    def auto_filter_menu_data(self, column):
+        """Returns auto filter menu data for the given column.
+
+        Returns:
+            menu_data (list): a list of namedtuples with the following three fields:
+                - not_filtered, True if the value *isn't* already auto filtered
+                - value, the value itself
+                - in_entity_classes, a set of the entity class ids where the value is found.
         """
-        # TODO
+        auto_filter_vals = dict()
+        for model in self.single_models:
+            data = model.sourceModel()._main_data
+            row_count = model.sourceModel().rowCount()
+            for i in range(row_count):
+                if not model._main_filter_accepts_row(i, None):
+                    continue
+                if not model._auto_filter_accepts_row(i, None, ignored_columns=[column]):
+                    continue
+                value = data[i][column]
+                auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
+        filtered = self._auto_filtered.get(column, [])
+        return [
+            AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, in_classes)
+            for value, in_classes in auto_filter_vals.items()
+        ]
 
-    def set_filtered_out_values(self, column, values):
-        """Sets values filtered out by the autofilter."""
-        # TODO
+    def set_auto_filter(self, column, auto_filter):
+        """Sets auto filter for given column.
 
-    def clear_filter(self):
-        """Clears the filter."""
-        # TODO
+        Args:
+            column (int): the column number
+            auto_filter (dict): maps entity ids to a collection of values to be filtered for the column
+        """
+        self._auto_filtered[column] = [val for values in auto_filter.values() for val in values]
+        for model in self.single_models:
+            values = auto_filter.get(model.entity_class_id, {})
+            model.set_auto_filter_values(column, values)
 
     def rename_object_classes(self, db_map, object_classes):
         """Rename object classes in model."""
@@ -259,8 +290,8 @@ class CompoundParameterModel(MinimalTableModel):
         self.connect_model_signals()
 
     def move_rows_to_single_models(self, rows):
-        """Move rows from empty model to a new single model.
-        Called when the empty row model succesfully inserts new data in the db.
+        """Move rows with newly added items from the empty model to a new single model.
+        Runs when the empty row model succesfully inserts new data into the db.
         """
         self.layoutAboutToBeChanged.emit()
         empty_model = self.sub_models.pop()
@@ -289,8 +320,8 @@ class CompoundParameterModel(MinimalTableModel):
             model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
 
     def clear_model(self):
-        """Clears model. Runs after rollback or refresh.
-        """
+        """Clears model. Runs after rollback or refresh."""
+        # TODO: Use this
         for model in self.sub_models:
             model.clear_model()
 
@@ -304,16 +335,15 @@ class CompoundParameterModel(MinimalTableModel):
 
     @staticmethod
     def entity_class_query(db_map):
-        """Returns a query of entity classes to populate the model."""
+        """Returns a query of entity classes to use for creating the different single models."""
         raise NotImplementedError()
 
     def update_filter(self):
         """Update filter."""
         self.layoutAboutToBeChanged.emit()
+        self._auto_filtered.clear()
         for model in self.single_models:
-            model.clear_filter()  # TODO: rename to `clear_auto_filter`
             model.update_filter()
-        self.clear_filter()
         self.layoutChanged.emit()
 
 
@@ -323,6 +353,7 @@ class CompoundParameterDefinitionModel(CompoundParameterModel):
     """
 
     def __init__(self, parent):
+        """Init class."""
         super().__init__(parent)
         self.json_fields = ["default_value"]
 

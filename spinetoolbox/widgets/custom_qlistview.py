@@ -18,7 +18,39 @@ Classes for custom QListView.
 
 from PySide2.QtWidgets import QListView, QApplication, QListWidget, QAbstractItemView
 from PySide2.QtGui import QDrag, QDropEvent
-from PySide2.QtCore import Qt, QMimeData, Signal
+from PySide2.QtCore import Qt, QMimeData, Signal, Slot, QItemSelectionModel
+
+
+class AutoFilterMenuView(QListView):
+    def __init__(self, parent):
+        """Initialize class."""
+        super().__init__(parent)
+        # self.horizontalHeader().hide()
+        self.setMouseTracking(True)
+        self.entered.connect(self._handle_entered)
+        self.clicked.connect(self._handle_clicked)
+
+    def keyPressEvent(self, event):
+        """Toggle checked state of current index if the user presses the Space key."""
+        super().keyPressEvent(event)
+        if event.key() == Qt.Key_Space:
+            index = self.currentIndex()
+            self.model().toggle_checked_state(index)
+
+    def leaveEvent(self, event):
+        """Clear selection."""
+        self.selectionModel().clearSelection()
+        event.accept()
+
+    @Slot("QModelIndex", name="_handle_entered")
+    def _handle_entered(self, index):
+        """Highlight current row."""
+        self.selectionModel().select(index, QItemSelectionModel.ClearAndSelect)
+
+    @Slot("QModelIndex", name="_handle_clicked")
+    def _handle_clicked(self, index):
+        """Toggle checked state of clicked index."""
+        self.model().toggle_checked_state(index)
 
 
 class DragListView(QListView):

@@ -48,10 +48,16 @@ class SingleParameterModel(QSortFilterProxyModel):
         self.header = parent.header
         self.database = database
         self.db_map = parent.db_name_to_map[database]
+        self._auto_filtered = dict()
         self._selected_param_def_ids = set()
         self._fetched = False
         source = self.create_source_model()
         self.setSourceModel(source)
+
+    @property
+    def entity_class_id(self):
+        """Returns the associated entity class id."""
+        raise NotImplementedError()
 
     @property
     def error_log(self):
@@ -60,6 +66,10 @@ class SingleParameterModel(QSortFilterProxyModel):
     @property
     def updated_count(self):
         return self.sourceModel().updated_count
+
+    def create_source_model(self):
+        """Returns a model filled with parameter data for the associated entity class."""
+        raise NotImplementedError()
 
     def canFetchMore(self, parent=None):
         """Return True if the model hasn't been fetched."""
@@ -70,11 +80,11 @@ class SingleParameterModel(QSortFilterProxyModel):
         data = self.get_data_from_db()
         self.reset_model(data)
 
-    def create_source_model(self):
-        """Returns a model filled with parameter data for the associated entity class."""
-        raise NotImplementedError()
-
     def get_data_from_db(self):
+        """Returns parameter data corresponding to the associated entity class from the database.
+        Used when fetching data for populating the model.
+        Must be reimplemented in subclasses.
+        """
         raise NotImplementedError()
 
     def reset_model(self, data):
@@ -83,14 +93,15 @@ class SingleParameterModel(QSortFilterProxyModel):
         self._fetched = True
 
     def batch_set_data(self, indexes, data):
+        """Set data for indexes in batch.
+        Map the indices to the source model and call the source method.
+        """
         source_inds = [self.mapToSource(ind) for ind in indexes]
         return self.sourceModel().batch_set_data(source_inds, data)
 
     def item_at_row(self, row):
         """Returns the item associated with the given row number.
-
-        Args:
-            row (int)
+        Map the row to the source model and call the source method.
         """
         src_row = self.mapToSource(self.index(row, 0)).row()
         return self.sourceModel().item_at_row(src_row)
@@ -105,17 +116,30 @@ class SingleParameterModel(QSortFilterProxyModel):
     def do_update_filter(self):
         """Does update the filter."""
         selected_param_def_ids = self.selected_param_def_ids()
-        if selected_param_def_ids != self._selected_param_def_ids:
+        cond_a = selected_param_def_ids != self._selected_param_def_ids
+        cond_b = bool(self._auto_filtered)
+        if cond_a:
             self._selected_param_def_ids = selected_param_def_ids
-            return True
-        return False
+        if cond_b:
+            self._auto_filtered.clear()
+        return cond_a or cond_b
 
     def selected_param_def_ids(self):
+        """Return parameter definitions selected in the grand parent.
+        Must be reimplemented in subclasses."""
         raise NotImplementedError()
 
-    def clear_filter(self):
-        """Clears filter."""
-        # raise NotImplementedError()
+    def set_auto_filter_values(self, column, values):
+        """Set auto filter values for given column.
+
+        Args:
+            column (int): the column number
+            values (set): a set of values to be filtered
+        """
+        if values == self._auto_filtered.get(column, {}):
+            return
+        self._auto_filtered[column] = values
+        self.invalidateFilter()
 
     def filterAcceptsRow(self, source_row, source_parent):
         """Accept or reject row."""
@@ -126,12 +150,21 @@ class SingleParameterModel(QSortFilterProxyModel):
         return True
 
     def _main_filter_accepts_row(self, source_row, source_parent):
+        """Applies the main filter, defined by the selections in the grand parent."""
         if self._selected_param_def_ids:
             parameter_definition_id = self.sourceModel()._main_data[source_row].parameter_definition_id
             return parameter_definition_id in self._selected_param_def_ids
         return True
 
-    def _auto_filter_accepts_row(self, source_row, source_parent):
+    def _auto_filter_accepts_row(self, source_row, source_parent, ignored_columns=None):
+        """Aplies the autofilter, defined by the autofilter drop down menu."""
+        if ignored_columns is None:
+            ignored_columns = []
+        for column, values in self._auto_filtered.items():
+            if column in ignored_columns:
+                continue
+            if self.sourceModel()._main_data[source_row][column] in values:
+                return False
         return True
 
     def clear_model(self):
@@ -176,6 +209,10 @@ class SingleRelationshipParameterDefinitionModel(
 class SingleParameterValueModel(SingleParameterModel):
     """A parameter value model for a single entity class"""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_object_ids = {}
+
     def create_source_model(self):
         return FilledParameterValueModel(self._parent)
 
@@ -184,10 +221,6 @@ class SingleObjectParameterValueModel(
     ObjectParameterDecorateMixin, SingleObjectParameterMixin, SingleParameterValueModel
 ):
     """An object parameter value model for a single object class."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._selected_object_ids = {}
 
     def get_data_from_db(self):
         sq = self.db_map.object_parameter_value_sq
@@ -222,7 +255,6 @@ class SingleRelationshipParameterValueModel(
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._selected_object_ids = {}
         self._selected_object_id_lists = {}
 
     def get_data_from_db(self):

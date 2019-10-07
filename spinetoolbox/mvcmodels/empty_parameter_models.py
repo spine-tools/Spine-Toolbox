@@ -43,9 +43,10 @@ class EmptyParameterModel(ParameterAutocompleteMixin, EmptyRowModel):
         """Initialize class.
 
         Args:
-            parent (ParameterModel): the parent object
+            parent (Object): the parent object
         """
         super().__init__(parent)
+        self._grand_parent = parent.parent()
         self.header = parent.header
         self.db_name_to_map = parent.db_name_to_map
         self.error_log = []
