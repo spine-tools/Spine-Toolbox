@@ -18,7 +18,8 @@ Unit tests for GdxExport project item.
 
 from tempfile import TemporaryDirectory
 import unittest
-from project_items.gdx_export.gdx_export import GdxExport
+
+from ..project_items.gdx_export.gdx_export import GdxExport
 
 
 class _MockProject:

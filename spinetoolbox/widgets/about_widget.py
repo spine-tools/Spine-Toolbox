@@ -20,7 +20,6 @@ from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, QPoint
 from PySide2.QtGui import QTextCursor
 import spinedb_api
-import ui.about
 
 
 class AboutWidget(QWidget):
@@ -33,10 +32,11 @@ class AboutWidget(QWidget):
 
     def __init__(self, toolbox, version):
         """Initializes About widget."""
+        from ..ui import about
         super().__init__(parent=toolbox, f=Qt.Popup)  # Setting the parent inherits the stylesheet
         self._toolbox = toolbox
         # Set up the user interface from Designer file.
-        self.ui = ui.about.Ui_Form()
+        self.ui = about.Ui_Form()
         self.ui.setupUi(self)
         self.setWindowFlags(Qt.Popup)
         # Ensure this window gets garbage-collected when closed

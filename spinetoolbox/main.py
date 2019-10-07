@@ -10,33 +10,21 @@
 ######################################################################################################################
 
 """
-Spine Toolbox application main file.
+Provides the main() function.
 
-:author: P. Savolainen (VTT)
-:date:   14.12.2017
+:author: A. Soininen (VTT)
+:date:   4.10.2019
 """
 
 import sys
 import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
+from .ui_main import ToolboxUI
+from .helpers import spinedb_api_version_check, pyside2_version_check
 
-try:
-    import spinedb_api
-except ModuleNotFoundError:
-    import spinedatabase_api
-
-    sys.modules['spinedb_api'] = spinedatabase_api  # So `import spinedb_api` does not fail before the check
-from ui_main import ToolboxUI
-from helpers import spinedb_api_version_check, pyside2_version_check
-
-
-def main(argv):
-    """Launch application.
-
-    Args:
-        argv (list): Command line arguments
-    """
+def main():
+    """Starts the Spinetooblox GUI."""
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
@@ -44,11 +32,11 @@ def main(argv):
         datefmt='%Y-%m-%d %H:%M:%S',
     )
     if not pyside2_version_check():
-        return 0
+        return 1
     if not spinedb_api_version_check():
-        return 0
+        return 1
     # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
-    app = QApplication(argv)
+    app = QApplication(sys.argv)
     QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
     window = ToolboxUI()
     window.show()
@@ -56,7 +44,3 @@ def main(argv):
     # Enter main event loop and wait until exit() is called
     return_code = app.exec_()
     return return_code
-
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv))

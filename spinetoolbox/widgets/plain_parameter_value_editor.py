@@ -18,7 +18,6 @@ An editor widget for editing plain number database (relationship) parameter valu
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
-from ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
 
 
 class _ValueModel:
@@ -60,6 +59,7 @@ class PlainParameterValueEditor(QWidget):
     """
 
     def __init__(self, parent_widget=None):
+        from ..ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
         super().__init__(parent_widget)
         self._ui = Ui_PlainParameterValueEditor()
         self._ui.setupUi(self)

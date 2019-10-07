@@ -17,9 +17,9 @@ Module for data connection icon class.
 """
 
 import os
-from graphics_items import ProjectItemIcon
 from PySide2.QtGui import QColor, QPen, QBrush
 from PySide2.QtCore import Qt, QTimer
+from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class DataConnectionIcon(ProjectItemIcon):

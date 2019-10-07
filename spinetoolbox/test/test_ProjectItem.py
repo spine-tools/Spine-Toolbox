@@ -18,7 +18,8 @@ Unit tests for ProjectItem base class.
 
 from tempfile import TemporaryDirectory
 import unittest
-from project_item import ProjectItem
+
+from ..project_item import ProjectItem
 
 
 class _MockProject:

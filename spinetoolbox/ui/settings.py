@@ -424,4 +424,4 @@ class Ui_SettingsForm(object):
         self.pushButton_cancel.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Closes the window without saving changes</p></body></html>", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("SettingsForm", "Cancel", None, -1))
 
-import resources_icons_rc
+from spinetoolbox import resources_icons_rc

@@ -29,7 +29,7 @@ from PySide2.QtWidgets import (
     QToolButton,
 )
 from PySide2.QtGui import QIcon, QDrag
-from config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
+from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 
 
 class ItemToolBar(QToolBar):

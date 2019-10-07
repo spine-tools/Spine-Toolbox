@@ -22,10 +22,10 @@ from PySide2.QtCore import Slot, Signal, Qt
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager, QtKernelRestarter
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
-from config import JULIA_EXECUTABLE, JL_REPL_TIME_TO_DEAD, JL_REPL_RESTART_LIMIT
-from widgets.toolbars import DraggableWidget
-import qsubprocess
-from helpers import busy_effect
+from ..config import JULIA_EXECUTABLE, JL_REPL_TIME_TO_DEAD, JL_REPL_RESTART_LIMIT
+from .toolbars import DraggableWidget
+from spinetoolbox import qsubprocess
+from ..helpers import busy_effect
 
 
 class CustomQtKernelManager(QtKernelManager):

@@ -17,13 +17,14 @@ Contains ImportErrorWidget class.
 """
 
 from PySide2.QtWidgets import QWidget
-from ui.import_errors import Ui_ImportErrors
 
 
 class ImportErrorWidget(QWidget):
     """Widget to display errors while importing and ask user for action."""
 
     def __init__(self, parent=None):
+        from ..ui.import_errors import Ui_ImportErrors
+
         super().__init__(parent)
 
         # state

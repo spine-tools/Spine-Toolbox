@@ -34,10 +34,10 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QIcon
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.empty_row_model import EmptyRowModel
-from mvcmodels.hybrid_table_model import HybridTableModel
-from widgets.custom_delegates import (
+from ..mvcmodels.minimal_table_model import MinimalTableModel
+from ..mvcmodels.empty_row_model import EmptyRowModel
+from ..mvcmodels.hybrid_table_model import HybridTableModel
+from .custom_delegates import (
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
     ManageRelationshipClassesDelegate,
@@ -45,9 +45,9 @@ from widgets.custom_delegates import (
     RemoveTreeItemsDelegate,
     ManageParameterTagsDelegate,
 )
-from widgets.custom_editors import IconColorEditor
-from widgets.custom_qtableview import CopyPasteTableView
-from helpers import busy_effect, default_icon_id
+from .custom_editors import IconColorEditor
+from .custom_qtableview import CopyPasteTableView
+from ..helpers import busy_effect, default_icon_id
 
 
 class ManageItemsDialog(QDialog):

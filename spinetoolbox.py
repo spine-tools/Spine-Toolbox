@@ -10,8 +10,14 @@
 ######################################################################################################################
 
 """
-Gdx export project item widgets.
+Starts Spinetoolbox.
 
 :author: A. Soininen (VTT)
 :date:   3.10.2019
 """
+
+
+if __name__ == "__main__":
+    import sys
+    from spinetoolbox.main import main
+    sys.exit(main())

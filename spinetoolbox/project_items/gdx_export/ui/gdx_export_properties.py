@@ -94,4 +94,4 @@ class Ui_Form(object):
         self.item_name_label.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
         self.open_directory_button.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Data Connection\'s project directory in file browser</p></body></html>", None, -1))
 
-import resources_icons_rc
+from spinetoolbox import resources_icons_rc

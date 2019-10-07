@@ -10,8 +10,5 @@
 ######################################################################################################################
 
 """
-Gdx export project item widgets.
-
-:author: A. Soininen (VTT)
-:date:   3.10.2019
+The Spinetoolbox package.
 """

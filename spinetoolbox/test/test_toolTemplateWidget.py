@@ -21,8 +21,8 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
-from widgets.tool_template_widget import ToolTemplateWidget
-from ui_main import ToolboxUI
+from ..widgets.tool_template_widget import ToolTemplateWidget
+from ..ui_main import ToolboxUI
 
 
 class MockQWidget(QWidget):
@@ -51,8 +51,8 @@ class TestToolTemplateWidget(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
+        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "spinetoolbox.ui_main.PythonReplWidget"
         ) as mock_python_repl:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
@@ -71,9 +71,9 @@ class TestToolTemplateWidget(unittest.TestCase):
 
     def test_create_minimal_tool_template(self):
         """Test that a minimal tool template can be created by specifying name, type and main program file."""
-        with mock.patch("widgets.tool_template_widget.QFileDialog") as mock_file_dialog, mock.patch(
-            "widgets.tool_template_widget.ToolTemplateWidget.call_add_tool_template"
-        ) as mock_add, mock.patch("widgets.tool_template_widget.ToolTemplateWidget.close") as mock_close:
+        with mock.patch("spinetoolbox.widgets.tool_template_widget.QFileDialog") as mock_file_dialog, mock.patch(
+            "spinetoolbox.widgets.tool_template_widget.ToolTemplateWidget.call_add_tool_template"
+        ) as mock_add, mock.patch("spinetoolbox.widgets.tool_template_widget.ToolTemplateWidget.close") as mock_close:
             self.tool_template_widget.ui.comboBox_tooltype.setCurrentIndex(1)
             self.tool_template_widget.ui.lineEdit_name.setText("test_tool")
             self.tool_template_widget.ui.lineEdit_main_program.setText(__file__)

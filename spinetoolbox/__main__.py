@@ -10,8 +10,14 @@
 ######################################################################################################################
 
 """
-Gdx export project item widgets.
+Spine Toolbox application main file.
 
-:author: A. Soininen (VTT)
-:date:   3.10.2019
+:author: P. Savolainen (VTT)
+:date:   14.12.2017
 """
+
+import sys
+from .main import main
+
+return_code = main()
+sys.exit(return_code)

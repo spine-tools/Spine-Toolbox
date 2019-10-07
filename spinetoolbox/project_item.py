@@ -18,12 +18,12 @@ BaseProjectItem and ProjectItem classes.
 
 import os
 import logging
-from metaobject import MetaObject
 from PySide2.QtCore import Qt, Signal, Slot, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
-from widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
-from helpers import create_dir
+from .helpers import create_dir
+from .metaobject import MetaObject
+from .widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
 
 
 class BaseProjectItem(MetaObject):

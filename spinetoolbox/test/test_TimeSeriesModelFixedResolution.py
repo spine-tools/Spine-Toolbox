@@ -24,7 +24,7 @@ import numpy.testing
 from PySide2.QtCore import Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesFixedResolution
-from mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
+from ..mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
 
 
 class TestTimeSeriesModelFixedStep(unittest.TestCase):

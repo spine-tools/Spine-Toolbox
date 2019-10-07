@@ -19,7 +19,7 @@ A model for time patterns, used by the parameter value editors.
 import numpy as np
 from PySide2.QtCore import QModelIndex, Qt
 from spinedb_api import TimePattern
-from mvcmodels.indexed_value_table_model import IndexedValueTableModel
+from .indexed_value_table_model import IndexedValueTableModel
 
 
 class TimePatternModel(IndexedValueTableModel):

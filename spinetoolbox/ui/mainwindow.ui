@@ -935,12 +935,12 @@
   <customwidget>
    <class>CustomQTextBrowser</class>
    <extends>QTextBrowser</extends>
-   <header>widgets/custom_qtextbrowser.h</header>
+   <header>spinetoolbox/widgets/custom_qtextbrowser.h</header>
   </customwidget>
   <customwidget>
    <class>DesignQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>widgets/custom_qgraphicsviews.h</header>
+   <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

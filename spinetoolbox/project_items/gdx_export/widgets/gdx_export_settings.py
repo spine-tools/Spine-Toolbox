@@ -19,7 +19,6 @@ Gdx Export item's settings window.
 from PySide2.QtCore import QAbstractListModel, QModelIndex, Qt, Signal, Slot
 from PySide2.QtGui import QColor
 from PySide2.QtWidgets import QWidget
-from project_items.gdx_export.ui.gdx_export_settings import Ui_Form
 
 
 def _move_selected_elements_by(list_view, delta):
@@ -64,6 +63,8 @@ class GdxExportSettings(QWidget):
             settings (Settings): export settings
             parent (QWidget): a parent widget
         """
+        from ..ui.gdx_export_settings import Ui_Form
+
         # super().__init__(parent)
         super().__init__(parent=parent, f=Qt.Window)
         self._ui = Ui_Form()

@@ -20,7 +20,6 @@ from datetime import datetime
 from PySide2.QtCore import QDate, QDateTime, QTime, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import DateTime
-from ui.datetime_editor import Ui_DatetimeEditor
 
 
 def _QDateTime_to_datetime(dt):
@@ -53,6 +52,7 @@ class DatetimeEditor(QWidget):
     """
 
     def __init__(self, parent=None):
+        from ..ui.datetime_editor import Ui_DatetimeEditor
         super().__init__(parent)
         self._value = DateTime("2000-01-01")
         self._ui = Ui_DatetimeEditor()

@@ -21,11 +21,11 @@ import os
 from PySide2.QtCore import Qt, Slot, QFileInfo
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
-from project_item import ProjectItem
-from helpers import create_dir, create_log_file_timestamp
-from spine_io.importers.csv_reader import CSVConnector
-from spine_io.importers.excel_reader import ExcelConnector
-from widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.helpers import create_dir, create_log_file_timestamp
+from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
+from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 
 
 class DataInterface(ProjectItem):

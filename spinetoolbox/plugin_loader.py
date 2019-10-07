@@ -20,7 +20,7 @@ import importlib
 import importlib.util
 import os
 import sys
-from config import PLUGINS_PATH
+from .config import PLUGINS_PATH
 
 
 def get_plugins(subpath):

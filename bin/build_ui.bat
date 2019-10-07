@@ -38,11 +38,12 @@ FOR %%f IN (%ui_path%\*.ui) DO (
     SET py_file=%ui_path%\%%~nf.py
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-uic
-    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    pyside2-uic --from-imports -o !py_file!.o !ui_file:\=/!
     findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
     DEL !py_file!.o > NUL
     CALL bin\append_license_xml.bat !ui_file!
     CALL bin\append_license_py.bat !py_file!
+    python bin\fix_ui_resources_imports.py !py_file!
     ECHO.
 )
 FOR %%f IN (%ui_path%\resources\*.qrc) DO (
@@ -61,11 +62,12 @@ FOR %%f IN (%dc_ui_path%\*.ui) DO (
     SET py_file=%dc_ui_path%\%%~nf.py
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-uic
-    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    pyside2-uic --from-imports -o !py_file!.o !ui_file:\=/!
     findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
     DEL !py_file!.o > NUL
     CALL bin\append_license_xml.bat !ui_file!
     CALL bin\append_license_py.bat !py_file!
+    python bin\fix_ui_resources_imports.py !py_file!
 )
 ECHO.
 ECHO --- Building Spine Toolbox Project Item Data Interface UI ---
@@ -74,11 +76,12 @@ FOR %%f IN (%di_ui_path%\*.ui) DO (
     SET py_file=%di_ui_path%\%%~nf.py
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-uic
-    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    pyside2-uic --from-imports -o !py_file!.o !ui_file:\=/!
     findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
     DEL !py_file!.o > NUL
     CALL bin\append_license_xml.bat !ui_file!
     CALL bin\append_license_py.bat !py_file!
+    python bin\fix_ui_resources_imports.py !py_file!
 )
 ECHO.
 ECHO --- Building Spine Toolbox Project Item Data Store UI ---
@@ -87,11 +90,12 @@ FOR %%f IN (%ds_ui_path%\*.ui) DO (
     SET py_file=%ds_ui_path%\%%~nf.py
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-uic
-    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    pyside2-uic --from-imports -o !py_file!.o !ui_file:\=/!
     findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
     DEL !py_file!.o > NUL
     CALL bin\append_license_xml.bat !ui_file!
     CALL bin\append_license_py.bat !py_file!
+    python bin\fix_ui_resources_imports.py !py_file!
 )
 ECHO.
 ECHO --- Building Spine Toolbox Project Item Gdx Export UI ---
@@ -100,11 +104,12 @@ FOR %%f IN (%gdx_export_ui_path%\*.ui) DO (
     SET py_file=%gdx_export_ui_path%\%%~nf.py
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-uic
-    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    pyside2-uic --from-imports -o !py_file!.o !ui_file:\=/!
     findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
     DEL !py_file!.o > NUL
     CALL bin\append_license_xml.bat !ui_file!
     CALL bin\append_license_py.bat !py_file!
+    python bin\fix_ui_resources_imports.py !py_file!
 )
 ECHO.
 ECHO --- Building Spine Toolbox Project Item Tool UI ---
@@ -113,11 +118,12 @@ FOR %%f IN (%tool_ui_path%\*.ui) DO (
     SET py_file=%tool_ui_path%\%%~nf.py
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-uic
-    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    pyside2-uic --from-imports -o !py_file!.o !ui_file:\=/!
     findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
     DEL !py_file!.o > NUL
     CALL bin\append_license_xml.bat !ui_file!
     CALL bin\append_license_py.bat !py_file!
+    python bin\fix_ui_resources_imports.py !py_file!
 )
 ECHO.
 ECHO --- Building Spine Toolbox Project View UI ---
@@ -126,11 +132,12 @@ FOR %%f IN (%view_ui_path%\*.ui) DO (
     SET py_file=%view_ui_path%\%%~nf.py
     ECHO building !py_file!
     REM Replace backslashes with forward slashes for pyside2-uic
-    pyside2-uic -o !py_file!.o !ui_file:\=/!
+    pyside2-uic --from-imports -o !py_file!.o !ui_file:\=/!
     findstr /V /C:"# Created:" /C:"#      by:" !py_file!.o > !py_file!
     DEL !py_file!.o > NUL
     CALL bin\append_license_xml.bat !ui_file!
     CALL bin\append_license_py.bat !py_file!
+    python bin\fix_ui_resources_imports.py !py_file!
 )
 
 ECHO --- Build completed ---

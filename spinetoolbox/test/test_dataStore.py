@@ -22,11 +22,11 @@ import shutil
 import os
 import logging
 import sys
-from test.mock_helpers import MockQWidget, qsettings_value_side_effect
-from PySide2.QtWidgets import QApplication, QWidget
-from ui_main import ToolboxUI
 from spinedb_api import create_new_spine_database
-from widgets.tree_view_widget import TreeViewForm
+from PySide2.QtWidgets import QApplication, QWidget
+from .mock_helpers import MockQWidget, qsettings_value_side_effect
+from ..ui_main import ToolboxUI
+from ..widgets.tree_view_widget import TreeViewForm
 
 
 # noinspection PyUnusedLocal
@@ -66,9 +66,9 @@ class TestDataStore(unittest.TestCase):
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
+        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "spinetoolbox.ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
@@ -275,7 +275,7 @@ class TestDataStore(unittest.TestCase):
         # Select the sqlite dialect
         self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
         # Browse to an existing db file
-        with mock.patch("project_items.data_store.data_store.QFileDialog") as mock_qfile_dialog:
+        with mock.patch("spinetoolbox.project_items.data_store.data_store.QFileDialog") as mock_qfile_dialog:
             mock_qfile_dialog.getOpenFileName.side_effect = lambda *args: [self.file_path]
             self.ds_properties_ui.toolButton_open_sqlite_file.click()
         # Open treeview

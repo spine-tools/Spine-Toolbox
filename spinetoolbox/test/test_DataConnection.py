@@ -18,8 +18,10 @@ Unit tests for Data Connection project item.
 
 from tempfile import TemporaryDirectory
 import unittest
+
 from PySide2.QtWidgets import QApplication
-from project_items.data_connection.data_connection import DataConnection
+
+from ..project_items.data_connection.data_connection import DataConnection
 
 
 class _MockProject:
@@ -82,18 +84,27 @@ class TestDataInterface(unittest.TestCase):
             toolbox.reset_messages()
             source_item.item_type = "Gdx Export"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg_warning.text, "Link established. Interaction between a "
-            "<b>Gdx Export</b> and a <b>Data Connection</b> has not been implemented yet.")
+            self.assertEqual(
+                toolbox.msg_warning.text,
+                "Link established. Interaction between a "
+                "<b>Gdx Export</b> and a <b>Data Connection</b> has not been implemented yet.",
+            )
             toolbox.reset_messages()
             source_item.item_type = "Tool"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg.text, "Link established. Tool <b>source name</b> output files will be "
-                "passed to item <b>name</b> after execution.")
+            self.assertEqual(
+                toolbox.msg.text,
+                "Link established. Tool <b>source name</b> output files will be "
+                "passed to item <b>name</b> after execution.",
+            )
             toolbox.reset_messages()
             source_item.item_type = "View"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg_warning.text, "Link established. Interaction between a "
-            "<b>View</b> and a <b>Data Connection</b> has not been implemented yet.")
+            self.assertEqual(
+                toolbox.msg_warning.text,
+                "Link established. Interaction between a "
+                "<b>View</b> and a <b>Data Connection</b> has not been implemented yet.",
+            )
             item.data_dir_watcher.removePath(item.data_dir)
 
 

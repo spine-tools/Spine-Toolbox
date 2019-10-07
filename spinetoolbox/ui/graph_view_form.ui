@@ -832,17 +832,17 @@
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>GraphQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>widgets/custom_qgraphicsviews.h</header>
+   <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
   </customwidget>
   <customwidget>
    <class>DragListView</class>
    <extends>QListView</extends>
-   <header>widgets/custom_qlistview.h</header>
+   <header>spinetoolbox/widgets/custom_qlistview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

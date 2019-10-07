@@ -16,12 +16,11 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
-import logging
 from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
-from graphics_items import ProjectItemIcon, Link
-from widgets.toolbars import DraggableWidget
+from ..graphics_items import ProjectItemIcon
+from .toolbars import DraggableWidget
 
 
 class CustomQGraphicsScene(QGraphicsScene):

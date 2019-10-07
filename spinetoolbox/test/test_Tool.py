@@ -18,10 +18,12 @@ Unit tests for Tool project item.
 
 from tempfile import TemporaryDirectory
 import unittest
+
 from PySide2.QtCore import QSettings
-from project_items.tool.tool import Tool
-from project import SpineToolboxProject
-from mvcmodels.tool_template_model import ToolTemplateModel
+
+from ..project_items.tool.tool import Tool
+from ..project import SpineToolboxProject
+from ..mvcmodels.tool_template_model import ToolTemplateModel
 
 
 class _MockToolbox:
@@ -70,23 +72,35 @@ class TestTool(unittest.TestCase):
             item = Tool(toolbox, "name", "description", 0.0, 0.0)
             source_item = _MockItem("Data Connection", "source name")
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg.text, "Link established. Tool <b>name</b> will look for input "
-                "files from <b>source name</b>'s references and data directory.")
+            self.assertEqual(
+                toolbox.msg.text,
+                "Link established. Tool <b>name</b> will look for input "
+                "files from <b>source name</b>'s references and data directory.",
+            )
             toolbox.reset_messages()
             source_item = _MockItem("Data Interface", "source name")
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg_warning.text, "Link established. Interaction between a "
-            "<b>Data Interface</b> and a <b>Tool</b> has not been implemented yet.")
+            self.assertEqual(
+                toolbox.msg_warning.text,
+                "Link established. Interaction between a "
+                "<b>Data Interface</b> and a <b>Tool</b> has not been implemented yet.",
+            )
             toolbox.reset_messages()
             source_item.item_type = "Data Store"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg.text, "Link established. Data Store <b>source name</b> reference will "
-                "be passed to Tool <b>name</b> when executing.")
+            self.assertEqual(
+                toolbox.msg.text,
+                "Link established. Data Store <b>source name</b> reference will "
+                "be passed to Tool <b>name</b> when executing.",
+            )
             toolbox.reset_messages()
             source_item.item_type = "Gdx Export"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg.text, "Link established. Gdx Export <b>source name</b> exported file will "
-                "be passed to Tool <b>name</b> when executing.")
+            self.assertEqual(
+                toolbox.msg.text,
+                "Link established. Gdx Export <b>source name</b> exported file will "
+                "be passed to Tool <b>name</b> when executing.",
+            )
             toolbox.reset_messages()
             source_item.item_type = "Tool"
             item.notify_destination(source_item)
@@ -94,8 +108,11 @@ class TestTool(unittest.TestCase):
             toolbox.reset_messages()
             source_item.item_type = "View"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg_warning.text, "Link established. Interaction between a "
-            "<b>View</b> and a <b>Tool</b> has not been implemented yet.")
+            self.assertEqual(
+                toolbox.msg_warning.text,
+                "Link established. Interaction between a "
+                "<b>View</b> and a <b>Tool</b> has not been implemented yet.",
+            )
 
 
 if __name__ == '__main__':

@@ -18,8 +18,8 @@ Classes for models dealing with Data Packages.
 
 import os
 from PySide2.QtCore import Qt
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.empty_row_model import EmptyRowModel
+from .minimal_table_model import MinimalTableModel
+from .empty_row_model import EmptyRowModel
 
 
 class DatapackageResourcesModel(MinimalTableModel):

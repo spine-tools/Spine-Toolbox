@@ -25,15 +25,14 @@ from PySide2.QtWidgets import QToolButton, QApplication, QGraphicsScene, QAction
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QSize, QEvent
 from PySide2.QtGui import QIcon, QPalette, QMouseEvent
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
-from ui.graph_view_form import Ui_MainWindow
-from widgets.data_store_widget import DataStoreForm
-from widgets.custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
-from widgets.custom_qwidgets import ZoomWidget
-from widgets.report_plotting_failure import report_plotting_failure
-from mvcmodels.object_relationship_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
-from graphics_items import ObjectItem, ArcItem, CustomTextItem
-from helpers import busy_effect, fix_name_ambiguity
-from plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
+from .data_store_widget import DataStoreForm
+from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
+from .custom_qwidgets import ZoomWidget
+from .report_plotting_failure import report_plotting_failure
+from ..mvcmodels.object_relationship_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
+from ..graphics_items import ObjectItem, ArcItem, CustomTextItem
+from ..helpers import busy_effect, fix_name_ambiguity
+from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
 class GraphViewForm(DataStoreForm):
@@ -47,6 +46,8 @@ class GraphViewForm(DataStoreForm):
 
     def __init__(self, project, db_maps, read_only=False):
         """Initialize class."""
+        from ..ui.graph_view_form import Ui_MainWindow
+
         tic = time.clock()
         super().__init__(project, Ui_MainWindow(), db_maps)
         self.db_map = self.db_maps[0]

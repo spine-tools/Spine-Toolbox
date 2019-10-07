@@ -41,7 +41,7 @@ from PySide2.QtGui import (
     QStandardItemModel,
     QStandardItem,
 )
-from config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
+from .config import DEFAULT_PROJECT_DIR, REQUIRED_SPINEDB_API_VERSION
 
 
 def set_taskbar_icon():

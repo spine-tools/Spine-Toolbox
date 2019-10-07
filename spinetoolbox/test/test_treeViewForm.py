@@ -23,8 +23,8 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication, QStyleOptionViewItem
 from PySide2.QtCore import QSettings, Qt, QItemSelectionModel, QItemSelection
-from widgets.tree_view_widget import TreeViewForm
-from widgets.custom_editors import SearchBarEditor, MultiSearchBarEditor, CustomLineEditor
+from ..widgets.tree_view_widget import TreeViewForm
+from ..widgets.custom_editors import SearchBarEditor, MultiSearchBarEditor, CustomLineEditor
 
 
 class qry(list):
@@ -119,7 +119,7 @@ class TestTreeViewForm(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes."""
-        with mock.patch("project.SpineToolboxProject") as mock_project, mock.patch(
+        with mock.patch("spinetoolbox.project.SpineToolboxProject") as mock_project, mock.patch(
             "spinedb_api.DiffDatabaseMapping"
         ) as mock_db_map:
             mock_project._toolbox._qsettings = QSettings("SpineProject", "Spine Toolbox")

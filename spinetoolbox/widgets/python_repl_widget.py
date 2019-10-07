@@ -22,10 +22,10 @@ from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
-from widgets.toolbars import DraggableWidget
-from helpers import busy_effect
-from config import PYTHON_EXECUTABLE
-import qsubprocess
+from .toolbars import DraggableWidget
+from ..helpers import busy_effect
+from ..config import PYTHON_EXECUTABLE
+from .. import qsubprocess
 
 
 class PythonReplWidget(RichJupyterWidget):

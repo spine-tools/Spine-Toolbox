@@ -32,13 +32,12 @@ from spinedb_api import (
     TimePattern,
     TimeSeries,
 )
-from ui.tabular_view_form import Ui_MainWindow
-from widgets.custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
-from widgets.custom_qdialog import CommitDialog
-from widgets.parameter_value_editor import ParameterValueEditor
-from helpers import fix_name_ambiguity, tuple_itemgetter, busy_effect
-from mvcmodels.pivot_table_models import PivotTableSortFilterProxy, PivotTableModel
-from config import MAINWINDOW_SS
+from .custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
+from .custom_qdialog import CommitDialog
+from .parameter_value_editor import ParameterValueEditor
+from ..helpers import fix_name_ambiguity, tuple_itemgetter, busy_effect
+from ..mvcmodels.pivot_table_models import PivotTableSortFilterProxy, PivotTableModel
+from ..config import MAINWINDOW_SS
 
 # TODO: connect to all add, delete relationship/object classes widgets to this.
 
@@ -78,6 +77,8 @@ class TabularViewForm(QMainWindow):
     """
 
     def __init__(self, data_store, db_map, database):
+        from ..ui.tabular_view_form import Ui_MainWindow
+
         super().__init__(flags=Qt.Window)
         # TODO: change the list_select_class to something nicer
         # Setup UI from Qt Designer file
