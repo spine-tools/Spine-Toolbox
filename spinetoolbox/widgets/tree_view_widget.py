@@ -22,23 +22,22 @@ from PySide2.QtWidgets import QFileDialog, QDockWidget, QInputDialog, QTreeView,
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QIcon
 from spinedb_api import copy_database, SpineDBAPIError
-from ui.tree_view_form import Ui_MainWindow
-from widgets.data_store_widget import DataStoreForm
-from widgets.custom_menus import (
+from .data_store_widget import DataStoreForm
+from .custom_menus import (
     EditableParameterValueContextMenu,
     ObjectTreeContextMenu,
     RelationshipTreeContextMenu,
     ParameterContextMenu,
     ParameterValueListContextMenu,
 )
-from widgets.custom_qdialog import RemoveTreeItemsDialog
-from widgets.import_widget import ImportDialog
-from widgets.report_plotting_failure import report_plotting_failure
-from mvcmodels.object_relationship_models import ObjectTreeModel, RelationshipTreeModel
-from excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
-from datapackage_import_export import datapackage_to_spine
-from helpers import busy_effect, rows_to_row_count_tuples
-from plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
+from .custom_qdialog import RemoveTreeItemsDialog
+from .import_widget import ImportDialog
+from .report_plotting_failure import report_plotting_failure
+from ..mvcmodels.object_relationship_models import ObjectTreeModel, RelationshipTreeModel
+from ..excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
+from ..datapackage_import_export import datapackage_to_spine
+from ..helpers import busy_effect, int_list_to_row_count_tuples
+from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
 class TreeViewForm(DataStoreForm):
@@ -64,6 +63,8 @@ class TreeViewForm(DataStoreForm):
 
     def __init__(self, project, db_maps):
         """Initialize class."""
+        from ..ui.tree_view_form import Ui_MainWindow
+
         tic = time.process_time()
         super().__init__(project, Ui_MainWindow(), db_maps)
         self.takeCentralWidget()

@@ -19,7 +19,7 @@ A tree model for parameter value lists.
 import json
 from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractItemModel
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
-from mvcmodels.parameter_value_formatting import format_for_DisplayRole
+from .parameter_value_formatting import format_for_DisplayRole
 
 
 class TreeNode:

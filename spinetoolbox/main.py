@@ -10,33 +10,24 @@
 ######################################################################################################################
 
 """
-Spine Toolbox application main file.
+Provides the main() function.
 
-:author: P. Savolainen (VTT)
-:date:   14.12.2017
+:author: A. Soininen (VTT)
+:date:   4.10.2019
 """
 
 import sys
 import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
-
-try:
-    import spinedb_api
-except ModuleNotFoundError:
-    import spinedatabase_api
-
-    sys.modules['spinedb_api'] = spinedatabase_api  # So `import spinedb_api` does not fail before the check
-from ui_main import ToolboxUI
-from helpers import spinedb_api_version_check, pyside2_version_check
+# Importing initializes resources so we can add Font Awesome to the application
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
+from .ui_main import ToolboxUI
+from .helpers import spinedb_api_version_check, pyside2_version_check
 
 
-def main(argv):
-    """Launch application.
-
-    Args:
-        argv (list): Command line arguments
-    """
+def main():
+    """Creates main window GUI and starts main event loop."""
     logging.basicConfig(
         stream=sys.stderr,
         level=logging.DEBUG,
@@ -44,19 +35,16 @@ def main(argv):
         datefmt='%Y-%m-%d %H:%M:%S',
     )
     if not pyside2_version_check():
-        return 0
+        return 1
     if not spinedb_api_version_check():
-        return 0
-    # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
-    app = QApplication(argv)
-    QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+        return 1
+    app = QApplication(sys.argv)
+    status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+    if status < 0:
+        logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
     window = ToolboxUI()
     window.show()
     window.init_project()
     # Enter main event loop and wait until exit() is called
     return_code = app.exec_()
     return return_code
-
-
-if __name__ == '__main__':
-    sys.exit(main(sys.argv))

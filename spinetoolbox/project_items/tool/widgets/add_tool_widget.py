@@ -18,8 +18,7 @@ Widget shown to user when a new Tool is created.
 
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
-from project_items.tool.ui.add_tool import Ui_Form
-from config import STATUSBAR_SS, INVALID_CHARS
+from spinetoolbox.config import STATUSBAR_SS, INVALID_CHARS
 
 
 class AddToolWidget(QWidget):
@@ -33,6 +32,8 @@ class AddToolWidget(QWidget):
 
     def __init__(self, toolbox, x, y):
         """Initialize class."""
+        from ..ui.add_tool import Ui_Form
+
         super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
         self._toolbox = toolbox
         self._x = x

@@ -18,14 +18,14 @@ Models for relationship parameter definitions and values.
 
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QFont
-from helpers import busy_effect, format_string_list
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.empty_row_model import EmptyRowModel
-from mvcmodels.empty_parameter_models import (
+from ..helpers import busy_effect, format_string_list
+from .minimal_table_model import MinimalTableModel
+from .empty_row_model import EmptyRowModel
+from .empty_parameter_models import (
     EmptyRelationshipParameterValueModel,
     EmptyRelationshipParameterDefinitionModel,
 )
-from mvcmodels.sub_parameter_models import SubParameterValueModel, SubParameterDefinitionModel
+from .sub_parameter_models import SubParameterValueModel, SubParameterDefinitionModel
 
 
 class RelationshipParameterModel(MinimalTableModel):

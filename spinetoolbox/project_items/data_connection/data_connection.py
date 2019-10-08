@@ -22,10 +22,10 @@ import logging
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from project_item import ProjectItem
-from widgets.spine_datapackage_widget import SpineDatapackageWidget
-from helpers import busy_effect
-from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
+from spinetoolbox.helpers import busy_effect
+from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
 class DataConnection(ProjectItem):
@@ -36,12 +36,11 @@ class DataConnection(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
-            x (int): Initial X coordinate of item icon
-            y (int): Initial Y coordinate of item icon
+            x (float): Initial X coordinate of item icon
+            y (float): Initial Y coordinate of item icon
             references (list): List of file references
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Data Connection"
+        super().__init__(toolbox, "Data Connection", name, description, x, y)
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -392,7 +391,8 @@ class DataConnection(ProjectItem):
         super().simulate_execution(inst)
         refs = self.file_references()
         inst.append_dc_refs(self.name, refs)
-        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()] if self.data_files() else []
+        files = self.data_files()
+        f_list = [os.path.join(self.data_dir, f) for f in files] if files is not None else []
         inst.append_dc_files(self.name, f_list)
         if not refs + f_list:
             self.add_notification(
@@ -411,3 +411,15 @@ class DataConnection(ProjectItem):
         Closes the SpineDatapackageWidget instances opened."""
         if self.spine_datapackage_form:
             self.spine_datapackage_form.close()
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Tool":
+            self._toolbox.msg.emit(
+                "Link established. Tool <b>{0}</b> output files will be "
+                "passed to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type in ["Data Store", "Data Interface"]:
+            self._toolbox.msg.emit("Link established.")
+        else:
+            super().notify_destination(source_item)

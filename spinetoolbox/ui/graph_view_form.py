@@ -93,13 +93,14 @@ class Ui_MainWindow(object):
         font.setPointSize(10)
         self.listView_object_class.setFont(font)
         self.listView_object_class.setMouseTracking(True)
+        self.listView_object_class.setSizeAdjustPolicy(QtWidgets.QAbstractScrollArea.AdjustIgnored)
         self.listView_object_class.setEditTriggers(QtWidgets.QAbstractItemView.NoEditTriggers)
         self.listView_object_class.setProperty("showDropIndicator", False)
         self.listView_object_class.setDragEnabled(False)
         self.listView_object_class.setDragDropMode(QtWidgets.QAbstractItemView.NoDragDrop)
         self.listView_object_class.setDefaultDropAction(QtCore.Qt.CopyAction)
         self.listView_object_class.setIconSize(QtCore.QSize(32, 32))
-        self.listView_object_class.setTextElideMode(QtCore.Qt.ElideMiddle)
+        self.listView_object_class.setTextElideMode(QtCore.Qt.ElideRight)
         self.listView_object_class.setMovement(QtWidgets.QListView.Static)
         self.listView_object_class.setFlow(QtWidgets.QListView.LeftToRight)
         self.listView_object_class.setProperty("isWrapping", True)
@@ -396,7 +397,7 @@ class Ui_MainWindow(object):
         self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
         self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
 
-from widgets.custom_qtableview import AutoFilterCopyPasteTableView
-from widgets.custom_qlistview import DragListView
-from widgets.custom_qgraphicsviews import GraphQGraphicsView
-import resources_icons_rc
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
+from spinetoolbox.widgets.custom_qlistview import DragListView
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox import resources_icons_rc

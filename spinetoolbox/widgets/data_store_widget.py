@@ -20,14 +20,14 @@ from PySide2.QtWidgets import QMainWindow, QHeaderView, QDialog, QMessageBox, QC
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import SpineDBAPIError
-from config import MAINWINDOW_SS, STATUSBAR_SS
-from widgets.custom_delegates import (
+from ..config import MAINWINDOW_SS, STATUSBAR_SS
+from .custom_delegates import (
     ObjectParameterValueDelegate,
     ObjectParameterDefinitionDelegate,
     RelationshipParameterValueDelegate,
     RelationshipParameterDefinitionDelegate,
 )
-from widgets.custom_qdialog import (
+from .custom_qdialog import (
     AddObjectClassesDialog,
     AddObjectsDialog,
     AddRelationshipClassesDialog,
@@ -47,9 +47,9 @@ from mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from mvcmodels.parameter_value_list_model import ParameterValueListModel
-from helpers import busy_effect, format_string_list, IconManager
-from plotting import tree_graph_view_parameter_value_name
+from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
+from ..helpers import busy_effect, format_string_list, IconManager
+from ..plotting import tree_graph_view_parameter_value_name
 
 
 class DataStoreForm(QMainWindow):

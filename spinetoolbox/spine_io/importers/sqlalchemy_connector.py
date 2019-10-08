@@ -20,7 +20,7 @@ Contains SqlAlchemyConnector class and a help function.
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.orm import Session
 from PySide2.QtWidgets import QInputDialog
-from spine_io.io_api import SourceConnection
+from ..io_api import SourceConnection
 
 
 def select_sa_conn_string(parent=None):

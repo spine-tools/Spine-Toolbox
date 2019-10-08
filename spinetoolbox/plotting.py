@@ -26,11 +26,10 @@ The main entrance points to plotting are:
 import numpy as np
 from PySide2.QtCore import Qt
 from spinedb_api import from_database, ParameterValueFormatError, TimeSeries
-from widgets.plot_widget import PlotWidget
+from .widgets.plot_widget import PlotWidget
 
 
 class PlottingError(Exception):
-
     def __init__(self, message):
         """An exception signalling failure in plotting.
 
@@ -289,7 +288,6 @@ class PlottingHints:
 
 
 class GraphAndTreeViewPlottingHints(PlottingHints):
-
     def __init__(self, table_view):
         """Support for plotting data in Graph and Tree views.
 

@@ -16,9 +16,9 @@ Module for view icon class.
 :date:   4.4.2018
 """
 
-from graphics_items import ProjectItemIcon
 from PySide2.QtGui import QColor, QPen, QBrush
 from PySide2.QtCore import Qt
+from spinetoolbox.graphics_items import ProjectItemIcon
 
 
 class ViewIcon(ProjectItemIcon):
@@ -27,10 +27,10 @@ class ViewIcon(ProjectItemIcon):
 
         Args:
             toolbox (ToolBoxUI): QMainWindow instance
-            x (int): Icon x coordinate
-            y (int): Icon y coordinate
-            w (int): Width of background rectangle
-            h (int): Height of background rectangle
+            x (float): Icon x coordinate
+            y (float): Icon y coordinate
+            w (float): Width of background rectangle
+            h (float): Height of background rectangle
             name (str): Item name
         """
         super().__init__(toolbox, x, y, w, h, name)

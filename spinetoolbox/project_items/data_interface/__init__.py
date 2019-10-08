@@ -16,11 +16,10 @@ Data interface plugin.
 :date:   12.9.2019
 """
 
-from project_items.data_interface.ui.data_interface_properties import Ui_Form
-from project_items.data_interface.data_interface import DataInterface
-from project_items.data_interface.data_interface_icon import DataInterfaceIcon
-from project_items.data_interface.widgets.data_interface_properties_widget import DataInterfacePropertiesWidget
-from project_items.data_interface.widgets.add_data_interface_widget import AddDataInterfaceWidget
+from .data_interface import DataInterface
+from .data_interface_icon import DataInterfaceIcon
+from .widgets.data_interface_properties_widget import DataInterfacePropertiesWidget
+from .widgets.add_data_interface_widget import AddDataInterfaceWidget
 
 item_rank = 4
 item_category = "Data Interfaces"

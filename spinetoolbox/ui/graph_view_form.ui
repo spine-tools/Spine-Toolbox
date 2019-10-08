@@ -207,6 +207,9 @@
            <property name="mouseTracking">
             <bool>true</bool>
            </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QAbstractScrollArea::AdjustIgnored</enum>
+           </property>
            <property name="editTriggers">
             <set>QAbstractItemView::NoEditTriggers</set>
            </property>
@@ -229,7 +232,7 @@
             </size>
            </property>
            <property name="textElideMode">
-            <enum>Qt::ElideMiddle</enum>
+            <enum>Qt::ElideRight</enum>
            </property>
            <property name="movement">
             <enum>QListView::Static</enum>
@@ -832,17 +835,17 @@
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>GraphQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>widgets/custom_qgraphicsviews.h</header>
+   <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
   </customwidget>
   <customwidget>
    <class>DragListView</class>
    <extends>QListView</extends>
-   <header>widgets/custom_qlistview.h</header>
+   <header>spinetoolbox/widgets/custom_qlistview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

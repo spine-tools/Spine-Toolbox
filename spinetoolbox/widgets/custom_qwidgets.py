@@ -31,7 +31,7 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import QTimer, Signal
 from PySide2.QtGui import QPainter
-from mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
+from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
 
 
 class FilterWidget(QWidget):

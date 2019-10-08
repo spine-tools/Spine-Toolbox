@@ -945,17 +945,17 @@
   <customwidget>
    <class>CustomQLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>widgets/custom_qlineedit.h</header>
+   <header>spinetoolbox/widgets/custom_qlineedit.h</header>
   </customwidget>
   <customwidget>
    <class>SourcesTreeView</class>
    <extends>QTreeView</extends>
-   <header>widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>CustomTreeView</class>
    <extends>QTreeView</extends>
-   <header>widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

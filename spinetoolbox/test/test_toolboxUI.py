@@ -24,12 +24,12 @@ import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtCore import SIGNAL, Qt, QPoint
 from PySide2.QtTest import QTest
-from ui_main import ToolboxUI
-from project import SpineToolboxProject
-from test.mock_helpers import MockQWidget, qsettings_value_side_effect
-from config import APPLICATION_PATH
-from graphics_items import ProjectItemIcon, Link
-from project_item import RootProjectItem
+from ..ui_main import ToolboxUI
+from ..project import SpineToolboxProject
+from .mock_helpers import MockQWidget, qsettings_value_side_effect
+from ..config import APPLICATION_PATH
+from ..graphics_items import ProjectItemIcon, Link
+from ..project_item import RootProjectItem
 
 
 # noinspection PyUnusedLocal,DuplicatedCode
@@ -51,9 +51,9 @@ class TestToolboxUI(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test. Makes an instance of ToolboxUI class
         without opening previous project."""
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
+        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "spinetoolbox.ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             # Replace Julia and Python REPLs with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()  # Hack, because QWidget does not have test_push_vars()
@@ -76,13 +76,13 @@ class TestToolboxUI(unittest.TestCase):
         self.check_init_project_item_model()
 
     def test_init_project_item_model_with_project(self):
-        """Test that a new project item model contains 4 items (Data Stores, Data Connections, Tools, and Views).
+        """Test that project item model is initialized successfully.
         Note: This test is done WITH a project.
         Mock save_project() and create_dir() so that .proj file and project directory (and work directory) are
         not actually created.
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "project.create_dir"
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
             self.toolbox.create_project("UnitTest Project", "Project for unit tests.")
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
@@ -92,7 +92,8 @@ class TestToolboxUI(unittest.TestCase):
     def check_init_project_item_model(self):
         """Checks that category items are created as expected."""
         n = self.toolbox.project_item_model.rowCount()
-        self.assertEqual(n, 5)
+        # Data Stores, Data Connections, Tools, Views, Data Interfaces, Exporting
+        self.assertEqual(n, 6)
         # Check that there's only one column
         self.assertEqual(self.toolbox.project_item_model.columnCount(), 1)
         # Check that the items DisplayRoles are (In this particular order)
@@ -115,6 +116,16 @@ class TestToolboxUI(unittest.TestCase):
         self.assertTrue(item4.name == "Views", "Item on row 3 is not 'Views'")
         self.assertTrue(
             isinstance(item4.parent(), RootProjectItem), "Parent item of category item on row 3 should be root"
+        )
+        item5 = self.toolbox.project_item_model.root().child(4)
+        self.assertTrue(item5.name == "Data Interfaces", "Item on row 4 is not 'Data Interfaces'")
+        self.assertTrue(
+            isinstance(item5.parent(), RootProjectItem), "Parent item of category item on row 4 should be root"
+        )
+        item6 = self.toolbox.project_item_model.root().child(5)
+        self.assertTrue(item6.name == "Data Exporters", "Item on row 5 is not 'Data Exporters'")
+        self.assertTrue(
+            isinstance(item6.parent(), RootProjectItem), "Parent item of category item on row 5 should be root"
         )
 
     def test_init_tool_template_model(self):
@@ -147,8 +158,8 @@ class TestToolboxUI(unittest.TestCase):
         """Test that create_project method makes a SpineToolboxProject instance.
         Skips creating a .proj file and creating directories.
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "project.create_dir"
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
             self.toolbox.create_project("UnitTest Project", "Project for unit tests.")
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)  # Check that a project is open
@@ -164,9 +175,9 @@ class TestToolboxUI(unittest.TestCase):
             self.skipTest("Test project file not found in path:'{0}'".format(test_project_path))
             return
         self.assertIsNone(self.toolbox.project())
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
-            "project.create_dir"
-        ) as mock_create_dir, mock.patch("project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir, mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
             self.toolbox.open_project(test_project_path)
         self.assertIsInstance(self.toolbox.project(), SpineToolboxProject)
         # Check that project contains four items
@@ -224,8 +235,8 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).
         """
-        with mock.patch("ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("project.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
+                mock.patch("spinetoolbox.project.create_dir") as mock_create_dir:
             self.toolbox.create_project("UnitTest Project", "")
         # self.toolbox.create_project("UnitTest Project", "")
         ds1 = "DS1"
@@ -547,14 +558,14 @@ class TestToolboxUI(unittest.TestCase):
         """Helper method to create a Data Store with the given name and coordinates."""
         item = dict(name=name, description="", url=dict(), x=x, y=y)
         # TODO: Mocking create_dir does not work here since DataStore class was moved to project_items directory
-        with mock.patch("project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Stores", item)
         return
 
     def add_dc(self, name, x=0, y=0):
         """Helper method to create a Data Connection with the given name and coordinates."""
         item = dict(name=name, description="", references=list(), x=x, y=y)
-        with mock.patch("project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Connections", item)
         return
 

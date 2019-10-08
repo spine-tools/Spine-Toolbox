@@ -20,7 +20,6 @@ from PySide2.QtCore import QObject
 
 
 class MetaObject(QObject):
-
     def __init__(self, name, description):
         """Class for an object which has a name, type, and some description.
 

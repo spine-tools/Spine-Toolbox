@@ -13,7 +13,7 @@
 cx-Freeze setup file for Spine Toolbox.
 
 Usage:
-- Build the application into /build directory with command 'python setup.py build'
+- Build the application into build/ directory with command 'python cx_Freeze_setup.py build'
 - Package the built application into an installer file for distribution:
 1. On Windows, compile setup.iss file with Inno Setup. This will create a single-file (.exe) installer.
 2. On other platforms, use setup.py (this file) and Cx_Freeze (see Cx_Freeze documentation for help)
@@ -25,11 +25,11 @@ Usage:
 import os
 import sys
 from cx_Freeze import setup, Executable
-from config import SPINE_TOOLBOX_VERSION, APPLICATION_PATH
+from spinetoolbox.config import SPINE_TOOLBOX_VERSION, APPLICATION_PATH
 
 
 def main(argv):
-    """Main of cx_Freeze setup.py."""
+    """Main of cx_Freeze_setup.py."""
     python_dir = os.path.dirname(sys.executable)
     os.environ['TCL_LIBRARY'] = os.path.join(python_dir, "tcl", "tcl8.6")
     os.environ['TK_LIBRARY'] = os.path.join(python_dir, "tcl", "tk8.6")
@@ -76,7 +76,7 @@ def main(argv):
             "scipy.spatial.ckdtree",
             "pymysql",
             "tabulator.loaders.local",
-            "tabulator.parsers.csv"
+            "tabulator.parsers.csv",
         ],
         "include_files": [
             (doc_path, "docs/"),
@@ -86,7 +86,8 @@ def main(argv):
             readme_file,
             copying_file,
             copying_lesser_file,
-        ] + alembic_version_files,
+        ]
+        + alembic_version_files,
         "include_msvcr": True,
     }
     # Windows specific options
@@ -104,7 +105,7 @@ def main(argv):
     # Other platforms (TODO: needs testing)
     else:
         base = None
-    executables = [Executable("spinetoolbox.py", base=base, icon="./ui/resources/app.ico")]
+    executables = [Executable("spinetoolbox.py", base=base, icon="spinetoolbox/ui/resources/app.ico")]
     setup(
         name="Spine Toolbox",
         version=SPINE_TOOLBOX_VERSION,

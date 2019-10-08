@@ -23,12 +23,12 @@ from PySide2.QtCore import Slot, Qt
 from PySide2.QtWidgets import QMessageBox, QFileDialog, QApplication
 from sqlalchemy import create_engine
 from sqlalchemy.engine.url import make_url, URL
-from project_item import ProjectItem
-from widgets.tree_view_widget import TreeViewForm
-from widgets.graph_view_widget import GraphViewForm
-from widgets.tabular_view_widget import TabularViewForm
-from helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
-from project_items.data_store.widgets.custom_menus import DataStoreContextMenu
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.widgets.tree_view_widget import TreeViewForm
+from spinetoolbox.widgets.graph_view_widget import GraphViewForm
+from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
+from spinetoolbox.helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
+from .widgets.custom_menus import DataStoreContextMenu
 
 
 class DataStore(ProjectItem):
@@ -39,13 +39,12 @@ class DataStore(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
-            x (int): Initial X coordinate of item icon
-            y (int): Initial Y coordinate of item icon
+            x (float): Initial X coordinate of item icon
+            y (float): Initial Y coordinate of item icon
             url (str or dict): SQLAlchemy url
             reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Data Store"
+        super().__init__(toolbox, "Data Store", name, description, x, y)
         if type(reference) == dict and "url" in reference:
             url = reference["url"]
         self._url = self.parse_url(url)
@@ -642,3 +641,15 @@ class DataStore(ProjectItem):
             self.tabular_view_form.close()
         if self.graph_view_form:
             self.graph_view_form.close()
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Tool":
+            self._toolbox.msg.emit(
+                "Link established. Tool <b>{0}</b> output files will be "
+                "passed to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type in ["Data Connection", "Data Interface"]:
+            self._toolbox.msg.emit("Link established.")
+        else:
+            super().notify_destination(source_item)

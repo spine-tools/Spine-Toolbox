@@ -172,4 +172,4 @@ class Ui_Form(object):
         self.radioButton_execute_in_source.setText(QtWidgets.QApplication.translate("Form", "Source directory", None, -1))
         self.toolButton_tool_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Tool\'s project directory in file browser</p></body></html>", None, -1))
 
-import resources_icons_rc
+from spinetoolbox import resources_icons_rc
