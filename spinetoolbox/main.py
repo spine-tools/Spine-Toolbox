@@ -20,6 +20,8 @@ import sys
 import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
+# Importing initializes resources so we can add Font Awesome to the application
+import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from .ui_main import ToolboxUI
 from .helpers import spinedb_api_version_check, pyside2_version_check
 
@@ -36,9 +38,10 @@ def main():
         return 1
     if not spinedb_api_version_check():
         return 1
-    # QApplication.setAttribute(Qt.AA_DisableHighDpiScaling)
     app = QApplication(sys.argv)
-    QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+    status = QFontDatabase.addApplicationFont(":/fonts/fontawesome5-solid-webfont.ttf")
+    if status < 0:
+        logging.warning("Could not load fonts from resources file. Some icons may not render properly.")
     window = ToolboxUI()
     window.show()
     window.init_project()
