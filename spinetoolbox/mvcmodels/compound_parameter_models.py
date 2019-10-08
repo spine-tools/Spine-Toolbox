@@ -56,7 +56,7 @@ class CompoundParameterModel(MinimalTableModel):
         self.sub_models = []
         self._row_map = []
         self._fetched = 0  # Index of the last submodel that's already been fetched
-        self._auto_filtered = dict()
+        self._auto_filter = dict()
 
     @property
     def single_models(self):
@@ -82,7 +82,7 @@ class CompoundParameterModel(MinimalTableModel):
         """Use italic font for columns having an autofilter installed."""
         italic_font = QFont()
         italic_font.setItalic(True)
-        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filtered.get(section):
+        if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filter.get(section):
             return italic_font
         return super().headerData(section, orientation, role)
 
@@ -277,16 +277,16 @@ class CompoundParameterModel(MinimalTableModel):
 
     def update_compound_filter(self):
         """Update the filter."""
-        if not self._auto_filtered:
+        if not self._auto_filter:
             return False
-        self._auto_filtered.clear()
+        self._auto_filter.clear()
         return True
 
     def update_single_model_filter(self, model):
         """Update the filter for the given model."""
-        if not model._auto_filtered:
+        if not model._auto_filter:
             return False
-        model._auto_filtered.clear()
+        model._auto_filter.clear()
         return True
 
     def update_filter(self):
@@ -298,7 +298,9 @@ class CompoundParameterModel(MinimalTableModel):
             self.apply_filter()
 
     def apply_filter(self):
-        """Applies the current filter."""
+        """Applies the current filter.
+        Recompute the row map taking into account filter results.
+        """
         self.layoutAboutToBeChanged.emit()
         self._row_map.clear()
         for model in self.accepted_single_models():
@@ -314,33 +316,48 @@ class CompoundParameterModel(MinimalTableModel):
             menu_data (list): a list of AutoFilterMenuItem
         """
         auto_filter_vals = dict()
-        for model in self.single_models:
-            data = model.sourceModel()._main_data
-            row_count = model.sourceModel().rowCount()
-            for i in range(row_count):
-                if not model._main_filter_accepts_row(i, None):
+        for model in self.accepted_single_models():
+            row_count = model.rowCount()
+            for i in range(model.rowCount()):
+                if not model._main_filter_accepts_row(i):
                     continue
-                if not model._auto_filter_accepts_row(i, None, ignored_columns=[column]):
+                if not model._auto_filter_accepts_row(i, ignored_columns=[column]):
                     continue
-                value = data[i][column]
+                value = model._main_data[i][column]
                 auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
-        filtered = self._auto_filtered.get(column, [])
+        column_auto_filter = self._auto_filter.get(column, {})
+        filtered = [val for values in column_auto_filter.values() for val in values]
         return [
             AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, in_classes)
             for value, in_classes in auto_filter_vals.items()
         ]
 
-    def set_auto_filter(self, column, auto_filter):
-        """Sets auto filter for given column.
+    def update_auto_filter(self, column, auto_filter):
+        """Updates auto filter for given column.
 
         Args:
             column (int): the column number
             auto_filter (dict): maps entity ids to a collection of values to be filtered for the column
         """
-        self._auto_filtered[column] = [val for values in auto_filter.values() for val in values]
-        for model in self.single_models:
-            values = auto_filter.get(model.entity_class_id, {})
-            model.set_auto_filter_values(column, values)
+        self._auto_filter[column] = auto_filter
+        updated = False
+        for model in self.accepted_single_models():
+            updated |= self.update_single_model_auto_filter(model, column)
+        self.apply_filter()
+
+    def update_single_model_auto_filter(self, model, column):
+        """Set auto filter values for given column.
+
+        Args:
+            model (SingleParameterModel): the model
+            column (int): the column number
+            values (set): the set of values to be filtered
+        """
+        values = self._auto_filter[column].get(model.entity_class_id, {})
+        if values == model._auto_filter.get(column, {}):
+            return False
+        model._auto_filter[column] = values
+        return True
 
     def _emit_data_changed_for_column(self, field):
         """Emits data changed for an entire column.

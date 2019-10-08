@@ -298,6 +298,13 @@ class CompoundObjectParameterMixin:
         b = self._settattr_if_different(self, "_selected_object_class_ids", self._parent.all_selected_object_class_ids)
         return a or b
 
+    def filter_accepts_single_model(self, model):
+        """Returns True if the given model should be included in the compound model, otherwise returns False.
+        """
+        if not self._selected_object_class_ids:
+            return True
+        return model.object_class_id in self._selected_object_class_ids.get(model.db_map, set())
+
     def update_single_model_filter(self, model):
         """Update the filter for a single model."""
         a = super().update_single_model_filter(model)
@@ -307,13 +314,6 @@ class CompoundObjectParameterMixin:
             self._parent.selected_obj_parameter_definition_ids.get((model.db_map, model.object_class_id), set()),
         )
         return a or b
-
-    def filter_accepts_single_model(self, model):
-        """Returns True if the given model should be included in the compound model, otherwise returns False.
-        """
-        if not self._selected_object_class_ids:
-            return True
-        return model.object_class_id in self._selected_object_class_ids.get(model.db_map, set())
 
 
 class CompoundRelationshipParameterMixin:
@@ -367,25 +367,13 @@ class SingleParameterMixin:
         super().__init__(parent)
         self.database = database
         self.db_map = parent.db_name_to_map[database]
-        self._auto_filtered = dict()
+        self._auto_filter = dict()
         self._selected_param_def_ids = set()
 
     @property
     def entity_class_id(self):
         """Returns the associated entity class id."""
         raise NotImplementedError()
-
-    def set_auto_filter_values(self, column, values):
-        """Set auto filter values for given column.
-
-        Args:
-            column (int): the column number
-            values (set): a set of values to be filtered
-        """
-        if values == self._auto_filtered.get(column, {}):
-            return
-        self._auto_filtered[column] = values
-        self.invalidateFilter()
 
     def filter_accepts_row(self, row):
         return self._main_filter_accepts_row(row) and self._auto_filter_accepts_row(row)
@@ -401,7 +389,7 @@ class SingleParameterMixin:
         """Aplies the autofilter, defined by the autofilter drop down menu."""
         if ignored_columns is None:
             ignored_columns = []
-        for column, values in self._auto_filtered.items():
+        for column, values in self._auto_filter.items():
             if column in ignored_columns:
                 continue
             if self._main_data[row][column] in values:

@@ -310,7 +310,7 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
     def update_auto_filter(self):
         """Called when the user selects Ok in the auto filter menu.
         Set auto filter in model."""
-        self.model().set_auto_filter(self.auto_filter_column, self.auto_filter_menu.auto_filter)
+        self.model().update_auto_filter(self.auto_filter_column, self.auto_filter_menu.auto_filter)
 
     @Slot(name="sort_model_ascending")
     def sort_model_ascending(self):
