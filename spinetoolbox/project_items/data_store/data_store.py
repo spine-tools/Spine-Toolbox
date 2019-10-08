@@ -549,7 +549,7 @@ class DataStore(ProjectItem):
                 for resource in import_data_resources:
                     provider_name = resource.provider.name
                     all_data = resource.data
-                    self._toolbox.msg_proc.emit("Importing data from <b>{0}</b> into '{1}'".format(provider_name, url))
+                    self._toolbox.msg.emit("Importing data from <b>{0}</b> into '{1}'".format(provider_name, url))
                     for data in all_data:
                         import_num, import_errors = spinedb_api.import_data(db_map, **data)
                         if import_errors:
