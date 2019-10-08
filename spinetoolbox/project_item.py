@@ -19,6 +19,7 @@ BaseProjectItem and ProjectItem classes.
 import os
 import logging
 from urllib.parse import urlparse
+from urllib.request import url2pathname
 from PySide2.QtCore import Qt, Signal, Slot, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
@@ -449,8 +450,8 @@ class ProjectItemResource:
 
     @property
     def path(self):
-        """Returns the resource path, as obtained from parsing the url."""
-        return self.parsed_url.path
+        """Returns the resource path in the local syntax, as obtained from parsing the url."""
+        return url2pathname(self.parsed_url.path)
 
     @property
     def scheme(self):
