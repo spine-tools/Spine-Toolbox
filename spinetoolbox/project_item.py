@@ -105,7 +105,7 @@ class BaseProjectItem(MetaObject):
             parent (QWidget): The widget that is controlling the menu
             pos (QPoint): Position on screen
         """
-        return NotImplemented
+        raise NotImplementedError()
 
     def apply_context_menu_action(self, parent, action):
         """Applies given action from context menu. Implement in subclasses as needed.
@@ -114,6 +114,7 @@ class BaseProjectItem(MetaObject):
             parent (QWidget): The widget that is controlling the menu
             action (str): The selected action
         """
+        raise NotImplementedError()
 
 
 class RootProjectItem(BaseProjectItem):
