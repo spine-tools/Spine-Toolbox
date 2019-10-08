@@ -269,6 +269,92 @@ class RelationshipParameterDecorateMixin:
         return super().data(index, role)
 
 
+class CompoundObjectParameterMixin:
+    """A compound object parameter mixin."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_object_class_ids = None
+
+    def rename_object_classes(self, db_map, object_classes):
+        """Rename object classes in model."""
+        object_classes = {x.id: x.name for x in object_classes}
+        for model in self._models_with_db_map(db_map):
+            model.rename_object_classes(object_classes)
+        self._emit_data_changed_for_column("object_class_name")
+
+    def remove_object_classes(self, db_map, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        object_class_ids = [x['id'] for x in object_classes]
+        for model in self._models_with_db_map(db_map):
+            if model.object_class_id in object_class_ids:
+                self.sub_models.remove(model)
+        self.layoutChanged.emit()
+
+    def update_compound_filter(self):
+        """Update the filter."""
+        a = super().update_compound_filter()
+        b = self._settattr_if_different(self, "_selected_object_class_ids", self._parent.all_selected_object_class_ids)
+        return a or b
+
+    def update_single_model_filter(self, model):
+        """Update the filter for a single model."""
+        a = super().update_single_model_filter(model)
+        b = self._settattr_if_different(
+            model,
+            "_selected_param_def_ids",
+            self._parent.selected_obj_parameter_definition_ids.get((model.db_map, model.object_class_id), set()),
+        )
+        return a or b
+
+    def filter_accepts_single_model(self, model):
+        """Returns True if the given model should be included in the compound model, otherwise returns False.
+        """
+        if not self._selected_object_class_ids:
+            return True
+        return model.object_class_id in self._selected_object_class_ids.get(model.db_map, set())
+
+
+class CompoundRelationshipParameterMixin:
+    """A compound object parameter mixin."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_object_class_ids = None
+        self._selected_relationship_class_ids = None
+
+    def update_compound_filter(self):
+        """Update the filter."""
+        a = super().update_compound_filter()
+        b = self._settattr_if_different(self, "_selected_object_class_ids", self._parent.selected_object_class_ids)
+        c = self._settattr_if_different(
+            self, "_selected_relationship_class_ids", self._parent.all_selected_relationship_class_ids
+        )
+        return a or b or c
+
+    def filter_accepts_single_model(self, model):
+        """Returns True if the given single model should be included in the compound model, otherwise returns False.
+        """
+        return (
+            not self._selected_object_class_ids
+            or self._selected_object_class_ids.get(model.db_map, set()).intersection(model.object_class_id_list)
+        ) and (
+            not self._selected_relationship_class_ids
+            or model.relationship_class_id in self._selected_relationship_class_ids.get(model.db_map, set())
+        )
+
+    def update_single_model_filter(self, model):
+        """Update the filter for a single model."""
+        a = super().update_single_model_filter(model)
+        b = self._settattr_if_different(
+            model,
+            "_selected_param_def_ids",
+            self._parent.selected_rel_parameter_definition_ids.get((model.db_map, model.relationship_class_id), set()),
+        )
+        return a or b
+
+
 class SingleParameterMixin:
     """A parameter model for a single entity class"""
 
@@ -288,10 +374,6 @@ class SingleParameterMixin:
     def entity_class_id(self):
         """Returns the associated entity class id."""
         raise NotImplementedError()
-
-    def update_filter(self, grand_parent):
-        """Update the filter."""
-        self._auto_filtered.clear()
 
     def set_auto_filter_values(self, column, values):
         """Set auto filter values for given column.
@@ -344,29 +426,10 @@ class SingleObjectParameterMixin(SingleParameterMixin):
         super().__init__(parent, database)
         self.object_class_id = object_class_id
         self.json_fields = ["value"]
-        self._selected_object_class_ids = None
 
     @property
     def entity_class_id(self):
         return self.object_class_id
-
-    def update_filter(self, grand_parent):
-        """Update the filter."""
-        super().update_filter(grand_parent)
-        self._selected_param_def_ids = grand_parent.selected_obj_parameter_definition_ids.get(
-            (self.db_map, self.object_class_id), set()
-        )
-        self._selected_object_class_ids = grand_parent.all_selected_object_class_ids
-
-    def rowCount(self, parent=QModelIndex()):
-        """Returns the number of rows in the model.
-        Returns 0 if the associated object class is not selected by the filter.
-        """
-        if not self._selected_object_class_ids or self.object_class_id in self._selected_object_class_ids.get(
-            self.db_map, set()
-        ):
-            return super().rowCount(parent)
-        return 0
 
 
 class SingleRelationshipParameterMixin(SingleParameterMixin):
@@ -385,57 +448,7 @@ class SingleRelationshipParameterMixin(SingleParameterMixin):
         self.relationship_class_id = relationship_class_id
         self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
         self.json_fields = ["default_value"]
-        self._selected_object_class_ids = None
-        self._selected_relationship_class_ids = None
 
     @property
     def entity_class_id(self):
         return self.relationship_class_id
-
-    def update_filter(self, grand_parent):
-        """Update the filter."""
-        super().update_filter(grand_parent)
-        self._selected_param_def_ids = grand_parent.selected_rel_parameter_definition_ids.get(
-            (self.db_map, self.relationship_class_id), set()
-        )
-        self._selected_object_class_ids = grand_parent.selected_object_class_ids
-        self._selected_relationship_class_ids = grand_parent.all_selected_relationship_class_ids
-
-    def rowCount(self, parent=QModelIndex()):
-        """Returns the number of rows in the model.
-        Returns 0 if the associated relationship class or any of its member
-        object classes are not selected by the filter.
-        """
-        if (
-            not self._selected_object_class_ids
-            or self._selected_object_class_ids.get(self.db_map, set()).intersection(self.object_class_id_list)
-        ) and (
-            not self._selected_relationship_class_ids
-            or self.relationship_class_id in self._selected_relationship_class_ids.get(self.db_map, set())
-        ):
-            return super().rowCount(parent)
-        return 0
-
-
-class CompoundObjectParameterMixin:
-    """A compound object parameter mixin."""
-
-    def rename_object_classes(self, db_map, object_classes):
-        """Rename object classes in model."""
-        object_classes = {x.id: x.name for x in object_classes}
-        for model in self._models_with_db_map(db_map):
-            model.rename_object_classes(object_classes)
-        self._emit_data_changed_for_column("object_class_name")
-
-    def remove_object_classes(self, db_map, object_classes):
-        """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        object_class_ids = [x['id'] for x in object_classes]
-        for model in self._models_with_db_map(db_map):
-            if model.object_class_id in object_class_ids:
-                self.sub_models.remove(model)
-        self.layoutChanged.emit()
-
-
-class CompoundRelationshipParameterMixin:
-    """A compound object parameter mixin."""

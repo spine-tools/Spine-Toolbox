@@ -73,11 +73,6 @@ class SingleObjectParameterValueModel(
             for param_val in self.db_map.query(sq).filter_by(object_class_id=self.object_class_id)
         ]
 
-    def update_filter(self, grand_parent):
-        """Update the filter."""
-        super().update_filter(grand_parent)
-        self._selected_object_ids = grand_parent.selected_object_ids.get((self.db_map, self.object_class_id), set())
-
     def _main_filter_accepts_row(self, row):
         """Reimplemented to filter objects."""
         if not super()._main_filter_accepts_row(row):
@@ -104,18 +99,6 @@ class SingleRelationshipParameterValueModel(
             RelationshipParameterValueItem(self.header, database=self.database, **param_val._asdict())
             for param_val in self.db_map.query(sq).filter_by(relationship_class_id=self.relationship_class_id)
         ]
-
-    def update_filter(self, grand_parent):
-        """Update update the filter."""
-        super().update_filter(grand_parent)
-        self._selected_object_id_lists = grand_parent.selected_object_id_lists.get(
-            (self.db_map, self.relationship_class_id), set()
-        )
-        self._selected_object_ids = set(
-            obj_id
-            for obj_cls_id in self.object_class_id_list
-            for obj_id in grand_parent.selected_object_ids.get((self.db_map, obj_cls_id), set())
-        )
 
     def _main_filter_accepts_row(self, row):
         """Reimplemented to filter relationships and objects."""

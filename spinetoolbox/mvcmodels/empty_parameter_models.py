@@ -128,10 +128,6 @@ class EmptyParameterModel(ParameterAutocompleteMixin, EmptyRowModel):
                 item.clear_cache()
             self.added_rows.append(row)
 
-    def accepted_rows(self):
-        """Returns all rows in the model."""
-        return range(self.rowCount())
-
 
 class EmptyParameterDefinitionModel(ParameterDefinitionAutocompleteMixin, EmptyParameterModel):
     """An empty parameter definition model.
