@@ -18,12 +18,11 @@ Classes for models dealing with Data Packages.
 
 import os
 from PySide2.QtCore import Qt
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.empty_row_model import EmptyRowModel
+from .minimal_table_model import MinimalTableModel
+from .empty_row_model import EmptyRowModel
 
 
 class DatapackageResourcesModel(MinimalTableModel):
-
     def __init__(self, parent):
         """A model of datapackage resource data, used by SpineDatapackageWidget.
 
@@ -50,7 +49,6 @@ class DatapackageResourcesModel(MinimalTableModel):
 
 
 class DatapackageFieldsModel(MinimalTableModel):
-
     def __init__(self, parent):
         """A model of datapackage field data, used by SpineDatapackageWidget.
 
@@ -72,7 +70,6 @@ class DatapackageFieldsModel(MinimalTableModel):
 
 
 class DatapackageForeignKeysModel(EmptyRowModel):
-
     def __init__(self, parent):
         """A model of datapackage foreign key data, used by SpineDatapackageWidget.
 

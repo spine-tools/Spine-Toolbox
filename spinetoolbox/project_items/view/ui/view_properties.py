@@ -139,5 +139,5 @@ class Ui_Form(object):
         self.pushButton_view_open_tabular_view.setText(QtWidgets.QApplication.translate("Form", "Tabular view", None, -1))
         self.toolButton_view_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this View\'s project directory in file browser</p></body></html>", None, -1))
 
-from widgets.custom_qtreeview import ReferencesTreeView
-import resources_icons_rc
+from spinetoolbox.widgets.custom_qtreeview import ReferencesTreeView
+from spinetoolbox import resources_icons_rc

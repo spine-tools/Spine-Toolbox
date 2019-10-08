@@ -21,7 +21,6 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):
-
     def __init__(self, parent=None):
         """Table model for outlining simple tabular data.
 
@@ -196,19 +195,21 @@ class MinimalTableModel(QAbstractTableModel):
 
     def batch_set_data(self, indexes, data):
         """Batch set data for indexes."""
-        if not indexes:
+        if not indexes or not data:
             return False
-        if len(indexes) != len(data):
-            return False
-        for k, index in enumerate(indexes):
+        rows = []
+        columns = []
+        for index, value in zip(indexes, data):
             if not index.isValid():
                 continue
-            self._main_data[index.row()][index.column()] = data[k]
+            self._main_data[index.row()][index.column()] = value
+            rows.append(index.row())
+            columns.append(index.column())
         # Find square envelope of indexes to emit dataChanged
-        top = min(ind.row() for ind in indexes)
-        bottom = max(ind.row() for ind in indexes)
-        left = min(ind.column() for ind in indexes)
-        right = max(ind.column() for ind in indexes)
+        top = min(rows)
+        bottom = max(rows)
+        left = min(columns)
+        right = max(columns)
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right), [Qt.EditRole, Qt.DisplayRole])
         return True
 

@@ -17,7 +17,7 @@ Unit tests for icon display id related functions in the helpers module.
 """
 
 import unittest
-from helpers import interpret_icon_id, make_icon_id
+from ..helpers import interpret_icon_id, make_icon_id
 
 
 class MyTestCase(unittest.TestCase):

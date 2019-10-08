@@ -18,7 +18,7 @@ Classes for handling models in PySide2's model/view framework.
 from spinedb_api import ObjectClassMapping, RelationshipClassMapping, ParameterMapping, Mapping
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel
 from PySide2.QtGui import QColor
-from mvcmodels.minimal_table_model import MinimalTableModel
+from ..mvcmodels.minimal_table_model import MinimalTableModel
 
 _DISPLAY_TYPE_TO_TYPE = {
     "Single value": "single value",

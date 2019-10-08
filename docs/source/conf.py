@@ -16,9 +16,10 @@
 import os
 import sys
 
-app_path = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, "spinetoolbox")
+#app_path = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir, "spinetoolbox")
+app_path = os.path.join(os.path.dirname(__file__), os.path.pardir, os.path.pardir)
 sys.path.insert(0, os.path.abspath(app_path))
-from config import SPINE_TOOLBOX_VERSION
+from spinetoolbox.config import SPINE_TOOLBOX_VERSION
 
 # -- Project information -----------------------------------------------------
 
@@ -89,7 +90,8 @@ autoapi_ignore = [
     '*/spinetoolbox/dist/*',
     '*/spinetoolbox/test/*',
     '*/spinetoolbox/ui/*',
-    '*/spinetoolbox/setup.py'
+    '*/spinetoolbox/setup.py',
+    '*/spinetoolbox/project_items/*/ui/*',
 ]  # ignored modules
 
 

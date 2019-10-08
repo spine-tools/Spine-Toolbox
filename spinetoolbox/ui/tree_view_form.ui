@@ -313,11 +313,11 @@
        <attribute name="verticalHeaderVisible">
         <bool>false</bool>
        </attribute>
-       <attribute name="verticalHeaderMinimumSectionSize">
-        <number>20</number>
-       </attribute>
        <attribute name="verticalHeaderHighlightSections">
         <bool>false</bool>
+       </attribute>
+       <attribute name="verticalHeaderMinimumSectionSize">
+        <number>20</number>
        </attribute>
       </widget>
      </item>
@@ -516,6 +516,9 @@
          <width>20</width>
          <height>20</height>
         </size>
+       </property>
+       <property name="uniformRowHeights">
+        <bool>true</bool>
        </property>
       </widget>
      </item>
@@ -801,17 +804,17 @@
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>ObjectTreeView</class>
    <extends>QTreeView</extends>
-   <header>widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>CopyTreeView</class>
    <extends>QTreeView</extends>
-   <header>widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

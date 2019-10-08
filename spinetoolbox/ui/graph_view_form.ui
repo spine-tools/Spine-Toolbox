@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -72,7 +72,7 @@
      <x>0</x>
      <y>0</y>
      <width>944</width>
-     <height>28</height>
+     <height>21</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuGraph">
@@ -207,6 +207,9 @@
            <property name="mouseTracking">
             <bool>true</bool>
            </property>
+           <property name="sizeAdjustPolicy">
+            <enum>QAbstractScrollArea::AdjustIgnored</enum>
+           </property>
            <property name="editTriggers">
             <set>QAbstractItemView::NoEditTriggers</set>
            </property>
@@ -229,7 +232,7 @@
             </size>
            </property>
            <property name="textElideMode">
-            <enum>Qt::ElideMiddle</enum>
+            <enum>Qt::ElideRight</enum>
            </property>
            <property name="movement">
             <enum>QListView::Static</enum>
@@ -404,8 +407,20 @@
        <property name="selectionMode">
         <enum>QAbstractItemView::ExtendedSelection</enum>
        </property>
+       <property name="iconSize">
+        <size>
+         <width>20</width>
+         <height>20</height>
+        </size>
+       </property>
+       <property name="indentation">
+        <number>20</number>
+       </property>
+       <property name="uniformRowHeights">
+        <bool>true</bool>
+       </property>
        <attribute name="headerVisible">
-        <bool>false</bool>
+        <bool>true</bool>
        </attribute>
       </widget>
      </item>
@@ -820,17 +835,17 @@
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>GraphQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>widgets/custom_qgraphicsviews.h</header>
+   <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
   </customwidget>
   <customwidget>
    <class>DragListView</class>
    <extends>QListView</extends>
-   <header>widgets/custom_qlistview.h</header>
+   <header>spinetoolbox/widgets/custom_qlistview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

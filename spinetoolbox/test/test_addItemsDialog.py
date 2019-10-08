@@ -23,8 +23,8 @@ import os
 import sys
 from PySide2.QtCore import QSettings
 from PySide2.QtWidgets import QApplication, QToolButton
-from widgets.tree_view_widget import TreeViewForm
-from widgets.custom_qdialog import AddObjectClassesDialog
+from ..widgets.tree_view_widget import TreeViewForm
+from ..widgets.custom_qdialog import AddObjectClassesDialog
 
 
 class TestAddItemsDialog(unittest.TestCase):

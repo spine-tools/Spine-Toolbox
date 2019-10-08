@@ -12,7 +12,7 @@
 """
 Unit tests for the plotting module.
 
-:author: A. Soininen(VTT)
+:author: A. Soininen (VTT)
 :date:   10.7.2019
 """
 
@@ -21,7 +21,7 @@ from unittest.mock import Mock
 from PySide2.QtCore import QAbstractTableModel, QModelIndex, Qt
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
-from plotting import (
+from ..plotting import (
     add_time_series_plot,
     plot_pivot_column,
     plot_selection,
@@ -29,8 +29,8 @@ from plotting import (
     GraphAndTreeViewPlottingHints,
     PivotTablePlottingHints,
 )
-from mvcmodels.pivot_table_models import PivotTableModel
-from widgets.plot_widget import PlotWidget
+from ..mvcmodels.pivot_table_models import PivotTableModel
+from ..widgets.plot_widget import PlotWidget
 
 
 def _make_pivot_model():

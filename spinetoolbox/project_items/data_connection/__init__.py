@@ -16,16 +16,15 @@ Data connection plugin.
 :date:   12.9.2019
 """
 
-from project_items.data_connection.data_connection import DataConnection
-from project_items.data_connection.data_connection_icon import DataConnectionIcon
-from project_items.data_connection.widgets.data_connection_properties_widget import DataConnectionPropertiesWidget
-from project_items.data_connection.widgets.add_data_connection_widget import AddDataConnectionWidget
+from .data_connection_icon import DataConnectionIcon
+from .data_connection import DataConnection as item_maker
+from .widgets.data_connection_properties_widget import DataConnectionPropertiesWidget
+from .widgets.add_data_connection_widget import AddDataConnectionWidget
 
 item_rank = 1
 item_category = "Data Connections"
 item_type = "Data Connection"
 item_icon = ":/icons/project_item_icons/file-alt.svg"
-item_maker = DataConnection
 icon_maker = DataConnectionIcon
 properties_widget_maker = DataConnectionPropertiesWidget
 add_form_maker = AddDataConnectionWidget

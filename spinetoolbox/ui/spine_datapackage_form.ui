@@ -402,7 +402,7 @@
   <customwidget>
    <class>CopyPasteTableView</class>
    <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

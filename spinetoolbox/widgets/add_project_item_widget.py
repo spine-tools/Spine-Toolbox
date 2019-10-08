@@ -18,8 +18,7 @@ Widget shown to user when a new Project Item is created.
 
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
-from ui.add_project_item import Ui_Form
-from config import STATUSBAR_SS, INVALID_CHARS
+from ..config import STATUSBAR_SS, INVALID_CHARS
 
 
 class AddProjectItemWidget(QWidget):
@@ -33,6 +32,8 @@ class AddProjectItemWidget(QWidget):
 
     def __init__(self, toolbox, x, y):
         """Initialize class."""
+        from ..ui.add_project_item import Ui_Form
+
         super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
         self._toolbox = toolbox
         self._x = x
@@ -102,7 +103,10 @@ class AddProjectItemWidget(QWidget):
 
     def call_add_item(self):
         """Creates new Item according to user's selections.
-        Must be implemented by subclasses."""
+
+        Must be reimplemented by subclasses.
+        """
+        raise NotImplementedError()
 
     def keyPressEvent(self, e):
         """Close Setup form when escape key is pressed.

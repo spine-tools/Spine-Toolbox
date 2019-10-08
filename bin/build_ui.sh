@@ -33,10 +33,11 @@ for ui_file in $(find $ui_path -name '*.ui'); do
   py_file=$(basename "$py_file")
   py_file=$ui_path/$py_file
   echo building $(basename "$py_file")
-  pyside2-uic $ui_file -o $py_file
+  pyside2-uic --from-imports $ui_file -o $py_file
   sed -i '/# Created:/d;/#      by:/d' $py_file
   bash "bin/append_license_xml.sh" $ui_file
   bash "bin/append_license_py.sh" $py_file
+  python "bin/fix_ui_resources_imports.py" $py_file
 done
 for qrc_file in $(find $ui_path -name '*.qrc'); do
   py_file="${qrc_file%.qrc}_rc.py"
@@ -54,10 +55,11 @@ echo --- Building Spine Toolbox Project Items GUI ---
 for ui_file in $(find $project_items_path -name '*.ui'); do
     py_file="${ui_file%.ui}.py"
     echo building $(basename "$py_file")
-    pyside2-uic $ui_file -o $py_file
+    pyside2-uic --from-imports $ui_file -o $py_file
     sed -i '/# Created:/d;/#      by:/d' $py_file
     bash "bin/append_license_xml.sh" $ui_file
     bash "bin/append_license_py.sh" $py_file
+    python "bin/fix_ui_resources_imports.py" $py_file
 done
 
 echo --- Build completed ---

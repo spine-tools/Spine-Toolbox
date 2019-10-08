@@ -17,15 +17,16 @@ Unit tests for DataStore class.
 """
 
 import unittest
+from unittest import mock
 import shutil
 import os
-from unittest import mock
 import logging
 import sys
-from test.mock_helpers import MockQWidget, qsettings_value_side_effect
-from PySide2.QtWidgets import QApplication, QWidget
-from ui_main import ToolboxUI
 from spinedb_api import create_new_spine_database
+from PySide2.QtWidgets import QApplication, QWidget
+from .mock_helpers import MockQWidget, qsettings_value_side_effect
+from ..ui_main import ToolboxUI
+from ..widgets.tree_view_widget import TreeViewForm
 
 
 # noinspection PyUnusedLocal
@@ -44,14 +45,30 @@ class TestDataStore(unittest.TestCase):
             datefmt='%Y-%m-%d %H:%M:%S',
         )
 
+        # Let's create a real db to more easily test complicated stuff (such as opening a tree view)
+        cls.file_path = os.path.join(os.path.dirname(os.path.realpath(__file__)), "temp_db.sqlite")
+        if not os.path.exists(cls.file_path):
+            with open(cls.file_path, 'w'):
+                pass
+        cls.url = "sqlite:///" + cls.file_path
+        create_new_spine_database(cls.url)
+
+    @classmethod
+    def tearDownClass(cls):
+        """Remove the file path."""
+        try:
+            os.remove(cls.file_path)
+        except OSError:
+            pass
+
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of ToolboxUI class.
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("ui_main.QSettings.value") as mock_qsettings_value:
+        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "spinetoolbox.ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
@@ -75,6 +92,13 @@ class TestDataStore(unittest.TestCase):
         self.toolbox.deleteLater()
         self.toolbox = None
         self.ds_properties_ui = None
+
+    def test_item_type(self):
+        item = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        self.toolbox.project().add_project_items("Data Stores", item)
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)
+        self.assertEqual(data_store.item_type, "Data Store")
 
     def test_create_new_empty_spine_database(self):
         """Test that a new Spine database is created when clicking on 'New Spine db tool button'
@@ -170,18 +194,11 @@ class TestDataStore(unittest.TestCase):
         self.assertTrue(os.path.exists(db_line_edit.text()))
         self.assertTrue(os.path.isfile(db_line_edit.text()))
 
-    def test_load_reference(self):
-        """Test that reference is loaded into selections on Data Store creation,
+    def test_load_url(self):
+        """Test that url is loaded into selections on Data Store creation,
         and then shown in the ui when Data Store is activated.
         """
-        # FIXME: For now it only tests sqlite references
-        file_path = os.path.join(self.toolbox.project().project_dir, "mock_db.sqlite")
-        if not os.path.exists(file_path):
-            with open(file_path, 'w'):
-                pass
-        url = "sqlite:///" + file_path
-        create_new_spine_database(url)
-        item = dict(name="DS", description="", url=url, x=0, y=0)
+        item = dict(name="DS", description="", url=self.url, x=0, y=0)
         self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
         ind = self.toolbox.project_item_model.find_item("DS")
         data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
@@ -190,7 +207,7 @@ class TestDataStore(unittest.TestCase):
         database = os.path.basename(self.ds_properties_ui.lineEdit_database.text())
         username = self.ds_properties_ui.lineEdit_username.text()
         self.assertEqual(dialect, 'sqlite')
-        self.assertEqual(database, 'mock_db.sqlite')
+        self.assertEqual(database, 'temp_db.sqlite')
         self.assertEqual(username, '')
 
     def test_save_and_restore_selections(self):
@@ -244,6 +261,109 @@ class TestDataStore(unittest.TestCase):
         # noinspection PyArgumentList
         clipboard_text = QApplication.clipboard().text()
         self.assertEqual(clipboard_text, url)
+
+    def test_open_treeview1(self):
+        """Test that selecting the 'sqlite' dialect, browsing to an existing db file,
+        and pressing open tree view works as expected.
+        """
+        item = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        data_store.activate()
+        self.assertIsNone(data_store.tree_view_form)
+        # Select the sqlite dialect
+        self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
+        # Browse to an existing db file
+        with mock.patch("spinetoolbox.project_items.data_store.data_store.QFileDialog") as mock_qfile_dialog:
+            mock_qfile_dialog.getOpenFileName.side_effect = lambda *args: [self.file_path]
+            self.ds_properties_ui.toolButton_open_sqlite_file.click()
+        # Open treeview
+        self.ds_properties_ui.pushButton_ds_tree_view.click()
+        self.assertIsInstance(data_store.tree_view_form, TreeViewForm)
+        self.assertEqual(str(data_store.tree_view_form.db_maps[0].db_url), str(self.url))
+        data_store.tree_view_form.close()
+
+    def test_open_treeview2(self):
+        """Test that selecting the 'sqlite' dialect, typing the path to an existing db file,
+        and pressing open tree view works as expected.
+        """
+        item = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        self.toolbox.project().add_project_items("Data Stores", item)  # Create Data Store to project
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
+        data_store.activate()
+        self.assertIsNone(data_store.tree_view_form)
+        # Select the sqlite dialect
+        self.ds_properties_ui.comboBox_dialect.activated[str].emit("sqlite")
+        # Type the path to an existing db file
+        self.ds_properties_ui.lineEdit_database.setText(self.file_path)
+        self.ds_properties_ui.lineEdit_database.editingFinished.emit()
+        # Open treeview
+        self.ds_properties_ui.pushButton_ds_tree_view.click()
+        self.assertIsInstance(data_store.tree_view_form, TreeViewForm)
+        self.assertEqual(str(data_store.tree_view_form.db_maps[0].db_url), str(self.url))
+        data_store.tree_view_form.close()
+
+    def test_notify_destination(self):
+        class MockToolbox:
+            class Message:
+                def __init__(self):
+                    self.text = None
+
+                def emit(self, text):
+                    self.text = text
+
+            def __init__(self):
+                self.msg = MockToolbox.Message()
+                self.msg_warning = MockToolbox.Message()
+
+            def reset_messages(self):
+                self.msg = MockToolbox.Message()
+                self.msg_warning = MockToolbox.Message()
+
+        class MockItem:
+            def __init__(self, item_type, name):
+                self.item_type = item_type
+                self.name = name
+
+        item = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        self.toolbox.project().add_project_items("Data Stores", item)
+        ind = self.toolbox.project_item_model.find_item("DS")
+        data_store = self.toolbox.project_item_model.project_item(ind)
+        toolbox = MockToolbox()
+        data_store._toolbox = toolbox
+        source_item = MockItem("Data Connection", "source name")
+        data_store.notify_destination(source_item)
+        self.assertEqual(toolbox.msg.text, "Link established.")
+        toolbox.reset_messages()
+        source_item.item_type = "Data Interface"
+        data_store.notify_destination(source_item)
+        self.assertEqual(toolbox.msg.text, "Link established.")
+        toolbox.reset_messages()
+        source_item.item_type = "Gdx Export"
+        data_store.notify_destination(source_item)
+        self.assertEqual(
+            toolbox.msg_warning.text,
+            "Link established. Interaction between a "
+            "<b>Gdx Export</b> and a <b>Data Store</b> has not been implemented yet.",
+        )
+        toolbox.reset_messages()
+        source_item.item_type = "Tool"
+        data_store.notify_destination(source_item)
+        self.assertEqual(
+            toolbox.msg.text,
+            "Link established. Tool <b>source name</b> output files will be "
+            "passed to item <b>DS</b> after execution.",
+        )
+        toolbox.reset_messages()
+        source_item.item_type = "View"
+        data_store.notify_destination(source_item)
+        self.assertEqual(
+            toolbox.msg_warning.text,
+            "Link established. Interaction between a "
+            "<b>View</b> and a <b>Data Store</b> has not been implemented yet.",
+        )
 
 
 if __name__ == '__main__':

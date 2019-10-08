@@ -18,7 +18,7 @@ Unit tests for the PlainParameterValueEditor widget.
 
 import unittest
 from PySide2.QtWidgets import QApplication
-from widgets.plain_parameter_value_editor import PlainParameterValueEditor
+from ..widgets.plain_parameter_value_editor import PlainParameterValueEditor
 
 
 class TestPlainParameterValueEditor(unittest.TestCase):

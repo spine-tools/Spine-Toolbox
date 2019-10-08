@@ -20,7 +20,7 @@ Contains CSVConnector class and a help function.
 import csv
 from itertools import islice
 from PySide2.QtWidgets import QFileDialog
-from spine_io.io_api import SourceConnection
+from ..io_api import SourceConnection
 
 
 def select_csv_file(parent=None):

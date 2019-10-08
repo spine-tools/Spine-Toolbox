@@ -19,10 +19,8 @@ Widget shown to user when a new project is created.
 import os
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
-from config import STATUSBAR_SS
-import ui.project_form
-from config import INVALID_CHARS
-from helpers import project_dir
+from ..config import INVALID_CHARS, STATUSBAR_SS
+from ..helpers import project_dir
 
 
 class NewProjectForm(QWidget):
@@ -34,10 +32,11 @@ class NewProjectForm(QWidget):
 
     def __init__(self, toolbox):
         """Initialize class."""
+        from ..ui import project_form
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent
         self._toolbox = toolbox
         # Set up the user interface from Designer.
-        self.ui = ui.project_form.Ui_Form()
+        self.ui = project_form.Ui_Form()
         self.ui.setupUi(self)
         # Add status bar to form
         self.statusbar = QStatusBar(self)

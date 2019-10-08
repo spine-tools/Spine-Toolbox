@@ -19,8 +19,8 @@ Tool template classes.
 import os
 import logging
 from collections import OrderedDict
-from metaobject import MetaObject
-from config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
+from .metaobject import MetaObject
+from .config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 
 
 class ToolTemplate(MetaObject):
