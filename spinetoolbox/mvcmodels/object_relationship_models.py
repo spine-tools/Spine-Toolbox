@@ -17,7 +17,7 @@ Models for object and relationship classes.
 """
 
 from PySide2.QtCore import Qt
-from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QColor, QPen
+from PySide2.QtGui import QStandardItem, QStandardItemModel, QBrush, QFont, QIcon, QColor
 from ..helpers import busy_effect
 
 
@@ -29,7 +29,6 @@ class ObjectClassListModel(QStandardItemModel):
         super().__init__(graph_view_form)
         self._graph_view_form = graph_view_form
         self.db_map = graph_view_form.db_map
-        self.add_more_index = None
 
     def populate_list(self):
         """Populate model."""
@@ -42,16 +41,14 @@ class ObjectClassListModel(QStandardItemModel):
             object_class_item.setData(data, Qt.UserRole + 1)
             object_class_item.setData(object_class.name, Qt.ToolTipRole)
             self.appendRow(object_class_item)
-        add_more_item = QStandardItem()
+        add_more_item = QStandardItem("Add more...")
         add_more_item.setSelectable(False)
-        add_more_item.setData("Add more...", Qt.DisplayRole)
         add_more_item.setData(QBrush(QColor("#e6e6e6")), Qt.BackgroundRole)
-        # add_more_item.setTextAlignment(Qt.AlignHCenter)
         icon = QIcon(":/icons/menu_icons/cube_plus.svg")
         add_more_item.setIcon(icon)
-        add_more_item.setData("Add custom object class", Qt.ToolTipRole)
+        add_more_item.setToolTip("Add custom object class")
+        add_more_item.setData("Add More", Qt.UserRole + 2)
         self.appendRow(add_more_item)
-        self.add_more_index = self.indexFromItem(add_more_item)
 
     def add_object_class(self, object_class):
         """Add object class item to model."""
@@ -82,7 +79,6 @@ class RelationshipClassListModel(QStandardItemModel):
         super().__init__(graph_view_form)
         self._graph_view_form = graph_view_form
         self.db_map = graph_view_form.db_map
-        self.add_more_index = None
 
     def populate_list(self):
         """Populate model."""
@@ -95,10 +91,14 @@ class RelationshipClassListModel(QStandardItemModel):
             relationship_class_item.setData(data, Qt.UserRole + 1)
             relationship_class_item.setData(relationship_class.name, Qt.ToolTipRole)
             self.appendRow(relationship_class_item)
-        add_more_item = QStandardItem()
-        add_more_item.setData("Add more...", Qt.DisplayRole)
+        add_more_item = QStandardItem("Add more...")
+        add_more_item.setSelectable(False)
+        add_more_item.setData(QBrush(QColor("#e6e6e6")), Qt.BackgroundRole)
+        icon = QIcon(":/icons/menu_icons/cube_plus.svg")
+        add_more_item.setIcon(icon)
+        add_more_item.setToolTip("Add custom relationship class")
+        add_more_item.setData("Add More", Qt.UserRole + 2)
         self.appendRow(add_more_item)
-        self.add_more_index = self.indexFromItem(add_more_item)
 
     def add_relationship_class(self, relationship_class):
         """Add relationship class."""

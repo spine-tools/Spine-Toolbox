@@ -21,10 +21,9 @@ import logging
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import QToolButton, QApplication, QGraphicsScene, QAction, QWidgetAction, QTreeView, \
-    QWidget, QHBoxLayout, QSizePolicy
-from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QSize, QEvent
-from PySide2.QtGui import QIcon, QPalette, QMouseEvent
+from PySide2.QtWidgets import QApplication, QGraphicsScene, QWidgetAction, QTreeView
+from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QEvent
+from PySide2.QtGui import QPalette, QMouseEvent
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
 from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
@@ -113,7 +112,6 @@ class GraphViewForm(DataStoreForm):
         # Initialize stuff
         self.init_models()
         self.setup_delegates()
-        self.create_add_more_actions()
         self.add_toggle_view_actions()
         self.setup_zoom_action()
         self.connect_signals()
@@ -156,43 +154,6 @@ class GraphViewForm(DataStoreForm):
         self.ui.menuView.addSeparator()
         self.ui.menuView.addAction(self.zoom_widget_action)
 
-    def create_add_more_actions(self):
-        """Create and 'Add more' action and button for the Item Palette views."""
-        # object class
-        # index = self.object_class_list_model.add_more_index
-        # action = QAction()
-        # icon = QIcon(":/icons/menu_icons/cube_plus.svg")
-        # action.setIcon(icon)
-        # action.setIconText("Add more...")
-        # button = QToolButton()
-        # button.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        # button.setDefaultAction(action)
-        # button.setIconSize(QSize(32, 32))
-        # button.setFixedSize(64, 56)
-        # self.ui.listView_object_class.setIndexWidget(index, button)
-        # action.triggered.connect(self.show_add_object_classes_form)
-
-        # relationship class
-        index = self.relationship_class_list_model.add_more_index
-        action = QAction()
-        icon = QIcon(":/icons/menu_icons/cubes_plus.svg")
-        action.setIcon(icon)
-        action.setText(index.data(Qt.DisplayRole))
-        button2 = QToolButton()
-        button2.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
-        button2.setDefaultAction(action)
-        button2.setIconSize(QSize(32, 32))
-        button2.setFixedSize(64, 56)
-        self.ui.listView_relationship_class.setIndexWidget(index, button2)
-        action.triggered.connect(self.show_add_relationship_classes_form)
-
-    @Slot("QModelIndex", name="add_more_object_classes")
-    def add_more_object_classes(self, ind):
-        """Opens the add more object classes form when clicking on Add more... item."""
-        if ind == self.object_class_list_model.add_more_index:
-            self.show_add_object_classes_form()
-        return
-
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
@@ -221,9 +182,25 @@ class GraphViewForm(DataStoreForm):
         self.zoom_widget.minus_pressed.connect(self._handle_zoom_widget_minus_pressed)
         self.zoom_widget.plus_pressed.connect(self._handle_zoom_widget_plus_pressed)
         self.zoom_widget.reset_pressed.connect(self._handle_zoom_widget_reset_pressed)
-        # Add more items
-        self.ui.listView_object_class.clicked.connect(self.add_more_object_classes)
+        # Connect Add more items in Item palette
+        self.ui.listView_object_class.clicked.connect(self._add_more_object_classes)
+        self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
 
+    @Slot("QModelIndex", name="_add_more_object_classes")
+    def _add_more_object_classes(self, ind):
+        """Opens the add more object classes form when clicking on Add more... item
+        in Item palette Object class view."""
+        clicked_item = self.object_class_list_model.itemFromIndex(ind)
+        if clicked_item.data(Qt.UserRole + 2) == "Add More":
+            self.show_add_object_classes_form()
+
+    @Slot("QModelIndex", name="_add_more_relationship_classes")
+    def _add_more_relationship_classes(self, ind):
+        """Opens the add more relationship classes form when clicking on Add more... item
+        in Item palette Relationship class view."""
+        clicked_item = self.relationship_class_list_model.itemFromIndex(ind)
+        if clicked_item.data(Qt.UserRole + 2) == "Add More":
+            self.show_add_relationship_classes_form()
 
     def _object_tree_view_mouse_press_event(self, event):
         """Overrides mousePressEvent of ui.treeView_object so that Ctrl has the opposite effect.
