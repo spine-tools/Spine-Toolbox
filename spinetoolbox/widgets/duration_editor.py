@@ -19,7 +19,6 @@ An editor widget for editing duration database (relationship) parameter values.
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import Duration, duration_to_relativedelta, ParameterValueFormatError, relativedelta_to_duration
-from ui.duration_editor import Ui_DurationEditor
 
 
 def _to_text(value):
@@ -36,6 +35,7 @@ class DurationEditor(QWidget):
     """
 
     def __init__(self, parent=None):
+        from ..ui.duration_editor import Ui_DurationEditor
         super().__init__(parent)
         self._value = Duration(duration_to_relativedelta("1 hour"))
         self._ui = Ui_DurationEditor()

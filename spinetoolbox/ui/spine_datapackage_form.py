@@ -230,5 +230,5 @@ class Ui_MainWindow(object):
         self.actionPaste.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+V", None, -1))
         self.actionxx.setText(QtWidgets.QApplication.translate("MainWindow", "xx", None, -1))
 
-from widgets.custom_qtableview import CopyPasteTableView
-import resources_icons_rc
+from spinetoolbox.widgets.custom_qtableview import CopyPasteTableView
+from spinetoolbox import resources_icons_rc

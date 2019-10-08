@@ -352,7 +352,7 @@ class ExecutionInstance(QObject):
 
         Args:
             item_finish_state (int): 0=Continue to next project item. -2=Stop executing this graph (happens when e.g.
-            Tool does not find req. input files or something)
+                Tool does not find req. input files or something)
         """
         self.project_item_execution_finished_signal.disconnect()
         if item_finish_state == -1:

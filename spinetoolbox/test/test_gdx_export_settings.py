@@ -19,8 +19,8 @@ Unit tests for Gdx Export settings widget and related MVC models.
 import unittest
 from PySide2.QtCore import QModelIndex, Qt
 from PySide2.QtGui import QColor
-from project_items.gdx_export.widgets.gdx_export_settings import GAMSRecordListModel, GAMSSetListModel
-from spine_io.exporters.gdx import Settings
+from spinetoolbox.project_items.gdx_export.widgets.gdx_export_settings import GAMSRecordListModel, GAMSSetListModel
+from spinetoolbox.spine_io.exporters.gdx import Settings
 
 
 class TestGAMSSetListModel(unittest.TestCase):

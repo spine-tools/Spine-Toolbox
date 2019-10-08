@@ -18,7 +18,8 @@ Unit tests for Data Interface project item.
 
 from tempfile import TemporaryDirectory
 import unittest
-from project_items.data_interface.data_interface import DataInterface
+
+from ..project_items.data_interface.data_interface import DataInterface
 
 
 class _MockProject:
@@ -75,18 +76,27 @@ class TestDataInterface(unittest.TestCase):
             toolbox.reset_messages()
             source_item.item_type = "Gdx Export"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg_warning.text, "Link established. Interaction between a "
-            "<b>Gdx Export</b> and a <b>Data Interface</b> has not been implemented yet.")
+            self.assertEqual(
+                toolbox.msg_warning.text,
+                "Link established. Interaction between a "
+                "<b>Gdx Export</b> and a <b>Data Interface</b> has not been implemented yet.",
+            )
             toolbox.reset_messages()
             source_item.item_type = "Tool"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg_warning.text, "Link established. Interaction between a "
-            "<b>Tool</b> and a <b>Data Interface</b> has not been implemented yet.")
+            self.assertEqual(
+                toolbox.msg_warning.text,
+                "Link established. Interaction between a "
+                "<b>Tool</b> and a <b>Data Interface</b> has not been implemented yet.",
+            )
             toolbox.reset_messages()
             source_item.item_type = "View"
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg_warning.text, "Link established. Interaction between a "
-            "<b>View</b> and a <b>Data Interface</b> has not been implemented yet.")
+            self.assertEqual(
+                toolbox.msg_warning.text,
+                "Link established. Interaction between a "
+                "<b>View</b> and a <b>Data Interface</b> has not been implemented yet.",
+            )
 
 
 if __name__ == '__main__':

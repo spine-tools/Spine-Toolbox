@@ -20,14 +20,12 @@ is filled with all the information from the template being edited.
 
 import os
 import json
-from PySide2.QtGui import QStandardItemModel, QStandardItem
+from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from PySide2.QtGui import QDesktopServices
-from ui.tool_template_form import Ui_Form
-from config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, INVALID_FILENAME_CHARS
-from helpers import busy_effect
-from widgets.custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
+from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, INVALID_FILENAME_CHARS
+from ..helpers import busy_effect
+from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
 class ToolTemplateWidget(QWidget):
@@ -38,6 +36,8 @@ class ToolTemplateWidget(QWidget):
             toolbox (ToolboxUI): QMainWindow instance
             tool_template (ToolTemplate): If given, the form is pre-filled with this template
         """
+        from ..ui.tool_template_form import Ui_Form
+
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()

@@ -21,8 +21,8 @@ import unittest
 from PySide2.QtCore import QItemSelectionModel
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
-from mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
-from widgets.custom_qtableview import IndexedValueTableView
+from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
+from ..widgets.custom_qtableview import IndexedValueTableView
 
 
 class TestIndexedValueTableView(unittest.TestCase):

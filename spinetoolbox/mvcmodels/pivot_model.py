@@ -17,7 +17,7 @@ Provides PivotModel.
 """
 
 import operator
-from helpers import tuple_itemgetter
+from ..helpers import tuple_itemgetter
 
 
 class PivotModel:

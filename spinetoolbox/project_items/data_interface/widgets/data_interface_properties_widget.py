@@ -18,9 +18,8 @@ Data interface properties widget.
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
-from project_items.data_interface.ui.data_interface_properties import Ui_Form
-from project_items.data_interface.widgets.custom_menus import DiFilesContextMenu
-from config import TREEVIEW_HEADER_SS
+from .custom_menus import DiFilesContextMenu
+from spinetoolbox.config import TREEVIEW_HEADER_SS
 
 
 class DataInterfacePropertiesWidget(QWidget):
@@ -33,6 +32,7 @@ class DataInterfacePropertiesWidget(QWidget):
     def __init__(self, toolbox):
         """Init class."""
         super().__init__()
+        from ..ui.data_interface_properties import Ui_Form
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)

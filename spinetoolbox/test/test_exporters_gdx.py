@@ -22,8 +22,8 @@ import unittest
 from PySide2.QtWidgets import QApplication
 from spinedb_api import import_functions as dbmanip
 from spinedb_api.helpers import create_new_spine_database
-from spine_io.exporters import gdx
-from helpers import get_db_map
+from spinetoolbox.spine_io.exporters import gdx
+from spinetoolbox.helpers import get_db_map
 
 
 class TextExportersGdx(unittest.TestCase):

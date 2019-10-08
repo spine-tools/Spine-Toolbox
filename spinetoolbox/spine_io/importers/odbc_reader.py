@@ -18,7 +18,7 @@ Contains ODBCConnector class.
 
 from PySide2.QtWidgets import QWidget, QInputDialog, QErrorMessage
 import pyodbc
-from spine_io.io_api import SourceConnection
+from ..io_api import SourceConnection
 
 
 class ODBCConnector(SourceConnection):

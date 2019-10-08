@@ -23,10 +23,10 @@ import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from project_item import ProjectItem, ProjectItemResource
-from widgets.spine_datapackage_widget import SpineDatapackageWidget
-from helpers import busy_effect
-from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
+from spinetoolbox.helpers import busy_effect
+from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
 class DataConnection(ProjectItem):

@@ -28,7 +28,7 @@ OutputBaseFilename=spine-toolbox-{#MyAppVersion}-x64
 Compression=lzma
 SolidCompression=yes
 PrivilegesRequired=admin
-OutputDir=spinetoolbox\dist
+OutputDir=dist
 ArchitecturesInstallIn64BitMode=x64 ia64
 ArchitecturesAllowed=x64 ia64 arm64
 UsePreviousAppDir=yes
@@ -53,8 +53,8 @@ Name: "english"; MessagesFile: "compiler:Default.isl"
 Name: "desktopicon"; Description: "{cm:CreateDesktopIcon}"; GroupDescription: "{cm:AdditionalIcons}"; Flags: unchecked
 
 [Files]
-Source: "spinetoolbox\build\exe.win-amd64-3.6\spinetoolbox.exe"; DestDir: "{app}"; Flags: ignoreversion
-Source: "spinetoolbox\build\exe.win-amd64-3.6\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
+Source: "build\exe.win-amd64-3.6\spinetoolbox.exe"; DestDir: "{app}"; Flags: ignoreversion
+Source: "build\exe.win-amd64-3.6\*"; DestDir: "{app}"; Flags: ignoreversion recursesubdirs createallsubdirs
 ; NOTE: Don't use "Flags: ignoreversion" on any shared system files
 
 [Dirs]

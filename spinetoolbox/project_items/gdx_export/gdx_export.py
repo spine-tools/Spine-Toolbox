@@ -20,11 +20,11 @@ from copy import deepcopy
 import json
 import logging
 import os.path
-from helpers import get_db_map
-from project_item import ProjectItem
-from spine_io.exporters import gdx
-from project_items.gdx_export.widgets.gdx_export_settings import GdxExportSettings
-from project_items.gdx_export.widgets.export_list_item import ExportListItem
+from spinetoolbox.helpers import get_db_map
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.spine_io.exporters import gdx
+from .widgets.gdx_export_settings import GdxExportSettings
+from .widgets.export_list_item import ExportListItem
 
 
 class GdxExport(ProjectItem):

@@ -20,8 +20,8 @@ import logging
 import os
 from PySide2.QtCore import Qt, QModelIndex, QAbstractItemModel
 from PySide2.QtWidgets import QMessageBox
-from config import INVALID_CHARS, TOOL_OUTPUT_DIR
-from helpers import rename_dir
+from ..config import INVALID_CHARS, TOOL_OUTPUT_DIR
+from ..helpers import rename_dir
 
 
 class ProjectItemModel(QAbstractItemModel):

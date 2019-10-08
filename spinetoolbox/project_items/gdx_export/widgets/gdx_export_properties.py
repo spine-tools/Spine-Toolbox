@@ -17,7 +17,6 @@ Gdx Export properties widget.
 """
 
 from PySide2.QtWidgets import QWidget
-from project_items.gdx_export.ui.gdx_export_properties import Ui_Form
 
 
 class GdxExportProperties(QWidget):
@@ -28,6 +27,8 @@ class GdxExportProperties(QWidget):
         Args:
             toolbox (ToolboxUI): a main window instance
         """
+        from ..ui.gdx_export_properties import Ui_Form
+
         super().__init__()
         self._ui = Ui_Form()
         self._ui.setupUi(self)

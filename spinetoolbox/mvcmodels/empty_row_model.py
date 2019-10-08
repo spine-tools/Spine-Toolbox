@@ -17,7 +17,7 @@ Contains a table model with an empty last row.
 """
 
 from PySide2.QtCore import Qt, Slot, QModelIndex
-from mvcmodels.minimal_table_model import MinimalTableModel
+from .minimal_table_model import MinimalTableModel
 
 
 class EmptyRowModel(MinimalTableModel):

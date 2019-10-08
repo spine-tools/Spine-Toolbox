@@ -14,6 +14,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - A new project item *Gdx Export* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
 
 ### Changed
+- spinetoolbox is now a Python package.
+- spinetoolbox.py has been moved to repository root. To start the app, use command 'python -m spinetoolbox'.
 
 ### Deprecated
 

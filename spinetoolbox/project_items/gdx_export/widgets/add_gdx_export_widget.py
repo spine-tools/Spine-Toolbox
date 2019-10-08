@@ -16,7 +16,7 @@ Widget shown to user when a new Gdx Export item is created.
 :date:   6.9.2019
 """
 
-from widgets.add_project_item_widget import AddProjectItemWidget
+from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 
 
 class AddGdxExportWidget(AddProjectItemWidget):

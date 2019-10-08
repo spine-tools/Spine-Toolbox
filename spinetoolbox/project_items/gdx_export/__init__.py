@@ -16,16 +16,12 @@ Gdx export project item plugin.
 :date:   25.9.2019
 """
 
-from project_items.gdx_export.gdx_export import GdxExport
-from project_items.gdx_export.gdx_export_icon import GdxExportIcon
-from project_items.gdx_export.widgets.add_gdx_export_widget import AddGdxExportWidget
-from project_items.gdx_export.widgets.gdx_export_properties import GdxExportProperties
+from .gdx_export import GdxExport as item_maker
+from .gdx_export_icon import GdxExportIcon as icon_maker
+from .widgets.add_gdx_export_widget import AddGdxExportWidget as add_form_maker
+from .widgets.gdx_export_properties import GdxExportProperties as properties_widget_maker
 
 item_rank = 5
 item_category = "Data Exporters"
 item_type = "Gdx Export"
 item_icon = ":/icons/project_item_icons/file-export-solid.svg"
-item_maker = GdxExport
-icon_maker = GdxExportIcon
-properties_widget_maker = GdxExportProperties
-add_form_maker = AddGdxExportWidget

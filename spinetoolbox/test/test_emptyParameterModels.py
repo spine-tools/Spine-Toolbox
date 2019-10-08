@@ -20,15 +20,12 @@ import unittest
 from unittest import mock
 from collections import namedtuple
 from PySide2.QtWidgets import QApplication
-from mvcmodels.empty_parameter_models import (
+from ..mvcmodels.empty_parameter_models import (
     EmptyParameterValueModel,
     EmptyParameterDefinitionModel,
-    EmptyObjectParameterValueModel,
-    EmptyRelationshipParameterValueModel,
     EmptyObjectParameterDefinitionModel,
     EmptyRelationshipParameterDefinitionModel,
 )
-from PySide2.QtCore import Qt, QObject
 
 
 class TestEmptyParameterValueModel(unittest.TestCase):

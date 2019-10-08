@@ -301,7 +301,7 @@
   <customwidget>
    <class>ReferencesTreeView</class>
    <extends>QTreeView</extends>
-   <header>widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <resources>

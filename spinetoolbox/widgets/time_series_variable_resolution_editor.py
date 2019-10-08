@@ -19,12 +19,11 @@ Contains logic for the variable resolution time series editor widget.
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtWidgets import QWidget
 from spinedb_api import TimeSeriesVariableResolution
-from plotting import add_time_series_plot
-from mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
-from ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
-from widgets.custom_qtableview import IndexedValueTableView
-from widgets.indexed_value_table_context_menu import handle_table_context_menu
-from widgets.plot_widget import PlotWidget
+from ..plotting import add_time_series_plot
+from ..mvcmodels.time_series_model_variable_resolution import TimeSeriesModelVariableResolution
+from .custom_qtableview import IndexedValueTableView
+from .indexed_value_table_context_menu import handle_table_context_menu
+from .plot_widget import PlotWidget
 
 
 class TimeSeriesVariableResolutionEditor(QWidget):
@@ -36,6 +35,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
     """
 
     def __init__(self, parent=None):
+        from ..ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
         super().__init__(parent)
         stamps = ["2000-01-01T00:00:00", "2000-01-01T01:00:00"]
         zeros = len(stamps) * [0.0]

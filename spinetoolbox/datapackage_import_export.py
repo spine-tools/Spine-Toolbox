@@ -20,7 +20,7 @@ import getpass
 from PySide2.QtCore import QRunnable, Signal, QObject
 from datapackage import Package
 from spinedb_api import SpineDBAPIError, DiffDatabaseMapping, create_new_spine_database
-from helpers import busy_effect
+from .helpers import busy_effect
 
 
 class Signaler(QObject):

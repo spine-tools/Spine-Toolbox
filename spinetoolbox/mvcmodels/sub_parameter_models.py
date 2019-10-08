@@ -18,9 +18,9 @@ Models for parameter definitions and values corresponding to a single class.
 
 from PySide2.QtCore import Qt
 from PySide2.QtGui import QGuiApplication
-from helpers import busy_effect
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
+from ..helpers import busy_effect
+from .minimal_table_model import MinimalTableModel
+from .parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
 class SubParameterModel(MinimalTableModel):

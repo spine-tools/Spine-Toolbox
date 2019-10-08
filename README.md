@@ -23,20 +23,23 @@ run `spinetoolbox.exe`.
 
 ### Getting the latest development version
 
-The `master` branch contains the latest release version of the application. The 
-development happens on the `dev` branch. To get the latest features 
-and bug fixes you need to 
+To get the latest features and bug fixes you need to 
 [clone](https://help.github.com/articles/cloning-a-repository/) or download the latest 
 version of the source code to your computer.
+The `master` branch contains the latest release version of the application. The 
+development happens on the `dev` branch.
 
 Step-by-step instructions:
 
 1. Clone either the `master` or `dev` branch onto your computer
 2. Install Python (3.6->)
-3. Install requirements (see below)
-4. Go to directory `spinetoolbox` and run 
+3. Install requirements
 
-        python spinetoolbox.py
+        pip install -r requirements.txt
+
+4. Run 
+
+        python -m spinetoolbox
 
 Remember to update your clone occasionally with the 
 [git pull](https://www.atlassian.com/git/tutorials/syncing/git-pull) command.
@@ -45,22 +48,12 @@ Remember to update your clone occasionally with the
 
 Python 3.6 or higher is required.
 
-See file `requirements.txt` for packages needed to use Spinetoolbox.
-Additional packages are needed for development which are listed in `dev-requirements.txt`.
- 
-### Installing requirements
-
-After cloning or downloading the repository, open terminal (e.g. elevated command prompt 
-on Windows (run as administrator)). Change directory to Spine Toolbox root directory (the one that contains 
-requirements.txt)  
-
-Run
+See file `setup.py` for packages needed to use Spinetoolbox. These can be installed by
 
     pip install -r requirements.txt
 
-If everything goes smoothly, you can now run Spine Toolbox.
-
-To install the developer requirements run
+Additional packages needed for development are listed in `dev-requirements.txt`.
+To install the development requirements, run:
 
     pip install -r dev-requirements.txt
 

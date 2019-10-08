@@ -24,12 +24,12 @@ import pathlib
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
-from project_item import ProjectItem, ProjectItemResource
-from tool_instance import ToolInstance
-from config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
-from widgets.custom_menus import ToolTemplateOptionsPopupMenu
-from project_items.tool.widgets.custom_menus import ToolContextMenu
-from helpers import create_dir
+from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.tool_instance import ToolInstance
+from spinetoolbox.config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
+from spinetoolbox.widgets.custom_menus import ToolTemplateOptionsPopupMenu
+from spinetoolbox.project_items.tool.widgets.custom_menus import ToolContextMenu
+from spinetoolbox.helpers import create_dir
 
 
 class Tool(ProjectItem):

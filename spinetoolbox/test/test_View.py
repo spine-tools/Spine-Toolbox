@@ -18,8 +18,10 @@ Unit tests for View project item.
 
 from tempfile import TemporaryDirectory
 import unittest
+
 from PySide2.QtWidgets import QApplication
-from project_items.view.view import View
+
+from ..project_items.view.view import View
 
 
 class _MockProject:

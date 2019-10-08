@@ -25,12 +25,11 @@ from spinedb_api import (
     relativedelta_to_duration,
     TimeSeriesFixedResolution,
 )
-from plotting import add_time_series_plot
-from mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
-from ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
-from widgets.custom_qtableview import TimeSeriesFixedResolutionTableView
-from widgets.indexed_value_table_context_menu import handle_table_context_menu
-from widgets.plot_widget import PlotWidget
+from ..plotting import add_time_series_plot
+from ..mvcmodels.time_series_model_fixed_resolution import TimeSeriesModelFixedResolution
+from .custom_qtableview import TimeSeriesFixedResolutionTableView
+from .indexed_value_table_context_menu import handle_table_context_menu
+from .plot_widget import PlotWidget
 
 
 def _resolution_to_text(resolution):
@@ -59,6 +58,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
     """
 
     def __init__(self, parent=None):
+        from ..ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
         super().__init__(parent)
         start = datetime(year=2000, month=1, day=1)
         resolution = [duration_to_relativedelta("1 hour")]

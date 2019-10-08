@@ -48,7 +48,7 @@ from PySide2.QtWidgets import (
     QLabel,
 )
 from PySide2.QtGui import QIntValidator, QStandardItemModel, QStandardItem, QColor
-from helpers import IconListManager, interpret_icon_id, make_icon_id
+from ..helpers import IconListManager, interpret_icon_id, make_icon_id
 
 
 class CustomLineEditor(QLineEdit):
