@@ -23,13 +23,13 @@ import numpy as np
 from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView, QMenu, QLineEdit, QWidgetAction
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QSortFilterProxyModel
 from PySide2.QtGui import QKeySequence
-from mvcmodels.table_model import TableModel
-from mvcmodels.auto_filter_menu_model import (
+from ..mvcmodels.table_model import TableModel
+from ..mvcmodels.auto_filter_menu_model import (
     AutoFilterMenuItemProxyModel,
     AutoFilterMenuAllItemModel,
     AutoFilterMenuItem,
 )
-from widgets.custom_qlistview import AutoFilterMenuView
+from ..widgets.custom_qlistview import AutoFilterMenuView
 
 
 class CopyPasteTableView(QTableView):

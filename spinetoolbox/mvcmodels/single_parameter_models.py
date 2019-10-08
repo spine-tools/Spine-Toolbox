@@ -16,14 +16,14 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from mvcmodels.filled_parameter_models import FilledParameterDefinitionModel, FilledParameterValueModel
-from mvcmodels.parameter_mixins import (
+from ..mvcmodels.filled_parameter_models import FilledParameterDefinitionModel, FilledParameterValueModel
+from ..mvcmodels.parameter_mixins import (
     SingleObjectParameterMixin,
     SingleRelationshipParameterMixin,
     ObjectParameterDecorateMixin,
     RelationshipParameterDecorateMixin,
 )
-from mvcmodels.parameter_item import (
+from ..mvcmodels.parameter_item import (
     ObjectParameterDefinitionItem,
     ObjectParameterValueItem,
     RelationshipParameterDefinitionItem,

@@ -18,9 +18,9 @@ Filled models for parameter definitions and values (as in 'filled with data').
 
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.parameter_mixins import ParameterAutocompleteMixin, ParameterDefinitionAutocompleteMixin
-from mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
+from ..mvcmodels.minimal_table_model import MinimalTableModel
+from ..mvcmodels.parameter_mixins import ParameterAutocompleteMixin, ParameterDefinitionAutocompleteMixin
+from ..mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
 class FilledParameterModel(ParameterAutocompleteMixin, MinimalTableModel):

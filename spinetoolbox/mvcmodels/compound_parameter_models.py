@@ -19,22 +19,22 @@ that concatenate several 'single' models and one 'empty' model.
 
 from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
 from PySide2.QtGui import QFont
-from helpers import busy_effect, format_string_list, rows_to_row_count_tuples
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.empty_parameter_models import (
+from ..helpers import busy_effect, format_string_list, rows_to_row_count_tuples
+from ..mvcmodels.minimal_table_model import MinimalTableModel
+from ..mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyObjectParameterValueModel,
     EmptyRelationshipParameterDefinitionModel,
     EmptyRelationshipParameterValueModel,
 )
-from mvcmodels.single_parameter_models import (
+from ..mvcmodels.single_parameter_models import (
     SingleObjectParameterDefinitionModel,
     SingleObjectParameterValueModel,
     SingleRelationshipParameterDefinitionModel,
     SingleRelationshipParameterValueModel,
 )
-from mvcmodels.parameter_mixins import CompoundObjectParameterMixin, CompoundRelationshipParameterMixin
-from mvcmodels.auto_filter_menu_model import AutoFilterMenuItem
+from ..mvcmodels.parameter_mixins import CompoundObjectParameterMixin, CompoundRelationshipParameterMixin
+from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuItem
 
 
 class CompoundParameterModel(MinimalTableModel):

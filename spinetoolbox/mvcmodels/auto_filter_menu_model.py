@@ -23,7 +23,13 @@ class AutoFilterMenuItem:
     """An item for the auto filter menu."""
 
     def __init__(self, checked, value, in_classes=()):
-        """Init class."""
+        """Init class.
+
+        Args:
+            checked (int): the checked status, checked if not filtered
+            value: the value
+            in_classes (tuple): the entity classes where the value is found
+        """
         self.checked = checked
         self.value = value
         self.in_classes = in_classes
@@ -151,17 +157,23 @@ class AutoFilterMenuItemProxyModel(QSortFilterProxyModel):
         else:
             item.checked = Qt.Unchecked
             self._checked_count -= 1
-        if self._checked_count == 0:
-            all_checked = Qt.Unchecked
-        elif self._checked_count == self.rowCount():
-            all_checked = Qt.Checked
-        else:
-            all_checked = Qt.PartiallyChecked
-        self.all_checked_state_changed.emit(all_checked)
+        self.emit_all_checked_state_changed()
         self.dataChanged.emit(index, index, [Qt.CheckStateRole])
+
+    def emit_all_checked_state_changed(self):
+        """Emits signal depending on how many items are checked."""
+        print("hh")
+        if self._checked_count == 0:
+            all_checked_state = Qt.Unchecked
+        elif self._checked_count == self.rowCount():
+            all_checked_state = Qt.Checked
+        else:
+            all_checked_state = Qt.PartiallyChecked
+        self.all_checked_state_changed.emit(all_checked_state)
 
     def reset_model(self, data=None):
         """Calls the source method."""
+        self._checked_count = 0
         self.sourceModel().reset_model(data)
 
     def get_auto_filter(self):

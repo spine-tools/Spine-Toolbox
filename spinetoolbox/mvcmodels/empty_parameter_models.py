@@ -18,8 +18,8 @@ Empty models for parameter definitions and values.
 
 from sqlalchemy.sql import and_, or_
 from PySide2.QtCore import Qt, QModelIndex
-from mvcmodels.empty_row_model import EmptyRowModel
-from mvcmodels.parameter_mixins import (
+from ..mvcmodels.empty_row_model import EmptyRowModel
+from ..mvcmodels.parameter_mixins import (
     ParameterAutocompleteMixin,
     ParameterDefinitionAutocompleteMixin,
     ParameterValueAutocompleteMixin,
@@ -28,7 +28,7 @@ from mvcmodels.parameter_mixins import (
     ObjectParameterDecorateMixin,
     RelationshipParameterDecorateMixin,
 )
-from mvcmodels.parameter_item import (
+from ..mvcmodels.parameter_item import (
     ObjectParameterDefinitionItem,
     ObjectParameterValueItem,
     RelationshipParameterDefinitionItem,

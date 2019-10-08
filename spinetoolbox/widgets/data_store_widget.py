@@ -39,9 +39,9 @@ from .custom_qdialog import (
     ManageParameterTagsDialog,
     CommitDialog,
 )
-from widgets.parameter_value_editor import ParameterValueEditor
-from widgets.toolbars import ParameterTagToolBar
-from mvcmodels.compound_parameter_models import (
+from ..widgets.parameter_value_editor import ParameterValueEditor
+from ..widgets.toolbars import ParameterTagToolBar
+from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
     CompoundObjectParameterValueModel,
     CompoundRelationshipParameterDefinitionModel,

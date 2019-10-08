@@ -417,15 +417,15 @@ def do_get_db_map(url, upgrade):
     return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
 
 
-def rows_to_row_count_tuples(int_list):
+def rows_to_row_count_tuples(rows):
     """Breaks a list of rows into a list of (row, count) tuples corresponding
     to chunks of successive rows.
     """
-    sorted_list = sorted(set(int_list))
-    break_points = [k + 1 for k in range(len(sorted_list) - 1) if sorted_list[k] + 1 != sorted_list[k + 1]]
-    break_points = [0] + break_points + [len(sorted_list)]
+    sorted_rows = sorted(set(rows))
+    break_points = [k + 1 for k in range(len(sorted_rows) - 1) if sorted_rows[k] + 1 != sorted_rows[k + 1]]
+    break_points = [0] + break_points + [len(sorted_rows)]
     ranges = [(break_points[l], break_points[l + 1]) for l in range(len(break_points) - 1)]
-    return [(sorted_list[start], stop - start) for start, stop in ranges]
+    return [(sorted_rows[start], stop - start) for start, stop in ranges]
 
 
 class IconListManager:
