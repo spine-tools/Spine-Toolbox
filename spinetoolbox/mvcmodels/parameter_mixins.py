@@ -315,6 +315,11 @@ class CompoundObjectParameterMixin:
         )
         return a or b
 
+    @staticmethod
+    def entity_class_query(db_map):
+        """Returns a query of object classes to populate the model."""
+        return db_map.query(db_map.object_class_sq)
+
 
 class CompoundRelationshipParameterMixin:
     """A compound object parameter mixin."""
@@ -353,6 +358,11 @@ class CompoundRelationshipParameterMixin:
             self._parent.selected_rel_parameter_definition_ids.get((model.db_map, model.relationship_class_id), set()),
         )
         return a or b
+
+    @staticmethod
+    def entity_class_query(db_map):
+        """Returns a query of relationship classes to populate the model."""
+        return db_map.query(db_map.wide_relationship_class_sq)
 
 
 class SingleParameterMixin:
@@ -397,6 +407,7 @@ class SingleParameterMixin:
         return True
 
     def accepted_rows(self):
+        """Returns a list of accepted rows, for convenience."""
         return [row for row in range(self.rowCount()) if self.filter_accepts_row(row)]
 
 
