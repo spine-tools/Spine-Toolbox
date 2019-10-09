@@ -16,6 +16,7 @@ Module for view class.
 :date:   14.07.2018
 """
 
+import os
 import logging
 from PySide2.QtCore import Qt, Slot
 from PySide2.QtGui import QStandardItem, QStandardItemModel, QIcon, QPixmap

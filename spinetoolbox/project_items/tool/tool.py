@@ -797,7 +797,8 @@ class Tool(ProjectItem):
             )
             return
         for i in range(self.output_file_model.rowCount()):
-            out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
+            out_file_name = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
+            out_file_path = os.path.abspath(os.path.join(self.output_dir, out_file_name))
             resource = ProjectItemResource(
                 self, "file", url=pathlib.Path(out_file_path).as_uri(), metadata=dict(is_output=True)
             )
