@@ -36,7 +36,7 @@ from PySide2.QtCore import Slot, Qt
 from PySide2.QtGui import QIcon
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.empty_row_model import EmptyRowModel
-from ..mvcmodels.hybrid_table_model import HybridTableModel
+from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from .custom_delegates import (
     ManageObjectClassesDelegate,
     ManageObjectsDelegate,
@@ -1050,7 +1050,8 @@ class ManageParameterTagsDialog(ManageItemsDialog):
     def __init__(self, parent):
         super().__init__(parent)
         self.setWindowTitle("Manage parameter tags")
-        self.model = HybridTableModel(self)
+        header = ['parameter tag', 'description', 'databases', 'remove']
+        self.model = CompoundWithEmptyTableModel(self, header=header)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageParameterTagsDelegate(self))
         self.connect_signals()
@@ -1071,16 +1072,16 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             self.orig_data.append(row_data.copy())
             row_data.extend([db_names, remove])
             model_data.append(row_data)
-        self.model.set_horizontal_header_labels(['parameter tag', 'description', 'databases', 'remove'])
         db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps])
-        self.model.new_item_model.set_default_row(**{'databases': db_names})
-        self.model.reset_model(model_data)
-        self.create_check_boxes(0, self.model.rowCount() - 1)
-
-    def create_check_boxes(self, start, stop):
-        """Create check boxes in remove column."""
+        self.filled_model = MinimalTableModel(self, header=header)
+        self.empty_model = EmptyRowModel(self, header=header)
+        self.model.sub_models += [self.filled_model, self.empty_model]
+        self.model.connect_model_signals()
+        self.empty_model.set_default_row(**{'databases': db_names})
+        self.filled_model.reset_model(model_data)
+        # Create checkboxes
         column = self.model.header.index('remove')
-        for row in range(start, stop):
+        for row in range(0, self.filled_model.rowCount()):
             index = self.model.index(row, column)
             check_box = QCheckBox(self)
             self.table_view.setIndexWidget(index, check_box)
@@ -1089,7 +1090,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         """Returns a list of db names available for a given row.
         Used by delegates.
         """
-        if row < self.model.existing_item_model.rowCount():
+        if row < self.filled_model.rowCount():
             return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_dicts[row]]
         return [self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps]
 
@@ -1099,8 +1100,8 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         # Update and remove
         items_to_update = {}
         items_to_remove = {}
-        for i in range(self.model.existing_item_model.rowCount()):
-            tag, description, db_names, _ = self.model.existing_item_model.row_data(i)
+        for i in range(self.filled_model.rowCount()):
+            tag, description, db_names, _ = self.filled_model.row_data(i)
             db_name_list = db_names.split(",")
             try:
                 db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
@@ -1125,9 +1126,9 @@ class ManageParameterTagsDialog(ManageItemsDialog):
                     items_to_update.setdefault(db_map, []).append(item)
         # Insert
         items_to_add = {}
-        offset = self.model.existing_item_model.rowCount()
-        for i in range(self.model.new_item_model.rowCount() - 1):  # last row will always be empty
-            tag, description, db_names, _ = self.model.new_item_model.row_data(i)
+        offset = self.filled_model.rowCount()
+        for i in range(self.empty_model.rowCount() - 1):  # last row will always be empty
+            tag, description, db_names, _ = self.empty_model.row_data(i)
             db_name_list = db_names.split(",")
             try:
                 db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]

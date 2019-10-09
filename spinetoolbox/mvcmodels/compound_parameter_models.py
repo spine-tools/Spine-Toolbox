@@ -17,10 +17,10 @@ These models concatenate several 'single' models and one 'empty' model.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Slot, QModelIndex, QSortFilterProxyModel
+from PySide2.QtCore import Qt, Slot, QModelIndex
 from PySide2.QtGui import QFont
-from ..helpers import busy_effect, format_string_list, rows_to_row_count_tuples
-from ..mvcmodels.minimal_table_model import MinimalTableModel
+from ..helpers import busy_effect, format_string_list
+from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from ..mvcmodels.empty_parameter_models import (
     EmptyObjectParameterDefinitionModel,
     EmptyObjectParameterValueModel,
@@ -33,11 +33,10 @@ from ..mvcmodels.single_parameter_models import (
     SingleRelationshipParameterDefinitionModel,
     SingleRelationshipParameterValueModel,
 )
-from ..mvcmodels.parameter_mixins import CompoundObjectParameterMixin, CompoundRelationshipParameterMixin
 from ..mvcmodels.auto_filter_menu_model import AutoFilterMenuItem
 
 
-class CompoundParameterModel(MinimalTableModel):
+class CompoundParameterModel(CompoundWithEmptyTableModel):
     """A model that concatenates several single parameter models
     and one empty parameter model.
     """
@@ -50,33 +49,9 @@ class CompoundParameterModel(MinimalTableModel):
         """
         super().__init__(parent)
         self._parent = parent
-        self.db_maps = parent.db_maps
         self.db_name_to_map = parent.db_name_to_map
         self.icon_mngr = parent.icon_mngr
-        self.sub_models = []
-        self._row_map = []
-        self._fetched_count = 0  # Index of the last submodel that's already been fetched
         self._auto_filter = dict()
-
-    @property
-    def single_models(self):
-        return self.sub_models[0:-1]
-
-    @property
-    def empty_model(self):
-        return self.sub_models[-1]
-
-    def canFetchMore(self, parent):
-        """Returns True if any of the unfetched single models can fetch more."""
-        for model in self.sub_models[self._fetched_count :]:
-            if model.canFetchMore():
-                return True
-        return False
-
-    def fetchMore(self, parent):
-        """Fetches the next single model and increments the fetched index."""
-        self.sub_models[self._fetched_count].fetchMore()
-        self._fetched_count += 1
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Use italic font for columns having an autofilter installed."""
@@ -86,73 +61,12 @@ class CompoundParameterModel(MinimalTableModel):
             return italic_font
         return super().headerData(section, orientation, role)
 
-    def map_to_sub(self, index):
-        """Returns a submodel index corresponding to given one."""
-        row = index.row()
-        column = index.column()
-        sub_model, sub_row = self._row_map[row]
-        return sub_model.index(sub_row, column)
-
-    def flags(self, index):
-        """Translate the index into the corresponding submodel and return its flags."""
-        return self.map_to_sub(index).flags()
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Maps the index into a submodel and return its data."""
-        return self.map_to_sub(index).data(role)
-
-    def rowCount(self, parent=QModelIndex()):
-        """Return the sum of rows in all models."""
-        return len(self._row_map)
-
-    def removeRows(self, row, count, parent=QModelIndex()):
-        """Distribute the rows among the different submodels
-        and call removeRows on each of them.
-        """
-        if row < 0 or row + count - 1 >= self.rowCount():
-            return False
-        self.beginRemoveRows(parent, row, row + count - 1)
-        d = dict()
-        for sub_model, sub_row in self._row_map[row, row + count]:
-            d.setdefault(sub_model, list()).append(sub_row)
-        for sub_model, sub_rows in d.items():
-            for sub_row, sub_count in rows_to_row_count_tuples(sub_rows):
-                sub_model.removeRows(sub_row, sub_count)
-        self.endRemoveRows()
-        return True
-
-    def item_at_row(self, row):
-        """Returns the item at given row."""
-        sub_model, sub_row = self._row_map[row]
-        return sub_model.item_at_row(sub_row)
-
     def batch_set_data(self, indexes, data):
         """Set data for indexes in batch.
-        Distribute indexes and values among the different submodels
-        and call batch_set_data on each of them."""
-        if not indexes or not data:
+        Move added rows to single models and emit messages.
+        """
+        if not super().batch_set_data(indexes, data):
             return False
-        d = {}  # Maps models to (index, value) tuples
-        rows = []
-        columns = []
-        for index, value in zip(indexes, data):
-            if not index.isValid():
-                continue
-            rows.append(index.row())
-            columns.append(index.column())
-            sub_model, _ = self._row_map[index.row()]
-            sub_index = self.map_to_sub(index)
-            d.setdefault(sub_model, list()).append((sub_index, value))
-        for model, index_value_tuples in d.items():
-            indexes, values = zip(*index_value_tuples)
-            model.batch_set_data(indexes, values)
-        # Find square envelope of indexes to emit dataChanged
-        top = min(rows)
-        bottom = max(rows)
-        left = min(columns)
-        right = max(columns)
-        self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
-        # React to what's just happened
         added_rows = self.empty_model.added_rows
         updated_count = sum(m.updated_count for m in self.single_models)
         error_log = [entry for m in self.sub_models for entry in m.error_log]
@@ -167,36 +81,6 @@ class CompoundParameterModel(MinimalTableModel):
             msg = format_string_list(error_log)
             self._parent.msg_error.emit(msg)
         return True
-
-    @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
-    def _handle_empty_rows_inserted(self, parent, first, last):
-        """Runs when rows are inserted to the empty model.
-        Update row_map, then emit rowsInserted so the new rows become visible.
-        """
-        self._row_map += [(self.empty_model, i) for i in range(first, last + 1)]
-        tip = self.rowCount() - self.empty_model.rowCount()
-        self.rowsInserted.emit(QModelIndex(), tip + first, tip + last)
-
-    @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_removed")
-    def _handle_empty_rows_removed(self, parent, first, last):
-        """Runs when rows are inserted to the empty model.
-        Update row_map, then emit rowsRemoved so the removed rows are no longer visible.
-        """
-        removed_count = last - first + 1
-        tip = self.rowCount() - (self.empty_model.rowCount() + removed_count)
-        self._row_map = self._row_map[:tip] + [(self.empty_model, i) for i in range(self.empty_model.rowCount())]
-        self.rowsRemoved.emit(QModelIndex(), tip + first, tip + last)
-
-    def _handle_single_model_reset(self, model):
-        """Runs when one of the single models is reset.
-        Update row_map, then emit rowsInserted so the new rows become visible.
-        """
-        tip = self.rowCount() - self.empty_model.rowCount()
-        self._row_map, empty_row_map = self._row_map[:tip], self._row_map[tip:]
-        self._row_map += [(model, i) for i in range(model.rowCount())] + empty_row_map
-        first = self.rowCount() + 1
-        last = first + model.rowCount() - 1
-        self.rowsInserted.emit(QModelIndex(), first, last)
 
     def create_single_model(self, database, db_item):
         """Returns a single model for the given database and item."""
@@ -231,7 +115,7 @@ class CompoundParameterModel(MinimalTableModel):
         """
         d = {}
         for row in rows:
-            item = self.empty_model.item_at_row(row)
+            item = self.empty_model._main_data[row]
             d.setdefault((item.database, item.entity_class), list()).append(item)
         single_models = []
         for (database, entity_class), item_list in d.items():
@@ -243,19 +127,6 @@ class CompoundParameterModel(MinimalTableModel):
         self.sub_models[pos:pos] = single_models
         for row in reversed(rows):
             self.empty_model.removeRows(row, 1)
-
-    def connect_model_signals(self):
-        """Connect model signals."""
-        self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
-        self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
-        for model in self.single_models:
-            model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
-
-    def clear_model(self):
-        """Clears model. Runs after rollback or refresh."""
-        # TODO: Use this
-        for model in self.sub_models:
-            model.clear_model()
 
     def filter_accepts_single_model(self, model):
         """Returns True if the given model should be included in the compound model, otherwise returns False."""
@@ -305,10 +176,16 @@ class CompoundParameterModel(MinimalTableModel):
         """
         self.layoutAboutToBeChanged.emit()
         self._row_map.clear()
-        for model in self.accepted_single_models():
-            self._row_map += [(model, i) for i in model.accepted_rows()]
+        for model in self.single_models:
+            self._row_map += self._row_map_for_model(model)
         self._row_map += [(self.empty_model, i) for i in range(self.empty_model.rowCount())]
         self.layoutChanged.emit()
+
+    def _row_map_for_model(self, model):
+        """Returns row map for given model."""
+        if not self.filter_accepts_single_model(model):
+            return []
+        return [(model, i) for i in model.accepted_rows()]
 
     @busy_effect
     def auto_filter_menu_data(self, column):
@@ -319,13 +196,8 @@ class CompoundParameterModel(MinimalTableModel):
         """
         auto_filter_vals = dict()
         for model in self.accepted_single_models():
-            row_count = model.rowCount()
-            for i in range(model.rowCount()):
-                if not model._main_filter_accepts_row(i):
-                    continue
-                if not model._auto_filter_accepts_row(i, ignored_columns=[column]):
-                    continue
-                value = model._main_data[i][column]
+            for row in model.accepted_rows(ignored_columns=[column]):
+                value = model._main_data[row][column]
                 auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
         column_auto_filter = self._auto_filter.get(column, {})
         filtered = [val for values in column_auto_filter.values() for val in values]
@@ -345,7 +217,8 @@ class CompoundParameterModel(MinimalTableModel):
         updated = False
         for model in self.accepted_single_models():
             updated |= self.update_single_model_auto_filter(model, column)
-        self.apply_filter()
+        if updated:
+            self.apply_filter()
 
     def update_single_model_auto_filter(self, model, column):
         """Set auto filter values for given column.
@@ -353,7 +226,6 @@ class CompoundParameterModel(MinimalTableModel):
         Args:
             model (SingleParameterModel): the model
             column (int): the column number
-            values (set): the set of values to be filtered
         """
         values = self._auto_filter[column].get(model.entity_class_id, {})
         if values == model._auto_filter.get(column, {}):
@@ -377,15 +249,124 @@ class CompoundParameterModel(MinimalTableModel):
         return (m for m in self.single_models if m.db_map == db_map)
 
 
-class CompoundParameterDefinitionModel(CompoundParameterModel):
-    """A model that concatenates several single parameter definition models
-    and one empty parameter definition model.
-    """
+class CompoundObjectParameterMixin:
+    """Provides methods to do the filtering in a compound object parameter model."""
 
-    def __init__(self, parent):
-        """Init class."""
-        super().__init__(parent)
-        self.json_fields = ["default_value"]
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_object_class_ids = None
+
+    def rename_object_classes(self, db_map, object_classes):
+        """Rename object classes in model."""
+        object_classes = {x.id: x.name for x in object_classes}
+        for model in self._models_with_db_map(db_map):
+            model.rename_object_classes(object_classes)
+        self._emit_data_changed_for_column("object_class_name")
+
+    def remove_object_classes(self, db_map, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        object_class_ids = [x['id'] for x in object_classes]
+        for model in self._models_with_db_map(db_map):
+            if model.object_class_id in object_class_ids:
+                self.sub_models.remove(model)
+        self.layoutChanged.emit()
+
+    def update_compound_filter(self):
+        """Update the filter."""
+        a = super().update_compound_filter()
+        b = self._settattr_if_different(self, "_selected_object_class_ids", self._parent.all_selected_object_class_ids)
+        return a or b
+
+    def filter_accepts_single_model(self, model):
+        """Returns True if the given model should be included in the compound model, otherwise returns False.
+        """
+        if not self._selected_object_class_ids:
+            return True
+        return model.object_class_id in self._selected_object_class_ids.get(model.db_map, set())
+
+    def update_single_model_filter(self, model):
+        """Update the filter for a single model."""
+        a = super().update_single_model_filter(model)
+        b = self._settattr_if_different(
+            model,
+            "_selected_param_def_ids",
+            self._parent.selected_obj_parameter_definition_ids.get((model.db_map, model.object_class_id), set()),
+        )
+        return a or b
+
+    @staticmethod
+    def entity_class_query(db_map):
+        """Returns a query of object classes to populate the model."""
+        return db_map.query(db_map.object_class_sq)
+
+
+class CompoundRelationshipParameterMixin:
+    """Provides methods to do the filtering in a compound relationship parameter model."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_object_class_ids = None
+        self._selected_relationship_class_ids = None
+
+    def update_compound_filter(self):
+        """Update the filter."""
+        a = super().update_compound_filter()
+        b = self._settattr_if_different(self, "_selected_object_class_ids", self._parent.selected_object_class_ids)
+        c = self._settattr_if_different(
+            self, "_selected_relationship_class_ids", self._parent.all_selected_relationship_class_ids
+        )
+        return a or b or c
+
+    def filter_accepts_single_model(self, model):
+        """Returns True if the given single model should be included in the compound model, otherwise returns False.
+        """
+        return (
+            not self._selected_object_class_ids
+            or self._selected_object_class_ids.get(model.db_map, set()).intersection(model.object_class_id_list)
+        ) and (
+            not self._selected_relationship_class_ids
+            or model.relationship_class_id in self._selected_relationship_class_ids.get(model.db_map, set())
+        )
+
+    def update_single_model_filter(self, model):
+        """Update the filter for a single model."""
+        a = super().update_single_model_filter(model)
+        b = self._settattr_if_different(
+            model,
+            "_selected_param_def_ids",
+            self._parent.selected_rel_parameter_definition_ids.get((model.db_map, model.relationship_class_id), set()),
+        )
+        return a or b
+
+    @staticmethod
+    def entity_class_query(db_map):
+        """Returns a query of relationship classes to populate the model."""
+        return db_map.query(db_map.wide_relationship_class_sq)
+
+
+class CompoundObjectParameterRenameRemoveMixin:
+    """Provides methods to do renaming and removal in a compound object parameter model."""
+
+    def rename_object_classes(self, db_map, object_classes):
+        """Rename object classes in model."""
+        object_classes = {x.id: x.name for x in object_classes}
+        for model in self._models_with_db_map(db_map):
+            model.rename_object_classes(object_classes)
+        self._emit_data_changed_for_column("object_class_name")
+
+    def remove_object_classes(self, db_map, object_classes):
+        """Remove object classes from model."""
+        self.layoutAboutToBeChanged.emit()
+        object_class_ids = [x['id'] for x in object_classes]
+        for model in self._models_with_db_map(db_map):
+            if model.object_class_id in object_class_ids:
+                self.sub_models.remove(model)
+        self.layoutChanged.emit()
+
+
+class CompoundParameterDefinitionRenameRemoveMixin:
+    """Provides methods to do renaming and removal in a compound parameter definition model."""
 
     def rename_parameter_tags(self, db_map, parameter_tags):
         """Rename parameter tags in model."""
@@ -400,8 +381,26 @@ class CompoundParameterDefinitionModel(CompoundParameterModel):
             model.remove_parameter_tags(parameter_tag_ids)
         self._emit_data_changed_for_column("parameter_tag_list")
 
+    def rename_parameter_value_lists(self, db_map, value_lists):
+        """Rename parameter value_lists in model."""
+        value_lists = {x.id: x.name for x in value_lists}
+        for model in self._models_with_db_map(db_map):
+            model.rename_parameter_value_lists(parameter_tags)
+        self._emit_data_changed_for_column("value_list_name")
 
-class CompoundObjectParameterDefinitionModel(CompoundObjectParameterMixin, CompoundParameterDefinitionModel):
+    def clear_parameter_value_lists(self, db_map, value_list_ids):
+        """Clear parameter value_lists from model."""
+        for model in self._models_with_db_map(db_map):
+            model.clear_parameter_value_lists(value_list_ids)
+        self._emit_data_changed_for_column("value_list_name")
+
+
+class CompoundObjectParameterDefinitionModel(
+    CompoundObjectParameterMixin,
+    CompoundObjectParameterRenameRemoveMixin,
+    CompoundParameterDefinitionRenameRemoveMixin,
+    CompoundParameterModel,
+):
     """A model that concatenates several single object parameter definition models
     and one empty object parameter definition model.
     """
@@ -418,16 +417,25 @@ class CompoundObjectParameterDefinitionModel(CompoundObjectParameterMixin, Compo
             "database",
         ]
         self.fixed_fields = ["object_class_name", "database"]
+        self.json_fields = ["default_value"]
 
     def create_single_model(self, database, db_item):
-        return SingleObjectParameterDefinitionModel(self, database, db_item.id)
+        return SingleObjectParameterDefinitionModel(
+            self,
+            database,
+            db_item.id,
+            header=self.header,
+            fixed_fields=self.fixed_fields,
+            json_fields=self.json_fields,
+            icon_mngr=self.icon_mngr,
+        )
 
     def create_empty_model(self):
-        return EmptyObjectParameterDefinitionModel(self)
+        return EmptyObjectParameterDefinitionModel(self, header=self.header, icon_mngr=self.icon_mngr)
 
 
 class CompoundRelationshipParameterDefinitionModel(
-    CompoundRelationshipParameterMixin, CompoundParameterDefinitionModel
+    CompoundRelationshipParameterMixin, CompoundParameterDefinitionRenameRemoveMixin, CompoundParameterModel
 ):
     """A model that concatenates several single relationship parameter definition models
     and one empty relationship parameter definition model.
@@ -446,25 +454,25 @@ class CompoundRelationshipParameterDefinitionModel(
             "database",
         ]
         self.fixed_fields = ["relationship_class_name", "object_class_name_list", "database"]
+        self.json_fields = ["default_value"]
 
     def create_single_model(self, database, db_item):
-        return SingleRelationshipParameterDefinitionModel(self, database, db_item.id, db_item.object_class_id_list)
+        return SingleRelationshipParameterDefinitionModel(
+            self,
+            database,
+            db_item.id,
+            db_item.object_class_id_list,
+            header=self.header,
+            fixed_fields=self.fixed_fields,
+            json_fields=self.json_fields,
+            icon_mngr=self.icon_mngr,
+        )
 
     def create_empty_model(self):
-        return EmptyRelationshipParameterDefinitionModel(self)
+        return EmptyRelationshipParameterDefinitionModel(self, header=self.header, icon_mngr=self.icon_mngr)
 
 
-class CompoundParameterValueModel(CompoundParameterModel):
-    """A model that concatenates several single parameter value models
-    and one empty parameter value model.
-    """
-
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.json_fields = ["value"]
-
-
-class CompoundObjectParameterValueModel(CompoundObjectParameterMixin, CompoundParameterValueModel):
+class CompoundObjectParameterValueModel(CompoundObjectParameterMixin, CompoundParameterModel):
     """A model that concatenates several single object parameter value models
     and one empty object parameter value model.
     """
@@ -474,12 +482,21 @@ class CompoundObjectParameterValueModel(CompoundObjectParameterMixin, CompoundPa
         super().__init__(parent)
         self.header = ["object_class_name", "object_name", "parameter_name", "value", "database"]
         self.fixed_fields = ["object_class_name", "object_name", "parameter_name", "database"]
+        self.json_fields = ["value"]
 
     def create_single_model(self, database, db_item):
-        return SingleObjectParameterValueModel(self, database, db_item.id)
+        return SingleObjectParameterValueModel(
+            self,
+            database,
+            db_item.id,
+            header=self.header,
+            fixed_fields=self.fixed_fields,
+            json_fields=self.json_fields,
+            icon_mngr=self.icon_mngr,
+        )
 
     def create_empty_model(self):
-        return EmptyObjectParameterValueModel(self)
+        return EmptyObjectParameterValueModel(self, header=self.header, icon_mngr=self.icon_mngr)
 
     def update_single_model_filter(self, model):
         """Update the filter for the given model."""
@@ -492,7 +509,7 @@ class CompoundObjectParameterValueModel(CompoundObjectParameterMixin, CompoundPa
         return a or b
 
 
-class CompoundRelationshipParameterValueModel(CompoundRelationshipParameterMixin, CompoundParameterValueModel):
+class CompoundRelationshipParameterValueModel(CompoundRelationshipParameterMixin, CompoundParameterModel):
     """A model that concatenates several single relationship parameter value models
     and one empty relationship parameter value model.
     """
@@ -502,12 +519,22 @@ class CompoundRelationshipParameterValueModel(CompoundRelationshipParameterMixin
         super().__init__(parent)
         self.header = ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
         self.fixed_fields = ["relationship_class_name", "object_name_list", "parameter_name", "database"]
+        self.json_fields = ["value"]
 
     def create_single_model(self, database, db_item):
-        return SingleRelationshipParameterValueModel(self, database, db_item.id, db_item.object_class_id_list)
+        return SingleRelationshipParameterValueModel(
+            self,
+            database,
+            db_item.id,
+            db_item.object_class_id_list,
+            header=self.header,
+            fixed_fields=self.fixed_fields,
+            json_fields=self.json_fields,
+            icon_mngr=self.icon_mngr,
+        )
 
     def create_empty_model(self):
-        return EmptyRelationshipParameterValueModel(self)
+        return EmptyRelationshipParameterValueModel(self, header=self.header, icon_mngr=self.icon_mngr)
 
     def update_single_model_filter(self, model):
         """Update the filter for the given model."""

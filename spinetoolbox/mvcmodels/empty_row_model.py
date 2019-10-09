@@ -23,9 +23,9 @@ from .minimal_table_model import MinimalTableModel
 class EmptyRowModel(MinimalTableModel):
     """A table model with a last empty row."""
 
-    def __init__(self, parent=None):
+    def __init__(self, parent=None, header=None):
         """Init class."""
-        super().__init__(parent)
+        super().__init__(parent, header=header)
         self.default_row = {}  # A row of default values to put in any newly inserted row
         self.force_default = False  # Whether or not default values are editable
         self._fetched = False

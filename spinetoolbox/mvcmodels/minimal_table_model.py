@@ -21,16 +21,19 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):
-    def __init__(self, parent=None):
+    def __init__(self, parent, header=None):
         """Table model for outlining simple tabular data.
 
         Args:
             parent (QObject): the parent object
         """
         super().__init__(parent)
-        self._main_data = list()  # DisplayRole and EditRole
+        if header is None:
+            header = []
+        self.header = header
+        self._main_data = list()
+        self._fetched = False
         self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
-        self.header = list()  # DisplayRole and EditRole
 
     def clear(self):
         """Clear all data in model."""
@@ -43,6 +46,27 @@ class MinimalTableModel(QAbstractTableModel):
         if not index.isValid():
             return Qt.NoItemFlags
         return self.default_flags
+
+    def canFetchMore(self, parent=None):
+        """Return True if the model hasn't been fetched."""
+        return not self._fetched
+
+    def fetchMore(self, parent=None):
+        """Fetch data and use it to reset the model."""
+        try:
+            data = self.fetch_data()
+        except NotImplementedError:
+            pass
+        else:
+            self.reset_model(data)
+        finally:
+            self._fetched = True
+
+    def fetch_data(self):
+        """Returns data to reset the model with and call it fetched.
+        Reimplemented in subclasses if you want to populate your model automatically.
+        """
+        raise NotImplementedError()
 
     def rowCount(self, parent=QModelIndex()):
         """Number of rows in the model."""

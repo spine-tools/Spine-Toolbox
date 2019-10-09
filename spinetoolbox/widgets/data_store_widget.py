@@ -238,13 +238,14 @@ class DataStoreForm(QMainWindow):
             else:
                 self.selected_parameter_tag_ids[db_map].remove(id_)
         if not any(v for v in self.selected_parameter_tag_ids.values()):
-            # No tags selected: set empty dict so them all pass
+            # No tags selected
             self.selected_obj_parameter_definition_ids = {}
             self.selected_rel_parameter_definition_ids = {}
         else:
-            # At least one tag selected: set non-empty dict so not all of them pass
-            self.selected_obj_parameter_definition_ids = {None: None}
-            self.selected_rel_parameter_definition_ids = {None: None}
+            # At least one tag selected: init dict like below so in case no parameter has the tag,
+            # all of them are filtered
+            self.selected_obj_parameter_definition_ids = {(None, None): None}
+            self.selected_rel_parameter_definition_ids = {(None, None): None}
             for db_map, tag_ids in self.selected_parameter_tag_ids.items():
                 parameter_definition_id_list = set()
                 for item in db_map.wide_parameter_tag_definition_list():
