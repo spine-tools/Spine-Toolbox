@@ -222,8 +222,20 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             self._row_map += self._row_map_for_single_model(model)
         self._row_map += self._row_map_for_model(self.empty_model)
 
+    def clear_model(self):
+        """Clear the model."""
+        if self._row_map:
+            self.layoutAboutToBeChanged.emit()
+            self._row_map.clear()
+            self.layoutChanged.emit()
+        self._fetched_count = 0
+        for m in self.sub_models:
+            m.deleteLater()
+        self.sub_models.clear()
+
     def init_model(self):
         """Initialize model."""
+        self.clear_model()
         self.sub_models = [self.create_single_model(*key) for key in self.single_model_keys()]
         self.sub_models.append(self.create_empty_model())
         self.connect_model_signals()
