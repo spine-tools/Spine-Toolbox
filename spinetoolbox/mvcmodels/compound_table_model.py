@@ -260,7 +260,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         d = {}
         for row in rows:
             item = self.empty_model._main_data[row]
-            d.setdefault(self.single_model_key(item), list()).append(item)
+            d.setdefault(self.single_model_key_from_item(item), list()).append(item)
         single_models = []
         for key, item_list in d.items():
             single_model = self.create_single_model(*key)

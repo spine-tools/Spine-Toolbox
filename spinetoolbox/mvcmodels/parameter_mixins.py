@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Mixins for parameter definition models
+Miscelaneous mixins for parameter models
 
 :authors: M. Marin (KTH)
 :date:   4.10.2019
@@ -93,7 +93,7 @@ class ParameterInsertMixin:
             if not item_for_insert:
                 continue
             new_items, error_log = self.do_add_items_to_db(db_map, item_for_insert)
-            self.error_log.extend(error_log)
+            self._error_log.extend(error_log)
             if not error_log:
                 new_item = new_items.first()
                 item.id = new_item.id

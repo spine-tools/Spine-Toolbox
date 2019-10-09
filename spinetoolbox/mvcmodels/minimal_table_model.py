@@ -283,7 +283,7 @@ class MinimalTableModel(QAbstractTableModel):
         Returns:
             True if rows were removed successfully, False otherwise
         """
-        if row < 0 or row + count - 1 >= self.rowCount():
+        if row < 0 or count < 1 or row + count > self.rowCount():
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
         for i in reversed(range(row, row + count)):

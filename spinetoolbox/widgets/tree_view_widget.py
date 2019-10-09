@@ -1048,40 +1048,36 @@ class TreeViewForm(DataStoreForm):
         Remove selected rows from parameter value table.
 
         Args:
-            table_view (QTableView): a table view from which to remove
+            table_view (QTableView): remove selection from this view
         """
         selection = table_view.selectionModel().selection()
-        top_bottom = list()
+        rows = list()
         while not selection.isEmpty():
             current = selection.takeFirst()
             top = current.top()
             bottom = current.bottom()
-            top_bottom.append((top, bottom))
+            rows += range(top, bottom + 1)
+        # Get parameters values grouped by db_map
+        d = dict()
         model = table_view.model()
-        db_column = model.horizontal_header_labels().index("database")
-        db_map_rows = dict()
-        for top, bottom in top_bottom:
-            for row in range(top, bottom + 1):
-                db_name = model.index(row, db_column).data()
-                db_map = self.db_name_to_map.get(db_name)
-                if not db_map:
-                    continue
-                db_map_rows.setdefault(db_map, set()).add(row)
-        id_column = model.horizontal_header_labels().index("id")
-        removed = 0
-        for db_map, rows in db_map_rows.items():
-            ids = {model.index(i, id_column).data() for i in rows}
+        for row in rows:
+            database = model.item_at_row(row).database
+            db_map = self.db_name_to_map.get(database)
+            if not db_map:
+                continue
+            d.setdefault(db_map, set()).add(model.item_at_row(row).id)
+        # Remove the parameter value rows
+        for row, count in sorted(rows_to_row_count_tuples(rows), reverse=True):
+            model.removeRows(row, count)
+        # Remove from the db
+        for db_map, parameter_value_ids in d.items():
             try:
-                db_map.remove_items(parameter_value_ids=ids)
-                for row, count in sorted(rows_to_row_count_tuples(rows), reverse=True):
-                    model.removeRows(row, count)
-                removed += len(rows)
+                db_map.remove_items(parameter_value_ids=parameter_value_ids)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
-                continue
-        if removed:
+        if rows:
             self.commit_available.emit(True)
-            self.msg.emit("Successfully removed {} parameter value(s).".format(removed))
+            self.msg.emit("Successfully removed {} parameter value(s).".format(len(rows)))
 
     @busy_effect
     def remove_object_parameter_definitions(self):
@@ -1126,14 +1122,13 @@ class TreeViewForm(DataStoreForm):
         # Remove the parameter definition rows
         for row, count in sorted(rows_to_row_count_tuples(rows), reverse=True):
             model.removeRows(row, count)
-        # Remove from the parameter value models
+        # Remove from the db and from the parameter value model
         for db_map, parameters in d.items():
             try:
                 db_map.remove_items(parameter_definition_ids={x['id'] for x in parameters})
                 value_model.remove_parameters(db_map, parameters)
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
-                continue
         if rows:
             self.commit_available.emit(True)
             self.msg.emit("Successfully removed {} parameter definition(s).".format(len(rows)))

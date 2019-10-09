@@ -30,7 +30,6 @@ class EmptyRowModel(MinimalTableModel):
         self.force_default = False  # Whether or not default values are editable
         self._fetched = False
         self.dataChanged.connect(self._handle_data_changed)
-        self.rowsRemoved.connect(self._handle_rows_removed)
         self.rowsInserted.connect(self._handle_rows_inserted)
 
     def canFetchMore(self, parent=QModelIndex()):
@@ -76,14 +75,12 @@ class EmptyRowModel(MinimalTableModel):
         last_row = self.rowCount() - 1
         for column in range(self.columnCount()):
             try:
-                name = self.header[column]
+                field = self.header[column]
             except IndexError:
-                name = None
+                field = None
             data = self._main_data[last_row][column]
-            default = self.default_row.get(name)
-            if not data and not default:
-                continue
-            if data != default:
+            default = self.default_row.get(field)
+            if data and default and data != default:
                 self.insertRows(self.rowCount(), 1)
                 break
 
@@ -93,6 +90,12 @@ class EmptyRowModel(MinimalTableModel):
         last_row = self.rowCount()
         if last_row in range(first, last + 1):
             self.insertRows(self.rowCount(), 1)
+
+    def removeRows(self, row, count, parent=QModelIndex()):
+        """Don't remove the last empty row."""
+        if row + count == self.rowCount():
+            count -= 1
+        return super().removeRows(row, count, parent)
 
     @Slot("QModelIndex", "int", "int", name="_handle_rows_inserted")
     def _handle_rows_inserted(self, parent, first, last):
@@ -105,21 +108,14 @@ class EmptyRowModel(MinimalTableModel):
             last = first
         if first >= self.rowCount() or last < 0:
             return
-        left = None
-        right = None
         for column in range(self.columnCount()):
             try:
-                name = self.header[column]
+                field = self.header[column]
             except IndexError:
-                name = None
-            default = self.default_row.get(name)
-            if left is None:
-                left = column
-            right = column
+                field = None
+            default = self.default_row.get(field)
             for row in range(first, last + 1):
                 self._main_data[row][column] = default
-        if left is None:
-            return
-        top_left = self.index(first, left)
-        bottom_right = self.index(last, right)
+        top_left = self.index(first, 0)
+        bottom_right = self.index(last, self.columnCount() - 1)
         self.dataChanged.emit(top_left, bottom_right)
