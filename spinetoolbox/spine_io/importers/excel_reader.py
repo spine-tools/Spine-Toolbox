@@ -32,9 +32,7 @@ def select_excel_file(parent=None):
 
 
 class ExcelConnector(SourceConnection):
-    """
-    Template class to read data from another QThread
-    """
+    """Template class to read data from another QThread."""
 
     # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Excel"

@@ -190,7 +190,7 @@ class DataTreeView(QTreeView):
 
 
 class SourcesTreeView(QTreeView):
-    """Custom QTreeView class for 'Sources' in Tool Template form.
+    """Custom QTreeView class for 'Sources' in Tool specification editor widget.
 
     Attributes:
         parent (QWidget): The parent of this view
@@ -232,7 +232,7 @@ class SourcesTreeView(QTreeView):
 
 
 class CustomTreeView(QTreeView):
-    """Custom QTreeView class for Tool template editor form to enable keyPressEvent.
+    """Custom QTreeView class for Tool specification editor form to enable keyPressEvent.
 
     Attributes:
         parent (QWidget): The parent of this view

@@ -32,10 +32,10 @@ class ToolPropertiesContextMenu(CustomContextMenu):
     def __init__(self, parent, position, index):
         """Class constructor."""
         super().__init__(parent, position)
-        self.add_action("Edit Tool template")
+        self.add_action("Edit Tool specification")
         self.add_action("Edit main program file...")
         self.add_action("Open main program directory...")
-        self.add_action("Open Tool template definition file...")
+        self.add_action("Open Tool specification file...")
         self.addSeparator()
         self.add_action("Open directory...")
 
@@ -57,6 +57,6 @@ class ToolContextMenu(ProjectItemContextMenu):
         enabled = tool.get_icon().timer.state() == QTimeLine.Running
         self.add_action("Stop", enabled=False)
         self.addSeparator()
-        enabled = bool(tool.tool_template())
-        self.add_action("Edit Tool template", enabled=enabled)
+        enabled = bool(tool.tool_specification())
+        self.add_action("Edit Tool specification", enabled=enabled)
         self.add_action("Edit main program file...", enabled=enabled)

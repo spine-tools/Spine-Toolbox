@@ -31,9 +31,7 @@ def select_csv_file(parent=None):
 
 
 class CSVConnector(SourceConnection):
-    """
-    Template class to read data from another QThread
-    """
+    """Template class to read data from another QThread."""
 
     # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Text/CSV"

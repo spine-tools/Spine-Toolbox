@@ -20,9 +20,7 @@ from spinedb_api import read_with_mapping
 
 
 class SourceConnection:
-    """
-    Template class to read data from another QThread
-    """
+    """Template class to read data from another QThread."""
 
     # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "unnamed source"

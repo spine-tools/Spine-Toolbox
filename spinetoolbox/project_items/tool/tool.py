@@ -26,7 +26,7 @@ from PySide2.QtWidgets import QFileIconProvider
 from spinetoolbox.project_item import ProjectItem
 from spinetoolbox.tool_instance import ToolInstance
 from spinetoolbox.config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
-from spinetoolbox.widgets.custom_menus import ToolTemplateOptionsPopupMenu
+from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
 from spinetoolbox.project_items.tool.widgets.custom_menus import ToolContextMenu
 from spinetoolbox.helpers import create_dir
 
@@ -41,8 +41,8 @@ class Tool(ProjectItem):
             description (str): Object description
             x (float): Initial X coordinate of item icon
             y (float): Initial Y coordinate of item icon
-            tool (str): Template name for this Tool
-            execute_in_work (bool): Execute associated Tool template in work (True) or source directory (False)
+            tool (str): Name of this Tool's Tool specification
+            execute_in_work (bool): Execute associated Tool specification in work (True) or source directory (False)
         """
         super().__init__(toolbox, "Tool", name, description, x, y)
         self.source_file_model = QStandardItemModel()
@@ -53,26 +53,24 @@ class Tool(ProjectItem):
         self.populate_opt_input_file_model(None)
         self.output_file_model = QStandardItemModel()
         self.populate_output_file_model(None)
-        self.template_model = QStandardItemModel()
-        self.populate_template_model(False)
+        self.specification_model = QStandardItemModel()
+        self.populate_specification_model(False)
         self.source_files = list()
-        self._tool_template = self._toolbox.tool_template_model.find_tool_template(tool)
-        if tool != "" and not self._tool_template:
+        self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
+        if tool != "" and not self._tool_specification:
             # Clarifications for user
-            self._toolbox.msg_error.emit(
-                "Tool <b>{0}</b> should have a Tool template <b>{1}</b> but "
-                "it was not found. Add it to Tool templates and reopen "
-                "project.".format(self.name, tool)
-            )
-        self.set_tool_template(self._tool_template)
-        if not self._tool_template:
-            self._tool_template_name = ""
+            self._toolbox.msg_error.emit("Tool <b>{0}</b> should have a Tool "
+                                         "specification <b>{1}</b> but it was not found"
+                                         .format(self.name, tool))
+        self.set_tool_specification(self._tool_specification)
+        if not self._tool_specification:
+            self._tool_specification_name = ""
         else:
-            self._tool_template_name = self.tool_template().name
-        self.tool_template_options_popup_menu = None
+            self._tool_specification_name = self.tool_specification().name
+        self.tool_specification_options_popup_menu = None
         self.instance = None  # Instance of this Tool that can be sent to a subprocess for processing
         self.extra_cmdline_args = ''  # This may be used for additional Tool specific command line arguments
-        self.execute_in_work = execute_in_work  # Enables overriding the template default setting
+        self.execute_in_work = execute_in_work  # Enables overriding the specification default setting
         # Make directory for results
         self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
 
@@ -82,7 +80,7 @@ class Tool(ProjectItem):
         s = super().make_signal_handler_dict()
         s[self._properties_ui.toolButton_tool_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.pushButton_tool_results.clicked] = self.open_results
-        s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_template
+        s[self._properties_ui.comboBox_tool.currentIndexChanged] = self.update_tool_specification
         s[self._properties_ui.radioButton_execute_in_work.toggled] = self.update_execution_mode
         return s
 
@@ -102,22 +100,22 @@ class Tool(ProjectItem):
     def restore_selections(self):
         """Restore selections into shared widgets when this project item is selected."""
         self._properties_ui.label_tool_name.setText(self.name)
-        self._properties_ui.treeView_template.setModel(self.template_model)
-        if self._tool_template_name == "":
+        self._properties_ui.treeView_specification.setModel(self.specification_model)
+        if self._tool_specification_name == "":
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
-            self.set_tool_template(None)
+            self.set_tool_specification(None)
         else:
-            tool_template = self._toolbox.tool_template_model.find_tool_template(self._tool_template_name)
-            row = self._toolbox.tool_template_model.tool_template_row(self._tool_template_name)
+            tool_specification = self._toolbox.tool_specification_model.find_tool_specification(self._tool_specification_name)
+            row = self._toolbox.tool_specification_model.tool_specification_row(self._tool_specification_name)
             self._properties_ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
-            self.set_tool_template(tool_template)
+            self.set_tool_specification(tool_specification)
 
     def save_selections(self):
         """Save selections in shared widgets for this project item into instance variables."""
-        if not self._tool_template:
-            self._tool_template_name = ""
+        if not self._tool_specification:
+            self._tool_specification_name = ""
         else:
-            self._tool_template_name = self.tool_template().name
+            self._tool_specification_name = self.tool_specification().name
         self.execute_in_work = self._properties_ui.radioButton_execute_in_work.isChecked()
 
     @Slot(bool, name="update_execution_mode")
@@ -125,67 +123,67 @@ class Tool(ProjectItem):
         """Slot for execute in work radio button toggled signal."""
         self.execute_in_work = checked
 
-    @Slot(int, name="update_tool_template")
-    def update_tool_template(self, row):
-        """Update Tool template according to selection in the template comboBox.
+    @Slot(int, name="update_tool_specification")
+    def update_tool_specification(self, row):
+        """Update Tool specification according to selection in the specification comboBox.
 
         Args:
             row (int): Selected row in the comboBox
         """
         if row == -1:
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
-            self.set_tool_template(None)
+            self.set_tool_specification(None)
         else:
-            new_tool = self._toolbox.tool_template_model.tool_template(row)
-            self.set_tool_template(new_tool)
+            new_tool = self._toolbox.tool_specification_model.tool_specification(row)
+            self.set_tool_specification(new_tool)
 
-    def set_tool_template(self, tool_template):
-        """Sets Tool Template for this Tool. Removes Tool Template if None given as argument.
+    def set_tool_specification(self, tool_specification):
+        """Sets Tool specification for this Tool. Removes Tool specification if None given as argument.
 
         Args:
-            tool_template (ToolTemplate): Template for this Tool. None removes the template.
+            tool_specification (ToolSpecification): Tool specification of this Tool. None removes the specification.
         """
-        self._tool_template = tool_template
+        self._tool_specification = tool_specification
         self.update_tool_models()
         self.update_tool_ui()
         self.item_changed.emit()
 
     def update_tool_ui(self):
-        """Update Tool UI to show Tool template details. Used when Tool template is changed.
-        Overrides execution mode (work or source) with the template default."""
+        """Update Tool UI to show Tool specification details. Used when Tool specification is changed.
+        Overrides execution mode (work or source) with the specification default."""
         if not self._properties_ui:
-            # This happens when calling self.set_tool_template() in the __init__ method,
+            # This happens when calling self.set_tool_specification() in the __init__ method,
             # because the UI only becomes available *after* adding the item to the project_item_model... problem??
             return
-        if not self.tool_template():
+        if not self.tool_specification():
             self._properties_ui.lineEdit_tool_args.setText("")
             self._properties_ui.radioButton_execute_in_work.setChecked(True)
         else:
-            self._properties_ui.lineEdit_tool_args.setText(self.tool_template().cmdline_args)
+            self._properties_ui.lineEdit_tool_args.setText(self.tool_specification().cmdline_args)
             if self.execute_in_work:
                 self._properties_ui.radioButton_execute_in_work.setChecked(True)
             else:
                 self._properties_ui.radioButton_execute_in_source.setChecked(True)
-        self.tool_template_options_popup_menu = ToolTemplateOptionsPopupMenu(self._toolbox, self)
-        self._properties_ui.toolButton_tool_template.setMenu(self.tool_template_options_popup_menu)
-        self._properties_ui.treeView_template.expandAll()
+        self.tool_specification_options_popup_menu = ToolSpecificationOptionsPopupmenu(self._toolbox, self)
+        self._properties_ui.toolButton_tool_specification.setMenu(self.tool_specification_options_popup_menu)
+        self._properties_ui.treeView_specification.expandAll()
 
     def update_tool_models(self):
-        """Update Tool models with Tool template details. Used when Tool template is changed.
-        Overrides execution mode (work or source) with the template default."""
-        if not self.tool_template():
+        """Update Tool models with Tool specification details. Used when Tool specification is changed.
+        Overrides execution mode (work or source) with the specification default."""
+        if not self.tool_specification():
             self.populate_source_file_model(None)
             self.populate_input_file_model(None)
             self.populate_opt_input_file_model(None)
             self.populate_output_file_model(None)
-            self.populate_template_model(populate=False)
+            self.populate_specification_model(populate=False)
         else:
-            self.populate_source_file_model(self.tool_template().includes)
-            self.populate_input_file_model(self.tool_template().inputfiles)
-            self.populate_opt_input_file_model(self.tool_template().inputfiles_opt)
-            self.populate_output_file_model(self.tool_template().outputfiles)
-            self.populate_template_model(populate=True)
-            self.execute_in_work = self.tool_template().execute_in_work
+            self.populate_source_file_model(self.tool_specification().includes)
+            self.populate_input_file_model(self.tool_specification().inputfiles)
+            self.populate_opt_input_file_model(self.tool_specification().inputfiles_opt)
+            self.populate_output_file_model(self.tool_specification().outputfiles)
+            self.populate_specification_model(populate=True)
+            self.execute_in_work = self.tool_specification().execute_in_work
 
     @Slot(bool, name="open_results")
     def open_results(self, checked=False):
@@ -201,35 +199,35 @@ class Tool(ProjectItem):
         if not res:
             self._toolbox.msg_error.emit("Failed to open directory: {0}".format(self.output_dir))
 
-    @Slot(name="edit_tool_template")
-    def edit_tool_template(self):
-        """Open Tool template editor for the Tool template attached to this Tool."""
-        index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
-        self._toolbox.edit_tool_template(index)
+    @Slot(name="edit_tool_specification")
+    def edit_tool_specification(self):
+        """Open Tool specification editor for the Tool specification attached to this Tool."""
+        index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
+        self._toolbox.edit_tool_specification(index)
 
-    @Slot(name="open_tool_template_file")
-    def open_tool_template_file(self):
-        """Open Tool template definition file."""
-        index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
-        self._toolbox.open_tool_template_file(index)
+    @Slot(name="open_tool_specification_file")
+    def open_tool_specification_file(self):
+        """Open Tool specification file."""
+        index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
+        self._toolbox.open_tool_specification_file(index)
 
     @Slot(name="open_tool_main_program_file")
     def open_tool_main_program_file(self):
-        """Open Tool template main program file in an external text edit application."""
-        index = self._toolbox.tool_template_model.tool_template_index(self.tool_template().name)
+        """Open Tool specification main program file in an external text edit application."""
+        index = self._toolbox.tool_specification_model.tool_specification_index(self.tool_specification().name)
         self._toolbox.open_tool_main_program_file(index)
 
     @Slot(name="open_tool_main_directory")
     def open_tool_main_directory(self):
-        """Open directory where the Tool template main program is located in file explorer."""
-        if not self.tool_template():
+        """Open directory where the Tool specification main program is located in file explorer."""
+        if not self.tool_specification():
             return
-        dir_url = "file:///" + self.tool_template().path
+        dir_url = "file:///" + self.tool_specification().path
         self._toolbox.open_anchor(QUrl(dir_url, QUrl.TolerantMode))
 
-    def tool_template(self):
-        """Returns Tool template."""
-        return self._tool_template
+    def tool_specification(self):
+        """Returns Tool specification."""
+        return self._tool_specification
 
     def count_files_and_dirs(self):
         """Count the number of files and directories in required input files model.
@@ -282,7 +280,7 @@ class Tool(ProjectItem):
 
     def copy_input_files(self, paths):
         """Copy input files from given paths to work or source directory, depending on
-        where the Tool template requires them to be.
+        where the Tool specification requires them to be.
 
         Args:
             paths (dict): Key is path to destination file, value is path to source file.
@@ -341,7 +339,7 @@ class Tool(ProjectItem):
 
     def copy_optional_input_files(self, paths):
         """Copy optional input files from given paths to work or source directory, depending on
-        where the Tool template requires them to be.
+        where the Tool specification requires them to be.
 
         Args:
             paths (dict): Key is the optional file name pattern, value is a list of paths to source files.
@@ -412,19 +410,19 @@ class Tool(ProjectItem):
     def update_instance(self):
         """Initialize and update instance so that it is ready for processing. This is where Tool
         type specific initialization happens (whether the tool is GAMS, Python or Julia script)."""
-        if self.tool_template().tooltype == "gams":
+        if self.tool_specification().tooltype == "gams":
             gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
             if not gams_path == '':
                 gams_exe = gams_path
             else:
                 gams_exe = GAMS_EXECUTABLE
             self.instance.program = gams_exe
-            self.instance.args.append(self.tool_template().main_prgm)
+            self.instance.args.append(self.tool_specification().main_prgm)
             self.instance.args.append("curDir=")
             self.instance.args.append("{0}".format(self.instance.basedir))
             self.instance.args.append("logoption=3")  # TODO: This should be an option in Settings
             self.append_instance_args()  # Append Tool specific cmd line args into args list
-        elif self.tool_template().tooltype == "julia":
+        elif self.tool_specification().tooltype == "julia":
             # Prepare command "julia --project={PROJECT_DIR} script.jl"
             # Do this regardless of the `useEmbeddedJulia` setting since we may need to fallback
             # to `julia --project={PROJECT_DIR} script.jl`
@@ -437,7 +435,7 @@ class Tool(ProjectItem):
             if julia_project_path == "":
                 julia_project_path = "@."
             work_dir = self.instance.basedir
-            script_path = os.path.join(work_dir, self.tool_template().main_prgm)
+            script_path = os.path.join(work_dir, self.tool_specification().main_prgm)
             self.instance.program = julia_exe
             self.instance.args.append(f"--project={julia_project_path}")
             self.instance.args.append(script_path)
@@ -452,9 +450,9 @@ class Tool(ProjectItem):
                     r'cd("{}");'
                     r'empty!(ARGS);'
                     r'append!(ARGS, {});'
-                    r'include("{}")'.format(mod_work_dir, args, self.tool_template().main_prgm)
+                    r'include("{}")'.format(mod_work_dir, args, self.tool_specification().main_prgm)
                 )
-        elif self.tool_template().tooltype == "python":
+        elif self.tool_specification().tooltype == "python":
             # Prepare command "python script.py"
             python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
             if not python_path == "":
@@ -462,7 +460,7 @@ class Tool(ProjectItem):
             else:
                 python_cmd = PYTHON_EXECUTABLE
             work_dir = self.instance.basedir
-            script_path = os.path.join(work_dir, self.tool_template().main_prgm)
+            script_path = os.path.join(work_dir, self.tool_specification().main_prgm)
             self.instance.program = python_cmd
             self.instance.args.append(script_path)  # TODO: Why are we doing this?
             self.append_instance_args()
@@ -475,12 +473,12 @@ class Tool(ProjectItem):
                 # Skip first arg since it's the script path (see above)
                 args = " ".join([str(x) for x in self.instance.args[1:]])
                 cd_work_dir_cmd = "%cd -q {0} ".format(work_dir)  # -q: quiet
-                run_script_cmd = "%run \"{0}\" {1}".format(self.tool_template().main_prgm, args)
+                run_script_cmd = "%run \"{0}\" {1}".format(self.tool_specification().main_prgm, args)
                 # Populate FIFO command queue
                 self.instance.ipython_command_list.append(cd_work_dir_cmd)
                 self.instance.ipython_command_list.append(run_script_cmd)
-        elif self.tool_template().tooltype == "executable":
-            batch_path = os.path.join(self.instance.basedir, self.tool_template().main_prgm)
+        elif self.tool_specification().tooltype == "executable":
+            batch_path = os.path.join(self.instance.basedir, self.tool_specification().main_prgm)
             if sys.platform != "win32":
                 self.instance.program = "sh"
                 self.instance.args.append(batch_path)
@@ -489,15 +487,15 @@ class Tool(ProjectItem):
             self.append_instance_args()  # Append Tool specific cmd line args into args list
 
     def append_instance_args(self):
-        """Append Tool template command line args into instance args list."""
+        """Append Tool specification command line args into instance args list."""
         self.instance.args += self.get_instance_args()
 
     def get_instance_args(self):
         """Return instance args as list."""
         # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
-        if (self.tool_template().cmdline_args is not None) and (self.tool_template().cmdline_args != ''):
-            # Tool template cmdline args is a space delimited string. Return them as a list.
-            return self.tool_template().cmdline_args.split(" ")
+        if (self.tool_specification().cmdline_args is not None) and (self.tool_specification().cmdline_args != ''):
+            # Tool specification cmdline args is a space delimited string. Return them as a list.
+            return self.tool_specification().cmdline_args.split(" ")
         return []
 
     def populate_source_file_model(self, items):
@@ -523,7 +521,7 @@ class Tool(ProjectItem):
                 self.input_file_model.appendRow(qitem)
 
     def populate_opt_input_file_model(self, items):
-        """Add optional Tool template files into a model.
+        """Add optional Tool specification files into a model.
         If items is None or an empty list, model is cleared."""
         self.opt_input_file_model.clear()
         if items is not None:
@@ -544,23 +542,23 @@ class Tool(ProjectItem):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.output_file_model.appendRow(qitem)
 
-    def populate_template_model(self, populate):
-        """Add all tool template specs to a single QTreeView.
+    def populate_specification_model(self, populate):
+        """Add all tool specifications to a single QTreeView.
 
         Args:
             populate (bool): False to clear model, True to populate.
         """
-        self.template_model.clear()
-        self.template_model.setHorizontalHeaderItem(0, QStandardItem("Template specification"))  # Add header
+        self.specification_model.clear()
+        self.specification_model.setHorizontalHeaderItem(0, QStandardItem("Tool specification"))  # Add header
         # Add category items
         source_file_category_item = QStandardItem("Source files")
         input_category_item = QStandardItem("Input files")
         opt_input_category_item = QStandardItem("Optional input files")
         output_category_item = QStandardItem("Output files")
-        self.template_model.appendRow(source_file_category_item)
-        self.template_model.appendRow(input_category_item)
-        self.template_model.appendRow(opt_input_category_item)
-        self.template_model.appendRow(output_category_item)
+        self.specification_model.appendRow(source_file_category_item)
+        self.specification_model.appendRow(input_category_item)
+        self.specification_model.appendRow(opt_input_category_item)
+        self.specification_model.appendRow(output_category_item)
         if populate:
             if self.source_file_model.rowCount() > 0:
                 for row in range(self.source_file_model.rowCount()):
@@ -597,8 +595,8 @@ class Tool(ProjectItem):
 
     def execute(self):
         """Executes this Tool."""
-        if not self.tool_template():
-            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool template to execute".format(self.name))
+        if not self.tool_specification():
+            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool specification to execute".format(self.name))
             self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # continue
             return
         self._toolbox.msg.emit("")
@@ -609,7 +607,7 @@ class Tool(ProjectItem):
         self._toolbox.msg.emit("*** Executing in <b>{0}</b> directory mode ***".format(work_or_source))
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
-            self._toolbox.msg.emit("*** Checking Tool template requirements ***")
+            self._toolbox.msg.emit("*** Checking Tool specification requirements ***")
             n_dirs, n_files = self.count_files_and_dirs()
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_files > 0:
@@ -646,7 +644,7 @@ class Tool(ProjectItem):
             else:  # just for testing
                 # logging.debug("No directories to create")
                 pass
-        else:  # Tool template does not have requirements
+        else:  # Tool specification does not have requirements
             try:
                 self.instance = ToolInstance(self)
             except OSError as e:
@@ -713,7 +711,7 @@ class Tool(ProjectItem):
 
     @Slot(int, name="execute_finished")
     def execute_finished(self, return_code):
-        """Tool template execution finished.
+        """Tool specification execution finished.
 
         Args:
             return_code (int): Process exit code
@@ -741,8 +739,8 @@ class Tool(ProjectItem):
     def simulate_execution(self, inst):
         """Simulates executing this Tool."""
         super().simulate_execution(inst)
-        if not self.tool_template():
-            self.add_notification("This Tool does not have any Tool Template set. Set it in the Tool Properties Panel.")
+        if not self.tool_specification():
+            self.add_notification("This Tool is not connected to a Tool specification. Set it in the Tool Properties Panel.")
             return
         file_paths = self.find_input_files(inst)
         not_found = [k for k, v in file_paths.items() if v is None]
@@ -759,10 +757,10 @@ class Tool(ProjectItem):
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
         d = super().item_dict()
-        if not self.tool_template():
+        if not self.tool_specification():
             d["tool"] = ""
         else:
-            d["tool"] = self.tool_template().name
+            d["tool"] = self.tool_specification().name
         d["execute_in_work"] = self.execute_in_work
         return d
 
@@ -791,8 +789,8 @@ class Tool(ProjectItem):
                 self._toolbox.msg.emit("Tool <b>{0}</b> is not running".format(self.name))
             else:
                 self.stop_execution()  # Proceed with stopping
-        elif action == "Edit Tool template":
-            self.edit_tool_template()
+        elif action == "Edit Tool specification":
+            self.edit_tool_specification()
         elif action == "Edit main program file...":
             self.open_tool_main_program_file()
 

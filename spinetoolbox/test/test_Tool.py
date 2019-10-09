@@ -23,7 +23,7 @@ from PySide2.QtCore import QSettings
 
 from ..project_items.tool.tool import Tool
 from ..project import SpineToolboxProject
-from ..mvcmodels.tool_template_model import ToolTemplateModel
+from ..mvcmodels.tool_specification_model import ToolSpecificationModel
 
 
 class _MockToolbox:
@@ -37,7 +37,7 @@ class _MockToolbox:
     def __init__(self, temp_directory):
         self._qsettings = QSettings()
         self._qsettings.setValue("appSettings/projectsDir", temp_directory)
-        self.tool_template_model = ToolTemplateModel(self)
+        self.tool_specification_model = ToolSpecificationModel(self)
         self._project = SpineToolboxProject(self, "name", "description", temp_directory)
         self.msg = _MockToolbox.Message()
         self.msg_warning = _MockToolbox.Message()

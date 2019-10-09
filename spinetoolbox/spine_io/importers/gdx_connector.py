@@ -55,9 +55,7 @@ def select_gdx_file(parent=None):
 
 
 class GdxConnector(SourceConnection):
-    """
-    Template class to read data from another QThread
-    """
+    """Template class to read data from another QThread."""
 
     # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Gdx"

@@ -19,7 +19,7 @@ please check the :ref:`Terminology` section. If you want to contribute to this p
    tutorials
    main_window
    project_items
-   tool_template_editor
+   tool_specification_editor
    executing_tools
    settings
    data_store_views

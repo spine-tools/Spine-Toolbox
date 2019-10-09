@@ -50,7 +50,7 @@ Tool |tool|
 
 Tool is the heart of a DAG. It is usually the actual model to be executed in Spine Toolbox
 but can be an arbitrary script or executable as well.
-A tool is specified by its :ref:`template <Tool template editor>`.
+A tool is specified by its :ref:`specification <Tool specification editor>`.
 
 View |view|
 -----------
