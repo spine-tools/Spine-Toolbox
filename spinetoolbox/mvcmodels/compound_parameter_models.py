@@ -82,51 +82,26 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self._parent.msg_error.emit(msg)
         return True
 
-    def create_single_model(self, database, db_item):
-        """Returns a single model for the given database and item."""
-        raise NotImplementedError()
-
-    def create_empty_model(self):
-        """Returns an empty model."""
-        raise NotImplementedError()
-
     @staticmethod
     def entity_class_query(db_map):
         """Returns a query of entity classes to use for creating the different single models."""
         raise NotImplementedError()
 
-    def init_model(self):
-        """Initialize model."""
+    def single_model_keys(self):
+        """Generates keys for creating single models when initializing the model."""
         d = dict()
         for database, db_map in self.db_name_to_map.items():
             for entity_class in self.entity_class_query(db_map):
                 d.setdefault(entity_class.name, list()).append((database, entity_class))
-        self.sub_models = [
-            self.create_single_model(database, entity_class)
-            for entity_class_list in d.values()
-            for database, entity_class in entity_class_list
-        ]
-        self.sub_models.append(self.create_empty_model())
-        self.connect_model_signals()
+        for entity_class_list in d.values():
+            for database, entity_class in entity_class_list:
+                yield (database, entity_class)
 
-    def move_rows_to_single_models(self, rows):
-        """Move rows with newly added items from the empty model to a new single model.
-        Runs when the empty row model succesfully inserts new data into the db.
+    def single_model_key_from_item(self, item):
+        """Returns the single model key from the given item.
+        Used by move rows to single models.
         """
-        d = {}
-        for row in rows:
-            item = self.empty_model._main_data[row]
-            d.setdefault((item.database, item.entity_class), list()).append(item)
-        single_models = []
-        for (database, entity_class), item_list in d.items():
-            single_model = self.create_single_model(database, entity_class)
-            single_model.reset_model(item_list)
-            self._handle_single_model_reset(single_model)
-            single_models.append(single_model)
-        pos = len(self.single_models)
-        self.sub_models[pos:pos] = single_models
-        for row in reversed(rows):
-            self.empty_model.removeRows(row, 1)
+        return (item.database, item.entity_class)
 
     def filter_accepts_single_model(self, model):
         """Returns True if the given model should be included in the compound model, otherwise returns False."""
@@ -170,17 +145,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         model._auto_filter.clear()
         return True
 
-    def refresh(self):
-        """Recomputes the row map taking into account filter results."""
-        self.layoutAboutToBeChanged.emit()
-        self._row_map.clear()
-        for model in self.single_models:
-            self._row_map += self._row_map_for_model(model)
-        self._row_map += [(self.empty_model, i) for i in range(self.empty_model.rowCount())]
-        self.layoutChanged.emit()
-
-    def _row_map_for_model(self, model):
-        """Returns row map for given model."""
+    def _row_map_for_single_model(self, model):
+        """Returns row map for given single model.
+        Reimplemented to take filter status into account."""
         if not self.filter_accepts_single_model(model):
             return []
         return [(model, i) for i in model.accepted_rows()]
@@ -252,7 +219,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
 
 class CompoundObjectParameterMixin:
-    """Provides methods to do the filtering in a compound object parameter model."""
+    """Implements the interface for populating and filtering a compound object parameter model."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -288,7 +255,7 @@ class CompoundObjectParameterMixin:
 
 
 class CompoundRelationshipParameterMixin:
-    """Provides methods to do the filtering in a compound relationship parameter model."""
+    """Implements the interface for populating and filtering a compound relationship parameter model."""
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -332,7 +299,7 @@ class CompoundRelationshipParameterMixin:
 
 
 class CompoundObjectParameterRenameRemoveMixin:
-    """Provides methods to do renaming and removal in a compound object parameter model."""
+    """Implements an interface to rename and remove items in a compound object parameter model."""
 
     def rename_object_classes(self, db_map, object_classes):
         """Rename object classes in model."""
@@ -351,7 +318,7 @@ class CompoundObjectParameterRenameRemoveMixin:
 
 
 class CompoundRelationshipParameterRenameRemoveMixin:
-    """Provides methods to do renaming and removal in a compound relationship parameter model."""
+    """Implements an interface to rename and remove items in a compound relationship parameter model."""
 
     def rename_relationship_classes(self, db_map, relationship_classes):
         """Rename relationship classes in model."""
@@ -385,7 +352,7 @@ class CompoundRelationshipParameterRenameRemoveMixin:
 
 
 class CompoundParameterDefinitionRenameRemoveMixin:
-    """Provides methods to do renaming and removal in a compound parameter definition model."""
+    """Implements an interface to rename and remove items in a compound parameter definition model."""
 
     def rename_parameter_tags(self, db_map, parameter_tags):
         """Rename parameter tags in model."""
@@ -415,7 +382,7 @@ class CompoundParameterDefinitionRenameRemoveMixin:
 
 
 class CompoundParameterValueRenameRemoveMixin:
-    """Provides methods to do renaming and removal in a compound parameter value model."""
+    """Implements an interface to rename and remove items in a compound parameter value model."""
 
     def rename_parameters(self, db_map, parameters):
         """Rename parameters in model."""
@@ -441,7 +408,7 @@ class CompoundParameterValueRenameRemoveMixin:
 
 
 class CompoundObjectParameterValueRenameRemoveMixin:
-    """Provides methods to do renaming and removal in a compound object parameter value model."""
+    """Implements an interface to rename and remove items in a compound object parameter value model."""
 
     def rename_objects(self, db_map, objects):
         """Rename objects in model."""
@@ -467,7 +434,7 @@ class CompoundObjectParameterValueRenameRemoveMixin:
 
 
 class CompoundRelationshipParameterValueRenameRemoveMixin:
-    """Provides methods to do renaming and removal in a compound relationship parameter value model."""
+    """Implements an interface to rename and remove items in a compound relationship parameter value model."""
 
     def rename_objects(self, db_map, objects):
         """Rename objects in model."""

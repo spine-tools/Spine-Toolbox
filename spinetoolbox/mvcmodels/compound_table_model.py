@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-A models that concatenate several table models vertically.
+Models that vertically concatenate two or more table models.
 
 :authors: M. Marin (KTH)
 :date:   9.10.2019
@@ -22,7 +22,7 @@ from ..helpers import rows_to_row_count_tuples
 
 
 class CompoundTableModel(MinimalTableModel):
-    """A model that concatenates several table models together."""
+    """A model that vertically concatenates several sub table models together."""
 
     def __init__(self, parent, header=None):
         """Init class.
@@ -34,7 +34,39 @@ class CompoundTableModel(MinimalTableModel):
         self._parent = parent
         self.sub_models = []
         self._row_map = []
-        self._fetched_count = 0  # Index of the last submodel that's already been fetched
+        self._fetched_count = 0
+
+    def map_to_sub(self, index):
+        """Translate the index into the corresponding submodel."""
+        if not index.isValid():
+            return QModelIndex()
+        row = index.row()
+        column = index.column()
+        sub_model, sub_row = self._row_map[row]
+        return sub_model.index(sub_row, column)
+
+    def refresh(self):
+        """Recomputes the row map."""
+        self.layoutAboutToBeChanged.emit()
+        self.do_refresh()
+        self.layoutChanged.emit()
+
+    def _row_map_for_model(self, model):
+        """Returns row map for given model.
+        The base class implementation just returns all rows.
+        """
+        return [(model, i) for i in range(model.rowCount())]
+
+    def do_refresh(self):
+        """Recomputes the row map."""
+        self._row_map.clear()
+        for model in self.sub_models:
+            self._row_map += self._row_map_for_model(model)
+
+    def item_at_row(self, row):
+        """Returns the item at given row."""
+        sub_model, sub_row = self._row_map[row]
+        return sub_model._main_data[sub_row]
 
     def canFetchMore(self, parent):
         """Returns True if any of the unfetched single models can fetch more."""
@@ -44,33 +76,18 @@ class CompoundTableModel(MinimalTableModel):
         return False
 
     def fetchMore(self, parent):
-        """Fetches the next single model and increments the fetched index."""
+        """Fetches the next single model and increments the fetched counter."""
         model = self.sub_models[self._fetched_count]
-        sub_parent = self.map_to_sub(parent)
-        model_emitted_layout_changed = False
-
-        def _handle_model_layout_changed_locally():
-            model_emitted_layout_changed = True
-
-        model.layoutChanged.connect(_handle_model_layout_changed_locally)
-        model.fetchMore(sub_parent)
+        row_count_before = model.rowCount()
+        model.fetchMore(self.map_to_sub(parent))
         # Increment counter or just pop model if empty
         if model.rowCount():
             self._fetched_count += 1
         else:
             self.sub_models.pop(self._fetched_count)
-        if not model_emitted_layout_changed:
-            # fetching submodel had no effect?? emit layoutChanged so we fetch the next submodel
+        if model.rowCount() == row_count_before:
+            # fetching submodel didn't add any rows. Emit layoutChanged so we make sure we fetch the next submodel
             self.layoutChanged.emit()
-
-    def map_to_sub(self, index):
-        """Returns a submodel index corresponding to given one."""
-        if not index.isValid():
-            return QModelIndex()
-        row = index.row()
-        column = index.column()
-        sub_model, sub_row = self._row_map[row]
-        return sub_model.index(sub_row, column)
 
     def flags(self, index):
         """Translate the index into the corresponding submodel and return its flags."""
@@ -101,14 +118,6 @@ class CompoundTableModel(MinimalTableModel):
         self.refresh()
         self.endRemoveRows()
         return True
-
-    def refresh(self):
-        """Recomputes the row map. Reimplement in subclasses."""
-
-    def item_at_row(self, row):
-        """Returns the item at given row."""
-        sub_model, sub_row = self._row_map[row]
-        return sub_model._main_data[sub_row]
 
     def batch_set_data(self, indexes, data):
         """Set data for indexes in batch.
@@ -201,7 +210,58 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         for model in self.single_models:
             model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
 
-    def _row_map_for_model(self, model):
-        """Returns row map for given model.
+    def _row_map_for_single_model(self, model):
+        """Returns row map for given single model.
         Reimplement in subclasses to do e.g. filtering."""
-        return [(model, i) for i in range(model.rowCount())]
+        return self._row_map_for_model()
+
+    def do_refresh(self):
+        """Recomputes the row map."""
+        self._row_map.clear()
+        for model in self.single_models:
+            self._row_map += self._row_map_for_single_model(model)
+        self._row_map += self._row_map_for_model(self.empty_model)
+
+    def init_model(self):
+        """Initialize model."""
+        self.sub_models = [self.create_single_model(*key) for key in self.single_model_keys()]
+        self.sub_models.append(self.create_empty_model())
+        self.connect_model_signals()
+
+    def single_model_keys(self):
+        """Generates keys for creating single models when initializing the model."""
+        raise NotImplementedError()
+
+    def create_single_model(self, database, db_item):
+        """Returns a single model for the given database and item."""
+        raise NotImplementedError()
+
+    def create_empty_model(self):
+        """Returns an empty model."""
+        raise NotImplementedError()
+
+    def move_rows_to_single_models(self, rows):
+        """Move rows with newly added items from the empty model to a new single model.
+        Runs when the empty row model succesfully inserts new data into the db.
+        """
+        # Group items by single model key
+        d = {}
+        for row in rows:
+            item = self.empty_model._main_data[row]
+            d.setdefault(self.single_model_key(item), list()).append(item)
+        single_models = []
+        for key, item_list in d.items():
+            single_model = self.create_single_model(*key)
+            single_model.reset_model(item_list)
+            self._handle_single_model_reset(single_model)
+            single_models.append(single_model)
+        pos = len(self.single_models)
+        self.sub_models[pos:pos] = single_models
+        for row in reversed(rows):
+            self.empty_model.removeRows(row, 1)
+
+    def single_model_key_from_item(self, item):
+        """Returns the single model key from the given item.
+        Used by move rows to single models.
+        """
+        raise NotImplementedError()
