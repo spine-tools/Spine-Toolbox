@@ -29,6 +29,8 @@ class ParameterDefinitionTagSetMixin:
         """
         tag_specs_dict = dict()
         for item in rows.values():
+            database = item.database
+            db_map = self.db_name_to_map.get(database)
             tag_spec = item.tag_spec()
             if tag_spec:
                 tag_specs_dict.setdefault(db_map, dict()).update(tag_spec)
@@ -266,6 +268,43 @@ class RelationshipParameterDecorateMixin:
         return super().data(index, role)
 
 
+class ObjectParameterRenameMixin:
+    """Handles object parameter renaming."""
+
+    def rename_object_classes(self, object_classes):
+        """Rename object classes in model.
+
+        Args:
+            object_classes (dict): maps id to new name
+        """
+        for item in self._main_data:
+            item.object_class_name = object_classes.get(item.object_class_id, item.object_class_name)
+
+
+class RelationshipParameterRenameMixin:
+    """Handles relationship parameter renaming."""
+
+    def rename_relationship_classes(self, relationship_classes):
+        """Rename relationship classes in model.
+
+        Args:
+            relationship_classes (dict): maps id to new name
+        """
+        for item in self._main_data:
+            item.relationship_class_name = relationship_classes.get(
+                item.relationship_class_id, item.relationship_class_name
+            )
+
+    def rename_object_classes(self, object_classes):
+        """Rename object classes in model.
+
+        Args:
+            object_classes (dict): maps id to new name
+        """
+        for item in self._main_data:
+            item.rename_object_classes(object_classes)
+
+
 class ParameterDefinitionRenameRemoveMixin:
     """Handles parameter definitions renaming and removal."""
 
@@ -276,17 +315,7 @@ class ParameterDefinitionRenameRemoveMixin:
             parameter_tags (dict): maps id to new tag
         """
         for item in self._main_data:
-            if not item.parameter_tag_id_list:
-                continue
-            split_parameter_tag_id_list = [int(id_) for id_ in item.parameter_tag_id_list.split(",")]
-            matches = [(k, id_) for k, id_ in enumerate(split_parameter_tag_id_list) if id_ in parameter_tags]
-            if not matches:
-                continue
-            split_parameter_tag_list = item.parameter_tag_list.split(",")
-            for k, id_ in matches:
-                new_tag = parameter_tags[id_]
-                split_parameter_tag_list[k] = new_tag
-            item.parameter_tag_list = ",".join(split_parameter_tag_list)
+            item.rename_parameter_tags(parameter_tags)
 
     def remove_parameter_tags(self, parameter_tag_ids):
         """Remove parameter tags from model.
@@ -295,16 +324,7 @@ class ParameterDefinitionRenameRemoveMixin:
             parameter_tag_ids (set): set of ids to remove
         """
         for item in self._main_data:
-            if not item.parameter_tag_id_list:
-                continue
-            split_parameter_tag_id_list = [int(id_) for id_ in item.parameter_tag_id_list.split(",")]
-            matches = [k for k, id_ in enumerate(split_parameter_tag_id_list) if id_ in parameter_tag_ids]
-            if not matches:
-                continue
-            split_parameter_tag_list = item.parameter_tag_list.split(",")
-            for k in sorted(matches, reverse=True):
-                del split_parameter_tag_list[k]
-            item.parameter_tag_list = ",".join(split_parameter_tag_list)
+            item.remove_parameter_tags(parameter_tag_ids)
 
     def rename_parameter_value_lists(self, value_lists):
         """Rename parameter value lists in model.
@@ -313,16 +333,53 @@ class ParameterDefinitionRenameRemoveMixin:
             value_lists (dict): maps id to new name
         """
         for item in self._main_data:
-            if item.value_list_id in value_lists:
-                item.value_list_name = value_lists[item.value_list_id]
+            item.value_list_name = value_lists.get(item.value_list_id, item.value_list_name)
 
     def clear_parameter_value_lists(self, value_list_ids):
-        """Clear parameter value_lists from model.
+        """Clear parameter value lists from model.
 
         Args:
             value_list_ids (set): set of ids to remove
         """
         for item in self._main_data:
-            if item.value_list_id in value_list_ids:
-                item.value_list_id = None
-                item.value_list_name = None
+            if self.value_list_id in value_list_ids:
+                self.value_list_id = None
+                self.value_list_name = None
+
+
+class ParameterValueRenameMixin:
+    """Handles parameter renaming for parameter values."""
+
+    def rename_parameters(self, parameters):
+        """Rename parameters in model.
+        Args:
+            parameters (dict): maps id to new name
+        """
+        for item in self._main_data:
+            item.parameter_name = parameters.get(item.parameter_id, item.parameter_name)
+
+
+class ObjectParameterValueRenameMixin:
+    """Handles object renaming for object parameter values."""
+
+    def rename_objects(self, objects):
+        """Rename objects in model.
+
+        Args:
+            objects (dict): maps id to new name
+        """
+        for item in self._main_data:
+            item.object_name = objects.get(item.object_id, item.object_name)
+
+
+class RelationshipParameterValueRenameMixin:
+    """Handles object renaming for relationship parameter values."""
+
+    def rename_objects(self, objects):
+        """Rename objects in model.
+
+        Args:
+            objects (dict): maps id to new name
+        """
+        for item in self._main_data:
+            item.rename_objects(objects)

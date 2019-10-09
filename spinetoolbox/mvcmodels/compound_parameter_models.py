@@ -139,14 +139,22 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     @staticmethod
     def _settattr_if_different(obj, attr, val):
         """If the given value is different than the one currently stored
-        in the given object, set it and returns True.
-        Otherwise returns False.
+        in the given object, set it and returns True. Otherwise returns False.
+        Handy for updating filters.
         """
         curr = getattr(obj, attr)
         if curr != val:
             setattr(obj, attr, val)
             return True
         return False
+
+    def update_filter(self):
+        """Update filter."""
+        updated = self.update_compound_filter()
+        for model in self.single_models:
+            updated |= self.update_single_model_filter(model)
+        if updated:
+            self.refresh()
 
     def update_compound_filter(self):
         """Update the filter."""
@@ -162,18 +170,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         model._auto_filter.clear()
         return True
 
-    def update_filter(self):
-        """Update filter."""
-        updated = self.update_compound_filter()
-        for model in self.single_models:
-            updated |= self.update_single_model_filter(model)
-        if updated:
-            self.apply_filter()
-
-    def apply_filter(self):
-        """Applies the current filter.
-        Recompute the row map taking into account filter results.
-        """
+    def refresh(self):
+        """Recomputes the row map taking into account filter results."""
         self.layoutAboutToBeChanged.emit()
         self._row_map.clear()
         for model in self.single_models:
@@ -218,7 +216,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for model in self.accepted_single_models():
             updated |= self.update_single_model_auto_filter(model, column)
         if updated:
-            self.apply_filter()
+            self.refresh()
 
     def update_single_model_auto_filter(self, model, column):
         """Set auto filter values for given column.
@@ -235,14 +233,18 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     def _emit_data_changed_for_column(self, field):
         """Emits data changed for an entire column.
-        Used by `rename_` and some `remove_` methods whenever it's too difficult to find out the exact
-        rows that changed, especially because of filter status.
+        Used by `rename_` and some `remove_` methods because we're too lazy
+        to find out the exact rows that changed.
 
         Args:
             field (str): the column header
         """
-        column = self.header.index(field)
-        self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
+        try:
+            column = self.header.index(field)
+        except ValueError:
+            pass
+        else:
+            self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
 
     def _models_with_db_map(self, db_map):
         """Returns a collection of models having the given db_map."""
@@ -255,22 +257,6 @@ class CompoundObjectParameterMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._selected_object_class_ids = None
-
-    def rename_object_classes(self, db_map, object_classes):
-        """Rename object classes in model."""
-        object_classes = {x.id: x.name for x in object_classes}
-        for model in self._models_with_db_map(db_map):
-            model.rename_object_classes(object_classes)
-        self._emit_data_changed_for_column("object_class_name")
-
-    def remove_object_classes(self, db_map, object_classes):
-        """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
-        object_class_ids = [x['id'] for x in object_classes]
-        for model in self._models_with_db_map(db_map):
-            if model.object_class_id in object_class_ids:
-                self.sub_models.remove(model)
-        self.layoutChanged.emit()
 
     def update_compound_filter(self):
         """Update the filter."""
@@ -357,12 +343,45 @@ class CompoundObjectParameterRenameRemoveMixin:
 
     def remove_object_classes(self, db_map, object_classes):
         """Remove object classes from model."""
-        self.layoutAboutToBeChanged.emit()
         object_class_ids = [x['id'] for x in object_classes]
         for model in self._models_with_db_map(db_map):
             if model.object_class_id in object_class_ids:
                 self.sub_models.remove(model)
-        self.layoutChanged.emit()
+        self.refresh()
+
+
+class CompoundRelationshipParameterRenameRemoveMixin:
+    """Provides methods to do renaming and removal in a compound relationship parameter model."""
+
+    def rename_relationship_classes(self, db_map, relationship_classes):
+        """Rename relationship classes in model."""
+        relationship_classes = {x.id: x.name for x in relationship_classes}
+        for model in self._models_with_db_map(db_map):
+            model.rename_relationship_classes(relationship_classes)
+        self._emit_data_changed_for_column("relationship_class_name")
+
+    def remove_relationship_classes(self, db_map, relationship_classes):
+        """Remove relationship classes from model."""
+        relationship_class_ids = {x['id'] for x in relationship_classes}
+        for model in self._models_with_db_map(db_map):
+            if model.relationship_class_id in relationship_class_ids:
+                self.sub_models.remove(model)
+        self.refresh()
+
+    def rename_object_classes(self, db_map, object_classes):
+        """Rename object classes in model."""
+        object_classes = {x.id: x.name for x in object_classes}
+        for model in self._models_with_db_map(db_map):
+            model.rename_object_classes(object_classes)
+        self._emit_data_changed_for_column("object_class_name_list")
+
+    def remove_object_classes(self, db_map, object_classes):
+        """Remove object classes from model."""
+        object_class_ids = {x['id'] for x in object_classes}
+        for model in self._models_with_db_map(db_map):
+            if object_class_ids.intersection(model.object_class_id_list):
+                self.sub_models.remove(model)
+        self.refresh()
 
 
 class CompoundParameterDefinitionRenameRemoveMixin:
@@ -393,6 +412,100 @@ class CompoundParameterDefinitionRenameRemoveMixin:
         for model in self._models_with_db_map(db_map):
             model.clear_parameter_value_lists(value_list_ids)
         self._emit_data_changed_for_column("value_list_name")
+
+
+class CompoundParameterValueRenameRemoveMixin:
+    """Provides methods to do renaming and removal in a compound parameter value model."""
+
+    def rename_parameters(self, db_map, parameters):
+        """Rename parameters in model."""
+        parameters = {x['id']: x['name'] for x in parameters}
+        for model in self._models_with_db_map(db_map):
+            model.rename_parameters(parameters)
+        self._emit_data_changed_for_column("parameter_name")
+
+    def remove_parameters(self, db_map, parameters):
+        """Remove parameters from model."""
+        parameter_ids = {}
+        for parameter in parameters:
+            parameter_ids.setdefault(parameter["entity_class_id"], set()).add(parameter['id'])
+        for model in self._models_with_db_map(db_map):
+            class_parameter_ids = parameter_ids.get(model.entity_class_id)
+            if not class_parameter_ids:
+                continue
+            for row in reversed(range(model.rowCount())):
+                parameter_id = model._main_data[row].parameter_id
+                if parameter_id in class_parameter_ids:
+                    model.removeRows(row, 1)
+        self.refresh()
+
+
+class CompoundObjectParameterValueRenameRemoveMixin:
+    """Provides methods to do renaming and removal in a compound object parameter value model."""
+
+    def rename_objects(self, db_map, objects):
+        """Rename objects in model."""
+        objects = {x.id: x.name for x in objects}
+        for model in self._models_with_db_map(db_map):
+            model.rename_objects(objects)
+        self._emit_data_changed_for_column("object_name")
+
+    def remove_objects(self, db_map, objects):
+        """Remove objects from model."""
+        object_ids = {}
+        for object_ in objects:
+            object_ids.setdefault(object_["class_id"], set()).add(object_['id'])
+        for model in self._models_with_db_map(db_map):
+            class_object_ids = object_ids.get(model.entity_class_id)
+            if not class_object_ids:
+                continue
+            for row in reversed(range(model.rowCount())):
+                object_id = model._main_data[row].object_id
+                if object_id in class_object_ids:
+                    model.removeRows(row, 1)
+        self.refresh()
+
+
+class CompoundRelationshipParameterValueRenameRemoveMixin:
+    """Provides methods to do renaming and removal in a compound relationship parameter value model."""
+
+    def rename_objects(self, db_map, objects):
+        """Rename objects in model."""
+        objects = {x.id: x.name for x in objects}
+        for model in self._models_with_db_map(db_map):
+            model.rename_objects(objects)
+        self._emit_data_changed_for_column("object_name_list")
+
+    def remove_objects(self, db_map, objects):
+        """Remove objects from model."""
+        object_ids = {}
+        for object_ in objects:
+            object_ids.setdefault(object_['class_id'], set()).add(object_['id'])
+        for model in self._models_with_db_map(db_map):
+            class_object_ids = {id_ for class_id in model.object_class_id_list for id_ in object_ids.get(class_id, [])}
+            if not class_object_ids:
+                continue
+            for row in reversed(range(model.rowCount())):
+                object_id_list = model._main_data[row].object_id_list
+                object_id_list = [int(id_) for id_ in object_id_list.split(",")]
+                if class_object_ids.intersection(object_id_list):
+                    model.removeRows(row, 1)
+        self.refresh()
+
+    def remove_relationships(self, db_map, relationships):
+        """Remove relationships from model."""
+        relationship_ids = {}
+        for relationship in relationships:
+            relationship_ids.setdefault(relationship["class_id"], set()).add(relationship['id'])
+        for model in self._models_with_db_map(db_map):
+            class_relationship_ids = relationship_ids.get(model.entity_class_id)
+            if not class_relationship_ids:
+                continue
+            for row in reversed(range(model.rowCount())):
+                relationship_id = model._main_data[row].relationship_id
+                if relationship_id in class_relationship_ids:
+                    model.removeRows(row, 1)
+        self.refresh()
 
 
 class CompoundObjectParameterDefinitionModel(
@@ -435,7 +548,10 @@ class CompoundObjectParameterDefinitionModel(
 
 
 class CompoundRelationshipParameterDefinitionModel(
-    CompoundRelationshipParameterMixin, CompoundParameterDefinitionRenameRemoveMixin, CompoundParameterModel
+    CompoundRelationshipParameterMixin,
+    CompoundRelationshipParameterRenameRemoveMixin,
+    CompoundParameterDefinitionRenameRemoveMixin,
+    CompoundParameterModel,
 ):
     """A model that concatenates several single relationship parameter definition models
     and one empty relationship parameter definition model.
@@ -472,7 +588,13 @@ class CompoundRelationshipParameterDefinitionModel(
         return EmptyRelationshipParameterDefinitionModel(self, header=self.header, icon_mngr=self.icon_mngr)
 
 
-class CompoundObjectParameterValueModel(CompoundObjectParameterMixin, CompoundParameterModel):
+class CompoundObjectParameterValueModel(
+    CompoundObjectParameterMixin,
+    CompoundObjectParameterRenameRemoveMixin,
+    CompoundParameterValueRenameRemoveMixin,
+    CompoundObjectParameterValueRenameRemoveMixin,
+    CompoundParameterModel,
+):
     """A model that concatenates several single object parameter value models
     and one empty object parameter value model.
     """
@@ -509,7 +631,13 @@ class CompoundObjectParameterValueModel(CompoundObjectParameterMixin, CompoundPa
         return a or b
 
 
-class CompoundRelationshipParameterValueModel(CompoundRelationshipParameterMixin, CompoundParameterModel):
+class CompoundRelationshipParameterValueModel(
+    CompoundRelationshipParameterMixin,
+    CompoundRelationshipParameterRenameRemoveMixin,
+    CompoundParameterValueRenameRemoveMixin,
+    CompoundRelationshipParameterValueRenameRemoveMixin,
+    CompoundParameterModel,
+):
     """A model that concatenates several single relationship parameter value models
     and one empty relationship parameter value model.
     """

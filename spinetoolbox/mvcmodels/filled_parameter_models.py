@@ -25,7 +25,12 @@ from ..mvcmodels.parameter_mixins import (
     RelationshipParameterDecorateMixin,
     ParameterDefinitionUpdateMixin,
     ParameterValueUpdateMixin,
+    ObjectParameterRenameMixin,
+    RelationshipParameterRenameMixin,
     ParameterDefinitionRenameRemoveMixin,
+    ParameterValueRenameMixin,
+    ObjectParameterValueRenameMixin,
+    RelationshipParameterValueRenameMixin,
 )
 from ..mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
@@ -78,6 +83,7 @@ class FilledObjectParameterDefinitionModel(
     ObjectParameterDecorateMixin,
     ParameterDefinitionUpdateMixin,
     ParameterDefinitionAutocompleteMixin,
+    ObjectParameterRenameMixin,
     ParameterDefinitionRenameRemoveMixin,
     FilledParameterModel,
 ):
@@ -88,17 +94,30 @@ class FilledRelationshipParameterDefinitionModel(
     RelationshipParameterDecorateMixin,
     ParameterDefinitionUpdateMixin,
     ParameterDefinitionAutocompleteMixin,
+    RelationshipParameterRenameMixin,
     ParameterDefinitionRenameRemoveMixin,
     FilledParameterModel,
 ):
     """A relationship parameter definition model filled with data."""
 
 
-class FilledObjectParameterValueModel(ObjectParameterDecorateMixin, ParameterValueUpdateMixin, FilledParameterModel):
+class FilledObjectParameterValueModel(
+    ObjectParameterDecorateMixin,
+    ParameterValueUpdateMixin,
+    ObjectParameterRenameMixin,
+    ParameterValueRenameMixin,
+    ObjectParameterValueRenameMixin,
+    FilledParameterModel,
+):
     """An object parameter value model filled with data."""
 
 
 class FilledRelationshipParameterValueModel(
-    RelationshipParameterDecorateMixin, ParameterValueUpdateMixin, FilledParameterModel
+    RelationshipParameterDecorateMixin,
+    ParameterValueUpdateMixin,
+    RelationshipParameterRenameMixin,
+    ParameterValueRenameMixin,
+    RelationshipParameterValueRenameMixin,
+    FilledParameterModel,
 ):
     """A relationship parameter value model filled with data."""

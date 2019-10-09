@@ -47,20 +47,20 @@ class CompoundTableModel(MinimalTableModel):
         """Fetches the next single model and increments the fetched index."""
         model = self.sub_models[self._fetched_count]
         sub_parent = self.map_to_sub(parent)
-        layout_changed_emitted = False
+        model_emitted_layout_changed = False
 
-        def _handle_layout_changed():
-            layout_changed_emitted = True
+        def _handle_model_layout_changed_locally():
+            model_emitted_layout_changed = True
 
-        model.layoutChanged.connect(_handle_layout_changed)
+        model.layoutChanged.connect(_handle_model_layout_changed_locally)
         model.fetchMore(sub_parent)
         # Increment counter or just pop model if empty
         if model.rowCount():
             self._fetched_count += 1
         else:
             self.sub_models.pop(self._fetched_count)
-        if not layout_changed_emitted:
-            # layoutChanged not emitted by the , emit layoutChanged so we move to the next submodel
+        if not model_emitted_layout_changed:
+            # fetching submodel had no effect?? emit layoutChanged so we fetch the next submodel
             self.layoutChanged.emit()
 
     def map_to_sub(self, index):
@@ -92,13 +92,18 @@ class CompoundTableModel(MinimalTableModel):
             return False
         self.beginRemoveRows(parent, row, row + count - 1)
         d = dict()
-        for sub_model, sub_row in self._row_map[row, row + count]:
+        for i in range(row, row + count):
+            sub_model, sub_row = self._row_map[i]
             d.setdefault(sub_model, list()).append(sub_row)
         for sub_model, sub_rows in d.items():
-            for sub_row, sub_count in rows_to_row_count_tuples(sub_rows):
+            for sub_row, sub_count in sorted(rows_to_row_count_tuples(sub_rows), reverse=True):
                 sub_model.removeRows(sub_row, sub_count)
+        self.refresh()
         self.endRemoveRows()
         return True
+
+    def refresh(self):
+        """Recomputes the row map. Reimplement in subclasses."""
 
     def item_at_row(self, row):
         """Returns the item at given row."""
@@ -194,11 +199,9 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
         self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
         for model in self.single_models:
-            model.layoutChanged.connect(self.layoutChanged)
             model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
 
     def _row_map_for_model(self, model):
         """Returns row map for given model.
         Reimplement in subclasses to do e.g. filtering."""
-        print("this one")
         return [(model, i) for i in range(model.rowCount())]

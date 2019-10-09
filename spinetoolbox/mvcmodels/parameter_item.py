@@ -19,28 +19,8 @@ Classes to hold parameters.
 from collections import namedtuple
 
 
-class ObjectParameterItemMixin:
-    """Provides methods for object parameter items."""
-
-    @property
-    def entity_class(self):
-        """Returns a named tuple corresponding to the entity associated with this parameter."""
-        object_class = namedtuple("object_class", "id")
-        return object_class(self.object_class_id)
-
-
-class RelationshipParameterItemMixin:
-    """Provides methods for relationship parameter items."""
-
-    @property
-    def entity_class(self):
-        """Returns a named tuple corresponding to the entity associated with this parameter."""
-        relationship_class = namedtuple("relationship_class", "id object_class_id_list")
-        return relationship_class(self.relationship_class_id, self.object_class_id_list)
-
-
 class ParameterItem:
-    """Class to hold parameter definitions or values within an EmptyParameterModel or SubParameterModel.
+    """Class to hold parameter definitions or values within a subclass of MinimalTableModel.
     It provides __getitem__ and __setitem__ methods so the item behaves more or less like a list.
     """
 
@@ -134,11 +114,73 @@ class ParameterItem:
         self._cache.clear()
 
 
-class ParameterDefinitionItem(ParameterItem):
-    """Class to hold parameter definitions within an EmptyParameterModel or SubParameterModel.
-    It provides attributes for fields that are common to all parameter definitions
-    regardless of the entity class.
-    """
+class ObjectParameterItemMixin:
+    """Provides a common interface to object parameter definition and value items."""
+
+    def __init__(self, header, database=None, id=None, object_class_id=None, object_class_name=None, **kwargs):
+        """Init class."""
+        super().__init__(header, database, id, **kwargs)
+        self.object_class_id = object_class_id
+        self.object_class_name = object_class_name
+        self._mandatory_attrs_for_insert.append("object_class_id")
+
+    @property
+    def entity_class(self):
+        """Returns a named tuple corresponding to the entity associated with this parameter."""
+        object_class = namedtuple("object_class", "id")
+        return object_class(self.object_class_id)
+
+
+class RelationshipParameterItemMixin:
+    """Provides a common interface to relationship parameter definition and value items."""
+
+    def __init__(
+        self,
+        header,
+        database=None,
+        id=None,
+        relationship_class_id=None,
+        relationship_class_name=None,
+        object_class_id_list=None,
+        object_class_name_list=None,
+        **kwargs
+    ):
+        """Init class."""
+        super().__init__(header, database, id, **kwargs)
+        self.relationship_class_id = relationship_class_id
+        self.relationship_class_name = relationship_class_name
+        self.object_class_id_list = object_class_id_list
+        self.object_class_name_list = object_class_name_list
+        self._mandatory_attrs_for_insert.append("relationship_class_id")
+
+    @property
+    def entity_class(self):
+        """Returns a named tuple corresponding to the entity associated with this parameter."""
+        relationship_class = namedtuple("relationship_class", "id object_class_id_list")
+        return relationship_class(self.relationship_class_id, self.object_class_id_list)
+
+    def rename_object_classes(self, object_classes):
+        """Rename object class.
+
+        Args:
+            object_classes (dict): maps id to new name
+        """
+        if not self.object_class_id_list:
+            return False
+        split_object_class_id_list = [int(id_) for id_ in self.object_class_id_list.split(",")]
+        matches = [(k, id_) for k, id_ in enumerate(split_object_class_id_list) if id_ in object_classes]
+        if not matches:
+            return False
+        split_object_class_name_list = self.object_class_name_list.split(",")
+        for k, id_ in matches:
+            new_name = object_classes[id_]
+            split_object_class_name_list[k] = new_name
+        self.object_class_name_list = ",".join(split_object_class_name_list)
+        return True
+
+
+class ParameterDefinitionItemMixin:
+    """Provides a common interface to all parameter definitions regardless of the entity class."""
 
     def __init__(
         self,
@@ -151,10 +193,11 @@ class ParameterDefinitionItem(ParameterItem):
         parameter_tag_id_list=None,
         parameter_tag_list=None,
         default_value=None,
+        **kwargs
     ):
         """Init class.
         """
-        super().__init__(header, database, id)
+        super().__init__(header, database, id, **kwargs)
         self.parameter_name = parameter_name
         self.value_list_id = value_list_id
         self.value_list_name = value_list_name
@@ -176,95 +219,51 @@ class ParameterDefinitionItem(ParameterItem):
     def parameter_definition_id(self):
         return self.id
 
+    def rename_parameter_tags(self, parameter_tag_ids):
+        """Rename parameter tags.
 
-class ObjectParameterDefinitionItem(ObjectParameterItemMixin, ParameterDefinitionItem):
-    """Class to hold object parameter definitions within an EmptyParameterModel or SubParameterModel.
-    On top of the common parameter definition attributes,
-    it adds attributes that are unique to the *object* entity class.
-    """
+        Args:
+            parameter_tags (dict): maps id to new tag
+        """
+        if not self.parameter_tag_id_list:
+            return False
+        split_parameter_tag_id_list = [int(id_) for id_ in self.parameter_tag_id_list.split(",")]
+        matches = [(k, id_) for k, id_ in enumerate(split_parameter_tag_id_list) if id_ in parameter_tags]
+        if not matches:
+            return False
+        split_parameter_tag_list = self.parameter_tag_list.split(",")
+        for k, id_ in matches:
+            new_tag = parameter_tags[id_]
+            split_parameter_tag_list[k] = new_tag
+        self.parameter_tag_list = ",".join(split_parameter_tag_list)
+        return True
 
-    def __init__(
-        self,
-        header,
-        database=None,
-        id=None,
-        parameter_name=None,
-        value_list_id=None,
-        value_list_name=None,
-        parameter_tag_id_list=None,
-        parameter_tag_list=None,
-        default_value=None,
-        object_class_id=None,
-        object_class_name=None,
-    ):
-        """Init class."""
-        super().__init__(
-            header,
-            database,
-            id,
-            parameter_name,
-            value_list_id,
-            value_list_name,
-            parameter_tag_id_list,
-            parameter_tag_list,
-            default_value,
-        )
-        self.object_class_id = object_class_id
-        self.object_class_name = object_class_name
-        self._mandatory_attrs_for_insert.append("object_class_id")
+    def remove_parameter_tags(self, parameter_tag_ids):
+        """Remove parameter tags.
 
-
-class RelationshipParameterDefinitionItem(RelationshipParameterItemMixin, ParameterDefinitionItem):
-    """Class to hold relationship parameter definitions within an EmptyParameterModel or SubParameterModel.
-    On top of the common parameter definition attributes,
-    it adds attributes that are unique to the *relationship* entity class.
-    """
-
-    def __init__(
-        self,
-        header,
-        database=None,
-        id=None,
-        parameter_name=None,
-        value_list_id=None,
-        value_list_name=None,
-        parameter_tag_id_list=None,
-        parameter_tag_list=None,
-        default_value=None,
-        relationship_class_id=None,
-        relationship_class_name=None,
-        object_class_id_list=None,
-        object_class_name_list=None,
-    ):
-        """Init class."""
-        super().__init__(
-            header,
-            database,
-            id,
-            parameter_name,
-            value_list_id,
-            value_list_name,
-            parameter_tag_id_list,
-            parameter_tag_list,
-            default_value,
-        )
-        self.relationship_class_id = relationship_class_id
-        self.relationship_class_name = relationship_class_name
-        self.object_class_id_list = object_class_id_list
-        self.object_class_name_list = object_class_name_list
-        self._mandatory_attrs_for_insert.append("relationship_class_id")
+        Args:
+            parameter_tag_ids (set): set of ids to remove
+        """
+        if not self.parameter_tag_id_list:
+            return False
+        split_parameter_tag_id_list = [int(id_) for id_ in self.parameter_tag_id_list.split(",")]
+        matches = [k for k, id_ in enumerate(split_parameter_tag_id_list) if id_ in parameter_tag_ids]
+        if not matches:
+            return False
+        split_parameter_tag_list = self.parameter_tag_list.split(",")
+        for k in sorted(matches, reverse=True):
+            del split_parameter_tag_list[k]
+        self.parameter_tag_list = ",".join(split_parameter_tag_list)
+        return True
 
 
-class ParameterValueItem(ParameterItem):
-    """Class to hold parameter values within an EmptyParameterModel or SubParameterModel.
-    It provides attributes for fields that are common to all parameter values
-    regardless of the entity.
-    """
+class ParameterValueItemMixin:
+    """Provides a common interface to all parameter definitions regardless of the entity class."""
 
-    def __init__(self, header, database=None, id=None, parameter_id=None, parameter_name=None, value=None):
+    def __init__(self, header, database=None, id=None, parameter_id=None, parameter_name=None, value=None, **kwargs):
         """Init class.
         """
-        super().__init__(header, database, id)
+        super().__init__(header, database, id, **kwargs)
         self.parameter_id = parameter_id
         self.parameter_name = parameter_name
         self.value = value
@@ -279,66 +278,37 @@ class ParameterValueItem(ParameterItem):
         return self.parameter_id
 
 
-class ObjectParameterValueItem(ObjectParameterItemMixin, ParameterValueItem):
-    """Class to hold object parameter values within an EmptyParameterModel or SubParameterModel.
-    On top of the common parameter value attributes,
-    it adds attributes that are unique to the *object* entity.
-    """
+class ObjectParameterDefinitionItem(ObjectParameterItemMixin, ParameterDefinitionItemMixin, ParameterItem):
+    """Class to hold object parameter definitions within a subclass of MinimalTableModel."""
 
-    def __init__(
-        self,
-        header,
-        database=None,
-        id=None,
-        parameter_id=None,
-        parameter_name=None,
-        value=None,
-        object_id=None,
-        object_name=None,
-        object_class_id=None,
-        object_class_name=None,
-    ):
+
+class RelationshipParameterDefinitionItem(RelationshipParameterItemMixin, ParameterDefinitionItemMixin, ParameterItem):
+    """Class to hold relationship parameter definitions within a subclass of MinimalTableModel."""
+
+
+class ObjectParameterValueItem(ObjectParameterItemMixin, ParameterValueItemMixin, ParameterItem):
+    """Class to hold object parameter values within a subclass of MinimalTableModel."""
+
+    def __init__(self, header, database=None, id=None, object_id=None, object_name=None, **kwargs):
         """Init class."""
-        super().__init__(header, database, id, parameter_id, parameter_name, value)
+        super().__init__(header, database, id, **kwargs)
         self.object_id = object_id
         self.object_name = object_name
-        self.object_class_id = object_class_id
-        self.object_class_name = object_class_name
         self._mandatory_attrs_for_insert.append("object_id")
         self._object_dict = dict()
 
 
-class RelationshipParameterValueItem(RelationshipParameterItemMixin, ParameterValueItem):
-    """Class to hold relationship parameter values within an EmptyParameterModel or SubParameterModel.
-    On top of the common parameter value attributes,
-    it adds attributes that are unique to the *relationship* entity.
-    """
+class RelationshipParameterValueItem(RelationshipParameterItemMixin, ParameterValueItemMixin, ParameterItem):
+    """Class to hold relationship parameter values within a subclass of MinimalTableModel."""
 
     def __init__(
-        self,
-        header,
-        database=None,
-        id=None,
-        parameter_id=None,
-        parameter_name=None,
-        value=None,
-        relationship_id=None,
-        object_id_list=None,
-        object_name_list=None,
-        object_class_id_list=None,
-        object_class_name_list=None,
-        relationship_class_id=None,
-        relationship_class_name=None,
+        self, header, database=None, id=None, relationship_id=None, object_id_list=None, object_name_list=None, **kwargs
     ):
         """Init class."""
-        super().__init__(header, database, id, parameter_id, parameter_name, value)
+        super().__init__(header, database, id, **kwargs)
         self.relationship_id = relationship_id
         self.object_id_list = object_id_list
         self.object_name_list = object_name_list
-        self.object_class_id_list = object_class_id_list
-        self.object_class_name_list = object_class_name_list
-        self.relationship_class_id = relationship_class_id
-        self.relationship_class_name = relationship_class_name
         self._mandatory_attrs_for_insert.append("relationship_id")
         self._relationship_dict = dict()
         self._object_name_class_id_tups = list()
@@ -361,3 +331,22 @@ class RelationshipParameterValueItem(RelationshipParameterItemMixin, ParameterVa
             "object_id_list": [int(x) for x in self.object_id_list.split(",")],
             "class_id": self.relationship_class_id,
         }
+
+    def rename_objects(self, objects):
+        """Rename objects.
+
+        Args:
+            objects (dict): maps id to new name
+        """
+        if not self.object_id_list:
+            return False
+        split_object_id_list = [int(id_) for id_ in self.object_id_list.split(",")]
+        matches = [(k, id_) for k, id_ in enumerate(split_object_id_list) if id_ in objects]
+        if not matches:
+            return False
+        split_object_name_list = self.object_name_list.split(",")
+        for k, id_ in matches:
+            new_name = objects[id_]
+            split_object_name_list[k] = new_name
+        self.object_name_list = ",".join(split_object_name_list)
+        return True

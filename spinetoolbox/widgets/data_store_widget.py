@@ -908,24 +908,15 @@ class DataStoreForm(QMainWindow):
         """
         if new_value is None:
             return False
-        field = index.model().horizontal_header_labels()
+        header = index.model().horizontal_header_labels()
         item = index.model().item_at_row(index.row())
         db_map = self.db_name_to_map.get(item.database)
-        return index.model().setData(index, new_value)
-
         if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name' and db_map:
-            parameter_id_column = header.index('id')
-            parameter_id = index.sibling(index.row(), parameter_id_column).data(Qt.DisplayRole)
-            if 'object_class_id' in header:
-                object_class_id_column = header.index('object_class_id')
-                object_class_id = index.sibling(index.row(), object_class_id_column).data(Qt.DisplayRole)
-                parameter = dict(id=parameter_id, object_class_id=object_class_id, name=new_value)
-                self.object_parameter_value_model.rename_parameter(db_map, parameter)
-            elif 'relationship_class_id' in header:
-                relationship_class_id_column = header.index('relationship_class_id')
-                relationship_class_id = index.sibling(index.row(), relationship_class_id_column).data(Qt.DisplayRole)
-                parameter = dict(id=parameter_id, relationship_class_id=relationship_class_id, name=new_value)
-                self.relationship_parameter_value_model.rename_parameter(db_map, parameter)
+            parameters = [dict(id=item.id, entity_class_id=item.entity_class.id, name=new_value)]
+            if index.model() == self.object_parameter_definition_model:
+                self.object_parameter_value_model.rename_parameters(db_map, parameters)
+            elif index.model() == self.relationship_parameter_definition_model:
+                self.relationship_parameter_value_model.rename_parameters(db_map, parameters)
         return True
 
     def show_commit_session_prompt(self):

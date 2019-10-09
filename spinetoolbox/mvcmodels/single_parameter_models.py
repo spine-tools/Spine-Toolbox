@@ -32,7 +32,7 @@ from ..mvcmodels.parameter_item import (
 
 class SingleParameterMixin:
     """Provides an interface to associate a parameter model with a single entity class
-    and do some filtering on the parameters.
+    and do some filtering on the rows.
     """
 
     def __init__(self, parent, database, *args, **kwargs):
