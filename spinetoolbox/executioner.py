@@ -18,7 +18,6 @@ Contains classes for handling project item execution.
 
 import logging
 import os
-import fnmatch
 import random
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx

@@ -15,7 +15,7 @@ Tool class.
 :author: P. Savolainen (VTT)
 :date:   19.12.2017
 """
-
+import fnmatch
 import logging
 import os
 import shutil
