@@ -1,2 +1,3 @@
 git+https://github.com/Spine-project/Spine-Database-API.git#egg=spinedb_api
+git+https://github.com/ererkka/GDX2py
 -e .
