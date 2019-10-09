@@ -83,10 +83,13 @@ class ExcelConnector(SourceConnection):
         self._filename = None
 
     def get_tables(self):
-        """Method that should return a list of table names, list(str)
+        """Method that should return Excel sheets as mappings and their options.
+
+        Returns:
+            dict: Sheets as mappings and options for each sheet or an empty dictionary if no workbook.
 
         Raises:
-            NotImplementedError: [description]
+            Exception: If something goes wrong.
         """
         if not self._wb:
             return {}

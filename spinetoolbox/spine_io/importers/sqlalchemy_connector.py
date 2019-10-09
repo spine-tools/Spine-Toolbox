@@ -75,8 +75,8 @@ class SqlAlchemyConnector(SourceConnection):
     def get_tables(self):
         """Method that should return a list of table names, list(str)
 
-        Raises:
-            NotImplementedError: [description]
+        Returns:
+            list(str): Table names in list
         """
         tables = list(self._engine.table_names())
         return tables
