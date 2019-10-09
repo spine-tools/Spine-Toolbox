@@ -381,7 +381,7 @@ class DataConnection(ProjectItem):
         # Update Data Connection based on project items that are already executed
         # Add previously executed Tool's output file paths to references
         tool_output_files = [
-            r for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
+            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
         ]
         self.references += tool_output_files
         self.populate_reference_list(self.references, emit_item_changed=False)
