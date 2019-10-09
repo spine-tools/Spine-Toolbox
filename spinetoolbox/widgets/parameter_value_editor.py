@@ -75,8 +75,8 @@ class ParameterValueEditor(QDialog):
         self._ui.setupUi(self)
         self.setWindowTitle(value_name + " - Edit value")
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint)
-        self._ui.ok_button.clicked.connect(self.accept)
-        self._ui.cancel_button.clicked.connect(self.reject)
+        self._ui.button_box.accepted.connect(self.accept)
+        self._ui.button_box.rejected.connect(self.reject)
         self._time_pattern_editor = TimePatternEditor()
         self._plain_value_editor = PlainParameterValueEditor()
         self._time_series_fixed_resolution_editor = TimeSeriesFixedResolutionEditor()
@@ -98,7 +98,7 @@ class ParameterValueEditor(QDialog):
                 return
         self._select_editor(value)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Saves the parameter value shown in the currently selected editor widget back to the parent model."""
         editor = self._ui.editor_stack.currentWidget()
