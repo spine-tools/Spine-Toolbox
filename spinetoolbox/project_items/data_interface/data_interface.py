@@ -252,7 +252,17 @@ class DataInterface(ProjectItem):
             source_type = settings["source_type"]
             connector = eval(source_type)()
             connector.connect_to_source(source)
-            data, errors = connector.get_mapped_data(settings["table_mappings"], settings["table_options"], max_rows=-1)
+            table_mappings = {
+                name: mapping
+                for name, mapping in settings["table_mappings"].items()
+                if name in settings["selected_tables"]
+            }
+            table_options = {
+                name: options
+                for name, options in settings["table_options"].items()
+                if name in settings["selected_tables"]
+            }
+            data, errors = connector.get_mapped_data(table_mappings, table_options, max_rows=-1)
             self._toolbox.msg.emit(
                 "<b>{0}:</b> Read {1} data from {2} with {3} errors".format(
                     self.name, sum(len(d) for d in data.values()), source, len(errors)
