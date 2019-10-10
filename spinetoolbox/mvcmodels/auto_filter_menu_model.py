@@ -16,7 +16,8 @@ A model for the auto filter menu widget.
 :date:   7.10.2019
 """
 
-from PySide2.QtCore import Qt, Signal, Slot, QStringListModel, QSortFilterProxyModel, QModelIndex
+import re
+from PySide2.QtCore import Qt, Signal, Slot, QStringListModel, QModelIndex
 
 
 class AutoFilterMenuItem:
@@ -36,7 +37,7 @@ class AutoFilterMenuItem:
 
 
 class AutoFilterMenuItemModel(QStringListModel):
-    """A source model for the auto filter menu widget."""
+    """Base class for models for the filter menu widget."""
 
     def __init__(self, parent=None, fetch_step=32):
         """Init class."""
@@ -46,6 +47,7 @@ class AutoFilterMenuItemModel(QStringListModel):
         self._fetch_step = fetch_step
 
     def canFetchMore(self, parent=QModelIndex()):
+        """Returns whether or not there're unfetched rows."""
         return bool(self._unfetched)
 
     def fetchMore(self, parent=QModelIndex()):
@@ -65,15 +67,23 @@ class AutoFilterMenuItemModel(QStringListModel):
         return len(self._data)
 
     def index(self, row, column, parent=QModelIndex()):
+        """Returns an index for this model, with the corresponding AutoFilterMenuItem in the internal pointer."""
         return self.createIndex(row, column, self._data[row])
 
     def data(self, index, role=Qt.DisplayRole):
+        """Handle the check state role."""
         item = index.internalPointer()
         if role == Qt.CheckStateRole:
             return item.checked
         if role == Qt.DisplayRole:
             return item.value
         return super().data(index, role)
+
+    def toggle_checked_state(self, index):
+        """Toggle checked state of given index.
+        Must be reimplemented in subclasses.
+        """
+        raise NotImplementedError()
 
     def reset_model(self, data=None):
         """Resets model.
@@ -90,6 +100,7 @@ class AutoFilterMenuItemModel(QStringListModel):
 
 
 class AutoFilterMenuAllItemModel(AutoFilterMenuItemModel):
+    """A model for the 'All' item in the auto filter menu."""
 
     checked_state_changed = Signal("int", name="checked_state_changed")
 
@@ -101,12 +112,13 @@ class AutoFilterMenuAllItemModel(AutoFilterMenuItemModel):
 
     @Slot("int", name="set_checked_state")
     def set_checked_state(self, state):
+        """Sets the checked state for the item."""
         self._item.checked = state
         ind = self.index(0, 0)
         self.dataChanged.emit(ind, ind, [Qt.CheckStateRole])
 
     def toggle_checked_state(self, index):
-        """Toggle checked state of given index."""
+        """Toggle checked state and emit checked_state_changed."""
         if self._item.checked in (Qt.Unchecked, Qt.PartiallyChecked):
             self._item.checked = Qt.Checked
         else:
@@ -115,8 +127,8 @@ class AutoFilterMenuAllItemModel(AutoFilterMenuItemModel):
         self.dataChanged.emit(index, index, [Qt.CheckStateRole])
 
 
-class AutoFilterMenuItemProxyModel(QSortFilterProxyModel):
-    """A source model for the auto filter menu widget."""
+class AutoFilterMenuValueItemModel(AutoFilterMenuItemModel):
+    """A model for the value items in the auto filter menu."""
 
     all_checked_state_changed = Signal("int", name="all_checked_state_changed")
 
@@ -124,33 +136,70 @@ class AutoFilterMenuItemProxyModel(QSortFilterProxyModel):
         """Init class."""
         super().__init__(parent)
         self._checked_count = 0
-        source = AutoFilterMenuItemModel(parent)
-        self.setSourceModel(source)
+        self._row_map = []
+        self._filter_reg_exp = ""
+        self.rowsInserted.connect(self._handle_rows_inserted)
 
-    def filterAcceptsRow(self, source_row, source_parent):
-        if not super().filterAcceptsRow(source_row, source_parent):
+    @Slot("QModelIndex", "int", "int", name="_handle_rows_inserted")
+    def _handle_rows_inserted(self, parent, first, last):
+        """Builds the row map and call the method that emits all_checked_state_changed appropriatly."""
+        self.build_row_map()
+        self.emit_all_checked_state_changed()
+
+    def map_index(self, index):
+        """Maps an index using the row map."""
+        mapped_row = self._row_map[index.row()]
+        return self.index(mapped_row, index.column())
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Returns the data from the mapped index, as in a filter."""
+        return super().data(self.map_index(index), role)
+
+    def rowCount(self, parent=QModelIndex()):
+        """Returns the length of the row map."""
+        return len(self._row_map)
+
+    def filter_accepts_row(self, row):
+        """Returns whether or not the row passes the filter, and update the checked count
+        so we know how many items are checked for emitting all_checked_state_changed."""
+        item = self.index(row, 0).internalPointer()
+        if not re.search(self._filter_reg_exp, item.value):
             return False
-        item = self.sourceModel()._data[source_row]
         if item.checked == Qt.Checked:
             self._checked_count += 1
         return True
 
-    def setFilterRegExp(self, regexp):
+    def set_filter_reg_exp(self, regexp):
+        """Sets the regular expression to filter row values."""
         self._checked_count = 0
-        super().setFilterRegExp(regexp)
+        if regexp != self._filter_reg_exp:
+            self._filter_reg_exp = regexp
+            self.refresh()
+
+    def refresh(self):
+        """Rebuilds the row map so as to update the filter.
+        Called when the filter regular expression changes."""
+        self.layoutAboutToBeChanged.emit()
+        self.build_row_map()
+        self.layoutChanged.emit()
+        self.emit_all_checked_state_changed()
+
+    def build_row_map(self):
+        """Buils the row map while applying the filter to each row."""
+        self._row_map = [row for row in range(super().rowCount()) if self.filter_accepts_row(row)]
 
     @Slot("int", name="set_all_items_checked_state")
     def set_all_items_checked_state(self, state):
-        """"""
+        """Set the checked state for all items."""
         for row in range(self.rowCount()):
-            item = self.mapToSource(self.index(row, 0)).internalPointer()
+            item = self.index(row, 0).internalPointer()
             item.checked = state
         self.dataChanged.emit(self.index(0, 0), self.index(self.rowCount() - 1, 0), [Qt.CheckStateRole])
         self._checked_count = self.rowCount()
 
     def toggle_checked_state(self, index):
         """Toggle checked state of given index."""
-        item = self.mapToSource(index).internalPointer()
+        item = index.internalPointer()
         if item.checked in (Qt.Unchecked, Qt.PartiallyChecked):
             item.checked = Qt.Checked
             self._checked_count += 1
@@ -162,7 +211,6 @@ class AutoFilterMenuItemProxyModel(QSortFilterProxyModel):
 
     def emit_all_checked_state_changed(self):
         """Emits signal depending on how many items are checked."""
-        print("hh")
         if self._checked_count == 0:
             all_checked_state = Qt.Unchecked
         elif self._checked_count == self.rowCount():
@@ -172,17 +220,19 @@ class AutoFilterMenuItemProxyModel(QSortFilterProxyModel):
         self.all_checked_state_changed.emit(all_checked_state)
 
     def reset_model(self, data=None):
-        """Calls the source method."""
+        """Resets model."""
         self._checked_count = 0
-        self.sourceModel().reset_model(data)
+        self._row_map.clear()
+        super().reset_model(data)
 
     def get_auto_filter(self):
         """Returns autofilter.
         """
         d = dict()
         for row in range(self.rowCount()):
-            item = self.mapToSource(self.index(row, 0)).internalPointer()
-            if not item.checked:
-                for class_id in item.in_classes:
-                    d.setdefault(class_id, set()).add(item.value)
+            item = self.index(row, 0).internalPointer()
+            if item.checked:
+                continue
+            for class_id in item.in_classes:
+                d.setdefault(class_id, set()).add(item.value)
         return d

@@ -147,11 +147,6 @@ class CompoundTableModel(MinimalTableModel):
         self.dataChanged.emit(self.index(top, left), self.index(bottom, right))
         return True
 
-    def clear_model(self):
-        """Clears model. Runs after rollback or refresh."""
-        for model in self.sub_models:
-            model.clear_model()
-
 
 class CompoundWithEmptyTableModel(CompoundTableModel):
     """A compound parameter table model where the last model is an empty row model."""
@@ -225,9 +220,9 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
     def clear_model(self):
         """Clear the model."""
         if self._row_map:
-            self.layoutAboutToBeChanged.emit()
+            self.beginResetModel()
             self._row_map.clear()
-            self.layoutChanged.emit()
+            self.endResetModel()
         self._fetched_count = 0
         for m in self.sub_models:
             m.deleteLater()
