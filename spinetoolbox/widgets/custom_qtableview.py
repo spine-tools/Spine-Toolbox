@@ -20,7 +20,7 @@ import csv
 import io
 import locale
 import numpy as np
-from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView, QMenu, QLineEdit, QWidgetAction, QSizePolicy
+from PySide2.QtWidgets import QTableView, QApplication, QAbstractItemView, QMenu, QLineEdit, QWidgetAction
 from PySide2.QtCore import Qt, Signal, Slot, QItemSelectionModel, QPoint, QTimer
 from PySide2.QtGui import QKeySequence
 from ..mvcmodels.table_model import TableModel
@@ -279,25 +279,25 @@ class AutoFilterCopyPasteTableView(CopyPasteTableView):
         self.auto_filter_menu.asc_sort_triggered.connect(self.sort_model_ascending)
         self.auto_filter_menu.desc_sort_triggered.connect(self.sort_model_descending)
         self.auto_filter_menu.filter_triggered.connect(self.update_auto_filter)
+        self.horizontalHeader().sectionClicked.connect(self.show_auto_filter_menu)
 
     def keyPressEvent(self, event):
         """Show the autofilter menu if the user presses Alt + Down"""
         if event.modifiers() == Qt.AltModifier and event.key() == Qt.Key_Down:
             column = self.currentIndex().column()
-            self.toggle_auto_filter(column)
+            self.show_auto_filter_menu(column)
             event.accept()
         else:
             super().keyPressEvent(event)
 
     def setModel(self, model):
-        """Disconnect sectionPressed signal, only connect it to show_filter_menu slot.
+        """Disconnect sectionPressed signal which seems to be connected by the super method.
         Otherwise the column is selected when pressing on the header."""
         super().setModel(model)
         self.horizontalHeader().sectionPressed.disconnect()
-        self.horizontalHeader().sectionClicked.connect(self.toggle_auto_filter)
 
     @Slot(int, name="show_filter_menu")
-    def toggle_auto_filter(self, logical_index):
+    def show_auto_filter_menu(self, logical_index):
         """Called when user clicks on a horizontal section header.
         Show/hide the auto filter widget."""
         self.auto_filter_column = logical_index
