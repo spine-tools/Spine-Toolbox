@@ -181,10 +181,10 @@ class TestSpineToolboxProject(unittest.TestCase):
     # def test_load(self):
     #     self.fail()
     #
-    # def test_load_tool_template_from_file(self):
+    # def test_load_tool_specification_from_file(self):
     #     self.fail()
     #
-    # def test_load_tool_template_from_dict(self):
+    # def test_load_tool_specification_from_dict(self):
     #     self.fail()
     #
     # def test_append_connection_model(self):

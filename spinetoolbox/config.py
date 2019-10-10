@@ -48,6 +48,7 @@ TOOL_OUTPUT_DIR = "output"
 
 _on_windows = sys.platform == "win32"
 
+
 def _executable(name):
     """Appends a .exe extension to `name` on Windows platform."""
     if _on_windows:
@@ -67,7 +68,7 @@ PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
 # Tool types
 TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
 
-# Required and optional keywords for Tool template definition files
+# Required and optional keywords for Tool specification dictionaries
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']
 OPTIONAL_KEYS = [
     'description',

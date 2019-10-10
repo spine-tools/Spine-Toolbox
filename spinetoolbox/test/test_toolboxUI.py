@@ -128,31 +128,31 @@ class TestToolboxUI(unittest.TestCase):
             isinstance(item6.parent(), RootProjectItem), "Parent item of category item on row 5 should be root"
         )
 
-    def test_init_tool_template_model(self):
-        """Check that tool template model has no items after init and that
+    def test_init_tool_specification_model(self):
+        """Check that tool specification model has no items after init and that
         signals are connected just once.
         """
         self.assertIsNone(self.toolbox.project())  # Make sure that there is no project open
-        self.toolbox.init_tool_template_model(list())
-        self.assertEqual(self.toolbox.tool_template_model.rowCount(), 0)
+        self.toolbox.init_tool_specification_model(list())
+        self.assertEqual(self.toolbox.tool_specification_model.rowCount(), 0)
         # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))
+        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(SIGNAL("doubleClicked(QModelIndex)"))
         self.assertEqual(n_dbl_clicked_recv, 1)
-        n_context_menu_recv = self.toolbox.ui.listView_tool_templates.receivers(
+        n_context_menu_recv = self.toolbox.ui.listView_tool_specifications.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
         )
         self.assertEqual(n_context_menu_recv, 1)
-        # Initialize ToolTemplateModel again and see that the signals are connected only once
-        self.toolbox.init_tool_template_model(list())
+        # Initialize ToolSpecificationModel again and see that the signals are connected only once
+        self.toolbox.init_tool_specification_model(list())
         # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_templates.receivers(SIGNAL("doubleClicked(QModelIndex)"))
+        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(SIGNAL("doubleClicked(QModelIndex)"))
         self.assertEqual(n_dbl_clicked_recv, 1)
-        n_context_menu_recv = self.toolbox.ui.listView_tool_templates.receivers(
+        n_context_menu_recv = self.toolbox.ui.listView_tool_specifications.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
         )
         self.assertEqual(n_context_menu_recv, 1)
         # Check that there's still no items in the model
-        self.assertEqual(self.toolbox.tool_template_model.rowCount(), 0)
+        self.assertEqual(self.toolbox.tool_specification_model.rowCount(), 0)
 
     def test_create_project(self):
         """Test that create_project method makes a SpineToolboxProject instance.
@@ -548,11 +548,11 @@ class TestToolboxUI(unittest.TestCase):
         self.assertEqual(n_items_in_design_view, 0)
 
     @unittest.skip("TODO")
-    def test_add_tool_template(self):
+    def test_add_tool_specification(self):
         self.fail()
 
     @unittest.skip("TODO")
-    def test_remove_tool_template(self):
+    def test_remove_tool_specification(self):
         self.fail()
 
     def add_ds(self, name, x=0, y=0):
