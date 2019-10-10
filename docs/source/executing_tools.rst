@@ -1,4 +1,4 @@
-.. Executing Tools (Tool templates) documentation
+.. Executing Tools (Tool specifications) documentation
    Created 16.1.2019
 
 .. _Executing Tools:
@@ -50,24 +50,24 @@ list in *Project* dock widget) any of the nodes a, b, c, or d and then press the
 Executing Tools as a part of the DAG
 ====================================
 All project items in the DAG are *executed*, but the real processing only happens when a Tool project item is
-executed. When you have created at least one Tool template, you can execute a Tool as part of the DAG. The Tool
-template defines the process that is depicted by the Tool project item. As an example, below we have two project
+executed. When you have created at least one Tool specification, you can execute a Tool as part of the DAG. The Tool
+specification defines the process that is depicted by the Tool project item. As an example, below we have two project
 items; *Julia Model* Tool and *Data File* Data Connection connected as a DAG with an edge between the nodes.
 
 .. image:: img/execution_julia_tool_selected.png
    :align: center
 
 Selecting the *Julia Model* shows its properties in the *Properties* dock widget. In the top of the Tool
-Properties, there is a template drop-down menu. From this drop-down menu, you can select the Tool template for this
-particular Tool item. The *Example Tool Template* tool template has been selected for the Tool *Julia Model*. Below
-the drop-down menu, you can see the details of the Tool template, command line arguments, Source files (the first
+Properties, there is a specification drop-down menu. From this drop-down menu, you can select the Tool specification for this
+particular Tool item. The *Example Tool specification* tool specification has been selected for the Tool *Julia Model*. Below
+the drop-down menu, you can see the details of the Tool specification, command line arguments, Source files (the first
 one is the main program file), Input files, Optional input files and Output files. *Results...* button opens the
 Tool's result archive directory in the File Explorer (all Tools have their own result directory). The *Execute in*
 radio buttons control, whether this Tool is first copied to a work directory and executed there, or if the execution
 should happen in the source directory where the main program file is located.
 
 .. note::
-   The *Example Tool Template* has been modified a bit from previous sections. It now requires an *Input file*
+   The *Example Tool specification* has been modified a bit from previous sections. It now requires an *Input file*
    *data.csv*.
 
 When you click on the |play-all| button, the execution starts from the *Data File* Data Connection. When executed,
@@ -80,18 +80,18 @@ in the below picture.
 
 When it's the *Julia Model* tools turn to be executed, it checks if it finds the file *data.csv* from project items,
 that have already been executed. When the DAG is set up like this, the Tool finds the input file that it requires
-and then starts processing the Tool template starting with the main program file *script.jl*. Note that if the edge
+and then starts processing the Tool specification starting with the main program file *script.jl*. Note that if the edge
 would be the other way around (from *Julia Model* to *Data File*) execution would start from the *Julia Model* and it
 would fail because it cannot find the required file *data.csv*. The same thing happens if there is no edge between the
 two project items. In this case the project items would be in separate DAGs.
 
-Since the Tool template type was set as *Julia* and the main program is a Julia script, Spine Toolbox starts the execution in the
+Since the Tool specification type was set as *Julia* and the main program is a Julia script, Spine Toolbox starts the execution in the
 Julia Console (if you have selected this in the application *Settings*,
 See :ref:`Settings` section).
 
 Tool execution algorithm
 ========================
-The below figure depicts what happens when a Tool item with a valid Tool template is executed.
+The below figure depicts what happens when a Tool item with a valid Tool specification is executed.
 
 .. image:: img/execution_algorithm.png
    :align: center

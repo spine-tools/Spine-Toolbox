@@ -32,9 +32,7 @@ def select_excel_file(parent=None):
 
 
 class ExcelConnector(SourceConnection):
-    """
-    Template class to read data from another QThread
-    """
+    """Template class to read data from another QThread."""
 
     # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Excel"
@@ -83,10 +81,13 @@ class ExcelConnector(SourceConnection):
         self._filename = None
 
     def get_tables(self):
-        """Method that should return a list of table names, list(str)
+        """Method that should return Excel sheets as mappings and their options.
+
+        Returns:
+            dict: Sheets as mappings and options for each sheet or an empty dictionary if no workbook.
 
         Raises:
-            NotImplementedError: [description]
+            Exception: If something goes wrong.
         """
         if not self._wb:
             return {}

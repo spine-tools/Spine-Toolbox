@@ -11,8 +11,8 @@
 
 # -*- coding: utf-8 -*-
 
-# Form implementation generated from reading ui file 'spinetoolbox/ui/tool_template_form.ui',
-# licensing of 'spinetoolbox/ui/tool_template_form.ui' applies.
+# Form implementation generated from reading ui file 'spinetoolbox/ui/tool_specification_form.ui',
+# licensing of 'spinetoolbox/ui/tool_specification_form.ui' applies.
 #
 #
 # WARNING! All changes made in this file will be lost!
@@ -421,15 +421,15 @@ class Ui_Form(object):
         Form.setTabOrder(self.pushButton_ok, self.pushButton_cancel)
 
     def retranslateUi(self, Form):
-        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Edit Tool Template", None, -1))
-        self.lineEdit_name.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool template name (required)</p></body></html>", None, -1))
+        Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Edit Tool Specification", None, -1))
+        self.lineEdit_name.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool specification name (required)</p></body></html>", None, -1))
         self.lineEdit_name.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type name here...", None, -1))
-        self.comboBox_tooltype.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool template type</p></body></html>", None, -1))
-        self.checkBox_execute_in_work.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>If checked, Tool template is executed in a work directory (default).</p><p>If unchecked, Tool template is executed in main program file directory.</p><p>It is recommended to uncheck this for <span style=\" font-weight:600;\">Executable</span> Tool templates.</p></body></html>", None, -1))
+        self.comboBox_tooltype.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool specification type</p></body></html>", None, -1))
+        self.checkBox_execute_in_work.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>If checked, Tool specification is executed in a work directory (default).</p><p>If unchecked, Tool specification is executed in main program file directory.</p><p>It is recommended to uncheck this for <span style=\" font-weight:600;\">Executable</span> Tool specifications.</p></body></html>", None, -1))
         self.checkBox_execute_in_work.setText(QtWidgets.QApplication.translate("Form", "Execute in work directory", None, -1))
-        self.textEdit_description.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool template description (optional)</p></body></html>", None, -1))
+        self.textEdit_description.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Tool specification description (optional)</p></body></html>", None, -1))
         self.textEdit_description.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Type description here...", None, -1))
-        self.lineEdit_main_program.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Main program file that is used to launch the Tool template (required)</p></body></html>", None, -1))
+        self.lineEdit_main_program.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Main program file that is used to launch the Tool specification (required)</p></body></html>", None, -1))
         self.lineEdit_main_program.setPlaceholderText(QtWidgets.QApplication.translate("Form", "Add main program file here...", None, -1))
         self.toolButton_add_main_program.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Create a new main program or select an existing one</p></body></html>", None, -1))
         self.lineEdit_args.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Command line arguments (space-delimited) for the main program (optional)</p></body></html>", None, -1))

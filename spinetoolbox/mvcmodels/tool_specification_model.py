@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains a class for storing Tool templates.
+Contains a class for storing Tool specifications.
 
 :authors: P. Savolainen (VTT)
 :date:   23.1.2018
@@ -19,7 +19,7 @@ Contains a class for storing Tool templates.
 from PySide2.QtCore import Qt, QModelIndex, QAbstractListModel
 
 
-class ToolTemplateModel(QAbstractListModel):
+class ToolSpecificationModel(QAbstractListModel):
     """Class to store tools that are available in a project e.g. GAMS or Julia models."""
 
     def __init__(self, toolbox=None):
@@ -103,11 +103,11 @@ class ToolTemplateModel(QAbstractListModel):
         self.endRemoveRows()
         return True
 
-    def update_tool_template(self, tool, row):
-        """Update tool template.
+    def update_tool_specification(self, tool, row):
+        """Update tool specification.
 
         Args:
-            tool (ToolTemplate): new tool, to replace the old one
+            tool (ToolSpecification): new tool, to replace the old one
             row (int): Position of the tool to be updated
 
         Returns:
@@ -119,39 +119,39 @@ class ToolTemplateModel(QAbstractListModel):
         except IndexError:
             return False
 
-    def tool_template(self, row):
-        """Returns tool template on given row.
+    def tool_specification(self, row):
+        """Returns tool specification on given row.
 
         Args:
-            row (int): Row of tool template
+            row (int): Row of tool specification
 
         Returns:
-            ToolTemplate from tool template list or None if given row is zero
+            ToolSpecification from tool specification list or None if given row is zero
         """
         return self._tools[row]
 
-    def find_tool_template(self, name):
-        """Returns tool template with the given name.
+    def find_tool_specification(self, name):
+        """Returns tool specification with the given name.
 
         Args:
-            name (str): Name of tool template to find
+            name (str): Name of tool specification to find
         """
-        for template in self._tools:
-            if name.lower() == template.name.lower():
-                return template
+        for specification in self._tools:
+            if name.lower() == specification.name.lower():
+                return specification
         return None
 
-    def tool_template_row(self, name):
-        """Returns the row on which the given template is located or -1 if it is not found."""
+    def tool_specification_row(self, name):
+        """Returns the row on which the given specification is located or -1 if it is not found."""
         for i in range(len(self._tools)):
             if name == self._tools[i].name:
                 return i
         return -1
 
-    def tool_template_index(self, name):
-        """Returns the QModelIndex on which a tool template with
+    def tool_specification_index(self, name):
+        """Returns the QModelIndex on which a tool specification with
         the given name is located or invalid index if it is not found."""
-        row = self.tool_template_row(name)
+        row = self.tool_specification_row(name)
         if row == -1:
             return QModelIndex()
         return self.createIndex(row, 0)

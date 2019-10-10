@@ -44,7 +44,7 @@ class ToolInstance(QObject):
         """class constructor."""
         super().__init__()  # TODO: Should this be QObject.__init__(self) like in MetaObject class?
         self.tool = tool
-        self.tool_template = tool.tool_template()
+        self.tool_specification = tool.tool_specification()
         self._toolbox = tool._toolbox
         self._project = tool._project
         self.execute_in_work = tool.execute_in_work
@@ -55,20 +55,20 @@ class ToolInstance(QObject):
         if self.execute_in_work:  # Execute in work directory
             wrk_dir = self._project.work_dir
             self.basedir = tempfile.mkdtemp(
-                suffix='__toolbox', prefix=self.tool_template.short_name + '__', dir=wrk_dir
+                suffix='__toolbox', prefix=self.tool_specification.short_name + '__', dir=wrk_dir
             )
         else:  # Execute in source directory
-            self.basedir = self.tool_template.path
+            self.basedir = self.tool_specification.path
         self.julia_repl_command = None
         self.ipython_command_list = list()
         self.program = None  # Program to start in the subprocess
         self.args = list()  # List of command line arguments for the program
-        self.inputfiles = [os.path.join(self.basedir, f) for f in self.tool_template.inputfiles]
-        self.inputfiles_opt = [os.path.join(self.basedir, f) for f in self.tool_template.inputfiles_opt]
-        self.outputfiles = [os.path.join(self.basedir, f) for f in self.tool_template.outputfiles]
+        self.inputfiles = [os.path.join(self.basedir, f) for f in self.tool_specification.inputfiles]
+        self.inputfiles_opt = [os.path.join(self.basedir, f) for f in self.tool_specification.inputfiles_opt]
+        self.outputfiles = [os.path.join(self.basedir, f) for f in self.tool_specification.outputfiles]
         # Check that required output directories are created
         self.make_work_output_dirs()
-        # Checkout Tool template to work directory
+        # Checkout Tool specification to work directory
         if self.execute_in_work:
             if not self._checkout:
                 raise OSError("Could not create Tool instance")
@@ -82,12 +82,12 @@ class ToolInstance(QObject):
                 + "'>source directory</a>"
             )
             self._toolbox.msg.emit(
-                "*** Executing Tool template <b>{0}</b> in {1} ***".format(self.tool_template.name, src_dir_anchor)
+                "*** Executing Tool specification <b>{0}</b> in {1} ***".format(self.tool_specification.name, src_dir_anchor)
             )
 
     @property
     def _checkout(self):
-        """Copies Tool template files to work directory."""
+        """Copies Tool specification files to work directory."""
         n_copied_files = 0
         # Make work directory anchor with path as tooltip
         work_anchor = (
@@ -98,11 +98,11 @@ class ToolInstance(QObject):
             + "'>work directory</a>"
         )
         self._toolbox.msg.emit(
-            "*** Copying Tool template <b>{0}</b> source files to {1} ***".format(self.tool_template.name, work_anchor)
+            "*** Copying Tool specification <b>{0}</b> source files to {1} ***".format(self.tool_specification.name, work_anchor)
         )
-        for filepath in self.tool_template.includes:
+        for filepath in self.tool_specification.includes:
             dirname, file_pattern = os.path.split(filepath)
-            src_dir = os.path.join(self.tool_template.path, dirname)
+            src_dir = os.path.join(self.tool_specification.path, dirname)
             dst_dir = os.path.join(self.basedir, dirname)
             # Create the destination directory
             try:
@@ -131,9 +131,9 @@ class ToolInstance(QObject):
         return True
 
     def execute(self):
-        """Starts executing Tool template instance in Julia Console, Python Console or in a sub-process."""
-        self._toolbox.msg.emit("*** Starting Tool template <b>{0}</b> ***".format(self.tool_template.name))
-        if self.tool_template.tooltype == "julia":
+        """Starts executing Tool specification instance in Julia Console, Python Console or in a sub-process."""
+        self._toolbox.msg.emit("*** Starting Tool specification <b>{0}</b> ***".format(self.tool_specification.name))
+        if self.tool_specification.tooltype == "julia":
             if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
                 self.tool_process = self._toolbox.julia_repl
                 self.tool_process.execution_finished_signal.connect(self.julia_repl_tool_finished)
@@ -145,7 +145,7 @@ class ToolInstance(QObject):
                 # On Julia the Qprocess workdir must be set to the path where the main script is
                 # Otherwise it doesn't find input files in subdirectories
                 self.tool_process.start_process(workdir=self.basedir)
-        if self.tool_template.tooltype == "python":
+        if self.tool_specification.tooltype == "python":
             if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
                 self.tool_process = self._toolbox.python_repl
                 self.tool_process.execution_finished_signal.connect(self.python_console_tool_finished)
@@ -166,13 +166,13 @@ class ToolInstance(QObject):
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
-        elif self.tool_template.tooltype == "gams":
+        elif self.tool_specification.tooltype == "gams":
             self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
             self.tool_process.subprocess_finished_signal.connect(self.gams_tool_finished)
             # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
             # TODO: Check if this sets the curDir argument. Is the curDir arg now useless?
             self.tool_process.start_process(workdir=self.basedir)
-        elif self.tool_template.tooltype == "executable":
+        elif self.tool_specification.tooltype == "executable":
             self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
             self.tool_process.subprocess_finished_signal.connect(self.executable_tool_finished)
             self.tool_process.start_process(workdir=self.basedir)
@@ -182,25 +182,25 @@ class ToolInstance(QObject):
         """Runs when Julia tool using Julia Console has finished processing.
 
         Args:
-            ret (int): Tool template process return value
+            ret (int): Tool specification process return value
         """
         self.tool_process.execution_finished_signal.disconnect(self.julia_repl_tool_finished)  # Disconnect after exec.
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
                 # TODO: This should be a choice given to the user. It's a bit confusing now.
                 self._toolbox.msg.emit("")
-                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
+                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool specification")
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.julia_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
                 return
             try:
-                return_msg = self.tool_template.return_codes[ret]
+                return_msg = self.tool_specification.return_codes[ret]
                 self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process = None
         self.handle_output_files(ret)
 
@@ -209,7 +209,7 @@ class ToolInstance(QObject):
         """Runs when Julia tool from command line (without REPL) has finished processing.
 
         Args:
-            ret (int): Tool template process return value
+            ret (int): Tool specification process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.julia_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -220,12 +220,12 @@ class ToolInstance(QObject):
                 )
             else:
                 try:
-                    return_msg = self.tool_template.return_codes[ret]
+                    return_msg = self.tool_specification.return_codes[ret]
                     self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.handle_output_files(ret)
@@ -235,25 +235,25 @@ class ToolInstance(QObject):
         """Runs when Python Tool in Python Console has finished processing.
 
         Args:
-            ret (int): Tool template process return value
+            ret (int): Tool specification process return value
         """
         self.tool_process.execution_finished_signal.disconnect(self.python_console_tool_finished)
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
                 # TODO: This should be a choice given to the user. It's a bit confusing now.
                 self._toolbox.msg.emit("")
-                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
+                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool specification")
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.python_tool_finished)
                 self.tool_process.start_process(workdir=self.basedir)
                 return
             try:
-                return_msg = self.tool_template.return_codes[ret]
+                return_msg = self.tool_specification.return_codes[ret]
                 self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process = None
         self.handle_output_files(ret)
 
@@ -262,7 +262,7 @@ class ToolInstance(QObject):
         """Runs when Python tool from command line has finished processing.
 
         Args:
-            ret (int): Tool template process return value
+            ret (int): Tool specification process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.python_tool_finished)  # Disconnect signal
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -273,12 +273,12 @@ class ToolInstance(QObject):
                 )
             else:
                 try:
-                    return_msg = self.tool_template.return_codes[ret]
+                    return_msg = self.tool_specification.return_codes[ret]
                     self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.handle_output_files(ret)
@@ -288,7 +288,7 @@ class ToolInstance(QObject):
         """Runs when GAMS tool has finished processing.
 
         Args:
-            ret (int): Tool template process return value
+            ret (int): Tool specification process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.gams_tool_finished)  # Disconnect after execution
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -300,12 +300,12 @@ class ToolInstance(QObject):
                 )
             else:
                 try:
-                    return_msg = self.tool_template.return_codes[ret]
+                    return_msg = self.tool_specification.return_codes[ret]
                     self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.handle_output_files(ret)
@@ -315,7 +315,7 @@ class ToolInstance(QObject):
         """Runs when an executable tool has finished processing.
 
         Args:
-            ret (int): Tool template process return value
+            ret (int): Tool specification process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.executable_tool_finished)
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -324,23 +324,23 @@ class ToolInstance(QObject):
                 self.instance_finished_signal.emit(ret)
                 return
             try:
-                return_msg = self.tool_template.return_codes[ret]
+                return_msg = self.tool_specification.return_codes[ret]
                 self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.handle_output_files(ret)
 
     def handle_output_files(self, ret):
-        """Creates a timestamped result directory for Tool template output files. Starts copying Tool
-        template output files from work directory to result directory and print messages to Event
+        """Creates a timestamped result directory for Tool specification output files. Starts copying Tool
+        specification output files from work directory to result directory and print messages to Event
         Log depending on how the operation went.
 
         Args:
-            ret (int): Tool template process return value
+            ret (int): Tool specification process return value
         """
         output_dir_timestamp = create_output_dir_timestamp()  # Get timestamp when tool finished
         # Create an output folder with timestamp and copy output directly there
@@ -353,7 +353,7 @@ class ToolInstance(QObject):
         except OSError:
             self._toolbox.msg_error.emit(
                 "\tError creating timestamped output directory. "
-                "Tool template output files not copied. Please check directory permissions."
+                "Tool specification output files not copied. Please check directory permissions."
             )
             self.output_dir = None
             self.instance_finished_signal.emit(ret)
@@ -370,11 +370,11 @@ class ToolInstance(QObject):
         self._toolbox.msg.emit("*** Archiving output files to {0} ***".format(result_anchor))
         if not self.outputfiles:
             tip_anchor = (
-                "<a style='color:#99CCFF;' title='When you add output files to the Tool template,\n "
+                "<a style='color:#99CCFF;' title='When you add output files to the Tool specification,\n "
                 "they will be archived into results directory. Also, output files are passed to\n "
                 "subsequent project items.' href='#'>Tip</a>"
             )
-            self._toolbox.msg_warning.emit("\tNo output files defined for this Tool template. {0}".format(tip_anchor))
+            self._toolbox.msg_warning.emit("\tNo output files defined for this Tool specification. {0}".format(tip_anchor))
         else:
             saved_files, failed_files = self.copy_output(result_path)
             if not saved_files:
@@ -414,14 +414,14 @@ class ToolInstance(QObject):
         shutil.rmtree(self.basedir, ignore_errors=True)
 
     def copy_output(self, target_dir):
-        """Copies Tool template output files from work directory to given target directory.
+        """Copies Tool specification output files from work directory to given target directory.
 
         Args:
-            target_dir (str): Destination directory for Tool template output files
+            target_dir (str): Destination directory for Tool specification output files
 
         Returns:
             tuple: Contains two lists. The first list contains paths to successfully
-            copied files. The second list contains paths (or patterns) of Tool template
+            copied files. The second list contains paths (or patterns) of Tool specification
             output files that were not found.
 
         Raises:
@@ -430,7 +430,7 @@ class ToolInstance(QObject):
         failed_files = list()
         saved_files = list()
         # logging.debug("Saving result files to <{0}>".format(target_dir))
-        for pattern in self.tool_template.outputfiles:
+        for pattern in self.tool_specification.outputfiles:
             # Create subdirectories if necessary
             dst_subdir, fname_pattern = os.path.split(pattern)
             # logging.debug("pattern:{0} dst_subdir:{1} fname_pattern:{2}".format(pattern,
@@ -504,7 +504,7 @@ class ToolInstance(QObject):
             OSError: If creating an output directory to work fails.
         """
         # TODO: Remove duplicate directory names from the list of created directories.
-        for path in self.tool_template.outputfiles:
+        for path in self.tool_specification.outputfiles:
             dirname = os.path.split(path)[0]
             if dirname == '':
                 continue

@@ -142,8 +142,8 @@ class LinkContextMenu(CustomContextMenu):
             self.add_action("Send to bottom")
 
 
-class ToolTemplateContextMenu(CustomContextMenu):
-    """Context menu class for Tool templates.
+class ToolSpecificationContextMenu(CustomContextMenu):
+    """Context menu class for Tool specifications.
 
     Attributes:
         parent (QWidget): Parent for menu widget (ToolboxUI)
@@ -157,12 +157,12 @@ class ToolTemplateContextMenu(CustomContextMenu):
         if not index.isValid():
             # If no item at index
             return
-        self.add_action("Edit Tool template")
+        self.add_action("Edit Tool specification")
         self.add_action("Edit main program file...")
         self.add_action("Open main program directory...")
-        self.add_action("Open Tool template definition file...")
+        self.add_action("Open Tool specification file...")
         self.addSeparator()
-        self.add_action("Remove Tool template")
+        self.add_action("Remove Tool specification")
 
 
 class ObjectTreeContextMenu(CustomContextMenu):
@@ -442,8 +442,8 @@ class CustomPopupMenu(QMenu):
         action.triggered.connect(slot)
 
 
-class AddToolTemplatePopupMenu(CustomPopupMenu):
-    """Popup menu class for add Tool template button.
+class AddToolSpecificationPopupMenu(CustomPopupMenu):
+    """Popup menu class for add Tool specification button.
 
     Attributes:
         parent (QWidget): parent widget (ToolboxUI)
@@ -452,14 +452,14 @@ class AddToolTemplatePopupMenu(CustomPopupMenu):
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
-        # Open empty Tool template Form
-        self.add_action("New", self._parent.show_tool_template_form)
-        # Add an existing Tool template from file to project
-        self.add_action("Add existing...", self._parent.open_tool_template)
+        # Open empty Tool specification Form
+        self.add_action("New", self._parent.show_tool_specification_form)
+        # Add an existing Tool specification from file to project
+        self.add_action("Add existing...", self._parent.open_tool_specification)
 
 
-class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
-    """Popup menu class for tool template options button in Tool item.
+class ToolSpecificationOptionsPopupmenu(CustomPopupMenu):
+    """Popup menu class for tool specification options button in Tool item.
 
     Attributes:
         parent (QWidget): Parent widget of this menu (ToolboxUI)
@@ -468,45 +468,45 @@ class ToolTemplateOptionsPopupMenu(CustomPopupMenu):
 
     def __init__(self, parent, tool):
         super().__init__(parent)
-        enabled = bool(tool.tool_template())
-        self.add_action("Edit Tool template", tool.edit_tool_template, enabled=enabled)
+        enabled = bool(tool.tool_specification())
+        self.add_action("Edit Tool specification", tool.edit_tool_specification, enabled=enabled)
         self.add_action("Edit main program file...", tool.open_tool_main_program_file, enabled=enabled)
         self.add_action("Open main program directory...", tool.open_tool_main_directory, enabled=enabled)
-        self.add_action("Open definition file", tool.open_tool_template_file, enabled=enabled)
+        self.add_action("Open definition file", tool.open_tool_specification_file, enabled=enabled)
         self.addSeparator()
-        self.add_action("New Tool template", self._parent.show_tool_template_form)
-        self.add_action("Add Tool template...", self._parent.open_tool_template)
+        self.add_action("New Tool specification", self._parent.show_tool_specification_form)
+        self.add_action("Add Tool specification...", self._parent.open_tool_specification)
 
 
 class AddIncludesPopupMenu(CustomPopupMenu):
-    """Popup menu class for add includes button in Tool Template widget.
+    """Popup menu class for add includes button in Tool specification editor widget.
 
     Attributes:
-        parent (QWidget): Parent widget (ToolTemplateWidget)
+        parent (QWidget): Parent widget (ToolSpecificationWidget)
     """
 
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
         self._parent = parent
-        # Open a tool template file
+        # Open a tool specification file
         self.add_action("New file", self._parent.new_source_file)
         self.addSeparator()
         self.add_action("Open files...", self._parent.show_add_source_files_dialog)
 
 
 class CreateMainProgramPopupMenu(CustomPopupMenu):
-    """Popup menu class for add main program QToolButton in Tool Template editor.
+    """Popup menu class for add main program QToolButton in Tool specification editor widget.
 
     Attributes:
-        parent (QWidget): Parent widget (ToolTemplateWidget)
+        parent (QWidget): Parent widget (ToolSpecificationWidget)
     """
 
     def __init__(self, parent):
         """Class constructor."""
         super().__init__(parent)
         self._parent = parent
-        # Open a tool template file
+        # Open a tool specification file
         self.add_action("Make new main program", self._parent.new_main_program_file)
         self.add_action("Select existing main program", self._parent.browse_main_program)
 

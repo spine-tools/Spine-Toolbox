@@ -1,9 +1,9 @@
 {
     "project": {
-        "name": "Unit test project",
+        "name": "UnitTest Project",
         "description": "Project for testing open_project() method in ToolboxUI.",
         "work_dir": "C:\\data\\GIT\\SPINETOOLBOX\\work",
-        "tool_templates": [],
+        "tool_specifications": [],
         "connections": [
             [
                 false,

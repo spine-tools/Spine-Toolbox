@@ -16,6 +16,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Changed
 - spinetoolbox is now a Python package.
 - spinetoolbox.py has been moved to repository root. To start the app, use command 'python -m spinetoolbox'.
+- Tool templates are now called Tool specifications
 
 ### Deprecated
 

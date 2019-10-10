@@ -10,9 +10,9 @@
 ######################################################################################################################
 
 """
-QWidget that is used to create or edit Tool Templates.
+QWidget that is used to create or edit Tool specifications.
 In the former case it is presented empty, but in the latter it
-is filled with all the information from the template being edited.
+is filled with all the information from the specification being edited.
 
 :author: M. Marin (KTH), P. Savolainen (VTT)
 :date:   12.4.2018
@@ -23,21 +23,21 @@ import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS, INVALID_FILENAME_CHARS
+from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS,\
+    INVALID_FILENAME_CHARS
 from ..helpers import busy_effect
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
 
-class ToolTemplateWidget(QWidget):
-    def __init__(self, toolbox, tool_template=None):
-        """A widget to query user's preferences for a new tool template.
+class ToolSpecificationWidget(QWidget):
+    def __init__(self, toolbox, tool_specification=None):
+        """A widget to query user's preferences for a new tool specification.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
-            tool_template (ToolTemplate): If given, the form is pre-filled with this template
+            tool_specification (ToolSpecification): If given, the form is pre-filled with this specification
         """
-        from ..ui.tool_template_form import Ui_Form
-
+        from ..ui.tool_specification_form import Ui_Form
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
@@ -77,24 +77,24 @@ class ToolTemplateWidget(QWidget):
         self.ui.treeView_outputfiles.setStyleSheet(TREEVIEW_HEADER_SS)
         self.ui.comboBox_tooltype.addItem("Select type...")
         self.ui.comboBox_tooltype.addItems(TOOL_TYPES)
-        # if a template is given, fill the form with data from it
-        if tool_template:
-            self.ui.lineEdit_name.setText(tool_template.name)
-            check_state = Qt.Checked if tool_template.execute_in_work else Qt.Unchecked
+        # if a specification is given, fill the form with data from it
+        if tool_specification:
+            self.ui.lineEdit_name.setText(tool_specification.name)
+            check_state = Qt.Checked if tool_specification.execute_in_work else Qt.Unchecked
             self.ui.checkBox_execute_in_work.setCheckState(check_state)
-            self.ui.textEdit_description.setPlainText(tool_template.description)
-            self.ui.lineEdit_args.setText(tool_template.cmdline_args)
+            self.ui.textEdit_description.setPlainText(tool_specification.description)
+            self.ui.lineEdit_args.setText(tool_specification.cmdline_args)
             tool_types = [x.lower() for x in TOOL_TYPES]
-            index = tool_types.index(tool_template.tooltype) + 1
+            index = tool_types.index(tool_specification.tooltype) + 1
             self.ui.comboBox_tooltype.setCurrentIndex(index)
         # Init lists
         self.main_program_file = ""
-        self.sourcefiles = list(tool_template.includes) if tool_template else list()
-        self.inputfiles = list(tool_template.inputfiles) if tool_template else list()
-        self.inputfiles_opt = list(tool_template.inputfiles_opt) if tool_template else list()
-        self.outputfiles = list(tool_template.outputfiles) if tool_template else list()
-        self.def_file_path = tool_template.def_file_path if tool_template else None
-        self.program_path = tool_template.path if tool_template else None
+        self.sourcefiles = list(tool_specification.includes) if tool_specification else list()
+        self.inputfiles = list(tool_specification.inputfiles) if tool_specification else list()
+        self.inputfiles_opt = list(tool_specification.inputfiles_opt) if tool_specification else list()
+        self.outputfiles = list(tool_specification.outputfiles) if tool_specification else list()
+        self.def_file_path = tool_specification.def_file_path if tool_specification else None
+        self.program_path = tool_specification.path if tool_specification else None
         self.definition = dict()
         # Get first item from sourcefiles list as the main program file
         try:
@@ -285,7 +285,7 @@ class ToolTemplateWidget(QWidget):
 
     @Slot(name="new_source_file")
     def new_source_file(self):
-        """Let user create a new source file for this tool template."""
+        """Let user create a new source file for this tool specification."""
         path = self.program_path if self.program_path else APPLICATION_PATH
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         dir_path = QFileDialog.getSaveFileName(self, "Create source file", path, "*.*")
@@ -298,7 +298,7 @@ class ToolTemplateWidget(QWidget):
 
     @Slot(bool, name="show_add_source_files_dialog")
     def show_add_source_files_dialog(self, checked=False):
-        """Let user select source files for this tool template."""
+        """Let user select source files for this tool specification."""
         path = self.program_path if self.program_path else APPLICATION_PATH
         # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
         answer = QFileDialog.getOpenFileNames(self, "Add source file", path, "*.*")
@@ -311,7 +311,7 @@ class ToolTemplateWidget(QWidget):
 
     @Slot(bool, name="show_add_source_dirs_dialog")
     def show_add_source_dirs_dialog(self, checked=False):
-        """Let user select a source directory for this tool template.
+        """Let user select a source directory for this tool specification.
         All files and sub-directories will be added to the source files.
         """
         path = self.program_path if self.program_path else APPLICATION_PATH
@@ -409,7 +409,7 @@ class ToolTemplateWidget(QWidget):
 
     @Slot(bool, name="add_inputfiles")
     def add_inputfiles(self, checked=False):
-        """Let user select input files for this tool template."""
+        """Let user select input files for this tool specification."""
         msg = (
             "Add an input file or a directory required by your program. Wildcards "
             "<b>are not</b> supported.<br/><br/>"
@@ -450,7 +450,7 @@ class ToolTemplateWidget(QWidget):
 
     @Slot(bool, name="add_inputfiles_opt")
     def add_inputfiles_opt(self, checked=False):
-        """Let user select optional input files for this tool template."""
+        """Let user select optional input files for this tool specification."""
         msg = (
             "Add optional input files that may be utilized by your program. <br/>"
             "Wildcards are supported.<br/><br/>"
@@ -493,10 +493,10 @@ class ToolTemplateWidget(QWidget):
 
     @Slot(bool, name="add_outputfiles")
     def add_outputfiles(self, checked=False):
-        """Let user select output files for this tool template."""
+        """Let user select output files for this tool specification."""
         msg = (
             "Add output files that will be archived into the Tool results directory after the <br/>"
-            "Tool template has finished execution. Wildcards are supported.<br/><br/>"
+            "Tool specification has finished execution. Wildcards are supported.<br/><br/>"
             "Examples:<br/>"
             "<b>results.csv</b> -> File is copied from work directory into results.<br/> "
             "<b>*.csv</b> -> All CSV files will copied into results.<br/> "
@@ -534,7 +534,7 @@ class ToolTemplateWidget(QWidget):
 
     @Slot(name="ok_clicked")
     def ok_clicked(self):
-        """Check that everything is valid, create definition dictionary and add template to project."""
+        """Check that everything is valid, create Tool spec definition dictionary and add Tool spec to project."""
         # Check that tool type is selected
         if self.ui.comboBox_tooltype.currentIndex() == 0:
             self.statusbar.showMessage("Tool type not selected", 3000)
@@ -564,44 +564,44 @@ class ToolTemplateWidget(QWidget):
             if not self.definition[k]:
                 self.statusbar.showMessage("{} missing".format(k), 3000)
                 return
-        # Create new Template
+        # Create new Tool specification
         short_name = self.definition["name"].lower().replace(" ", "_")
         self.def_file_path = os.path.join(self.program_path, short_name + ".json")
-        if self.call_add_tool_template():
+        if self.call_add_tool_specification():
             self.close()
 
-    def call_add_tool_template(self):
-        """Add or update Tool Template according to user's selections.
-        If the name is the same as an existing tool template, it is updated and
+    def call_add_tool_specification(self):
+        """Add or update Tool specification according to user's selections.
+        If the name is the same as an existing tool specification, it is updated and
         auto-saved to the definition file. (User is editing an existing
-        tool template.) If the name is not in the tool template model, create
-        a new tool template and offer to save the definition file. (User is
-        creating a new tool template from scratch or spawning from an existing one).
+        tool specification.) If the name is not in the tool specification model, create
+        a new tool specification and offer to save the definition file. (User is
+        creating a new tool specification from scratch or spawning from an existing one).
         """
-        # Load tool template
+        # Load tool specification
         path = self.program_path
-        tool = self._project.load_tool_template_from_dict(self.definition, path)
+        tool = self._project.load_tool_specification_from_dict(self.definition, path)
         if not tool:
-            self.statusbar.showMessage("Adding Tool template failed", 3000)
+            self.statusbar.showMessage("Adding Tool specification failed", 3000)
             return False
-        # Check if a tool template with this name already exists
-        row = self._toolbox.tool_template_model.tool_template_row(tool.name)
+        # Check if a tool specification with this name already exists
+        row = self._toolbox.tool_specification_model.tool_specification_row(tool.name)
         if row >= 0:  # NOTE: Row 0 at this moment has 'No tool', but in the future it may change. Better be ready.
-            old_tool = self._toolbox.tool_template_model.tool_template(row)
+            old_tool = self._toolbox.tool_specification_model.tool_specification(row)
             def_file = old_tool.get_def_path()
             tool.set_def_path(def_file)
             if tool.__dict__ == old_tool.__dict__:  # Nothing changed. We're done here.
                 return True
-            # logging.debug("Updating definition for tool template '{}'".format(tool.name))
-            self._toolbox.update_tool_template(row, tool)
+            # logging.debug("Updating definition for tool specification '{}'".format(tool.name))
+            self._toolbox.update_tool_specification(row, tool)
         else:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getSaveFileName(self, "Save Tool template file", self.def_file_path, "JSON (*.json)")
+            answer = QFileDialog.getSaveFileName(self, "Save Tool specification file", self.def_file_path, "JSON (*.json)")
             if answer[0] == "":  # Cancel button clicked
                 return False
             def_file = os.path.abspath(answer[0])
             tool.set_def_path(def_file)
-            self._toolbox.add_tool_template(tool)
+            self._toolbox.add_tool_specification(tool)
         # Save path of main program file relative to definition file in case they differ
         def_path = os.path.dirname(def_file)
         if def_path != self.program_path:
@@ -612,7 +612,7 @@ class ToolTemplateWidget(QWidget):
                 json.dump(self.definition, fp, indent=4)
             except ValueError:
                 self.statusbar.showMessage("Error saving file", 3000)
-                self._toolbox.msg_error.emit("Saving Tool template definition file failed. Path:{0}".format(def_file))
+                self._toolbox.msg_error.emit("Saving Tool specification file failed. Path:{0}".format(def_file))
                 return False
         return True
 
