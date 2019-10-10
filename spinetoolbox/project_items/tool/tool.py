@@ -15,15 +15,16 @@ Tool class.
 :author: P. Savolainen (VTT)
 :date:   19.12.2017
 """
-
+import fnmatch
 import logging
 import os
 import shutil
 import sys
+import pathlib
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo, QTimeLine
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QFileIconProvider
-from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.tool_instance import ToolInstance
 from spinetoolbox.config import TOOL_OUTPUT_DIR, GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 from spinetoolbox.widgets.custom_menus import ToolSpecificationOptionsPopupmenu
@@ -681,7 +682,7 @@ class Tool(ProjectItem):
             if not filename:
                 # It's a directory
                 continue
-            file_paths[req_file_path] = exec_inst.find_file(filename, self.name)
+            file_paths[req_file_path] = self.find_file(filename, exec_inst)
         return file_paths
 
     def find_optional_input_files(self, exec_inst):
@@ -702,12 +703,55 @@ class Tool(ProjectItem):
             if not pattern:
                 # It's a directory -> skip
                 continue
-            found_files = exec_inst.find_optional_files(pattern, self.name)
+            found_files = self.find_optional_files(pattern, exec_inst)
             if not found_files:
                 self._toolbox.msg_warning.emit("\tNo files matching pattern <b>{0}</b> found".format(pattern))
             else:
                 file_paths[file_path] = found_files
         return file_paths
+
+    def available_filepath_resources(self, exec_inst):
+        """Returns available filepath resources from the given execution instance."""
+        filepaths = []
+        for resource in exec_inst.available_resources(self.name):
+            if resource.type_ == "file" or (resource.type_ == "database" and resource.scheme == "sqlite"):
+                filepaths.append(resource.path)
+        return filepaths
+
+    def find_file(self, filename, exec_inst):
+        """Returns the first occurrence of full path to given file name in files available
+        from the execution instance, or None if file was not found.
+
+        Args:
+            filename (str): Searched file name (no path) TODO: Change to pattern
+            exec_inst (ExecutionInstance): execution instance
+
+        Returns:
+            str: Full path to file if found, None if not found
+        """
+        for filepath in self.available_filepath_resources(exec_inst):
+            _, file_candidate = os.path.split(filepath)
+            if file_candidate == filename:
+                # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
+                return filepath
+        return None
+
+    def find_optional_files(self, pattern, exec_inst):
+        """Returns a list of found paths to files that match the given pattern in files available
+        from the execution instance.
+
+        Returns:
+            list: List of (full) paths
+        """
+        filepaths = self.available_filepath_resources(exec_inst)
+        # Find matches when pattern includes wildcards
+        if ('*' in pattern) or ('?' in pattern):
+            return fnmatch.filter(filepaths, pattern)
+        # Pattern is an exact filename (no wildcards)
+        match = self.find_file(pattern, exec_inst)
+        if match is not None:
+            return [match]
+        return []
 
     @Slot(int, name="execute_finished")
     def execute_finished(self, return_code):
@@ -751,8 +795,12 @@ class Tool(ProjectItem):
             )
             return
         for i in range(self.output_file_model.rowCount()):
-            out_file_path = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
-            inst.append_tool_output_file(self.name, out_file_path)
+            out_file_name = self.output_file_model.item(i, 0).data(Qt.DisplayRole)
+            out_file_path = os.path.abspath(os.path.join(self.output_dir, out_file_name))
+            resource = ProjectItemResource(
+                self, "file", url=pathlib.Path(out_file_path).as_uri(), metadata=dict(is_output=True)
+            )
+            inst.advertise_resources(self.name, resource)
 
     def item_dict(self):
         """Returns a dictionary corresponding to this item."""
@@ -798,7 +846,7 @@ class Tool(ProjectItem):
         """See base class."""
         if source_item.item_type == "Data Store":
             self._toolbox.msg.emit(
-                "Link established. Data Store <b>{0}</b> reference will "
+                "Link established. Data Store <b>{0}</b> url will "
                 "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
         elif source_item.item_type == "Data Connection":

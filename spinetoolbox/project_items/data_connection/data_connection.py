@@ -19,10 +19,11 @@ Module for data connection class.
 import os
 import shutil
 import logging
+import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
 from spinetoolbox.helpers import busy_effect
 from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
@@ -309,7 +310,7 @@ class DataConnection(ProjectItem):
     def data_files(self):
         """Returns a list of files that are in the data directory."""
         if not os.path.isdir(self.data_dir):
-            return None
+            return []
         files = list()
         with os.scandir(self.data_dir) as scan_iterator:
             for entry in scan_iterator:
@@ -363,6 +364,14 @@ class DataConnection(ProjectItem):
         """Update Data Connection tab name label. Used only when renaming project items."""
         self._properties_ui.label_dc_name.setText(self.name)
 
+    def resources_for_advertising(self):
+        """Returns list of references and files to advertise to the execution instance."""
+        refs = self.file_references()
+        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(ref).as_uri()) for ref in refs]
+        resources += [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in f_list]
+        return resources
+
     def execute(self):
         """Executes this Data Connection."""
         self._toolbox.msg.emit("")
@@ -371,14 +380,15 @@ class DataConnection(ProjectItem):
         inst = self._toolbox.project().execution_instance
         # Update Data Connection based on project items that are already executed
         # Add previously executed Tool's output file paths to references
-        self.references += inst.tool_output_files_at_sight(self.name)
+        tool_output_files = [
+            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
+        ]
+        self.references += tool_output_files
         self.populate_reference_list(self.references, emit_item_changed=False)
         # Update execution instance for project items downstream
         # Add data file references and data files into execution instance
-        refs = self.file_references()
-        inst.append_dc_refs(self.name, refs)
-        f_list = [os.path.join(self.data_dir, f) for f in self.data_files()]
-        inst.append_dc_files(self.name, f_list)
+        resources = self.resources_for_advertising()
+        inst.advertise_resources(self.name, *resources)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
@@ -389,12 +399,9 @@ class DataConnection(ProjectItem):
     def simulate_execution(self, inst):
         """Simulates executing this Data Connection."""
         super().simulate_execution(inst)
-        refs = self.file_references()
-        inst.append_dc_refs(self.name, refs)
-        files = self.data_files()
-        f_list = [os.path.join(self.data_dir, f) for f in files] if files is not None else []
-        inst.append_dc_files(self.name, f_list)
-        if not refs + f_list:
+        resources = self.resources_for_advertising()
+        inst.advertise_resources(self.name, *resources)
+        if not resources:
             self.add_notification(
                 "This Data Connection does not have any references or data. "
                 "Add some in the Data Connection Properties panel."
@@ -417,9 +424,10 @@ class DataConnection(ProjectItem):
         if source_item.item_type == "Tool":
             self._toolbox.msg.emit(
                 "Link established. Tool <b>{0}</b> output files will be "
-                "passed to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+                "passed as references to item <b>{1}</b> after execution.".format(source_item.name, self.name)
             )
         elif source_item.item_type in ["Data Store", "Data Interface"]:
+            # Does this type of link do anything?
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)

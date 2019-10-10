@@ -90,7 +90,7 @@ class TestTool(unittest.TestCase):
             item.notify_destination(source_item)
             self.assertEqual(
                 toolbox.msg.text,
-                "Link established. Data Store <b>source name</b> reference will "
+                "Link established. Data Store <b>source name</b> url will "
                 "be passed to Tool <b>name</b> when executing.",
             )
             toolbox.reset_messages()

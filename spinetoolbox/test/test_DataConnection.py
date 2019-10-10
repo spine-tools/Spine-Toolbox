@@ -95,7 +95,7 @@ class TestDataInterface(unittest.TestCase):
             self.assertEqual(
                 toolbox.msg.text,
                 "Link established. Tool <b>source name</b> output files will be "
-                "passed to item <b>name</b> after execution.",
+                "passed as references to item <b>name</b> after execution.",
             )
             toolbox.reset_messages()
             source_item.item_type = "View"

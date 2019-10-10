@@ -21,7 +21,7 @@ import os
 from PySide2.QtCore import Qt, Slot, QFileInfo
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
-from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.helpers import create_dir, create_log_file_timestamp
 from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
 from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
@@ -288,7 +288,8 @@ class DataInterface(ProjectItem):
         if all_data:
             # Add mapped data to a dict in the execution instance.
             # If execution reaches a Data Store, the mapped data will be imported into the corresponding url
-            inst.add_di_data(self.name, all_data)
+            resource = ProjectItemResource(self, "data", data=all_data, metadata=dict(for_import=True))
+            inst.advertise_resources(self.name, resource)
         self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(0)  # 0 success
 
     def stop_execution(self):
@@ -298,8 +299,10 @@ class DataInterface(ProjectItem):
     def simulate_execution(self, inst):
         """Simulates executing this Item."""
         super().simulate_execution(inst)
-        file_list = inst.dc_refs_at_sight(self.name).union(inst.dc_files_at_sight(self.name))
-        self.update_file_model(file_list)
+        file_list = [
+            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and not r.metadata.get("is_output")
+        ]
+        self.update_file_model(set(file_list))
         if not file_list:
             self.add_notification(
                 "This Data Interface does not have any input data. "
@@ -314,7 +317,13 @@ class DataInterface(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type in ["Data Connection", "Data Store"]:
+        if source_item.item_type == "Data Connection":
+            self._toolbox.msg.emit(
+                "Link established. You can define mappings on data from "
+                "<b>{0}</b> using item <b>{1}</b>.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type == "Data Store":
+            # Does this type of link do anything?
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
