@@ -307,7 +307,13 @@ class DataInterface(ProjectItem):
 
     def notify_destination(self, source_item):
         """See base class."""
-        if source_item.item_type in ["Data Connection", "Data Store"]:
+        if source_item.item_type == "Data Connection":
+            self._toolbox.msg.emit(
+                "Link established. You can define mappings on data from "
+                "<b>{0}</b> using item <b>{1}</b>.".format(source_item.name, self.name)
+            )
+        if source_item.item_type == "Data Connection":
+            # Does this type of link do anything?
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)

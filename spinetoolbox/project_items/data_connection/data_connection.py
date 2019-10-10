@@ -424,9 +424,10 @@ class DataConnection(ProjectItem):
         if source_item.item_type == "Tool":
             self._toolbox.msg.emit(
                 "Link established. Tool <b>{0}</b> output files will be "
-                "passed to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+                "passed as references to item <b>{1}</b> after execution.".format(source_item.name, self.name)
             )
         elif source_item.item_type in ["Data Store", "Data Interface"]:
+            # Does this type of link do anything?
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)

@@ -848,7 +848,7 @@ class Tool(ProjectItem):
         """See base class."""
         if source_item.item_type == "Data Store":
             self._toolbox.msg.emit(
-                "Link established. Data Store <b>{0}</b> reference will "
+                "Link established. Data Store <b>{0}</b> url will "
                 "be passed to Tool <b>{1}</b> when executing.".format(source_item.name, self.name)
             )
         elif source_item.item_type == "Data Connection":
