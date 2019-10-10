@@ -288,11 +288,11 @@ class DataConnection(ProjectItem):
             "{0}\n\n"
             "Are you sure?".format(files)
         )
-        # noinspection PyCallByClass, PyTypeChecker
-        answer = QMessageBox.question(
-            self._toolbox, "Remove {0} file(s)?".format(len(file_list)), msg, QMessageBox.Yes, QMessageBox.No
-        )
-        if not answer == QMessageBox.Yes:
+        title = "Remove {0} File(s)".format(len(file_list))
+        message_box = QMessageBox(QMessageBox.Question, title, msg, QMessageBox.Ok | QMessageBox.Cancel)
+        message_box.button(QMessageBox.Ok).setText("Remove Files")
+        answer = message_box.exec_()
+        if answer == QMessageBox.Cancel:
             return
         for filename in file_list:
             path_to_remove = os.path.join(self.data_dir, filename)

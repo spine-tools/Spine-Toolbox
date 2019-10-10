@@ -33,7 +33,7 @@ def handle_plotting_failure(error):
     errorBox = QMessageBox()
     errorBox.setWindowTitle("Plotting failed")
     errorBox.setText(error.message)
-    errorBox.exec()
+    errorBox.exec_()
 
 
 class CustomContextMenu(QMenu):

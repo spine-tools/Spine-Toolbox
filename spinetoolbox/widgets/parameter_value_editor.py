@@ -108,7 +108,7 @@ class ParameterValueEditor(QDialog):
             message_box = QMessageBox()
             message_box.setWindowTitle("Parameter value error")
             message_box.setText("Cannot set value: {}".format(error))
-            message_box.exec()
+            message_box.exec_()
             return
         self.close()
 
@@ -188,6 +188,6 @@ class ParameterValueEditor(QDialog):
         message_box = QMessageBox()
         message_box.setWindowTitle("Warning")
         message_box.setText(message)
-        message_box.exec()
+        message_box.exec_()
         self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
         self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)

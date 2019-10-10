@@ -142,9 +142,12 @@ class PythonReplWidget(RichJupyterWidget):
         """
         if not self.is_package_installed("ipython"):
             message = "Python Console requires package <b>IPython</b>." "<p>Do you want to install the package now?</p>"
-            # noinspection PyTypeChecker, PyCallByClass
-            answer = QMessageBox.question(self, "IPython missing", message, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
+            message_box = QMessageBox(
+                QMessageBox.Question, "IPython Missing", message, QMessageBox.Ok | QMessageBox.Cancel
+            )
+            message_box.button(QMessageBox.Ok).setText("Install IPython")
+            answer = message_box.exec_()
+            if answer == QMessageBox.Cancel:
                 self._control.viewport().setCursor(self.normal_cursor)
                 return False
             self._toolbox.msg.emit("*** Installing IPython ***")
@@ -154,9 +157,12 @@ class PythonReplWidget(RichJupyterWidget):
             message = (
                 "Python Console requires package <b>ipykernel</b>." "<p>Do you want to install the package now?</p>"
             )
-            # noinspection PyTypeChecker, PyCallByClass
-            answer = QMessageBox.question(self, "ipykernel missing", message, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
+            message_box = QMessageBox(
+                QMessageBox.Question, "ipykernel Missing", message, QMessageBox.Ok | QMessageBox.Cancel
+            )
+            message_box.button(QMessageBox.Ok).setText("Install ipykernel")
+            answer = message_box.exec_()
+            if answer == QMessageBox.Cancel:
                 self._control.viewport().setCursor(self.normal_cursor)
                 return False
             self._toolbox.msg.emit("*** Installing ipykernel ***")
