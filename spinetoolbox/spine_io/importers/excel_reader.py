@@ -138,7 +138,7 @@ class ExcelConnector(SourceConnection):
                         break
                     num_cols = num_cols + 1
             else:
-                num_cols = len(first_row)
+                num_cols = len(first_row) - skip_columns
         except StopIteration:
             # no data
             num_cols = 0
