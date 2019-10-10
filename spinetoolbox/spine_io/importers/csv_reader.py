@@ -31,9 +31,7 @@ def select_csv_file(parent=None):
 
 
 class CSVConnector(SourceConnection):
-    """
-    Template class to read data from another QThread
-    """
+    """Template class to read data from another QThread."""
 
     # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Text/CSV"
@@ -68,8 +66,8 @@ class CSVConnector(SourceConnection):
     def get_tables(self):
         """Method that should return a list of table names, list(str)
 
-        Raises:
-            NotImplementedError: [description]
+        Returns:
+            list(str): Table names in list
         """
         tables = [self._filename]
         return tables

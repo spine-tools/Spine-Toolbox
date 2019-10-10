@@ -67,7 +67,7 @@ C o m p i l a t i o n
       $exit
   65  *******************************************************************************
   66   
-GDXIN   C:\data\GIT\SPINETOOLBOX\tool_templates\magic\input/data.gdx
+GDXIN   C:\data\GIT\SPINETOOLBOX\tool_specifications\magic\input/data.gdx
 --- LOAD  data = 1:data
   71   
   72   Parameters peak     peak power (1000MW)
@@ -169,8 +169,8 @@ Include File Summary
 
    SEQ   GLOBAL TYPE      PARENT   LOCAL  FILENAME
 
-     1        1 INPUT          0       0  C:\data\GIT\SPINETOOLBOX\tool_templates\magic\magic.gms
-     2       67 GDXIN          1      68  C:\data\GIT\SPINETOOLBOX\tool_templates\magic\input/data.gdx
+     1        1 INPUT          0       0  C:\data\GIT\SPINETOOLBOX\tool_specifications\magic\magic.gms
+     2       67 GDXIN          1      68  C:\data\GIT\SPINETOOLBOX\tool_specifications\magic\input/data.gdx
 
 
 COMPILATION TIME     =        0.000 SECONDS      3 Mb  WIN240-240 Feb 14, 2013
@@ -711,5 +711,5 @@ USER: Energy Systems                                 W120511:1343CP-WIN
 
 **** FILE SUMMARY
 
-Input      C:\data\GIT\SPINETOOLBOX\tool_templates\magic\magic.gms
-Output     C:\data\GIT\SPINETOOLBOX\tool_templates\magic\magic.lst
+Input      C:\data\GIT\SPINETOOLBOX\tool_specifications\magic\magic.gms
+Output     C:\data\GIT\SPINETOOLBOX\tool_specifications\magic\magic.lst

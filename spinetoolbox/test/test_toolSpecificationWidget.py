@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Unit tests for ToolTemplateWidget class.
+Unit tests for ToolSpecificationWidget class.
 
 :author: M. Marin (KTH)
 :date:   8.1.2019
@@ -21,7 +21,7 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
-from ..widgets.tool_template_widget import ToolTemplateWidget
+from ..widgets.tool_specification_widget import ToolSpecificationWidget
 from ..ui_main import ToolboxUI
 
 
@@ -34,7 +34,7 @@ class MockQWidget(QWidget):
         return True
 
 
-class TestToolTemplateWidget(unittest.TestCase):
+class TestToolSpecificationWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
@@ -58,27 +58,27 @@ class TestToolTemplateWidget(unittest.TestCase):
             mock_julia_repl.return_value = QWidget()
             mock_python_repl.return_value = MockQWidget()
             self.toolbox = ToolboxUI()
-            self.tool_template_widget = ToolTemplateWidget(self.toolbox)
+            self.tool_specification_widget = ToolSpecificationWidget(self.toolbox)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        self.tool_template_widget.deleteLater()
-        self.tool_template_widget = None
+        self.tool_specification_widget.deleteLater()
+        self.tool_specification_widget = None
         self.toolbox.deleteLater()
         self.toolbox = None
 
-    def test_create_minimal_tool_template(self):
-        """Test that a minimal tool template can be created by specifying name, type and main program file."""
-        with mock.patch("spinetoolbox.widgets.tool_template_widget.QFileDialog") as mock_file_dialog, mock.patch(
-            "spinetoolbox.widgets.tool_template_widget.ToolTemplateWidget.call_add_tool_template"
-        ) as mock_add, mock.patch("spinetoolbox.widgets.tool_template_widget.ToolTemplateWidget.close") as mock_close:
-            self.tool_template_widget.ui.comboBox_tooltype.setCurrentIndex(1)
-            self.tool_template_widget.ui.lineEdit_name.setText("test_tool")
-            self.tool_template_widget.ui.lineEdit_main_program.setText(__file__)
+    def test_create_minimal_tool_specification(self):
+        """Test that a minimal tool specification can be created by specifying name, type and main program file."""
+        with mock.patch("spinetoolbox.widgets.tool_specification_widget.QFileDialog") as mock_file_dialog, mock.patch(
+            "spinetoolbox.widgets.tool_specification_widget.ToolSpecificationWidget.call_add_tool_specification"
+        ) as mock_add, mock.patch("spinetoolbox.widgets.tool_specification_widget.ToolSpecificationWidget.close") as mock_close:
+            self.tool_specification_widget.ui.comboBox_tooltype.setCurrentIndex(1)
+            self.tool_specification_widget.ui.lineEdit_name.setText("test_tool")
+            self.tool_specification_widget.ui.lineEdit_main_program.setText(__file__)
             mock_file_dialog.getSaveFileName.return_value = ['test_tool.json']
-            self.tool_template_widget.ui.pushButton_ok.click()
+            self.tool_specification_widget.ui.pushButton_ok.click()
         mock_add.assert_called_once()
         mock_close.assert_called_once()
 

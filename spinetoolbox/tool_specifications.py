@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Tool template classes.
+Tool specification classes.
 
 :authors: P. Savolainen (VTT), E. Rinne (VTT)
 :date:   24.1.2018
@@ -23,16 +23,16 @@ from .metaobject import MetaObject
 from .config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
 
 
-class ToolTemplate(MetaObject):
-    """Super class for various tool templates.
+class ToolSpecification(MetaObject):
+    """Super class for various tool specifications.
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Name of the tool
         tooltype (str): Type of Tool (e.g. Python, Julia, ..)
         path (str): Path to tool
-        includes (str): List of files belonging to the tool template (relative to 'path')
-        description (str): Description of the Tool template
+        includes (str): List of files belonging to the tool specification (relative to 'path')
+        description (str): Description of the Tool specification
         inputfiles (list): List of required data files
         inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
         outputfiles (list, optional): List of output files (wildcards may be used)
@@ -94,12 +94,12 @@ class ToolTemplate(MetaObject):
 
     @staticmethod
     def check_definition(ui, data):
-        """Check that a tool template definition contains
+        """Check that a tool specification contains
         the required keys and that it is in correct format.
 
         Args:
             ui (ToolboxUI): QMainWindow instance
-            data (dict): Tool template definition
+            data (dict): Tool specification
 
         Returns:
             Dictionary or None if there was a problem in the tool definition.
@@ -123,13 +123,13 @@ class ToolTemplate(MetaObject):
         return kwargs
 
 
-class GAMSTool(ToolTemplate):
-    """Class for GAMS tool templates.
+class GAMSTool(ToolSpecification):
+    """Class for GAMS tool specifications.
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
         name (str): GAMS Tool name
-        tooltype (str): Tool template type
+        tooltype (str): Tool specification type
         path (str): Path to model main file
         includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main GAMS program.
@@ -231,13 +231,13 @@ class GAMSTool(ToolTemplate):
         return None
 
 
-class JuliaTool(ToolTemplate):
-    """Class for Julia tool templates.
+class JuliaTool(ToolSpecification):
+    """Class for Julia tool specifications.
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Julia Tool name
-        tooltype (str): Tool template type
+        tooltype (str): Tool specification type
         path (str): Path to model main file
         includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main Julia program.
@@ -312,13 +312,13 @@ class JuliaTool(ToolTemplate):
         return None
 
 
-class PythonTool(ToolTemplate):
-    """Class for Python tool templates.
+class PythonTool(ToolSpecification):
+    """Class for Python tool specifications.
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Python Tool name
-        tooltype (str): Tool template type
+        tooltype (str): Tool specification type
         path (str): Path to model main file
         includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main Python program.
@@ -393,13 +393,13 @@ class PythonTool(ToolTemplate):
         return None
 
 
-class ExecutableTool(ToolTemplate):
-    """Class for Executable tool templates.
+class ExecutableTool(ToolSpecification):
+    """Class for Executable tool specifications.
 
     Args:
         toolbox (ToolboxUI): QMainWindow instance
         name (str): Tool name
-        tooltype (str): Tool template type
+        tooltype (str): Tool specification type
         path (str): Path to main script file
         includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
         First file in the list is the main script file.

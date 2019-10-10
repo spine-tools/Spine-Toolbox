@@ -282,13 +282,13 @@ class PythonReplWidget(RichJupyterWidget):
         except FileNotFoundError:
             self._toolbox.msg_error.emit("\tCouldn't find the Python executable specified by the Jupyter kernel")
             self._kernel_starting = False
-            return self.check_and_install_requirements()
+            return False
         except NoSuchKernel:  # kernelspecs for the selected kernel_name not available
             self._toolbox.msg_error.emit(
                 "\tCouldn't find the specified IPython kernel specs [{0}]".format(self.kernel_name)
             )
             self._kernel_starting = False
-            return self.check_and_install_requirements()
+            return False
 
     def execute_instance(self, commands):
         """Start executing the first command in the command queue in Python Console."""

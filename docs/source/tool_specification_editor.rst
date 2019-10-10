@@ -1,4 +1,4 @@
-.. Tool template editor documentation
+.. Tool specification editor documentation
    Created 15.1.2019
 
 .. |file| image:: ../../spinetoolbox/ui/resources/file.svg
@@ -8,31 +8,31 @@
 .. |play-selected| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-regular.svg
    :width: 16
 
-.. _Tool template editor:
+.. _Tool specification editor:
 
-********************
-Tool template editor
-********************
+*************************
+Tool specification editor
+*************************
 
-This section describes how to make a new Tool template and how to edit existing Tool templates.
+This section describes how to make a new Tool specification and how to edit existing Tool specifications.
 
 To execute a Julia, Python, GAMS, or an executable script in Spine Toolbox, you must first create a Tool
-template to your project. You can open the Tool template editor in several ways. One way is to press the
+specification to your project. You can open the Tool specification editor in several ways. One way is to press the
 Tool icon with a plus button in the *Project* dock widget. This presents you a pop-up menu with the *New*
 and *Add existing...* options.
 
-.. image:: img/open_tool_template_editor.png
+.. image:: img/open_tool_specification_editor.png
    :align: center
 
 When you click on *New* the following form pops up.
 
-.. image:: img/edit_tool_template_blank.png
+.. image:: img/edit_tool_specification_blank.png
    :align: center
 
-Start by giving the Tool template a name. Then select the type of the Tool. You have four options (Julia,
-Python, GAMS or Executable). Then select, whether you want the Tool template to be executed in the work directory or
-in its source directory (See :ref:`Terminology` section). You can give the Tool template a description,
-describing what the Tool template does. Main program file is the main file of your simulation model, or an
+Start by giving the Tool specification a name. Then select the type of the Tool. You have four options (Julia,
+Python, GAMS or Executable). Then select, whether you want the Tool specification to be executed in the work directory or
+in its source directory (See :ref:`Terminology` section). You can give the Tool specification a description,
+describing what the Tool specification does. Main program file is the main file of your simulation model, or an
 executable script. You can create a blank file into a new directory by pressing the |file| button and selecting
 *Make new main program* or you can browse to find an existing main program file by pressing the same button and
 selecting *Select existing main program*. Command line arguments will be appended to the actual command that
@@ -66,7 +66,7 @@ Examples:
   the work directory.
 
 *Output files* are files that will be archived into a timestamped result directory of the Tool's project directory
-after the Tool template has finished execution. Unix-style wildcards *?* and *\** are supported.
+after the Tool specification has finished execution. Unix-style wildcards *?* and *\** are supported.
 
 Examples:
 
@@ -75,28 +75,28 @@ Examples:
 - **output/*.gdx** -> All GDX files from the work directory's output/ subdirectory will be copied to into output/
   subdirectory in the results directory.
 
-When you are happy with your Tool template, click Ok, and you will be asked where to save the Tool template file.
+When you are happy with your Tool specification, click Ok, and you will be asked where to save the Tool specification file.
 It is recommended to save the file into the same directory where the main program file is located. The Tool
-template file is a text file in JSON format and has an extension *.json*
+specification file is a text file in JSON format and has an extension *.json*
 
-.. tip:: Only *name*, *type*, and *main program file* fields are required to make a Tool template. The other
+.. tip:: Only *name*, *type*, and *main program file* fields are required to make a Tool specification. The other
    fields are optional.
 
-Here is a minimal Tool template for a Julia script *script.jl*
+Here is a minimal Tool specification for a Julia script *script.jl*
 
-.. image:: img/minimal_tool_template.png
+.. image:: img/minimal_tool_specification.png
    :align: center
 
 
 .. note::
 
-   Under the hood, the contents of the Tool template are saved to a *Tool template definition file* in JSON
+   Under the hood, the contents of the Tool specification are saved to a *Tool specification file* in JSON
    format. Users do not need to worry about the contents of these files since reading and writing them is
-   managed by the app. For the interested, here are the contents of the *Tool template definition file* that we
+   managed by the app. For the interested, here are the contents of the *Tool specification file* that we
    just created.::
 
       {
-          "name": "Example Tool template",
+          "name": "Example Tool specification",
           "description": "",
           "tooltype": "julia",
           "execute_in_work": true,
@@ -109,14 +109,14 @@ Here is a minimal Tool template for a Julia script *script.jl*
           "cmdline_args": ""
       }
 
-After the user has clicked Ok and saved the file, the new Tool template has been added to the project.
+After the user has clicked Ok and saved the file, the new Tool specification has been added to the project.
 
-.. image:: img/project_dock_widget_with_one_tool_template.png
+.. image:: img/project_dock_widget_with_one_tool_specification.png
    :align: center
 
-To edit this Tool template, just right-click on the Tool template name and select `Edit Tool template` from the
+To edit this Tool specification, just right-click on the Tool specification name and select `Edit Tool specification` from the
 context-menu.
 
-You are now ready to execute the Tool template in Spine Toolbox. You just need to select a Tool item in the
-*Design view*, set the template *Example Tool template* to it, and click |play-all| or |play-selected|
+You are now ready to execute the Tool specification in Spine Toolbox. You just need to select a Tool item in the
+*Design view*, set the specification *Example Tool specification* to it, and click |play-all| or |play-selected|
 button.

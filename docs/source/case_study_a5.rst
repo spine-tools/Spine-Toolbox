@@ -4,16 +4,8 @@
 
 .. |ds_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/database.svg
             :width: 16
-.. |plus| image:: ../../spinetoolbox/ui/resources/plus.svg
-          :width: 16
 .. |tool_icon| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
              :width: 16
-.. |add_tool_template| image:: ../../spinetoolbox/ui/resources/wrench_plus.svg
-              :width: 16
-.. |tool_template_options| image:: ../../spinetoolbox/ui/resources/wrench.svg
-             :width: 16
-
-
 
 .. _SpineData.jl: https://gitlab.vtt.fi/spine/data/tree/manuelma
 .. _SpineModel.jl: https://gitlab.vtt.fi/spine/model/tree/manuelma
@@ -460,7 +452,7 @@ Configuring Julia
    to the julia project specified above. Follow the instructions until completion.
 
 
-Creating a Tool template for Spine Model
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+Creating a Tool specification for Spine Model
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 TODO

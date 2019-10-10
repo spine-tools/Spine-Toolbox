@@ -56,7 +56,7 @@ GAMS
 Databases can be exported to GAMS :literal:`.gdx` files by the *Gdx Export* project item.
 When a project is executed, *Gdx Export* writes its output files to the project item's data folder
 and forwards file paths to project items downstream.
-If a *Tool* is to use such a file, remember to add the file as one of the *Tool Template*'s input files!
+If a *Tool* is to use such a file, remember to add the file as one of the *Tool specification*'s input files!
 
 .. note::
    You need to have GAMS Python bindings installed to use this functionality.

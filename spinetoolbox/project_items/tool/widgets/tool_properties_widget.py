@@ -37,7 +37,7 @@ class ToolPropertiesWidget(QWidget):
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)
-        self.ui.treeView_template.setStyleSheet(TREEVIEW_HEADER_SS)
+        self.ui.treeView_specification.setStyleSheet(TREEVIEW_HEADER_SS)
         toolbox.ui.tabWidget_item_properties.addTab(self, "Tool")
         # Class attributes
         self.tool_prop_context_menu = None
@@ -45,36 +45,36 @@ class ToolPropertiesWidget(QWidget):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self._toolbox.tool_template_model_changed.connect(self.ui.comboBox_tool.setModel)
-        self.ui.treeView_template.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
+        self._toolbox.tool_specification_model_changed.connect(self.ui.comboBox_tool.setModel)
+        self.ui.treeView_specification.customContextMenuRequested.connect(self.show_tool_properties_context_menu)
 
     @Slot("QPoint", name="show_tool_properties_context_menu")
     def show_tool_properties_context_menu(self, pos):
         """Create and show a context-menu in Tool properties
-        if selected Tool has a Tool template.
+        if selected Tool has a Tool specification.
 
         Args:
             pos (QPoint): Mouse position
         """
-        ind = self.ui.treeView_template.indexAt(pos)  # Index of selected QStandardItem in Tool properties tree view.
+        ind = self.ui.treeView_specification.indexAt(pos)  # Index of selected QStandardItem in Tool properties tree view.
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Tool
         tool = self._toolbox.project_item_model.project_item(curr_index)
-        if not tool.tool_template():
+        if not tool.tool_specification():
             return
-        # Find index of Tool template
-        name = tool.tool_template().name
-        tool_index = self._toolbox.tool_template_model.tool_template_index(name)
-        global_pos = self.ui.treeView_template.viewport().mapToGlobal(pos)
+        # Find index of Tool specification
+        name = tool.tool_specification().name
+        tool_index = self._toolbox.tool_specification_model.tool_specification_index(name)
+        global_pos = self.ui.treeView_specification.viewport().mapToGlobal(pos)
         self.tool_prop_context_menu = ToolPropertiesContextMenu(self, global_pos, ind)
         option = self.tool_prop_context_menu.get_action()
-        if option == "Edit Tool template":
-            self._toolbox.edit_tool_template(tool_index)  # index in tool template model
+        if option == "Edit Tool specification":
+            self._toolbox.edit_tool_specification(tool_index)  # index in tool specification model
         elif option == "Edit main program file...":
-            self._toolbox.open_tool_main_program_file(tool_index)  # index in tool template model
+            self._toolbox.open_tool_main_program_file(tool_index)  # index in tool specification model
         elif option == "Open main program directory...":
             tool.open_tool_main_directory()
-        elif option == "Open Tool template definition file...":
-            self._toolbox.open_tool_template_file(tool_index)
+        elif option == "Open Tool specification file...":
+            self._toolbox.open_tool_specification_file(tool_index)
         elif option == "Open directory...":
             tool.open_directory()
         return
