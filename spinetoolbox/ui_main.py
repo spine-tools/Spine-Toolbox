@@ -52,13 +52,7 @@ from .widgets.julia_repl_widget import JuliaREPLWidget
 from .widgets.python_repl_widget import PythonReplWidget
 from .widgets import toolbars
 from .project import SpineToolboxProject
-from .config import (
-    SPINE_TOOLBOX_VERSION,
-    STATUSBAR_SS,
-    TEXTBROWSER_SS,
-    MAINWINDOW_SS,
-    DOCUMENTATION_PATH,
-)
+from .config import SPINE_TOOLBOX_VERSION, STATUSBAR_SS, TEXTBROWSER_SS, MAINWINDOW_SS, DOCUMENTATION_PATH
 from .helpers import project_dir, get_datetime, erase_dir, busy_effect, set_taskbar_icon, supported_img_formats
 from .project_item import RootProjectItem, CategoryProjectItem
 from .project_items import data_store, data_connection, gdx_export, tool, view, data_interface
@@ -159,7 +153,7 @@ class ToolboxUI(QMainWindow):
         self.ui.actionExport_project_to_GraphML.triggered.connect(self.export_as_graphml)
         self.ui.actionSettings.triggered.connect(self.show_settings)
         self.ui.actionPackages.triggered.connect(self.show_tool_config_asst)
-        self.ui.actionQuit.triggered.connect(self.closeEvent)
+        self.ui.actionQuit.triggered.connect(self.close)
         self.ui.actionRemove_all.triggered.connect(self.remove_all_items)
         self.ui.actionUser_Guide.triggered.connect(self.show_user_guide)
         self.ui.actionGetting_started.triggered.connect(self.show_getting_started_guide)
@@ -459,6 +453,7 @@ class ToolboxUI(QMainWindow):
             tool_cand = self._project.load_tool_specification_from_file(path)
             n_tools += 1
             if not tool_cand:
+                self.msg_error.emit("Failed to load Tool template from <b>{0}</b>".format(path))
                 continue
             # Add tool definition file path to tool instance variable
             tool_cand.set_def_path(path)
@@ -715,10 +710,17 @@ class ToolboxUI(QMainWindow):
         that use this specification."""
         sel_tool = self.tool_specification_model.tool_specification(index.row())
         tool_def_path = sel_tool.def_file_path
-        msg = "Removing Tool specification <b>{0}</b> from project. Are you sure?".format(sel_tool.name)
-        # noinspection PyCallByClass, PyTypeChecker
-        answer = QMessageBox.question(self, "Remove Tool specification", msg, QMessageBox.Yes, QMessageBox.No)
-        if not answer == QMessageBox.Yes:
+        message = "Remove Tool Specification <b>{0}</b> from Project?".format(sel_tool.name)
+        message_box = QMessageBox(
+            QMessageBox.Question,
+            "Remove Tool Specification",
+            message,
+            buttons=QMessageBox.Ok | QMessageBox.Cancel,
+            parent=self,
+        )
+        message_box.button(QMessageBox.Ok).setText("Remove Specification")
+        answer = message_box.exec_()
+        if answer != QMessageBox.Ok:
             return
         # Remove tool def file path from the project file
         project_file = self._project.path
@@ -767,9 +769,12 @@ class ToolboxUI(QMainWindow):
             self.msg.emit("No project items to remove")
             return
         msg = "Remove all items from project?"
-        # noinspection PyCallByClass, PyTypeChecker
-        answer = QMessageBox.question(self, 'Removing all items', msg, QMessageBox.Yes, QMessageBox.No)
-        if not answer == QMessageBox.Yes:
+        message_box = QMessageBox(
+            QMessageBox.Question, "Remove All Items", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+        )
+        message_box.button(QMessageBox.Ok).setText("Remove Items")
+        answer = message_box.exec_()
+        if answer != QMessageBox.Ok:
             return
         item_names = self.project_item_model.item_names()
         n = len(item_names)
@@ -805,18 +810,19 @@ class ToolboxUI(QMainWindow):
         if check_dialog:
             if not delete_item:
                 msg = (
-                    "Are you sure? If Yes, item data directory will still be available in "
-                    "the project directory after this operation.\n\n"
-                    "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
+                    "Remove item <b>{}</b> from project?".format(name)
+                    + " Item data directory will still be available in the project directory after this operation."
                 )
             else:
-                msg = (
-                    "Are you sure? If Yes, item data directory will be deleted from your project.\n\n"
-                    "Tip: Remove items by pressing 'Delete' key to bypass this dialog."
-                )
+                msg = "Remove item <b>{}</b> and its data directory from project?".format(name)
+            msg = msg + "<br><br>Tip: Remove items by pressing 'Delete' key to bypass this dialog."
             # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(self, "Remove item {0}?".format(name), msg, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
+            message_box = QMessageBox(
+                QMessageBox.Question, "Remove Item", msg, buttons=QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            )
+            message_box.button(QMessageBox.Ok).setText("Remove Item")
+            answer = message_box.exec_()
+            if answer != QMessageBox.Ok:
                 return
         try:
             data_dir = project_item.data_dir
@@ -1262,67 +1268,112 @@ class ToolboxUI(QMainWindow):
         for item in self.project_item_model.items():
             item.tear_down()
 
-    def show_confirm_exit(self):
-        """Shows confirm exit message box.
+    def _tasks_before_exit(self):
+        """
+        Returns a list of tasks to perform before exiting the application.
+
+        Possible tasks are:
+
+        - `"prompt exit"`: prompt user if quitting is really desired
+        - `"prompt save"`: prompt user if project should be saved before quitting
+        - `"save"`: save project before quitting
 
         Returns:
-            True if user clicks Yes or False if exit is cancelled
+            a list containing zero or more tasks
         """
-        ex = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
-        if ex == 2:  # 2 as in True
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Confirm exit")
-            msg.setText("Are you sure you want to exit Spine Toolbox?")
-            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            chkbox = QCheckBox()
-            chkbox.setText("Do not ask me again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()  # Show message box
-            if answer == QMessageBox.Yes:
-                # Update conf file according to checkbox status
-                if not chkbox.checkState():
-                    show_prompt = "2"  # 2 as in True
-                else:
-                    show_prompt = "0"  # 0 as in False
-                self._qsettings.setValue("appSettings/showExitPrompt", show_prompt)
-                return True
-            return False
+        show_confirm_exit = int(self._qsettings.value("appSettings/showExitPrompt", defaultValue="2"))
+        save_at_exit = (
+            int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1")) if self._project is not None else 0
+        )
+        if show_confirm_exit != 2:
+            # Don't prompt for exit
+            if save_at_exit == 0:
+                return []
+            if save_at_exit == 1:
+                # We still need to prompt for saving
+                return ["prompt save"]
+            return ["save"]
+        if save_at_exit == 0:
+            return ["prompt exit"]
+        if save_at_exit == 1:
+            return ["prompt save"]
+        return ["prompt exit", "save"]
+
+    def _perform_pre_exit_tasks(self):
+        """
+        Prompts user to confirm quitting and saves the project if necessary.
+
+        Returns:
+            True if exit should proceed, False if the process was cancelled
+        """
+        tasks = self._tasks_before_exit()
+        for task in tasks:
+            if task == "prompt exit":
+                if not self._confirm_exit():
+                    return False
+            elif task == "prompt save":
+                if not self._confirm_save_and_exit():
+                    return False
+            elif task == "save":
+                self.save_project()
         return True
 
-    def show_save_project_prompt(self):
-        """Shows the save project message box."""
-        save_at_exit = int(self._qsettings.value("appSettings/saveAtExit", defaultValue="1"))
-        if save_at_exit == 0:
-            # Don't save project and don't show message box
-            return
-        if save_at_exit == 1:  # Default
-            # Show message box
-            msg = QMessageBox()
-            msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Save project")
-            msg.setText("Save changes to project?")
-            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
-            chkbox = QCheckBox()
-            chkbox.setText("Do not ask me again")
-            msg.setCheckBox(chkbox)
-            answer = msg.exec_()
-            chk = chkbox.checkState()
-            if answer == QMessageBox.Yes:
-                self.save_project()
-                if chk == 2:
-                    # Save preference
-                    self._qsettings.setValue("appSettings/saveAtExit", "2")
+    def _confirm_exit(self):
+        """
+        Confirms exiting from user.
+
+        Returns:
+            True if exit should proceed, False if user cancelled
+        """
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setWindowTitle("Confirm exit")
+        msg.setText("Are you sure you want to exit Spine Toolbox?")
+        msg.setStandardButtons(QMessageBox.Ok | QMessageBox.Cancel)
+        msg.button(QMessageBox.Ok).setText("Exit")
+        chkbox = QCheckBox()
+        chkbox.setText("Do not ask me again")
+        msg.setCheckBox(chkbox)
+        answer = msg.exec_()  # Show message box
+        if answer == QMessageBox.Ok:
+            # Update conf file according to checkbox status
+            if not chkbox.checkState():
+                show_prompt = "2"  # 2 as in True
             else:
-                if chk == 2:
-                    # Save preference
-                    self._qsettings.setValue("appSettings/saveAtExit", "0")
-        elif save_at_exit == 2:
-            # Save project and don't show message box
+                show_prompt = "0"  # 0 as in False
+            self._qsettings.setValue("appSettings/showExitPrompt", show_prompt)
+            return True
+        return False
+
+    def _confirm_save_and_exit(self):
+        """
+        Confirms exit from user and saves the project if requested.
+
+        Returns:
+            True if exiting should proceed, False if user cancelled
+        """
+        msg = QMessageBox()
+        msg.setIcon(QMessageBox.Question)
+        msg.setWindowTitle("Save project before exiting")
+        msg.setText("Exiting Spine Toolbox. Save changes to project?")
+        msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+        msg.button(QMessageBox.Save).setText("Save And Exit")
+        msg.button(QMessageBox.Discard).setText("Exit without Saving")
+        chkbox = QCheckBox()
+        chkbox.setText("Do not ask me again")
+        msg.setCheckBox(chkbox)
+        answer = msg.exec_()
+        if answer == QMessageBox.Cancel:
+            return False
+        if answer == QMessageBox.Save:
             self.save_project()
-        else:
-            self._qsettings.setValue("appSettings/saveAtExit", "1")
-        return
+        chk = chkbox.checkState()
+        if chk == 2:
+            if answer == QMessageBox.Save:
+                self._qsettings.setValue("appSettings/saveAtExit", "2")
+            elif answer == QMessageBox.Discard:
+                self._qsettings.setValue("appSettings/saveAtExit", "0")
+        return True
 
     def remove_path_from_recent_projects(self, p):
         """Removes entry that contains given path from the recent project files list in QSettings.
@@ -1344,13 +1395,12 @@ class ToolboxUI(QMainWindow):
         # Save updated recent paths
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)
         self._qsettings.sync()  # Commit change immediately
-        self.msg_error.emit("Opening selected project failed. Project file <b>{0}</b> may have been removed."
-                            .format(p))
+        self.msg_error.emit("Opening selected project failed. Project file <b>{0}</b> may have been removed.".format(p))
 
     def update_recent_projects(self):
         """Adds a new entry to QSettings variable that remembers the five most recent project paths."""
         recents = self._qsettings.value("appSettings/recentProjects", defaultValue=None)
-        entry = self.project().name + "<>" +self.project().path
+        entry = self.project().name + "<>" + self.project().path
         if not recents:
             updated_recents = entry
         else:
@@ -1369,26 +1419,24 @@ class ToolboxUI(QMainWindow):
         self._qsettings.setValue("appSettings/recentProjects", updated_recents)
         self._qsettings.sync()  # Commit change immediately
 
-    def closeEvent(self, event=None):
+    def closeEvent(self, event):
         """Method for handling application exit.
 
         Args:
-             event (QEvent): PySide2 event
+             event (QCloseEvent): PySide2 event
         """
         # Show confirm exit message box
-        if not self.show_confirm_exit():
-            # Exit cancelled
-            if event:
-                event.ignore()
+        exit_confirmed = self._perform_pre_exit_tasks()
+        if not exit_confirmed:
+            event.ignore()
             return
-        # Save current project (if enabled in settings)
-        if not self._project:
+        # Save settings
+        if self._project is None:
             self._qsettings.setValue("appSettings/previousProject", "")
         else:
             self._qsettings.setValue("appSettings/previousProject", self._project.path)
             self.update_recent_projects()
             # Show save project prompt
-            self.show_save_project_prompt()
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())
         self._qsettings.setValue("mainWindow/windowState", self.saveState(version=1))
@@ -1403,7 +1451,4 @@ class ToolboxUI(QMainWindow):
         self.julia_repl.shutdown_jupyter_kernel()
         self.python_repl.shutdown_kernel()
         self.tear_down_items()
-        if event:
-            event.accept()
-        # noinspection PyArgumentList
-        QApplication.quit()
+        event.accept()
