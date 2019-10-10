@@ -258,7 +258,7 @@ class Tool(ProjectItem):
                 self.input_file_model.appendRow(qitem)
 
     def populate_opt_input_file_model(self, items):
-        """Add optional Tool template files into a model.
+        """Add optional Tool specification files into a model.
         If items is None or an empty list, model is cleared."""
         self.opt_input_file_model.clear()
         if items is not None:
@@ -279,23 +279,23 @@ class Tool(ProjectItem):
                 qitem.setData(QFileIconProvider().icon(QFileInfo(item)), Qt.DecorationRole)
                 self.output_file_model.appendRow(qitem)
 
-    def populate_template_model(self, populate):
-        """Add all tool template specs to a single QTreeView.
+    def populate_specification_model(self, populate):
+        """Add all tool specifications to a single QTreeView.
 
         Args:
             populate (bool): False to clear model, True to populate.
         """
-        self.template_model.clear()
-        self.template_model.setHorizontalHeaderItem(0, QStandardItem("Template specification"))  # Add header
+        self.specification_model.clear()
+        self.specification_model.setHorizontalHeaderItem(0, QStandardItem("Template specification"))  # Add header
         # Add category items
         source_file_category_item = QStandardItem("Source files")
         input_category_item = QStandardItem("Input files")
         opt_input_category_item = QStandardItem("Optional input files")
         output_category_item = QStandardItem("Output files")
-        self.template_model.appendRow(source_file_category_item)
-        self.template_model.appendRow(input_category_item)
-        self.template_model.appendRow(opt_input_category_item)
-        self.template_model.appendRow(output_category_item)
+        self.specification_model.appendRow(source_file_category_item)
+        self.specification_model.appendRow(input_category_item)
+        self.specification_model.appendRow(opt_input_category_item)
+        self.specification_model.appendRow(output_category_item)
         if populate:
             if self.source_file_model.rowCount() > 0:
                 for row in range(self.source_file_model.rowCount()):
@@ -333,8 +333,8 @@ class Tool(ProjectItem):
     def execute(self):
         """Executes this Tool."""
         exec_inst = self._project.execution_instance
-        if not self.tool_template():
-            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool template to execute".format(self.name))
+        if not self.tool_specification():
+            self._toolbox.msg_warning.emit("Tool <b>{0}</b> has no Tool specification to execute".format(self.name))
             exec_inst.project_item_execution_finished_signal.emit(0)  # continue
             return
         self._toolbox.msg.emit("")
@@ -344,7 +344,7 @@ class Tool(ProjectItem):
             work_or_source = "work"
             work_dir = self._project.work_dir
             self.basedir = tempfile.mkdtemp(
-                suffix='__toolbox', prefix=self.tool_template().short_name + '__', dir=work_dir
+                suffix='__toolbox', prefix=self.tool_specification().short_name + '__', dir=work_dir
             )
             # Make work directory anchor with path as tooltip
             work_anchor = (
@@ -355,8 +355,8 @@ class Tool(ProjectItem):
                 + "'>work directory</a>"
             )
             self._toolbox.msg.emit(
-                "*** Copying Tool template <b>{0}</b> source files to {1} ***".format(
-                    self.tool_template().name, work_anchor
+                "*** Copying Tool specification <b>{0}</b> source files to {1} ***".format(
+                    self.tool_specification().name, work_anchor
                 )
             )
             if not self.copy_program_files():
@@ -365,7 +365,7 @@ class Tool(ProjectItem):
                 return
         else:
             work_or_source = "source"
-            self.basedir = self.tool_template().path
+            self.basedir = self.tool_specification().path
             # Make source directory anchor with path as tooltip
             src_dir_anchor = (
                 "<a style='color:#99CCFF;' title='"
@@ -375,12 +375,14 @@ class Tool(ProjectItem):
                 + "'>source directory</a>"
             )
             self._toolbox.msg.emit(
-                "*** Executing Tool template <b>{0}</b> in {1} ***".format(self.tool_template().name, src_dir_anchor)
+                "*** Executing Tool specification <b>{0}</b> in {1} ***".format(
+                    self.tool_specification().name, src_dir_anchor
+                )
             )
         self._toolbox.msg.emit("*** Executing in <b>{0}</b> directory mode ***".format(work_or_source))
         # Find required input files for ToolInstance (if any)
         if self.input_file_model.rowCount() > 0:
-            self._toolbox.msg.emit("*** Checking Tool template requirements ***")
+            self._toolbox.msg.emit("*** Checking Tool specification requirements ***")
             n_dirs, n_files = self.count_files_and_dirs()
             # logging.debug("Tool requires {0} dirs and {1} files".format(n_dirs, n_files))
             if n_files > 0:
@@ -424,11 +426,11 @@ class Tool(ProjectItem):
             exec_inst.project_item_execution_finished_signal.emit(-1)  # abort
             return
         self.get_icon().start_animation()
-        self.instance = self.tool_template().create_tool_instance(self.basedir)
+        self.instance = self.tool_specification().create_tool_instance(self.basedir)
         self.instance.prepare()  # Make command and stuff
         self.instance.instance_finished_signal.connect(self.handle_execution_finished)
         self._toolbox.msg.emit(
-            "*** Starting instance of Tool template <b>{0}</b> ***".format(self.tool_template().name)
+            "*** Starting instance of Tool specification <b>{0}</b> ***".format(self.tool_specification().name)
         )
         self.instance.execute()
 
@@ -611,12 +613,12 @@ class Tool(ProjectItem):
         return True
 
     def copy_program_files(self):
-        """Copies Tool template include files to base directory."""
+        """Copies Tool specification include files to base directory."""
         n_copied_files = 0
         for i in range(self.source_file_model.rowCount()):
             filepath = self.source_file_model.item(i, 0).data(Qt.DisplayRole)
             dirname, file_pattern = os.path.split(filepath)
-            src_dir = os.path.join(self.tool_template().path, dirname)
+            src_dir = os.path.join(self.tool_specification().path, dirname)
             dst_dir = os.path.join(self.basedir, dirname)
             # Create the destination directory
             try:
@@ -734,7 +736,7 @@ class Tool(ProjectItem):
 
     @Slot(int, name="handle_execution_finished")
     def handle_execution_finished(self, return_code):
-        """Tool template execution finished.
+        """Tool specification execution finished.
 
         Args:
             return_code (int): Process exit code
@@ -753,12 +755,12 @@ class Tool(ProjectItem):
         self._project.execution_instance.project_item_execution_finished_signal.emit(0)
 
     def handle_output_files(self, ret):
-        """Creates a timestamped result directory for Tool template output files. Starts copying Tool
-        template output files from work directory to result directory and print messages to Event
+        """Creates a timestamped result directory for Tool specification output files. Starts copying Tool
+        specification output files from work directory to result directory and print messages to Event
         Log depending on how the operation went.
 
         Args:
-            ret (int): Tool template process return value
+            ret (int): Tool specification process return value
         """
         exec_inst = self._project.execution_instance
         output_dir_timestamp = create_output_dir_timestamp()  # Get timestamp when tool finished
@@ -772,7 +774,7 @@ class Tool(ProjectItem):
         except OSError:
             self._toolbox.msg_error.emit(
                 "\tError creating timestamped output directory. "
-                "Tool template output files not copied. Please check directory permissions."
+                "Tool specification output files not copied. Please check directory permissions."
             )
             return
         # Make link to output folder
@@ -811,11 +813,13 @@ class Tool(ProjectItem):
                     self._toolbox.msg_warning.emit("\t\t<b>{0}</b>".format(failed_fname))
         else:
             tip_anchor = (
-                "<a style='color:#99CCFF;' title='When you add output files to the Tool template,\n "
+                "<a style='color:#99CCFF;' title='When you add output files to the Tool specification,\n "
                 "they will be archived into results directory. Also, output files are passed to\n "
                 "subsequent project items.' href='#'>Tip</a>"
             )
-            self._toolbox.msg_warning.emit("\tNo output files defined for this Tool template. {0}".format(tip_anchor))
+            self._toolbox.msg_warning.emit(
+                "\tNo output files defined for this Tool specification. {0}".format(tip_anchor)
+            )
 
     def create_output_dirs(self):
         """Makes sure that work directory has the necessary output directories for Tool output files.
@@ -843,14 +847,14 @@ class Tool(ProjectItem):
         return True
 
     def copy_output_files(self, target_dir):
-        """Copies Tool template output files from work directory to given target directory.
+        """Copies Tool specification output files from work directory to given target directory.
 
         Args:
-            target_dir (str): Destination directory for Tool template output files
+            target_dir (str): Destination directory for Tool specification output files
 
         Returns:
             tuple: Contains two lists. The first list contains paths to successfully
-            copied files. The second list contains paths (or patterns) of Tool template
+            copied files. The second list contains paths (or patterns) of Tool specification
             output files that were not found.
 
         Raises:
