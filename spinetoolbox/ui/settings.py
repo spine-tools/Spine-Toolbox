@@ -379,9 +379,9 @@ class Ui_SettingsForm(object):
         self.radioButton_bg_solid.setText(QtWidgets.QApplication.translate("SettingsForm", "Solid", None, -1))
         self.toolButton_bg_color.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick solid background color</p></body></html>", None, -1))
         self.groupBox_gams.setTitle(QtWidgets.QApplication.translate("SettingsForm", "GAMS", None, -1))
-        self.label_4.setText(QtWidgets.QApplication.translate("SettingsForm", "GAMS program", None, -1))
-        self.lineEdit_gams_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Path to GAMS executable. Leave blank to use GAMS defined in your system path</p></body></html>", None, -1))
-        self.lineEdit_gams_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using GAMS in system path", None, -1))
+        self.label_4.setText(QtWidgets.QApplication.translate("SettingsForm", "GAMS executable", None, -1))
+        self.lineEdit_gams_path.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Path to GAMS executable for Tool and GAMS Python bindings. Leave blank to use system\'s default</p></body></html>", None, -1))
+        self.lineEdit_gams_path.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using sytem\'s default GAMS", None, -1))
         self.toolButton_browse_gams.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Pick GAMS executable with file browser (eg. gams.exe on Windows)</p></body></html>", None, -1))
         self.groupBox_julia.setTitle(QtWidgets.QApplication.translate("SettingsForm", "Julia", None, -1))
         self.label_5.setText(QtWidgets.QApplication.translate("SettingsForm", "Julia executable", None, -1))
@@ -414,7 +414,7 @@ class Ui_SettingsForm(object):
 "<html><head><meta name=\"qrichtext\" content=\"1\" /><style type=\"text/css\">\n"
 "p, li { white-space: pre-wrap; }\n"
 "</style></head><body style=\" font-family:\'MS Shell Dlg 2\'; font-size:8.25pt; font-weight:400; font-style:normal;\">\n"
-"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;\"><br /></p></body></html>", None, -1))
+"<p style=\"-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:\'MS Shell Dlg 2\';\"><br /></p></body></html>", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("SettingsForm", "Work directory", None, -1))
         self.lineEdit_work_dir.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Work directory location. Leave empty to use default (\\work).</p></body></html>", None, -1))
         self.lineEdit_work_dir.setPlaceholderText(QtWidgets.QApplication.translate("SettingsForm", "Using default directory", None, -1))
@@ -424,4 +424,4 @@ class Ui_SettingsForm(object):
         self.pushButton_cancel.setToolTip(QtWidgets.QApplication.translate("SettingsForm", "<html><head/><body><p>Closes the window without saving changes</p></body></html>", None, -1))
         self.pushButton_cancel.setText(QtWidgets.QApplication.translate("SettingsForm", "Cancel", None, -1))
 
-import resources_icons_rc
+from spinetoolbox import resources_icons_rc

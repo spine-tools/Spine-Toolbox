@@ -21,11 +21,11 @@ import logging
 import json
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QMessageBox
-from metaobject import MetaObject
-from helpers import project_dir, create_dir, copy_dir
-from tool_templates import JuliaTool, PythonTool, GAMSTool, ExecutableTool
-from config import DEFAULT_WORK_DIR, INVALID_CHARS
-from executioner import DirectedGraphHandler, ExecutionInstance
+from .metaobject import MetaObject
+from .helpers import project_dir, create_dir, copy_dir
+from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
+from .config import DEFAULT_WORK_DIR, INVALID_CHARS
+from .executioner import DirectedGraphHandler, ExecutionInstance
 
 
 class SpineToolboxProject(MetaObject):
@@ -170,7 +170,7 @@ class SpineToolboxProject(MetaObject):
         project_dict['name'] = self.name
         project_dict['description'] = self.description
         project_dict['work_dir'] = self.work_dir
-        project_dict['tool_templates'] = tool_def_paths
+        project_dict['tool_specifications'] = tool_def_paths
         # Compute connections directly from Links in scene
         connections = list()
         for link in self._toolbox.ui.graphicsView.links():
@@ -234,11 +234,11 @@ class SpineToolboxProject(MetaObject):
             self._toolbox.msg_warning.emit("Project has no items")
         return True
 
-    def load_tool_template_from_file(self, jsonfile):
-        """Create a Tool template according to a tool definition file.
+    def load_tool_specification_from_file(self, jsonfile):
+        """Create a Tool specification according to a tool definition file.
 
         Args:
-            jsonfile (str): Path of the tool template definition file
+            jsonfile (str): Path of the tool specification definition file
 
         Returns:
             Instance of a subclass if Tool
@@ -248,19 +248,19 @@ class SpineToolboxProject(MetaObject):
                 try:
                     definition = json.load(fp)
                 except ValueError:
-                    self._toolbox.msg_error.emit("Tool template definition file not valid")
+                    self._toolbox.msg_error.emit("Tool specification file not valid")
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._toolbox.msg_error.emit("Tool template definition file <b>{0}</b> not found".format(jsonfile))
+            self._toolbox.msg_error.emit("Tool specification file <b>{0}</b> not found".format(jsonfile))
             return None
         # Path to main program relative to definition file
         includes_main_path = definition.get("includes_main_path", ".")
         path = os.path.normpath(os.path.join(os.path.dirname(jsonfile), includes_main_path))
-        return self.load_tool_template_from_dict(definition, path)
+        return self.load_tool_specification_from_dict(definition, path)
 
-    def load_tool_template_from_dict(self, definition, path):
-        """Create a Tool template according to a dictionary.
+    def load_tool_specification_from_dict(self, definition, path):
+        """Create a Tool specification according to a dictionary.
 
         Args:
             definition (dict): Dictionary with the tool definition

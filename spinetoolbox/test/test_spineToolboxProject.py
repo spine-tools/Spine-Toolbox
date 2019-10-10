@@ -21,8 +21,8 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
-from ui_main import ToolboxUI
-from test.mock_helpers import MockQWidget, qsettings_value_side_effect
+from ..ui_main import ToolboxUI
+from .mock_helpers import MockQWidget, qsettings_value_side_effect
 
 
 # noinspection PyUnusedLocal
@@ -46,12 +46,12 @@ class TestSpineToolboxProject(unittest.TestCase):
         We want the ToolboxUI to start with the default settings and without a project so
         we need to mock CONFIGURATION_FILE to prevent loading user's own configs from settings.conf.
         """
-        with mock.patch("ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("project.create_dir") as mock_create_dir, mock.patch(
-            "ui_main.ToolboxUI.save_project"
+        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+            "spinetoolbox.ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, mock.patch(
+            "spinetoolbox.ui_main.ToolboxUI.save_project"
         ) as mock_save_project, mock.patch(
-            "ui_main.QSettings.value"
+            "spinetoolbox.ui_main.QSettings.value"
         ) as mock_qsettings_value:
             # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
             mock_julia_repl.return_value = QWidget()
@@ -181,10 +181,10 @@ class TestSpineToolboxProject(unittest.TestCase):
     # def test_load(self):
     #     self.fail()
     #
-    # def test_load_tool_template_from_file(self):
+    # def test_load_tool_specification_from_file(self):
     #     self.fail()
     #
-    # def test_load_tool_template_from_dict(self):
+    # def test_load_tool_specification_from_dict(self):
     #     self.fail()
     #
     # def test_append_connection_model(self):
@@ -196,28 +196,28 @@ class TestSpineToolboxProject(unittest.TestCase):
     def add_ds(self):
         """Helper method to add Data Store. Returns created items name."""
         item = dict(name="DS", description="", url=dict(), x=0, y=0)
-        with mock.patch("project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Stores", item)
         return "DS"
 
     def add_dc(self):
         """Helper method to add Data Connection. Returns created items name."""
         item = dict(name="DC", description="", references=list(), x=0, y=0)
-        with mock.patch("project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Data Connections", item)
         return "DC"
 
     def add_tool(self):
         """Helper method to add Tool. Returns created items name."""
         item = dict(name="tool", description="", tool="", execute_in_work=False, x=0, y=0)
-        with mock.patch("project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Tools", item)
         return "tool"
 
     def add_view(self):
         """Helper method to add View. Returns created items name."""
         item = dict(name="view", description="", x=0, y=0)
-        with mock.patch("project_item.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.project_item.create_dir") as mock_create_dir:
             self.toolbox.project().add_project_items("Views", item)
         return "view"
 

@@ -30,7 +30,7 @@ from spinedb_api import (
     TimeSeriesVariableResolution,
     to_database,
 )
-from widgets.parameter_value_editor import ParameterValueEditor
+from ..widgets.parameter_value_editor import ParameterValueEditor
 
 
 class _MockParentModel(QAbstractTableModel):

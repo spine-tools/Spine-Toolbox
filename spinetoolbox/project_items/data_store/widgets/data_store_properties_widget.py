@@ -18,7 +18,6 @@ Data store properties widget.
 
 from PySide2.QtWidgets import QWidget
 from PySide2.QtGui import QIntValidator
-from project_items.data_store.ui.data_store_properties import Ui_Form
 from spinedb_api import SUPPORTED_DIALECTS
 
 
@@ -32,6 +31,7 @@ class DataStorePropertiesWidget(QWidget):
     def __init__(self, toolbox):
         """Init class."""
         super().__init__()
+        from ..ui.data_store_properties import Ui_Form
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)

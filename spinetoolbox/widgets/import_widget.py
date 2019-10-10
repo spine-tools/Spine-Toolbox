@@ -28,15 +28,14 @@ from PySide2.QtWidgets import (
 )
 from PySide2.QtCore import Qt
 import spinedb_api
-from helpers import busy_effect
-from spine_io.connection_manager import ConnectionManager
-from spine_io.importers.csv_reader import CSVConnector
-from spine_io.importers.excel_reader import ExcelConnector
-from spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
-from spine_io.importers.gdx_connector import GdxConnector
-from widgets.import_preview_widget import ImportPreviewWidget
-from widgets.import_errors_widget import ImportErrorWidget
-from ui.import_source_selector import Ui_ImportSourceSelector
+from ..helpers import busy_effect
+from ..spine_io.connection_manager import ConnectionManager
+from ..spine_io.importers.csv_reader import CSVConnector
+from ..spine_io.importers.excel_reader import ExcelConnector
+from ..spine_io.importers.sqlalchemy_connector import SqlAlchemyConnector
+from ..spine_io.importers.gdx_connector import GdxConnector
+from .import_preview_widget import ImportPreviewWidget
+from .import_errors_widget import ImportErrorWidget
 
 
 class ImportDialog(QDialog):
@@ -49,6 +48,8 @@ class ImportDialog(QDialog):
     """
 
     def __init__(self, parent=None):
+        from ..ui.import_source_selector import Ui_ImportSourceSelector
+
         super().__init__(parent)
         self.setWindowTitle("Import data")
         # DB mapping

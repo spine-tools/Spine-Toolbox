@@ -19,7 +19,7 @@ Unit tests for the TimePatternEditor widget.
 import unittest
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimePattern
-from widgets.time_pattern_editor import TimePatternEditor
+from ..widgets.time_pattern_editor import TimePatternEditor
 
 
 class TestTimePatternEditor(unittest.TestCase):

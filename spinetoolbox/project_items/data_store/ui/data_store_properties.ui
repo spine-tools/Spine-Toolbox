@@ -845,7 +845,7 @@
   <customwidget>
    <class>CustomQLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>widgets/custom_qlineedit.h</header>
+   <header>spinetoolbox/widgets/custom_qlineedit.h</header>
   </customwidget>
  </customwidgets>
  <resources>

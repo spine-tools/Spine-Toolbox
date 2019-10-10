@@ -1,17 +1,2 @@
-pyside2 <5.12
-datapackage >=1.2.3
-qtconsole >=4.3.1
-sqlalchemy >=1.2.6
 git+https://github.com/Spine-project/Spine-Database-API.git#egg=spinedb_api
-openpyxl >=2.5.0
-numpy >=1.15.1
-matplotlib >=3.0
-scipy >=1.1.0
-jupyter-client >= 5.2.4
-networkx > 2.2
-pymysql >=0.9.2
-pyodbc >=4.0.23
-psycopg2 >= 2.7.4
-cx_Oracle >= 6.3.1
-python-dateutil >= 2.8.0
-pandas >= 0.24.0
+-e .

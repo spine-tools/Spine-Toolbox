@@ -400,5 +400,5 @@ class Ui_Form(object):
         self.toolButton_copy_url.setText(QtWidgets.QApplication.translate("Form", "...", None, -1))
         self.toolButton_ds_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Data Store\'s project directory in file browser</p></body></html>", None, -1))
 
-from widgets.custom_qlineedit import CustomQLineEdit
-import resources_icons_rc
+from spinetoolbox.widgets.custom_qlineedit import CustomQLineEdit
+from spinetoolbox import resources_icons_rc

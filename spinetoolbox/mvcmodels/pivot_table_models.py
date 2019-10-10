@@ -18,8 +18,8 @@ Provides pivot table models for the Tabular View.
 
 from PySide2.QtCore import QAbstractTableModel, Qt, QModelIndex, Signal, QSortFilterProxyModel
 from PySide2.QtGui import QColor, QFont
-from mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
-from mvcmodels.pivot_model import PivotModel
+from .parameter_value_formatting import format_for_DisplayRole, format_for_EditRole, format_for_ToolTipRole
+from .pivot_model import PivotModel
 
 
 class PivotTableModel(QAbstractTableModel):

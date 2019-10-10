@@ -21,11 +21,11 @@ import os
 from PySide2.QtCore import Qt, Slot, QFileInfo
 from PySide2.QtGui import QStandardItem, QStandardItemModel
 from PySide2.QtWidgets import QFileIconProvider, QListWidget, QDialog, QVBoxLayout, QDialogButtonBox
-from project_item import ProjectItem, ProjectItemResource
-from helpers import create_dir, create_log_file_timestamp
-from spine_io.importers.csv_reader import CSVConnector
-from spine_io.importers.excel_reader import ExcelConnector
-from widgets.import_preview_window import ImportPreviewWindow
+from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.helpers import create_dir, create_log_file_timestamp
+from spinetoolbox.spine_io.importers.csv_reader import CSVConnector
+from spinetoolbox.spine_io.importers.excel_reader import ExcelConnector
+from spinetoolbox.widgets.import_preview_window import ImportPreviewWindow
 
 
 class DataInterface(ProjectItem):
@@ -36,12 +36,11 @@ class DataInterface(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Project item name
             description (str): Project item description
-            x (int): Initial icon scene X coordinate
-            y (int): Initial icon scene Y coordinate
             mappings (dict): dict with mapping settings
+            x (float): Initial icon scene X coordinate
+            y (float): Initial icon scene Y coordinate
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Data Interface"
+        super().__init__(toolbox, "Data Interface", name, description, x, y)
         # Make logs subdirectory for this item
         self.logs_dir = os.path.join(self.data_dir, "logs")
         try:
@@ -253,7 +252,17 @@ class DataInterface(ProjectItem):
             source_type = settings["source_type"]
             connector = eval(source_type)()
             connector.connect_to_source(source)
-            data, errors = connector.get_mapped_data(settings["table_mappings"], settings["table_options"], max_rows=-1)
+            table_mappings = {
+                name: mapping
+                for name, mapping in settings["table_mappings"].items()
+                if name in settings["selected_tables"]
+            }
+            table_options = {
+                name: options
+                for name, options in settings["table_options"].items()
+                if name in settings["selected_tables"]
+            }
+            data, errors = connector.get_mapped_data(table_mappings, table_options, max_rows=-1)
             self._toolbox.msg.emit(
                 "<b>{0}:</b> Read {1} data from {2} with {3} errors".format(
                     self.name, sum(len(d) for d in data.values()), source, len(errors)
@@ -305,3 +314,16 @@ class DataInterface(ProjectItem):
         d = super().item_dict()
         d["mappings"] = self.settings
         return d
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Data Connection":
+            self._toolbox.msg.emit(
+                "Link established. You can define mappings on data from "
+                "<b>{0}</b> using item <b>{1}</b>.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type == "Data Store":
+            # Does this type of link do anything?
+            self._toolbox.msg.emit("Link established.")
+        else:
+            super().notify_destination(source_item)

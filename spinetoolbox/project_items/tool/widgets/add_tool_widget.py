@@ -18,8 +18,7 @@ Widget shown to user when a new Tool is created.
 
 from PySide2.QtWidgets import QWidget, QStatusBar
 from PySide2.QtCore import Slot, Qt
-from project_items.tool.ui.add_tool import Ui_Form
-from config import STATUSBAR_SS, INVALID_CHARS
+from spinetoolbox.config import STATUSBAR_SS, INVALID_CHARS
 
 
 class AddToolWidget(QWidget):
@@ -33,6 +32,8 @@ class AddToolWidget(QWidget):
 
     def __init__(self, toolbox, x, y):
         """Initialize class."""
+        from ..ui.add_tool import Ui_Form
+
         super().__init__(parent=toolbox, f=Qt.Window)  # Setting parent inherits stylesheet
         self._toolbox = toolbox
         self._x = x
@@ -51,7 +52,7 @@ class AddToolWidget(QWidget):
         self.name = ''
         self.description = ''
         # Init
-        self.ui.comboBox_tool.setModel(self._toolbox.tool_template_model)
+        self.ui.comboBox_tool.setModel(self._toolbox.tool_specification_model)
         self.ui.lineEdit_name.setFocus()
         self.connect_signals()
         # Ensure this window gets garbage-collected when closed
@@ -66,7 +67,7 @@ class AddToolWidget(QWidget):
 
     @Slot(int, name='update_args')
     def update_args(self, row):
-        """Show Tool template command line arguments in text input.
+        """Show Tool specification command line arguments in text input.
 
         Args:
             row (int): Selected row number
@@ -75,7 +76,7 @@ class AddToolWidget(QWidget):
             # No Tool selected
             self.ui.lineEdit_tool_args.setText("")
             return
-        selected_tool = self._toolbox.tool_template_model.tool_template(row)
+        selected_tool = self._toolbox.tool_specification_model.tool_specification(row)
         args = selected_tool.cmdline_args
         if not args:
             # Tool cmdline_args is None if the line does not exist in Tool definition file

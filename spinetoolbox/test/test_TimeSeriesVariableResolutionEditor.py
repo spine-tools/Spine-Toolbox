@@ -19,7 +19,7 @@ Unit tests for the TimeSeriesVariableResolutionEditor widget.
 import unittest
 from PySide2.QtWidgets import QApplication
 from spinedb_api import TimeSeriesVariableResolution
-from widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
+from ..widgets.time_series_variable_resolution_editor import TimeSeriesVariableResolutionEditor
 
 
 class TestTimeSeriesVariableResolutionEditor(unittest.TestCase):

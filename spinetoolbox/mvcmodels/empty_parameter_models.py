@@ -17,8 +17,8 @@ Empty models for parameter definitions and values.
 """
 
 from PySide2.QtCore import Qt
-from helpers import busy_effect
-from mvcmodels.empty_row_model import EmptyRowModel
+from ..helpers import busy_effect
+from .empty_row_model import EmptyRowModel
 
 
 class EmptyParameterModel(EmptyRowModel):

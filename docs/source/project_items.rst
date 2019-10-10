@@ -11,6 +11,8 @@
    :width: 16
 .. |execute-selected| image:: ../../spinetoolbox/ui/resources/project_item_icons/play-circle-regular.svg
    :width: 16
+.. |gdx_export| image:: ../../spinetoolbox/ui/resources/project_item_icons/file-export-solid.svg
+   :width: 16
 .. |tool| image:: ../../spinetoolbox/ui/resources/project_item_icons/hammer.svg
    :width: 16
 .. |view| image:: ../../spinetoolbox/ui/resources/project_item_icons/binoculars.svg
@@ -48,7 +50,7 @@ Tool |tool|
 
 Tool is the heart of a DAG. It is usually the actual model to be executed in Spine Toolbox
 but can be an arbitrary script or executable as well.
-A tool is specified by its :ref:`template <Tool template editor>`.
+A tool is specified by its :ref:`specification <Tool specification editor>`.
 
 View |view|
 -----------
@@ -65,3 +67,9 @@ Data Interface |data_interface|
 -------------------------------
 
 This item provides mapping from tabulated data (comma separated values, Excel) to the Spine data model.
+
+Gdx Export |gdx_export|
+-----------------------
+
+This item exports databases contained in a *Data Store* into :literal:`.gdx` format for GAMS Tools.
+See :ref:`Importing and exporting data` for more information.

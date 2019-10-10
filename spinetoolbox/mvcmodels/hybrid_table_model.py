@@ -17,8 +17,8 @@ Contains a hybrid table model.
 """
 
 from PySide2.QtCore import Qt, Slot, QModelIndex
-from mvcmodels.minimal_table_model import MinimalTableModel
-from mvcmodels.empty_row_model import EmptyRowModel
+from .minimal_table_model import MinimalTableModel
+from .empty_row_model import EmptyRowModel
 
 
 class HybridTableModel(MinimalTableModel):

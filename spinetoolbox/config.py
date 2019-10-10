@@ -19,7 +19,7 @@ Application constants and style sheets
 import sys
 import os
 
-SPINE_TOOLBOX_VERSION = "0.3.1"
+SPINE_TOOLBOX_VERSION = "0.3.2"
 REQUIRED_SPINEDB_API_VERSION = "0.0.36"
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
@@ -31,46 +31,44 @@ INVALID_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*", "."]
 INVALID_FILENAME_CHARS = ["<", ">", ":", "\"", "/", "\\", "|", "?", "*"]
 
 # Paths to application, configuration file, default project and work dirs, and documentation index page
-if getattr(sys, "frozen", False):
-    APPLICATION_PATH = os.path.realpath(os.path.dirname(sys.executable))
-    DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "projects"))
-    DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, "work"))
-    DOCUMENTATION_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "docs", "html"))
-    PLUGINS_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, "plugins"))
+_frozen = getattr(sys, "frozen", False)
+_path_to_executable = os.path.dirname(sys.executable if _frozen else __file__)
+APPLICATION_PATH = os.path.realpath(_path_to_executable)
+_program_root = APPLICATION_PATH if _frozen else os.path.join(APPLICATION_PATH, os.path.pardir)
+DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(_program_root, "projects"))
+DEFAULT_WORK_DIR = os.path.abspath(os.path.join(_program_root, "work"))
+if _frozen:
+    DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "html"))
 else:
-    APPLICATION_PATH = os.path.realpath(os.path.dirname(__file__))
-    DEFAULT_PROJECT_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "projects"))
-    DEFAULT_WORK_DIR = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "work"))
-    DOCUMENTATION_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "docs", "build", "html"))
-    PLUGINS_PATH = os.path.abspath(os.path.join(APPLICATION_PATH, os.path.pardir, "plugins"))
+    DOCUMENTATION_PATH = os.path.abspath(os.path.join(_program_root, "docs", "build", "html"))
+PLUGINS_PATH = os.path.abspath(os.path.join(_program_root, "plugins"))
 
 # Tool output directory name
 TOOL_OUTPUT_DIR = "output"
 
+_on_windows = sys.platform == "win32"
+
+
+def _executable(name):
+    """Appends a .exe extension to `name` on Windows platform."""
+    if _on_windows:
+        return name + ".exe"
+    return name
+
 # GAMS
-if sys.platform != "win32":
-    GAMS_EXECUTABLE = "gams"
-    GAMSIDE_EXECUTABLE = "gamside"
-else:
-    GAMS_EXECUTABLE = "gams.exe"
-    GAMSIDE_EXECUTABLE = "gamside.exe"
+GAMS_EXECUTABLE = _executable("gams")
+GAMSIDE_EXECUTABLE = _executable("gamside")
 
 # Julia
-if sys.platform != "win32":
-    JULIA_EXECUTABLE = "julia"
-else:
-    JULIA_EXECUTABLE = "julia.exe"
+JULIA_EXECUTABLE = _executable("julia")
 
 # Python
-if sys.platform != "win32":
-    PYTHON_EXECUTABLE = "python3"
-else:
-    PYTHON_EXECUTABLE = "python.exe"
+PYTHON_EXECUTABLE = _executable("python" if _on_windows else "python3")
 
 # Tool types
 TOOL_TYPES = ["Julia", "Python", "GAMS", "Executable"]
 
-# Required and optional keywords for Tool template definition files
+# Required and optional keywords for Tool specification dictionaries
 REQUIRED_KEYS = ['name', 'tooltype', 'includes']
 OPTIONAL_KEYS = [
     'description',

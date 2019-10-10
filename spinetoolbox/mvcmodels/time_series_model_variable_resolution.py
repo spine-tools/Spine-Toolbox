@@ -19,7 +19,7 @@ A model for variable resolution time series, used by the parameter value editors
 import numpy as np
 from PySide2.QtCore import QModelIndex, Qt, Slot
 from spinedb_api import TimeSeriesVariableResolution
-from mvcmodels.indexed_value_table_model import IndexedValueTableModel
+from .indexed_value_table_model import IndexedValueTableModel
 
 
 class TimeSeriesModelVariableResolution(IndexedValueTableModel):

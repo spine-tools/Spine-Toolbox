@@ -27,7 +27,16 @@ from openpyxl.utils import get_column_letter
 
 import numpy as np
 
-from spinedb_api import import_data, from_database, TimeSeries, TimeSeriesVariableResolution, TimePattern, DateTime, Duration, to_database
+from spinedb_api import (
+    import_data,
+    from_database,
+    TimeSeries,
+    TimeSeriesVariableResolution,
+    TimePattern,
+    DateTime,
+    Duration,
+    to_database,
+)
 
 
 SheetData = namedtuple(

@@ -22,10 +22,10 @@ from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
 from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
-from widgets.toolbars import DraggableWidget
-from helpers import busy_effect
-from config import PYTHON_EXECUTABLE
-import qsubprocess
+from .toolbars import DraggableWidget
+from ..helpers import busy_effect
+from ..config import PYTHON_EXECUTABLE
+from .. import qsubprocess
 
 
 class PythonReplWidget(RichJupyterWidget):
@@ -282,13 +282,13 @@ class PythonReplWidget(RichJupyterWidget):
         except FileNotFoundError:
             self._toolbox.msg_error.emit("\tCouldn't find the Python executable specified by the Jupyter kernel")
             self._kernel_starting = False
-            return self.check_and_install_requirements()
+            return False
         except NoSuchKernel:  # kernelspecs for the selected kernel_name not available
             self._toolbox.msg_error.emit(
                 "\tCouldn't find the specified IPython kernel specs [{0}]".format(self.kernel_name)
             )
             self._kernel_starting = False
-            return self.check_and_install_requirements()
+            return False
 
     def execute_instance(self, commands):
         """Start executing the first command in the command queue in Python Console."""

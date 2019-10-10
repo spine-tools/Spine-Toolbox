@@ -53,20 +53,20 @@ General settings
 GAMS settings
 =============
 
-- **GAMS program** Path to Gams executable you wish to use to execute GAMS Tool templates. Leave this blank to use
+- **GAMS program** Path to Gams executable you wish to use to execute GAMS Tool specifications. Leave this blank to use
   the system GAMS i.e. GAMS set up in your system PATH variable.
 
 Julia settings
 ==============
 
-- **Julia executable** Path to Julia executable you wish to use to execute Julia Tool templates. This is the Julia
-  that will be used in the embedded Julia Console and also the Julia that is used when executing Julia Tool templates
+- **Julia executable** Path to Julia executable you wish to use to execute Julia Tool specifications. This is the Julia
+  that will be used in the embedded Julia Console and also the Julia that is used when executing Julia Tool specifications
   as in the shell. Leave this blank, if you wish to use the system Julia.
 
 - **Julia home project** Set the Julia home project here.
 
-- **Use embedded Julia Console** Check this box to execute Julia Tool templates in the built-in Julia Console. If
-  you leave this un-checked, Julia Tool templates will be executed as in the shell. For example, on Windows this
+- **Use embedded Julia Console** Check this box to execute Julia Tool specifications in the built-in Julia Console. If
+  you leave this un-checked, Julia Tool specifications will be executed as in the shell. For example, on Windows this
   would be the equivalent as running command ``julia.exe example_script.jl`` in the command prompt. If you decide
   to use the embedded Julia Console, the ``example_script.jl`` is *included* into the console and executed there.
   It is highly recommended to use the embedded Julia Console, since this gives significant performance improvements
@@ -75,12 +75,12 @@ Julia settings
 Python settings
 ===============
 
-- **Python interpreter** Path to Python executable you wish to use to execute Python Tool templates. This is the
+- **Python interpreter** Path to Python executable you wish to use to execute Python Tool specifications. This is the
   Python that will be used in the embedded Python Console and also the Python that is used when executing Python
-  Tool templates as in the shell. Leave this blank, if you wish to use the system Python.
+  Tool specifications as in the shell. Leave this blank, if you wish to use the system Python.
 
-- **Use embedded Python Console** Check this box to execute Python Tool templates in the embedded iPython Console.
-  If you un-check this box, Python Tool templates will be executed as in the shell. For example, on Windows this
+- **Use embedded Python Console** Check this box to execute Python Tool specifications in the embedded iPython Console.
+  If you un-check this box, Python Tool specifications will be executed as in the shell. For example, on Windows this
   would be the equivalent as running command ``python.exe script.py`` in the command prompt. If you decide to use
   the embedded Python Console, the ``script.py`` is executed there.
 

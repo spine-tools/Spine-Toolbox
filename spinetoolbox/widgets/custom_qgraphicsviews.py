@@ -21,9 +21,9 @@ import math
 from PySide2.QtWidgets import QGraphicsView
 from PySide2.QtGui import QCursor
 from PySide2.QtCore import Signal, Slot, Qt, QRectF, QTimeLine, QMarginsF
-from graphics_items import LinkDrawer, Link
-from widgets.custom_qlistview import DragListView
-from widgets.custom_qgraphicsscene import CustomQGraphicsScene
+from ..graphics_items import LinkDrawer, Link
+from .custom_qlistview import DragListView
+from .custom_qgraphicsscene import CustomQGraphicsScene
 
 
 class CustomQGraphicsView(QGraphicsView):
@@ -441,10 +441,10 @@ class DesignQGraphicsView(CustomQGraphicsView):
             self.dst_item_name = self.dst_connector.parent_name()
             # create connection
             self.add_link(self.src_connector, self.dst_connector)
-            self.emit_connection_information_message()
+            self.notify_destination_items()
 
-    def emit_connection_information_message(self):
-        """Inform user about what connections are implemented and how they work."""
+    def notify_destination_items(self):
+        """Notify destination items that they have been connected to a source item."""
         if self.src_item_name == self.dst_item_name:
             self._toolbox.msg_warning.emit("Link established. Feedback link functionality not implemented.")
         else:
@@ -456,49 +456,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
             if not dst_index:
                 logging.error("Item %s not found", self.dst_item_name)
                 return
-            src_item_type = self._project_item_model.project_item(src_index).item_type
-            dst_item_type = self._project_item_model.project_item(dst_index).item_type
-            if src_item_type == "Data Connection" and dst_item_type == "Tool":
-                self._toolbox.msg.emit(
-                    "Link established. Tool <b>{0}</b> will look for input "
-                    "files from <b>{1}</b>'s references and data directory.".format(
-                        self.dst_item_name, self.src_item_name
-                    )
-                )
-            elif src_item_type == "Data Store" and dst_item_type == "Tool":
-                self._toolbox.msg.emit(
-                    "Link established. Data Store <b>{0}</b> reference will "
-                    "be passed to Tool <b>{1}</b> when executing.".format(self.src_item_name, self.dst_item_name)
-                )
-            elif src_item_type == "Tool" and dst_item_type in ["Data Connection", "Data Store"]:
-                self._toolbox.msg.emit(
-                    "Link established. Tool <b>{0}</b> output files will be "
-                    "passed to item <b>{1}</b> after execution.".format(self.src_item_name, self.dst_item_name)
-                )
-            elif src_item_type in ["Data Connection", "Data Store", "Data Interface"] and dst_item_type in [
-                "Data Connection",
-                "Data Store",
-                "Data Interface",
-            ]:
-                self._toolbox.msg.emit("Link established")
-            elif src_item_type == "Tool" and dst_item_type == "View":
-                self._toolbox.msg_warning.emit(
-                    "Link established. You can visualize the ouput from Tool "
-                    "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
-                )
-            elif src_item_type == "Data Store" and dst_item_type == "View":
-                self._toolbox.msg_warning.emit(
-                    "Link established. You can visualize Data Store "
-                    "<b>{0}</b> in View <b>{1}</b>.".format(self.src_item_name, self.dst_item_name)
-                )
-            elif src_item_type == "Tool" and dst_item_type == "Tool":
-                self._toolbox.msg_warning.emit("Link established.")
-            else:
-                self._toolbox.msg_warning.emit(
-                    "Link established. Interaction between a "
-                    "<b>{0}</b> and a <b>{1}</b> has not been "
-                    "implemented yet.".format(src_item_type, dst_item_type)
-                )
+            src_item = self._project_item_model.project_item(src_index)
+            dst_item = self._project_item_model.project_item(dst_index)
+            dst_item.notify_destination(src_item)
 
 
 class GraphQGraphicsView(CustomQGraphicsView):

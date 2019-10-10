@@ -20,8 +20,8 @@ import os
 import sys
 import shutil
 from PySide2.QtCore import QObject, Signal, Slot
-import qsubprocess
-from config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
+from . import qsubprocess
+from .config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 
 
 class ToolInstance(QObject):
@@ -225,24 +225,24 @@ class JuliaToolInstance(ToolInstance):
         """Handles repl-execution finished.
 
         Args:
-            ret (int)
+            ret (int): Tool specification process return value
         """
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
                 # TODO: This should be a choice given to the user. It's a bit confusing now.
                 self._toolbox.msg.emit("")
-                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
+                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool specification")
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
                 self.tool_process.start_process(workdir=self.basedir)
                 return
             try:
-                return_msg = self.tool_template.return_codes[ret]
+                return_msg = self.tool_specification.return_codes[ret]
                 self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process = None
         self.instance_finished_signal.emit(ret)
 
@@ -251,7 +251,7 @@ class JuliaToolInstance(ToolInstance):
         """Handles execution finished.
 
         Args:
-            ret (int)
+            ret (int): Tool specification process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.handle_execution_finished)
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -262,12 +262,12 @@ class JuliaToolInstance(ToolInstance):
                 )
             else:
                 try:
-                    return_msg = self.tool_template.return_codes[ret]
+                    return_msg = self.tool_specification.return_codes[ret]
                     self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.instance_finished_signal.emit(ret)
@@ -342,24 +342,24 @@ class PythonToolInstance(ToolInstance):
         """Handles console-execution finished.
 
         Args:
-            ret (int)
+            ret (int): Tool specification process return value
         """
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
                 # TODO: This should be a choice given to the user. It's a bit confusing now.
                 self._toolbox.msg.emit("")
-                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool template")
+                self._toolbox.msg_warning.emit("\tSpawning a new process for executing the Tool specification")
                 self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
                 self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
                 self.tool_process.start_process(workdir=self.basedir)
                 return
             try:
-                return_msg = self.tool_template.return_codes[ret]
+                return_msg = self.tool_specification.return_codes[ret]
                 self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
             except KeyError:
                 self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process = None
         self.instance_finished_signal.emit(ret)
 
@@ -368,7 +368,7 @@ class PythonToolInstance(ToolInstance):
         """Handles execution finished.
 
         Args:
-            ret (int)
+            ret (int): Tool specification process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.handle_execution_finished)
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -379,12 +379,12 @@ class PythonToolInstance(ToolInstance):
                 )
             else:
                 try:
-                    return_msg = self.tool_template.return_codes[ret]
+                    return_msg = self.tool_specification.return_codes[ret]
                     self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.instance_finished_signal.emit(ret)
@@ -422,7 +422,7 @@ class ExecutableToolInstance(ToolInstance):
         """Handles execution finished.
 
         Args:
-            ret (int)
+            ret (int): Tool specification process return value
         """
         self.tool_process.subprocess_finished_signal.disconnect(self.handle_execution_finished)
         if self.tool_process.process_failed:  # process_failed should be True if ret != 0
@@ -430,12 +430,12 @@ class ExecutableToolInstance(ToolInstance):
                 self._toolbox.msg_error.emit("\t<b>{0}</b> failed to start.".format(self.tool_process.program()))
             else:
                 try:
-                    return_msg = self.tool_template.return_codes[ret]
+                    return_msg = self.tool_specification.return_codes[ret]
                     self._toolbox.msg_error.emit("\t<b>{0}</b> [exit code:{1}]".format(return_msg, ret))
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.instance_finished_signal.emit(ret)

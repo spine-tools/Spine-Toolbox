@@ -804,17 +804,17 @@
   <customwidget>
    <class>AutoFilterCopyPasteTableView</class>
    <extends>QTableView</extends>
-   <header>widgets/custom_qtableview.h</header>
+   <header>spinetoolbox/widgets/custom_qtableview.h</header>
   </customwidget>
   <customwidget>
    <class>ObjectTreeView</class>
    <extends>QTreeView</extends>
-   <header>widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
   <customwidget>
    <class>CopyTreeView</class>
    <extends>QTreeView</extends>
-   <header>widgets/custom_qtreeview.h</header>
+   <header>spinetoolbox/widgets/custom_qtreeview.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>

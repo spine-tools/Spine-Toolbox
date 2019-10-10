@@ -23,10 +23,10 @@ import pathlib
 from PySide2.QtCore import Slot, QUrl, QFileSystemWatcher, Qt, QFileInfo
 from PySide2.QtGui import QDesktopServices, QStandardItem, QStandardItemModel, QIcon, QPixmap
 from PySide2.QtWidgets import QFileDialog, QStyle, QFileIconProvider, QInputDialog, QMessageBox
-from project_item import ProjectItem, ProjectItemResource
-from widgets.spine_datapackage_widget import SpineDatapackageWidget
-from helpers import busy_effect
-from config import APPLICATION_PATH, INVALID_FILENAME_CHARS
+from spinetoolbox.project_item import ProjectItem, ProjectItemResource
+from spinetoolbox.widgets.spine_datapackage_widget import SpineDatapackageWidget
+from spinetoolbox.helpers import busy_effect
+from spinetoolbox.config import APPLICATION_PATH, INVALID_FILENAME_CHARS
 
 
 class DataConnection(ProjectItem):
@@ -37,12 +37,11 @@ class DataConnection(ProjectItem):
             toolbox (ToolboxUI): QMainWindow instance
             name (str): Object name
             description (str): Object description
-            x (int): Initial X coordinate of item icon
-            y (int): Initial Y coordinate of item icon
+            x (float): Initial X coordinate of item icon
+            y (float): Initial Y coordinate of item icon
             references (list): List of file references
         """
-        super().__init__(toolbox, name, description, x, y)
-        self.item_type = "Data Connection"
+        super().__init__(toolbox, "Data Connection", name, description, x, y)
         self.reference_model = QStandardItemModel()  # References to files
         self.data_model = QStandardItemModel()  # Paths of project internal files. These are found in DC data directory
         self.datapackage_icon = QIcon(QPixmap(":/icons/datapkg.png"))
@@ -382,7 +381,7 @@ class DataConnection(ProjectItem):
         # Update Data Connection based on project items that are already executed
         # Add previously executed Tool's output file paths to references
         tool_output_files = [
-            r for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
+            r.path for r in inst.available_resources(self.name) if r.type_ == "file" and r.metadata.get("is_output")
         ]
         self.references += tool_output_files
         self.populate_reference_list(self.references, emit_item_changed=False)
@@ -419,3 +418,16 @@ class DataConnection(ProjectItem):
         Closes the SpineDatapackageWidget instances opened."""
         if self.spine_datapackage_form:
             self.spine_datapackage_form.close()
+
+    def notify_destination(self, source_item):
+        """See base class."""
+        if source_item.item_type == "Tool":
+            self._toolbox.msg.emit(
+                "Link established. Tool <b>{0}</b> output files will be "
+                "passed as references to item <b>{1}</b> after execution.".format(source_item.name, self.name)
+            )
+        elif source_item.item_type in ["Data Store", "Data Interface"]:
+            # Does this type of link do anything?
+            self._toolbox.msg.emit("Link established.")
+        else:
+            super().notify_destination(source_item)

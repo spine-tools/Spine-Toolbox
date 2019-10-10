@@ -31,7 +31,7 @@ from spinedb_api import (
     TimePattern,
 )
 import numpy as np
-from excel_import_export import (
+from ..excel_import_export import (
     stack_list_of_tuples,
     unstack_list_of_tuples,
     validate_sheet,
@@ -463,9 +463,9 @@ class TestExcelImport(unittest.TestCase):
             self.assertEqual(set(d1.objects), set(d2.objects))
         self.assertEqual(d1.class_type, d2.class_type)
 
-    @mock.patch('excel_import_export.load_workbook')
-    @mock.patch('excel_import_export.read_parameter_sheet')
-    @mock.patch('excel_import_export.read_json_sheet')
+    @mock.patch('spinetoolbox.excel_import_export.load_workbook')
+    @mock.patch('spinetoolbox.excel_import_export.read_parameter_sheet')
+    @mock.patch('spinetoolbox.excel_import_export.read_json_sheet')
     def test_read_spine_xlsx(self, mock_read_json_sheet, mock_read_parameter_sheet, mock_load_workbook):
         # workbook mock
         wb_dict = {
@@ -648,7 +648,7 @@ class TestExcelImport(unittest.TestCase):
             'relationship',
         )
 
-        with mock.patch('excel_import_export.read_2d') as mock_read_2d:
+        with mock.patch('spinetoolbox.excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = self.data_class_rel
             out_data = read_json_sheet(ws, 'relationship')
         self.assertEqualSheetData(test_data, out_data)
@@ -670,7 +670,7 @@ class TestExcelImport(unittest.TestCase):
             'object',
         )
 
-        with mock.patch('excel_import_export.read_2d') as mock_read_2d:
+        with mock.patch('spinetoolbox.excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = self.data_class_obj
             out_data = read_json_sheet(ws, 'object')
         self.assertEqualSheetData(test_data, out_data)
@@ -694,7 +694,7 @@ class TestExcelImport(unittest.TestCase):
             'object',
         )
 
-        with mock.patch('excel_import_export.read_2d') as mock_read_2d:
+        with mock.patch('spinetoolbox.excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = [self.data_class_obj, self.data_obj]
             out_data = read_parameter_sheet(ws)
         self.assertEqualSheetData(test_data, out_data)
@@ -718,7 +718,7 @@ class TestExcelImport(unittest.TestCase):
             'relationship',
         )
 
-        with mock.patch('excel_import_export.read_2d') as mock_read_2d:
+        with mock.patch('spinetoolbox.excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = [self.data_class_rel, self.data_rel]
             out_data = read_parameter_sheet(ws)
         self.assertEqualSheetData(test_data, out_data)
@@ -750,7 +750,7 @@ class TestExcelImport(unittest.TestCase):
             'relationship',
         )
 
-        with mock.patch('excel_import_export.read_2d') as mock_read_2d:
+        with mock.patch('spinetoolbox.excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = [self.data_class_rel, self.data_rel]
             out_data = read_parameter_sheet(ws)
         self.assertEqualSheetData(test_data, out_data)
@@ -779,14 +779,14 @@ class TestExcelImport(unittest.TestCase):
             'object',
         )
 
-        with mock.patch('excel_import_export.read_2d') as mock_read_2d:
+        with mock.patch('spinetoolbox.excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.side_effect = [self.data_class_obj, self.data_obj]
             out_data = read_parameter_sheet(ws)
         self.assertEqualSheetData(test_data, out_data)
 
     def test_validate_sheet_valid_relationship(self):
         """Test that a valid sheet with relationship as sheet_type will return true"""
-        with mock.patch('excel_import_export.read_2d') as mock_read_2d:
+        with mock.patch('spinetoolbox.excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.return_value = [['obj_class1', 'obj_class2']]
             ws_mock = self.ws_rel
             self.assertTrue(validate_sheet(ws_mock))
@@ -803,7 +803,7 @@ class TestExcelImport(unittest.TestCase):
         """Test that an invalid sheet with relationship as sheet_type will return false"""
         ws_mock = self.ws_rel
         # check invalid type
-        with mock.patch('excel_import_export.read_2d') as mock_read_2d:
+        with mock.patch('spinetoolbox.excel_import_export.read_2d') as mock_read_2d:
             mock_read_2d.return_value = [['obj_class1', 'obj_class2']]
             # wrong relationship name
             ws_mock['C2'].value = ''

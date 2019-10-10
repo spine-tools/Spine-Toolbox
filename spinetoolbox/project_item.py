@@ -18,13 +18,14 @@ BaseProjectItem and ProjectItem classes.
 
 import os
 import logging
-from PySide2.QtCore import Qt, Signal, QUrl
+from urllib.parse import urlparse
+from urllib.request import url2pathname
+from PySide2.QtCore import Qt, Signal, Slot, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
-from urllib.parse import urlparse
-from widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
-from metaobject import MetaObject
-from helpers import create_dir
+from .helpers import create_dir
+from .metaobject import MetaObject
+from .widgets.custom_menus import CategoryProjectItemContextMenu, ProjectItemContextMenu
 
 
 class BaseProjectItem(MetaObject):
@@ -105,7 +106,7 @@ class BaseProjectItem(MetaObject):
             parent (QWidget): The widget that is controlling the menu
             pos (QPoint): Position on screen
         """
-        return NotImplemented
+        raise NotImplementedError()
 
     def apply_context_menu_action(self, parent, action):
         """Applies given action from context menu. Implement in subclasses as needed.
@@ -114,6 +115,7 @@ class BaseProjectItem(MetaObject):
             parent (QWidget): The widget that is controlling the menu
             action (str): The selected action
         """
+        raise NotImplementedError()
 
 
 class RootProjectItem(BaseProjectItem):
@@ -214,20 +216,25 @@ class ProjectItem(BaseProjectItem):
     These items can be executed, refreshed, and so on.
 
     Attributes:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Item name
-        description (str): Item description
-        x (int): horizontal position in the screen
-        y (int): vertical position in the screen
+        x (float): horizontal position in the screen
+        y (float): vertical position in the screen
     """
 
     item_changed = Signal(name="item_changed")
-    """This is a class attribute."""
 
-    def __init__(self, toolbox, name, description, x, y):
-        """Class constructor."""
+    def __init__(self, toolbox, item_type, name, description, x, y):
+        """
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            item_type (str): item type identifier
+            name (str): item name
+            description (str): item description
+            x (float): horizontal position on the scene
+            y (float): vertical position on the scene
+        """
         super().__init__(name, description)
         self._toolbox = toolbox
+        self._item_type = item_type
         self._project = self._toolbox.project()
         self.x = x
         self.y = y
@@ -242,6 +249,11 @@ class ProjectItem(BaseProjectItem):
             self._toolbox.msg_error.emit(
                 "[OSError] Creating directory {0} failed." " Check permissions.".format(self.data_dir)
             )
+
+    @property
+    def item_type(self):
+        """Item's type identifier string."""
+        return self._item_type
 
     def flags(self):
         """Returns the item flags."""
@@ -386,6 +398,30 @@ class ProjectItem(BaseProjectItem):
         Implement in subclasses to eg close all QMainWindows opened by this item.
         """
 
+    def update_name_label(self):
+        """
+        Updates the name label on the properties widget when renaming an item.
+
+        Must be reimplemented by subclasses.
+        """
+        raise NotImplementedError()
+
+    def notify_destination(self, source_item):
+        """
+        Informs an item that it has become the destination of a connection between two items.
+
+        The default implementation logs a warning message. Subclasses should reimplement this if they need
+        more specific behavior.
+
+        Args:
+            source_item (ProjectItem): connection source item
+        """
+        self._toolbox.msg_warning.emit(
+            "Link established. Interaction between a "
+            "<b>{0}</b> and a <b>{1}</b> has not been "
+            "implemented yet.".format(source_item.item_type, self.item_type)
+        )
+
 
 class ProjectItemResource:
     """Class to hold a resource made available by a project item
@@ -435,8 +471,8 @@ class ProjectItemResource:
 
     @property
     def path(self):
-        """Returns the resource path, as obtained from parsing the url."""
-        return self.parsed_url.path
+        """Returns the resource path in the local syntax, as obtained from parsing the url."""
+        return url2pathname(self.parsed_url.path)
 
     @property
     def scheme(self):

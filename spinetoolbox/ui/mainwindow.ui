@@ -520,7 +520,7 @@
             <enum>QFrame::NoFrame</enum>
            </property>
            <property name="text">
-            <string>Tool templates</string>
+            <string>Tool specifications</string>
            </property>
            <property name="indent">
             <number>-1</number>
@@ -528,12 +528,12 @@
           </widget>
          </item>
          <item>
-          <widget class="QListView" name="listView_tool_templates">
+          <widget class="QListView" name="listView_tool_specifications">
            <property name="contextMenuPolicy">
             <enum>Qt::CustomContextMenu</enum>
            </property>
            <property name="toolTip">
-            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool Templates available in this project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Tool specifications available in this project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
           </widget>
          </item>
@@ -544,7 +544,7 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
-        <widget class="QToolButton" name="toolButton_add_tool_template">
+        <widget class="QToolButton" name="toolButton_add_tool_specification">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -564,7 +564,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new or add an existing Tool template to project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Create new or add an existing Tool specification to project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="icon">
           <iconset resource="resources/resources_icons.qrc">
@@ -576,7 +576,7 @@
         </widget>
        </item>
        <item>
-        <widget class="QToolButton" name="toolButton_remove_tool_template">
+        <widget class="QToolButton" name="toolButton_remove_tool_specification">
          <property name="sizePolicy">
           <sizepolicy hsizetype="Fixed" vsizetype="Fixed">
            <horstretch>0</horstretch>
@@ -596,7 +596,7 @@
           </size>
          </property>
          <property name="toolTip">
-          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove (selected) Tool template from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+          <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Remove (selected) Tool specification from project&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="icon">
           <iconset resource="resources/resources_icons.qrc">
@@ -935,19 +935,19 @@
   <customwidget>
    <class>CustomQTextBrowser</class>
    <extends>QTextBrowser</extends>
-   <header>widgets/custom_qtextbrowser.h</header>
+   <header>spinetoolbox/widgets/custom_qtextbrowser.h</header>
   </customwidget>
   <customwidget>
    <class>DesignQGraphicsView</class>
    <extends>QGraphicsView</extends>
-   <header>widgets/custom_qgraphicsviews.h</header>
+   <header>spinetoolbox/widgets/custom_qgraphicsviews.h</header>
   </customwidget>
  </customwidgets>
  <tabstops>
   <tabstop>treeView_project</tabstop>
-  <tabstop>listView_tool_templates</tabstop>
-  <tabstop>toolButton_add_tool_template</tabstop>
-  <tabstop>toolButton_remove_tool_template</tabstop>
+  <tabstop>listView_tool_specifications</tabstop>
+  <tabstop>toolButton_add_tool_specification</tabstop>
+  <tabstop>toolButton_remove_tool_specification</tabstop>
   <tabstop>graphicsView</tabstop>
   <tabstop>textBrowser_eventlog</tabstop>
   <tabstop>textBrowser_process_output</tabstop>

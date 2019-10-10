@@ -16,11 +16,10 @@ View plugin.
 :date:   12.9.2019
 """
 
-from project_items.view.ui.view_properties import Ui_Form
-from project_items.view.view import View
-from project_items.view.view_icon import ViewIcon
-from project_items.view.widgets.view_properties_widget import ViewPropertiesWidget
-from project_items.view.widgets.add_view_widget import AddViewWidget
+from .view import View
+from .view_icon import ViewIcon
+from .widgets.view_properties_widget import ViewPropertiesWidget
+from .widgets.add_view_widget import AddViewWidget
 
 item_rank = 3
 item_category = "Views"

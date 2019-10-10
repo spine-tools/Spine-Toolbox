@@ -20,7 +20,7 @@ from enum import Enum
 from collections import defaultdict
 import sys
 from PySide2.QtWidgets import QFileDialog
-from spine_io.io_api import SourceConnection
+from ..io_api import SourceConnection
 
 IMPORT_ERROR = ""
 try:
@@ -55,9 +55,7 @@ def select_gdx_file(parent=None):
 
 
 class GdxConnector(SourceConnection):
-    """
-    Template class to read data from another QThread
-    """
+    """Template class to read data from another QThread."""
 
     # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Gdx"
@@ -124,15 +122,14 @@ class GdxConnector(SourceConnection):
     def get_tables(self):
         """Method that should return a list of table names, list(str)
 
-        Raises:
-            NotImplementedError: [description]
+        Returns:
+            list(str): Table names in list
         """
         tables = []
         _ret, symbol_count, _element_count = gdxcc.gdxSystemInfo(self._handle)
         for i in range(symbol_count):
             _ret, name, _dims, _data_type = gdxcc.gdxSymbolInfo(self._handle, i)
             tables.append(name)
-
         return tables
 
     def get_data_iterator(self, table, options, max_rows=-1):

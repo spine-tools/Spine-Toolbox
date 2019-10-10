@@ -19,9 +19,8 @@ Data connection properties widget.
 import os
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, Slot, QUrl
-from project_items.data_connection.ui.data_connection_properties import Ui_Form
-from project_items.data_connection.widgets.custom_menus import DcRefContextMenu, DcDataContextMenu
-from config import TREEVIEW_HEADER_SS
+from .custom_menus import DcRefContextMenu, DcDataContextMenu
+from spinetoolbox.config import TREEVIEW_HEADER_SS
 
 
 class DataConnectionPropertiesWidget(QWidget):
@@ -33,6 +32,8 @@ class DataConnectionPropertiesWidget(QWidget):
 
     def __init__(self, toolbox):
         """Init class."""
+        from ..ui.data_connection_properties import Ui_Form
+
         super().__init__()
         self._toolbox = toolbox
         self.ui = Ui_Form()
