@@ -312,7 +312,7 @@ class DataInterface(ProjectItem):
                 "Link established. You can define mappings on data from "
                 "<b>{0}</b> using item <b>{1}</b>.".format(source_item.name, self.name)
             )
-        if source_item.item_type == "Data Store":
+        elif source_item.item_type == "Data Store":
             # Does this type of link do anything?
             self._toolbox.msg.emit("Link established.")
         else:

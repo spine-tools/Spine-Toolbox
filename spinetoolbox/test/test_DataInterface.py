@@ -68,7 +68,10 @@ class TestDataInterface(unittest.TestCase):
             item = DataInterface(toolbox, "name", "description", {}, 0.0, 0.0)
             source_item = _MockItem("Data Connection", "source name")
             item.notify_destination(source_item)
-            self.assertEqual(toolbox.msg.text, "Link established.")
+            self.assertEqual(
+                toolbox.msg.text,
+                "Link established. You can define mappings on data from <b>source name</b> using item <b>name</b>.",
+            )
             toolbox.reset_messages()
             source_item.item_type = "Data Store"
             item.notify_destination(source_item)
