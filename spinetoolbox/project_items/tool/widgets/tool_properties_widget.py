@@ -56,7 +56,9 @@ class ToolPropertiesWidget(QWidget):
         Args:
             pos (QPoint): Mouse position
         """
-        ind = self.ui.treeView_specification.indexAt(pos)  # Index of selected QStandardItem in Tool properties tree view.
+        ind = self.ui.treeView_specification.indexAt(
+            pos
+        )  # Index of selected QStandardItem in Tool properties tree view.
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Tool
         tool = self._toolbox.project_item_model.project_item(curr_index)
         if not tool.tool_specification():

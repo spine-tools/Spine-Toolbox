@@ -33,6 +33,7 @@ class DataInterfacePropertiesWidget(QWidget):
         """Init class."""
         super().__init__()
         from ..ui.data_interface_properties import Ui_Form
+
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)

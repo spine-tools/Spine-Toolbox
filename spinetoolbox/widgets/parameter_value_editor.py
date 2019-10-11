@@ -68,6 +68,7 @@ class ParameterValueEditor(QDialog):
 
     def __init__(self, parent_index, value_name="", value=None, parent_widget=None):
         from ..ui.parameter_value_editor import Ui_ParameterValueEditor
+
         super().__init__(parent_widget)
         self._parent_model = parent_index.model()
         self._parent_index = parent_index
@@ -125,8 +126,8 @@ class ParameterValueEditor(QDialog):
         """
         old_index = self._ui.editor_stack.currentIndex()
         if (
-                selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION.value
-                and old_index == _Editor.TIME_SERIES_FIXED_RESOLUTION.value
+            selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION.value
+            and old_index == _Editor.TIME_SERIES_FIXED_RESOLUTION.value
         ):
             fixed_resolution_value = self._time_series_fixed_resolution_editor.value()
             stamps = fixed_resolution_value.indexes
@@ -136,8 +137,8 @@ class ParameterValueEditor(QDialog):
             )
             self._time_series_variable_resolution_editor.set_value(variable_resolution_value)
         elif (
-                selector_index == _Editor.TIME_SERIES_FIXED_RESOLUTION
-                and old_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION
+            selector_index == _Editor.TIME_SERIES_FIXED_RESOLUTION
+            and old_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION
         ):
             variable_resolution_value = self._time_series_variable_resolution_editor.value()
             stamps = variable_resolution_value.indexes

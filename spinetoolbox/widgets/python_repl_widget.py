@@ -167,7 +167,9 @@ class PythonReplWidget(RichJupyterWidget):
                 "IPython kernel specifications for the selected environment are missing. "
                 "<p>Do you want to install kernel <b>{0}</b> specifications now?</p>".format(self.kernel_name)
             )
-            message_box = QMessageBox(QMessageBox.Question, "Kernel Specs Missing", message, QMessageBox.Ok | QMessageBox.Cancel)
+            message_box = QMessageBox(
+                QMessageBox.Question, "Kernel Specs Missing", message, QMessageBox.Ok | QMessageBox.Cancel
+            )
             message_box.button(QMessageBox.Ok).setText("Install specifications")
             answer = message_box.exec_()
             if answer == QMessageBox.Cancel:

@@ -55,6 +55,7 @@ def _executable(name):
         return name + ".exe"
     return name
 
+
 # GAMS
 GAMS_EXECUTABLE = _executable("gams")
 GAMSIDE_EXECUTABLE = _executable("gamside")

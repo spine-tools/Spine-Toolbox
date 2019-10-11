@@ -53,6 +53,7 @@ class DatetimeEditor(QWidget):
 
     def __init__(self, parent=None):
         from ..ui.datetime_editor import Ui_DatetimeEditor
+
         super().__init__(parent)
         self._value = DateTime("2000-01-01")
         self._ui = Ui_DatetimeEditor()
