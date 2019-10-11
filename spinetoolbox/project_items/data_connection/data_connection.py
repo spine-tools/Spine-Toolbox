@@ -289,7 +289,9 @@ class DataConnection(ProjectItem):
             "Are you sure?".format(files)
         )
         title = "Remove {0} File(s)".format(len(file_list))
-        message_box = QMessageBox(QMessageBox.Question, title, msg, QMessageBox.Ok | QMessageBox.Cancel)
+        message_box = QMessageBox(
+            QMessageBox.Question, title, msg, QMessageBox.Ok | QMessageBox.Cancel, parent=self._toolbox
+        )
         message_box.button(QMessageBox.Ok).setText("Remove Files")
         answer = message_box.exec_()
         if answer == QMessageBox.Cancel:

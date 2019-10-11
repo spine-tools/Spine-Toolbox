@@ -18,7 +18,7 @@ Classes for custom context menus and pop-up menus.
 
 import os
 from operator import itemgetter
-from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QMessageBox, QWidget
+from PySide2.QtWidgets import QMenu, QWidgetAction, QAction, QWidget
 from PySide2.QtGui import QIcon
 from PySide2.QtCore import Qt, Signal, Slot, QPoint
 from ..helpers import fix_name_ambiguity, tuple_itemgetter
@@ -26,14 +26,6 @@ from ..plotting import plot_pivot_column, plot_selection, PlottingError, PivotTa
 from .custom_qwidgets import FilterWidget
 from .parameter_value_editor import ParameterValueEditor
 from .report_plotting_failure import report_plotting_failure
-
-
-def handle_plotting_failure(error):
-    """Reports a PlottingError exception to the user."""
-    errorBox = QMessageBox()
-    errorBox.setWindowTitle("Plotting failed")
-    errorBox.setText(error.message)
-    errorBox.exec_()
 
 
 class CustomContextMenu(QMenu):
@@ -742,7 +734,7 @@ class PivotTableModelMenu(QMenu):
         try:
             plot_window = plot_selection(self._model, selected_indexes, hints)
         except PlottingError as error:
-            report_plotting_failure(error)
+            report_plotting_failure(error, self)
             return
         plotted_column_names = set()
         for index in selected_indexes:
@@ -824,7 +816,7 @@ class PivotTableHorizontalHeaderMenu(QMenu):
             support = PivotTablePlottingHints()
             plot_window = plot_pivot_column(self._model, self._model_index.column(), support)
         except PlottingError as error:
-            report_plotting_failure(error)
+            report_plotting_failure(error, self)
             return
         plot_window.setWindowTitle(
             "Plot    -- {} --".format(support.column_label(self._model, self._model_index.column()))

@@ -1325,7 +1325,7 @@ class ToolboxUI(QMainWindow):
         Returns:
             True if exit should proceed, False if user cancelled
         """
-        msg = QMessageBox()
+        msg = QMessageBox(parent=self)
         msg.setIcon(QMessageBox.Question)
         msg.setWindowTitle("Confirm exit")
         msg.setText("Are you sure you want to exit Spine Toolbox?")
@@ -1352,7 +1352,7 @@ class ToolboxUI(QMainWindow):
         Returns:
             True if exiting should proceed, False if user cancelled
         """
-        msg = QMessageBox()
+        msg = QMessageBox(parent=self)
         msg.setIcon(QMessageBox.Question)
         msg.setWindowTitle("Save project before exiting")
         msg.setText("Exiting Spine Toolbox. Save changes to project?")

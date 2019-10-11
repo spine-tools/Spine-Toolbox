@@ -299,7 +299,7 @@ class SpineDatapackageWidget(QMainWindow):
                 os.path.basename(self._data_connection.data_dir)
             )
             message_box = QMessageBox(
-                QMessageBox.Question, "Replace 'datapackage.json", msg, QMessageBox.Ok | QMessageBox.Cancel
+                QMessageBox.Question, "Replace 'datapackage.json", msg, QMessageBox.Ok | QMessageBox.Cancel, parent=self
             )
             message_box.button(QMessageBox.Ok).setText("Replace File")
             answer = message_box.exec_()

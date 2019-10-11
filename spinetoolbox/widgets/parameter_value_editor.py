@@ -106,10 +106,8 @@ class ParameterValueEditor(QDialog):
         try:
             self._parent_model.setData(self._parent_index, to_database(editor.value()))
         except ParameterValueFormatError as error:
-            message_box = QMessageBox()
-            message_box.setWindowTitle("Parameter value error")
-            message_box.setText("Cannot set value: {}".format(error))
-            message_box.exec_()
+            message = "Cannot set value: {}".format(error)
+            QMessageBox.warning(self, "Parameter Value error", message)
             return
         self.close()
 
@@ -186,9 +184,6 @@ class ParameterValueEditor(QDialog):
 
     def _warn_and_select_default_view(self, message):
         """Displays a warning dialog and opens the default editor widget after user clicks OK."""
-        message_box = QMessageBox()
-        message_box.setWindowTitle("Warning")
-        message_box.setText(message)
-        message_box.exec_()
+        QMessageBox.warning(self, "Warning", message)
         self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
         self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)

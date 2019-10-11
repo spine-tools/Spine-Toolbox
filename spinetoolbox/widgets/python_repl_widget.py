@@ -145,7 +145,11 @@ class PythonReplWidget(RichJupyterWidget):
                 "Python Console requires package <b>ipykernel</b>." "<p>Do you want to install the package now?</p>"
             )
             message_box = QMessageBox(
-                QMessageBox.Question, "ipykernel Missing", message, QMessageBox.Ok | QMessageBox.Cancel
+                QMessageBox.Question,
+                "ipykernel Missing",
+                message,
+                QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self._toolbox,
             )
             message_box.button(QMessageBox.Ok).setText("Install ipykernel")
             answer = message_box.exec_()
@@ -168,7 +172,11 @@ class PythonReplWidget(RichJupyterWidget):
                 "<p>Do you want to install kernel <b>{0}</b> specifications now?</p>".format(self.kernel_name)
             )
             message_box = QMessageBox(
-                QMessageBox.Question, "Kernel Specs Missing", message, QMessageBox.Ok | QMessageBox.Cancel
+                QMessageBox.Question,
+                "Kernel Specs Missing",
+                message,
+                QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self._toolbox,
             )
             message_box.button(QMessageBox.Ok).setText("Install specifications")
             answer = message_box.exec_()
