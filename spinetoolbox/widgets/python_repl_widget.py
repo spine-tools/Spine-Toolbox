@@ -140,19 +140,6 @@ class PythonReplWidget(RichJupyterWidget):
         Returns:
             Boolean value depending on whether or not the user chooses to proceed.
         """
-        if not self.is_package_installed("ipython"):
-            message = "Python Console requires package <b>IPython</b>." "<p>Do you want to install the package now?</p>"
-            message_box = QMessageBox(
-                QMessageBox.Question, "IPython Missing", message, QMessageBox.Ok | QMessageBox.Cancel
-            )
-            message_box.button(QMessageBox.Ok).setText("Install IPython")
-            answer = message_box.exec_()
-            if answer == QMessageBox.Cancel:
-                self._control.viewport().setCursor(self.normal_cursor)
-                return False
-            self._toolbox.msg.emit("*** Installing IPython ***")
-            self.start_package_install_process("ipython")
-            return True
         if not self.is_package_installed("ipykernel"):
             message = (
                 "Python Console requires package <b>ipykernel</b>." "<p>Do you want to install the package now?</p>"
