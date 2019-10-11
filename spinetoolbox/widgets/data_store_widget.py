@@ -956,7 +956,7 @@ class DataStoreForm(QMainWindow):
             # Show message box
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Commit pending changes")
+            msg.setWindowTitle("Commit Pending Changes")
             msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
             msg.setInformativeText("WARNING: If you choose not to commit, all changes will be lost.")
             msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
