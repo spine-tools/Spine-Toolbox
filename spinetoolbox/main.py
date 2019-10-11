@@ -20,6 +20,7 @@ import sys
 import logging
 from PySide2.QtGui import QFontDatabase
 from PySide2.QtWidgets import QApplication
+
 # Importing initializes resources so we can add Font Awesome to the application
 import spinetoolbox.resources_icons_rc  # pylint: disable=unused-import
 from .ui_main import ToolboxUI

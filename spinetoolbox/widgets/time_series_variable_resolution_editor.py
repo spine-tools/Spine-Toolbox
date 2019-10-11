@@ -36,6 +36,7 @@ class TimeSeriesVariableResolutionEditor(QWidget):
 
     def __init__(self, parent=None):
         from ..ui.time_series_variable_resolution_editor import Ui_TimeSeriesVariableResolutionEditor
+
         super().__init__(parent)
         stamps = ["2000-01-01T00:00:00", "2000-01-01T01:00:00"]
         zeros = len(stamps) * [0.0]

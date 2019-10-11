@@ -306,7 +306,9 @@ class TestPivotModel(unittest.TestCase):
         model.set_list(self.data)
         with mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.beginResetModel"
-        ) as br, mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel") as er:
+        ) as br, mock.patch(
+            "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel"
+        ) as er:
             model.remove_items(items)
         self.assertEqual(model._data, self.data[1:])
         self.assertEqual(model._data_set, set(self.data[1:]))
@@ -317,7 +319,9 @@ class TestPivotModel(unittest.TestCase):
         model.set_list(self.data)
         with mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.beginResetModel"
-        ) as br, mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel") as er:
+        ) as br, mock.patch(
+            "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel"
+        ) as er:
             model.remove_items(items)
         self.assertEqual(model._selected, set(self.data[1:]))
         self.assertTrue(model._all_selected)
@@ -330,7 +334,9 @@ class TestPivotModel(unittest.TestCase):
         model._all_selected = False
         with mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.beginResetModel"
-        ) as br, mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel") as er:
+        ) as br, mock.patch(
+            "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel"
+        ) as er:
             model.remove_items(items)
         self.assertEqual(model._selected, set(self.data[1:]))
         self.assertTrue(model._all_selected)
@@ -342,7 +348,9 @@ class TestPivotModel(unittest.TestCase):
         model.set_filter('b')
         with mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.beginResetModel"
-        ) as br, mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel") as er:
+        ) as br, mock.patch(
+            "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel"
+        ) as er:
             model.remove_items(items)
         self.assertEqual(model._filter_index, [3, 4])
         self.assertEqual(model._selected_filtered, set(self.data[4:]))
@@ -354,7 +362,9 @@ class TestPivotModel(unittest.TestCase):
         model.set_filter('b')
         with mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.beginResetModel"
-        ) as br, mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel") as er:
+        ) as br, mock.patch(
+            "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel"
+        ) as er:
             model.remove_items(items)
         self.assertEqual(model._filter_index, [3, 4])
 
@@ -367,7 +377,9 @@ class TestPivotModel(unittest.TestCase):
         model._all_selected = False
         with mock.patch(
             "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.beginResetModel"
-        ) as br, mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel") as er:
+        ) as br, mock.patch(
+            "spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.endResetModel"
+        ) as er:
             model.remove_items(items)
         self.assertEqual(model._selected_filtered, set(self.data[4:]))
         self.assertTrue(model._all_selected)

@@ -68,6 +68,7 @@ class ParameterValueEditor(QDialog):
 
     def __init__(self, parent_index, value_name="", value=None, parent_widget=None):
         from ..ui.parameter_value_editor import Ui_ParameterValueEditor
+
         super().__init__(parent_widget)
         self._parent_model = parent_index.model()
         self._parent_index = parent_index
@@ -75,8 +76,8 @@ class ParameterValueEditor(QDialog):
         self._ui.setupUi(self)
         self.setWindowTitle(value_name + " - Edit value")
         self.setWindowFlag(Qt.WindowMinMaxButtonsHint)
-        self._ui.ok_button.clicked.connect(self.accept)
-        self._ui.cancel_button.clicked.connect(self.reject)
+        self._ui.button_box.accepted.connect(self.accept)
+        self._ui.button_box.rejected.connect(self.reject)
         self._time_pattern_editor = TimePatternEditor()
         self._plain_value_editor = PlainParameterValueEditor()
         self._time_series_fixed_resolution_editor = TimeSeriesFixedResolutionEditor()
@@ -98,17 +99,15 @@ class ParameterValueEditor(QDialog):
                 return
         self._select_editor(value)
 
-    @Slot(name="accept")
+    @Slot()
     def accept(self):
         """Saves the parameter value shown in the currently selected editor widget back to the parent model."""
         editor = self._ui.editor_stack.currentWidget()
         try:
             self._parent_model.setData(self._parent_index, to_database(editor.value()))
         except ParameterValueFormatError as error:
-            message_box = QMessageBox()
-            message_box.setWindowTitle("Parameter value error")
-            message_box.setText("Cannot set value: {}".format(error))
-            message_box.exec()
+            message = "Cannot set value: {}".format(error)
+            QMessageBox.warning(self, "Parameter Value error", message)
             return
         self.close()
 
@@ -125,8 +124,8 @@ class ParameterValueEditor(QDialog):
         """
         old_index = self._ui.editor_stack.currentIndex()
         if (
-                selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION.value
-                and old_index == _Editor.TIME_SERIES_FIXED_RESOLUTION.value
+            selector_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION.value
+            and old_index == _Editor.TIME_SERIES_FIXED_RESOLUTION.value
         ):
             fixed_resolution_value = self._time_series_fixed_resolution_editor.value()
             stamps = fixed_resolution_value.indexes
@@ -136,8 +135,8 @@ class ParameterValueEditor(QDialog):
             )
             self._time_series_variable_resolution_editor.set_value(variable_resolution_value)
         elif (
-                selector_index == _Editor.TIME_SERIES_FIXED_RESOLUTION
-                and old_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION
+            selector_index == _Editor.TIME_SERIES_FIXED_RESOLUTION
+            and old_index == _Editor.TIME_SERIES_VARIABLE_RESOLUTION
         ):
             variable_resolution_value = self._time_series_variable_resolution_editor.value()
             stamps = variable_resolution_value.indexes
@@ -185,9 +184,6 @@ class ParameterValueEditor(QDialog):
 
     def _warn_and_select_default_view(self, message):
         """Displays a warning dialog and opens the default editor widget after user clicks OK."""
-        message_box = QMessageBox()
-        message_box.setWindowTitle("Warning")
-        message_box.setText(message)
-        message_box.exec()
+        QMessageBox.warning(self, "Warning", message)
         self._ui.parameter_type_selector.setCurrentIndex(_Editor.PLAIN_VALUE.value)
         self._ui.editor_stack.setCurrentIndex(_Editor.PLAIN_VALUE.value)
