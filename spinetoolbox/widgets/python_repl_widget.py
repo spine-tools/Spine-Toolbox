@@ -16,12 +16,13 @@ Class for a custom RichJupyterWidget to use as Python REPL.
 :date:   14.3.2019
 """
 
+import os.path
 import subprocess
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
-from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
+from jupyter_client.kernelspec import find_kernel_specs, get_kernel_spec, NoSuchKernel
 from .toolbars import DraggableWidget
 from ..helpers import busy_effect
 from ..config import PYTHON_EXECUTABLE
@@ -82,11 +83,11 @@ class PythonReplWidget(RichJupyterWidget):
         if not self.may_need_restart:
             return self.kernel_name, self.kernel_display_name
         python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
-        if not python_path == "":
+        if python_path:
             self.python_cmd = python_path
         else:
             self.python_cmd = PYTHON_EXECUTABLE
-        program = "{0}".format(self.python_cmd)
+        program = str(self.python_cmd)
         args = list()
         args.append("-V")
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
@@ -97,7 +98,7 @@ class PythonReplWidget(RichJupyterWidget):
             )
             return None
         python_version_str = q_process.output
-        if python_version_str == "":
+        if not python_version_str:
             # The version str might be in stderr instead of stdout (happens at least with Python 2.7.14)
             python_version_str = q_process.error_output
         p_v_list = python_version_str.split()
@@ -163,7 +164,12 @@ class PythonReplWidget(RichJupyterWidget):
             return True
         # Install kernelspecs for self.kernel_name if not already present
         kernel_specs = find_kernel_specs()
-        if self.kernel_name not in kernel_specs.keys():
+        spec_exists = self.kernel_name in kernel_specs
+        executable_valid = False
+        if spec_exists:
+            spec = get_kernel_spec(self.kernel_name)
+            executable_valid = os.path.exists(spec.argv[0])
+        if not spec_exists or not executable_valid:
             message = (
                 "IPython kernel specifications for the selected environment are missing. "
                 "<p>Do you want to install kernel <b>{0}</b> specifications now?</p>".format(self.kernel_name)
