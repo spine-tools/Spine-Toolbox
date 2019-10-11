@@ -80,7 +80,7 @@ class EmptyRowModel(MinimalTableModel):
                 field = None
             data = self._main_data[last_row][column]
             default = self.default_row.get(field)
-            if data and default and data != default:
+            if (data or default) and data != default:
                 self.insertRows(self.rowCount(), 1)
                 break
 

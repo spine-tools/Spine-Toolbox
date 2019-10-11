@@ -604,8 +604,6 @@ class DataStoreForm(QMainWindow):
 
     def add_relationship_classes_to_models(self, db_map, added):
         self.object_tree_model.add_relationship_classes(db_map, added)
-        self.relationship_parameter_definition_model.add_object_class_id_lists(db_map, added)
-        self.relationship_parameter_value_model.add_object_class_id_lists(db_map, added)
 
     def add_relationships(self, relationship_d):
         """Insert new relationships."""

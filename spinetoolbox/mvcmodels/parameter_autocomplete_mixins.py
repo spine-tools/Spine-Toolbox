@@ -16,6 +16,18 @@ Mixins for autocompleting data in parameter models
 :date:   4.10.2019
 """
 
+from sqlalchemy import or_, and_
+from ..helpers import Singleton
+
+
+class ToBeDetermined(metaclass=Singleton):
+    """Class for marking values that need to be determined
+    by a second pass of the autocomplete algorithm.
+    """
+
+
+to_be_determined = ToBeDetermined()
+
 
 class ParameterAutocompleteMixin:
     """Provides basic autocomplete methods for all parameter models."""
@@ -296,7 +308,7 @@ class ObjectParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
                 if len(object_class_id) != 1:
                     continue
                 item.object_class_id = object_class_id.pop()
-                item.object_class_name = True  # Mark the item somehow
+                item.object_class_name = to_be_determined
                 object_class_ids.setdefault(database, set()).add(item.object_class_id)
             # Pick the right object_id and parameter_id
             item.object_id = item._object_dict.get(item.object_class_id)
@@ -306,7 +318,7 @@ class ObjectParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         object_class_dict = self._attr_dict(object_class_ids, "object_class_sq", map_func, filter_func)
         for item in rows.values():
             db_object_class_dict = object_class_dict.get(item.database)
-            if db_object_class_dict and item.object_class_name is True:
+            if db_object_class_dict and item.object_class_name is to_be_determined:
                 item.object_class_name = db_object_class_dict.get(item.object_class_id)
         # TODO: emit dataChanged after changing `object_class_name`
 
@@ -358,7 +370,7 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
                 if len(relationship_class_id) != 1:
                     continue
                 item.relationship_class_id = relationship_class_id.pop()
-                item.relationship_class_name = True  # Mark the item somehow
+                item.relationship_class_name = to_be_determined
                 relationship_class_ids.setdefault(database, set()).add(item.relationship_class_id)
             # Pick the right relationship_id and parameter_id
             relationship = item._relationship_dict.get(item.relationship_class_id)
@@ -375,7 +387,7 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         for item in rows.values():
             database = item.database
             db_relationship_class_dict = relationship_class_dict.get(database)
-            if db_relationship_class_dict and item.relationship_class_name is True:
+            if db_relationship_class_dict and item.relationship_class_name is to_be_determined:
                 relationship_class = db_relationship_class_dict.get(item.relationship_class_id)
                 if relationship_class:
                     item.relationship_class_name = relationship_class.name
@@ -397,10 +409,10 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
             if not database:
                 continue
             if not item.object_id_list and item.object_name_list and item.object_class_id_list:
-                # object_id_list is not and can be figured out, so let's do it
+                # object_id_list is not there and can be figured out, so let's do it
                 object_names = item.object_name_list.split(",")
                 object_class_ids = [int(x) for x in item.object_class_id_list.split(",")]
-                item._object_name_class_id_tups = set(zip(object_names, object_class_ids))
+                item._object_name_class_id_tups = list(zip(object_names, object_class_ids))
                 object_name_class_id_tuples.setdefault(database, set()).update(item._object_name_class_id_tups)
             else:
                 item._object_name_class_id_tups = None

@@ -371,7 +371,7 @@ class CompoundParameterDefinitionRenameRemoveMixin:
         """Rename parameter value_lists in model."""
         value_lists = {x.id: x.name for x in value_lists}
         for model in self._models_with_db_map(db_map):
-            model.rename_parameter_value_lists(parameter_tags)
+            model.rename_parameter_value_lists(value_lists)
         self._emit_data_changed_for_column("value_list_name")
 
     def clear_parameter_value_lists(self, db_map, value_list_ids):

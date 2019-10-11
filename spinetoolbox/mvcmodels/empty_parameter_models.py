@@ -150,7 +150,7 @@ class EmptyRelationshipParameterValueModel(
                 continue
             new_relationships, error_log = db_map.add_wide_relationships(relationship_for_insert)
             if error_log:
-                self.error_log.extend(error_log)
+                self._error_log.extend(error_log)
                 continue
             new_relationship = new_relationships.first()
             item.relationship_id = new_relationship.id
