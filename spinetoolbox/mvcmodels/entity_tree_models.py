@@ -243,6 +243,10 @@ class MultiDBTreeItem(TreeItem):
                 ", ".join([self.db_map_data(db_map)["database"] for db_map in self.db_maps]),
             )[column]
 
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        return {}
+
 
 class TreeRootItem(MultiDBTreeItem):
     @property
@@ -333,6 +337,11 @@ class ObjectClassItem(EntityClassItem):
             # TODO return self._spinedb_manager.icon_manager.object_icon(data["name"])
         return super().data(column, role)
 
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        data = self.db_map_data(self.first_db_map)
+        return dict(object_class_name=data['name'], database=data['database'])
+
 
 class RelationshipClassItem(EntityClassItem):
 
@@ -374,6 +383,11 @@ class RelationshipClassItem(EntityClassItem):
             data = self.db_map_data(self.first_db_map)
             # TODO return self._spinedb_manager.icon_manager.relationship_icon(data["object_class_name_list"])
         return super().data(column, role)
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        data = self.db_map_data(self.first_db_map)
+        return dict(relationship_class_name=data['name'], database=data['database'])
 
 
 class EntityItem(MultiDBTreeItem):
@@ -427,6 +441,12 @@ class ObjectItem(EntityItem):
             # TODO return self._spinedb_manager.icon_manager.object_icon(data["name"])
         return super().data(column, role)
 
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        data = self.db_map_data(self.first_db_map)
+        parent_data = self._parent.db_map_data(self.first_db_map)
+        return dict(object_class_name=parent_data['name'], object_name=data['name'], database=data['database'])
+
 
 class RelationshipItem(EntityItem):
     context_menu_actions = {
@@ -451,6 +471,16 @@ class RelationshipItem(EntityItem):
 
     def insert_new_children(self, db_map, children_data):
         pass
+
+    def default_parameter_data(self):
+        """Return data to put as default in a parameter table when this item is selected."""
+        data = self.db_map_data(self.first_db_map)
+        parent_data = self._parent.db_map_data(self.first_db_map)
+        return dict(
+            relationship_class_name=parent_data['name'],
+            object_name_list=data['object_name_list'],
+            database=data['database'],
+        )
 
 
 class EntityTreeModel(QAbstractItemModel):
@@ -483,34 +513,30 @@ class EntityTreeModel(QAbstractItemModel):
 
     def visit_all(self, index=QModelIndex()):
         """Iterates all items in the model including and below the given index."""
-        # TODO: Fix this
-        if index.column() != 0:
-            return
         if index.isValid():
-            current = index.internalPointer()
+            ancient_one = index.internalPointer()
         else:
-            current = self._invisible_root
-        if current.can_fetch_more() or not current.has_children():
-            yield current
+            ancient_one = self._invisible_root
+        yield ancient_one
+        child = ancient_one.child(0)
+        if not child:
             return
-        back_to_parent = False  # True if moving back to the parent index
+        current = child
+        back_to_parent = False
         while True:
             yield current
             if not back_to_parent:
-                # Try and visit first child
                 child = current.child(0)
                 if child:
                     current = child
                     continue
-            # Try and visit next sibling
             sibling = current.next_sibling()
             if sibling:
                 back_to_parent = False
                 current = sibling
                 continue
-            # Go back to parent
             parent = current._parent
-            if parent != index.internalPointer():
+            if parent != ancient_one:
                 back_to_parent = True
                 current = parent
                 continue

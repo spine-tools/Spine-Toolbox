@@ -323,7 +323,7 @@ class DataStoreForm(QMainWindow):
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_definition_models()
-        self.set_default_parameter_rows()
+        self.set_default_parameter_data()
         self.init_parameter_value_list_model()
         self.init_parameter_tag_toolbar()
 
@@ -413,78 +413,20 @@ class DataStoreForm(QMainWindow):
             for key, value in tree_relationship_class_ids.items()
         }
 
-    def set_default_parameter_rows(self, index=None):
+    def set_default_parameter_data(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
-        if index is None or not index.parent().isValid():
-            database = next(iter(self.db_maps.keys()))
-            default_row = dict(database=database)
-            for model in (
-                self.object_parameter_definition_model,
-                self.object_parameter_value_model,
-                self.relationship_parameter_definition_model,
-                self.relationship_parameter_value_model,
-            ):
-                model = model.empty_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1)
-            return
-        item = index.internalPointer()
-        db_map = item.first_db_map
-        data = item.db_map_data(db_map)
-        if isinstance(item, ObjectClassItem):
-            default_row = dict(object_class_id=data['id'], object_class_name=data['name'], database=data['database'])
-            for model in (self.object_parameter_definition_model, self.object_parameter_value_model):
-                model = model.empty_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1)
-        elif isinstance(item, ObjectItem):
-            parent_item = index.parent().internalPointer()
-            parent_data = parent_item.db_map_data(db_map)
-            default_row = dict(
-                object_class_id=parent_data['id'], object_class_name=parent_data['name'], database=data['database']
-            )
-            model = self.object_parameter_definition_model.empty_model
-            model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1)
-            default_row.update(dict(object_id=data['id'], object_name=data['name']))
-            model = self.object_parameter_value_model.empty_model
-            model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1)
-        elif isinstance(item, RelationshipClassItem):
-            default_row = dict(
-                relationship_class_id=data['id'],
-                relationship_class_name=data['name'],
-                object_class_id_list=data['object_class_id_list'],
-                object_class_name_list=data['object_class_name_list'],
-                database=data['database'],
-            )
-            for model in (self.relationship_parameter_definition_model, self.relationship_parameter_value_model):
-                model = model.empty_model
-                model.set_default_row(**default_row)
-                model.set_rows_to_default(model.rowCount() - 1)
-        elif isinstance(item, RelationshipItem):
-            parent_item = index.parent().internalPointer()
-            parent_data = parent_item.db_map_data(db_map)
-            default_row = dict(
-                relationship_class_id=parent_data['id'],
-                relationship_class_name=parent_data['name'],
-                object_class_id_list=parent_data['object_class_id_list'],
-                object_class_name_list=parent_data['object_class_name_list'],
-                database=data['database'],
-            )
-            model = self.relationship_parameter_definition_model.empty_model
-            model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1)
-            default_row.update(
-                dict(
-                    relationship_id=data['id'],
-                    object_id_list=data['object_id_list'],
-                    object_name_list=data['object_name_list'],
-                )
-            )
-            model = self.relationship_parameter_value_model.empty_model
-            model.set_default_row(**default_row)
-            model.set_rows_to_default(model.rowCount() - 1)
+        if index is None:
+            default_data = dict(database=next(iter(self.db_maps)))
+        else:
+            default_data = index.internalPointer().default_parameter_data()
+        for model in (
+            self.object_parameter_definition_model,
+            self.object_parameter_value_model,
+            self.relationship_parameter_definition_model,
+            self.relationship_parameter_value_model,
+        ):
+            model.empty_model.set_default_row(**default_data)
+            model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
 
     def do_update_filter(self):
         """Apply filter on visible views."""

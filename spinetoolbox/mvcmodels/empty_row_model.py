@@ -108,14 +108,14 @@ class EmptyRowModel(MinimalTableModel):
             last = first
         if first >= self.rowCount() or last < 0:
             return
+        indexes = []
+        values = []
         for column in range(self.columnCount()):
             try:
                 field = self.header[column]
             except IndexError:
                 field = None
             default = self.default_row.get(field)
-            for row in range(first, last + 1):
-                self._main_data[row][column] = default
-        top_left = self.index(first, 0)
-        bottom_right = self.index(last, self.columnCount() - 1)
-        self.dataChanged.emit(top_left, bottom_right)
+            indexes += [self.index(row, column) for row in range(first, last + 1)]
+            values += [default for row in range(first, last + 1)]
+        self.batch_set_data(indexes, values)

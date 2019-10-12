@@ -34,6 +34,7 @@ class CompoundTableModel(MinimalTableModel):
         self._parent = parent
         self.sub_models = []
         self._row_map = []
+        self._inv_row_map = {}
         self._fetched_count = 0
 
     def map_to_sub(self, index):
@@ -44,6 +45,14 @@ class CompoundTableModel(MinimalTableModel):
         column = index.column()
         sub_model, sub_row = self._row_map[row]
         return sub_model.index(sub_row, column)
+
+    def map_from_sub(self, sub_model, sub_index):
+        """Translate the index from the given submodel into this."""
+        try:
+            row = self._inv_row_map[(sub_model, sub_index.row())]
+        except KeyError:
+            return QModelIndex()
+        return self.index(row, sub_index.column())
 
     def refresh(self):
         """Recomputes the row map."""
@@ -60,8 +69,13 @@ class CompoundTableModel(MinimalTableModel):
     def do_refresh(self):
         """Recomputes the row map."""
         self._row_map.clear()
+        self._inv_row_map.clear()
+        row_count = 0
         for model in self.sub_models:
-            self._row_map += self._row_map_for_model(model)
+            row_map_for_model = self._row_map_for_model(model)
+            self._row_map += row_map_for_model
+            self._inv_row_map.update({(model, i): offset + i for model, i in row_map_for_model})
+            row_count += len(row_map_for_model)
 
     def item_at_row(self, row):
         """Returns the item at given row."""
@@ -204,6 +218,12 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
         for model in self.single_models:
             model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
+        for model in self.sub_models:
+            model.dataChanged.connect(
+                lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
+                    self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
+                )
+            )
 
     def _row_map_for_single_model(self, model):
         """Returns row map for given single model.

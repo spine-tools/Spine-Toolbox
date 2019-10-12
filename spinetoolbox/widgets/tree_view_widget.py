@@ -532,6 +532,7 @@ class TreeViewForm(DataStoreForm):
             )
             self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
             self.clear_other_selections(self.ui.treeView_object)
+            self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
             self.update_filter()
 
     @busy_effect
@@ -552,6 +553,7 @@ class TreeViewForm(DataStoreForm):
             )
             self.relationship_selection_available.emit(bool(self.relationship_tree_model.selected_relationship_indexes))
             self.clear_other_selections(self.ui.treeView_relationship)
+            self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
             self.update_filter()
 
     def update_filter(self):
@@ -685,12 +687,16 @@ class TreeViewForm(DataStoreForm):
     @busy_effect
     def fully_expand_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
+            if index.column() != 0:
+                continue
             for item in self.object_tree_model.visit_all(index):
                 self.ui.treeView_object.expand(self.object_tree_model.index_from_item(item))
 
     @busy_effect
     def fully_collapse_selection(self):
         for index in self.ui.treeView_object.selectionModel().selectedIndexes():
+            if index.column() != 0:
+                continue
             for item in self.object_tree_model.visit_all(index):
                 self.ui.treeView_object.collapse(self.object_tree_model.index_from_item(item))
 
