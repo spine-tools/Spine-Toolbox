@@ -124,57 +124,12 @@ class TestTreeViewForm(unittest.TestCase):
         ) as mock_db_map:
             mock_project._toolbox._qsettings = QSettings("SpineProject", "Spine Toolbox")
             mock_project._toolbox._qsettings.setValue("appSettings/commitAtExit", "0")
-            mock_db_map.object_parameter_definition_fields.return_value = [
-                'id',
-                'object_class_id',
-                'object_class_name',
-                'parameter_name',
-                'value_list_id',
-                'value_list_name',
-                'parameter_tag_id_list',
-                'parameter_tag_list',
-                'default_value',
-            ]
-            mock_db_map.relationship_parameter_definition_fields.return_value = [
-                'id',
-                'relationship_class_id',
-                'relationship_class_name',
-                'object_class_id_list',
-                'object_class_name_list',
-                'parameter_name',
-                'value_list_id',
-                'value_list_name',
-                'parameter_tag_id_list',
-                'parameter_tag_list',
-                'default_value',
-            ]
-            mock_db_map.object_parameter_value_fields.return_value = [
-                'id',
-                'object_class_id',
-                'object_class_name',
-                'object_id',
-                'object_name',
-                'parameter_id',
-                'parameter_name',
-                'value',
-            ]
-            mock_db_map.relationship_parameter_value_fields.return_value = [
-                'id',
-                'relationship_class_id',
-                'relationship_class_name',
-                'object_class_id_list',
-                'object_class_name_list',
-                'relationship_id',
-                'object_id_list',
-                'object_name_list',
-                'parameter_id',
-                'parameter_name',
-                'value',
-            ]
             mock_db_map.add_wide_relationships.return_value = qry(), []
             mock_db_map.add_parameter_definitions.return_value = qry(), []
             mock_db_map.add_parameter_values.return_value = qry(), []
             self.tree_view_form = TreeViewForm(mock_project, {"mock_db": mock_db_map})
+            self.db_map_mock_query = self.tree_view_form.db_maps[0].query = mock.Mock()
+            self.db_map_mock_query.side_effect = lambda x: x
             self.fish_class = None
             self.dog_class = None
             self.nemo_object = None
@@ -668,7 +623,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.add_mock_object_classes()
         self.add_mock_objects()
         self.add_mock_object_parameter_definitions()
-        self.tree_view_form.init_models()
+        self.init_tree_view_form_models()
         # Add first object parameter value (for scooby), to test autofilling of object class from *object*
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
@@ -747,7 +702,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.add_mock_objects()
         self.add_mock_relationship_classes()
         self.add_mock_relationship_parameter_definitions()
-        self.tree_view_form.init_models()
+        self.init_tree_view_form_models()
         # Fetch nemo's fish__dog
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -887,7 +842,7 @@ class TestTreeViewForm(unittest.TestCase):
     def test_paste_add_object_parameter_definitions(self):
         """Test that data is pasted onto the view and object parameter definitions are added to the model."""
         self.add_mock_object_classes()
-        self.tree_view_form.init_models()
+        self.init_tree_view_form_models()
         # Paste data
         model = self.tree_view_form.object_parameter_definition_model
         view = self.tree_view_form.ui.tableView_object_parameter_definition
@@ -945,7 +900,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.add_mock_object_classes()
         self.add_mock_objects()
         self.add_mock_object_parameter_definitions()
-        self.tree_view_form.init_models()
+        self.init_tree_view_form_models()
         # Paste data
         model = self.tree_view_form.object_parameter_value_model
         view = self.tree_view_form.ui.tableView_object_parameter_value
@@ -1044,7 +999,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.add_mock_object_classes()
         self.add_mock_objects()
         self.add_mock_relationship_classes()
-        self.tree_view_form.init_models()
+        self.init_tree_view_form_models()
         # Paste data
         model = self.tree_view_form.relationship_parameter_definition_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_definition
@@ -1115,7 +1070,7 @@ class TestTreeViewForm(unittest.TestCase):
         self.add_mock_relationship_classes()
         self.add_mock_relationships()
         self.add_mock_relationship_parameter_definitions()
-        self.tree_view_form.init_models()
+        self.init_tree_view_form_models()
         # Paste data
         model = self.tree_view_form.relationship_parameter_value_model
         view = self.tree_view_form.ui.tableView_relationship_parameter_value
@@ -1278,7 +1233,7 @@ class TestTreeViewForm(unittest.TestCase):
     def test_set_object_parameter_definition_defaults(self):
         """Test that defaults are set in object parameter definition models according the object tree selection."""
         self.add_mock_object_classes()
-        self.tree_view_form.init_models()
+        self.init_tree_view_form_models()
         # Select fish item in object tree
         root_item = self.tree_view_form.object_tree_model.root_item
         fish_item = root_item.child(0)
@@ -1821,7 +1776,7 @@ class TestTreeViewForm(unittest.TestCase):
         form.db_maps[0].parameter_definition_list.return_value.filter_by.return_value.one_or_none.return_value = None
         editor = view.itemDelegate().createEditor(view, QStyleOptionViewItem(), parameter_value_index)
         view.itemDelegate().setEditorData(editor, parameter_value_index)
-        self.assertTrue(isinstance(editor, CustomLineEditor), "Editor is not a 'CustomLineEditor'")
+        self.assertEqual(type(editor), CustomLineEditor)
         self.assertEqual(editor.data(), '"salt"')
         editor.set_data('"pepper"')
         x = namedtuple("foo", ["id"])(self.nemo_water.id)
@@ -2131,6 +2086,7 @@ class TestTreeViewForm(unittest.TestCase):
         """Add fish and dog object classes."""
         self.fish_class = self.ObjectClass(1, "fish", "A fish.", 1, None)
         self.dog_class = self.ObjectClass(2, "dog", "A dog.", 3, None)
+        self.tree_view_form.db_maps[0].object_class_sq = qry([self.fish_class, self.dog_class])
         self.tree_view_form.db_maps[0].object_class_list.return_value = qry([self.fish_class, self.dog_class])
 
     def add_mock_objects(self):
@@ -2150,6 +2106,7 @@ class TestTreeViewForm(unittest.TestCase):
             else:
                 return qry()
 
+        self.tree_view_form.db_maps[0].object_sq.filter_by.side_effect = side_effect
         self.tree_view_form.db_maps[0].object_list.side_effect = side_effect
 
     def add_mock_relationship_classes(self):
@@ -2170,6 +2127,8 @@ class TestTreeViewForm(unittest.TestCase):
             else:
                 return qry()
 
+        # self.tree_view_form.db_maps[0].wide_relationship_class_sq.filter_by.side_effect = side_effect
+        self.tree_view_form.db_maps[0].wide_relationship_class_sq = qry([self.fish_dog_class, self.dog_fish_class])
         self.tree_view_form.db_maps[0].wide_relationship_class_list.side_effect = side_effect
 
     def add_mock_relationships(self):
@@ -2221,6 +2180,7 @@ class TestTreeViewForm(unittest.TestCase):
             else:
                 return qry()
 
+        self.tree_view_form.db_maps[0].wide_relationship_sq.filter_by.side_effect = side_effect
         self.tree_view_form.db_maps[0].wide_relationship_list.side_effect = side_effect
 
     def add_mock_object_parameter_definitions(self):
@@ -2240,6 +2200,7 @@ class TestTreeViewForm(unittest.TestCase):
             else:
                 return qry()
 
+        self.tree_view_form.db_maps[0].object_parameter_definition_sq.filter_by.side_effect = side_effect
         self.tree_view_form.db_maps[0].object_parameter_definition_list.side_effect = side_effect
 
     def add_mock_relationship_parameter_definitions(self):
@@ -2285,6 +2246,7 @@ class TestTreeViewForm(unittest.TestCase):
             else:
                 return qry()
 
+        self.tree_view_form.db_maps[0].relationship_parameter_definition_sq.filter_by.side_effect = side_effect
         self.tree_view_form.db_maps[0].relationship_parameter_definition_list.side_effect = side_effect
 
     def add_mock_object_parameter_values(self):
@@ -2306,9 +2268,15 @@ class TestTreeViewForm(unittest.TestCase):
             3, dog_class_id, "dog", scooby_object_id, "scooby", breed_parameter_id, "breed", '"great dane"'
         )
 
-        def side_effect():
-            return qry([self.nemo_water, self.pluto_breed, self.scooby_breed])
+        def side_effect(object_class_id=None):
+            if object_class_id == fish_class_id:
+                return qry([self.nemo_water])
+            elif object_class_id == dog_class_id:
+                return qry([self.pluto_breed, self.scooby_breed])
+            else:
+                return qry()
 
+        self.tree_view_form.db_maps[0].object_parameter_value_sq.filter_by.side_effect = side_effect
         self.tree_view_form.db_maps[0].object_parameter_value_list.side_effect = side_effect
 
     def add_mock_relationship_parameter_values(self):
@@ -2365,9 +2333,15 @@ class TestTreeViewForm(unittest.TestCase):
             "100",
         )
 
-        def side_effect():
-            return qry([self.nemo_pluto_relative_speed, self.nemo_scooby_relative_speed, self.pluto_nemo_combined_mojo])
+        def side_effect(relationship_class_id=None):
+            if relationship_class_id == fish_dog_class_id:
+                return qry([self.nemo_pluto_relative_speed, self.nemo_scooby_relative_speed])
+            elif relationship_class_id == dog_fish_class_id:
+                return qry([self.pluto_nemo_combined_mojo])
+            else:
+                return qry()
 
+        self.tree_view_form.db_maps[0].relationship_parameter_value_sq.filter_by.side_effect = side_effect
         self.tree_view_form.db_maps[0].relationship_parameter_value_list.side_effect = side_effect
 
     def add_mock_dataset(self):
@@ -2380,7 +2354,20 @@ class TestTreeViewForm(unittest.TestCase):
         self.add_mock_relationship_parameter_definitions()
         self.add_mock_object_parameter_values()
         self.add_mock_relationship_parameter_values()
+        self.init_tree_view_form_models()
+
+    def init_tree_view_form_models(self):
         self.tree_view_form.init_models()
+        for model in (
+            self.tree_view_form.object_parameter_value_model,
+            self.tree_view_form.object_parameter_definition_model,
+            self.tree_view_form.relationship_parameter_value_model,
+            self.tree_view_form.relationship_parameter_definition_model,
+        ):
+            # print("\n\n", model)
+            for m in model.sub_models:
+                m.fetchMore(m.index(0, 0))
+                # print([item.for_insert() for item in m._main_data])
 
 
 if __name__ == '__main__':

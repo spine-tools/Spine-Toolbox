@@ -17,7 +17,7 @@ A tree model for parameter value lists.
 """
 
 import json
-from PySide2.QtCore import Qt, Slot, QModelIndex, QAbstractItemModel
+from PySide2.QtCore import Qt, Signal, Slot, QModelIndex, QAbstractItemModel
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from .parameter_value_formatting import format_for_DisplayRole
 
@@ -50,6 +50,9 @@ class ParameterValueListModel(QAbstractItemModel):
         parent (DataStoreForm)
         db_maps (dict): maps db names to DiffDatabaseMapping instances
     """
+
+    remove_selection_requested = Signal(name="remove_selection_requested")
+    remove_icon = QIcon(":/icons/minus.png")
 
     def __init__(self, parent, db_maps):
         """Initialize class"""

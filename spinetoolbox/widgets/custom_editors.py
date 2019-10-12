@@ -396,7 +396,6 @@ class CheckListEditor(QTableView):
         self._parent = parent
         self._elder_sibling = elder_sibling
         self._base_size = None
-        self._item_names_map = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
         self.verticalHeader().hide()
@@ -430,9 +429,6 @@ class CheckListEditor(QTableView):
 
     def set_data(self, item_names, current_item_names):
         """Set data and update geometry."""
-        if ininstace(item_names, list):
-            item_names = {x: x for x in item_names}
-        self._item_names_map = item_names
         for name in item_names:
             qitem = QStandardItem(name)
             if name in current_item_names:

@@ -62,7 +62,6 @@ class ManageItemsDialog(QDialog):
         super().__init__(parent)
         self._parent = parent
         self.model = None
-        self._model_data = None
         self.table_view = CopyPasteTableView(self)
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.table_view.horizontalHeader().setStretchLastSection(True)
@@ -81,15 +80,6 @@ class ManageItemsDialog(QDialog):
         self.table_view.itemDelegate().data_committed.connect(self.set_model_data)
         self.model.dataChanged.connect(self._handle_model_data_changed)
         self.model.modelReset.connect(self._handle_model_reset)
-        self._model_data = self.model.data
-        self.model.data = self._model_data_override
-
-    def _model_data_override(self, index, role=Qt.DisplayRole):
-        header = self.model.header
-        data = self._model_data(index, role)
-        if header[index.column()] == "databases" and data:
-            return ", ".join([x.short_name for x in data])
-        return data
 
     def resize_window_to_columns(self):
         margins = self.layout().contentsMargins()
@@ -143,7 +133,7 @@ class AddItemsDialog(ManageItemsDialog):
         """Returns a list of db names available for a given row.
         Used by delegates.
         """
-        return self.db_maps
+        return list(self.db_maps.keys())
 
 
 class GetObjectClassesMixin:
@@ -156,8 +146,7 @@ class GetObjectClassesMixin:
         """
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
-        db_name_to_map = self._parent.db_name_to_map
-        db_maps = iter(db_name_to_map[x] for x in db_names.split(",") if x in db_name_to_map)
+        db_maps = iter(self.db_maps[x] for x in db_names.split(",") if x in self.db_maps)
         db_map = next(db_maps, None)
         if not db_map:
             return []
@@ -179,8 +168,7 @@ class GetObjectsMixin:
         """
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
-        db_name_to_map = self._parent.db_name_to_map
-        db_maps = iter(db_name_to_map[x] for x in db_names.split(",") if x in db_name_to_map)
+        db_maps = iter(self.db_maps[x] for x in db_names.split(",") if x in self.db_maps)
         db_map = next(db_maps, None)
         if not db_map:
             return []
@@ -239,17 +227,18 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
         self.combo_box = QComboBox(self)
         self.layout().insertWidget(0, self.combo_box)
         self.obj_cls_dict = {
-            db_map: {x.name: x.display_order for x in db_map.object_class_list()} for db_map in self._parent.db_maps
+            db_map: {x.name: x.display_order for x in db_map.object_class_list()} for db_map in self.db_maps.values()
         }
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
+        databases = ",".join(self.db_maps.keys())
         self.default_display_icon = default_icon_id()
-        self.model.set_default_row(**{'databases': db_maps, 'display icon': self.default_display_icon})
+        self.model.set_default_row(**{'databases': databases, 'display icon': self.default_display_icon})
         self.model.clear()
         insert_at_position_list = ['Insert new classes at the top']
-        object_class_names = {x: None for db_map in self._parent.db_maps for x in self.obj_cls_dict[db_map]}
+        object_class_names = {x: None for db_map in self.db_maps.values() for x in self.obj_cls_dict[db_map]}
         self.object_class_names = list(object_class_names)
         insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(name) for name in self.object_class_names]
@@ -275,7 +264,7 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
             name, description, display_icon, db_names = row_data
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+                db_maps = [self.db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -325,13 +314,13 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description', 'databases'])
         self.obj_cls_dict = {
-            db_map: {x.name: x.id for x in db_map.object_class_list()} for db_map in self._parent.db_maps
+            db_map: {x.name: x.id for x in db_map.object_class_list()} for db_map in self.db_maps.values()
         }
         if class_name:
             default_db_maps = [db_map for db_map, names in self.obj_cls_dict.items() if class_name in names]
+            db_names = ",".join([db_name for db_name, db_map in self.db_maps.items() if db_map in default_db_maps])
         else:
-            default_db_maps = self._parent.db_maps
-        db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in default_db_maps])
+            db_names = ",".join(self.db_maps.keys())
         self.model.set_default_row(**{'object class name': class_name, 'databases': db_names})
         self.model.clear()
 
@@ -368,10 +357,10 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
                 return
             pre_item = {'name': name, 'description': description}
             for db_name in db_names.split(","):
-                if db_name not in self._parent.db_name_to_map:
+                if db_name not in self.db_maps:
                     self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
-                db_map = self._parent.db_name_to_map[db_name]
+                db_map = self.db_maps[db_name]
                 object_classes = self.obj_cls_dict[db_map]
                 if class_name not in object_classes:
                     self._parent.msg_error.emit(
@@ -399,7 +388,7 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
     """
 
     def __init__(self, parent, db_maps, object_class_one_name=None, force_default=False):
-        super().__init__(parent)
+        super().__init__(parent, db_maps)
         self.setWindowTitle("Add relationship classes")
         self.model = EmptyRowModel(self)
         self.model.force_default = force_default
@@ -418,13 +407,13 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class 1 name', 'relationship class name', 'databases'])
         self.obj_cls_dict = {
-            db_map: {x.name: x.id for x in db_map.object_class_list()} for db_map in self._parent.db_maps
+            db_map: {x.name: x.id for x in db_map.object_class_list()} for db_map in self.db_maps.values()
         }
         if object_class_one_name:
             default_db_maps = [db_map for db_map, names in self.obj_cls_dict.items() if object_class_one_name in names]
+            db_names = ",".join([db_name for db_name, db_map in self.db_maps.items() if db_map in default_db_maps])
         else:
-            default_db_maps = self._parent.db_maps
-        db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in default_db_maps])
+            db_names = ",".join(self.db_maps.keys())
         self.model.set_default_row(**{'object class 1 name': object_class_one_name, 'databases': db_names})
         self.model.clear()
 
@@ -500,10 +489,10 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
             pre_item = {'name': relationship_class_name}
             db_names = row_data[db_column]
             for db_name in db_names.split(","):
-                if db_name not in self._parent.db_name_to_map:
+                if db_name not in self.db_maps:
                     self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
-                db_map = self._parent.db_name_to_map[db_name]
+                db_map = self.db_maps[db_name]
                 object_classes = self.obj_cls_dict[db_map]
                 object_class_id_list = list()
                 for column in range(name_column):  # Leave 'name' column outside
@@ -545,7 +534,7 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
         object_name=None,
         force_default=False,
     ):
-        super().__init__(parent)
+        super().__init__(parent, db_maps)
         self.default_object_class_name = object_class_name
         self.default_object_name = object_name
         self.relationship_class = None
@@ -562,14 +551,14 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
         self.layout().insertWidget(0, widget)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cubes_minus.svg"))
         self.obj_dict = {
-            db_map: {(x.class_id, x.name): x.id for x in db_map.object_list()} for db_map in self._parent.db_maps
+            db_map: {(x.class_id, x.name): x.id for x in db_map.object_list()} for db_map in self.db_maps.values()
         }
         self.rel_cls_dict = {
             db_map: {
                 (x.name, x.object_class_name_list): (x.id, x.object_class_id_list)
                 for x in db_map.wide_relationship_class_list()
             }
-            for db_map in self._parent.db_maps
+            for db_map in self.db_maps.values()
         }
         combo_items = {x: None for rel_cls_list in self.rel_cls_dict.values() for x in rel_cls_list}
         combo_items = list(combo_items)
@@ -607,7 +596,7 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
             if (self.class_name, self.object_class_name_list) in rel_cls_list
         ]
         object_class_name_list = self.object_class_name_list.split(',')
-        db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in default_db_maps])
+        db_names = ",".join([db_name for db_name, db_map in self.db_maps.items() if db_map in default_db_maps])
         header = [*[x + " name" for x in object_class_name_list], 'relationship name', 'databases']
         self.model.set_horizontal_header_labels(header)
         defaults = {'databases': db_names}
@@ -653,10 +642,10 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
             pre_item = {'name': relationship_name}
             db_names = row_data[db_column]
             for db_name in db_names.split(","):
-                if db_name not in self._parent.db_name_to_map:
+                if db_name not in self.db_maps:
                     self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
-                db_map = self._parent.db_name_to_map[db_name]
+                db_map = self.db_maps[db_name]
                 relationship_classes = self.rel_cls_dict[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
                     self._parent.msg_error.emit(
@@ -694,6 +683,7 @@ class EditOrRemoveItemsDialog(ManageItemsDialog):
         """Returns a list of db names available for a given row.
         Used by delegates.
         """
+        # TODO: db_map_dicts needs to know the database name
         return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_dicts[row]]
 
 
@@ -717,7 +707,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
         self.default_display_icon = default_icon_id()
         model_data = list()
         for db_map_dict in db_map_dicts:
-            db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
+            db_names = ",".join([db_name for db_name, db_map in self._parent.db_maps if db_map in db_map_dict])
             item = list(db_map_dict.values())[0]
             name = item.get('name')
             if not name:
@@ -746,7 +736,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
             name, description, display_icon, db_names = self.model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+                db_maps = [self.db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -811,7 +801,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             name, description, db_names = self.model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+                db_maps = [self.db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -873,7 +863,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             name, db_names = self.model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+                db_maps = [self.db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -960,7 +950,7 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
             db_names = row_data[db_column]
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+                db_maps = [self.db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -1043,7 +1033,7 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
             item_type, _, db_names = self.model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+                db_maps = [self.db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -1064,8 +1054,9 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         parent (TreeViewForm): data store widget
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, db_maps):
         super().__init__(parent)
+        self.db_maps = db_maps
         self.setWindowTitle("Manage parameter tags")
         header = ['parameter tag', 'description', 'databases', 'remove']
         self.model = CompoundWithEmptyTableModel(self, header=header)
@@ -1075,7 +1066,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         self.orig_data = list()
         model_data = list()
         tag_dict = {}
-        for db_map in self._parent.db_maps:
+        for db_map in self.db_maps:
             for parameter_tag in db_map.parameter_tag_list():
                 tag_dict.setdefault(parameter_tag.tag, {})[db_map] = parameter_tag
         self.db_map_dicts = list(tag_dict.values())
@@ -1084,12 +1075,12 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             tag = parameter_tag.tag
             description = parameter_tag.description
             remove = None
-            db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
+            db_names = ",".join([db_name for db_name, db_map in self.db_maps.items() if db_map in db_map_dict])
             row_data = [tag, description]
             self.orig_data.append(row_data.copy())
             row_data.extend([db_names, remove])
             model_data.append(row_data)
-        db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps])
+        db_names = ",".join(self.db_maps.keys())
         self.filled_model = MinimalTableModel(self, header=header)
         self.empty_model = EmptyRowModel(self, header=header)
         self.model.sub_models += [self.filled_model, self.empty_model]
@@ -1108,8 +1099,8 @@ class ManageParameterTagsDialog(ManageItemsDialog):
         Used by delegates.
         """
         if row < self.filled_model.rowCount():
-            return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_dicts[row]]
-        return [self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps]
+            return [db_name for db_name, db_map in self.db_maps.items() if db_map in self.db_map_dicts[row]]
+        return self.db_maps.keys()
 
     @Slot(name="accept")
     def accept(self):
@@ -1121,7 +1112,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             tag, description, db_names, _ = self.filled_model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+                db_maps = [self.db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -1148,7 +1139,7 @@ class ManageParameterTagsDialog(ManageItemsDialog):
             tag, description, db_names, _ = self.empty_model.row_data(i)
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self._parent.db_name_to_map[x] for x in db_name_list]
+                db_maps = [self.db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, offset + i + 1))
                 return

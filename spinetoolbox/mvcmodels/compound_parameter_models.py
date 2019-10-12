@@ -17,8 +17,8 @@ These models concatenate several 'single' models and one 'empty' model.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, Slot, QModelIndex
-from PySide2.QtGui import QFont
+from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
+from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, format_string_list
 from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 from ..mvcmodels.empty_parameter_models import (
@@ -40,6 +40,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     """A model that concatenates several single parameter models
     and one empty parameter model.
     """
+
+    remove_selection_requested = Signal(name="remove_selection_requested")
+    remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
 
     def __init__(self, parent, db_maps):
         """Init class.

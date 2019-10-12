@@ -55,13 +55,16 @@ class CustomContextMenu(QMenu):
         """Adds an action to the context menu.
 
         Args:
-            text (str): Text description of the action
+            text (str): Text description of the action, empty string is a separator
             icon (QIcon): Icon for menu item
             enabled (bool): Is action enabled?
         """
-        action = self.addAction(icon, text)
-        action.setEnabled(enabled)
-        action.triggered.connect(lambda: self.set_action(text))
+        if not text:
+            self.addSeparator()
+        else:
+            action = self.addAction(icon, text)
+            action.setEnabled(enabled)
+            action.triggered.connect(lambda: self.set_action(text))
 
     def set_action(self, option):
         """Sets the action which was clicked.
@@ -165,7 +168,7 @@ class ToolSpecificationContextMenu(CustomContextMenu):
         self.add_action("Remove Tool specification")
 
 
-class ObjectTreeContextMenu(CustomContextMenu):
+class EntityTreeContextMenu(CustomContextMenu):
     """Context menu class for object tree items in tree view form.
 
     Attributes:
@@ -179,78 +182,15 @@ class ObjectTreeContextMenu(CustomContextMenu):
         super().__init__(parent, position)
         if not index.isValid():
             return
-        copy_icon = self._parent.ui.actionCopy.icon()
-        plus_object_icon = self._parent.ui.actionAdd_objects.icon()
-        plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
-        edit_object_icon = self._parent.ui.actionEdit_objects.icon()
-        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
-        fully_expand_icon = self._parent.fully_expand_icon
-        fully_collapse_icon = self._parent.fully_collapse_icon
-        find_next_icon = self._parent.find_next_icon
-        item_type = index.data(Qt.UserRole)
-        self.add_action("Copy text", copy_icon)
+        item = index.internalPointer()
+        self.add_action("Copy text", QIcon(":/icons/menu_icons/copy.svg"))
         self.addSeparator()
-        if index.model().hasChildren(index):
-            self.add_action("Fully expand", fully_expand_icon)
-            self.add_action("Fully collapse", fully_collapse_icon)
-        if item_type == 'relationship':
-            self.add_action("Find next", find_next_icon)
+        if item.has_children():
+            self.add_action("Fully expand", QIcon(":/icons/menu_icons/angle-double-right.svg"))
+            self.add_action("Fully collapse", QIcon(":/icons/menu_icons/angle-double-left.svg"))
         self.addSeparator()
-        if item_type == 'root':
-            self.add_action("Add object classes", plus_object_icon)
-        elif item_type == 'object_class':
-            self.add_action("Add relationship classes", plus_relationship_icon)
-            self.add_action("Add objects", plus_object_icon)
-            self.addSeparator()
-            self.add_action("Edit object classes", edit_object_icon)
-        elif item_type == 'object':
-            self.addSeparator()
-            self.add_action("Edit objects", edit_object_icon)
-        elif item_type == 'relationship_class':
-            self.add_action("Add relationships", plus_relationship_icon)
-            self.addSeparator()
-            self.add_action("Edit relationship classes", edit_relationship_icon)
-        elif item_type == 'relationship':
-            self.addSeparator()
-            self.add_action("Edit relationships", edit_relationship_icon)
-        if item_type != 'root':
-            self.addSeparator()
-            self.add_action("Remove selection", remove_icon)
-
-
-class RelationshipTreeContextMenu(CustomContextMenu):
-    """Context menu class for relationship tree items in tree view form.
-
-    Attributes:
-        parent (QWidget): Parent for menu widget (TreeViewForm)
-        position (QPoint): Position on screen
-        index (QModelIndex): Index of item that requested the context-menu
-    """
-
-    def __init__(self, parent, position, index):
-        """Class constructor."""
-        super().__init__(parent, position)
-        if not index.isValid():
-            return
-        copy_icon = self._parent.ui.actionCopy.icon()
-        plus_relationship_icon = self._parent.ui.actionAdd_relationships.icon()
-        edit_relationship_icon = self._parent.ui.actionEdit_relationships.icon()
-        remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
-        item_type = index.data(Qt.UserRole)
-        self.add_action("Copy text", copy_icon)
-        self.addSeparator()
-        if item_type == 'root':
-            self.add_action("Add relationship classes", plus_relationship_icon)
-        elif item_type == 'relationship_class':
-            self.add_action("Add relationships", plus_relationship_icon)
-            self.addSeparator()
-            self.add_action("Edit relationship classes", edit_relationship_icon)
-        elif item_type == 'relationship':
-            self.add_action("Edit relationships", edit_relationship_icon)
-        if item_type != 'root':
-            self.addSeparator()
-            self.add_action("Remove selection", remove_icon)
+        for text, icon in item.context_menu_actions.items():
+            self.add_action(text, icon)
 
 
 class ParameterContextMenu(CustomContextMenu):
