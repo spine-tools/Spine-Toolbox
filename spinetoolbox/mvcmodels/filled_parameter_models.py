@@ -38,20 +38,20 @@ from ..mvcmodels.parameter_value_formatting import format_for_DisplayRole, forma
 class FilledParameterModel(MinimalTableModel):
     """A parameter model filled with data."""
 
-    def __init__(self, parent, lazy_loading=False, header=None, fixed_fields=None, json_fields=None):
+    def __init__(self, parent, header, db_maps, lazy_loading=False, fixed_fields=None, json_fields=None):
         """Initialize class.
 
         Args:
-            parent (ParameterModel): the parent object
+            parent (Object): the parent object, typically a CompoundParameterModel
+            header (list): list of field names for the header
+            db_maps (dict): maps database names to DiffDatabaseMapping instances
         """
-        super().__init__(parent, header=header)
-        if header is None:
-            header = []
+        super().__init__(parent, header)
+        self.db_maps = db_maps
         if fixed_fields is None:
             fixed_fields = []
         if json_fields is None:
             json_fields = []
-        self.header = header
         self.fixed_fields = fixed_fields
         self.json_fields = json_fields
 

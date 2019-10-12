@@ -35,15 +35,19 @@ class SingleParameterMixin:
     and do some filtering on the rows.
     """
 
-    def __init__(self, parent, database, *args, **kwargs):
+    def __init__(self, parent, header, db_maps, icon_mngr, database, *args, **kwargs):
         """Init class.
 
         Args:
-            database (str): the database where the entity class associated with this model lives.
+            parent (CompoundParameterModel): the parent object
+            header (list): list of field names for the header
+            db_maps (dict): maps database names to DiffDatabaseMapping instances
+            icon_mngr (IconManager): an icon manager for the decoration role
+            database (str): the database where the entity class associated with this model lives
         """
-        super().__init__(parent, *args, **kwargs)
+        super().__init__(parent, header, db_maps, icon_mngr, *args, **kwargs)
         self.database = database
-        self.db_map = parent.db_name_to_map[database]
+        self.db_map = db_maps[database]
         self._auto_filter = dict()
         self._selected_param_def_ids = set()
 
@@ -83,15 +87,18 @@ class SingleParameterMixin:
 class SingleObjectParameterMixin(SingleParameterMixin):
     """Associates a parameter model with a single object class."""
 
-    def __init__(self, parent, database, object_class_id, *args, **kwargs):
+    def __init__(self, parent, header, db_maps, icon_mngr, database, object_class_id, *args, **kwargs):
         """Init class.
 
         Args:
-            parent (CompoundParameterModel): the parent model
-            database (str): the database where the object class associated with this model lives.
+            parent (CompoundParameterModel): the parent object
+            header (list): list of field names for the header
+            db_maps (dict): maps database names to DiffDatabaseMapping instances
+            icon_mngr (IconManager): an icon manager for the decoration role
+            database (str): the database where the entity class associated with this model lives
             object_class_id (int): the id of the object class
         """
-        super().__init__(parent, database, *args, **kwargs)
+        super().__init__(parent, header, db_maps, icon_mngr, database, *args, **kwargs)
         self.object_class_id = object_class_id
 
     @property
@@ -102,16 +109,21 @@ class SingleObjectParameterMixin(SingleParameterMixin):
 class SingleRelationshipParameterMixin(SingleParameterMixin):
     """Associates a parameter model with a single relationship class."""
 
-    def __init__(self, parent, database, relationship_class_id, object_class_id_list, *args, **kwargs):
+    def __init__(
+        self, parent, header, db_maps, icon_mngr, database, relationship_class_id, object_class_id_list, *args, **kwargs
+    ):
         """Init class.
 
         Args:
-            parent (CompoundParameterModel): the parent model
-            database (str): the database where the relationship class associated with this model lives.
+            parent (CompoundParameterModel): the parent object
+            header (list): list of field names for the header
+            db_maps (dict): maps database names to DiffDatabaseMapping instances
+            icon_mngr (IconManager): an icon manager for the decoration role
+            database (str): the database where the entity class associated with this model lives
             relationship_class_id (int): the id of the relationship class
             object_class_id_list (str): comma separated string of member object class ids
         """
-        super().__init__(parent, database, *args, **kwargs)
+        super().__init__(parent, header, db_maps, icon_mngr, database, *args, **kwargs)
         self.relationship_class_id = relationship_class_id
         self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
 
@@ -163,7 +175,9 @@ class SingleObjectParameterDefinitionModel(SingleObjectParameterMixin, FilledObj
     def fetch_data(self):
         sq = self.db_map.object_parameter_definition_sq
         return [
-            ObjectParameterDefinitionItem(self.header, database=self.database, **param_def._asdict())
+            ObjectParameterDefinitionItem(
+                self.header, database=self.database, db_map=self.db_map, **param_def._asdict()
+            )
             for param_def in self.db_map.query(sq).filter_by(object_class_id=self.object_class_id)
         ]
 
@@ -176,7 +190,9 @@ class SingleRelationshipParameterDefinitionModel(
     def fetch_data(self):
         sq = self.db_map.relationship_parameter_definition_sq
         return [
-            RelationshipParameterDefinitionItem(self.header, database=self.database, **param_def._asdict())
+            RelationshipParameterDefinitionItem(
+                self.header, database=self.database, db_map=self.db_map, **param_def._asdict()
+            )
             for param_def in self.db_map.query(sq).filter_by(relationship_class_id=self.relationship_class_id)
         ]
 
@@ -189,7 +205,7 @@ class SingleObjectParameterValueModel(
     def fetch_data(self):
         sq = self.db_map.object_parameter_value_sq
         return [
-            ObjectParameterValueItem(self.header, database=self.database, **param_val._asdict())
+            ObjectParameterValueItem(self.header, database=self.database, db_map=self.db_map, **param_val._asdict())
             for param_val in self.db_map.query(sq).filter_by(object_class_id=self.object_class_id)
         ]
 
@@ -202,6 +218,8 @@ class SingleRelationshipParameterValueModel(
     def fetch_data(self):
         sq = self.db_map.relationship_parameter_value_sq
         return [
-            RelationshipParameterValueItem(self.header, database=self.database, **param_val._asdict())
+            RelationshipParameterValueItem(
+                self.header, database=self.database, db_map=self.db_map, **param_val._asdict()
+            )
             for param_val in self.db_map.query(sq).filter_by(relationship_class_id=self.relationship_class_id)
         ]

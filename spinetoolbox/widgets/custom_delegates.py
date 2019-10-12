@@ -210,7 +210,7 @@ class ParameterDelegate(QItemDelegate):
 
     def _create_database_editor(self, parent, option, index):
         editor = SearchBarEditor(self._parent, parent)
-        editor.set_data(index.data(Qt.EditRole), self._parent.db_names)
+        editor.set_data(index.data(Qt.DisplayRole), self._parent.db_maps.keys())
         return editor
 
     def _create_line_editor(self, parent, option, index):
@@ -272,7 +272,7 @@ class ParameterDelegate(QItemDelegate):
         """Return editor."""
         field = index.model().horizontal_header_labels()[index.column()]
         item = index.model().item_at_row(index.row())
-        db_map = self._parent.db_name_to_map.get(item.database)
+        db_map = item.db_map
         create_editor_func = self._create_editor_func_map.get(field)
         if field == 'database':
             editor = self._create_database_editor(parent, option, index)

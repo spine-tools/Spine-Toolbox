@@ -47,6 +47,7 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
+from ..mvcmodels.entity_tree_models import ObjectClassItem, ObjectItem, RelationshipClassItem, RelationshipItem
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect, format_string_list, IconManager
 from ..plotting import tree_graph_view_parameter_value_name
@@ -58,7 +59,7 @@ class DataStoreForm(QMainWindow):
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
         ui: UI definition of the form that is initialized
-        db_maps (dict): named DiffDatabaseMapping instances
+        db_maps (dict): maps database names to DiffDatabaseMapping instances
     """
 
     msg = Signal(str, name="msg")
@@ -81,12 +82,9 @@ class DataStoreForm(QMainWindow):
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB
-        self.db_names = list(db_maps.keys())
-        self.db_maps = list(db_maps.values())
-        self.db_name_to_map = dict(zip(self.db_names, self.db_maps))
-        self.db_map_to_name = dict(zip(self.db_maps, self.db_names))
+        self.db_maps = db_maps
         self.icon_mngr = IconManager()
-        for db_map in self.db_maps:
+        for db_map in self.db_maps.values():
             self.icon_mngr.setup_object_pixmaps(db_map.object_class_list())
         # Object tree selected indexes
         self.selected_obj_tree_indexes = {}
@@ -95,17 +93,17 @@ class DataStoreForm(QMainWindow):
         self.selected_relationship_class_ids = dict()
         self.selected_object_id_lists = dict()
         # Parameter tag stuff
-        self.parameter_tag_toolbar = ParameterTagToolBar(self)
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, list(db_maps.values()))
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         self.selected_parameter_tag_ids = dict()
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
         # Models
-        self.object_parameter_value_model = CompoundObjectParameterValueModel(self)
-        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self)
-        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self)
-        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self)
-        self.parameter_value_list_model = ParameterValueListModel(self)
+        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, db_maps)
+        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, db_maps)
+        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, db_maps)
+        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self, db_maps)
+        self.parameter_value_list_model = ParameterValueListModel(self, db_maps)
         # Setup views
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
@@ -282,7 +280,8 @@ class DataStoreForm(QMainWindow):
         if not any(db_map.has_pending_changes() for db_map in self.db_maps):
             self.msg.emit("Nothing to commit yet.")
             return
-        dialog = CommitDialog(self, *self.db_names)
+        db_names = list(self.db_maps.keys())
+        dialog = CommitDialog(self, *db_names)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
             return
@@ -291,7 +290,7 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def commit_session(self, commit_msg):
         try:
-            for db_map in self.db_maps:
+            for db_map in self.db_maps.values():
                 db_map.commit_session(commit_msg)
             self.commit_available.emit(False)
         except SpineDBAPIError as e:
@@ -303,7 +302,7 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="rollback_session")
     def rollback_session(self, checked=False):
         try:
-            for db_map in self.db_maps:
+            for db_map in self.db_maps.values():
                 db_map.rollback_session()
             self.commit_available.emit(False)
         except SpineDBAPIError as e:
@@ -331,7 +330,7 @@ class DataStoreForm(QMainWindow):
     def init_object_tree_model(self):
         """Initialize object tree model."""
         self.object_tree_model.build_tree()
-        self.ui.treeView_object.expand(self.object_tree_model.indexFromItem(self.object_tree_model.root_item))
+        self.ui.treeView_object.expand(self.object_tree_model.root_index)
         self.ui.treeView_object.resizeColumnToContents(0)
 
     def init_parameter_value_models(self):
@@ -416,9 +415,9 @@ class DataStoreForm(QMainWindow):
 
     def set_default_parameter_rows(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
-        if index is None or index.data(Qt.UserRole) == 'root':
-            db_name = self.db_names[0]
-            default_row = dict(database=db_name)
+        if index is None or not index.parent().isValid():
+            database = next(iter(self.db_maps.keys()))
+            default_row = dict(database=database)
             for model in (
                 self.object_parameter_definition_model,
                 self.object_parameter_value_model,
@@ -429,62 +428,58 @@ class DataStoreForm(QMainWindow):
                 model.set_default_row(**default_row)
                 model.set_rows_to_default(model.rowCount() - 1)
             return
-        item_type = index.data(Qt.UserRole)
-        db_map_dict = index.data(Qt.UserRole + 1)
-        db_map = list(db_map_dict.keys())[0]
-        db_name = self.db_map_to_name[db_map]
-        item = db_map_dict[db_map]
-        if item_type == 'object_class':
-            default_row = dict(object_class_id=item['id'], object_class_name=item['name'], database=db_name)
+        item = index.internalPointer()
+        db_map = item.first_db_map
+        data = item.db_map_data(db_map)
+        if isinstance(item, ObjectClassItem):
+            default_row = dict(object_class_id=data['id'], object_class_name=data['name'], database=data['database'])
             for model in (self.object_parameter_definition_model, self.object_parameter_value_model):
                 model = model.empty_model
                 model.set_default_row(**default_row)
                 model.set_rows_to_default(model.rowCount() - 1)
-        elif item_type == 'object':
-            parent_index = index.parent()
-            parent_db_map_dict = parent_index.data(Qt.UserRole + 1)
-            parent_item = parent_db_map_dict[db_map]
+        elif isinstance(item, ObjectItem):
+            parent_item = index.parent().internalPointer()
+            parent_data = parent_item.db_map_data(db_map)
             default_row = dict(
-                object_class_id=parent_item['id'], object_class_name=parent_item['name'], database=db_name
+                object_class_id=parent_data['id'], object_class_name=parent_data['name'], database=data['database']
             )
             model = self.object_parameter_definition_model.empty_model
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1)
-            default_row.update(dict(object_id=item['id'], object_name=item['name']))
+            default_row.update(dict(object_id=data['id'], object_name=data['name']))
             model = self.object_parameter_value_model.empty_model
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1)
-        elif item_type == 'relationship_class':
+        elif isinstance(item, RelationshipClassItem):
             default_row = dict(
-                relationship_class_id=item['id'],
-                relationship_class_name=item['name'],
-                object_class_id_list=item['object_class_id_list'],
-                object_class_name_list=item['object_class_name_list'],
-                database=db_name,
+                relationship_class_id=data['id'],
+                relationship_class_name=data['name'],
+                object_class_id_list=data['object_class_id_list'],
+                object_class_name_list=data['object_class_name_list'],
+                database=data['database'],
             )
             for model in (self.relationship_parameter_definition_model, self.relationship_parameter_value_model):
                 model = model.empty_model
                 model.set_default_row(**default_row)
                 model.set_rows_to_default(model.rowCount() - 1)
-        elif item_type == 'relationship':
-            parent_index = index.parent()
-            parent_db_map_dict = parent_index.data(Qt.UserRole + 1)
-            parent_item = parent_db_map_dict[db_map]
+        elif isinstance(item, RelationshipItem):
+            parent_item = index.parent().internalPointer()
+            parent_data = parent_item.db_map_data(db_map)
             default_row = dict(
-                relationship_class_id=parent_item['id'],
-                relationship_class_name=parent_item['name'],
-                object_class_id_list=parent_item['object_class_id_list'],
-                object_class_name_list=parent_item['object_class_name_list'],
-                database=db_name,
+                relationship_class_id=parent_data['id'],
+                relationship_class_name=parent_data['name'],
+                object_class_id_list=parent_data['object_class_id_list'],
+                object_class_name_list=parent_data['object_class_name_list'],
+                database=data['database'],
             )
             model = self.relationship_parameter_definition_model.empty_model
             model.set_default_row(**default_row)
             model.set_rows_to_default(model.rowCount() - 1)
             default_row.update(
                 dict(
-                    relationship_id=item['id'],
-                    object_id_list=item['object_id_list'],
-                    object_name_list=item['object_name_list'],
+                    relationship_id=data['id'],
+                    object_id_list=data['object_id_list'],
+                    object_name_list=data['object_name_list'],
                 )
             )
             model = self.relationship_parameter_value_model.empty_model
@@ -505,19 +500,19 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_add_object_classes_form")
     def show_add_object_classes_form(self, checked=False):
         """Show dialog to let user select preferences for new object classes."""
-        dialog = AddObjectClassesDialog(self)
+        dialog = AddObjectClassesDialog(self, self.db_maps)
         dialog.show()
 
     @Slot("bool", "str", name="show_add_objects_form")
     def show_add_objects_form(self, checked=False, class_name=""):
         """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, class_name=class_name)
+        dialog = AddObjectsDialog(self, self.db_maps, class_name=class_name)
         dialog.show()
 
     @Slot("bool", "str", name="show_add_relationship_classes_form")
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
         """Show dialog to let user select preferences for new relationship class."""
-        dialog = AddRelationshipClassesDialog(self, object_class_one_name=object_class_one_name)
+        dialog = AddRelationshipClassesDialog(self, self.db_maps, object_class_one_name=object_class_one_name)
         dialog.show()
 
     @Slot("bool", "tuple", "str", "str", name="show_add_relationships_form")
@@ -527,6 +522,7 @@ class DataStoreForm(QMainWindow):
         """Show dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
             self,
+            self.db_maps,
             relationship_class_key=relationship_class_key,
             object_class_name=object_class_name,
             object_name=object_name,
@@ -908,7 +904,7 @@ class DataStoreForm(QMainWindow):
             return False
         header = index.model().horizontal_header_labels()
         item = index.model().item_at_row(index.row())
-        db_map = self.db_name_to_map.get(item.database)
+        db_map = item.db_map
         if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name' and db_map:
             parameters = [dict(id=item.id, entity_class_id=item.entity_class.id, name=new_value)]
             if index.model() == self.object_parameter_definition_model:
@@ -1012,7 +1008,7 @@ class DataStoreForm(QMainWindow):
         else:
             qsettings.setValue("windowMaximized", False)
         qsettings.endGroup()
-        if any(db_map.has_pending_changes() for db_map in self.db_maps):
+        if any(db_map.has_pending_changes() for db_map in self.db_maps.values()):
             self.show_commit_session_prompt()
         if event:
             event.accept()

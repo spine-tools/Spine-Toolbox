@@ -43,12 +43,19 @@ class TreeNode:
 
 
 class ParameterValueListModel(QAbstractItemModel):
-    """A model to display parameter value list data in a tree view."""
+    """A model to display parameter value list data in a tree view.
 
-    def __init__(self, parent):
+
+    Args:
+        parent (DataStoreForm)
+        db_maps (dict): maps db names to DiffDatabaseMapping instances
+    """
+
+    def __init__(self, parent, db_maps):
         """Initialize class"""
         super().__init__(parent)
         self._parent = parent
+        self.db_maps = db_maps
         self.bold_font = QFont()
         self.bold_font.setBold(True)
         gray_color = QGuiApplication.palette().text().color()
@@ -64,7 +71,7 @@ class ParameterValueListModel(QAbstractItemModel):
         self.beginResetModel()
         self._root_nodes = list()
         k = 0
-        for db_map, db_name in self._parent.db_map_to_name.items():
+        for db_name, db_map in self.db_maps.items():
             db_node = TreeNode(None, k, text="root ({})".format(db_name), identifier=db_map, level=0)
             k += 1
             self._root_nodes.append(db_node)

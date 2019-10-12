@@ -24,16 +24,18 @@ class ParameterItem:
     It provides __getitem__ and __setitem__ methods so the item behaves more or less like a list.
     """
 
-    def __init__(self, header, database=None, id=None):
+    def __init__(self, header, database=None, db_map=None, id=None):
         """Init class.
 
         Args:
             header (list): header from the model where this item belong
-            database (str): the database where this item comes from
-            id (int): the id of the item in the database table
+            database (str): the name of the database where this item comes from
+            db_map (DiffDatabaseMapping): the db mapping to the database
+            id (int): the id of the item in the db_map table
         """
         self._header = header
         self.database = database
+        self.db_map = db_map
         self.id = id
         self._cache = {}  # A dict for storing changes before an update
         self._attr_field_map = {}  # Map from attribute name to db field name in case they differ
@@ -117,9 +119,11 @@ class ParameterItem:
 class ObjectParameterItemMixin:
     """Provides a common interface to object parameter definition and value items."""
 
-    def __init__(self, header, database=None, id=None, object_class_id=None, object_class_name=None, **kwargs):
+    def __init__(
+        self, header, database=None, db_map=None, id=None, object_class_id=None, object_class_name=None, **kwargs
+    ):
         """Init class."""
-        super().__init__(header, database, id, **kwargs)
+        super().__init__(header, database, db_map, id, **kwargs)
         self.object_class_id = object_class_id
         self.object_class_name = object_class_name
         self._mandatory_attrs_for_insert.append("object_class_id")
@@ -138,6 +142,7 @@ class RelationshipParameterItemMixin:
         self,
         header,
         database=None,
+        db_map=None,
         id=None,
         relationship_class_id=None,
         relationship_class_name=None,
@@ -146,7 +151,7 @@ class RelationshipParameterItemMixin:
         **kwargs
     ):
         """Init class."""
-        super().__init__(header, database, id, **kwargs)
+        super().__init__(header, database, db_map, id, **kwargs)
         self.relationship_class_id = relationship_class_id
         self.relationship_class_name = relationship_class_name
         self.object_class_id_list = object_class_id_list
@@ -186,6 +191,7 @@ class ParameterDefinitionItemMixin:
         self,
         header,
         database=None,
+        db_map=None,
         id=None,
         parameter_name=None,
         value_list_id=None,
@@ -197,7 +203,7 @@ class ParameterDefinitionItemMixin:
     ):
         """Init class.
         """
-        super().__init__(header, database, id, **kwargs)
+        super().__init__(header, database, db_map, id, **kwargs)
         self.parameter_name = parameter_name
         self.value_list_id = value_list_id
         self.value_list_name = value_list_name
@@ -260,10 +266,12 @@ class ParameterDefinitionItemMixin:
 class ParameterValueItemMixin:
     """Provides a common interface to all parameter definitions regardless of the entity class."""
 
-    def __init__(self, header, database=None, id=None, parameter_id=None, parameter_name=None, value=None, **kwargs):
+    def __init__(
+        self, header, database=None, db_map=None, id=None, parameter_id=None, parameter_name=None, value=None, **kwargs
+    ):
         """Init class.
         """
-        super().__init__(header, database, id, **kwargs)
+        super().__init__(header, database, db_map, id, **kwargs)
         self.parameter_id = parameter_id
         self.parameter_name = parameter_name
         self.value = value
@@ -289,9 +297,9 @@ class RelationshipParameterDefinitionItem(RelationshipParameterItemMixin, Parame
 class ObjectParameterValueItem(ObjectParameterItemMixin, ParameterValueItemMixin, ParameterItem):
     """Class to hold object parameter values within a subclass of MinimalTableModel."""
 
-    def __init__(self, header, database=None, id=None, object_id=None, object_name=None, **kwargs):
+    def __init__(self, header, database=None, db_map=None, id=None, object_id=None, object_name=None, **kwargs):
         """Init class."""
-        super().__init__(header, database, id, **kwargs)
+        super().__init__(header, database, db_map, id, **kwargs)
         self.object_id = object_id
         self.object_name = object_name
         self._mandatory_attrs_for_insert.append("object_id")
@@ -302,10 +310,18 @@ class RelationshipParameterValueItem(RelationshipParameterItemMixin, ParameterVa
     """Class to hold relationship parameter values within a subclass of MinimalTableModel."""
 
     def __init__(
-        self, header, database=None, id=None, relationship_id=None, object_id_list=None, object_name_list=None, **kwargs
+        self,
+        header,
+        database=None,
+        db_map=None,
+        id=None,
+        relationship_id=None,
+        object_id_list=None,
+        object_name_list=None,
+        **kwargs
     ):
         """Init class."""
-        super().__init__(header, database, id, **kwargs)
+        super().__init__(header, database, db_map, id, **kwargs)
         self.relationship_id = relationship_id
         self.object_id_list = object_id_list
         self.object_name_list = object_name_list

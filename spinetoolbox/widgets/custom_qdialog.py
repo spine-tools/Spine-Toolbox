@@ -51,16 +51,18 @@ from ..helpers import busy_effect, default_icon_id
 
 
 class ManageItemsDialog(QDialog):
-    """A dialog with a CopyPasteTableView and a QDialogButtonBox, to be extended into
-    dialogs to query user's preferences for adding/editing/managing data items
+    """A dialog with a CopyPasteTableView and a QDialogButtonBox. Base class for all
+    dialogs to query user's preferences for adding/editing/managing data items.
 
     Attributes:
-        parent (TreeViewForm): data store widget
+        parent (DataStoreForm): data store widget
     """
 
     def __init__(self, parent):
         super().__init__(parent)
         self._parent = parent
+        self.model = None
+        self._model_data = None
         self.table_view = CopyPasteTableView(self)
         self.table_view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
         self.table_view.horizontalHeader().setStretchLastSection(True)
@@ -79,6 +81,15 @@ class ManageItemsDialog(QDialog):
         self.table_view.itemDelegate().data_committed.connect(self.set_model_data)
         self.model.dataChanged.connect(self._handle_model_data_changed)
         self.model.modelReset.connect(self._handle_model_reset)
+        self._model_data = self.model.data
+        self.model.data = self._model_data_override
+
+    def _model_data_override(self, index, role=Qt.DisplayRole):
+        header = self.model.header
+        data = self._model_data(index, role)
+        if header[index.column()] == "databases" and data:
+            return ", ".join([x.short_name for x in data])
+        return data
 
     def resize_window_to_columns(self):
         margins = self.layout().contentsMargins()
@@ -110,8 +121,9 @@ class ManageItemsDialog(QDialog):
 
 
 class AddItemsDialog(ManageItemsDialog):
-    def __init__(self, parent):
+    def __init__(self, parent, db_maps):
         super().__init__(parent)
+        self.db_maps = db_maps
         self.remove_rows_button = QToolButton()
         self.remove_rows_button.setToolTip("<p>Remove selected rows.</p>")
         self.layout().insertWidget(1, self.remove_rows_button)
@@ -131,7 +143,7 @@ class AddItemsDialog(ManageItemsDialog):
         """Returns a list of db names available for a given row.
         Used by delegates.
         """
-        return [self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps]
+        return self.db_maps
 
 
 class GetObjectClassesMixin:
@@ -219,8 +231,8 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
         parent (DataStoreForm): data store widget
     """
 
-    def __init__(self, parent):
-        super().__init__(parent)
+    def __init__(self, parent, db_maps):
+        super().__init__(parent, db_maps)
         self.setWindowTitle("Add object classes")
         self.model = EmptyRowModel(self)
         self.table_view.setModel(self.model)
@@ -233,9 +245,8 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
-        db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in self._parent.db_maps])
         self.default_display_icon = default_icon_id()
-        self.model.set_default_row(**{'databases': db_names, 'display icon': self.default_display_icon})
+        self.model.set_default_row(**{'databases': db_maps, 'display icon': self.default_display_icon})
         self.model.clear()
         insert_at_position_list = ['Insert new classes at the top']
         object_class_names = {x: None for db_map in self._parent.db_maps for x in self.obj_cls_dict[db_map]}
@@ -303,8 +314,8 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
         force_default (bool): if True, defaults are non-editable
     """
 
-    def __init__(self, parent, class_name=None, force_default=False):
-        super().__init__(parent)
+    def __init__(self, parent, db_maps, class_name=None, force_default=False):
+        super().__init__(parent, db_maps)
         self.setWindowTitle("Add objects")
         self.model = EmptyRowModel(self)
         self.model.force_default = force_default
@@ -387,7 +398,7 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
         force_default (bool): if True, defaults are non-editable
     """
 
-    def __init__(self, parent, object_class_one_name=None, force_default=False):
+    def __init__(self, parent, db_maps, object_class_one_name=None, force_default=False):
         super().__init__(parent)
         self.setWindowTitle("Add relationship classes")
         self.model = EmptyRowModel(self)
@@ -526,7 +537,13 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
     """
 
     def __init__(
-        self, parent, relationship_class_key=None, object_class_name=None, object_name=None, force_default=False
+        self,
+        parent,
+        db_maps,
+        relationship_class_key=None,
+        object_class_name=None,
+        object_name=None,
+        force_default=False,
     ):
         super().__init__(parent)
         self.default_object_class_name = object_class_name

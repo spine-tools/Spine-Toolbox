@@ -43,8 +43,19 @@ class CopyPasteTableView(QTableView):
         elif event.matches(QKeySequence.Paste):
             if not self.paste():
                 super().keyPressEvent(event)
+        elif event.matches(QKeySequence.Delete):
+            if not self.delete_content():
+                super().keyPressEvent(event)
         else:
             super().keyPressEvent(event)
+
+    def delete_content(self):
+        """Delete content from editable indexes in current selection."""
+        selection = self.selectionModel().selection()
+        if not selection:
+            return False
+        indexes = [ind for ind in selection.indexes() if ind.flags() & Qt.ItemIsEditable]
+        return self.model().batch_set_data(indexes, [None for _ in indexes])
 
     def copy(self):
         """Copy current selection to clipboard in excel format."""

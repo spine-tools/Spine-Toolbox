@@ -41,15 +41,16 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     and one empty parameter model.
     """
 
-    def __init__(self, parent):
+    def __init__(self, parent, db_maps):
         """Init class.
 
         Args:
             parent (DataStoreForm): an instance of TreeViewForm or GraphViewForm
+            db_maps (dicts): maps db names to DiffDatabaseMapping instances
         """
         super().__init__(parent)
         self._parent = parent
-        self.db_name_to_map = parent.db_name_to_map
+        self.db_maps = db_maps
         self.icon_mngr = parent.icon_mngr
         self._auto_filter = dict()
 
@@ -90,12 +91,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def single_model_keys(self):
         """Generates keys for creating single models when initializing the model."""
         d = dict()
-        for database, db_map in self.db_name_to_map.items():
+        for database, db_map in self.db_maps.items():
             for entity_class in self.entity_class_query(db_map):
                 d.setdefault(entity_class.name, list()).append((database, entity_class))
         for entity_class_list in d.values():
-            for database, entity_class in entity_class_list:
-                yield (database, entity_class)
+            yield from entity_class_list
 
     def single_model_key_from_item(self, item):
         """Returns the single model key from the given item.
@@ -485,9 +485,9 @@ class CompoundObjectParameterDefinitionModel(
     and one empty object parameter definition model.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent, db_maps):
         """Init class."""
-        super().__init__(parent)
+        super().__init__(parent, db_maps)
         self.header = [
             "object_class_name",
             "parameter_name",
@@ -502,16 +502,17 @@ class CompoundObjectParameterDefinitionModel(
     def create_single_model(self, database, db_item):
         return SingleObjectParameterDefinitionModel(
             self,
+            self.header,
+            self.db_maps,
+            self.icon_mngr,
             database,
             db_item.id,
-            header=self.header,
             fixed_fields=self.fixed_fields,
             json_fields=self.json_fields,
-            icon_mngr=self.icon_mngr,
         )
 
     def create_empty_model(self):
-        return EmptyObjectParameterDefinitionModel(self, header=self.header, icon_mngr=self.icon_mngr)
+        return EmptyObjectParameterDefinitionModel(self, self.header, self.db_maps, self.icon_mngr)
 
 
 class CompoundRelationshipParameterDefinitionModel(
@@ -524,9 +525,9 @@ class CompoundRelationshipParameterDefinitionModel(
     and one empty relationship parameter definition model.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent, db_maps):
         """Init class."""
-        super().__init__(parent)
+        super().__init__(parent, db_maps)
         self.header = [
             "relationship_class_name",
             "object_class_name_list",
@@ -542,17 +543,18 @@ class CompoundRelationshipParameterDefinitionModel(
     def create_single_model(self, database, db_item):
         return SingleRelationshipParameterDefinitionModel(
             self,
+            self.header,
+            self.db_maps,
+            self.icon_mngr,
             database,
             db_item.id,
             db_item.object_class_id_list,
-            header=self.header,
             fixed_fields=self.fixed_fields,
             json_fields=self.json_fields,
-            icon_mngr=self.icon_mngr,
         )
 
     def create_empty_model(self):
-        return EmptyRelationshipParameterDefinitionModel(self, header=self.header, icon_mngr=self.icon_mngr)
+        return EmptyRelationshipParameterDefinitionModel(self, self.header, self.db_maps, self.icon_mngr)
 
 
 class CompoundObjectParameterValueModel(
@@ -566,9 +568,9 @@ class CompoundObjectParameterValueModel(
     and one empty object parameter value model.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent, db_maps):
         """Init class."""
-        super().__init__(parent)
+        super().__init__(parent, db_maps)
         self.header = ["object_class_name", "object_name", "parameter_name", "value", "database"]
         self.fixed_fields = ["object_class_name", "object_name", "parameter_name", "database"]
         self.json_fields = ["value"]
@@ -576,16 +578,17 @@ class CompoundObjectParameterValueModel(
     def create_single_model(self, database, db_item):
         return SingleObjectParameterValueModel(
             self,
+            self.header,
+            self.db_maps,
+            self.icon_mngr,
             database,
             db_item.id,
-            header=self.header,
             fixed_fields=self.fixed_fields,
             json_fields=self.json_fields,
-            icon_mngr=self.icon_mngr,
         )
 
     def create_empty_model(self):
-        return EmptyObjectParameterValueModel(self, header=self.header, icon_mngr=self.icon_mngr)
+        return EmptyObjectParameterValueModel(self, self.header, self.db_maps, self.icon_mngr)
 
     def update_single_model_filter(self, model):
         """Update the filter for the given model."""
@@ -609,9 +612,9 @@ class CompoundRelationshipParameterValueModel(
     and one empty relationship parameter value model.
     """
 
-    def __init__(self, parent=None):
+    def __init__(self, parent, db_maps):
         """Init class."""
-        super().__init__(parent)
+        super().__init__(parent, db_maps)
         self.header = ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
         self.fixed_fields = ["relationship_class_name", "object_name_list", "parameter_name", "database"]
         self.json_fields = ["value"]
@@ -619,17 +622,18 @@ class CompoundRelationshipParameterValueModel(
     def create_single_model(self, database, db_item):
         return SingleRelationshipParameterValueModel(
             self,
+            self.header,
+            self.db_maps,
+            self.icon_mngr,
             database,
             db_item.id,
             db_item.object_class_id_list,
-            header=self.header,
             fixed_fields=self.fixed_fields,
             json_fields=self.json_fields,
-            icon_mngr=self.icon_mngr,
         )
 
     def create_empty_model(self):
-        return EmptyRelationshipParameterValueModel(self, header=self.header, icon_mngr=self.icon_mngr)
+        return EmptyRelationshipParameterValueModel(self, self.header, self.db_maps, self.icon_mngr)
 
     def update_single_model_filter(self, model):
         """Update the filter for the given model."""

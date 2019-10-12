@@ -170,11 +170,12 @@ class SearchBarEditor(QTableView):
         delegate = CustomLineEditDelegate(self)
         delegate.text_edited.connect(self._handle_delegate_text_edited)
         self.setItemDelegateForRow(0, delegate)
+        self._json_data_map = {}
 
     def set_data(self, current, all_data):
         """Populate model and initialize first index."""
         if self._is_json:
-            all_data = [json.loads(x) for x in all_data]
+            self._json_data_map = {json.loads(v): v for v in all_data}
         item_list = [QStandardItem(current)]
         for name in all_data:
             qitem = QStandardItem(name)
@@ -213,7 +214,7 @@ class SearchBarEditor(QTableView):
     def data(self):
         data = self.first_index.data(Qt.EditRole)
         if self._is_json:
-            data = json.dumps(data)
+            data = self._json_data_map.get(data)
         return data
 
     @Slot("QString", name="_handle_delegate_text_edited")
@@ -395,6 +396,7 @@ class CheckListEditor(QTableView):
         self._parent = parent
         self._elder_sibling = elder_sibling
         self._base_size = None
+        self._item_names_map = None
         self.model = QStandardItemModel(self)
         self.setModel(self.model)
         self.verticalHeader().hide()
@@ -428,6 +430,9 @@ class CheckListEditor(QTableView):
 
     def set_data(self, item_names, current_item_names):
         """Set data and update geometry."""
+        if ininstace(item_names, list):
+            item_names = {x: x for x in item_names}
+        self._item_names_map = item_names
         for name in item_names:
             qitem = QStandardItem(name)
             if name in current_item_names:

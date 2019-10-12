@@ -32,10 +32,6 @@ to_be_determined = ToBeDetermined()
 class ParameterAutocompleteMixin:
     """Provides basic autocomplete methods for all parameter models."""
 
-    def __init__(self, *args, **kwargs):
-        """Initialize class."""
-        super().__init__(*args, **kwargs)
-
     def batch_set_data(self, indexes, data):
         """Sets data for indexes in batch.
         If succesful, autocomplete data
@@ -54,6 +50,16 @@ class ParameterAutocompleteMixin:
         Args:
             rows (dict): A dict mapping row numbers to items that need treatment
         """
+        self.batch_set_db_maps(rows)
+
+    def batch_set_db_maps(self, rows):
+        """Sets db map (DiffDatabaseMapping instance) in accordance with database names.
+
+        Args:
+            rows (dict): A dict mapping row numbers to items that need treatment
+        """
+        for item in rows.values():
+            item.db_map = self.db_maps.get(item.database)
 
     @staticmethod
     def _attr_set(items, attr, func=lambda a: {a}):
@@ -66,12 +72,11 @@ class ParameterAutocompleteMixin:
         """
         d = dict()
         for item in items:
-            database = item.database
-            if not database:
+            if not item.db_map:
                 continue
             value = item.__getattribute__(attr)
             if value:
-                d.setdefault(database, set()).update(func(value))
+                d.setdefault(item.db_map, set()).update(func(value))
         return d
 
     def _attr_dict(self, attr_set, subqry_name, map_func, filter_func):
@@ -86,12 +91,9 @@ class ParameterAutocompleteMixin:
             filter_func: a function to produce a filter for the subquery from the attribute value set
         """
         d = dict()
-        for database, attrs in attr_set.items():
-            db_map = self.db_name_to_map.get(database)
-            if not db_map:
-                continue
+        for db_map, attrs in attr_set.items():
             subqry = db_map.__getattribute__(subqry_name)
-            d[database] = dict([map_func(x) for x in db_map.query(subqry).filter(filter_func(subqry, attrs))])
+            d[db_map] = dict([map_func(x) for x in db_map.query(subqry).filter(filter_func(subqry, attrs))])
         return d
 
     def _attr_dict_v2(self, attr_set, subqry_name, map_func, filter_func):
@@ -106,12 +108,9 @@ class ParameterAutocompleteMixin:
             filter_func: a function to produce a filter for the subquery from the attribute set
         """
         d = dict()
-        for database, attrs in attr_set.items():
-            db_map = self.db_name_to_map.get(database)
-            if not db_map:
-                continue
+        for db_map, attrs in attr_set.items():
             subqry = db_map.__getattribute__(subqry_name)
-            d[database] = {
+            d[db_map] = {
                 attr: dict([map_func(x) for x in db_map.query(subqry).filter(filter_func(subqry, attr))])
                 for attr in attrs
             }
@@ -142,7 +141,7 @@ class ParameterDefinitionAutocompleteMixin(ParameterAutocompleteMixin):
         filter_func = lambda sq, tags: sq.c.tag.in_(tags)
         parameter_tag_dict = self._attr_dict(parameter_tags, "parameter_tag_sq", map_func, filter_func)
         for item in rows.values():
-            db_parameter_tag_dict = parameter_tag_dict.get(item.database)
+            db_parameter_tag_dict = parameter_tag_dict.get(item.db_map)
             if db_parameter_tag_dict and item.parameter_tag_list:
                 tags = item.parameter_tag_list.split(",")
                 tag_ids = [db_parameter_tag_dict.get(tag) for tag in tags]
@@ -162,7 +161,7 @@ class ParameterDefinitionAutocompleteMixin(ParameterAutocompleteMixin):
         filter_func = lambda sq, names: sq.c.name.in_(names)
         value_list_dict = self._attr_dict(value_list_names, "wide_parameter_value_list_sq", map_func, filter_func)
         for item in rows.values():
-            db_value_list_dict = value_list_dict.get(item.database)
+            db_value_list_dict = value_list_dict.get(item.db_map)
             if db_value_list_dict:
                 item.value_list_id = db_value_list_dict.get(item.value_list_name)
 
@@ -190,7 +189,7 @@ class ParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         filter_func = lambda sq, name: sq.c.name == name
         parameter_dict = self._attr_dict_v2(parameter_names, "parameter_definition_sq", map_func, filter_func)
         for item in rows.values():
-            db_parameter_dict = parameter_dict.get(item.database)
+            db_parameter_dict = parameter_dict.get(item.db_map)
             if db_parameter_dict:
                 item._parameter_dict = db_parameter_dict.get(item.parameter_name, {})
 
@@ -218,7 +217,7 @@ class ObjectParameterAutocompleteMixin(ParameterAutocompleteMixin):
         filter_func = lambda sq, names: sq.c.name.in_(names)
         object_class_dict = self._attr_dict(object_class_names, "object_class_sq", map_func, filter_func)
         for item in rows.values():
-            db_object_class_dict = object_class_dict.get(item.database)
+            db_object_class_dict = object_class_dict.get(item.db_map)
             if db_object_class_dict:
                 item.object_class_id = db_object_class_dict.get(item.object_class_name)
 
@@ -248,7 +247,7 @@ class RelationshipParameterAutocompleteMixin(ParameterAutocompleteMixin):
             relationship_class_names, "wide_relationship_class_sq", map_func, filter_func
         )
         for item in rows.values():
-            db_relationship_class_dict = relationship_class_dict.get(item.database)
+            db_relationship_class_dict = relationship_class_dict.get(item.db_map)
             if db_relationship_class_dict:
                 relationship_class = db_relationship_class_dict.get(item.relationship_class_name)
                 if not relationship_class:
@@ -282,7 +281,7 @@ class ObjectParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         filter_func = lambda sq, name: sq.c.name == name
         object_dict = self._attr_dict_v2(object_names, "object_sq", map_func, filter_func)
         for item in rows.values():
-            db_object_dict = object_dict.get(item.database)
+            db_object_dict = object_dict.get(item.db_map)
             if db_object_dict:
                 item._object_dict = db_object_dict.get(item.object_name, {})
 
@@ -292,8 +291,8 @@ class ObjectParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         """
         object_class_ids = dict()
         for item in rows.values():
-            database = item.database
-            if not database:
+            db_map = item.db_map
+            if not db_map:
                 continue
             if item.object_class_id is None:
                 # Try and see if we can figure out the object class id
@@ -309,7 +308,7 @@ class ObjectParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
                     continue
                 item.object_class_id = object_class_id.pop()
                 item.object_class_name = to_be_determined
-                object_class_ids.setdefault(database, set()).add(item.object_class_id)
+                object_class_ids.setdefault(db_map, set()).add(item.object_class_id)
             # Pick the right object_id and parameter_id
             item.object_id = item._object_dict.get(item.object_class_id)
             item.parameter_id = item._parameter_dict.get(item.object_class_id)
@@ -317,7 +316,7 @@ class ObjectParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         filter_func = lambda sq, ids: sq.c.id.in_(ids)
         object_class_dict = self._attr_dict(object_class_ids, "object_class_sq", map_func, filter_func)
         for item in rows.values():
-            db_object_class_dict = object_class_dict.get(item.database)
+            db_object_class_dict = object_class_dict.get(item.db_map)
             if db_object_class_dict and item.object_class_name is to_be_determined:
                 item.object_class_name = db_object_class_dict.get(item.object_class_id)
         # TODO: emit dataChanged after changing `object_class_name`
@@ -344,7 +343,7 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         filter_func = lambda sq, name_list: sq.c.object_name_list == name_list
         relationship_dict = self._attr_dict_v2(object_name_lists, "wide_relationship_sq", map_func, filter_func)
         for item in rows.values():
-            db_relationship_dict = relationship_dict.get(item.database)
+            db_relationship_dict = relationship_dict.get(item.db_map)
             if db_relationship_dict:
                 item._relationship_dict = db_relationship_dict.get(item.object_name_list, {})
 
@@ -354,8 +353,8 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         """
         relationship_class_ids = dict()
         for item in rows.values():
-            database = item.database
-            if not database:
+            db_map = item.db_map
+            if not db_map:
                 continue
             if item.relationship_class_id is None:
                 # Try and see if we can figure out the object class id
@@ -371,7 +370,7 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
                     continue
                 item.relationship_class_id = relationship_class_id.pop()
                 item.relationship_class_name = to_be_determined
-                relationship_class_ids.setdefault(database, set()).add(item.relationship_class_id)
+                relationship_class_ids.setdefault(db_map, set()).add(item.relationship_class_id)
             # Pick the right relationship_id and parameter_id
             relationship = item._relationship_dict.get(item.relationship_class_id)
             if relationship:
@@ -385,8 +384,8 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         )
         # Update the items
         for item in rows.values():
-            database = item.database
-            db_relationship_class_dict = relationship_class_dict.get(database)
+            db_map = item.db_map
+            db_relationship_class_dict = relationship_class_dict.get(db_map)
             if db_relationship_class_dict and item.relationship_class_name is to_be_determined:
                 relationship_class = db_relationship_class_dict.get(item.relationship_class_id)
                 if relationship_class:
@@ -405,15 +404,15 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         """
         object_name_class_id_tuples = dict()
         for item in rows.values():
-            database = item.database
-            if not database:
+            db_map = item.db_map
+            if not db_map:
                 continue
             if not item.object_id_list and item.object_name_list and item.object_class_id_list:
                 # object_id_list is not there and can be figured out, so let's do it
                 object_names = item.object_name_list.split(",")
                 object_class_ids = [int(x) for x in item.object_class_id_list.split(",")]
                 item._object_name_class_id_tups = list(zip(object_names, object_class_ids))
-                object_name_class_id_tuples.setdefault(database, set()).update(item._object_name_class_id_tups)
+                object_name_class_id_tuples.setdefault(db_map, set()).update(item._object_name_class_id_tups)
             else:
                 item._object_name_class_id_tups = None
         map_func = lambda x: ((x.name, x.class_id), x.id)
@@ -423,8 +422,8 @@ class RelationshipParameterValueAutocompleteMixin(ParameterAutocompleteMixin):
         object_dict = self._attr_dict(object_name_class_id_tuples, "object_sq", map_func, filter_func)
         # Update the items
         for item in rows.values():
-            database = item.database
-            db_object_dict = object_dict.get(database)
+            db_map = item.db_map
+            db_object_dict = object_dict.get(db_map)
             tups = item._object_name_class_id_tups
             if db_object_dict and tups:
                 object_id_list = [db_object_dict.get((name, class_id)) for (name, class_id) in tups]

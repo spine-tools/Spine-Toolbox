@@ -183,15 +183,17 @@ class ParameterTagToolBar(QToolBar):
 
     Attributes:
         parent (DataStoreForm): tree or graph view form
+        db_maps (list): list of DiffDatabaseMapping to get tags from
     """
 
     tag_button_toggled = Signal("QVariant", "bool", name="tag_button_toggled")
     manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
 
-    def __init__(self, parent):
+    def __init__(self, parent, db_maps):
         """Init class"""
         super().__init__("Parameter Tag Toolbar", parent=parent)
         self._parent = parent
+        self.db_maps = db_maps
         label = QLabel("Parameter tag")
         self.addWidget(label)
         self.tag_button_group = QButtonGroup(self)
@@ -220,9 +222,9 @@ class ParameterTagToolBar(QToolBar):
         button = self.widgetForAction(action)
         self.tag_button_group.addButton(button, id=0)
         self.actions = [action]
-        self.db_map_ids = [[(db_map, 0) for db_map in self._parent.db_maps]]
+        self.db_map_ids = [[(db_map, 0) for db_map in self.db_maps]]
         tag_dict = {}
-        for db_map in self._parent.db_maps:
+        for db_map in self.db_maps:
             for parameter_tag in db_map.parameter_tag_list():
                 tag_dict.setdefault(parameter_tag.tag, {})[db_map] = parameter_tag.id
         for tag, db_map_dict in tag_dict.items():

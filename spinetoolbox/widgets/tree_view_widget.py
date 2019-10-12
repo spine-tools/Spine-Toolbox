@@ -33,7 +33,7 @@ from .custom_menus import (
 from .custom_qdialog import RemoveTreeItemsDialog
 from .import_widget import ImportDialog
 from .report_plotting_failure import report_plotting_failure
-from ..mvcmodels.object_relationship_models import ObjectTreeModel, RelationshipTreeModel
+from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
 from ..excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from ..datapackage_import_export import datapackage_to_spine
 from ..helpers import busy_effect, rows_to_row_count_tuples
@@ -69,8 +69,8 @@ class TreeViewForm(DataStoreForm):
         super().__init__(project, Ui_MainWindow(), db_maps)
         self.takeCentralWidget()
         # Object tree model
-        self.object_tree_model = ObjectTreeModel(self)
-        self.relationship_tree_model = RelationshipTreeModel(self)
+        self.object_tree_model = ObjectTreeModel(self, db_maps)
+        self.relationship_tree_model = RelationshipTreeModel(self, db_maps)
         self.selected_rel_tree_indexes = {}
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
@@ -89,7 +89,7 @@ class TreeViewForm(DataStoreForm):
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.connect_signals()
-        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join(self.db_names)))
+        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join(list(db_maps.keys()))))
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
@@ -394,7 +394,7 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="show_import_file_dialog")
     def show_import_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to import."""
-        db_map = self.db_maps[0]
+        db_map = next(iter(self.db_maps.values()))
         if db_map.has_pending_changes():
             commit_warning = QMessageBox()
             commit_warning.setText("Please commit or rollback before importing data")
@@ -466,13 +466,14 @@ class TreeViewForm(DataStoreForm):
              the database map of the database or None if no database was selected
         """
         if len(self.db_maps) == 1:
-            return self.db_maps[0]
+            return next(iter(self.db_maps.values()))
+        db_names = list(self.db_maps.keys())
         selected_database, ok = QInputDialog.getItem(
-            self, "Select database", "Select database to export", self.db_names, editable=False
+            self, "Select database", "Select database to export", db_names, editable=False
         )
         if not ok:
             return None
-        return self.db_maps[self.db_names.index(selected_database)]
+        return self.db_maps[selected_database]
 
     @busy_effect
     def export_to_excel(self, db_map, file_path):
@@ -503,14 +504,12 @@ class TreeViewForm(DataStoreForm):
     def init_object_tree_model(self):
         """Initialize object tree model."""
         super().init_object_tree_model()
-        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
+        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
 
     def init_relationship_tree_model(self):
         """Initialize relationship tree model."""
         self.relationship_tree_model.build_tree()
-        self.ui.treeView_relationship.expand(
-            self.relationship_tree_model.indexFromItem(self.relationship_tree_model.root_item)
-        )
+        self.ui.treeView_relationship.expand(self.relationship_tree_model.root_index)
         self.ui.treeView_relationship.resizeColumnToContents(0)
 
     @Slot("QModelIndex", name="find_next_leaf")
@@ -1061,10 +1060,7 @@ class TreeViewForm(DataStoreForm):
         d = dict()
         model = table_view.model()
         for row in rows:
-            database = model.item_at_row(row).database
-            db_map = self.db_name_to_map.get(database)
-            if not db_map:
-                continue
+            db_map = model.item_at_row(row).db_map
             d.setdefault(db_map, set()).add(model.item_at_row(row).id)
         # Remove the parameter value rows
         for row, count in sorted(rows_to_row_count_tuples(rows), reverse=True):
@@ -1112,8 +1108,7 @@ class TreeViewForm(DataStoreForm):
         d = dict()
         model = table_view.model()
         for row in rows:
-            database = model.item_at_row(row).database
-            db_map = self.db_name_to_map.get(database)
+            db_map = model.item_at_row(row).db_map
             if not db_map:
                 continue
             d.setdefault(db_map, []).append(

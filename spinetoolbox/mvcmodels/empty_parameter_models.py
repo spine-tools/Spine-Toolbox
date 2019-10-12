@@ -44,6 +44,17 @@ from ..mvcmodels.parameter_item import (
 class EmptyParameterModel(EmptyRowModel):
     """An empty parameter model."""
 
+    def __init__(self, parent, header, db_maps):
+        """Initialize class.
+
+        Args:
+            parent (Object): the parent object, typically a CompoundParameterModel
+            header (list): list of field names for the header
+            db_maps (dict): maps database names to DiffDatabaseMapping instances
+        """
+        super().__init__(parent, header)
+        self.db_maps = db_maps
+
     def create_item(self):
         """Returns an item to put in the model rows.
         Reimplement in subclasses to return something meaningful.
@@ -141,8 +152,7 @@ class EmptyRelationshipParameterValueModel(
             rows (dict): A dict mapping row numbers to items that should be added to the db
         """
         for row, item in rows.items():
-            database = item.database
-            db_map = self.db_name_to_map.get(database)
+            db_map = item.db_map
             if not db_map:
                 continue
             relationship_for_insert = item.relationship_for_insert()

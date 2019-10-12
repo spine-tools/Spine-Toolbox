@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Contains the TreeViewForm class.
+Contains the GraphViewForm class.
 
 :author: M. Marin (KTH)
 :date:   26.11.2018
@@ -29,7 +29,8 @@ from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from .custom_qwidgets import ZoomWidget
 from .report_plotting_failure import report_plotting_failure
-from ..mvcmodels.object_relationship_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
+from ..mvcmodels.entity_tree_models import ObjectTreeModel
+from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
 from ..graphics_items import ObjectItem, ArcItem, CustomTextItem
 from ..helpers import busy_effect, fix_name_ambiguity
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints

@@ -29,8 +29,9 @@ class ParameterDefinitionTagSetMixin:
         """
         tag_specs_dict = dict()
         for item in rows.values():
-            database = item.database
-            db_map = self.db_name_to_map.get(database)
+            db_map = item.db_map
+            if not db_map:
+                continue
             tag_spec = item.tag_spec()
             if tag_spec:
                 tag_specs_dict.setdefault(db_map, dict()).update(tag_spec)
@@ -42,14 +43,13 @@ class ParameterDefinitionTagSetMixin:
 class ParameterInsertMixin:
     """Handles adding parameters to the db."""
 
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Initialize class.
 
         Args:
             parent (Object): the parent object
         """
-        super().__init__(parent, *args, **kwargs)
-        self.db_name_to_map = parent.db_name_to_map
+        super().__init__(*args, **kwargs)
         self._error_log = []
         self._added_rows = []
 
@@ -85,8 +85,7 @@ class ParameterInsertMixin:
         """
         for row, item in rows.items():
             item = self._main_data[row]
-            database = item.database
-            db_map = self.db_name_to_map.get(database)
+            db_map = item.db_map
             if not db_map:
                 continue
             item_for_insert = item.for_insert()
@@ -139,14 +138,13 @@ class ParameterValueInsertMixing(ParameterInsertMixin):
 class ParameterUpdateMixin:
     """Handles updating parameters in the db."""
 
-    def __init__(self, parent, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Initialize class.
 
         Args:
             parent (ParameterModel): the parent object
         """
-        super().__init__(parent, *args, **kwargs)
-        self.db_name_to_map = parent.db_name_to_map
+        super().__init__(*args, **kwargs)
         self._error_log = []
         self._updated_count = 0
 
@@ -182,8 +180,7 @@ class ParameterUpdateMixin:
             rows (dict): A dict mapping row numbers to items that should be updated in the db
         """
         for row, item in rows.items():
-            database = item.database
-            db_map = self.db_name_to_map.get(database)
+            db_map = item.db_map
             if not db_map:
                 continue
             item_for_update = item.for_update()
@@ -237,8 +234,8 @@ class ParameterValueUpdateMixin(ParameterUpdateMixin):
 class ObjectParameterDecorateMixin:
     """Provides decoration features to all object parameter models."""
 
-    def __init__(self, *args, icon_mngr=None, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent, header, db_maps, icon_mngr, *args, **kwargs):
+        super().__init__(parent, header, db_maps, *args, **kwargs)
         self.icon_mngr = icon_mngr
 
     def data(self, index, role=Qt.DisplayRole):
@@ -254,8 +251,8 @@ class ObjectParameterDecorateMixin:
 class RelationshipParameterDecorateMixin:
     """Provides decoration features to all relationship parameter models."""
 
-    def __init__(self, *args, icon_mngr=None, **kwargs):
-        super().__init__(*args, **kwargs)
+    def __init__(self, parent, header, db_maps, icon_mngr, *args, **kwargs):
+        super().__init__(parent, header, db_maps, *args, **kwargs)
         self.icon_mngr = icon_mngr
 
     def data(self, index, role=Qt.DisplayRole):
