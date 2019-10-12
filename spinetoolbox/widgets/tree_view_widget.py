@@ -636,7 +636,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Add relationship classes":
             self.call_show_add_relationship_classes_form(index)
         elif option == "Add relationships":
-            self.call_show_add_relationships_form(index)
+            self.call_show_add_relationships_form_from_object_tree(index)
         elif option == "Edit object classes":
             self.show_edit_object_classes_form()
         elif option == "Edit objects":
@@ -673,7 +673,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Add relationship classes":
             self.show_add_relationship_classes_form()
         elif option == "Add relationships":
-            self.call_show_add_relationships_form(index)
+            self.call_show_add_relationships_form_from_relationship_tree(index)
         elif option == "Edit relationship classes":
             self.show_edit_relationship_classes_form()
         elif option == "Edit relationships":
@@ -701,25 +701,26 @@ class TreeViewForm(DataStoreForm):
                 self.ui.treeView_object.collapse(self.object_tree_model.index_from_item(item))
 
     def call_show_add_objects_form(self, index):
-        class_name = index.data(Qt.DisplayRole)
+        class_name = index.internalPointer().unique_identifier
         self.show_add_objects_form(class_name=class_name)
 
     def call_show_add_relationship_classes_form(self, index):
-        object_class_one_name = index.data(Qt.DisplayRole)
+        object_class_one_name = index.internalPointer().unique_identifier
         self.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
 
-    def call_show_add_relationships_form(self, index):
-        relationship_class_key = (index.data(Qt.DisplayRole), index.data(Qt.ToolTipRole))
-        if index.model() == self.object_tree_model:
-            object_name = index.parent().data(Qt.DisplayRole)
-            object_class_name = index.parent().parent().data(Qt.DisplayRole)
-            self.show_add_relationships_form(
-                relationship_class_key=relationship_class_key,
-                object_class_name=object_class_name,
-                object_name=object_name,
-            )
-        else:
-            self.show_add_relationships_form(relationship_class_key=relationship_class_key)
+    def call_show_add_relationships_form_from_object_tree(self, index):
+        item = index.internalPointer()
+        relationship_class_key = item.unique_identifier
+        object_name = item._parent.unique_identifier
+        object_class_name = item._parent._parent.unique_identifier
+        self.show_add_relationships_form(
+            relationship_class_key=relationship_class_key, object_class_name=object_class_name, object_name=object_name
+        )
+
+    def call_show_add_relationships_form_from_relationship_tree(self, index):
+        item = index.internalPointer()
+        relationship_class_key = item.unique_identifier
+        self.show_add_relationships_form(relationship_class_key=relationship_class_key)
 
     def add_object_classes(self, object_class_d):
         """Insert new object classes."""

@@ -16,6 +16,7 @@ Classes for custom QDialogs to add and edit database items.
 :date:   13.5.2018
 """
 
+from functools import reduce
 from PySide2.QtWidgets import (
     QDialog,
     QHBoxLayout,
@@ -168,21 +169,9 @@ class GetObjectsMixin:
         """
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
-        db_maps = iter(self.db_maps[x] for x in db_names.split(",") if x in self.db_maps)
-        db_map = next(db_maps, None)
-        if not db_map:
-            return []
-        # Initalize list from first db_map
-        relationship_classes = self.rel_cls_dict[db_map]
+        db_maps = [self.db_maps[x] for x in db_names.split(",") if x in self.db_maps]
         rel_cls_key = (self.class_name, self.object_class_name_list)
-        if rel_cls_key not in relationship_classes:
-            return []
-        _, object_class_id_list = relationship_classes[rel_cls_key]
-        object_class_id_list = [int(x) for x in object_class_id_list.split(",")]
-        object_class_id = object_class_id_list[column]
-        objects = self.obj_dict[db_map]
-        object_name_list = [name for (class_id, name) in objects if class_id == object_class_id]
-        # Update list from remaining db_maps
+        object_name_lists = []
         for db_map in db_maps:
             relationship_classes = self.rel_cls_dict[db_map]
             if rel_cls_key not in relationship_classes:
@@ -191,10 +180,10 @@ class GetObjectsMixin:
             object_class_id_list = [int(x) for x in object_class_id_list.split(",")]
             object_class_id = object_class_id_list[column]
             objects = self.obj_dict[db_map]
-            object_name_list = [
-                name for (class_id, name) in objects if class_id == object_class_id and name in object_name_list
-            ]
-        return object_name_list
+            object_name_lists.append([name for (class_id, name) in objects if class_id == object_class_id])
+        if not object_name_lists:
+            return []
+        return list(reduce(lambda x, y: set(x) & set(y), object_name_lists))
 
 
 class ShowIconColorEditorMixin:
@@ -560,13 +549,13 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
             }
             for db_map in self.db_maps.values()
         }
-        combo_items = {x: None for rel_cls_list in self.rel_cls_dict.values() for x in rel_cls_list}
-        combo_items = list(combo_items)
-        self.combo_box.addItems(["{0} ({1})".format(*key) for key in combo_items])
+        relationship_class_keys = {x: None for rel_cls_list in self.rel_cls_dict.values() for x in rel_cls_list}
+        self.relationship_class_keys = list(relationship_class_keys)
+        self.combo_box.addItems(["{0} ({1})".format(*key) for key in self.relationship_class_keys])
         self.table_view.setItemDelegate(ManageRelationshipsDelegate(self))
         self.connect_signals()
-        if relationship_class_key in combo_items:
-            current_index = combo_items.index(relationship_class_key)
+        if relationship_class_key in self.relationship_class_keys:
+            current_index = self.relationship_class_keys.index(relationship_class_key)
             self.combo_box.setCurrentIndex(current_index)
             self.class_name, self.object_class_name_list = relationship_class_key
             self.reset_model()
@@ -576,15 +565,17 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
 
     def connect_signals(self):
         """Connect signals to slots."""
-        self.combo_box.currentTextChanged.connect(self.call_reset_model)
+        self.combo_box.currentIndexChanged.connect(self.call_reset_model)
         super().connect_signals()
 
-    @Slot("str", name='call_reset_model')
-    def call_reset_model(self, text):
+    @Slot("int", name='call_reset_model')
+    def call_reset_model(self, index):
         """Called when relationship class's combobox's index changes.
         Update relationship_class attribute accordingly and reset model."""
-        self.class_name, self.object_class_name_list = text.split(" ")
-        self.object_class_name_list = self.object_class_name_list[1:-1]
+        try:
+            self.class_name, self.object_class_name_list = self.relationship_class_keys[index]
+        except IndexError:
+            return
         self.reset_model()
 
     def reset_model(self):

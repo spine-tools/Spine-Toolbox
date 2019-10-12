@@ -73,11 +73,25 @@ class TreeItem:
             return self._parent.children.index(self)
         return 0
 
+    def find_children(self, cond=lambda child: True):
+        """Returns children that meet condition expressed as a lambda function."""
+        for child in self.children:
+            if cond(child):
+                yield child
+
+    def find_child(self, cond=lambda child: True):
+        """Returns first child that meet condition expressed as a lambda function."""
+        return next(self.find_children(cond), None)
+
     def next_sibling(self):
         """Returns the next sibling or None if last or if doesn't have a parent."""
         if self._parent is None:
             return None
         return self._parent.child(self.child_number() + 1)
+
+    def clear_children(self):
+        """Clear all children, used when resetting the model."""
+        self.children.clear()
 
     def column_count(self):
         """Returns 0."""
@@ -185,6 +199,10 @@ class MultiDBTreeItem(TreeItem):
         """Returns the data of this item in given db_map or None if not found."""
         return self._db_map_data.get(db_map)
 
+    def db_map_data_field(self, db_map, field):
+        """Returns the data of this item for given filed in given db_map or None if not found."""
+        return self._db_map_data.get(db_map, {}).get(field)
+
     def fetch_more(self):
         new_children = dict()
         for db_map, child_data in self._get_children_data():
@@ -217,7 +235,7 @@ class MultiDBTreeItem(TreeItem):
         Must be reimplemented in subclasses."""
         raise NotImplementedError()
 
-    def insert_new_children(self, db_map, children_data):
+    def append_children_from_data(self, db_map, children_data):
         """
 
         Args:
@@ -225,22 +243,24 @@ class MultiDBTreeItem(TreeItem):
             children_data (list): collection of dicts
         """
         existing_identifiers = [child.unique_identifier for child in self.children]
-        items_to_add = []
-        updated_rows = []
+        added_rows = []
+        updated_inds = []
+        database = self.db_map_data(db_map)["database"]
         for child_data in children_data:
+            child_data["database"] = database
             try:
                 # Check in the existing identifiers if we have a collision
                 new_item = self._create_child_item({db_map: child_data})
-                row = existing_identifiers.index(new_item.unique_identifier())
+                ind = existing_identifiers.index(new_item.unique_identifier)
             except ValueError:
                 # No collision, let's add the new item
-                items_to_add.append(new_item)
+                added_rows.append(new_item)
             else:
                 # Collision, update current and get rid of the new one
-                self.child(row).add_db_map_data(db_map, child_data)
-                updated_rows.append(row)
+                self.child(ind).add_db_map_data(db_map, child_data)
+                updated_inds.append(ind)
                 del new_item
-        return items_to_add, updated_rows
+        return added_rows, updated_inds
 
     def data(self, column, role):
         """Returns data from this item for a QAbstractItemModel."""
@@ -487,7 +507,7 @@ class RelationshipItem(EntityItem):
     def has_children(self):
         return False
 
-    def insert_new_children(self, db_map, children_data):
+    def append_children_from_data(self, db_map, children_data):
         pass
 
     def default_parameter_data(self):
@@ -515,8 +535,11 @@ class EntityTreeModel(QAbstractItemModel):
         self.selected_indexes = dict()  # Maps item type to selected indexes
 
     def build_tree(self):
+        self.beginResetModel()
+        self._invisible_root.clear_children()
         self._root = self._create_root_item(self._db_map_data, parent=self._invisible_root)
         self._invisible_root.insert_children(0, [self._root])
+        self.endResetModel()
 
     @property
     def root_item(self):
@@ -562,7 +585,7 @@ class EntityTreeModel(QAbstractItemModel):
 
     def visit_all_recursive(self, index=QModelIndex()):
         """Yields the current index and all its descendants."""
-        # NOTE: Not in use for fear of recursion limit
+        # NOTE: Kept because it's nice, but not used for fear of recursion limits
         if index.isValid():
             item = index.internalPointer()
         else:
@@ -584,6 +607,26 @@ class EntityTreeModel(QAbstractItemModel):
                     row = tree_item.child_number()
                     parent = self.parent(self.createIndex(0, 0, tree_item))
                     self.removeRow(row, parent)
+
+    def append_to_node(self, db_map, data, parent_type, condition=lambda item: True):
+        for tree_item in self.visit_all():
+            if not isinstance(tree_item, parent_type) or not condition(tree_item):
+                continue
+            tree_index = self.index_from_item(tree_item)
+            if self.canFetchMore(tree_index):
+                continue
+            added_items, _ = tree_item.append_children_from_data(db_map, data)
+            self.appendRows(added_items, tree_index)
+
+    def append_entities_to_class_node(self, db_map, new_items, parent_type):
+        d = dict()
+        for item in new_items:
+            item = item._asdict()
+            d.setdefault(item["class_id"], []).append(item)
+        for class_id, data in d.items():
+            self.append_to_node(
+                db_map, data, parent_type, condition=lambda item: item.db_map_data_field(db_map, "id") == class_id
+            )
 
     def remove_entity_class(self, db_map, entity_class_ids):
         self.remove_node(db_map, entity_class_ids, EntityClassItem)
@@ -671,8 +714,8 @@ class EntityTreeModel(QAbstractItemModel):
 
     def fetchMore(self, parent):
         parent_item = self.item_from_index(parent)
-        rows = parent_item.fetch_more()
-        self.insertRows(0, rows, parent)
+        items = parent_item.fetch_more()
+        self.insertRows(0, items, parent)
 
     def removeRows(self, position, rows, parent=QModelIndex()):
         parent_item = self.item_from_index(parent)
@@ -688,6 +731,10 @@ class EntityTreeModel(QAbstractItemModel):
         self.endInsertRows()
         return success
 
+    def appendRows(self, rows, parent=QModelIndex()):
+        position = parent.internalPointer().child_count()
+        return self.insertRows(position, rows, parent)
+
     def deselect_index(self, index):
         """Removes the index from the dict."""
         if not index.isValid() or index.column() != 0:
@@ -701,6 +748,13 @@ class EntityTreeModel(QAbstractItemModel):
             return
         item_type = type(index.internalPointer())
         self.selected_indexes.setdefault(item_type, {})[index] = None
+
+    def find_item(self, cond, index=QModelIndex()):
+        """Find the first item that satisfies given condition."""
+        for visited in self.visit_all(index):
+            if cond(visited):
+                return visited
+        return None
 
 
 class ObjectTreeModel(EntityTreeModel):
@@ -726,8 +780,46 @@ class ObjectTreeModel(EntityTreeModel):
     def selected_relationship_indexes(self):
         return self.selected_indexes.get(RelationshipItem, {})
 
+    def add_object_classes(self, db_map, new_items):
+        data = [x._asdict() for x in new_items]
+        self.append_to_node(db_map, data, ObjectTreeRootItem)
+
+    def add_objects(self, db_map, new_items):
+        self.append_entities_to_class_node(db_map, new_items, ObjectClassItem)
+
+    def add_relationship_classes(self, db_map, new_items):
+        d = dict()
+        for item in new_items:
+            item = item._asdict()
+            for id_ in item["object_class_id_list"].split(","):
+                d.setdefault(int(id_), []).append(item)
+        for object_class_id, data in d.items():
+            self.append_to_node(
+                db_map,
+                data,
+                ObjectItem,
+                condition=lambda item: item.db_map_data_field(db_map, "class_id") == object_class_id,
+            )
+
+    def add_relationships(self, db_map, new_items):
+        d = dict()
+        for item in new_items:
+            item = item._asdict()
+            for id_ in item["object_id_list"].split(","):
+                d.setdefault((item["class_id"], int(id_)), []).append(item)
+        for (class_id, object_id), data in d.items():
+            self.append_to_node(
+                db_map,
+                data,
+                RelationshipClassItem,
+                condition=lambda item: item.db_map_data_field(db_map, "id") == class_id
+                and item._parent.db_map_data_field(db_map, "id") == object_id,
+            )
+
     def find_next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
+        # Mildly insane, but gets the job done and I can't think of anything better right now
+        # Still it just searches in the first db map only...
         if not index.isValid():
             return
         rel_item = index.internalPointer()
@@ -743,55 +835,49 @@ class ObjectTreeModel(EntityTreeModel):
         rel_cls_data = rel_cls_item.db_map_data(db_map)
         obj_data = obj_item.db_map_data(db_map)
         obj_cls_data = obj_cls_item.db_map_data(db_map)
-        # Create custom objects for our search
-        obj_cls_id = obj_cls_data['id']
-        object_class_ids = [int(id_) for id_ in rel_cls_data['object_class_id_list'].split(",")]
-        object_class_ids = [id_ for id_ in object_class_ids if id_ != obj_cls_id]
-        obj_id = obj_data['id']
-        object_ids = [int(id_) for id_ in rel_data['object_id_list'].split(",")]
-        object_ids = [id_ for id_ in object_ids if id_ != obj_id]
-        object_id_dict = dict(zip(object_class_ids, object_ids))
+        # Get specific data for our searches
         rel_cls_id = rel_cls_data['id']
+        obj_id = obj_data['id']
+        obj_cls_id = obj_cls_data['id']
+        object_ids = [int(id_) for id_ in rel_data['object_id_list'].split(",")]
+        object_class_ids = [int(id_) for id_ in rel_cls_data['object_class_id_list'].split(",")]
+        # Find position in the relationship of the (grand parent) object
+        # then use it to determine object class and object id to look for
+        pos = object_ids.index(obj_id) + 1
+        if pos == len(object_ids):
+            pos = 0
+        object_id = object_ids[pos]
+        object_class_id = object_class_ids[pos]
+        # Find, fetch, and find again until done
         # Find object class
-        found_obj_cls_item = self.find_item(
-            lambda item: isinstance(item, ObjectClassItem)
-            and item.db_map_data(db_map)
-            and item.db_map_data(db_map)['id'] in object_class_ids
+        found_obj_cls_item = self.root_item.find_child(
+            lambda child: child.db_map_data_field(db_map, "id") == object_class_id
         )
+        if not found_obj_cls_item:
+            return None
         found_obj_cls_ind = self.index_from_item(found_obj_cls_item)
         self.canFetchMore(found_obj_cls_ind) and self.fetchMore(found_obj_cls_ind)
         # Find object
-        found_obj_cls_id = found_obj_cls_item.db_map_data(db_map)['id']
-        object_id = object_id_dict[found_obj_cls_id]
-        found_obj_item = self.find_item(
-            lambda item: isinstance(item, ObjectItem)
-            and item.db_map_data(db_map)
-            and item.db_map_data(db_map)['id'] == object_id,
-            found_obj_cls_ind,
-        )
+        found_obj_item = found_obj_cls_item.find_child(lambda child: child.db_map_data_field(db_map, "id") == object_id)
+        if not found_obj_item:
+            return None
         found_obj_ind = self.index_from_item(found_obj_item)
         self.canFetchMore(found_obj_ind) and self.fetchMore(found_obj_ind)
         # Find relationship class
-        found_rel_cls_item = self.find_item(
-            lambda item: isinstance(item, RelationshipClassItem)
-            and item.db_map_data(db_map)
-            and item.db_map_data(db_map)['id'] == rel_cls_id,
-            found_obj_ind,
+        found_rel_cls_item = found_obj_item.find_child(
+            lambda child: child.db_map_data_field(db_map, "id") == rel_cls_id
         )
+        if not found_rel_cls_item:
+            return None
         found_rel_cls_ind = self.index_from_item(found_rel_cls_item)
         self.canFetchMore(found_rel_cls_ind) and self.fetchMore(found_rel_cls_ind)
         # Find relationship
-        found_rel_item = self.find_item(
-            lambda item: isinstance(item, RelationshipItem) and item.unique_identifier == rel_item.unique_identifier,
-            found_rel_cls_ind,
+        found_rel_item = found_rel_cls_item.find_child(
+            lambda child: child.unique_identifier == rel_item.unique_identifier
         )
+        if not found_rel_item:
+            return None
         return self.index_from_item(found_rel_item)
-
-    def find_item(self, cond, index=QModelIndex()):
-        for visited in self.visit_all(index):
-            if cond(visited):
-                return visited
-        return None
 
 
 class RelationshipTreeModel(EntityTreeModel):
@@ -808,3 +894,10 @@ class RelationshipTreeModel(EntityTreeModel):
     @property
     def selected_relationship_indexes(self):
         return self.selected_indexes.get(RelationshipItem, {})
+
+    def add_relationship_classes(self, db_map, new_items):
+        data = [x._asdict() for x in new_items]
+        self.append_to_node(db_map, data, RelationshipTreeRootItem)
+
+    def add_relationships(self, db_map, new_items):
+        self.append_entities_to_class_node(db_map, new_items, RelationshipClassItem)

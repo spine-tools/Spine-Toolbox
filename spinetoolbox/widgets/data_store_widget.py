@@ -276,7 +276,7 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_commit_session_dialog")
     def show_commit_session_dialog(self, checked=False):
         """Query user for a commit message and commit changes to source database."""
-        if not any(db_map.has_pending_changes() for db_map in self.db_maps):
+        if not any(db_map.has_pending_changes() for db_map in self.db_maps.values()):
             self.msg.emit("Nothing to commit yet.")
             return
         db_names = list(self.db_maps.keys())
@@ -487,6 +487,8 @@ class DataStoreForm(QMainWindow):
         self.commit_available.emit(True)
         msg = "Successfully added new object class(es) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
+        return True
+        # TODO: do this in the model maybe
         if self.selected_object_class_ids:
             # Recompute self.selected_obj_tree_indexes['object_class']
             # since some new classes might have been inserted above those indexes
@@ -498,7 +500,6 @@ class DataStoreForm(QMainWindow):
                 obj_cls_index = self.object_tree_model.index(i, 0, root_index)
                 if is_selected(obj_cls_index):
                     self.selected_obj_tree_indexes['object_class'][obj_cls_index] = None
-        return True
 
     def add_object_classses_to_models(self, db_map, added):
         self.object_tree_model.add_object_classes(db_map, added)
