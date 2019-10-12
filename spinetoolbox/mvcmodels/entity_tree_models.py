@@ -152,8 +152,15 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def unique_identifier(self):
-        """"Returns a unique identifier for this item across all dbs."""
+        """"Returns a unique identifier for this item across all dbs.
+        The base class implementation returns the name.
+        """
         return self.db_map_data(self.first_db_map)["name"]
+
+    @property
+    def display_data(self):
+        """"Returns a short unique identifier for display purposes."""
+        return self.unique_identifier
 
     @property
     def first_db_map(self):
@@ -175,8 +182,8 @@ class MultiDBTreeItem(TreeItem):
         return self._db_map_data.pop(db_map, None)
 
     def db_map_data(self, db_map):
-        """Returns the id of this item in given db_map."""
-        return self._db_map_data[db_map]
+        """Returns the data of this item in given db_map or None if not found."""
+        return self._db_map_data.get(db_map)
 
     def fetch_more(self):
         new_children = dict()
@@ -238,10 +245,9 @@ class MultiDBTreeItem(TreeItem):
     def data(self, column, role):
         """Returns data from this item for a QAbstractItemModel."""
         if role == Qt.DisplayRole:
-            return (
-                self.unique_identifier,
-                ", ".join([self.db_map_data(db_map)["database"] for db_map in self.db_maps]),
-            )[column]
+            return (self.display_data, ", ".join([self.db_map_data(db_map)["database"] for db_map in self.db_maps]))[
+                column
+            ]
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -357,7 +363,13 @@ class RelationshipClassItem(EntityClassItem):
     def unique_identifier(self):
         """"The name plus the object class names list."""
         data = self.db_map_data(self.first_db_map)
-        return data["name"] + ': ' + data["object_class_name_list"]
+        return (data["name"], data["object_class_name_list"])
+
+    @property
+    def display_data(self):
+        """"Returns a short unique identifier for display purposes."""
+        data = self.db_map_data(self.first_db_map)
+        return data["name"]
 
     def _children_query(self, db_map):
         """Returns a query to the given db map that returns children of this item."""
@@ -464,7 +476,13 @@ class RelationshipItem(EntityItem):
     @property
     def unique_identifier(self):
         data = self.db_map_data(self.first_db_map)
-        return data["name"] + ': ' + data["object_name_list"]
+        return (data["name"], data["object_name_list"])
+
+    @property
+    def display_data(self):
+        """"Returns a short unique identifier for display purposes."""
+        data = self.db_map_data(self.first_db_map)
+        return data["object_name_list"]
 
     def has_children(self):
         return False
@@ -497,7 +515,7 @@ class EntityTreeModel(QAbstractItemModel):
         self.selected_indexes = dict()  # Maps item type to selected indexes
 
     def build_tree(self):
-        self._root = self._create_root_item()
+        self._root = self._create_root_item(self._db_map_data, parent=self._invisible_root)
         self._invisible_root.insert_children(0, [self._root])
 
     @property
@@ -688,8 +706,9 @@ class EntityTreeModel(QAbstractItemModel):
 class ObjectTreeModel(EntityTreeModel):
     remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
 
-    def _create_root_item(self):
-        return ObjectTreeRootItem(self._db_map_data, parent=self._invisible_root)
+    @staticmethod
+    def _create_root_item(db_map_data, parent):
+        return ObjectTreeRootItem(db_map_data, parent=parent)
 
     @property
     def selected_object_class_indexes(self):
@@ -711,22 +730,76 @@ class ObjectTreeModel(EntityTreeModel):
         """Find and return next ocurrence of relationship item."""
         if not index.isValid():
             return
-        item = index.internalPointer()
-        if not isinstance(item, RelationshipItem):
+        rel_item = index.internalPointer()
+        if not isinstance(rel_item, RelationshipItem):
             return
-        items = [visited for visited in self.visit_all() if visited == item]
-        position = items.index(item) + 1
-        if position > len(items):
-            position = 0
-        next_item = items[position + 1]
-        return self.indexFromItem(items[position])
+        # Get all ancestors
+        rel_cls_item = rel_item._parent
+        obj_item = rel_cls_item._parent
+        obj_cls_item = obj_item._parent
+        # Get data from ancestors
+        db_map = rel_item.first_db_map
+        rel_data = rel_item.db_map_data(db_map)
+        rel_cls_data = rel_cls_item.db_map_data(db_map)
+        obj_data = obj_item.db_map_data(db_map)
+        obj_cls_data = obj_cls_item.db_map_data(db_map)
+        # Create custom objects for our search
+        obj_cls_id = obj_cls_data['id']
+        object_class_ids = [int(id_) for id_ in rel_cls_data['object_class_id_list'].split(",")]
+        object_class_ids = [id_ for id_ in object_class_ids if id_ != obj_cls_id]
+        obj_id = obj_data['id']
+        object_ids = [int(id_) for id_ in rel_data['object_id_list'].split(",")]
+        object_ids = [id_ for id_ in object_ids if id_ != obj_id]
+        object_id_dict = dict(zip(object_class_ids, object_ids))
+        rel_cls_id = rel_cls_data['id']
+        # Find object class
+        found_obj_cls_item = self.find_item(
+            lambda item: isinstance(item, ObjectClassItem)
+            and item.db_map_data(db_map)
+            and item.db_map_data(db_map)['id'] in object_class_ids
+        )
+        found_obj_cls_ind = self.index_from_item(found_obj_cls_item)
+        self.canFetchMore(found_obj_cls_ind) and self.fetchMore(found_obj_cls_ind)
+        # Find object
+        found_obj_cls_id = found_obj_cls_item.db_map_data(db_map)['id']
+        object_id = object_id_dict[found_obj_cls_id]
+        found_obj_item = self.find_item(
+            lambda item: isinstance(item, ObjectItem)
+            and item.db_map_data(db_map)
+            and item.db_map_data(db_map)['id'] == object_id,
+            found_obj_cls_ind,
+        )
+        found_obj_ind = self.index_from_item(found_obj_item)
+        self.canFetchMore(found_obj_ind) and self.fetchMore(found_obj_ind)
+        # Find relationship class
+        found_rel_cls_item = self.find_item(
+            lambda item: isinstance(item, RelationshipClassItem)
+            and item.db_map_data(db_map)
+            and item.db_map_data(db_map)['id'] == rel_cls_id,
+            found_obj_ind,
+        )
+        found_rel_cls_ind = self.index_from_item(found_rel_cls_item)
+        self.canFetchMore(found_rel_cls_ind) and self.fetchMore(found_rel_cls_ind)
+        # Find relationship
+        found_rel_item = self.find_item(
+            lambda item: isinstance(item, RelationshipItem) and item.unique_identifier == rel_item.unique_identifier,
+            found_rel_cls_ind,
+        )
+        return self.index_from_item(found_rel_item)
+
+    def find_item(self, cond, index=QModelIndex()):
+        for visited in self.visit_all(index):
+            if cond(visited):
+                return visited
+        return None
 
 
 class RelationshipTreeModel(EntityTreeModel):
     remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
 
-    def _create_root_item(self):
-        return RelationshipTreeRootItem(self._db_map_data, parent=self._invisible_root)
+    @staticmethod
+    def _create_root_item(db_map_data, parent):
+        return RelationshipTreeRootItem(db_map_data, parent=parent)
 
     @property
     def selected_relationship_class_indexes(self):

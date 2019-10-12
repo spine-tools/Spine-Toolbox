@@ -647,7 +647,7 @@ class TreeViewForm(DataStoreForm):
             self.show_edit_relationships_form()
         elif option == "Find next":
             self.find_next_relationship(index)
-        elif option.startswith("Remove selection"):
+        elif option == "Remove selection":
             self.show_remove_object_tree_items_form()
         elif option == "Fully expand":
             self.fully_expand_selection()
@@ -678,7 +678,7 @@ class TreeViewForm(DataStoreForm):
             self.show_edit_relationship_classes_form()
         elif option == "Edit relationships":
             self.show_edit_relationships_form()
-        elif option.startswith("Remove selection"):
+        elif option == "Remove selection":
             self.show_remove_relationship_tree_items_form()
         else:  # No option selected
             pass

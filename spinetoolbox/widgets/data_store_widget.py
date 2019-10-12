@@ -47,7 +47,6 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterDefinitionModel,
     CompoundRelationshipParameterValueModel,
 )
-from ..mvcmodels.entity_tree_models import ObjectClassItem, ObjectItem, RelationshipClassItem, RelationshipItem
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..helpers import busy_effect, format_string_list, IconManager
 from ..plotting import tree_graph_view_parameter_value_name
