@@ -182,7 +182,7 @@ class MultiDBTreeItem(TreeItem):
     @property
     def display_database(self):
         """"Returns the database for display."""
-        return ", ".join([self.db_map_data_field(db_map, "database") for db_map in self.db_maps])
+        return ",".join([self.db_map_data_field(db_map, "database") for db_map in self.db_maps])
 
     @property
     def first_db_map(self):
@@ -202,6 +202,10 @@ class MultiDBTreeItem(TreeItem):
     def remove_db_map(self, db_map):
         """Removes the given db_map."""
         self._db_map_data.pop(db_map, None)
+
+    def has_one_db_map(self, db_map):
+        """Returns true if the given db map is the only one."""
+        return len(self._db_map_data) == 1 and db_map in self._db_map_data
 
     def db_map_data(self, db_map):
         """Returns the data of this item in given db_map or None if not found."""

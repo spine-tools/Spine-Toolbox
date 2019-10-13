@@ -566,11 +566,8 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
-        indexes = self.selected_obj_tree_indexes.get('object_class')
-        if not indexes:
-            return
-        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditObjectClassesDialog(self, db_map_dicts)
+        selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_class_indexes}
+        dialog = EditObjectClassesDialog(self, selected)
         dialog.show()
 
     @Slot("bool", name="show_edit_objects_form")
@@ -756,7 +753,7 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_manage_parameter_tags_form")
     def show_manage_parameter_tags_form(self, checked=False):
-        dialog = ManageParameterTagsDialog(self)
+        dialog = ManageParameterTagsDialog(self, self.db_maps)
         dialog.show()
 
     @busy_effect

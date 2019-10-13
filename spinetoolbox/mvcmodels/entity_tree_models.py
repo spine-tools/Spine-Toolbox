@@ -263,13 +263,13 @@ class EntityTreeModel(QAbstractItemModel):
         self.appendRows(added_items, self.index_from_item(parent))
 
     def remove_node(self, db_map, item):
-        """Convenience method to remove a db_map from item and then
+        """Convenience method to remove a db_map from an item and then
         remove it from the model if empty."""
-        item.remove_db_map(db_map)
-        if not item.db_maps:
+        if item.has_one_db_map(db_map):
             row = item.child_number()
             parent = self.parent(self.createIndex(0, 0, item))
             self.removeRow(row, parent)
+        item.remove_db_map(db_map)
 
 
 class ObjectTreeModel(EntityTreeModel):

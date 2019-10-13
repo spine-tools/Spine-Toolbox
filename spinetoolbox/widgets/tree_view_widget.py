@@ -792,11 +792,11 @@ class TreeViewForm(DataStoreForm):
     @Slot(name="show_remove_relationship_tree_items_form")
     def show_remove_relationship_tree_items_form(self):
         """Show form to remove items from relationship treeview."""
-        removed = {
-            key: [ind.data(Qt.UserRole + 1) for ind in self.selected_rel_tree_indexes.get(item_type, {})]
-            for item_type in ('relationship_class', 'relationship')
+        selected = {
+            item_type: [ind.internalPointer() for ind in indexes]
+            for item_type, indexes in self.relationship_tree_model.selected_indexes.items()
         }
-        dialog = RemoveTreeItemsDialog(self, **kwargs)
+        dialog = RemoveTreeItemsDialog(self, selected)
         dialog.show()
 
     @busy_effect

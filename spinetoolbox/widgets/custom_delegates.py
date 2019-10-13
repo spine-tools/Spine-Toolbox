@@ -450,6 +450,13 @@ class ManageItemsDelegate(QItemDelegate):
             model = index.model()
             editor.data_committed.connect(lambda e=editor, i=index, m=model: self.close_editor(e, i, m))
 
+    def _create_database_editor(self, parent, option, index):
+        editor = CheckListEditor(parent)
+        all_databases = self._parent.all_databases(index.row())
+        databases = index.data(Qt.DisplayRole).split(",")
+        editor.set_data(all_databases, databases)
+        return editor
+
 
 class ManageObjectClassesDelegate(ManageItemsDelegate):
     """A delegate for the model and view in {Add/Edit}ObjectClassesDialog.
@@ -471,10 +478,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
             self.icon_color_editor_requested.emit(index)
             editor = None
         elif header[index.column()] == 'databases':
-            editor = CheckListEditor(parent)
-            all_databases = self._parent.all_databases(index.row())
-            databases = index.data(Qt.DisplayRole).split(",")
-            editor.set_data(all_databases, databases)
+            editor = self._create_database_editor(parent, option, index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
@@ -507,10 +511,7 @@ class ManageObjectsDelegate(ManageItemsDelegate):
             object_class_name_list = self._parent.object_class_name_list(index.row())
             editor.set_data(index.data(Qt.EditRole), object_class_name_list)
         elif header[index.column()] == 'databases':
-            editor = CheckListEditor(parent)
-            all_databases = self._parent.all_databases(index.row())
-            databases = index.data(Qt.DisplayRole).split(",")
-            editor.set_data(all_databases, databases)
+            editor = self._create_database_editor(parent, option, index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
@@ -532,10 +533,7 @@ class ManageRelationshipClassesDelegate(ManageItemsDelegate):
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
         elif header[index.column()] == 'databases':
-            editor = CheckListEditor(parent)
-            all_databases = self._parent.all_databases(index.row())
-            databases = index.data(Qt.DisplayRole).split(",")
-            editor.set_data(all_databases, databases)
+            editor = self._create_database_editor(parent, option, index)
         else:
             editor = SearchBarEditor(parent)
             object_class_name_list = self._parent.object_class_name_list(index.row())
@@ -559,10 +557,7 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
             data = index.data(Qt.EditRole)
             editor.set_data(data)
         elif header[index.column()] == 'databases':
-            editor = CheckListEditor(parent)
-            all_databases = self._parent.all_databases(index.row())
-            databases = index.data(Qt.DisplayRole).split(",")
-            editor.set_data(all_databases, databases)
+            editor = self._create_database_editor(parent, option, index)
         else:
             editor = SearchBarEditor(parent)
             object_name_list = self._parent.object_name_list(index.row(), index.column())
@@ -582,10 +577,7 @@ class RemoveTreeItemsDelegate(ManageItemsDelegate):
         """Return editor."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'databases':
-            editor = CheckListEditor(parent)
-            all_databases = self._parent.all_databases(index.row())
-            databases = index.data(Qt.DisplayRole).split(", ")
-            editor.set_data(all_databases, databases)
+            editor = self._create_database_editor(parent, option, index)
             self.connect_editor_signals(editor, index)
             return editor
 
@@ -603,10 +595,7 @@ class ManageParameterTagsDelegate(ManageItemsDelegate):
         if header[index.column()] == 'remove':
             return None
         if header[index.column()] == 'databases':
-            editor = CheckListEditor(parent)
-            all_databases = self._parent.all_databases(index.row())
-            databases = index.data(Qt.DisplayRole).split(",")
-            editor.set_data(all_databases, databases)
+            editor = self._create_database_editor(parent, option, index)
         else:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
