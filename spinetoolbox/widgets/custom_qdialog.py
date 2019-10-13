@@ -668,14 +668,14 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
 class EditOrRemoveItemsDialog(ManageItemsDialog):
     def __init__(self, parent):
         super().__init__(parent)
-        self.db_map_dicts = list()
+        self.items = list()
 
     def all_databases(self, row):
         """Returns a list of db names available for a given row.
         Used by delegates.
         """
-        # TODO: db_map_dicts needs to know the database name
-        return [self._parent.db_map_to_name[db_map] for db_map in self.db_map_dicts[row]]
+        item = self.items[row]
+        return [item.db_map_data_field(db_map, "database") for db_map in item.db_maps]
 
 
 class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin):
@@ -993,9 +993,10 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
 
     Attributes:
         parent (TreeViewForm): data store widget
+        selected (dict): maps item type (class) to instances
     """
 
-    def __init__(self, parent, **kwargs):
+    def __init__(self, parent, selected):
         super().__init__(parent)
         self.setWindowTitle("Remove items")
         self.model = MinimalTableModel(self)
@@ -1004,37 +1005,36 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
         self.connect_signals()
         self.model.set_horizontal_header_labels(['type', 'name', 'databases'])
         model_data = list()
-        for item_type, db_map_dicts in kwargs.items():
-            for db_map_dict in db_map_dicts:
-                db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
-                item = list(db_map_dict.values())[0]
-                name = item.get('name')
-                if not name:
-                    continue
-                row_data = [item_type, name, db_names]
+        for item_type, items in selected.items():
+            for item in items:
+                row_data = [item_type.type_name, item.display_name, item.display_database]
                 model_data.append(row_data)
-                self.db_map_dicts.append(db_map_dict)
+                self.items.append(item)
         self.model.reset_model(model_data)
 
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to remove items."""
-        item_d = dict()
+        d = dict()
         for i in range(self.model.rowCount()):
-            item_type, _, db_names = self.model.row_data(i)
-            db_name_list = db_names.split(",")
-            try:
-                db_maps = [self.db_maps[x] for x in db_name_list]
-            except KeyError as e:
-                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
-                return
+            type_name, _, db_names = self.model.row_data(i)
+            item = self.items[i]
+            db_maps = []
+            for database in db_names.split(", "):
+                for db_map in item.db_maps:
+                    if item.db_map_data_field(db_map, "database") == database:
+                        db_maps.append(db_map)
+                        break
+                else:
+                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    return
             for db_map in db_maps:
-                item = self.db_map_dicts[i][db_map]
-                item_d.setdefault(db_map, {}).setdefault(item_type, []).append(item)
-        if not item_d:
+                data = item.db_map_data(db_map)
+                d.setdefault(db_map, {}).setdefault(type_name, []).append(data)
+        if not d:
             self._parent.msg_error.emit("Nothing to remove")
             return
-        self._parent.remove_tree_items(item_d)
+        self._parent.remove_tree_items(d)
         super().accept()
 
 

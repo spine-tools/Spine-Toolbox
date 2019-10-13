@@ -584,7 +584,7 @@ class RemoveTreeItemsDelegate(ManageItemsDelegate):
         if header[index.column()] == 'databases':
             editor = CheckListEditor(parent)
             all_databases = self._parent.all_databases(index.row())
-            databases = index.data(Qt.DisplayRole).split(",")
+            databases = index.data(Qt.DisplayRole).split(", ")
             editor.set_data(all_databases, databases)
             self.connect_editor_signals(editor, index)
             return editor

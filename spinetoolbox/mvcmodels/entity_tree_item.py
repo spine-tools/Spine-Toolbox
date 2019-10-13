@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Models for object and relationship classes.
+Classes to represent entities in a tree.
 
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
@@ -176,8 +176,13 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def display_name(self):
-        """"Returns a short identifier for display purposes."""
+        """"Returns the name for display."""
         return self.unique_identifier
+
+    @property
+    def display_database(self):
+        """"Returns the database for display."""
+        return ", ".join([self.db_map_data_field(db_map, "database") for db_map in self.db_maps])
 
     @property
     def first_db_map(self):
@@ -191,20 +196,26 @@ class MultiDBTreeItem(TreeItem):
         return list(self._db_map_data.keys())
 
     def add_db_map_data(self, db_map, new_data):
-        """Adds a new mapping from db_map to id for this item."""
+        """Adds new data from db_map for this item."""
         self._db_map_data[db_map] = new_data
 
-    def remove_db_map_data(self, db_map):
-        """Removes the mapping from given db_map."""
-        return self._db_map_data.pop(db_map, None)
+    def remove_db_map(self, db_map):
+        """Removes the given db_map."""
+        self._db_map_data.pop(db_map, None)
 
     def db_map_data(self, db_map):
         """Returns the data of this item in given db_map or None if not found."""
         return self._db_map_data.get(db_map)
 
-    def db_map_data_field(self, db_map, field):
+    def db_map_data_field(self, db_map, field, default=None):
         """Returns the data of this item for given filed in given db_map or None if not found."""
-        return self._db_map_data.get(db_map, {}).get(field)
+        return self._db_map_data.get(db_map, {}).get(field, default)
+
+    def add_db_map_data_field(self, db_map, field, value):
+        """Adds a new field to the data of this item in given db_map."""
+        db_map_data = self.db_map_data(db_map)
+        if db_map_data:
+            db_map_data[field] = value
 
     def fetch_more(self):
         """Returns a list of new children to add to the model."""
@@ -266,10 +277,7 @@ class MultiDBTreeItem(TreeItem):
     def data(self, column, role):
         """Returns data from this item."""
         if role == Qt.DisplayRole:
-            return (
-                self.display_name,
-                ", ".join([self.db_map_data_field(db_map, "database") for db_map in self.db_maps]),
-            )[column]
+            return (self.display_name, self.display_database)[column]
         if role == Qt.DecorationRole and column == 0:
             return self.display_icon()
 
@@ -316,14 +324,6 @@ class RelationshipTreeRootItem(TreeRootItem):
         return RelationshipClassItem(db_map_data, parent=self)
 
 
-class RelationshipDecorateMixin:
-    def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.DecorationRole and column == 0:
-            object_class_name_list = self.db_map_data_field(self.first_db_map, "object_class_name_list")
-            # TODO return self._spinedb_manager.icon_manager.relationship_icon(object_class_name_list)
-        return super().data(column, role)
-
-
 class EntityClassItem(MultiDBTreeItem):
     """An entity class item."""
 
@@ -343,6 +343,7 @@ class EntityClassItem(MultiDBTreeItem):
 class ObjectClassItem(EntityClassItem):
     """An object class item."""
 
+    type_name = "object class"
     context_menu_actions = {
         "Add relationship classes": QIcon(":/icons/menu_icons/cubes_plus.svg"),
         "Add objects": QIcon(":/icons/menu_icons/cube_plus.svg"),
@@ -373,6 +374,7 @@ class ObjectClassItem(EntityClassItem):
 class RelationshipClassItem(EntityClassItem):
     """A relationship class item."""
 
+    type_name = "relationship class"
     context_menu_actions = {
         "Add relationships": QIcon(":/icons/menu_icons/cubes_plus.svg"),
         "": None,
@@ -380,6 +382,19 @@ class RelationshipClassItem(EntityClassItem):
         "": None,
         "Remove selection": QIcon(":/icons/menu_icons/cubes_minus.svg"),
     }
+
+    def __init__(self, *args, **kwargs):
+        """Overriden method to parse some data for convenience later."""
+        super().__init__(*args, **kwargs)
+        for db_map in self.db_maps:
+            object_class_id_list = self.db_map_data_field(db_map, "object_class_id_list")
+            if object_class_id_list:
+                parsed_object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
+                self.add_db_map_data_field(db_map, "parsed_object_class_id_list", parsed_object_class_id_list)
+            object_class_name_list = self.db_map_data_field(db_map, "object_class_name_list")
+            if object_class_name_list:
+                parsed_object_class_name_list = object_class_name_list.split(",")
+                self.add_db_map_data_field(db_map, "parsed_object_class_name_list", parsed_object_class_name_list)
 
     @property
     def unique_identifier(self):
@@ -389,7 +404,7 @@ class RelationshipClassItem(EntityClassItem):
 
     @property
     def display_name(self):
-        """"Returns a short identifier for display purposes."""
+        """"Returns the name for display."""
         return self.db_map_data_field(self.first_db_map, "name")
 
     def display_icon(self):
@@ -434,6 +449,7 @@ class EntityItem(MultiDBTreeItem):
 class ObjectItem(EntityItem):
     """An object item."""
 
+    type_name = "object"
     context_menu_actions = {
         "Edit objects": QIcon(":/icons/menu_icons/cube_pen.svg"),
         "": None,
@@ -471,6 +487,7 @@ class ObjectItem(EntityItem):
 class RelationshipItem(EntityItem):
     """An object item."""
 
+    type_name = "relationship"
     context_menu_actions = {
         "Edit relationships": QIcon(":/icons/menu_icons/cubes_pen.svg"),
         "": None,
@@ -480,8 +497,19 @@ class RelationshipItem(EntityItem):
     }
 
     def __init__(self, *args, **kwargs):
+        """Overriden method to parse some data for convenience later.
+        Also make sure we never try and fetch this item."""
         super().__init__(*args, **kwargs)
         self._fetched = True
+        for db_map in self.db_maps:
+            object_id_list = self.db_map_data_field(db_map, "object_id_list")
+            if object_id_list:
+                parsed_object_id_list = [int(id_) for id_ in object_id_list.split(",")]
+                self.add_db_map_data_field(db_map, "parsed_object_id_list", parsed_object_id_list)
+            object_name_list = self.db_map_data_field(db_map, "object_name_list")
+            if object_name_list:
+                parsed_object_name_list = object_name_list.split(",")
+                self.add_db_map_data_field(db_map, "parsed_object_name_list", parsed_object_name_list)
 
     @property
     def unique_identifier(self):
@@ -491,7 +519,7 @@ class RelationshipItem(EntityItem):
 
     @property
     def display_name(self):
-        """"Returns a short identifier for display purposes."""
+        """"Returns the name for display."""
         return self.db_map_data_field(self.first_db_map, "object_name_list")
 
     def display_icon(self):

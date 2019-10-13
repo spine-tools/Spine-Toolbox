@@ -782,18 +782,18 @@ class TreeViewForm(DataStoreForm):
     @Slot(name="show_remove_object_tree_items_form")
     def show_remove_object_tree_items_form(self):
         """Show form to remove items from object treeview."""
-        kwargs = {
-            item_type: [ind.data(Qt.UserRole + 1) for ind in self.selected_obj_tree_indexes.get(item_type, {})]
-            for item_type in ('object_class', 'object', 'relationship_class', 'relationship')
+        selected = {
+            item_type: [ind.internalPointer() for ind in indexes]
+            for item_type, indexes in self.object_tree_model.selected_indexes.items()
         }
-        dialog = RemoveTreeItemsDialog(self, **kwargs)
+        dialog = RemoveTreeItemsDialog(self, selected)
         dialog.show()
 
     @Slot(name="show_remove_relationship_tree_items_form")
     def show_remove_relationship_tree_items_form(self):
         """Show form to remove items from relationship treeview."""
-        kwargs = {
-            item_type: [ind.data(Qt.UserRole + 1) for ind in self.selected_rel_tree_indexes.get(item_type, {})]
+        removed = {
+            key: [ind.data(Qt.UserRole + 1) for ind in self.selected_rel_tree_indexes.get(item_type, {})]
             for item_type in ('relationship_class', 'relationship')
         }
         dialog = RemoveTreeItemsDialog(self, **kwargs)
@@ -803,11 +803,11 @@ class TreeViewForm(DataStoreForm):
     def remove_tree_items(self, item_d):
         """Remove items from tree views."""
         removed = 0
-        for db_map, item_type_ids in item_d.items():
-            object_classes = item_type_ids.get("object_class", ())
-            objects = item_type_ids.get("object", ())
-            relationship_classes = item_type_ids.get("relationship_class", ())
-            relationships = item_type_ids.get("relationship", ())
+        for db_map, items_per_type in item_d.items():
+            object_classes = items_per_type.get("object class", ())
+            objects = items_per_type.get("object", ())
+            relationship_classes = items_per_type.get("relationship class", ())
+            relationships = items_per_type.get("relationship", ())
             object_class_ids = {x['id'] for x in object_classes}
             object_ids = {x['id'] for x in objects}
             relationship_class_ids = {x['id'] for x in relationship_classes}
@@ -823,32 +823,34 @@ class TreeViewForm(DataStoreForm):
                 self.msg_error.emit(e.msg)
                 continue
             if object_class_ids:
-                self.object_tree_model.remove_object_classes(db_map, object_class_ids)
-                self.relationship_tree_model.remove_object_classes(db_map, object_class_ids)
+                self.object_tree_model.remove_object_classes(db_map, object_classes)
+                self.relationship_tree_model.remove_object_classes(db_map, object_classes)
                 self.object_parameter_definition_model.remove_object_classes(db_map, object_classes)
                 self.object_parameter_value_model.remove_object_classes(db_map, object_classes)
                 self.relationship_parameter_definition_model.remove_object_classes(db_map, object_classes)
                 self.relationship_parameter_value_model.remove_object_classes(db_map, object_classes)
             if object_ids:
-                self.object_tree_model.remove_objects(db_map, object_ids)
-                self.relationship_tree_model.remove_objects(db_map, object_ids)
+                self.object_tree_model.remove_objects(db_map, objects)
+                self.relationship_tree_model.remove_objects(db_map, objects)
                 self.object_parameter_value_model.remove_objects(db_map, objects)
                 self.relationship_parameter_value_model.remove_objects(db_map, objects)
             if relationship_class_ids:
-                self.object_tree_model.remove_relationship_classes(db_map, relationship_class_ids)
-                self.relationship_tree_model.remove_relationship_classes(db_map, relationship_class_ids)
+                self.object_tree_model.remove_relationship_classes(db_map, relationship_classes)
+                self.relationship_tree_model.remove_relationship_classes(db_map, relationship_classes)
                 self.relationship_parameter_definition_model.remove_relationship_classes(db_map, relationship_classes)
                 self.relationship_parameter_value_model.remove_relationship_classes(db_map, relationship_classes)
             if relationship_ids:
-                self.object_tree_model.remove_relationships(db_map, relationship_ids)
-                self.relationship_tree_model.remove_relationships(db_map, relationship_ids)
+                self.object_tree_model.remove_relationships(db_map, relationships)
+                self.relationship_tree_model.remove_relationships(db_map, relationships)
                 self.relationship_parameter_value_model.remove_relationships(db_map, relationships)
             removed += len(object_class_ids) + len(object_ids) + len(relationship_class_ids) + len(relationship_ids)
         if not removed:
             return
         self.commit_available.emit(True)
-        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.hasChildren())
+        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
         self.msg.emit("Successfully removed {} item(s).".format(removed))
+        return
+        # TODO: do the below in the models
         # Update selected (object and relationship) tree indexes
         self.selected_obj_tree_indexes = {}
         for index in self.ui.treeView_object.selectedIndexes():
@@ -1048,7 +1050,7 @@ class TreeViewForm(DataStoreForm):
 
         Args:
             table_view (QTableView): remove rows from this table
-            value_model (QAbstractTableModel): remove parameters from this model
+            value_model (QAbstractTableModel): also remove parameters from this model
         """
         selection = table_view.selectionModel().selection()
         rows = list()
