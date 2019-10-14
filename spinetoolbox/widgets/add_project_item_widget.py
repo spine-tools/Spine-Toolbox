@@ -30,7 +30,7 @@ class AddProjectItemWidget(QWidget):
         y (int): Y coordinate of new item
     """
 
-    def __init__(self, toolbox, x, y):
+    def __init__(self, toolbox, x, y, initial_name=''):
         """Initialize class."""
         from ..ui.add_project_item import Ui_Form
 
@@ -49,7 +49,8 @@ class AddProjectItemWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # Class attributes
-        self.name = ''
+        self.name = initial_name
+        self.ui.lineEdit_name.setText(self.name)
         self.description = ''
         self.connect_signals()
         self.ui.lineEdit_name.setFocus()

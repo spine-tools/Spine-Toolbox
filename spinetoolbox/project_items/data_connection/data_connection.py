@@ -433,3 +433,8 @@ class DataConnection(ProjectItem):
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
+
+    @staticmethod
+    def _default_name_prefix():
+        """see base class"""
+        return "data_connection"

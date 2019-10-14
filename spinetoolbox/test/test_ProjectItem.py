@@ -16,8 +16,10 @@ Unit tests for ProjectItem base class.
 :date:   4.10.2019
 """
 
+from collections import namedtuple
 from tempfile import TemporaryDirectory
 import unittest
+from unittest.mock import MagicMock
 
 from ..project_item import ProjectItem
 
@@ -55,6 +57,28 @@ class TestProjectItem(unittest.TestCase):
                 "Link established."
                 " Interaction between a <b>item_type</b> and a <b>item_type</b> has not been implemented yet.",
             )
+
+    def test_default_name(self):
+        class MockItem(ProjectItem):
+            def __init__(self, toolbox):
+                super().__init__(toolbox, "mock_type", "no_name", "description", 0.0, 0.0)
+
+            @staticmethod
+            def _default_name_prefix():
+                return "name_prefix"
+
+        with TemporaryDirectory() as project_dir:
+            toolbox = _MockToolbox(_MockProject(project_dir))
+            toolbox.project_item_model = namedtuple("model", ["find_name"])
+            toolbox.project_item_model.find_item = MagicMock()
+            toolbox.project_item_model.find_item.return_value = None
+            item = MockItem(toolbox)
+            self.assertEqual(item.default_name(toolbox), "name_prefix_01")
+            # Subsequent calls should not increase the counter
+            self.assertEqual(item.default_name(toolbox), "name_prefix_01")
+            # If an item with the same name exists already we increment the counter up to 99.
+            toolbox.project_item_model.find_item.return_value = object()
+            self.assertEqual(item.default_name(toolbox), "name_prefix_99")
 
 
 if __name__ == '__main__':

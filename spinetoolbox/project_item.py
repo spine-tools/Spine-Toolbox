@@ -222,6 +222,8 @@ class ProjectItem(BaseProjectItem):
 
     item_changed = Signal(name="item_changed")
 
+    _default_name_counts = {}
+
     def __init__(self, toolbox, item_type, name, description, x, y):
         """
         Args:
@@ -379,6 +381,40 @@ class ProjectItem(BaseProjectItem):
             delete_bool = delete_int != 0
             ind = self._toolbox.project_item_model.find_item(self.name)
             self._toolbox.remove_item(ind, delete_item=delete_bool, check_dialog=True)
+
+    @staticmethod
+    def _default_name_prefix():
+        """prefix for default item name"""
+        raise NotImplementedError()
+
+    @classmethod
+    def default_name(cls, toolbox):
+        """
+        Proposes a name for the project item.
+
+        The format is `prefix_xx` where `prefix` is what `_default_name_prefix` returns
+        and `xx` is a counter value [01..99].
+
+        Args:
+            toolbox (ToolboxUI): a toolbox instance
+
+        Returns:
+            a name string
+        """
+        prefix = cls._default_name_prefix()
+        name_count = cls._default_name_counts.get(prefix, 0)
+        if not name_count:
+            cls._default_name_counts[prefix] = 0
+        name = prefix + "_{:02}".format(name_count + 1)
+        if toolbox.project_item_model.find_item(name) is not None:
+            if name_count == 98:
+                # Avoiding too deep recursions.
+                # If we get here there is just too many items already and we don't care.
+                return name
+            # Increment index recursively if name is already in project.
+            cls._default_name_counts[prefix] += 1
+            name = cls.default_name(toolbox)
+        return name
 
     def rename(self, new_name):
         """Rename this item."""
