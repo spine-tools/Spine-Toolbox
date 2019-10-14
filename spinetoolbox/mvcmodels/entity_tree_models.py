@@ -62,17 +62,17 @@ class EntityTreeModel(QAbstractItemModel):
 
     def track_item(self, item):
         """Tracks given TreeItem."""
-        item.rows_about_to_be_inserted.connect(self._begin_insert_rows)
-        item.rows_inserted.connect(self._end_insert_rows)
-        item.rows_about_to_be_removed.connect(self._begin_remove_rows)
-        item.rows_removed.connect(self._end_remove_rows)
+        item.children_about_to_be_inserted.connect(self._begin_insert_rows)
+        item.children_inserted.connect(self._end_insert_rows)
+        item.children_about_to_be_removed.connect(self._begin_remove_rows)
+        item.children_removed.connect(self._end_remove_rows)
 
     def stop_tracking_item(self, item):
         """Stops tracking given TreeItem."""
-        item.rows_about_to_be_inserted.disconnect(self._begin_insert_rows)
-        item.rows_inserted.disconnect(self._end_insert_rows)
-        item.rows_about_to_be_removed.disconnect(self._begin_remove_rows)
-        item.rows_removed.disconnect(self._end_remove_rows)
+        item.children_about_to_be_inserted.disconnect(self._begin_insert_rows)
+        item.children_inserted.disconnect(self._end_insert_rows)
+        item.children_about_to_be_removed.disconnect(self._begin_remove_rows)
+        item.children_removed.disconnect(self._end_remove_rows)
 
     @Slot("QVariant", "int", "int", name="_begin_insert_rows")
     def _begin_insert_rows(self, item, row, count):
@@ -435,7 +435,7 @@ class ObjectTreeModel(EntityTreeModel):
         for parent in self.cascade_filter_nodes_by_id(
             db_map, (object_class_id,), (object_id,), (rel_cls_id,), fetch=True
         ):
-            for item in parent.find_children(lambda child: child.unique_identifier == rel_item.unique_identifier):
+            for item in parent.find_children(lambda child: child.display_id == rel_item.display_id):
                 return self.index_from_item(item)
         return None
 

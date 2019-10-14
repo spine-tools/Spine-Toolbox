@@ -710,7 +710,7 @@ class TreeViewForm(DataStoreForm):
 
     def call_show_add_relationships_form_from_object_tree(self, index):
         item = index.internalPointer()
-        relationship_class_key = item.unique_identifier
+        relationship_class_key = item.display_id
         object_name = item._parent.display_name
         object_class_name = item._parent._parent.display_name
         self.show_add_relationships_form(
@@ -719,7 +719,7 @@ class TreeViewForm(DataStoreForm):
 
     def call_show_add_relationships_form_from_relationship_tree(self, index):
         item = index.internalPointer()
-        relationship_class_key = item.unique_identifier
+        relationship_class_key = item.display_id
         self.show_add_relationships_form(relationship_class_key=relationship_class_key)
 
     def add_object_classes(self, object_class_d):
