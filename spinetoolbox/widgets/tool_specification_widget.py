@@ -23,8 +23,14 @@ import json
 from PySide2.QtGui import QDesktopServices, QStandardItemModel, QStandardItem
 from PySide2.QtWidgets import QWidget, QStatusBar, QInputDialog, QFileDialog, QFileIconProvider, QMessageBox
 from PySide2.QtCore import Slot, Qt, QUrl, QFileInfo
-from ..config import STATUSBAR_SS, TREEVIEW_HEADER_SS, APPLICATION_PATH, TOOL_TYPES, REQUIRED_KEYS,\
-    INVALID_FILENAME_CHARS
+from ..config import (
+    STATUSBAR_SS,
+    TREEVIEW_HEADER_SS,
+    APPLICATION_PATH,
+    TOOL_TYPES,
+    REQUIRED_KEYS,
+    INVALID_FILENAME_CHARS,
+)
 from ..helpers import busy_effect
 from .custom_menus import AddIncludesPopupMenu, CreateMainProgramPopupMenu
 
@@ -38,6 +44,7 @@ class ToolSpecificationWidget(QWidget):
             tool_specification (ToolSpecification): If given, the form is pre-filled with this specification
         """
         from ..ui.tool_specification_form import Ui_Form
+
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherit stylesheet from ToolboxUI
         # Setup UI from Qt Designer file
         self.ui = Ui_Form()
@@ -596,7 +603,9 @@ class ToolSpecificationWidget(QWidget):
             self._toolbox.update_tool_specification(row, tool)
         else:
             # noinspection PyCallByClass, PyTypeChecker, PyArgumentList
-            answer = QFileDialog.getSaveFileName(self, "Save Tool specification file", self.def_file_path, "JSON (*.json)")
+            answer = QFileDialog.getSaveFileName(
+                self, "Save Tool specification file", self.def_file_path, "JSON (*.json)"
+            )
             if answer[0] == "":  # Cancel button clicked
                 return False
             def_file = os.path.abspath(answer[0])

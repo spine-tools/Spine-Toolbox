@@ -379,7 +379,7 @@ class TreeViewForm(DataStoreForm):
         """Show dialog to allow user to select a file to import."""
         db_map = next(iter(self.db_maps.values()))
         if db_map.has_pending_changes():
-            commit_warning = QMessageBox()
+            commit_warning = QMessageBox(parent=self)
             commit_warning.setText("Please commit or rollback before importing data")
             commit_warning.setStandardButtons(QMessageBox.Ok)
             commit_warning.exec()
@@ -388,7 +388,7 @@ class TreeViewForm(DataStoreForm):
         # assume that dialog is modal, if not use accepted, rejected signals
         if dialog.exec() == QDialog.Accepted:
             if db_map.has_pending_changes():
-                self.msg.emit("Import was successfull")
+                self.msg.emit("Import was successful")
                 self.commit_available.emit(True)
                 self.init_models()
 
@@ -948,7 +948,7 @@ class TreeViewForm(DataStoreForm):
                 hints = GraphAndTreeViewPlottingHints(table_view)
                 plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
-                report_plotting_failure(error)
+                report_plotting_failure(error, self)
                 return
             if (
                 table_view is self.ui.tableView_object_parameter_value

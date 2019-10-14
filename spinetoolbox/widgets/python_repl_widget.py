@@ -16,12 +16,13 @@ Class for a custom RichJupyterWidget to use as Python REPL.
 :date:   14.3.2019
 """
 
+import os.path
 import subprocess
 from PySide2.QtCore import Qt, Signal, Slot
 from PySide2.QtWidgets import QAction, QMessageBox
 from qtconsole.rich_jupyter_widget import RichJupyterWidget
 from qtconsole.manager import QtKernelManager
-from jupyter_client.kernelspec import find_kernel_specs, NoSuchKernel
+from jupyter_client.kernelspec import find_kernel_specs, get_kernel_spec, NoSuchKernel
 from .toolbars import DraggableWidget
 from ..helpers import busy_effect
 from ..config import PYTHON_EXECUTABLE
@@ -82,11 +83,11 @@ class PythonReplWidget(RichJupyterWidget):
         if not self.may_need_restart:
             return self.kernel_name, self.kernel_display_name
         python_path = self._toolbox.qsettings().value("appSettings/pythonPath", defaultValue="")
-        if not python_path == "":
+        if python_path:
             self.python_cmd = python_path
         else:
             self.python_cmd = PYTHON_EXECUTABLE
-        program = "{0}".format(self.python_cmd)
+        program = str(self.python_cmd)
         args = list()
         args.append("-V")
         q_process = qsubprocess.QSubProcess(self._toolbox, program, args, silent=True)
@@ -97,7 +98,7 @@ class PythonReplWidget(RichJupyterWidget):
             )
             return None
         python_version_str = q_process.output
-        if python_version_str == "":
+        if not python_version_str:
             # The version str might be in stderr instead of stdout (happens at least with Python 2.7.14)
             python_version_str = q_process.error_output
         p_v_list = python_version_str.split()
@@ -139,23 +140,20 @@ class PythonReplWidget(RichJupyterWidget):
         Returns:
             Boolean value depending on whether or not the user chooses to proceed.
         """
-        if not self.is_package_installed("ipython"):
-            message = "Python Console requires package <b>IPython</b>." "<p>Do you want to install the package now?</p>"
-            # noinspection PyTypeChecker, PyCallByClass
-            answer = QMessageBox.question(self, "IPython missing", message, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
-                self._control.viewport().setCursor(self.normal_cursor)
-                return False
-            self._toolbox.msg.emit("*** Installing IPython ***")
-            self.start_package_install_process("ipython")
-            return True
         if not self.is_package_installed("ipykernel"):
             message = (
                 "Python Console requires package <b>ipykernel</b>." "<p>Do you want to install the package now?</p>"
             )
-            # noinspection PyTypeChecker, PyCallByClass
-            answer = QMessageBox.question(self, "ipykernel missing", message, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
+            message_box = QMessageBox(
+                QMessageBox.Question,
+                "ipykernel Missing",
+                message,
+                QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self._toolbox,
+            )
+            message_box.button(QMessageBox.Ok).setText("Install ipykernel")
+            answer = message_box.exec_()
+            if answer == QMessageBox.Cancel:
                 self._control.viewport().setCursor(self.normal_cursor)
                 return False
             self._toolbox.msg.emit("*** Installing ipykernel ***")
@@ -163,25 +161,43 @@ class PythonReplWidget(RichJupyterWidget):
             return True
         # Install kernelspecs for self.kernel_name if not already present
         kernel_specs = find_kernel_specs()
-        if self.kernel_name not in kernel_specs.keys():
+        spec_exists = self.kernel_name in kernel_specs
+        executable_valid = False
+        if spec_exists:
+            spec = get_kernel_spec(self.kernel_name)
+            executable_valid = os.path.exists(spec.argv[0])
+        if not spec_exists or not executable_valid:
             message = (
                 "IPython kernel specifications for the selected environment are missing. "
                 "<p>Do you want to install kernel <b>{0}</b> specifications now?</p>".format(self.kernel_name)
             )
-            # noinspection PyTypeChecker, PyCallByClass
-            answer = QMessageBox.question(self, "Kernel specs missing", message, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
+            message_box = QMessageBox(
+                QMessageBox.Question,
+                "Kernel Specs Missing",
+                message,
+                QMessageBox.Ok | QMessageBox.Cancel,
+                parent=self._toolbox,
+            )
+            message_box.button(QMessageBox.Ok).setText("Install specifications")
+            answer = message_box.exec_()
+            if answer == QMessageBox.Cancel:
                 self._control.viewport().setCursor(self.normal_cursor)
                 return False
             self._toolbox.msg.emit("*** Installing IPython kernel <b>{0}</b> specs ***".format(self.kernel_name))
             self.start_kernelspec_install_process()
-        else:  # Everything ready, start Python Console
-            kernel_dir = kernel_specs[self.kernel_name]
-            kernel_spec_anchor = "<a style='color:#99CCFF;' title='{0}' href='#'>{1}</a>".format(
-                kernel_dir, self.kernel_name
-            )
-            self._toolbox.msg.emit("\tStarting IPython kernel {0}".format(kernel_spec_anchor))
-            self.start_python_kernel()
+            # New specs installed, update the variable
+            if self.install_process.wait_for_finished():
+                kernel_specs = find_kernel_specs()
+            else:
+                self._toolbox.msg_error.emit("Failed to install IPython kernel specifications.")
+                return False
+        # Everything ready, start Python Console
+        kernel_dir = kernel_specs[self.kernel_name]
+        kernel_spec_anchor = "<a style='color:#99CCFF;' title='{0}' href='#'>{1}</a>".format(
+            kernel_dir, self.kernel_name
+        )
+        self._toolbox.msg.emit("\tStarting IPython kernel {0}".format(kernel_spec_anchor))
+        self.start_python_kernel()
         return True
 
     def is_package_installed(self, package_name):

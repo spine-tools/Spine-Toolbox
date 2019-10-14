@@ -23,7 +23,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 ### Removed
 
 ### Fixed
-- Data advertised by a project item during execution is only accessible by its descendants.
+- Data advertised by a project item during execution is only accessible by its direct children.
+  In other words, resources are passed to the next items in line but not beyond.
 
 ### Security
 

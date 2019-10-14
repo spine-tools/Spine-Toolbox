@@ -1021,7 +1021,7 @@ class GraphViewForm(DataStoreForm):
                 hints = GraphAndTreeViewPlottingHints(table_view)
                 plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
-                report_plotting_failure(error)
+                report_plotting_failure(error, self)
                 return
             if (
                 table_view is self.ui.tableView_object_parameter_value

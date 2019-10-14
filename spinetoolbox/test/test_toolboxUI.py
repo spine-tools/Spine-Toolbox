@@ -136,7 +136,9 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox.init_tool_specification_model(list())
         self.assertEqual(self.toolbox.tool_specification_model.rowCount(), 0)
         # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(SIGNAL("doubleClicked(QModelIndex)"))
+        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(
+            SIGNAL("doubleClicked(QModelIndex)")
+        )
         self.assertEqual(n_dbl_clicked_recv, 1)
         n_context_menu_recv = self.toolbox.ui.listView_tool_specifications.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
@@ -145,7 +147,9 @@ class TestToolboxUI(unittest.TestCase):
         # Initialize ToolSpecificationModel again and see that the signals are connected only once
         self.toolbox.init_tool_specification_model(list())
         # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(SIGNAL("doubleClicked(QModelIndex)"))
+        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(
+            SIGNAL("doubleClicked(QModelIndex)")
+        )
         self.assertEqual(n_dbl_clicked_recv, 1)
         n_context_menu_recv = self.toolbox.ui.listView_tool_specifications.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
@@ -235,8 +239,9 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).
         """
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("spinetoolbox.project.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
             self.toolbox.create_project("UnitTest Project", "")
         # self.toolbox.create_project("UnitTest Project", "")
         ds1 = "DS1"
@@ -553,6 +558,62 @@ class TestToolboxUI(unittest.TestCase):
     @unittest.skip("TODO")
     def test_remove_tool_specification(self):
         self.fail()
+
+    def test_tasks_before_exit_without_open_project(self):
+        self.assertIsNone(self.toolbox.project())
+        settings = self.toolbox.qsettings()
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "0")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, [])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "0")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit"])
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "1")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, [])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "1")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit"])
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "2")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, [])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "2")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit"])
+
+    def test_tasks_before_exit_with_open_project(self):
+        self.toolbox._project = 1  # Just make sure project is not None
+        settings = self.toolbox.qsettings()
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "0")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, [])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "0")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit"])
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "1")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt save"])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "1")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt save"])
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "2")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["save"])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "2")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit", "save"])
 
     def add_ds(self, name, x=0, y=0):
         """Helper method to create a Data Store with the given name and coordinates."""

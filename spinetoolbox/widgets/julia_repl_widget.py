@@ -241,7 +241,7 @@ class JuliaREPLWidget(RichJupyterWidget):
                 )
                 return False
             julia_active_project = q_process.output
-            msg = QMessageBox()
+            msg = QMessageBox(parent=self._toolbox)
             msg.setIcon(QMessageBox.Question)
             msg.setWindowTitle("IJulia installation needed")
             msg.setText(

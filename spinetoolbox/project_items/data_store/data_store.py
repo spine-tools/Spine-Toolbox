@@ -492,7 +492,7 @@ class DataStore(ProjectItem):
                 return
         try:
             if not spinedb_api.is_empty(url):
-                msg = QMessageBox()
+                msg = QMessageBox(parent=self._toolbox)
                 msg.setIcon(QMessageBox.Question)
                 msg.setWindowTitle("Database not empty")
                 msg.setText("The database at <b>'{0}'</b> is not empty.".format(url))

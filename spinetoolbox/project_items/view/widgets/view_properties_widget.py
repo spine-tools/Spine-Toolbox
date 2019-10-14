@@ -32,6 +32,7 @@ class ViewPropertiesWidget(QWidget):
     def __init__(self, toolbox):
         """Init class."""
         from ..ui.view_properties import Ui_Form
+
         super().__init__()
         self._toolbox = toolbox
         self.ui = Ui_Form()

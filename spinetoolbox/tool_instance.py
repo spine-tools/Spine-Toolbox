@@ -82,7 +82,9 @@ class ToolInstance(QObject):
                 + "'>source directory</a>"
             )
             self._toolbox.msg.emit(
-                "*** Executing Tool specification <b>{0}</b> in {1} ***".format(self.tool_specification.name, src_dir_anchor)
+                "*** Executing Tool specification <b>{0}</b> in {1} ***".format(
+                    self.tool_specification.name, src_dir_anchor
+                )
             )
 
     @property
@@ -98,7 +100,9 @@ class ToolInstance(QObject):
             + "'>work directory</a>"
         )
         self._toolbox.msg.emit(
-            "*** Copying Tool specification <b>{0}</b> source files to {1} ***".format(self.tool_specification.name, work_anchor)
+            "*** Copying Tool specification <b>{0}</b> source files to {1} ***".format(
+                self.tool_specification.name, work_anchor
+            )
         )
         for filepath in self.tool_specification.includes:
             dirname, file_pattern = os.path.split(filepath)
@@ -374,7 +378,9 @@ class ToolInstance(QObject):
                 "they will be archived into results directory. Also, output files are passed to\n "
                 "subsequent project items.' href='#'>Tip</a>"
             )
-            self._toolbox.msg_warning.emit("\tNo output files defined for this Tool specification. {0}".format(tip_anchor))
+            self._toolbox.msg_warning.emit(
+                "\tNo output files defined for this Tool specification. {0}".format(tip_anchor)
+            )
         else:
             saved_files, failed_files = self.copy_output(result_path)
             if not saved_files:

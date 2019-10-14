@@ -229,7 +229,7 @@ class ToolConfigurationAssistantWidget(QWidget):
 
     def get_permission(self, title, action):
         """Ask user's permission to perform an action and return True if granted."""
-        msg = QMessageBox()
+        msg = QMessageBox(parent=self)
         msg.setIcon(QMessageBox.Question)
         msg.setWindowTitle(title)
         msg.setText(

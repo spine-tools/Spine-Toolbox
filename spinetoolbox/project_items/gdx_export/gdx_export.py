@@ -19,9 +19,10 @@ Gdx Export project item.
 from copy import deepcopy
 import json
 import logging
+import pathlib
 import os.path
 from spinetoolbox.helpers import get_db_map
-from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io.exporters import gdx
 from .widgets.gdx_export_settings import GdxExportSettings
 from .widgets.export_list_item import ExportListItem
@@ -115,12 +116,13 @@ class GdxExport(ProjectItem):
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Gdx Export <b>{}</b>".format(self.name))
         self._toolbox.msg.emit("***")
+        execution_instance = self._toolbox.project().execution_instance
         availability_error = gdx.gams_import_error()
         success = 0
         abort = -1
         if availability_error:
             self._toolbox.msg_error.emit(availability_error)
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
+            execution_instance.project_item_execution_finished_signal.emit(abort)
             return
         gams_system_directory = self._resolve_gams_system_directory()
         for url in self._database_urls:
@@ -135,7 +137,7 @@ class GdxExport(ProjectItem):
                     "Failed to write .gdx file: {}".format(error.message)
                     + " Check that the correct <i>GAMS executable</i> is selected in <b>File->Settings (F1)</b>."
                 )
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
+                execution_instance.project_item_execution_finished_signal.emit(abort)
                 return
             except RuntimeError as gams_error:
                 # Happens when there's a mismatch in bitness between selected (in app Settings)
@@ -144,20 +146,20 @@ class GdxExport(ProjectItem):
                 self._toolbox.msg_warning.emit(
                     "Please select another <i>GAMS program</i> " "in <b>File->Settings (F1)</b>"
                 )
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
+                execution_instance.project_item_execution_finished_signal.emit(abort)
                 return
             file_name = self._database_to_file_name_map.get(url.database, None)
             if file_name is None:
                 self._toolbox.msg_error.emit("No file name given to export database {}.".format(url.database))
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
+                execution_instance.project_item_execution_finished_signal.emit(abort)
                 return
             out_path = os.path.join(self.data_dir, file_name)
             gdx.export_to_gdx(gams_database, out_path)
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
-        execution_instance = self._toolbox.project().execution_instance
         paths = [os.path.join(self.data_dir, file_name) for file_name in self._database_to_file_name_map.values()]
-        execution_instance.append_dc_files(self.name, paths)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(success)
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
+        execution_instance.advertise_resources(self.name, *resources)
+        execution_instance.project_item_execution_finished_signal.emit(success)
 
     def stop_execution(self):
         """Stops executing this item."""
@@ -168,11 +170,11 @@ class GdxExport(ProjectItem):
         """Simulates executing this item."""
         super().simulate_execution(inst)
         self._database_urls.clear()
-        for url in inst.ds_urls_at_sight(self.name):
-            self._database_urls.append(url)
+        self._database_urls += [r.url for r in inst.available_resources(self.name) if r.type_ == "database"]
         files = self._database_to_file_name_map.values()
         paths = [os.path.join(self.data_dir, file_name) for file_name in files]
-        inst.append_dc_files(self.name, paths)
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
+        inst.advertise_resources(self.name, *resources)
         if not paths:
             self.add_notification(
                 "Currently this item does not export anything. "

@@ -60,9 +60,10 @@ class Tool(ProjectItem):
         self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
         if tool != "" and not self._tool_specification:
             # Clarifications for user
-            self._toolbox.msg_error.emit("Tool <b>{0}</b> should have a Tool "
-                                         "specification <b>{1}</b> but it was not found"
-                                         .format(self.name, tool))
+            self._toolbox.msg_error.emit(
+                "Tool <b>{0}</b> should have a Tool "
+                "specification <b>{1}</b> but it was not found".format(self.name, tool)
+            )
         self.set_tool_specification(self._tool_specification)
         if not self._tool_specification:
             self._tool_specification_name = ""
@@ -106,7 +107,9 @@ class Tool(ProjectItem):
             self._properties_ui.comboBox_tool.setCurrentIndex(-1)
             self.set_tool_specification(None)
         else:
-            tool_specification = self._toolbox.tool_specification_model.find_tool_specification(self._tool_specification_name)
+            tool_specification = self._toolbox.tool_specification_model.find_tool_specification(
+                self._tool_specification_name
+            )
             row = self._toolbox.tool_specification_model.tool_specification_row(self._tool_specification_name)
             self._properties_ui.comboBox_tool.setCurrentIndex(row)  # Row in tool temp model
             self.set_tool_specification(tool_specification)
@@ -784,7 +787,9 @@ class Tool(ProjectItem):
         """Simulates executing this Tool."""
         super().simulate_execution(inst)
         if not self.tool_specification():
-            self.add_notification("This Tool is not connected to a Tool specification. Set it in the Tool Properties Panel.")
+            self.add_notification(
+                "This Tool is not connected to a Tool specification. Set it in the Tool Properties Panel."
+            )
             return
         file_paths = self.find_input_files(inst)
         not_found = [k for k, v in file_paths.items() if v is None]
