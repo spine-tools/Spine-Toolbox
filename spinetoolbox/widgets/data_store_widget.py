@@ -273,9 +273,9 @@ class DataStoreForm(QMainWindow):
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
 
-    @Slot("bool", name="show_commit_session_dialog")
-    def show_commit_session_dialog(self, checked=False):
-        """Query user for a commit message and commit changes to source database."""
+    @Slot("bool", name="_prompt_and_commit_session")
+    def _prompt_and_commit_session(self, checked=False):
+        """Query user for a commit message and commit changes to source database returning False if cancelled."""
         if not any(db_map.has_pending_changes() for db_map in self.db_maps.values()):
             self.msg.emit("Nothing to commit yet.")
             return
@@ -947,7 +947,7 @@ class DataStoreForm(QMainWindow):
         Args:
             event (QCloseEvent): Closing event
         """
-        if any(db_map.has_pending_changes() for db_map in self.db_maps):
+        if any(db_map.has_pending_changes() for db_map in self.db_maps.values()):
             want_to_close = self._prompt_close_and_commit()
             if not want_to_close:
                 event.ignore()
