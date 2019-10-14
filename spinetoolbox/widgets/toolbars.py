@@ -33,15 +33,15 @@ from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 
 
 class ItemToolBar(QToolBar):
-    """A toolbar to add items using drag and drop actions.
-
-    Attributes:
-        parent (ToolboxUI): QMainWindow instance
-    """
+    """A toolbar to add items using drag and drop actions."""
 
     # noinspection PyUnresolvedReferences, PyUnusedLocal
     def __init__(self, parent):
-        """Init class."""
+        """
+
+        Args:
+            parent (ToolboxUI): QMainWindow instance
+        """
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         self._toolbox = parent
         label = QLabel("Drag & Drop Icon")
@@ -85,7 +85,7 @@ class ItemToolBar(QToolBar):
         self.setObjectName("ItemToolbar")
 
     def add_draggable_widgets(self, category_icon):
-        """Adds dragable widgets from the given list.
+        """Adds draggable widgets from the given list.
 
         Args:
             category_icon (list): List of tuples (item category (str), icon path (str))
@@ -132,21 +132,22 @@ class ItemToolBar(QToolBar):
 
 
 class DraggableWidget(QLabel):
-    """A draggable QLabel.
-
-    Attributes:
-        parent (QWidget): Parent widget
-        pixmap (QPixMap): Picture for the label
-        text (str): Item type
-    """
+    """A draggable QLabel."""
 
     def __init__(self, parent, pixmap, text):
+        """
+
+        Args:
+            parent (QWidget): Parent widget
+            pixmap (QPixMap): Picture for the label
+            text (str): Item type
+        """
         super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
         self.text = text
         self.setPixmap(pixmap)
         self.drag_start_pos = None
         self.setToolTip(
-            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(self.text)
+            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(self.text[:-1])
         )
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -179,17 +180,17 @@ class DraggableWidget(QLabel):
 
 
 class ParameterTagToolBar(QToolBar):
-    """A toolbar to add items using drag and drop actions.
-
-    Attributes:
-        parent (DataStoreForm): tree or graph view form
-    """
+    """A toolbar to add items using drag and drop actions."""
 
     tag_button_toggled = Signal("QVariant", "bool", name="tag_button_toggled")
     manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
 
     def __init__(self, parent):
-        """Init class"""
+        """
+
+        Args:
+            parent (DataStoreForm): tree or graph view form
+        """
         super().__init__("Parameter Tag Toolbar", parent=parent)
         self._parent = parent
         label = QLabel("Parameter tag")
