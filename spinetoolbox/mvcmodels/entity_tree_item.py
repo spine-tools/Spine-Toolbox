@@ -15,14 +15,19 @@ Classes to represent entities in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, Signal, QModelIndex
+from PySide2.QtCore import Qt, QObject, Signal, QModelIndex
 from sqlalchemy import or_
 from PySide2.QtGui import QFont, QBrush, QIcon
 from ..helpers import all_ids
 
 
-class TreeItem:
+class TreeItem(QObject):
     """A tree item that can fetch its children."""
+
+    rows_about_to_be_inserted = Signal("QVariant", "int", "int", name="rows_about_to_be_inserted")
+    rows_about_to_be_removed = Signal("QVariant", "int", "int", name="rows_about_to_be_removed")
+    rows_inserted = Signal("QVariant", name="rows_inserted")
+    rows_removed = Signal("QVariant", name="rows_removed")
 
     def __init__(self, parent=None):
         """Init class.
@@ -30,6 +35,7 @@ class TreeItem:
         Args:
             parent (TreeItem, NoneType): the parent item or None
         """
+        super().__init__(parent)
         self._children = []
         self._parent = None
         self._fetched = False
@@ -44,6 +50,8 @@ class TreeItem:
     def children(self, children):
         if not all(isinstance(child, TreeItem) for child in children):
             raise ValueError("all items in children must be instance of TreeItem")
+        for child in children:
+            child.parent = self
         self._children = children
 
     @property
@@ -114,8 +122,16 @@ class TreeItem:
             raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count() + 1:
             return False
+        self.rows_about_to_be_inserted.emit(self, position, len(new_children))
+        for child in new_children:
+            child.parent = self
         self._children[position:position] = new_children
+        self.rows_inserted.emit(new_children)
         return True
+
+    def append_children(self, new_children):
+        """Append children at the end."""
+        return self.insert_children(self.child_count(), new_children)
 
     def remove_children(self, position, count):
         """Removes count children starting from the given position."""
@@ -123,7 +139,10 @@ class TreeItem:
             return False
         if position + count > self.child_count():
             count = self.child_count() - position
+        self.rows_about_to_be_removed.emit(self, position, count)
+        items = self._children[position : position + count]
         del self._children[position : position + count]
+        self.rows_removed.emit(items)
         return True
 
     def clear_children(self):
@@ -149,11 +168,9 @@ class TreeItem:
         return not self._fetched
 
     def fetch_more(self):
-        """Fetches more children and returns them in a list.
-        The base class implementation returns an empty list.
+        """Fetches more children.
         """
         self._fetched = True
-        return []
 
 
 class MultiDBTreeItem(TreeItem):
@@ -255,7 +272,38 @@ class MultiDBTreeItem(TreeItem):
 
     def pop_db_map(self, db_map):
         """Removes the mapping for given db_map and returns it."""
-        return self._db_map_data.pop(db_map, None)
+        db_map = self._db_map_data.pop(db_map, None)
+        if not self._db_map_data:
+            self.parent.remove_children(self.child_number(), 1)
+        # Update child map, but maybe not dramatic if we don't
+        self._child_map = {key: value for key, value in self._child_map.items() if key[0] != db_map}
+        return db_map
+
+    def deep_remove_db_map(self, db_map):
+        for child in reversed(self.children):
+            child.deep_remove_db_map(db_map)
+        _ = self.pop_db_map(db_map)
+
+    def deep_take_db_map(self, db_map):
+        """Takes data and children from given db_map into a new item."""
+        db_map_data = self.pop_db_map(db_map)
+        if not db_map_data:
+            return None
+        other = type(self)({db_map: db_map_data})
+        other_children = []
+        for child in self.children:
+            other_child = child.deep_take_db_map(db_map)
+            if other_child:
+                other_children.append(other_child)
+        other.children = other_children
+        return other
+
+    def deep_merge(self, other):
+        if not isinstance(other, type(self)):
+            raise ValueError(f"Can't merge an instance of {type(other)} into a MultiDBTreeItem.")
+        for db_map in other.db_maps:
+            self.add_db_map_data(db_map, other.db_map_data(db_map))
+        self._merge_children(other.children)
 
     def has_one_db_map(self, db_map):
         """Returns true if the given db map is the only one."""
@@ -290,48 +338,9 @@ class MultiDBTreeItem(TreeItem):
         Must be reimplemented in subclasses."""
         raise NotImplementedError()
 
-    def fetch_more(self):
-        """Returns a list of new children to add to the model."""
-        filtered = list()
-        for db_map in self.db_maps:
-            children_data = self._get_children_data(db_map)
-            new_children = self._create_new_children(db_map, children_data)
-            filtered += self._filter_and_merge(new_children, filtered)
-        self._fetched = True
-        return filtered
-
-    def add_children_from_data(self, db_map, children_data):
-        """
-        Returns new children from given data.
-        Data is *not* checked for integrity (dups, etc.).
-
-        Args:
-            db_map (DiffDatabaseMapping)
-            children_data (list): collection of dicts
-        """
-        new_children = self._create_new_children(db_map, children_data)
-        return self._filter_and_merge(new_children, self.children)
-
-    def _filter_and_merge(self, new_children, existing_children):
-        """Checks for collision between new children and existing ones.
-        Merges children that collide into the existent, returns the others."""
-        ref = {child.unique_identifier: child for child in existing_children}
-        filtered = []
-        for new_child in new_children:
-            existing_child = ref.get(new_child.unique_identifier)
-            if existing_child:
-                # Collision, update existing and get rid of new one
-                for db_map in new_child.db_maps:
-                    existing_child.add_db_map_data(db_map, new_child.db_map_data(db_map))
-                del new_child
-            else:
-                # No collision, add the new item
-                filtered.append(new_child)
-        return filtered
-
     def _create_new_children(self, db_map, children_data):
         """
-        Creates and returns new items.
+        Creates new items for a db map given data..
         Data is *not* checked for integrity (dups, etc.).
 
         Args:
@@ -345,8 +354,53 @@ class MultiDBTreeItem(TreeItem):
             new_children.append(self._create_child_item({db_map: child_data}))
         return new_children
 
-    def update_children_from_data(self, db_map, children_data):
+    def _merge_children(self, new_children):
+        """Merges source into target children by unique_identifier. Returns unmerged."""
+        existing_children = {child.unique_identifier: child for child in self.children}
+        unmerged = []
+        for new_child in new_children:
+            existing = existing_children.get(new_child.unique_identifier)
+            if existing:
+                # Found match, merge and get rid of src just in case
+                existing.deep_merge(new_child)
+                del new_child
+            else:
+                # No match
+                unmerged.append(new_child)
+        self.append_children(unmerged)
+
+    def fetch_more(self):
+        """Creates children by querying all databases.
+        Merges the children across databases.
+        Returns the list of newly created children.
         """
+        all_children = list()
+        for db_map in self.db_maps:
+            children_data = self._get_children_data(db_map)
+            new_children = self._create_new_children(db_map, children_data)
+            self._merge_children(new_children)
+        self._fetched = True
+
+    def append_children_from_data(self, db_map, children_data):
+        """
+        Creates children from given data and merges them to the existing.
+        Data is *not* checked for integrity (dups, etc.)
+        Appends the list of unmerged children.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            children_data (list): collection of dicts
+        """
+        new_children = self._create_new_children(db_map, children_data)
+        self._merge_children(new_children)
+
+    def update_children_with_data(self, db_map, children_data):
+        """
+        Updates children with given data. Note that this may cause two type of problems with the unique id:
+        - the unique id of an individual item is no longer unique
+        - two or more children have the same unique id
+        Call fix_children after you're done updating all your db_maps to fix that situation.
+        Returns updated rows so the model knows which children may need a fix.
 
         Args:
             db_map (DiffDatabaseMapping)
@@ -364,29 +418,23 @@ class MultiDBTreeItem(TreeItem):
             updated_rows.append(row)
         return updated_rows
 
-    def split_ambiguous(self, rows):
-        """
-        Check if the children at rows are ambiguous (which may result from an update operation).
-        """
-        new_children = {}
-        for row in rows:
+    def fix_children(self, rows):
+        """Fixes children thay may have problems with their unique id after calling update_children_with_data."""
+        unique_ids = [child.unique_identifier for child in self.children if child.unique_identifier]
+        new_children = []
+        for row in reversed(sorted(rows)):
             child = self.child(row)
             if not child:
                 continue
+            # Deep take db maps until the unique id becomes unique
             while not child.unique_identifier:
                 db_map = child.first_db_map
-                child_data = child.pop_db_map(db_map)
-                new_child = self._create_child_item({db_map: child_data})
+                new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
-                existing_child = new_children.get(new_child.unique_identifier)
-                if existing_child:
-                    # Collision, update existing and get rid of new one
-                    existing_child.add_db_map_data(db_map, child_data)
-                    del new_child
-                else:
-                    # No collision, add the new item
-                    new_children[new_child.unique_identifier] = new_child
-        return self._filter_and_merge(new_children.values(), self.children)
+            if child.unique_identifier in unique_ids[:row] + unique_ids[row + 1 :]:
+                new_children.append(child)
+                self.remove_children(row, 1)
+        self._merge_children(new_children)
 
     def data(self, column, role):
         """Returns data from this item."""
@@ -427,7 +475,7 @@ class ObjectTreeRootItem(TreeRootItem):
         return db_map.query(db_map.object_class_sq)
 
     def _create_child_item(self, db_map_data):
-        return ObjectClassItem(db_map_data, parent=self)
+        return ObjectClassItem(db_map_data)
 
 
 class RelationshipTreeRootItem(TreeRootItem):
@@ -440,7 +488,7 @@ class RelationshipTreeRootItem(TreeRootItem):
         return db_map.query(db_map.wide_relationship_class_sq)
 
     def _create_child_item(self, db_map_data):
-        return RelationshipClassItem(db_map_data, parent=self)
+        return RelationshipClassItem(db_map_data)
 
 
 class EntityClassItem(MultiDBTreeItem):
@@ -477,7 +525,7 @@ class ObjectClassItem(EntityClassItem):
         return db_map.query(db_map.object_sq).filter_by(class_id=self.db_map_data_field(db_map, 'id'))
 
     def _create_child_item(self, db_map_data):
-        return ObjectItem(db_map_data, parent=self)
+        return ObjectItem(db_map_data)
 
     def display_icon(self):
         """Returns the object class icon."""
@@ -538,7 +586,7 @@ class RelationshipClassItem(EntityClassItem):
         return qry
 
     def _create_child_item(self, db_map_data):
-        return RelationshipItem(db_map_data, parent=self)
+        return RelationshipItem(db_map_data)
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -579,7 +627,7 @@ class ObjectItem(EntityItem):
         )
 
     def _create_child_item(self, db_map_data):
-        return RelationshipClassItem(db_map_data, parent=self)
+        return RelationshipClassItem(db_map_data)
 
     def display_icon(self):
         """Returns the object class icon."""
