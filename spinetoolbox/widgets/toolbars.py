@@ -88,12 +88,12 @@ class ItemToolBar(QToolBar):
         """Adds draggable widgets from the given list.
 
         Args:
-            category_icon (list): List of tuples (item category (str), icon path (str))
+            category_icon (list): List of tuples (item_type (str), item category (str), icon path (str))
         """
         widgets = list()
-        for category, icon in category_icon:
+        for item_type, category, icon in category_icon:
             pixmap = QIcon(icon).pixmap(24, 24)
-            widget = DraggableWidget(self, pixmap, category)
+            widget = DraggableWidget(self, pixmap, item_type, category)
             widgets.append(widget)
         for widget in widgets:
             self.insertWidget(self.tool_separator, widget)
@@ -134,20 +134,21 @@ class ItemToolBar(QToolBar):
 class DraggableWidget(QLabel):
     """A draggable QLabel."""
 
-    def __init__(self, parent, pixmap, text):
+    def __init__(self, parent, pixmap, item_type, category):
         """
 
         Args:
             parent (QWidget): Parent widget
             pixmap (QPixMap): Picture for the label
-            text (str): Item type
+            item_type (str): Item type (e.g. Data Store, Data Connection, etc...)
+            category (str): Item category (e.g. Data Stores, Data Connetions, etc...)
         """
         super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
-        self.text = text
+        self.category = category
         self.setPixmap(pixmap)
         self.drag_start_pos = None
         self.setToolTip(
-            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(self.text[:-1])
+            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(item_type)
         )
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -168,7 +169,7 @@ class DraggableWidget(QLabel):
             return
         drag = QDrag(self)
         mime_data = QMimeData()
-        mime_data.setText(self.text)
+        mime_data.setText(self.category)
         drag.setMimeData(mime_data)
         drag.setPixmap(self.pixmap())
         drag.setHotSpot(self.pixmap().rect().center())

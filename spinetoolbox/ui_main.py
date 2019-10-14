@@ -213,7 +213,7 @@ class ToolboxUI(QMainWindow):
             add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
             add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
             add_item_actions.append(add_item_action)
-            category_icon.append((item_category, item_icon))
+            category_icon.append((item_type, item_category, item_icon))
         # Add actions to Edit menu
         remove_all_action = self.ui.menuEdit.actions()[0]
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
