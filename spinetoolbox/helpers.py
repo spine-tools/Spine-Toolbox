@@ -439,6 +439,23 @@ class Singleton(type):
         return cls._instances[cls]
 
 
+class ToBeDetermined(metaclass=Singleton):
+    """Class for marking values that need to be determined
+    by a second pass of the parameter autocomplete algorithm.
+    """
+
+
+to_be_determined = ToBeDetermined()
+
+
+class MasterId(metaclass=Singleton):
+    """Class to represent a master id that passes all filters."""
+
+
+master_id = MasterId()
+all_ids = (master_id,)
+
+
 class IconListManager:
     """A class to manage icons for icon list widgets."""
 

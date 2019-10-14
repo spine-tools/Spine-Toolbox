@@ -17,16 +17,7 @@ Mixins for autocompleting data in parameter models
 """
 
 from sqlalchemy import or_, and_
-from ..helpers import Singleton
-
-
-class ToBeDetermined(metaclass=Singleton):
-    """Class for marking values that need to be determined
-    by a second pass of the autocomplete algorithm.
-    """
-
-
-to_be_determined = ToBeDetermined()
+from ..helpers import to_be_determined
 
 
 class ParameterAutocompleteMixin:

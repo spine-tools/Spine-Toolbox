@@ -472,7 +472,7 @@ class DataStoreForm(QMainWindow):
 
     def add_object_classes(self, object_class_d):
         """Insert new object classes."""
-        added_names = set()
+        db_map_data = dict()
         for db_map, items in object_class_d.items():
             added, error_log = db_map.add_object_classes(*items)
             if error_log:
@@ -480,11 +480,12 @@ class DataStoreForm(QMainWindow):
             if not added.count():
                 continue
             self.icon_mngr.setup_object_pixmaps(added)
-            self.add_object_classses_to_models(db_map, added)
-            added_names.update(x.name for x in added)
-        if not added_names:
+            db_map_data[db_map] = [x._asdict() for x in added]
+        if not db_map_data:
             return False
+        self.add_object_classses_to_models(db_map_data)
         self.commit_available.emit(True)
+        added_names = {x["name"] for added in db_map_data.values() for x in added}
         msg = "Successfully added new object class(es) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
@@ -501,22 +502,24 @@ class DataStoreForm(QMainWindow):
                 if is_selected(obj_cls_index):
                     self.selected_obj_tree_indexes['object_class'][obj_cls_index] = None
 
-    def add_object_classses_to_models(self, db_map, added):
-        self.object_tree_model.add_object_classes(db_map, added)
+    def add_object_classses_to_models(self, db_map_data):
+        self.object_tree_model.add_object_classes(db_map_data)
 
     def add_objects(self, object_d):
         """Insert new objects."""
-        added_names = set()
+        db_map_data = dict()
         for db_map, items in object_d.items():
             added, error_log = db_map.add_objects(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
             if not added.count():
                 continue
-            self.object_tree_model.add_objects(db_map, added)
-            added_names.update(x.name for x in added)
+            db_map_data[db_map] = [x._asdict() for x in added]
+        added_names = {x["name"] for added in db_map_data.values() for x in added}
         if not added_names:
             return False
+        self.object_tree_model.add_objects(db_map_data)
+        self.commit_available.emit(True)
         self.commit_available.emit(True)
         msg = "Successfully added new object(s) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
@@ -524,45 +527,47 @@ class DataStoreForm(QMainWindow):
 
     def add_relationship_classes(self, rel_cls_d):
         """Insert new relationship classes."""
-        added_names = set()
+        db_map_data = dict()
         for db_map, items in rel_cls_d.items():
             added, error_log = db_map.add_wide_relationship_classes(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
             if not added.count():
                 continue
-            self.add_relationship_classes_to_models(db_map, added)
-            added_names.update(x.name for x in added)
+            db_map_data[db_map] = [x._asdict() for x in added]
+        added_names = {x["name"] for added in db_map_data.values() for x in added}
         if not added_names:
             return False
+        self.add_relationship_classes_to_models(db_map_data)
         self.commit_available.emit(True)
         msg = "Successfully added new relationship class(es) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
 
-    def add_relationship_classes_to_models(self, db_map, added):
-        self.object_tree_model.add_relationship_classes(db_map, added)
+    def add_relationship_classes_to_models(self, db_map_data):
+        self.object_tree_model.add_relationship_classes(db_map_data)
 
     def add_relationships(self, relationship_d):
         """Insert new relationships."""
-        added_names = set()
+        db_map_data = dict()
         for db_map, items in relationship_d.items():
             added, error_log = db_map.add_wide_relationships(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
-            added_names.update(x.name for x in added)
             if not added.count():
                 continue
-            self.add_relationships_to_models(db_map, added)
+            db_map_data[db_map] = [x._asdict() for x in added]
+        added_names = {x["name"] for added in db_map_data.values() for x in added}
         if not added_names:
             return False
+        self.add_relationships_to_models(db_map_data)
         self.commit_available.emit(True)
         msg = "Successfully added new relationship(s) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
 
-    def add_relationships_to_models(self, db_map, added):
-        self.object_tree_model.add_relationships(db_map, added)
+    def add_relationships_to_models(self, db_map_data):
+        self.object_tree_model.add_relationships(db_map_data)
 
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
@@ -618,7 +623,7 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def update_object_classes(self, object_class_d):
         """Update object classes."""
-        updated_names = set()
+        db_map_data = dict()
         for db_map, items in object_class_d.items():
             updated, error_log = db_map.update_object_classes(*items)
             if error_log:
@@ -626,21 +631,22 @@ class DataStoreForm(QMainWindow):
             if not updated.count():
                 continue
             self.icon_mngr.setup_object_pixmaps(updated)
-            self.update_object_classes_in_models(db_map, updated)
-            updated_names.update(x.name for x in updated)
+            db_map_data[db_map] = [x._asdict() for x in updated]
+        updated_names = {x["name"] for updated in db_map_data.values() for x in updated}
         if not updated_names:
             return False
+        self.update_object_classes_in_models(db_map_data)
         self.commit_available.emit(True)
         msg = "Successfully updated object class(es) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
         return True
 
-    def update_object_classes_in_models(self, db_map, updated):
-        self.object_tree_model.update_object_classes(db_map, updated)
-        self.object_parameter_value_model.rename_object_classes(db_map, updated)
-        self.object_parameter_definition_model.rename_object_classes(db_map, updated)
-        self.relationship_parameter_value_model.rename_object_classes(db_map, updated)
-        self.relationship_parameter_definition_model.rename_object_classes(db_map, updated)
+    def update_object_classes_in_models(self, db_map_data):
+        self.object_tree_model.update_object_classes(db_map_data)
+        self.object_parameter_value_model.rename_object_classes(db_map_data)
+        self.object_parameter_definition_model.rename_object_classes(db_map_data)
+        self.relationship_parameter_value_model.rename_object_classes(db_map_data)
+        self.relationship_parameter_definition_model.rename_object_classes(db_map_data)
 
     @busy_effect
     def update_objects(self, object_d):
@@ -734,18 +740,19 @@ class DataStoreForm(QMainWindow):
         return True
 
     def update_parameter_value_lists(self, parameter_value_list_d):
-        updated_names = set()
+        db_map_data = dict()
         for db_map, items in parameter_value_list_d.items():
             updated, error_log = db_map.update_wide_parameter_value_lists(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            self.object_parameter_definition_model.rename_parameter_value_lists(db_map, updated)
-            self.relationship_parameter_definition_model.rename_parameter_value_lists(db_map, updated)
-            updated_names.update(x.name for x in updated)
+            db_map_data[db_map] = updated
+        updated_names = {x.name for updated in db_map_data.values() for x in updated}
         if not updated_names:
             return False
+        self.object_parameter_definition_model.rename_parameter_value_lists(db_map_data)
+        self.relationship_parameter_definition_model.rename_parameter_value_lists(db_map_data)
         self.commit_available.emit(True)
         msg = "Successfully updated parameter value list(s) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
@@ -759,17 +766,18 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def add_parameter_tags(self, parameter_tag_d):
         """Add parameter tags."""
-        added_tags = set()
+        db_map_parameter_tags = dict()
         for db_map, items in parameter_tag_d.items():
             added, error_log = db_map.add_parameter_tags(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
-            added_tags.update(x.tag for x in added)
             if not added.count():
                 continue
-            self.parameter_tag_toolbar.add_tag_actions(db_map, added)
+            db_map_parameter_tags[db_map] = added
+        added_tags = {x.tag for added in db_map_parameter_tags.values() for x in added}
         if not added_tags:
             return False
+        self.parameter_tag_toolbar.add_tag_actions(db_map_parameter_tags)
         self.commit_available.emit(True)
         msg = "Successfully added new parameter tag(s) '{}'.".format("', '".join(added_tags))
         self.msg.emit(msg)
@@ -779,19 +787,20 @@ class DataStoreForm(QMainWindow):
     def update_parameter_tags(self, parameter_tag_d):
         """Update parameter tags."""
         # TODO: update parameter value tables??
-        updated_tags = set()
+        db_map_parameter_tags = dict()
         for db_map, items in parameter_tag_d.items():
             updated, error_log = db_map.update_parameter_tags(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            self.object_parameter_definition_model.rename_parameter_tags(db_map, updated)
-            self.relationship_parameter_definition_model.rename_parameter_tags(db_map, updated)
-            self.parameter_tag_toolbar.update_tag_actions(db_map, updated)
-            updated_tags.update(x.tag for x in updated)
+            db_map_parameter_tags[db_map] = updated
+        updated_tags = {x.tag for updated in db_map_parameter_tags.values() for x in updated}
         if not updated_tags:
             return False
+        self.object_parameter_definition_model.rename_parameter_tags(db_map_parameter_tags)
+        self.relationship_parameter_definition_model.rename_parameter_tags(db_map_parameter_tags)
+        self.parameter_tag_toolbar.update_tag_actions(db_map_parameter_tags)
         self.commit_available.emit(True)
         msg = "Successfully updated parameter tag(s) '{}'.".format("', '".join(updated_tags))
         self.msg.emit(msg)
@@ -808,12 +817,12 @@ class DataStoreForm(QMainWindow):
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            self.object_parameter_definition_model.remove_parameter_tags(db_map, ids)
-            self.relationship_parameter_definition_model.remove_parameter_tags(db_map, ids)
-            self.parameter_tag_toolbar.remove_tag_actions(db_map, ids)
             removed += len(ids)
         if not removed:
             return False
+        self.parameter_tag_toolbar.remove_tag_actions(parameter_tag_d)
+        self.object_parameter_definition_model.remove_parameter_tags(parameter_tag_d)
+        self.relationship_parameter_definition_model.remove_parameter_tags(parameter_tag_d)
         self.commit_available.emit(True)
         msg = "Successfully removed {} parameter tag(s).".format(removed)
         self.msg.emit(msg)
@@ -847,9 +856,9 @@ class DataStoreForm(QMainWindow):
         if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name' and db_map:
             parameters = [dict(id=item.id, entity_class_id=item.entity_class.id, name=new_value)]
             if index.model() == self.object_parameter_definition_model:
-                self.object_parameter_value_model.rename_parameters(db_map, parameters)
+                self.object_parameter_value_model.rename_parameters({db_map: parameters})
             elif index.model() == self.relationship_parameter_definition_model:
-                self.relationship_parameter_value_model.rename_parameters(db_map, parameters)
+                self.relationship_parameter_value_model.rename_parameters({db_map: parameters})
         return True
 
     def show_commit_session_prompt(self):

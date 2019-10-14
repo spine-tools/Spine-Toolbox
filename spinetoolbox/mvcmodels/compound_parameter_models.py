@@ -304,98 +304,147 @@ class CompoundRelationshipParameterMixin:
 class CompoundObjectParameterRenameRemoveMixin:
     """Implements an interface to rename and remove items in a compound object parameter model."""
 
-    def rename_object_classes(self, db_map, object_classes):
+    def rename_object_classes(self, db_map_data):
         """Rename object classes in model."""
-        object_classes = {x.id: x.name for x in object_classes}
-        for model in self._models_with_db_map(db_map):
-            model.rename_object_classes(object_classes)
+        for db_map, object_classes in db_map_data.items():
+            self._rename_db_map_object_classes(db_map, object_classes)
         self._emit_data_changed_for_column("object_class_name")
 
-    def remove_object_classes(self, db_map, object_classes):
+    def _rename_db_map_object_classes(self, db_map, object_classes):
+        object_classes = {x["id"]: x["name"] for x in object_classes}
+        for model in self._models_with_db_map(db_map):
+            model.rename_object_classes(object_classes)
+
+    def remove_object_classes(self, db_map_data):
         """Remove object classes from model."""
-        object_class_ids = [x['id'] for x in object_classes]
+        for db_map, object_classes in db_map_data.items():
+            self._remove_db_map_object_classes(db_map, object_classes)
+        self.refresh()
+
+    def _remove_db_map_object_classes(self, db_map, object_classes):
+        object_class_ids = {x['id'] for x in object_classes}
         for model in self._models_with_db_map(db_map):
             if model.object_class_id in object_class_ids:
                 self.sub_models.remove(model)
-        self.refresh()
 
 
 class CompoundRelationshipParameterRenameRemoveMixin:
     """Implements an interface to rename and remove items in a compound relationship parameter model."""
 
-    def rename_relationship_classes(self, db_map, relationship_classes):
+    def rename_relationship_classes(self, db_map_data):
         """Rename relationship classes in model."""
-        relationship_classes = {x.id: x.name for x in relationship_classes}
-        for model in self._models_with_db_map(db_map):
-            model.rename_relationship_classes(relationship_classes)
+        for db_map, relationship_classes in db_map_data.items():
+            self._rename_db_map_relationship_classes(db_map, relationship_classes)
         self._emit_data_changed_for_column("relationship_class_name")
 
-    def remove_relationship_classes(self, db_map, relationship_classes):
+    def _rename_db_map_relationship_classes(self, db_map, relationship_classes):
+        relationship_classes = {x["id"]: x["name"] for x in relationship_classes}
+        for model in self._models_with_db_map(db_map):
+            model.rename_relationship_classes(relationship_classes)
+
+    def remove_relationship_classes(self, db_map_data):
         """Remove relationship classes from model."""
+        for db_map, relationship_classes in db_map_data.items():
+            self._remove_db_map_relationship_classes(db_map, relationship_classes)
+        self.refresh()
+
+    def _remove_db_map_relationship_classes(self, db_map, relationship_classes):
         relationship_class_ids = {x['id'] for x in relationship_classes}
         for model in self._models_with_db_map(db_map):
             if model.relationship_class_id in relationship_class_ids:
                 self.sub_models.remove(model)
-        self.refresh()
 
-    def rename_object_classes(self, db_map, object_classes):
+    def rename_object_classes(self, db_map_data):
         """Rename object classes in model."""
-        object_classes = {x.id: x.name for x in object_classes}
-        for model in self._models_with_db_map(db_map):
-            model.rename_object_classes(object_classes)
+        for db_map, object_classes in db_map_data.items():
+            self._rename_db_map_object_classes(db_map, object_classes)
         self._emit_data_changed_for_column("object_class_name_list")
 
-    def remove_object_classes(self, db_map, object_classes):
+    def _rename_db_map_object_classes(self, db_map, object_classes):
+        object_classes = {x["id"]: x["name"] for x in object_classes}
+        for model in self._models_with_db_map(db_map):
+            model.rename_object_classes(object_classes)
+
+    def remove_object_classes(self, db_map_data):
         """Remove object classes from model."""
+        for db_map, object_classes in db_map_data.items():
+            self._remove_db_map_object_classes(db_map, object_classes)
+        self.refresh()
+
+    def _remove_db_map_object_classes(self, db_map, object_classes):
         object_class_ids = {x['id'] for x in object_classes}
         for model in self._models_with_db_map(db_map):
             if object_class_ids.intersection(model.object_class_id_list):
                 self.sub_models.remove(model)
-        self.refresh()
 
 
 class CompoundParameterDefinitionRenameRemoveMixin:
     """Implements an interface to rename and remove items in a compound parameter definition model."""
 
-    def rename_parameter_tags(self, db_map, parameter_tags):
+    def rename_parameter_tags(self, db_map_data):
         """Rename parameter tags in model."""
+        for db_map, parameter_tags in db_map_data.items():
+            self._rename_db_map_parameter_tags(db_map, parameter_tags)
+
+    def _rename_db_map_parameter_tags(self, db_map, parameter_tags):
         parameter_tags = {x.id: x.tag for x in parameter_tags}
         for model in self._models_with_db_map(db_map):
             model.rename_parameter_tags(parameter_tags)
         self._emit_data_changed_for_column("parameter_tag_list")
 
-    def remove_parameter_tags(self, db_map, parameter_tag_ids):
+    def remove_parameter_tags(self, db_map_data):
         """Remove parameter tags from model."""
-        for model in self._models_with_db_map(db_map):
-            model.remove_parameter_tags(parameter_tag_ids)
+        for db_map, parameter_tag_ids in db_map_data.items():
+            self._remove_db_map_parameter_tags(db_map, parameter_tag_ids)
         self._emit_data_changed_for_column("parameter_tag_list")
 
-    def rename_parameter_value_lists(self, db_map, value_lists):
+    def _remove_db_map_parameter_tags(self, db_map, parameter_tag_ids):
+        for model in self._models_with_db_map(db_map):
+            model.remove_parameter_tags(parameter_tag_ids)
+
+    def rename_parameter_value_lists(self, db_map_data):
         """Rename parameter value_lists in model."""
+        for db_map, value_lists in db_map_data.items():
+            self._rename_db_map_parameter_value_lists(db_map, value_lists)
+        self._emit_data_changed_for_column("value_list_name")
+
+    def _rename_db_map_parameter_value_lists(self, db_map, value_lists):
         value_lists = {x.id: x.name for x in value_lists}
         for model in self._models_with_db_map(db_map):
             model.rename_parameter_value_lists(value_lists)
+
+    def clear_parameter_value_lists(self, db_map_data):
+        """Clear parameter value_lists from model."""
+        for db_map, value_list_ids in db_map_data.items():
+            self._clear_db_map_parameter_value_lists(db_map, value_list_ids)
         self._emit_data_changed_for_column("value_list_name")
 
-    def clear_parameter_value_lists(self, db_map, value_list_ids):
-        """Clear parameter value_lists from model."""
+    def _clear_db_map_parameter_value_lists(self, db_map, value_list_ids):
         for model in self._models_with_db_map(db_map):
             model.clear_parameter_value_lists(value_list_ids)
-        self._emit_data_changed_for_column("value_list_name")
 
 
 class CompoundParameterValueRenameRemoveMixin:
     """Implements an interface to rename and remove items in a compound parameter value model."""
 
-    def rename_parameters(self, db_map, parameters):
+    def rename_parameters(self, db_map_data):
         """Rename parameters in model."""
+        for db_map, parameters in db_map_data.items():
+            self._rename_db_map_parameters(db_map, parameters)
+        self._emit_data_changed_for_column("parameter_name")
+
+    def _rename_db_map_parameters(self, db_map, parameters):
         parameters = {x['id']: x['name'] for x in parameters}
         for model in self._models_with_db_map(db_map):
             model.rename_parameters(parameters)
-        self._emit_data_changed_for_column("parameter_name")
 
-    def remove_parameters(self, db_map, parameters):
+    def remove_parameters(self, db_map_data):
         """Remove parameters from model."""
+        for db_map, parameters in db_map_data.items():
+            self._remove_db_map_parameters(db_map, parameters)
+        self.refresh()
+
+    def _remove_db_map_parameters(self, db_map, parameters):
         parameter_ids = {}
         for parameter in parameters:
             parameter_ids.setdefault(parameter["entity_class_id"], set()).add(parameter['id'])
@@ -407,21 +456,29 @@ class CompoundParameterValueRenameRemoveMixin:
                 parameter_id = model._main_data[row].parameter_id
                 if parameter_id in class_parameter_ids:
                     model.removeRows(row, 1)
-        self.refresh()
 
 
 class CompoundObjectParameterValueRenameRemoveMixin:
     """Implements an interface to rename and remove items in a compound object parameter value model."""
 
-    def rename_objects(self, db_map, objects):
+    def rename_objects(self, db_map_data):
         """Rename objects in model."""
+        for db_map, objects in db_map_data.items():
+            self._rename_db_map_objects(db_map, objects)
+        self._emit_data_changed_for_column("object_name")
+
+    def _rename_db_map_objects(self, db_map, objects):
         objects = {x.id: x.name for x in objects}
         for model in self._models_with_db_map(db_map):
             model.rename_objects(objects)
-        self._emit_data_changed_for_column("object_name")
 
-    def remove_objects(self, db_map, objects):
+    def remove_objects(self, db_map_data):
         """Remove objects from model."""
+        for db_map, objects in db_map_data.items():
+            self._remove_db_map_objects(db_map, objects)
+        self.refresh()
+
+    def _remove_db_map_objects(self, db_map, objects):
         object_ids = {}
         for object_ in objects:
             object_ids.setdefault(object_["class_id"], set()).add(object_['id'])
@@ -433,21 +490,30 @@ class CompoundObjectParameterValueRenameRemoveMixin:
                 object_id = model._main_data[row].object_id
                 if object_id in class_object_ids:
                     model.removeRows(row, 1)
-        self.refresh()
 
 
 class CompoundRelationshipParameterValueRenameRemoveMixin:
     """Implements an interface to rename and remove items in a compound relationship parameter value model."""
 
-    def rename_objects(self, db_map, objects):
+    def rename_objects(self, db_map_data):
+        """Rename objects in model."""
+        for db_map, objects in db_map_data.items():
+            self._rename_db_map_objects(db_map, objects)
+        self._emit_data_changed_for_column("object_name_list")
+
+    def _rename_db_map_objects(self, db_map, objects):
         """Rename objects in model."""
         objects = {x.id: x.name for x in objects}
         for model in self._models_with_db_map(db_map):
             model.rename_objects(objects)
-        self._emit_data_changed_for_column("object_name_list")
 
-    def remove_objects(self, db_map, objects):
+    def remove_objects(self, db_map_data):
         """Remove objects from model."""
+        for db_map, objects in db_map_data.items():
+            self._remove_db_map_objects(db_map, objects)
+        self.refresh()
+
+    def _remove_db_map_objects(self, db_map, objects):
         object_ids = {}
         for object_ in objects:
             object_ids.setdefault(object_['class_id'], set()).add(object_['id'])
@@ -460,10 +526,14 @@ class CompoundRelationshipParameterValueRenameRemoveMixin:
                 object_id_list = [int(id_) for id_ in object_id_list.split(",")]
                 if class_object_ids.intersection(object_id_list):
                     model.removeRows(row, 1)
+
+    def remove_relationships(self, db_map_data):
+        """Remove relationships from model."""
+        for db_map, relationships in db_map_data.items():
+            self._remove_db_map_relationships(db_map, relationships)
         self.refresh()
 
-    def remove_relationships(self, db_map, relationships):
-        """Remove relationships from model."""
+    def _remove_db_map_relationships(self, db_map, relationships):
         relationship_ids = {}
         for relationship in relationships:
             relationship_ids.setdefault(relationship["class_id"], set()).add(relationship['id'])
@@ -475,7 +545,6 @@ class CompoundRelationshipParameterValueRenameRemoveMixin:
                 relationship_id = model._main_data[row].relationship_id
                 if relationship_id in class_relationship_ids:
                     model.removeRows(row, 1)
-        self.refresh()
 
 
 class CompoundObjectParameterDefinitionModel(

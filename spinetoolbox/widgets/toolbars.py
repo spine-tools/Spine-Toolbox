@@ -239,7 +239,11 @@ class ParameterTagToolBar(QToolBar):
             lambda id, checked: self.tag_button_toggled.emit(self.db_map_ids[id], checked)
         )
 
-    def add_tag_actions(self, db_map, parameter_tags):
+    def add_tag_actions(self, db_map_parameter_tags):
+        for db_map, parameter_tags in db_map_parameter_tags.items():
+            self._add_db_map_tag_actions(db_map, parameter_tags)
+
+    def _add_db_map_tag_actions(self, db_map, parameter_tags):
         action_texts = [a.text() for a in self.actions]
         for parameter_tag in parameter_tags:
             if parameter_tag.tag in action_texts:
@@ -256,7 +260,11 @@ class ParameterTagToolBar(QToolBar):
                 self.db_map_ids.append([(db_map, parameter_tag.id)])
                 action_texts.append(action.text())
 
-    def remove_tag_actions(self, db_map, parameter_tag_ids):
+    def remove_tag_actions(self, parameter_tag_d):
+        for db_map, parameter_tag_ids in parameter_tag_d.items():
+            self._remove_db_map_tag_actions(db_map, parameter_tag_ids)
+
+    def _remove_db_map_tag_actions(self, db_map, parameter_tag_ids):
         for tag_id in parameter_tag_ids:
             i = next(k for k, x in enumerate(self.db_map_ids) if (db_map, tag_id) in x)
             self.db_map_ids[i].remove((db_map, tag_id))
@@ -264,7 +272,11 @@ class ParameterTagToolBar(QToolBar):
                 self.db_map_ids.pop(i)
                 self.removeAction(self.actions.pop(i))
 
-    def update_tag_actions(self, db_map, parameter_tags):
+    def update_tag_actions(self, db_map_parameter_tags):
+        for db_map, parameter_tags in db_map_parameter_tags.items():
+            self._update_db_map_tag_actions(db_map, parameter_tags)
+
+    def _update_db_map_tag_actions(self, db_map, parameter_tags):
         for parameter_tag in parameter_tags:
             i = next(k for k, x in enumerate(self.db_map_ids) if (db_map, parameter_tag.id) in x)
             action = self.actions[i]

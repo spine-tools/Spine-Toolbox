@@ -225,7 +225,7 @@ class ParameterDefinitionItemMixin:
     def parameter_definition_id(self):
         return self.id
 
-    def rename_parameter_tags(self, parameter_tag_ids):
+    def rename_parameter_tags(self, parameter_tags):
         """Rename parameter tags.
 
         Args:

@@ -18,6 +18,7 @@ Classes to represent entities in a tree.
 from PySide2.QtCore import Qt, Signal, QModelIndex
 from sqlalchemy import or_
 from PySide2.QtGui import QFont, QBrush, QIcon
+from ..helpers import all_ids
 
 
 class TreeItem:
@@ -97,10 +98,6 @@ class TreeItem:
             return None
         return self.parent.child(self.child_number() - 1)
 
-    def clear_children(self):
-        """Clear all children, used when resetting the model."""
-        self.children.clear()
-
     def column_count(self):
         """Returns 0."""
         return 0
@@ -112,8 +109,9 @@ class TreeItem:
             position (int): insert new items here
             new_children (list): insert items from this list
         """
-        if not all(isinstance(item, TreeItem) for item in new_children):
-            raise TypeError("All rows in new_rows must be of type 'TreeItem'")
+        bad_types = [type(child) for child in new_children if not isinstance(child, TreeItem)]
+        if bad_types:
+            raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count() + 1:
             return False
         self._children[position:position] = new_children
@@ -127,6 +125,10 @@ class TreeItem:
             count = self.child_count() - position
         del self._children[position : position + count]
         return True
+
+    def clear_children(self):
+        """Clear all children, used when resetting the model."""
+        self.children.clear()
 
     def flags(self, column):
         """Enables the item and makes it selectable."""
@@ -157,6 +159,8 @@ class TreeItem:
 class MultiDBTreeItem(TreeItem):
     """A tree item that may belong in multiple databases."""
 
+    primary_key = ["name"]
+
     def __init__(self, db_map_data, parent=None):
         """Init class.
 
@@ -166,18 +170,64 @@ class MultiDBTreeItem(TreeItem):
         """
         super().__init__(parent)
         self._db_map_data = db_map_data
+        self._child_map = dict()
+
+    def insert_children(self, position, new_children):
+        """Insert new children at given position. Returns a boolean depending on how it went.
+
+        Args:
+            position (int): insert new items here
+            new_children (list): insert items from this list
+        """
+        bad_types = [type(child) for child in new_children if not isinstance(child, MultiDBTreeItem)]
+        if bad_types:
+            raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
+        if super().insert_children(position, new_children):
+            self._refresh_child_map()
+            return True
+        return False
+
+    def remove_children(self, position, count):
+        """Removes count children starting from the given position."""
+        if super().remove_children(position, count):
+            self._refresh_child_map()
+            return True
+        return False
+
+    def clear_children(self):
+        """Clear all children, used when resetting the model."""
+        super.clear_children()
+        self._child_map.clear()
+
+    def _refresh_child_map(self):
+        """Recomputes the child map."""
+        self._child_map.clear()
+        for row, child in enumerate(self.children):
+            for db_map in child.db_maps:
+                self._child_map[(db_map, child.db_map_data_field(db_map, "id"))] = row
+
+    def find_children_by_id(self, db_map, *ids):
+        """Yields children with the given ids in the given db_map or all of them if ids is the all_ids constant."""
+        if ids == all_ids:
+            yield from self._children
+        else:
+            for id_ in ids:
+                if (db_map, id_) in self._child_map:
+                    row = self._child_map[db_map, id_]
+                    yield self._children[row]
 
     @property
     def unique_identifier(self):
-        """"Returns the unique identifier for this item across all dbs.
-        The base class implementation returns the name.
-        """
-        return self.db_map_data_field(self.first_db_map, "name")
+        """"Returns the value of the primary key for this item or None if non unique across all dbs."""
+        pks = [tuple(self.db_map_data_field(db_map, field) for field in self.primary_key) for db_map in self.db_maps]
+        if len(set(pks)) != 1:
+            return None
+        return pks[0]
 
     @property
     def display_name(self):
         """"Returns the name for display."""
-        return self.unique_identifier
+        return self.db_map_data_field(self.first_db_map, "name")
 
     @property
     def display_database(self):
@@ -187,8 +237,12 @@ class MultiDBTreeItem(TreeItem):
     @property
     def first_db_map(self):
         """Returns the first db_map where this item belongs."""
-        db_map = next(iter(self._db_map_data.keys()))
-        return db_map
+        return list(self._db_map_data.keys())[0]
+
+    @property
+    def last_db_map(self):
+        """Returns the last db_map where this item belongs."""
+        return list(self._db_map_data.keys())[-1]
 
     @property
     def db_maps(self):
@@ -199,9 +253,9 @@ class MultiDBTreeItem(TreeItem):
         """Adds new data from db_map for this item."""
         self._db_map_data[db_map] = new_data
 
-    def remove_db_map(self, db_map):
-        """Removes the given db_map."""
-        self._db_map_data.pop(db_map, None)
+    def pop_db_map(self, db_map):
+        """Removes the mapping for given db_map and returns it."""
+        return self._db_map_data.pop(db_map, None)
 
     def has_one_db_map(self, db_map):
         """Returns true if the given db map is the only one."""
@@ -221,28 +275,10 @@ class MultiDBTreeItem(TreeItem):
         if db_map_data:
             db_map_data[field] = value
 
-    def fetch_more(self):
-        """Returns a list of new children to add to the model."""
-        new_children = dict()
-        for db_map, child_data in self._get_children_data():
-            database = self.db_map_data_field(db_map, "database")
-            child_data["database"] = database
-            new_item = self._create_child_item({db_map: child_data})
-            unique_identifier = new_item.unique_identifier
-            existing_item = new_children.get(unique_identifier)
-            if not existing_item:
-                new_children[unique_identifier] = new_item
-            else:
-                existing_item.add_db_map_data(db_map, child_data)
-                del new_item
-        self._fetched = True
-        return list(new_children.values())
-
-    def _get_children_data(self):
-        """Generates tuples of (db_map, child data) from all the dbs."""
-        for db_map in self.db_maps:
-            for child in self._children_query(db_map):
-                yield (db_map, child._asdict())
+    def _get_children_data(self, db_map):
+        """Generates child data by running the children query on the given db_map."""
+        for child in self._children_query(db_map):
+            yield child._asdict()
 
     def _children_query(self, db_map):
         """Returns a query that selects all children from given db_map.
@@ -254,29 +290,103 @@ class MultiDBTreeItem(TreeItem):
         Must be reimplemented in subclasses."""
         raise NotImplementedError()
 
-    def append_children_from_data(self, db_map, children_data):
+    def fetch_more(self):
+        """Returns a list of new children to add to the model."""
+        filtered = list()
+        for db_map in self.db_maps:
+            children_data = self._get_children_data(db_map)
+            new_children = self._create_new_children(db_map, children_data)
+            filtered += self._filter_and_merge(new_children, filtered)
+        self._fetched = True
+        return filtered
+
+    def add_children_from_data(self, db_map, children_data):
+        """
+        Returns new children from given data.
+        Data is *not* checked for integrity (dups, etc.).
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            children_data (list): collection of dicts
+        """
+        new_children = self._create_new_children(db_map, children_data)
+        return self._filter_and_merge(new_children, self.children)
+
+    def _filter_and_merge(self, new_children, existing_children):
+        """Checks for collision between new children and existing ones.
+        Merges children that collide into the existent, returns the others."""
+        ref = {child.unique_identifier: child for child in existing_children}
+        filtered = []
+        for new_child in new_children:
+            existing_child = ref.get(new_child.unique_identifier)
+            if existing_child:
+                # Collision, update existing and get rid of new one
+                for db_map in new_child.db_maps:
+                    existing_child.add_db_map_data(db_map, new_child.db_map_data(db_map))
+                del new_child
+            else:
+                # No collision, add the new item
+                filtered.append(new_child)
+        return filtered
+
+    def _create_new_children(self, db_map, children_data):
+        """
+        Creates and returns new items.
+        Data is *not* checked for integrity (dups, etc.).
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            children_data (iter): dicts with data from each child
+        """
+        new_children = []
+        database = self.db_map_data_field(db_map, "database")
+        for child_data in children_data:
+            child_data["database"] = database
+            new_children.append(self._create_child_item({db_map: child_data}))
+        return new_children
+
+    def update_children_from_data(self, db_map, children_data):
         """
 
         Args:
             db_map (DiffDatabaseMapping)
             children_data (list): collection of dicts
         """
-        existing_children = {child.unique_identifier: child for child in self.children}
-        added_rows = []
-        updated_inds = []
+        updated_rows = []
         database = self.db_map_data_field(db_map, "database")
         for child_data in children_data:
             child_data["database"] = database
-            new_item = self._create_child_item({db_map: child_data})
-            existing_item = existing_children.get(new_item.unique_identifier)
-            if not existing_item:
-                # No collision, add the new item
-                added_rows.append(new_item)
-            else:
-                # Collision, update existing and get rid of new one
-                existing_item.add_db_map_data(db_map, child_data)
-                del new_item
-        return added_rows
+            row = self._child_map.get((db_map, child_data["id"]))
+            if row is None:
+                continue
+            child = self._children[row]
+            child.add_db_map_data(db_map, child_data)
+            updated_rows.append(row)
+        return updated_rows
+
+    def split_ambiguous(self, rows):
+        """
+        Check if the children at rows are ambiguous (which may result from an update operation).
+        """
+        new_children = {}
+        for row in rows:
+            child = self.child(row)
+            if not child:
+                continue
+            while not child.unique_identifier:
+                db_map = child.first_db_map
+                child_data = child.pop_db_map(db_map)
+                new_child = self._create_child_item({db_map: child_data})
+                new_children.append(new_child)
+                existing_child = new_children.get(new_child.unique_identifier)
+                if existing_child:
+                    # Collision, update existing and get rid of new one
+                    existing_child.add_db_map_data(db_map, child_data)
+                    del new_child
+                else:
+                    # No collision, add the new item
+                    new_children[new_child.unique_identifier] = new_child
+        return self._filter_and_merge(new_children.values(), self.children)
 
     def data(self, column, role):
         """Returns data from this item."""
@@ -298,6 +408,11 @@ class MultiDBTreeItem(TreeItem):
 class TreeRootItem(MultiDBTreeItem):
     @property
     def unique_identifier(self):
+        """"Returns a unique identifier for this item across all dbs."""
+        return "root"
+
+    @property
+    def display_name(self):
         """"Returns a unique identifier for this item across all dbs."""
         return "root"
 
@@ -378,6 +493,7 @@ class ObjectClassItem(EntityClassItem):
 class RelationshipClassItem(EntityClassItem):
     """A relationship class item."""
 
+    primary_key = ["name", "object_class_name_list"]
     type_name = "relationship class"
     context_menu_actions = {
         "Add relationships": QIcon(":/icons/menu_icons/cubes_plus.svg"),
@@ -399,17 +515,6 @@ class RelationshipClassItem(EntityClassItem):
             if object_class_name_list:
                 parsed_object_class_name_list = object_class_name_list.split(",")
                 self.add_db_map_data_field(db_map, "parsed_object_class_name_list", parsed_object_class_name_list)
-
-    @property
-    def unique_identifier(self):
-        """Returns a tuple of name, object class name list."""
-        data = self.db_map_data(self.first_db_map)
-        return (data["name"], data["object_class_name_list"])
-
-    @property
-    def display_name(self):
-        """"Returns the name for display."""
-        return self.db_map_data_field(self.first_db_map, "name")
 
     def display_icon(self):
         """Returns relationship class icon."""
@@ -491,6 +596,8 @@ class ObjectItem(EntityItem):
 class RelationshipItem(EntityItem):
     """An object item."""
 
+    primary_key = ["name", "object_name_list"]
+
     type_name = "relationship"
     context_menu_actions = {
         "Edit relationships": QIcon(":/icons/menu_icons/cubes_pen.svg"),
@@ -516,12 +623,6 @@ class RelationshipItem(EntityItem):
                 self.add_db_map_data_field(db_map, "parsed_object_name_list", parsed_object_name_list)
 
     @property
-    def unique_identifier(self):
-        """Returns a tuple of name, object name list."""
-        data = self.db_map_data(self.first_db_map)
-        return (data["name"], data["object_name_list"])
-
-    @property
     def display_name(self):
         """"Returns the name for display."""
         return self.db_map_data_field(self.first_db_map, "object_name_list")
@@ -534,7 +635,7 @@ class RelationshipItem(EntityItem):
     def has_children(self):
         return False
 
-    def append_children_from_data(self, db_map, children_data):
+    def new_children_from_data(self, db_map, children_data):
         pass
 
     def default_parameter_data(self):

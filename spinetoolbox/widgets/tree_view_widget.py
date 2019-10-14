@@ -701,18 +701,18 @@ class TreeViewForm(DataStoreForm):
                 self.ui.treeView_object.collapse(self.object_tree_model.index_from_item(item))
 
     def call_show_add_objects_form(self, index):
-        class_name = index.internalPointer().unique_identifier
+        class_name = index.internalPointer().display_name
         self.show_add_objects_form(class_name=class_name)
 
     def call_show_add_relationship_classes_form(self, index):
-        object_class_one_name = index.internalPointer().unique_identifier
+        object_class_one_name = index.internalPointer().display_name
         self.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
 
     def call_show_add_relationships_form_from_object_tree(self, index):
         item = index.internalPointer()
         relationship_class_key = item.unique_identifier
-        object_name = item._parent.unique_identifier
-        object_class_name = item._parent._parent.unique_identifier
+        object_name = item._parent.display_name
+        object_class_name = item._parent._parent.display_name
         self.show_add_relationships_form(
             relationship_class_key=relationship_class_key, object_class_name=object_class_name, object_name=object_name
         )
@@ -729,13 +729,13 @@ class TreeViewForm(DataStoreForm):
             return True
         return False
 
-    def add_relationship_classes_to_models(self, db_map, added):
-        super().add_relationship_classes_to_models(db_map, added)
-        self.relationship_tree_model.add_relationship_classes(db_map, added)
+    def add_relationship_classes_to_models(self, db_map_data):
+        super().add_relationship_classes_to_models(db_map_data)
+        self.relationship_tree_model.add_relationship_classes(db_map_data)
 
-    def add_relationships_to_models(self, db_map, added):
-        super().add_relationships_to_models(db_map, added)
-        self.relationship_tree_model.add_relationships(db_map, added)
+    def add_relationships_to_models(self, db_map_data):
+        super().add_relationships_to_models(db_map_data)
+        self.relationship_tree_model.add_relationships(db_map_data)
 
     def edit_object_tree_items(self):
         """Called when F2 is pressed while the object tree has focus.
@@ -763,9 +763,9 @@ class TreeViewForm(DataStoreForm):
         elif current_type == 'relationship':
             self.show_edit_relationships_form()
 
-    def update_object_classes_in_models(self, db_map, updated):
-        super().update_object_classes_in_models(db_map, updated)
-        self.relationship_tree_model.update_object_classes(db_map, updated)
+    def update_object_classes_in_models(self, db_map_data):
+        super().update_object_classes_in_models(db_map_data)
+        # self.relationship_tree_model.update_object_classes(db_map_data)
 
     def update_objects_in_models(self, db_map, updated):
         super().update_objects_in_models(db_map, updated)
@@ -803,47 +803,51 @@ class TreeViewForm(DataStoreForm):
     def remove_tree_items(self, item_d):
         """Remove items from tree views."""
         removed = 0
+        db_map_object_classes = dict()
+        db_map_objects = dict()
+        db_map_relationship_classes = dict()
+        db_map_relationships = dict()
         for db_map, items_per_type in item_d.items():
             object_classes = items_per_type.get("object class", ())
             objects = items_per_type.get("object", ())
             relationship_classes = items_per_type.get("relationship class", ())
             relationships = items_per_type.get("relationship", ())
-            object_class_ids = {x['id'] for x in object_classes}
-            object_ids = {x['id'] for x in objects}
-            relationship_class_ids = {x['id'] for x in relationship_classes}
-            relationship_ids = {x['id'] for x in relationships}
             try:
                 db_map.remove_items(
-                    object_class_ids=object_class_ids,
-                    object_ids=object_ids,
-                    relationship_class_ids=relationship_class_ids,
-                    relationship_ids=relationship_ids,
+                    object_class_ids={x['id'] for x in object_classes},
+                    object_ids={x['id'] for x in objects},
+                    relationship_class_ids={x['id'] for x in relationship_classes},
+                    relationship_ids={x['id'] for x in relationships},
                 )
             except SpineDBAPIError as e:
                 self.msg_error.emit(e.msg)
                 continue
-            if object_class_ids:
-                self.object_tree_model.remove_object_classes(db_map, object_classes)
-                self.relationship_tree_model.remove_object_classes(db_map, object_classes)
-                self.object_parameter_definition_model.remove_object_classes(db_map, object_classes)
-                self.object_parameter_value_model.remove_object_classes(db_map, object_classes)
-                self.relationship_parameter_definition_model.remove_object_classes(db_map, object_classes)
-                self.relationship_parameter_value_model.remove_object_classes(db_map, object_classes)
-            if object_ids:
-                self.object_tree_model.remove_objects(db_map, objects)
-                self.relationship_tree_model.remove_objects(db_map, objects)
-                self.object_parameter_value_model.remove_objects(db_map, objects)
-                self.relationship_parameter_value_model.remove_objects(db_map, objects)
-            if relationship_class_ids:
-                self.object_tree_model.remove_relationship_classes(db_map, relationship_classes)
-                self.relationship_tree_model.remove_relationship_classes(db_map, relationship_classes)
-                self.relationship_parameter_definition_model.remove_relationship_classes(db_map, relationship_classes)
-                self.relationship_parameter_value_model.remove_relationship_classes(db_map, relationship_classes)
-            if relationship_ids:
-                self.object_tree_model.remove_relationships(db_map, relationships)
-                self.relationship_tree_model.remove_relationships(db_map, relationships)
-                self.relationship_parameter_value_model.remove_relationships(db_map, relationships)
-            removed += len(object_class_ids) + len(object_ids) + len(relationship_class_ids) + len(relationship_ids)
+            db_map_object_classes[db_map] = object_classes
+            db_map_objects[db_map] = objects
+            db_map_relationship_classes[db_map] = relationship_classes
+            db_map_relationships[db_map] = relationships
+            removed += len(object_classes) + len(objects) + len(relationship_classes) + len(relationships)
+        if db_map_object_classes:
+            self.object_tree_model.remove_object_classes(db_map_object_classes)
+            self.relationship_tree_model.remove_object_classes(db_map_object_classes)
+            self.object_parameter_definition_model.remove_object_classes(db_map_object_classes)
+            self.object_parameter_value_model.remove_object_classes(db_map_object_classes)
+            self.relationship_parameter_definition_model.remove_object_classes(db_map_object_classes)
+            self.relationship_parameter_value_model.remove_object_classes(db_map_object_classes)
+        if db_map_objects:
+            self.object_tree_model.remove_objects(db_map_objects)
+            self.relationship_tree_model.remove_objects(db_map_objects)
+            self.object_parameter_value_model.remove_objects(db_map_objects)
+            self.relationship_parameter_value_model.remove_objects(db_map_objects)
+        if db_map_relationship_classes:
+            self.object_tree_model.remove_relationship_classes(db_map_relationship_classes)
+            self.relationship_tree_model.remove_relationship_classes(db_map_relationship_classes)
+            self.relationship_parameter_definition_model.remove_relationship_classes(db_map_relationship_classes)
+            self.relationship_parameter_value_model.remove_relationship_classes(db_map_relationship_classes)
+        if db_map_relationships:
+            self.object_tree_model.remove_relationships(db_map_relationships)
+            self.relationship_tree_model.remove_relationships(db_map_relationships)
+            self.relationship_parameter_value_model.remove_relationships(db_map_relationships)
         if not removed:
             return
         self.commit_available.emit(True)
@@ -1117,6 +1121,7 @@ class TreeViewForm(DataStoreForm):
         for parent, indexes in list_indexes.items():
             db_map = parent.internalPointer().id
             item_d.setdefault(db_map, {}).setdefault("to_rm", set()).update(ind.internalPointer().id for ind in indexes)
+        db_map_data_to_remove = dict()
         for db_map, d in item_d.items():
             to_update = d.get("to_upd", None)
             to_remove = d.get("to_rm", None)
@@ -1126,11 +1131,13 @@ class TreeViewForm(DataStoreForm):
                     db_map.update_wide_parameter_value_lists(*to_update)
                 if to_remove:
                     db_map.remove_items(parameter_value_list_ids=to_remove)
-                self.object_parameter_definition_model.clear_parameter_value_lists(db_map, to_remove)
-                self.relationship_parameter_definition_model.clear_parameter_value_lists(db_map, to_remove)
+
             except SpineDBAPIError as e:
                 self._tree_view_form.msg_error.emit(e.msg)
-                return
+                continue
+            db_map_data_to_remove[db_map] = to_remove
+        self.object_parameter_definition_model.clear_parameter_value_lists(db_map_data_to_remove)
+        self.relationship_parameter_definition_model.clear_parameter_value_lists(db_map_data_to_remove)
         for parent, indexes in list_indexes.items():
             for row in sorted([ind.row() for ind in indexes], reverse=True):
                 self.parameter_value_list_model.removeRow(row, parent)
