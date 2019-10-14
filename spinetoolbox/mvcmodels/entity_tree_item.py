@@ -48,8 +48,9 @@ class TreeItem(QObject):
 
     @children.setter
     def children(self, children):
-        if not all(isinstance(child, TreeItem) for child in children):
-            raise ValueError("all items in children must be instance of TreeItem")
+        bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
+        if bad_types:
+            raise TypeError(f"Cand't set children of type {bad_types} for an item of type {type(self)}")
         for child in children:
             child.parent = self
         self._children = children
@@ -441,10 +442,8 @@ class MultiDBTreeItem(TreeItem):
         """Returns data for given column and role."""
         if role == Qt.DisplayRole:
             return (self.display_name, self.display_database)[column]
-        if role == Qt.DecorationRole and column == 0:
-            return self.display_icon()
 
-    def display_icon(self):
+    def display_icon(self, icon_manager):
         """Returns an icon to display next to the name.
         Reimplement in subclasses to return something nice."""
         return None
@@ -532,10 +531,10 @@ class ObjectClassItem(EntityClassItem):
         """Returns an ObjectItem."""
         return ObjectItem(db_map_data)
 
-    def display_icon(self):
+    def display_icon(self, icon_manager):
         """Returns the object class icon."""
         name = self.db_map_data_field(self.first_db_map, "name")
-        # TODO return self._spinedb_manager.icon_manager.object_icon(name)
+        return icon_manager.object_icon(name)
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -569,10 +568,10 @@ class RelationshipClassItem(EntityClassItem):
                 parsed_object_class_name_list = object_class_name_list.split(",")
                 self.set_db_map_data_field(db_map, "parsed_object_class_name_list", parsed_object_class_name_list)
 
-    def display_icon(self):
+    def display_icon(self, icon_manager):
         """Returns relationship class icon."""
         object_class_name_list = self.db_map_data_field(self.first_db_map, "object_class_name_list")
-        # TODO return self._spinedb_manager.icon_manager.relationship_icon(object_class_name_list)
+        return icon_manager.relationship_icon(object_class_name_list)
 
     def _children_query(self, db_map):
         """Returns a query that selects all relationships of this class from the db.
@@ -641,10 +640,10 @@ class ObjectItem(EntityItem):
         """Returns a RelationshipClassItem."""
         return RelationshipClassItem(db_map_data)
 
-    def display_icon(self):
+    def display_icon(self, icon_manager):
         """Returns the object class icon."""
         name = self.parent.db_map_data_field(self.first_db_map, "name")
-        # TODO return self._spinedb_manager.icon_manager.object_icon(name)
+        return icon_manager.object_icon(name)
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -687,10 +686,10 @@ class RelationshipItem(EntityItem):
         """"Returns the name for display."""
         return self.db_map_data_field(self.first_db_map, "object_name_list")
 
-    def display_icon(self):
+    def display_icon(self, icon_manager):
         """Returns relationship class icon."""
         object_class_name_list = self.parent.db_map_data_field(self.first_db_map, "object_class_name_list")
-        # TODO return self._spinedb_manager.icon_manager.relationship_icon(object_class_name_list)
+        return icon_manager.relationship_icon(object_class_name_list)
 
     def has_children(self):
         """Returns false, this item never has children."""

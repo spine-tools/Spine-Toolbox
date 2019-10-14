@@ -54,14 +54,15 @@ class EntityTreeModel(QAbstractItemModel):
         self.beginResetModel()
         self._invisible_root_item.deleteLater()
         self._invisible_root_item = TreeItem()
-        self.track_item(self._invisible_root_item)
         self.selected_indexes.clear()
         self.endResetModel()
+        self.track_item(self._invisible_root_item)
         self._root_item = self._create_root_item(self._db_map_data)
         self._invisible_root_item.insert_children(0, [self._root_item])
 
     def track_item(self, item):
-        """Tracks given TreeItem."""
+        """Tracks given TreeItem. This means we insert rows when children are inserted
+        and remove rows when children are removed."""
         item.children_about_to_be_inserted.connect(self._begin_insert_rows)
         item.children_inserted.connect(self._end_insert_rows)
         item.children_about_to_be_removed.connect(self._begin_remove_rows)
@@ -76,22 +77,26 @@ class EntityTreeModel(QAbstractItemModel):
 
     @Slot("QVariant", "int", "int", name="_begin_insert_rows")
     def _begin_insert_rows(self, item, row, count):
+        """Begin an operation to insert rows."""
         index = self.index_from_item(item)
         self.beginInsertRows(index, row, row + count - 1)
 
     @Slot("QVariant", name="_end_insert_rows")
     def _end_insert_rows(self, items):
+        """End an operation to insert rows. Start tracking all inserted items."""
         for item in items:
             self.track_item(item)
         self.endInsertRows()
 
     @Slot("QVariant", "int", "int", name="_begin_remove_rows")
     def _begin_remove_rows(self, item, row, count):
+        """Begin an operation to remove rows."""
         index = self.index_from_item(item)
         self.beginRemoveRows(index, row, row + count - 1)
 
     @Slot("QVariant", name="_end_remove_rows")
     def _end_remove_rows(self, items):
+        """End an operation to remove rows. Stop tracking all removed items."""
         for item in items:
             self.stop_tracking_item(item)
         self.endRemoveRows()
@@ -105,6 +110,7 @@ class EntityTreeModel(QAbstractItemModel):
         return self.index_from_item(self._root_item)
 
     def _create_root_item(self):
+        """Implement in subclasses to create a model specific to any entity type."""
         raise NotImplementedError()
 
     def visit_all(self, index=QModelIndex()):
@@ -139,21 +145,8 @@ class EntityTreeModel(QAbstractItemModel):
             visit_children = False  # Make sure we don't visit children again
             current = parent
 
-    def visit_all_recursive(self, index=QModelIndex()):
-        """Yields the current index and all its descendants."""
-        # NOTE: Kept because it's nice, but not used for fear of recursion limits
-        if index.isValid():
-            item = index.internalPointer()
-        else:
-            item = self._invisible_root_item
-        for child in reversed(item.children):
-            if child.child_count() > 0:
-                yield from self.visit_all_recursive(self.createIndex(0, 0, child))
-            else:
-                yield child
-        yield item
-
     def item_from_index(self, index):
+        """Return the given item corresponding to the given index."""
         if index.isValid():
             item = index.internalPointer()
             if item:
@@ -173,11 +166,10 @@ class EntityTreeModel(QAbstractItemModel):
             return QModelIndex()
         return self.createIndex(parent_item.child_number(), 0, parent_item)
 
-    def column_count(self, parent):
-        return 2
-
     def data(self, index, role):
         item = self.item_from_index(index)
+        if role == Qt.DecorationRole and index.column() == 0:
+            return item.display_icon(self._parent.icon_mngr)
         return item.data(index.column(), role)
 
     def setData(self, index, value, role=Qt.EditRole):
@@ -190,8 +182,7 @@ class EntityTreeModel(QAbstractItemModel):
 
     def flags(self, index):
         item = self.item_from_index(index)
-        roles = item.flags(index.column())
-        return roles
+        return item.flags(index.column())
 
     def headerData(self, section, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
@@ -217,7 +208,7 @@ class EntityTreeModel(QAbstractItemModel):
         return parent_item.child_count()
 
     def hasChildren(self, parent):
-        """Return True if not fetched, so the user can try and expand it."""
+        """Returns True if not fetched, so the user can try and expand it."""
         parent_item = self.item_from_index(parent)
         return parent_item.has_children()
 
@@ -230,24 +221,24 @@ class EntityTreeModel(QAbstractItemModel):
         parent_item.fetch_more()
 
     def deselect_index(self, index):
-        """Removes the index from the dict."""
+        """Marks the index as deselected."""
         if not index.isValid() or index.column() != 0:
             return
         item_type = type(self.item_from_index(index))
         self.selected_indexes[item_type].pop(index)
 
     def select_index(self, index):
-        """Adds the index to the dict."""
+        """Marks the index as selected."""
         if not index.isValid() or index.column() != 0:
             return
         item_type = type(self.item_from_index(index))
         self.selected_indexes.setdefault(item_type, {})[index] = None
 
     def cascade_filter_nodes(self, *conds, fetch=False, fetched_only=True):
-        """Filter nodes in cascade by applying the given conditions as follows:
-        Root --(first cond on children)--> First level nodes --(second cond on children)--> Second level nodes, etc.
+        """Filter nodes in cascade by applying the given conditions:
+        Root --> Children with first cond --> Children with second cond, etc.
         Returns the nodes at the lowest level attained.
-        Optionally fetch the nodes as it goes.
+        Optionally fetch the nodes where it passes.
         """
         parents = [self.root_item]
         for cond in conds:
@@ -261,8 +252,10 @@ class EntityTreeModel(QAbstractItemModel):
         return parents
 
     def cascade_filter_nodes_by_id(self, db_map, *ids_set, fetch=False, fetched_only=True):
-        """Filter nodes by ids in cascade as follows:
-        Root --> First level nodes with ids in first set of ids --> Second level nodes with ids in second set of ids...
+        """Filter nodes by ids in cascade:
+        Root --> Children with id in the first set --> Children with id in the second set...
+        Returns the nodes at the lowest level attained.
+        Optionally fetch the nodes where it passes.
         """
         parents = [self.root_item]
         for ids in ids_set:
@@ -307,21 +300,6 @@ class ObjectTreeModel(EntityTreeModel):
             self.root_item.append_children_from_data(db_map, data)
         self.selected_indexes[ObjectClassItem] = {self.index_from_item(item): None for item in selected_items}
 
-    def remove_object_classes(self, db_map_data):
-        for db_map, removed_items in db_map_data.items():
-            self._remove_db_map_object_classes(db_map, removed_items)
-
-    def _remove_db_map_object_classes(self, db_map, removed_items):
-        removed_ids = {x['id'] for x in removed_items}
-        for item in reversed(self.cascade_filter_nodes_by_id(db_map, removed_ids, fetched_only=False)):
-            item.deep_remove_db_map(db_map)
-
-    def update_object_classes(self, db_map_data):
-        updated_rows = set()
-        for db_map, data in db_map_data.items():
-            updated_rows.update(self.root_item.update_children_with_data(db_map, data))
-        self.root_item.fix_children(updated_rows)
-
     def add_objects(self, db_map_data):
         for db_map, new_items in db_map_data.items():
             self._add_db_map_objects(db_map, new_items)
@@ -333,18 +311,6 @@ class ObjectTreeModel(EntityTreeModel):
         for class_id, data in d.items():
             for parent in self.cascade_filter_nodes_by_id(db_map, (class_id,)):
                 parent.append_children_from_data(db_map, data)
-
-    def remove_objects(self, db_map_data):
-        for db_map, removed_items in db_map_data.items():
-            self._remove_db_map_objects(db_map, removed_items)
-
-    def _remove_db_map_objects(self, db_map, removed_items):
-        d = dict()
-        for item in removed_items:
-            d.setdefault(item["class_id"], []).append(item['id'])
-        for class_id, removed_ids in d.items():
-            for item in reversed(self.cascade_filter_nodes_by_id(db_map, (class_id,), removed_ids, fetched_only=False)):
-                item.deep_remove_db_map(db_map)
 
     def add_relationship_classes(self, db_map_data):
         for db_map, new_items in db_map_data.items():
@@ -358,6 +324,40 @@ class ObjectTreeModel(EntityTreeModel):
         for object_class_id, data in d.items():
             for parent in self.cascade_filter_nodes_by_id(db_map, (object_class_id,), all_ids):
                 parent.append_children_from_data(db_map, data)
+
+    def add_relationships(self, db_map_data):
+        for db_map, new_items in db_map_data.items():
+            self._add_db_map_relationships(db_map, new_items)
+
+    def _add_db_map_relationships(self, db_map, new_items):
+        d = dict()
+        for item in new_items:
+            for object_id in item["object_id_list"].split(","):
+                d.setdefault((item["class_id"], int(object_id)), []).append(item)
+        for (class_id, object_id), data in d.items():
+            for parent in self.cascade_filter_nodes_by_id(db_map, all_ids, (object_id,), (class_id,)):
+                parent.append_children_from_data(db_map, data)
+
+    def remove_object_classes(self, db_map_data):
+        for db_map, removed_items in db_map_data.items():
+            self._remove_db_map_object_classes(db_map, removed_items)
+
+    def _remove_db_map_object_classes(self, db_map, removed_items):
+        removed_ids = {x['id'] for x in removed_items}
+        for item in reversed(self.cascade_filter_nodes_by_id(db_map, removed_ids, fetched_only=False)):
+            item.deep_remove_db_map(db_map)
+
+    def remove_objects(self, db_map_data):
+        for db_map, removed_items in db_map_data.items():
+            self._remove_db_map_objects(db_map, removed_items)
+
+    def _remove_db_map_objects(self, db_map, removed_items):
+        d = dict()
+        for item in removed_items:
+            d.setdefault(item["class_id"], []).append(item['id'])
+        for class_id, removed_ids in d.items():
+            for item in reversed(self.cascade_filter_nodes_by_id(db_map, (class_id,), removed_ids, fetched_only=False)):
+                item.deep_remove_db_map(db_map)
 
     def remove_relationship_classes(self, db_map_data):
         for db_map, removed_items in db_map_data.items():
@@ -374,19 +374,6 @@ class ObjectTreeModel(EntityTreeModel):
             ):
                 item.deep_remove_db_map(db_map)
 
-    def add_relationships(self, db_map_data):
-        for db_map, new_items in db_map_data.items():
-            self._add_db_map_relationships(db_map, new_items)
-
-    def _add_db_map_relationships(self, db_map, new_items):
-        d = dict()
-        for item in new_items:
-            for object_id in item["object_id_list"].split(","):
-                d.setdefault((item["class_id"], int(object_id)), []).append(item)
-        for (class_id, object_id), data in d.items():
-            for parent in self.cascade_filter_nodes_by_id(db_map, all_ids, (object_id,), (class_id,)):
-                parent.append_children_from_data(db_map, data)
-
     def remove_relationships(self, db_map_data):
         for db_map, removed_items in db_map_data.items():
             self._remove_db_map_relationships(db_map, removed_items)
@@ -401,6 +388,12 @@ class ObjectTreeModel(EntityTreeModel):
                 db_map, all_ids, (object_id,), (class_id,), removed_ids, fetched_only=False
             ):
                 item.deep_remove_db_map(db_map)
+
+    def update_object_classes(self, db_map_data):
+        updated_rows = set()
+        for db_map, data in db_map_data.items():
+            updated_rows.update(self.root_item.update_children_with_data(db_map, data))
+        self.root_item.fix_children(updated_rows)
 
     def find_next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
@@ -461,18 +454,9 @@ class RelationshipTreeModel(EntityTreeModel):
         for db_map, data in db_map_data.items():
             self.root_item.append_children_from_data(db_map, data)
 
-    def remove_relationship_classes(self, db_map_data):
-        for db_map, removed_items in db_map_data.items():
-            self._remove_db_map_relationship_classes(db_map, removed_items)
-
-    def _remove_db_map_relationship_classes(self, db_map, removed_items):
-        removed_ids = {x['id'] for x in removed_items}
-        for item in reversed(self.cascade_filter_nodes_by_id(db_map, removed_ids, fetched_only=False)):
-            item.deep_remove_db_map(db_map)
-
     def add_relationships(self, db_map_data):
         for db_map, new_items in db_map_data.items():
-            self.__add_db_map_relationships(db_map, new_items)
+            self._add_db_map_relationships(db_map, new_items)
 
     def _add_db_map_relationships(self, db_map, new_items):
         d = dict()
@@ -481,6 +465,15 @@ class RelationshipTreeModel(EntityTreeModel):
         for class_id, data in d.items():
             for parent in self.cascade_filter_nodes_by_id(db_map, (class_id,)):
                 parent.append_children_from_data(db_map, data)
+
+    def remove_relationship_classes(self, db_map_data):
+        for db_map, removed_items in db_map_data.items():
+            self._remove_db_map_relationship_classes(db_map, removed_items)
+
+    def _remove_db_map_relationship_classes(self, db_map, removed_items):
+        removed_ids = {x['id'] for x in removed_items}
+        for item in reversed(self.cascade_filter_nodes_by_id(db_map, removed_ids, fetched_only=False)):
+            item.deep_remove_db_map(db_map)
 
     def remove_relationships(self, db_map_data):
         for db_map, removed_items in db_map_data.items():
