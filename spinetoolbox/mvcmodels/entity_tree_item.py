@@ -617,14 +617,8 @@ class RelationshipClassItem(EntityClassItem):
         qry = db_map.query(sq).filter_by(class_id=self.db_map_data_field(db_map, 'id'))
         if isinstance(self.parent, ObjectItem):
             object_id = self.parent.db_map_data_field(db_map, 'id')
-            qry = qry.filter(
-                or_(
-                    sq.c.object_id_list.like(f"%,{object_id},%"),
-                    sq.c.object_id_list.like(f"{object_id},%"),
-                    sq.c.object_id_list.like(f"%,{object_id}"),
-                    sq.c.object_id_list == object_id,
-                )
-            )
+            ids = {x.id for x in db_map.query(db_map.relationship_sq).filter_by(object_id=object_id)}
+            qry = qry.filter(sq.c.id.in_(ids))
         return qry
 
     def _create_child_item(self, db_map_data):
@@ -662,15 +656,10 @@ class ObjectItem(EntityItem):
         from the given db_map.
         """
         object_class_id = self.db_map_data_field(db_map, 'class_id')
+        sq = db_map.relationship_class_sq
+        ids = {x.id for x in db_map.query(sq).filter_by(object_class_id=object_class_id)}
         sq = db_map.wide_relationship_class_sq
-        return db_map.query(sq).filter(
-            or_(
-                sq.c.object_class_id_list.like(f"%,{object_class_id},%"),
-                sq.c.object_class_id_list.like(f"{object_class_id},%"),
-                sq.c.object_class_id_list.like(f"%,{object_class_id}"),
-                sq.c.object_class_id_list == object_class_id,
-            )
-        )
+        return db_map.query(sq).filter(sq.c.id.in_(ids))
 
     def _create_child_item(self, db_map_data):
         """Returns a RelationshipClassItem."""
