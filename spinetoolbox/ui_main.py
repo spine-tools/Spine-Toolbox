@@ -686,14 +686,16 @@ class ToolboxUI(QMainWindow):
             return
         # Get all Tool project items
         tools = self.project_item_model.items("Tools")
-        for tool in tools:
-            if not tool.tool_specification():
+        for tool_item in tools:
+            if not tool_item.tool_specification():
                 continue
-            elif tool.tool_specification().name == tool_specification.name:
-                tool.set_tool_specification(specification)
-                tool.execute_in_work = specification.execute_in_work
+            if tool_item.tool_specification().name == tool_specification.name:
+                tool_item.set_tool_specification(specification)
+                tool_item.execute_in_work = specification.execute_in_work
                 self.msg.emit(
-                    "Tool specification <b>{0}</b> reattached to Tool <b>{1}</b>".format(specification.name, tool.name)
+                    "Tool specification <b>{0}</b> reattached to Tool <b>{1}</b>".format(
+                        specification.name, tool_item.name
+                    )
                 )
 
     @Slot(name="remove_selected_tool_specification")
@@ -925,8 +927,8 @@ class ToolboxUI(QMainWindow):
         """
         if not index.isValid():
             return
-        tool = self.tool_specification_model.tool_specification(index.row())
-        file_path = os.path.join(tool.path, tool.includes[0])
+        tool_item = self.tool_specification_model.tool_specification(index.row())
+        file_path = os.path.join(tool_item.path, tool_item.includes[0])
         # Check if file exists first. openUrl may return True even if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
@@ -1397,7 +1399,7 @@ class ToolboxUI(QMainWindow):
         recents = str(recents)
         recents_list = recents.split("\n")
         for entry in recents_list:
-            name, path = entry.split("<>")
+            _, path = entry.split("<>")
             if path == p:
                 recents_list.pop(recents_list.index(entry))
                 break
