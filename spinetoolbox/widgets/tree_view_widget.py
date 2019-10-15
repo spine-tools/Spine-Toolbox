@@ -887,9 +887,7 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        self._show_parameter_context_menu(
-            pos, self.ui.tableView_object_parameter_value, "value", self.remove_object_parameter_values
-        )
+        self._show_parameter_context_menu(pos, self.ui.tableView_object_parameter_value, "value")
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
@@ -898,9 +896,7 @@ class TreeViewForm(DataStoreForm):
         Args:
             pos (QPoint): Mouse position
         """
-        self._show_parameter_context_menu(
-            pos, self.ui.tableView_relationship_parameter_value, "value", self.remove_relationship_parameter_values
-        )
+        self._show_parameter_context_menu(pos, self.ui.tableView_relationship_parameter_value, "value")
 
     @Slot("QPoint", name="show_object_parameter_context_menu")
     def show_object_parameter_context_menu(self, pos):

@@ -41,6 +41,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     and one empty parameter model.
     """
 
+    parameters_renamed = Signal("QVariant", name="parameters_renamed")
     remove_selection_requested = Signal(name="remove_selection_requested")
     remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
 

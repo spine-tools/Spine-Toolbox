@@ -91,12 +91,12 @@ class DataStoreForm(QMainWindow):
         self.selected_object_ids = dict()
         self.selected_relationship_class_ids = dict()
         self.selected_object_id_lists = dict()
-        # Parameter tag stuff
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, list(db_maps.values()))
-        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         self.selected_parameter_tag_ids = dict()
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
+        # Parameter tag toolbar
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, list(db_maps.values()))
+        self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, db_maps)
         self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, db_maps)
@@ -111,7 +111,7 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_parameter_value_list.setModel(self.parameter_value_list_model)
         self.default_row_height = QFontMetrics(QFont("", 0)).lineSpacing()
         max_screen_height = max([s.availableSize().height() for s in QGuiApplication.screens()])
-        self.visible_rows = int(max_screen_height / self.default_row_height)
+        visible_rows = int(max_screen_height / self.default_row_height)
         for view in (
             self.ui.tableView_object_parameter_value,
             self.ui.tableView_relationship_parameter_value,
@@ -120,7 +120,7 @@ class DataStoreForm(QMainWindow):
         ):
             view.horizontalHeader().setSectionResizeMode(QHeaderView.Interactive)
             view.verticalHeader().setDefaultSectionSize(self.default_row_height)
-            view.horizontalHeader().setResizeContentsPrecision(self.visible_rows)
+            view.horizontalHeader().setResizeContentsPrecision(visible_rows)
             view.horizontalHeader().setSectionsMovable(True)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -179,6 +179,13 @@ class DataStoreForm(QMainWindow):
             self._handle_relationship_parameter_definition_visibility_changed
         )
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
+        # Parameters renamed
+        self.object_parameter_definition_model.parameters_renamed.connect(
+            self.object_parameter_value_model.rename_parameters
+        )
+        self.relationship_parameter_definition_model.parameters_renamed.connect(
+            self.relationship_parameter_value_model.rename_parameters
+        )
 
     def qsettings(self):
         """Returns the QSettings instance from ToolboxUI."""
@@ -849,17 +856,15 @@ class DataStoreForm(QMainWindow):
         """Update (object or relationship) parameter definition with newly edited data.
         If the parameter name changed, update it in (object or relationship) parameter value.
         """
-        if new_value is None:
+        if new_value is None or not index.model().setData(index, new_value):
             return False
         header = index.model().horizontal_header_labels()
-        item = index.model().item_at_row(index.row())
-        db_map = item.db_map
-        if index.model().setData(index, new_value) and header[index.column()] == 'parameter_name' and db_map:
-            parameters = [dict(id=item.id, entity_class_id=item.entity_class.id, name=new_value)]
-            if index.model() == self.object_parameter_definition_model:
-                self.object_parameter_value_model.rename_parameters({db_map: parameters})
-            elif index.model() == self.relationship_parameter_definition_model:
-                self.relationship_parameter_value_model.rename_parameters({db_map: parameters})
+        if header[index.column()] == 'parameter_name':
+            item = index.model().item_at_row(index.row())
+            db_map = item.db_map
+            if db_map:
+                parameter = {db_map: [dict(id=item.id, entity_class_id=item.entity_class.id, name=new_value)]}
+                index.model().parameters_renamed.emit(parameter)
         return True
 
     def _prompt_close_and_commit(self):
