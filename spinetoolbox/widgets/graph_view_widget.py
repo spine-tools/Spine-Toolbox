@@ -51,8 +51,7 @@ class GraphViewForm(DataStoreForm):
 
         tic = time.clock()
         super().__init__(project, Ui_MainWindow(), db_maps)
-        self.db_map = self.db_maps[0]
-        self.db_name = self.db_names[0]
+        self.db_name, self.db_map = next(iter(self.db_maps.items()))
         self.ui.graphicsView.set_graph_view_form(self)
         self.read_only = read_only
         self._has_graph = False
@@ -65,7 +64,7 @@ class GraphViewForm(DataStoreForm):
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.arc_color.setAlphaF(0.8)
         # Object tree model
-        self.object_tree_model = ObjectTreeModel(self, flat=True)
+        self.object_tree_model = ObjectTreeModel(self, db_maps)
         self.ui.treeView_object.setModel(self.object_tree_model)
         # Data for ObjectItems
         self.object_ids = list()
@@ -337,24 +336,24 @@ class GraphViewForm(DataStoreForm):
         self.object_class_ids = list()
         self.object_class_names = list()
         root_item = self.object_tree_model.root_item
-        index = self.object_tree_model.indexFromItem(root_item)
+        index = self.object_tree_model.root_index
         is_root_selected = self.ui.treeView_object.selectionModel().isSelected(index)
-        for i in range(root_item.rowCount()):
-            object_class_item = root_item.child(i, 0)
-            object_class_id = object_class_item.data(Qt.UserRole + 1)[self.db_map]['id']
-            object_class_name = object_class_item.data(Qt.UserRole + 1)[self.db_map]['name']
-            index = self.object_tree_model.indexFromItem(object_class_item)
+        for i in range(root_item.child_count()):
+            object_class_item = root_item.child(i)
+            object_class_id = object_class_item.db_map_data_field(self.db_map, 'id')
+            object_class_name = object_class_item.db_map_data_field(self.db_map, 'name')
+            index = self.object_tree_model.index_from_item(object_class_item)
             is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
             # Fetch object class if needed
             if is_root_selected or is_object_class_selected and self.object_tree_model.canFetchMore(index):
                 self.object_tree_model.fetchMore(index)
-            for j in range(object_class_item.rowCount()):
-                object_item = object_class_item.child(j, 0)
-                object_id = object_item.data(Qt.UserRole + 1)[self.db_map]["id"]
-                object_name = object_item.data(Qt.UserRole + 1)[self.db_map]["name"]
+            for j in range(object_class_item.child_count()):
+                object_item = object_class_item.child(j)
+                object_id = object_item.db_map_data_field(self.db_map, 'id')
+                object_name = object_item.db_map_data_field(self.db_map, 'name')
                 if object_name in rejected_object_names:
                     continue
-                index = self.object_tree_model.indexFromItem(object_item)
+                index = self.object_tree_model.index_from_item(object_item)
                 is_object_selected = self.ui.treeView_object.selectionModel().isSelected(index)
                 if is_root_selected or is_object_class_selected or is_object_selected:
                     self.object_ids.append(object_id)
@@ -627,10 +626,10 @@ class GraphViewForm(DataStoreForm):
         self.selected_object_id_lists = dict()
         for item in selected_items:
             if isinstance(item, ObjectItem):
-                self.selected_object_class_ids.setdefault(self.db_map).add(item.object_class_id)
+                self.selected_object_class_ids.setdefault(self.db_map, set()).add(item.object_class_id)
                 self.selected_object_ids.setdefault((self.db_map, item.object_class_id), set()).add(item.object_id)
             elif isinstance(item, ArcItem):
-                self.selected_relationship_class_ids.setdefault(self.db_map).add(item.relationship_class_id)
+                self.selected_relationship_class_ids.setdefault(self.db_map, set()).add(item.relationship_class_id)
                 self.selected_object_id_lists.setdefault((self.db_map, item.relationship_class_id), set()).add(
                     item.object_id_list
                 )
