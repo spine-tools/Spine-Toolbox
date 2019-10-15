@@ -521,9 +521,9 @@ class IconManager:
         Create the corresponding object pixmaps and clear obsolete entries
         from the relationship class icon cache."""
         for object_class in object_classes:
-            self.create_object_pixmap(object_class.display_icon)
-            self.obj_cls_icon_cache[object_class.name] = object_class.display_icon
-        object_class_names = [x.name for x in object_classes]
+            self.create_object_pixmap(object_class["display_icon"])
+            self.obj_cls_icon_cache[object_class["name"]] = object_class["display_icon"]
+        object_class_names = [x["name"] for x in object_classes]
         dirty_keys = [k for k in self.rel_cls_icon_cache if any(x in object_class_names for x in k)]
         for k in dirty_keys:
             del self.rel_cls_icon_cache[k]

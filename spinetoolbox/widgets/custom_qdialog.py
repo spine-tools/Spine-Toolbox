@@ -33,7 +33,7 @@ from PySide2.QtWidgets import (
     QSpinBox,
     QCheckBox,
 )
-from PySide2.QtCore import Slot, Qt
+from PySide2.QtCore import Signal, Slot, Qt
 from PySide2.QtGui import QIcon
 from ..mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.empty_row_model import EmptyRowModel
@@ -58,6 +58,8 @@ class ManageItemsDialog(QDialog):
     Attributes:
         parent (DataStoreForm): data store widget
     """
+
+    data_committed = Signal("QVariant", name="data_committed")
 
     def __init__(self, parent):
         super().__init__(parent)
@@ -244,7 +246,7 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to add items."""
-        object_class_d = dict()
+        db_map_data = dict()
         # Display order
         combo_index = self.combo_box.currentIndex()
         after_obj_cls = self.object_class_names[combo_index - 1] if combo_index > 0 else None
@@ -275,11 +277,11 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
                     display_order = obj_cls_order[after_obj_cls]
                 item = pre_item.copy()
                 item['display_order'] = display_order
-                object_class_d.setdefault(db_map, []).append(item)
-        if not object_class_d:
+                db_map_data.setdefault(db_map, []).append(item)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to add")
             return
-        self._parent.add_object_classes(object_class_d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 
@@ -337,7 +339,7 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to add items."""
-        object_d = dict()
+        db_map_data = dict()
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
             row_data = self.model.row_data(i)
             class_name, name, description, db_names = row_data
@@ -359,11 +361,11 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
                 class_id = object_classes[class_name]
                 item = pre_item.copy()
                 item['class_id'] = class_id
-                object_d.setdefault(db_map, []).append(item)
-        if not object_d:
+                db_map_data.setdefault(db_map, []).append(item)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to add")
             return
-        self._parent.add_objects(object_d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 
@@ -466,7 +468,7 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to add items."""
-        rel_cls_d = dict()
+        db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("relationship class name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -495,11 +497,11 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
                     object_class_id_list.append(object_class_id)
                 item = pre_item.copy()
                 item['object_class_id_list'] = object_class_id_list
-                rel_cls_d.setdefault(db_map, []).append(item)
-        if not rel_cls_d:
+                db_map_data.setdefault(db_map, []).append(item)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to add")
             return
-        self._parent.add_relationship_classes(rel_cls_d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 
@@ -620,7 +622,7 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to add items."""
-        relationship_d = dict()
+        db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("relationship name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount() - 1):  # last row will always be empty
@@ -657,11 +659,11 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
                     object_id_list.append(object_id)
                 item = pre_item.copy()
                 item.update({'object_id_list': object_id_list, 'class_id': class_id})
-                relationship_d.setdefault(db_map, []).append(item)
-        if not relationship_d:
+                db_map_data.setdefault(db_map, []).append(item)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to add")
             return
-        self._parent.add_relationships(relationship_d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 
@@ -815,10 +817,10 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map_dicts (list): list of dictionaries mapping dbs to relationship classes for editing
+        selected (set): set of RelationshipClassItem instances to edit
     """
 
-    def __init__(self, parent, db_map_dicts):
+    def __init__(self, parent, selected):
         super().__init__(parent)
         self.setWindowTitle("Edit relationship classes")
         self.model = MinimalTableModel(self)
@@ -828,17 +830,13 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         self.model.set_horizontal_header_labels(['relationship class name', 'databases'])
         self.orig_data = list()
         model_data = list()
-        for db_map_dict in db_map_dicts:
-            db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
-            item = list(db_map_dict.values())[0]
-            name = item.get('name')
-            if not name:
-                continue
-            row_data = [name]
+        for item in selected:
+            data = item.db_map_data(item.first_db_map)
+            row_data = [item.display_name]
             self.orig_data.append(row_data.copy())
-            row_data.append(db_names)
+            row_data.append(item.display_database)
             model_data.append(row_data)
-            self.items.append(db_map_dict)
+            self.items.append(item)
         self.model.reset_model(model_data)
 
     @Slot(name="accept")
@@ -847,24 +845,27 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         rel_cls_d = dict()
         for i in range(self.model.rowCount()):
             name, db_names = self.model.row_data(i)
-            db_name_list = db_names.split(",")
-            try:
-                db_maps = [self.db_maps[x] for x in db_name_list]
-            except KeyError as e:
-                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
-                return
+            item = self.items[i]
+            db_maps = []
+            for database in db_names.split(","):
+                for db_map in item.db_maps:
+                    if item.db_map_data_field(db_map, "database") == database:
+                        db_maps.append(db_map)
+                        break
+                else:
+                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    return
             if not name:
                 self._parent.msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [name] == orig_row:
                 continue
-            pre_item = {'name': name}
+            pre_db_item = {'name': name}
             for db_map in db_maps:
-                id_ = self.items[i][db_map]['id']
-                item = pre_item.copy()
-                item['id'] = id_
-                rel_cls_d.setdefault(db_map, []).append(item)
+                db_item = pre_db_item.copy()
+                db_item['id'] = item.db_map_data_field(db_map, 'id')
+                rel_cls_d.setdefault(db_map, []).append(db_item)
         if not rel_cls_d:
             self._parent.msg_error.emit("Nothing to update")
             return
@@ -1000,9 +1001,9 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
         self.connect_signals()
         self.model.set_horizontal_header_labels(['type', 'name', 'databases'])
         model_data = list()
-        for item_type, items in selected.items():
+        for class_, items in selected.items():
             for item in items:
-                row_data = [item_type.type_name, item.display_name, item.display_database]
+                row_data = [class_.item_type, item.display_name, item.display_database]
                 model_data.append(row_data)
                 self.items.append(item)
         self.model.reset_model(model_data)
@@ -1010,14 +1011,14 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to remove items."""
-        d = dict()
+        db_map_data = dict()
         for i in range(self.model.rowCount()):
-            type_name, _, db_names = self.model.row_data(i)
+            item_type, _, db_names = self.model.row_data(i)
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
-                    if item.db_map_data_field(db_map, "database") == database:
+                    if item.db_mngr.display_database(db_map) == database:
                         db_maps.append(db_map)
                         break
                 else:
@@ -1025,11 +1026,11 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
                     return
             for db_map in db_maps:
                 data = item.db_map_data(db_map)
-                d.setdefault(db_map, {}).setdefault(type_name, []).append(data)
-        if not d:
+                db_map_data.setdefault(db_map, {}).setdefault(item_type, []).append(data)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to remove")
             return
-        self._parent.remove_tree_items(d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 

@@ -68,8 +68,8 @@ class TreeViewForm(DataStoreForm):
         super().__init__(project, Ui_MainWindow(), db_maps)
         self.takeCentralWidget()
         # Object tree model
-        self.object_tree_model = ObjectTreeModel(self, db_maps)
-        self.relationship_tree_model = RelationshipTreeModel(self, db_maps)
+        self.object_tree_model = ObjectTreeModel(self, self.db_mngr)
+        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr)
         self.selected_rel_tree_indexes = {}
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
@@ -636,7 +636,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Add relationship classes":
             self.call_show_add_relationship_classes_form(index)
         elif option == "Add relationships":
-            self.call_show_add_relationships_form_from_object_tree(index)
+            self.call_show_add_relationships_form(index)
         elif option == "Edit object classes":
             self.show_edit_object_classes_form()
         elif option == "Edit objects":
@@ -673,7 +673,7 @@ class TreeViewForm(DataStoreForm):
         elif option == "Add relationship classes":
             self.show_add_relationship_classes_form()
         elif option == "Add relationships":
-            self.call_show_add_relationships_form_from_relationship_tree(index)
+            self.call_show_add_relationships_form(index)
         elif option == "Edit relationship classes":
             self.show_edit_relationship_classes_form()
         elif option == "Edit relationships":
@@ -708,34 +708,24 @@ class TreeViewForm(DataStoreForm):
         object_class_one_name = index.internalPointer().display_name
         self.show_add_relationship_classes_form(object_class_one_name=object_class_one_name)
 
-    def call_show_add_relationships_form_from_object_tree(self, index):
+    def call_show_add_relationships_form(self, index):
         item = index.internalPointer()
         relationship_class_key = item.display_id
-        object_name = item._parent.display_name
-        object_class_name = item._parent._parent.display_name
+        try:
+            object_name = item._parent.display_name
+            object_class_name = item._parent._parent.display_name
+        except AttributeError:
+            object_name = object_class_name = None
         self.show_add_relationships_form(
             relationship_class_key=relationship_class_key, object_class_name=object_class_name, object_name=object_name
         )
 
-    def call_show_add_relationships_form_from_relationship_tree(self, index):
-        item = index.internalPointer()
-        relationship_class_key = item.display_id
-        self.show_add_relationships_form(relationship_class_key=relationship_class_key)
-
-    def add_object_classes(self, object_class_d):
-        """Insert new object classes."""
-        if super().add_object_classes(object_class_d):
+    @Slot("QVariant", name="receive_object_classes_added")
+    def receive_object_classes_added(self, db_map_ids):
+        if super().receive_object_classes_added(db_map_ids):
             self.ui.actionExport.setEnabled(True)
             return True
         return False
-
-    def add_relationship_classes_to_models(self, db_map_data):
-        super().add_relationship_classes_to_models(db_map_data)
-        self.relationship_tree_model.add_relationship_classes(db_map_data)
-
-    def add_relationships_to_models(self, db_map_data):
-        super().add_relationships_to_models(db_map_data)
-        self.relationship_tree_model.add_relationships(db_map_data)
 
     def edit_object_tree_items(self):
         """Called when F2 is pressed while the object tree has focus.
@@ -771,9 +761,9 @@ class TreeViewForm(DataStoreForm):
         super().update_objects_in_models(db_map_data)
         # self.relationship_tree_model.update_objects(db_map_data)
 
-    def update_relationship_classes_in_models(self, db_map, updated):
-        super().update_relationship_classes_in_models(db_map, updated)
-        self.relationship_tree_model.update_relationship_classes(db_map, updated)
+    def update_relationship_classes_in_models(self, db_map_data):
+        super().update_relationship_classes_in_models(db_map_data)
+        self.relationship_tree_model.update_relationship_classes(db_map_data)
 
     def update_relationships_in_models(self, db_map, updated):
         super().update_relationships_in_models(db_map, updated)
@@ -787,6 +777,7 @@ class TreeViewForm(DataStoreForm):
             for item_type, indexes in self.object_tree_model.selected_indexes.items()
         }
         dialog = RemoveTreeItemsDialog(self, selected)
+        dialog.data_committed.connect(self.db_mngr.remove_items)
         dialog.show()
 
     @Slot(name="show_remove_relationship_tree_items_form")
@@ -797,37 +788,17 @@ class TreeViewForm(DataStoreForm):
             for item_type, indexes in self.relationship_tree_model.selected_indexes.items()
         }
         dialog = RemoveTreeItemsDialog(self, selected)
+        dialog.data_committed.connect(self.db_mngr.remove_items)
         dialog.show()
 
-    @busy_effect
-    def remove_tree_items(self, item_d):
-        """Remove items from tree views."""
-        removed = 0
-        db_map_object_classes = dict()
-        db_map_objects = dict()
-        db_map_relationship_classes = dict()
-        db_map_relationships = dict()
-        for db_map, items_per_type in item_d.items():
-            object_classes = items_per_type.get("object class", ())
-            objects = items_per_type.get("object", ())
-            relationship_classes = items_per_type.get("relationship class", ())
-            relationships = items_per_type.get("relationship", ())
-            try:
-                db_map.remove_items(
-                    object_class_ids={x['id'] for x in object_classes},
-                    object_ids={x['id'] for x in objects},
-                    relationship_class_ids={x['id'] for x in relationship_classes},
-                    relationship_ids={x['id'] for x in relationships},
-                )
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-            db_map_object_classes[db_map] = object_classes
-            db_map_objects[db_map] = objects
-            db_map_relationship_classes[db_map] = relationship_classes
-            db_map_relationships[db_map] = relationships
-            removed += len(object_classes) + len(objects) + len(relationship_classes) + len(relationships)
-        if db_map_object_classes:
+    @Slot("QVariant", name="receive_object_classes_removed")
+    def receive_object_classes_removed(self, db_map_data):
+        """Receive object classes removed signal from db manager."""
+        self.commit_available.emit(True)
+        # self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
+        self.msg.emit("Successfully removed {} item(s).".format(removed))
+
+        if db_map_data:
             self.object_tree_model.remove_object_classes(db_map_object_classes)
             self.relationship_tree_model.remove_object_classes(db_map_object_classes)
             self.object_parameter_definition_model.remove_object_classes(db_map_object_classes)
@@ -1104,7 +1075,7 @@ class TreeViewForm(DataStoreForm):
                 value_indexes.pop(index, None)
         # Get items to update
         model = self.parameter_value_list_model
-        item_d = dict()
+        db_map_data = dict()
         for parent, indexes in value_indexes.items():
             db_map = parent.parent().internalPointer().id
             id_ = parent.internalPointer().id
@@ -1112,13 +1083,15 @@ class TreeViewForm(DataStoreForm):
             all_rows = range(model.rowCount(parent) - 1)
             remaining_rows = [row for row in all_rows if row not in removed_rows]
             value_list = [model.index(row, 0, parent).data(Qt.EditRole) for row in remaining_rows]
-            item_d.setdefault(db_map, {}).setdefault("to_upd", []).append(dict(id=id_, value_list=value_list))
+            db_map_data.setdefault(db_map, {}).setdefault("to_upd", []).append(dict(id=id_, value_list=value_list))
         # Get ids to remove
         for parent, indexes in list_indexes.items():
             db_map = parent.internalPointer().id
-            item_d.setdefault(db_map, {}).setdefault("to_rm", set()).update(ind.internalPointer().id for ind in indexes)
+            db_map_data.setdefault(db_map, {}).setdefault("to_rm", set()).update(
+                ind.internalPointer().id for ind in indexes
+            )
         db_map_data_to_remove = dict()
-        for db_map, d in item_d.items():
+        for db_map, d in db_map_data.items():
             to_update = d.get("to_upd", None)
             to_remove = d.get("to_rm", None)
             try:

@@ -16,10 +16,10 @@ The SpineDBManager class
 :date:   2.10.2019
 """
 
-from typing import Tuple, Dict, Set
+from typing import Dict
 from PySide2.QtCore import QObject, Signal
-from spinedb_api import DiffDatabaseMapping
-from helpers import IconManager
+from spinedb_api import DiffDatabaseMapping, SpineDBAPIError
+from .helpers import IconManager
 
 
 class SpineDBManager(QObject):
@@ -28,246 +28,141 @@ class SpineDBManager(QObject):
     that need to interact with a set of DBs.
     """
 
-    entities_deleted = Signal(DiffDatabaseMapping, set)
-    entity_classes_deleted = Signal(DiffDatabaseMapping, set)
-    entities_updated = Signal(DiffDatabaseMapping, set)
-    entity_classes_updated = Signal(DiffDatabaseMapping, set)
-    entities_added = Signal(DiffDatabaseMapping, set)
-    entity_classes_added = Signal(DiffDatabaseMapping, set)
+    msg_error = Signal("QVariant", name="msg_error")
+    object_classes_added = Signal("QVariant", name="object_classes_added")
+    objects_added = Signal("QVariant", name="objects_added")
+    relationship_classes_added = Signal("QVariant", name="relationship_classes_added")
+    relationships_added = Signal("QVariant", name="relationships_added")
+    object_classes_removed = Signal("QVariant", name="object_classes_removed")
+    objects_removed = Signal("QVariant", name="objects_removed")
+    relationship_classes_removed = Signal("QVariant", name="relationship_classes_removed")
+    relationships_removed = Signal("QVariant", name="relationships_removed")
 
-    def __init__(self, db_maps: Dict[str, DiffDatabaseMapping]):
+    def __init__(self, keyed_db_maps: Dict[str, DiffDatabaseMapping]):
         """Init class."""
-        super(SpineDBManager, self).__init__()
-        self._db_maps = db_maps
-        self.fetched = {"entity_class": set(), "entity": set()}
-        self.entity = {db_map: dict() for db_map in self._db_maps.values()}
-        self.entity_class = {db_map: dict() for db_map in self._db_maps.values()}
-        self.db_name_to_map = {db_name: db_map for db_name, db_map in self._db_maps.items()}
-        self.db_map_to_name = {db_map: db_name for db_name, db_map in self._db_maps.items()}
-        self.icon_manager = IconManager()
-        for db_map in self._db_maps.values():
-            self.icon_manager.setup_object_pixmaps(db_map.object_class_list())
+        super().__init__()
+        self._keyed_db_maps = keyed_db_maps
+        self._db_maps = list(keyed_db_maps.values())
+        self._db_names = {db_map: db_name for db_name, db_map in keyed_db_maps.items()}
+        self._data = {}
+        self.icon_mngr = IconManager()
+        self.connect_signals()
 
-    @staticmethod
-    def _obj_to_dict(obj):
-        """Returns a dictionary mapping ids to dictionary-items
-        in the given collection of objects."""
-        d = {}
-        for data in obj:
-            data = data._asdict()
-            data["entity_type"] = "object"
-            d[data["id"]] = data
-        return d
+    def connect_signals(self):
+        self.object_classes_added.connect(self.update_icons)
 
-    @staticmethod
-    def _obj_class_to_dict(obj):
-        """Returns a dictionary mapping ids to dictionary-items
-        in the given collection of objects classes."""
-        d = {}
-        for data in obj:
-            data = data._asdict()
-            data["class_type"] = "object"
-            d[data["id"]] = data
-        return d
+    def update_icons(self, db_map_data):
+        object_classes = [item for db_map, data in db_map_data.items() for item in data]
+        self.icon_mngr.setup_object_pixmaps(object_classes)
 
-    @staticmethod
-    def _rel_to_dict(rel):
-        """Returns a dictionary mapping ids to dictionary-items
-        in the given collection of relationships."""
-        d = {}
-        for data in rel:
-            data = data._asdict()
-            data["object_id_list"] = [int(id_str) for id_str in data["object_id_list"].split(",")]
-            data["entity_type"] = "relationship"
-            d[data["id"]] = data
-        return d
+    @property
+    def db_maps(self):
+        return self._db_maps
 
-    @staticmethod
-    def _rel_class_to_dict(rel):
-        """Returns a dictionary mapping ids to dictionary-items
-        in the given collection of relationship classes."""
-        d = {}
-        for data in rel:
-            data = data._asdict()
-            data["class_type"] = "relationship"
-            data["object_class_id_list"] = [int(id_str) for id_str in data["object_class_id_list"].split(",")]
-            d[data["id"]] = data
-        return d
+    def display_database(self, db_map):
+        return self._db_names.get(db_map)
 
-    def update_entities(self, db_map: DiffDatabaseMapping, updated_entities):
-        """Update entities in the given database."""
-        if db_map not in self.db_map_to_name:
-            return
-        objects = [entity for entity in updated_entities if entity["entity_type"] == "object"]
-        for o in objects:
-            o.pop("class_id", None)
-        relationships = [entity for entity in updated_entities if entity["entity_type"] == "relationship"]
-        for r in relationships:
-            r.pop("class_id", None)
+    def get_data(self, db_map, item_type, id_):
+        return self._data.get(db_map, {}).get(item_type, {}).get(id_, {})
 
-        updated_objects, _ = db_map.update_objects(*objects, strict=True)
-        updated_relationships, _ = db_map.update_wide_relationships(*relationships, strict=True)
+    def get_object_class_ids(self, db_map):
+        d = self._data.setdefault(db_map, {}).setdefault("object class", {})
+        qry = db_map.query(db_map.object_class_sq)
+        items = {x.id: x._asdict() for x in qry}
+        d.update(items)
+        self.icon_mngr.setup_object_pixmaps(items.values())
+        return items.keys()
 
-        updated_objects = self._obj_to_dict(updated_objects)
-        updated_relationships = self._rel_to_dict(updated_relationships)
-        self.entity[db_map].update(updated_objects)
-        self.entity[db_map].update(updated_relationships)
-        updated_ids = set(updated_objects.keys()).union(set(updated_relationships.keys()))
-        entity_data = self.entity[db_map]
-        for entity_id in self.entity[db_map].keys():
-            if entity_id in updated_ids:
+    def get_object_ids(self, db_map, class_id=None):
+        d = self._data.setdefault(db_map, {}).setdefault("object", {})
+        qry = db_map.query(db_map.object_sq)
+        if class_id:
+            qry = qry.filter_by(class_id=class_id)
+        items = {x.id: x._asdict() for x in qry}
+        d.update(items)
+        return items.keys()
+
+    def get_relationship_class_ids(self, db_map, object_class_id=None):
+        d = self._data.setdefault(db_map, {}).setdefault("relationship class", {})
+        qry = db_map.query(db_map.wide_relationship_class_sq)
+        if object_class_id:
+            ids = {x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id)}
+            qry = qry.filter(db_map.wide_relationship_class_sq.c.id.in_(ids))
+        items = {x.id: x._asdict() for x in qry}
+        d.update(items)
+        return items.keys()
+
+    def get_relationship_ids(self, db_map, class_id, object_id=None):
+        d = self._data.setdefault(db_map, {}).setdefault("relationship", {})
+        qry = db_map.query(db_map.wide_relationship_sq).filter_by(class_id=class_id)
+        if object_id:
+            ids = {x.id for x in db_map.query(db_map.relationship_sq).filter_by(object_id=object_id)}
+            qry = qry.filter(db_map.wide_relationship_sq.c.id.in_(ids))
+        items = {x.id: x._asdict() for x in qry}
+        d.update(items)
+        return items.keys()
+
+    def add_items(self, input_data, item_type, method_name, signal_name):
+        db_map_data = dict()
+        error_log = dict()
+        for db_map, items in input_data.items():
+            added, error_log[db_map] = getattr(db_map, method_name)(*items)
+            if not added.count():
                 continue
-            if entity_data[entity_id]["entity_type"] == "relationship" and any(
-                updated_ids.intersection(set(entity_data[entity_id]["object_id_list"]))
-            ):
-                updated_ids.add(entity_id)
-        if updated_ids:
-            self.entities_updated.emit(db_map, updated_ids)
+            d = self._data.setdefault(db_map, {}).setdefault(item_type, {})
+            added = {x.id: x._asdict() for x in added}
+            d.update(added)
+            db_map_data[db_map] = list(added.values())
+        if any(error_log.values()):
+            self.msg_error.emit(error_log)
+        if any(db_map_data.values()):
+            getattr(self, signal_name).emit(db_map_data)
 
-    def update_entity_classes(self, db_map: DiffDatabaseMapping, updated_entity_classes):
-        """Update entities classes in the given database."""
-        if db_map not in self.db_map_to_name:
-            return
-        objects = [entity for entity in updated_entity_classes if entity["class_type"] == "object"]
-        for o in objects:
-            o.pop("class_id", None)
-        relationships = [entity for entity in updated_entity_classes if entity["class_type"] == "relationship"]
-        for r in relationships:
-            r.pop("class_id", None)
+    def add_object_classes(self, db_map_data):
+        self.add_items(db_map_data, "object class", "add_object_classes", "objects_classes_added")
 
-        updated_objects, _ = db_map.update_object_classes(*objects, strict=True)
-        updated_relationships, _ = db_map.update_wide_relationship_classes(*relationships, strict=True)
+    def add_objects(self, db_map_data):
+        self.add_items(db_map_data, "object", "add_objects", "objects_added")
 
-        updated_objects = self._obj_class_to_dict(updated_objects)
-        updated_relationships = self._rel_class_to_dict(updated_relationships)
+    def add_relationship_classes(self, db_map_data):
+        self.add_items(db_map_data, "relationship class", "add_wide_relationship_classes", "relationship_classes_added")
 
-        self.entity_class[db_map].update(updated_objects)
-        self.entity_class[db_map].update(updated_relationships)
-        updated_ids = set(updated_objects.keys()).union(set(updated_relationships.keys()))
-        entity_data = self.entity_class[db_map]
-        for entity_class_id in self.entity_class[db_map].keys():
-            if entity_class_id in updated_ids:
+    def add_relationships(self, db_map_data):
+        self.add_items(db_map_data, "relationship", "add_wide_relationships", "relationships_added")
+
+    def remove_items(self, input_data):
+        db_map_object_classes = dict()
+        db_map_objects = dict()
+        db_map_relationship_classes = dict()
+        db_map_relationships = dict()
+        error_log = dict()
+        for db_map, items_per_type in input_data.items():
+            object_classes = items_per_type.get("object class", ())
+            objects = items_per_type.get("object", ())
+            relationship_classes = items_per_type.get("relationship class", ())
+            relationships = items_per_type.get("relationship", ())
+            try:
+                db_map.remove_items(
+                    object_class_ids={x['id'] for x in object_classes},
+                    object_ids={x['id'] for x in objects},
+                    relationship_class_ids={x['id'] for x in relationship_classes},
+                    relationship_ids={x['id'] for x in relationships},
+                )
+            except SpineDBAPIError as err:
+                error_log[db_map] = err
                 continue
-            if entity_data[entity_class_id]["class_type"] == "relationship" and any(
-                updated_ids.intersection(set(entity_data[entity_class_id]["object_class_id_list"]))
-            ):
-                updated_ids.add(entity_class_id)
-        if updated_ids:
-            self.entity_classes_updated.emit(db_map, updated_ids)
-
-    def add_entities(self, db_map: DiffDatabaseMapping, new_entities):
-        """Add entities to the given database."""
-        objects = [entity for entity in new_entities if entity["entity_type"] == "object"]
-        relationships = [entity for entity in new_entities if entity["entity_type"] == "relationship"]
-        new_obj, _ = db_map.add_objects(*objects)
-        new_rel, _ = db_map.add_wide_relationships(*relationships)
-        new_obj = self._obj_to_dict(new_obj)
-        new_rel = self._rel_to_dict(new_rel)
-        self.entity[db_map].update(new_obj)
-        self.entity[db_map].update(new_rel)
-        if new_obj or new_rel:
-            self.entities_added.emit(db_map, set(new_obj.keys()).union(set(new_rel.keys())))
-
-    def add_entity_classes(self, db_map: DiffDatabaseMapping, new_entity_classes):
-        """Add entitiy classes to the given database."""
-        objects = [entity for entity in new_entity_classes if entity["class_type"] == "object"]
-        relationships = [entity for entity in new_entity_classes if entity["class_type"] == "relationship"]
-        new_obj, _ = db_map.add_object_classes(*objects, strict=True)
-        new_rel, _ = db_map.add_wide_relationship_classes(*relationships, strict=True)
-        new_obj = self._obj_class_to_dict(new_obj)
-        new_rel = self._rel_class_to_dict(new_rel)
-        self.entity_class[db_map].update(new_obj)
-        self.entity_class[db_map].update(new_rel)
-        if new_obj or new_rel:
-            self.entity_classes_added.emit(db_map, set(new_obj.keys()).union(set(new_rel.keys())))
-
-    def delete_entities(self, db_map: DiffDatabaseMapping, entity_ids: Set[int]):
-        """Delete entities from the given database."""
-        if db_map in self.db_map_to_name:
-            entity_dict = self.entity[db_map]
-            object_ids = set(entity_id for entity_id in entity_ids if entity_dict[entity_id]["entity_type"] == "object")
-            relationship_ids = set(
-                entity_id for entity_id in entity_ids if entity_dict[entity_id]["entity_type"] == "relationship"
-            )
-            db_map.remove_items(object_ids=object_ids, relationship_ids=relationship_ids)
-            # Update entity_ids with cascade-removed member objects in relationship
-            for entity_id in self.entity[db_map].keys():
-                if entity_id in entity_ids:
-                    continue
-                if entity_dict[entity_id]["entity_type"] == "relationship" and any(
-                    entity_ids.intersection(set(entity_dict[entity_id]["object_id_list"].split(",")))
-                ):
-                    entity_ids.add(entity_id)
-            # Remove entries in the internal dictionary
-            for entity_id in entity_ids:
-                self.entity[db_map].pop(entity_id)
-        if entity_ids:
-            self.entities_deleted.emit(db_map, entity_ids)
-        return entity_ids
-
-    def delete_entity_classes(self, db_map: DiffDatabaseMapping, entity_class_ids: Set[int]):
-        """Delete entitiy classes from the given database."""
-        if db_map in self.db_map_to_name:
-            entity_class_dict = self.entity_class[db_map]
-            object_class_ids = set(
-                class_id for class_id in entity_class_ids if entity_class_dict[class_id]["class_type"] == "object"
-            )
-            relationship_class_ids = set(
-                class_id for class_id in entity_class_ids if entity_class_dict[class_id]["class_type"] == "relationship"
-            )
-            db_map.remove_items(object_class_ids=object_class_ids, relationship_class_ids=relationship_class_ids)
-            # Update entity_ids with cascade-removed member object classes in relationship classes
-            for class_id in self.entity_class[db_map].keys():
-                if class_id in entity_class_ids:
-                    continue
-                if entity_class_dict[class_id]["class_type"] == "relationship" and any(
-                    entity_class_ids.intersection(set(entity_class_dict[class_id]["object_class_id_list"].split(",")))
-                ):
-                    entity_class_ids.add(class_id)
-            # Remove entries in the internal dictionary
-            for class_id in entity_class_ids:
-                self.entity_class[db_map].pop(class_id)
-        if entity_class_ids:
-            self.entity_classes_deleted.emit(db_map, entity_class_ids)
-        return entity_class_ids
-
-    def get_entities(self, entity_type: Tuple[str, ...] = ("object", "relationship"), filters: dict = None):
-        """Fetches and returns entities in all databases."""
-        if filters is None:
-            filters = dict()
-        entities = []
-        for db_map in self._db_maps.values():
-            id_list = filters.get(db_map, {}).get("id_list", None)
-            class_id = filters.get(db_map, {}).get("class_id", None)
-            if "object" in entity_type:
-                obj = self._obj_to_dict(db_map.object_list(id_list=id_list, class_id=class_id))
-                self.entity[db_map].update(obj)
-                entities.extend([(db_map, data) for data in obj.values()])
-            if "relationship" in entity_type:
-                object_id = filters.get(db_map, {}).get("object_id", None)
-                rels = self._rel_to_dict(
-                    db_map.wide_relationship_list(id_list=id_list, class_id=class_id, object_id=object_id)
-                )
-                self.entity[db_map].update(rels)
-                entities.extend([(db_map, data) for data in rels.values()])
-        return entities
-
-    def get_entity_classes(self, entity_class_type: Tuple[str, ...] = ("object", "relationship"), filters: dict = None):
-        """Fetches and returns entity classes in all databases."""
-        if filters is None:
-            filters = dict()
-        classes = []
-        for db_map in self._db_maps.values():
-            id_list = filters.get(db_map, {}).get("id_list", None)
-            if "object" in entity_class_type:
-                obj = self._obj_class_to_dict(db_map.object_class_list(id_list=id_list))
-                self.entity_class[db_map].update(obj)
-                classes.extend([(db_map, data) for data in obj.values()])
-            if "relationship" in entity_class_type:
-                object_class_id = filters.get(db_map, {}).get("object_class_id", None)
-                rel = self._rel_class_to_dict(
-                    db_map.wide_relationship_class_list(id_list=id_list, object_class_id=object_class_id)
-                )
-                self.entity_class[db_map].update(rel)
-                classes.extend([(db_map, data) for data in rel.values()])
-        return classes
+            db_map_object_classes[db_map] = object_classes
+            db_map_objects[db_map] = objects
+            db_map_relationship_classes[db_map] = relationship_classes
+            db_map_relationships[db_map] = relationships
+            # TODO: remove ids from _data
+        if any(error_log.values()):
+            self.msg_error.emit(error_log)
+        if any(db_map_object_classes.values()):
+            self.object_classes_removed.emit(db_map_object_classes)
+        if any(db_map_objects.values()):
+            self.objects_removed.emit(db_map_objects)
+        if any(db_map_relationship_classes.values()):
+            self.relationship_classes_removed.emit(db_map_relationship_classes)
+        if any(db_map_relationships.values()):
+            self.relationships_removed.emit(db_map_relationships)
