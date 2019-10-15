@@ -19,6 +19,7 @@ Widget shown to user when a new Data Connection is created.
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
 from ..data_connection import DataConnection
 
+
 class AddDataConnectionWidget(AddProjectItemWidget):
     """A widget to query user's preferences for a new item.
 

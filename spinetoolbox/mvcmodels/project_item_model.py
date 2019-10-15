@@ -183,7 +183,7 @@ class ProjectItemModel(QAbstractItemModel):
         """
         for category in self.root().children():
             for item in category.children():
-                if (name == item.name):
+                if name == item.name:
                     return category
         return None
 
