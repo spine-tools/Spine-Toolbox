@@ -754,10 +754,10 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
 
     Attributes:
         parent (DataStoreForm): data store widget
-        db_map_dicts (list): list of dictionaries mapping dbs to objects for editing
+        selected (set): set of ObjectItem instances to edit
     """
 
-    def __init__(self, parent, db_map_dicts):
+    def __init__(self, parent, selected):
         super().__init__(parent)
         self.setWindowTitle("Edit objects")
         self.model = MinimalTableModel(self)
@@ -767,18 +767,13 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
         self.model.set_horizontal_header_labels(['object name', 'description', 'databases'])
         self.orig_data = list()
         model_data = list()
-        for db_map_dict in db_map_dicts:
-            db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
-            item = list(db_map_dict.values())[0]
-            name = item.get('name')
-            if not name:
-                continue
-            description = item.get('description')
-            row_data = [name, description]
+        for item in selected:
+            data = item.db_map_data(item.first_db_map)
+            row_data = [item.display_name, data['description']]
             self.orig_data.append(row_data.copy())
-            row_data.append(db_names)
+            row_data.append(item.display_database)
             model_data.append(row_data)
-            self.items.append(db_map_dict)
+            self.items.append(item)
         self.model.reset_model(model_data)
 
     @Slot(name="accept")
@@ -787,24 +782,27 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
         object_d = dict()
         for i in range(self.model.rowCount()):
             name, description, db_names = self.model.row_data(i)
-            db_name_list = db_names.split(",")
-            try:
-                db_maps = [self.db_maps[x] for x in db_name_list]
-            except KeyError as e:
-                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
-                return
+            item = self.items[i]
+            db_maps = []
+            for database in db_names.split(","):
+                for db_map in item.db_maps:
+                    if item.db_map_data_field(db_map, "database") == database:
+                        db_maps.append(db_map)
+                        break
+                else:
+                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    return
             if not name:
                 self._parent.msg_error.emit("Object name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [name, description] == orig_row:
                 continue
-            pre_item = {'name': name, 'description': description}
+            pre_db_item = {'name': name, 'description': description}
             for db_map in db_maps:
-                id_ = self.items[i][db_map]['id']
-                item = pre_item.copy()
-                item['id'] = id_
-                object_d.setdefault(db_map, []).append(item)
+                db_item = pre_db_item.copy()
+                db_item['id'] = item.db_map_data_field(db_map, 'id')
+                object_d.setdefault(db_map, []).append(db_item)
         if not object_d:
             self._parent.msg_error.emit("Nothing to update")
             return

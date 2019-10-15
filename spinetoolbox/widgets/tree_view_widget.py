@@ -767,9 +767,9 @@ class TreeViewForm(DataStoreForm):
         super().update_object_classes_in_models(db_map_data)
         # self.relationship_tree_model.update_object_classes(db_map_data)
 
-    def update_objects_in_models(self, db_map, updated):
-        super().update_objects_in_models(db_map, updated)
-        self.relationship_tree_model.update_objects(db_map, updated)
+    def update_objects_in_models(self, db_map_data):
+        super().update_objects_in_models(db_map_data)
+        # self.relationship_tree_model.update_objects(db_map_data)
 
     def update_relationship_classes_in_models(self, db_map, updated):
         super().update_relationship_classes_in_models(db_map, updated)

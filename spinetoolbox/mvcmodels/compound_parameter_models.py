@@ -387,7 +387,7 @@ class CompoundParameterDefinitionRenameRemoveMixin:
             self._rename_db_map_parameter_tags(db_map, parameter_tags)
 
     def _rename_db_map_parameter_tags(self, db_map, parameter_tags):
-        parameter_tags = {x.id: x.tag for x in parameter_tags}
+        parameter_tags = {x["id"]: x["tag"] for x in parameter_tags}
         for model in self._models_with_db_map(db_map):
             model.rename_parameter_tags(parameter_tags)
         self._emit_data_changed_for_column("parameter_tag_list")
@@ -409,7 +409,7 @@ class CompoundParameterDefinitionRenameRemoveMixin:
         self._emit_data_changed_for_column("value_list_name")
 
     def _rename_db_map_parameter_value_lists(self, db_map, value_lists):
-        value_lists = {x.id: x.name for x in value_lists}
+        value_lists = {x["id"]: x["name"] for x in value_lists}
         for model in self._models_with_db_map(db_map):
             model.rename_parameter_value_lists(value_lists)
 
@@ -468,7 +468,7 @@ class CompoundObjectParameterValueRenameRemoveMixin:
         self._emit_data_changed_for_column("object_name")
 
     def _rename_db_map_objects(self, db_map, objects):
-        objects = {x.id: x.name for x in objects}
+        objects = {x["id"]: x["name"] for x in objects}
         for model in self._models_with_db_map(db_map):
             model.rename_objects(objects)
 
@@ -503,7 +503,7 @@ class CompoundRelationshipParameterValueRenameRemoveMixin:
 
     def _rename_db_map_objects(self, db_map, objects):
         """Rename objects in model."""
-        objects = {x.id: x.name for x in objects}
+        objects = {x["id"]: x["name"] for x in objects}
         for model in self._models_with_db_map(db_map):
             model.rename_objects(objects)
 

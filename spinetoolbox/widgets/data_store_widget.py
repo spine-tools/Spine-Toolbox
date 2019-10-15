@@ -490,18 +490,6 @@ class DataStoreForm(QMainWindow):
         msg = "Successfully added new object class(es) '{}'.".format("', '".join(added_names))
         self.msg.emit(msg)
         return True
-        # TODO: do this in the model maybe
-        if self.selected_object_class_ids:
-            # Recompute self.selected_obj_tree_indexes['object_class']
-            # since some new classes might have been inserted above those indexes
-            # NOTE: This is only needed for object classes, since all other items are inserted at the bottom
-            self.selected_obj_tree_indexes['object_class'] = {}
-            is_selected = self.ui.treeView_object.selectionModel().isSelected
-            root_index = self.object_tree_model.indexFromItem(self.object_tree_model.root_item)
-            for i in range(self.object_tree_model.root_item.rowCount()):
-                obj_cls_index = self.object_tree_model.index(i, 0, root_index)
-                if is_selected(obj_cls_index):
-                    self.selected_obj_tree_indexes['object_class'][obj_cls_index] = None
 
     def add_object_classses_to_models(self, db_map_data):
         self.object_tree_model.add_object_classes(db_map_data)
@@ -578,15 +566,26 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_edit_objects_form")
     def show_edit_objects_form(self, checked=False):
-        indexes = self.selected_obj_tree_indexes.get('object')
-        if not indexes:
-            return
-        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditObjectsDialog(self, db_map_dicts)
+        selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_indexes}
+        dialog = EditObjectsDialog(self, selected)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationship_classes_form")
     def show_edit_relationship_classes_form(self, checked=False):
+        if self.widget_with_selection == self.ui.treeView_object:
+            indexes = self.selected_obj_tree_indexes.get('relationship_class')
+        elif self.widget_with_selection == self.ui.treeView_relationship:
+            indexes = self.selected_rel_tree_indexes.get('relationship_class')
+        else:
+            return
+        if not indexes:
+            return
+        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
+        dialog = EditRelationshipClassesDialog(self, db_map_dicts)
+        dialog.show()
+
+    @Slot("bool", name="show_edit_relationship_classes_form_from_object_tree")
+    def show_edit_relationship_classes_form_from_object_tree(self, checked=False):
         if self.widget_with_selection == self.ui.treeView_object:
             indexes = self.selected_obj_tree_indexes.get('relationship_class')
         elif self.widget_with_selection == self.ui.treeView_relationship:
@@ -652,26 +651,27 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def update_objects(self, object_d):
         """Update objects."""
-        updated_names = set()
+        db_map_data = dict()
         for db_map, items in object_d.items():
             updated, error_log = db_map.update_objects(*items)
             if error_log:
                 self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            self.update_objects_in_models(db_map, updated)
-            updated_names.update(x.name for x in updated)
+            db_map_data[db_map] = [x._asdict() for x in updated]
+        updated_names = {x["name"] for updated in db_map_data.values() for x in updated}
         if not updated_names:
             return False
+        self.update_objects_in_models(db_map_data)
         self.commit_available.emit(True)
         msg = "Successfully updated object(s) '{}'.".format("', '".join(updated_names))
         self.msg.emit(msg)
         return True
 
-    def update_objects_in_models(self, db_map, updated):
-        self.object_tree_model.update_objects(db_map, updated)
-        self.object_parameter_value_model.rename_objects(db_map, updated)
-        self.relationship_parameter_value_model.rename_objects(db_map, updated)
+    def update_objects_in_models(self, db_map_data):
+        self.object_tree_model.update_objects(db_map_data)
+        self.object_parameter_value_model.rename_objects(db_map_data)
+        self.relationship_parameter_value_model.rename_objects(db_map_data)
 
     @busy_effect
     def update_relationship_classes(self, rel_cls_d):
@@ -748,8 +748,8 @@ class DataStoreForm(QMainWindow):
                 self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            db_map_data[db_map] = updated
-        updated_names = {x.name for updated in db_map_data.values() for x in updated}
+            db_map_data[db_map] = [x._asdict() for x in updated]
+        updated_names = {x["name"] for updated in db_map_data.values() for x in updated}
         if not updated_names:
             return False
         self.object_parameter_definition_model.rename_parameter_value_lists(db_map_data)
@@ -795,8 +795,8 @@ class DataStoreForm(QMainWindow):
                 self.msg_error.emit(format_string_list(error_log))
             if not updated.count():
                 continue
-            db_map_parameter_tags[db_map] = updated
-        updated_tags = {x.tag for updated in db_map_parameter_tags.values() for x in updated}
+            db_map_parameter_tags[db_map] = [x._asdict() for x in updated]
+        updated_tags = {x["tag"] for updated in db_map_parameter_tags.values() for x in updated}
         if not updated_tags:
             return False
         self.object_parameter_definition_model.rename_parameter_tags(db_map_parameter_tags)
@@ -971,7 +971,4 @@ class DataStoreForm(QMainWindow):
         else:
             qsettings.setValue("windowMaximized", False)
         qsettings.endGroup()
-        if any(db_map.has_pending_changes() for db_map in self.db_maps.values()):
-            self.show_commit_session_prompt()
-        if event:
-            event.accept()
+        event.accept()

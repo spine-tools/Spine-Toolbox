@@ -18,7 +18,6 @@ Classes to represent entities in a tree.
 from PySide2.QtCore import Qt, QObject, Signal, QModelIndex
 from sqlalchemy import or_
 from PySide2.QtGui import QFont, QBrush, QIcon
-from ..helpers import all_ids
 
 
 class TreeItem(QObject):
@@ -183,12 +182,12 @@ class MultiDBTreeItem(TreeItem):
         """Init class.
 
         Args:
-            db_map_data (dict): maps instances of DiffDatabaseMapping to the data of the item in that db
+            db_map_data (dict): maps instances of DiffDatabaseMapping to the data for the item in that db
 
         """
         super().__init__(parent)
         self._db_map_data = db_map_data
-        self._child_map = dict()  # Maps tuples (db_map, id) to children row
+        self._child_map = dict()  # Maps db_map to id to row number
 
     def insert_children(self, position, new_children):
         """Insert new children at given position. Returns a boolean depending on how it went.
@@ -222,18 +221,32 @@ class MultiDBTreeItem(TreeItem):
         self._child_map.clear()
         for row, child in enumerate(self.children):
             for db_map in child.db_maps:
-                self._child_map[(db_map, child.db_map_data_field(db_map, "id"))] = row
+                id_ = child.db_map_data_field(db_map, "id")
+                self._child_map.setdefault(db_map, dict())[id_] = row
 
-    def find_children_by_id(self, db_map, *ids):
-        """Generates children with the given ids in the given db_map,
-        or all of them if ids is the all_ids constant."""
-        if ids == all_ids:
-            yield from self._children
+    def find_children_by_id(self, db_map, *ids, reverse=True):
+        """Generates children with the given ids in the given db_map.
+        If the first id is True, then generates *all* children with the given db_map."""
+        for row in self.find_rows_by_id(db_map, *ids, reverse=reverse):
+            yield self._children[row]
+
+    def find_rows_by_id(self, db_map, *ids, reverse=True):
+        yield from sorted(self._find_unsorted_rows_by_id(db_map, *ids), reverse=reverse)
+
+    def _find_unsorted_rows_by_id(self, db_map, *ids):
+        """Generates rows corresponding to children with the given ids in the given db_map.
+        If the first id is True, then generates rows corresponding to *all* children with the given db_map."""
+        if next(iter(ids)) is True:
+            # Yield all children with the db_map regardless of the id
+            d = self._child_map.get(db_map)
+            if d:
+                yield from d.values()
         else:
+            # Yield all children with the db_map *and* the id
             for id_ in ids:
-                if (db_map, id_) in self._child_map:
-                    row = self._child_map[db_map, id_]
-                    yield self._children[row]
+                row = self._child_map.get(db_map, {}).get(id_, None)
+                if row is not None:
+                    yield row
 
     @property
     def display_id(self):
@@ -277,8 +290,7 @@ class MultiDBTreeItem(TreeItem):
         db_map = self._db_map_data.pop(db_map, None)
         if not self._db_map_data:
             self.parent.remove_children(self.child_number(), 1)
-        # Update child map, but maybe not dramatic if we don't
-        self._child_map = {key: value for key, value in self._child_map.items() if key[0] != db_map}
+        self._child_map.pop(db_map, None)
         return db_map
 
     def deep_remove_db_map(self, db_map):
@@ -289,7 +301,7 @@ class MultiDBTreeItem(TreeItem):
 
     def deep_take_db_map(self, db_map):
         """Takes given db_map from this item and all its descendants.
-        Returns a new item with taken data.
+        Returns a new item from taken data or None if db_map is not present in the first place.
         """
         db_map_data = self.take_db_map(db_map)
         if not db_map_data:
@@ -304,8 +316,7 @@ class MultiDBTreeItem(TreeItem):
         return other
 
     def deep_merge(self, other):
-        """Merges another item and all its descendants into this one.
-        """
+        """Merges another item and all its descendants into this one."""
         if not isinstance(other, type(self)):
             raise ValueError(f"Can't merge an instance of {type(other)} into a MultiDBTreeItem.")
         for db_map in other.db_maps:
@@ -327,7 +338,7 @@ class MultiDBTreeItem(TreeItem):
             db_map_data[field] = value
 
     def _get_children_data(self, db_map):
-        """Generates child data for the given db_map.
+        """Generates children data for the given db_map.
         Runs _children_query.
         """
         for child in self._children_query(db_map):
@@ -345,7 +356,7 @@ class MultiDBTreeItem(TreeItem):
 
     def _create_new_children(self, db_map, children_data):
         """
-        Creates new items from data for given db map.
+        Creates new items from data associated to a db map.
         Data is *not* checked for integrity (dups, etc.).
 
         Args:
@@ -360,7 +371,7 @@ class MultiDBTreeItem(TreeItem):
         return new_children
 
     def _merge_children(self, new_children):
-        """Merges children into this item. Makes sure each children has a valid display id.
+        """Merges new children into this item. Ensures that each children has a valid display id afterwards.
         """
         existing_children = {child.display_id: child for child in self.children}
         unmerged = []
@@ -368,51 +379,74 @@ class MultiDBTreeItem(TreeItem):
             match = existing_children.get(new_child.display_id)
             if match:
                 # Found match, merge and get rid of new just in case
-                match.deep_merge(new_child)
+                match.deep_merge(new_child)  # NOTE: This calls `_merge_children` on the match
                 del new_child
             else:
                 # No match
+                existing_children[new_child.display_id] = new_child
                 unmerged.append(new_child)
         self.append_children(unmerged)
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
-        all_children = list()
-        for db_map in self.db_maps:
-            children_data = self._get_children_data(db_map)
-            new_children = self._create_new_children(db_map, children_data)
-            self._merge_children(new_children)
+        db_map_data = {db_map: self._get_children_data(db_map) for db_map in self.db_maps}
+        self.append_children_from_data(db_map_data)
         self._fetched = True
 
-    def append_children_from_data(self, db_map, children_data):
+    def append_children_from_data(self, db_map_data):
         """
-        Appends children given data for database map.
-        Data is *not* checked for integrity (dups, etc.)
+        Appends children from data. Data is *not* checked for integrity (dups, etc.)
 
         Args:
-            db_map (DiffDatabaseMapping)
-            children_data (list): collection of dicts
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of dict-items
         """
-        new_children = self._create_new_children(db_map, children_data)
+        new_children = []
+        for db_map, data in db_map_data.items():
+            new_children += self._create_new_children(db_map, data)
         self._merge_children(new_children)
 
-    def update_children_with_data(self, db_map, children_data):
+    def remove_children_by_data(self, db_map_data):
         """
-        Updates children with given data. Note that this may cause two type of problems with the display id:
-        - the display id of an individual child is no longer unique
-        - two or more children have the same display id
-        fix_children can be called afterwards to fix that situation, but better wait after updating all db_maps.
-        Returns updated rows so the client knows which children may need a fix.
+        Removes children by data.
+
+        Args:
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
+        """
+        for db_map, data in db_map_data.items():
+            ids = {x["id"] for x in data}
+            for child in self.find_children_by_id(db_map, *ids, reverse=True):
+                child.deep_remove_db_map(db_map)
+
+    def update_children_with_data(self, db_map_data):
+        """
+        Updates children with data. Data is *not* checked for integrity (dups, etc.)
+
+        Args:
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of dict-items
+        """
+        updated_rows = []
+        for db_map, data in db_map_data.items():
+            updated_rows += self._update_db_map_children_with_data(db_map, data)
+        updated_rows = set(updated_rows)
+        self._fix_children(updated_rows)
+
+    def _update_db_map_children_with_data(self, db_map, children_data):
+        """
+        Updates children from given db_map using data without checking anything. Returns updated rows.
+        Note that after this, there may be two type of problems concerning display ids.
+        - the display id of an individual child is no longer consistent across db_maps
+        - two or more children now have the same display id
+        _fix_children must be called with the returned rows to fix these problems.
 
         Args:
             db_map (DiffDatabaseMapping)
-            children_data (list): collection of dicts
+            children_data (list): list of dict-items
         """
         updated_rows = []
         database = self.db_map_data_field(db_map, "database")
         for child_data in children_data:
             child_data["database"] = database
-            row = self._child_map.get((db_map, child_data["id"]))
+            row = self._child_map.get(db_map, {}).get(child_data["id"])
             if row is None:
                 continue
             child = self._children[row]
@@ -420,20 +454,22 @@ class MultiDBTreeItem(TreeItem):
             updated_rows.append(row)
         return updated_rows
 
-    def fix_children(self, rows):
-        """Fixes children thay may have problems with their display id after calling update_children_with_data."""
-        unique_ids = [child.display_id for child in self.children if child.display_id]
+    def _fix_children(self, rows):
+        """Fixes children thay may have problems with their display id after calls to
+        _update_db_map_children_with_data."""
+        display_ids = [child.display_id for child in self.children if child.display_id]
         new_children = []
-        for row in reversed(sorted(rows)):
+        for row in sorted(rows, reverse=True):
             child = self.child(row)
             if not child:
                 continue
-            # Deep take db maps until the display id becomes valid
+            # Solve first problem: Deep take db maps until the display id becomes consistent
             while not child.display_id:
                 db_map = child.first_db_map
                 new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
-            if child.display_id in unique_ids[:row] + unique_ids[row + 1 :]:
+            # Solve second problem: take the child and put it in the list to be inserted again
+            if child.display_id in display_ids[:row] + display_ids[row + 1 :]:
                 new_children.append(child)
                 self.remove_children(row, 1)
         self._merge_children(new_children)

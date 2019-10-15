@@ -26,7 +26,6 @@ from .entity_tree_item import (
     RelationshipClassItem,
     RelationshipItem,
 )
-from ..helpers import all_ids
 
 
 class EntityTreeModel(QAbstractItemModel):
@@ -115,7 +114,7 @@ class EntityTreeModel(QAbstractItemModel):
 
     def visit_all(self, index=QModelIndex()):
         """Iterates all items in the model including and below the given index.
-        Iterative implementation to comply with Python recursion limits.
+        Iterative implementation so we don't need to worry about Python recursion limits.
         """
         if index.isValid():
             ancient_one = self.item_from_index(index)
@@ -146,7 +145,7 @@ class EntityTreeModel(QAbstractItemModel):
             current = parent
 
     def item_from_index(self, index):
-        """Return the given item corresponding to the given index."""
+        """Return the item corresponding to the given index."""
         if index.isValid():
             item = index.internalPointer()
             if item:
@@ -208,7 +207,6 @@ class EntityTreeModel(QAbstractItemModel):
         return parent_item.child_count()
 
     def hasChildren(self, parent):
-        """Returns True if not fetched, so the user can try and expand it."""
         parent_item = self.item_from_index(parent)
         return parent_item.has_children()
 
@@ -234,13 +232,14 @@ class EntityTreeModel(QAbstractItemModel):
         item_type = type(self.item_from_index(index))
         self.selected_indexes.setdefault(item_type, {})[index] = None
 
-    def cascade_filter_nodes(self, *conds, fetch=False, fetched_only=True):
-        """Filter nodes in cascade by applying the given conditions:
+    def cascade_filter_nodes(self, *conds, parents=(), fetch=False, fetched_only=True):
+        """Filter nodes in cascade by given condition starting from the list of parents:
         Root --> Children with first cond --> Children with second cond, etc.
         Returns the nodes at the lowest level attained.
         Optionally fetch the nodes where it passes.
         """
-        parents = [self.root_item]
+        if not parents:
+            parents = [self.root_item]
         for cond in conds:
             parents = [child for parent in parents for child in parent.find_children(cond)]
             if fetch:
@@ -251,13 +250,15 @@ class EntityTreeModel(QAbstractItemModel):
             return [parent for parent in parents if not self.canFetchMore(self.index_from_item(parent))]
         return parents
 
-    def cascade_filter_nodes_by_id(self, db_map, *ids_set, fetch=False, fetched_only=True):
-        """Filter nodes by ids in cascade:
+    def cascade_filter_nodes_by_id(self, db_map, *ids_set, parents=(), fetch=False, fetched_only=True):
+        """Filter nodes by ids in cascade starting from the list of parents:
         Root --> Children with id in the first set --> Children with id in the second set...
         Returns the nodes at the lowest level attained.
         Optionally fetch the nodes where it passes.
         """
-        parents = [self.root_item]
+        # TODO: maybe implement visit_all based on this?
+        if not parents:
+            parents = [self.root_item]
         for ids in ids_set:
             parents = [child for parent in parents for child in parent.find_children_by_id(db_map, *ids)]
             if fetch:
@@ -294,106 +295,115 @@ class ObjectTreeModel(EntityTreeModel):
     def selected_relationship_indexes(self):
         return self.selected_indexes.get(RelationshipItem, {})
 
+    def _group_object_data_by_parent(self, db_map_data):
+        """Takes given object data and returns the same data keyed by parent tree-item.
+
+        Args:
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
+
+        Returns:
+            result (dict): maps parent tree-items to DiffDatabaseMapping instances to list of object items as dict
+        """
+        result = dict()
+        for db_map, items in db_map_data.items():
+            d = dict()
+            for item in items:
+                d.setdefault(item["class_id"], []).append(item)
+            for class_id, data in d.items():
+                for parent in self.cascade_filter_nodes_by_id(db_map, (class_id,)):
+                    result.setdefault(parent, {})[db_map] = data
+        return result
+
+    def _group_relationship_class_data_by_parent(self, db_map_data):
+        """Takes given relationship class data and returns the same data keyed by parent tree-item.
+
+        Args:
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
+
+        Returns:
+            result (dict): maps parent tree-items to DiffDatabaseMapping instances to list of object items as dict
+        """
+        result = dict()
+        for db_map, items in db_map_data.items():
+            d = dict()
+            for item in items:
+                for object_class_id in item["object_class_id_list"].split(","):
+                    d.setdefault(int(object_class_id), []).append(item)
+            for object_class_id, data in d.items():
+                for parent in self.cascade_filter_nodes_by_id(db_map, (object_class_id,), (True,)):
+                    result.setdefault(parent, {})[db_map] = data
+        return result
+
+    def _group_relationship_data_by_parent(self, db_map_data):
+        """Takes given relationship data and returns the same data keyed by parent tree-item.
+
+        Args:
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of items as dict
+
+        Returns:
+            result (dict): maps parent tree-items to DiffDatabaseMapping instances to list of object items as dict
+        """
+        result = dict()
+        for db_map, items in db_map_data.items():
+            d = dict()
+            for item in items:
+                for object_id in item["object_id_list"].split(","):
+                    key = (int(object_id), item["class_id"])
+                    d.setdefault(key, []).append(item)
+            for (object_id, class_id), data in d.items():
+                for parent in self.cascade_filter_nodes_by_id(db_map, (True,), (object_id,), (class_id,)):
+                    result.setdefault(parent, {})[db_map] = data
+        return result
+
     def add_object_classes(self, db_map_data):
         selected_items = [self.item_from_index(ind) for ind in self.selected_object_class_indexes]
-        for db_map, data in db_map_data.items():
-            self.root_item.append_children_from_data(db_map, data)
+        self.root_item.append_children_from_data(db_map_data)
         self.selected_indexes[ObjectClassItem] = {self.index_from_item(item): None for item in selected_items}
 
     def add_objects(self, db_map_data):
-        for db_map, new_items in db_map_data.items():
-            self._add_db_map_objects(db_map, new_items)
-
-    def _add_db_map_objects(self, db_map, new_items):
-        d = dict()
-        for item in new_items:
-            d.setdefault(item["class_id"], []).append(item)
-        for class_id, data in d.items():
-            for parent in self.cascade_filter_nodes_by_id(db_map, (class_id,)):
-                parent.append_children_from_data(db_map, data)
+        for parent, db_map_data in self._group_object_data_by_parent(db_map_data).items():
+            parent.append_children_from_data(db_map_data)
 
     def add_relationship_classes(self, db_map_data):
-        for db_map, new_items in db_map_data.items():
-            self._add_db_map_relationship_classes(db_map, new_items)
-
-    def _add_db_map_relationship_classes(self, db_map, new_items):
-        d = dict()
-        for item in new_items:
-            for object_class_id in item["object_class_id_list"].split(","):
-                d.setdefault(int(object_class_id), []).append(item)
-        for object_class_id, data in d.items():
-            for parent in self.cascade_filter_nodes_by_id(db_map, (object_class_id,), all_ids):
-                parent.append_children_from_data(db_map, data)
+        for parent, db_map_data in self._group_relationship_class_data_by_parent(db_map_data).items():
+            parent.append_children_from_data(db_map_data)
 
     def add_relationships(self, db_map_data):
-        for db_map, new_items in db_map_data.items():
-            self._add_db_map_relationships(db_map, new_items)
-
-    def _add_db_map_relationships(self, db_map, new_items):
-        d = dict()
-        for item in new_items:
-            for object_id in item["object_id_list"].split(","):
-                d.setdefault((item["class_id"], int(object_id)), []).append(item)
-        for (class_id, object_id), data in d.items():
-            for parent in self.cascade_filter_nodes_by_id(db_map, all_ids, (object_id,), (class_id,)):
-                parent.append_children_from_data(db_map, data)
+        for parent, db_map_data in self._group_relationship_data_by_parent(db_map_data).items():
+            parent.append_children_from_data(db_map_data)
 
     def remove_object_classes(self, db_map_data):
-        for db_map, removed_items in db_map_data.items():
-            self._remove_db_map_object_classes(db_map, removed_items)
-
-    def _remove_db_map_object_classes(self, db_map, removed_items):
-        removed_ids = {x['id'] for x in removed_items}
-        for item in reversed(self.cascade_filter_nodes_by_id(db_map, removed_ids, fetched_only=False)):
-            item.deep_remove_db_map(db_map)
+        # TODO: what happens with the selection here???
+        self.root_item.remove_children_by_data(db_map_data)
 
     def remove_objects(self, db_map_data):
-        for db_map, removed_items in db_map_data.items():
-            self._remove_db_map_objects(db_map, removed_items)
-
-    def _remove_db_map_objects(self, db_map, removed_items):
-        d = dict()
-        for item in removed_items:
-            d.setdefault(item["class_id"], []).append(item['id'])
-        for class_id, removed_ids in d.items():
-            for item in reversed(self.cascade_filter_nodes_by_id(db_map, (class_id,), removed_ids, fetched_only=False)):
-                item.deep_remove_db_map(db_map)
+        for parent, db_map_data in self._group_object_data_by_parent(db_map_data).items():
+            parent.remove_children_by_data(db_map_data)
 
     def remove_relationship_classes(self, db_map_data):
-        for db_map, removed_items in db_map_data.items():
-            self._remove_db_map_relationship_classes(db_map, removed_items)
-
-    def _remove_db_map_relationship_classes(self, db_map, removed_items):
-        d = dict()
-        for item in removed_items:
-            for object_class_id in item["object_class_id_list"].split(","):
-                d.setdefault(int(object_class_id), []).append(item['id'])
-        for object_class_id, removed_ids in d.items():
-            for item in reversed(
-                self.cascade_filter_nodes_by_id(db_map, (object_class_id,), all_ids, removed_ids, fetched_only=False)
-            ):
-                item.deep_remove_db_map(db_map)
+        for parent, db_map_data in self._group_relationship_class_data_by_parent(db_map_data).items():
+            parent.remove_children_by_data(db_map_data)
 
     def remove_relationships(self, db_map_data):
-        for db_map, removed_items in db_map_data.items():
-            self._remove_db_map_relationships(db_map, removed_items)
-
-    def _remove_db_map_relationships(self, db_map, removed_items):
-        d = dict()
-        for item in removed_items:
-            for object_id in item["object_id_list"].split(","):
-                d.setdefault((item["class_id"], int(object_id)), []).append(item['id'])
-        for (class_id, object_id), removed_ids in d.items():
-            for item in self.cascade_filter_nodes_by_id(
-                db_map, all_ids, (object_id,), (class_id,), removed_ids, fetched_only=False
-            ):
-                item.deep_remove_db_map(db_map)
+        for parent, db_map_data in self._group_relationship_data_by_parent(db_map_data).items():
+            parent.remove_children_by_data(db_map_data)
 
     def update_object_classes(self, db_map_data):
-        updated_rows = set()
-        for db_map, data in db_map_data.items():
-            updated_rows.update(self.root_item.update_children_with_data(db_map, data))
-        self.root_item.fix_children(updated_rows)
+        self.root_item.update_children_with_data(db_map_data)
+        # TODO: update object class name in relationship class items
+
+    def update_objects(self, db_map_data):
+        for parent, db_map_data in self._group_object_data_by_parent(db_map_data).items():
+            parent.update_children_with_data(db_map_data)
+        # TODO: update object name in relationship items
+
+    def update_relationship_classes(self, db_map_data):
+        for parent, db_map_data in self._group_relationship_class_data_by_parent(db_map_data).items():
+            parent.update_children_with_data(db_map_data)
+
+    def update_relationships(self, db_map_data):
+        for parent, db_map_data in self._group_relationship_data_by_parent(db_map_data).items():
+            parent.update_children_with_data(db_map_data)
 
     def find_next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
@@ -451,8 +461,7 @@ class RelationshipTreeModel(EntityTreeModel):
         return self.selected_indexes.get(RelationshipItem, {})
 
     def add_relationship_classes(self, db_map_data):
-        for db_map, data in db_map_data.items():
-            self.root_item.append_children_from_data(db_map, data)
+        self.root_item.append_children_from_data(db_map_data)
 
     def add_relationships(self, db_map_data):
         for db_map, new_items in db_map_data.items():
