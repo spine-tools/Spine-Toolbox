@@ -31,7 +31,8 @@ class AddDataInterfaceWidget(AddProjectItemWidget):
 
     def __init__(self, toolbox, x, y):
         """Initialize class."""
-        super().__init__(toolbox, x, y, DataInterface.default_name(toolbox))
+        initial_name = toolbox.propose_item_name(DataInterface.default_name_prefix())
+        super().__init__(toolbox, x, y, initial_name)
         self.setWindowTitle(f"Add Data Interface")
 
     def call_add_item(self):

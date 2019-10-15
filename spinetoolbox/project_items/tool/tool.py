@@ -870,6 +870,6 @@ class Tool(ProjectItem):
             super().notify_destination(source_item)
 
     @staticmethod
-    def _default_name_prefix():
+    def default_name_prefix():
         """see base class"""
         return "tool"

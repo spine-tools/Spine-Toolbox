@@ -30,7 +30,8 @@ class AddGdxExportWidget(AddProjectItemWidget):
             x (int): X coordinate of new item
             y (int): Y coordinate of new item
         """
-        super().__init__(toolbox, x, y, GdxExport.default_name(toolbox))
+        initial_name = toolbox.propose_item_name(GdxExport.default_name_prefix())
+        super().__init__(toolbox, x, y, initial_name)
         self.setWindowTitle(f"Add Gdx Export")
 
     def call_add_item(self):

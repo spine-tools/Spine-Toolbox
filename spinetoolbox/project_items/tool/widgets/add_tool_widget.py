@@ -50,7 +50,7 @@ class AddToolWidget(QWidget):
         self.statusbar.setStyleSheet(STATUSBAR_SS)
         self.ui.horizontalLayout_statusbar_placeholder.addWidget(self.statusbar)
         # Class attributes
-        self.name = Tool.default_name(toolbox)
+        self.name = toolbox.propose_item_name(Tool.default_name_prefix())
         self.ui.lineEdit_name.setText(self.name)
         self.description = ''
         # Init
