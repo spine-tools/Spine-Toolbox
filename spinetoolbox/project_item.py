@@ -20,7 +20,7 @@ import os
 import logging
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from PySide2.QtCore import Qt, Signal, Slot, QUrl
+from PySide2.QtCore import Qt, Signal, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir
@@ -40,7 +40,7 @@ class BaseProjectItem(MetaObject):
         self._parent = None  # Parent BaseProjectItem. Set when add_child is called
         self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
 
-    def flags(self):
+    def flags(self):  # pylint: disable=no-self-use
         """Returns the item flags."""
         return Qt.NoItemFlags
 
@@ -80,7 +80,7 @@ class BaseProjectItem(MetaObject):
             return r
         return 0
 
-    def add_child(self, child_item):
+    def add_child(self, child_item):  # pylint: disable=no-self-use
         """Base method that shall be overridden in subclasses."""
         return False
 
@@ -379,6 +379,11 @@ class ProjectItem(BaseProjectItem):
             delete_bool = delete_int != 0
             ind = self._toolbox.project_item_model.find_item(self.name)
             self._toolbox.remove_item(ind, delete_item=delete_bool, check_dialog=True)
+
+    @staticmethod
+    def default_name_prefix():
+        """prefix for default item name"""
+        raise NotImplementedError()
 
     def rename(self, new_name):
         """Rename this item."""
