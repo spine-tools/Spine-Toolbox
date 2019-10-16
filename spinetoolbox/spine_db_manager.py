@@ -79,7 +79,7 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.stop_tracking_items("relationship class", db_map_data)
         )
         self.relationships_removed.connect(lambda db_map_data: self.stop_tracking_items("relationship", db_map_data))
-        # Keep tracking updated
+        # Update tracking information
         self.object_classes_updated.connect(lambda db_map_data: self.track_items("object class", db_map_data))
         self.objects_updated.connect(lambda db_map_data: self.track_items("object", db_map_data))
         self.relationship_classes_updated.connect(
@@ -284,12 +284,12 @@ class SpineDBManager(QObject):
 
     def cascade_remove_relationship_classes(self, db_map_data):
         """Runs when removing object classes. Removes relationship classes in cascade."""
-        db_map_data = self.find_cascading_relationship_classes(db_map_data)
+        db_map_data = self.find_cascading_relationship_classes(db_map_data, update_names=False)
         self.relationship_classes_removed.emit(db_map_data)
 
     def cascade_remove_relationships(self, db_map_data):
         """Runs when removing objects. Removes relationships in cascade."""
-        db_map_data = self.find_cascading_relationships(db_map_data)
+        db_map_data = self.find_cascading_relationships(db_map_data, update_names=False)
         self.relationships_removed.emit(db_map_data)
 
     def find_cascading_relationship_classes(self, db_map_data, update_names=True):

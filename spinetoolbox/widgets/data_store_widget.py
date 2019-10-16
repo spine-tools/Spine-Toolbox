@@ -606,6 +606,7 @@ class DataStoreForm(QMainWindow):
     def receive_relationships_updated(self, db_map_data):
         self.receive_items_added_or_updated("updated", "relationship", db_map_data)
 
+    # TODO: Connect these to signals in spine_db_manager
     def update_object_classes_in_models(self, db_map_data):
         self.object_parameter_value_model.rename_object_classes(db_map_data)
         self.object_parameter_definition_model.rename_object_classes(db_map_data)

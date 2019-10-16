@@ -251,7 +251,9 @@ class MultiDBTreeItem(TreeItem):
 
     @property
     def display_id(self):
-        """"Returns the display id of this item or None if non unique across all dbs."""
+        """"Returns an id for display based on the display key. This id must be the same across all db_maps.
+        If it's not, this property becomes None and measures need to be taken (see update_children_by_id).
+        """
         ids = [tuple(self.db_map_data_field(db_map, field) for field in self.visual_key) for db_map in self.db_maps]
         if len(set(ids)) != 1:
             return None
@@ -407,32 +409,37 @@ class MultiDBTreeItem(TreeItem):
 
     def update_children_by_id(self, db_map_ids):
         """
-        Updates children by id.
+        Updates children by id. Essentially makes sure all children have a valid display id
+        after an update in the underlying data. These may require 'splitting' a child
+        into several for different dbs or merging two or more children from different dbs.
+
+        Examples of problems:
+        - The user renames an object class in one db but not in the others --> we need to split
+        - The user renames an object class and the new name is already 'taken' by another object class in
+          another db_map --> we need to merge
 
         Args:
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
-        updated_rows = []
+        # Find updated rows
+        updated_rows = self._updated_rows(db_map_ids)
         for db_map, ids in db_map_ids.items():
             updated_rows += list(self.find_rows_by_id(db_map, *ids))
         updated_rows = set(updated_rows)
-        self._fix_children(updated_rows)
-
-    def _fix_children(self, rows):
-        """Fixes children thay may have problems with their display id after an update."""
+        # Check display ids
         display_ids = [child.display_id for child in self.children if child.display_id]
-        new_children = []
+        new_children = []  # List of new children to be inserted for solving display id problems
         for row in sorted(rows, reverse=True):
             child = self.child(row)
             if not child:
                 continue
-            # Solve first problem: Deep take db maps until the display id becomes consistent
             while not child.display_id:
+                # Split child until it recovers a valid display id
                 db_map = child.first_db_map
                 new_child = child.deep_take_db_map(db_map)
                 new_children.append(new_child)
-            # Solve second problem: take the child and put it in the list to be inserted again
             if child.display_id in display_ids[:row] + display_ids[row + 1 :]:
+                # Take the child and put it in the list to be merged
                 new_children.append(child)
                 self.remove_children(row, 1)
         self._merge_children(new_children)
