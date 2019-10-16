@@ -28,6 +28,8 @@ import os
 import sys
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
 from spinedb_api import from_database, ParameterValueFormatError
+if sys.platform == 'win32':
+    import winreg
 
 
 class GdxExportException(Exception):
@@ -154,8 +156,6 @@ def find_gams_directory():
     """
     if sys.platform == "win32":
         try:
-            import winreg
-
             with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "gams.location") as gams_location_key:
                 gams_path, _ = winreg.QueryValueEx(gams_location_key, None)
                 return gams_path
@@ -408,11 +408,6 @@ def to_gdx_file(database_map, file_name, settings, gams_system_directory=None):
             domain_parameters_to_gams(output_file, global_parameters_domain)
 
 
-def names(sets):
-    """Returns the names of given sets as a list."""
-    return [element.name for element in sets]
-
-
 def set_records(sets):
     """Returns a dictionary mapping set name to its records' keys."""
     records = dict()
@@ -433,8 +428,8 @@ def make_settings(database_map):
     """
     domains = object_classes_to_domains(database_map)
     sets = relationship_classes_to_sets(database_map)
-    domain_names = names(domains)
-    set_names = names(sets)
+    domain_names = [element.name for element in domains]
+    set_names = [element.name for element in sets]
     records = set_records(domains)
     records.update(set_records(sets))
     return Settings(domain_names, set_names, records)

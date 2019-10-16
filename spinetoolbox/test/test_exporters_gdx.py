@@ -207,7 +207,7 @@ class TextExportersGdx(unittest.TestCase):
                 self.assertEqual(gams_set.elements[0], "mock_object_name")
                 gams_parameter = gdx_file["mock_parameter_name"]
                 self.assertEqual(len(gams_parameter.keys()), 1)
-                for key, value in gams_parameter:
+                for key, value in gams_parameter:  # pylint: disable=not-an-iterable
                     self.assertEqual(key, "mock_object_name")
                     self.assertEqual(value, 2.3)
 
@@ -237,7 +237,7 @@ class TextExportersGdx(unittest.TestCase):
                 self.assertEqual(gams_set.elements[0], "mock_object_name")
                 gams_parameter = gdx_file["mock_parameter_name"]
                 self.assertEqual(len(gams_parameter.keys()), 1)
-                for key, value in gams_parameter:
+                for key, value in gams_parameter:  # pylint: disable=not-an-iterable
                     self.assertEqual(key, "mock_object_name")
                     self.assertEqual(value, 2.3)
 
