@@ -21,6 +21,7 @@ import json
 import logging
 import pathlib
 import os.path
+from PySide2.QtCore import Slot
 from spinetoolbox.helpers import get_db_map
 from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io.exporters import gdx
@@ -107,9 +108,9 @@ class GdxExport(ProjectItem):
             item = ExportListItem(url, file_name)
             database_list_storage.insertWidget(0, item)
             # pylint: disable=cell-var-from-loop
-            item.refresh_button.clicked.connect(lambda checked: self._refresh_settings_for_database(url))
-            item.settings_button.clicked.connect(lambda checked: self._show_settings(url))
-            item.out_file_name_edit.textChanged.connect(lambda text: self._update_out_file_name(text, url))
+            item.refresh_settings_clicked.connect(self._refresh_settings_for_database)
+            item.open_settings_clicked.connect(self._show_settings)
+            item.file_name_changed.connect(self._update_out_file_name)
 
     def execute(self):
         """Executes this item."""
@@ -162,6 +163,7 @@ class GdxExport(ProjectItem):
         if self._activated:
             self.restore_selections()
 
+    @Slot(str)
     def _show_settings(self, database_url):
         """Opens the item's settings window."""
         settings = self._settings.get(database_url, None)
@@ -180,6 +182,7 @@ class GdxExport(ProjectItem):
         settings_window.window_closing.connect(lambda: self._discard_settings_window(database_url))
         settings_window.show()
 
+    @Slot(str, str)
     def _update_out_file_name(self, file_name, database_path):
         """Updates the output file name for given database"""
         self._database_to_file_name_map[database_path] = file_name
@@ -237,6 +240,7 @@ class GdxExport(ProjectItem):
         else:
             super().notify_destination(source_item)
 
+    @Slot(str)
     def _refresh_settings_for_database(self, url):
         original_settings = self._settings.get(url, None)
         database_map = get_db_map(url)
