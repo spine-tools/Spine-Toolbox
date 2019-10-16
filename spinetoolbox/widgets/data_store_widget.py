@@ -498,30 +498,28 @@ class DataStoreForm(QMainWindow):
 
     @Slot("QVariant", name="receive_object_classes_added")
     def receive_object_classes_added(self, db_map_data):
-        return self.receive_items_added("object class", db_map_data)
+        self.receive_items_added("object class", db_map_data)
 
     @Slot("QVariant", name="receive_objects_added")
     def receive_objects_added(self, db_map_data):
-        return self.receive_items_added("object", db_map_data)
+        self.receive_items_added("object", db_map_data)
 
     @Slot("QVariant", name="receive_relationship_classes_added")
     def receive_relationship_classes_added(self, db_map_data):
-        return self.receive_items_added("relationship class", db_map_data)
+        self.receive_items_added("relationship class", db_map_data)
 
     @Slot("QVariant", name="receive_relationships_added")
     def receive_relationships_added(self, db_map_data):
-        return self.receive_items_added("relationship", db_map_data)
+        self.receive_items_added("relationship", db_map_data)
 
     @Slot(str, "QVariant", name="receive_items_added")
     def receive_items_added(self, item_type, db_map_data):
+        self.ui.actionExport.setEnabled(True)
         added_names = {item["name"] for db_map, data in db_map_data.items() for item in data}
-        if not added_names:
-            return False
         self.commit_available.emit(True)
         added_names = "', '".join(added_names)
         msg = f"Successfully added new item(s) '{added_names}' of type {item_type}."
         self.msg.emit(msg)
-        return True
 
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):

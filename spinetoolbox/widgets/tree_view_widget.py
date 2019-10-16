@@ -720,13 +720,6 @@ class TreeViewForm(DataStoreForm):
             relationship_class_key=relationship_class_key, object_class_name=object_class_name, object_name=object_name
         )
 
-    @Slot("QVariant", name="receive_object_classes_added")
-    def receive_object_classes_added(self, db_map_ids):
-        if super().receive_object_classes_added(db_map_ids):
-            self.ui.actionExport.setEnabled(True)
-            return True
-        return False
-
     def edit_object_tree_items(self):
         """Called when F2 is pressed while the object tree has focus.
         Call the appropriate method to show the edit form,
@@ -794,30 +787,23 @@ class TreeViewForm(DataStoreForm):
     @Slot("QVariant", name="receive_object_classes_removed")
     def receive_object_classes_removed(self, db_map_data):
         """Receive object classes removed signal from db manager."""
+        # TODO: this...
         self.commit_available.emit(True)
         # self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
         self.msg.emit("Successfully removed {} item(s).".format(removed))
 
-        if db_map_data:
-            self.object_tree_model.remove_object_classes(db_map_object_classes)
-            self.relationship_tree_model.remove_object_classes(db_map_object_classes)
+        if db_map_object_classes:
             self.object_parameter_definition_model.remove_object_classes(db_map_object_classes)
             self.object_parameter_value_model.remove_object_classes(db_map_object_classes)
             self.relationship_parameter_definition_model.remove_object_classes(db_map_object_classes)
             self.relationship_parameter_value_model.remove_object_classes(db_map_object_classes)
         if db_map_objects:
-            self.object_tree_model.remove_objects(db_map_objects)
-            self.relationship_tree_model.remove_objects(db_map_objects)
             self.object_parameter_value_model.remove_objects(db_map_objects)
             self.relationship_parameter_value_model.remove_objects(db_map_objects)
         if db_map_relationship_classes:
-            self.object_tree_model.remove_relationship_classes(db_map_relationship_classes)
-            self.relationship_tree_model.remove_relationship_classes(db_map_relationship_classes)
             self.relationship_parameter_definition_model.remove_relationship_classes(db_map_relationship_classes)
             self.relationship_parameter_value_model.remove_relationship_classes(db_map_relationship_classes)
         if db_map_relationships:
-            self.object_tree_model.remove_relationships(db_map_relationships)
-            self.relationship_tree_model.remove_relationships(db_map_relationships)
             self.relationship_parameter_value_model.remove_relationships(db_map_relationships)
         if not removed:
             return

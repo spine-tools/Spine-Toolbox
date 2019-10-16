@@ -725,7 +725,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
-                    if item.db_map_data_field(db_map, "database") == database:
+                    if item.db_mngr.display_database(db_map) == database:
                         db_maps.append(db_map)
                         break
                 else:

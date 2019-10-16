@@ -517,11 +517,11 @@ class RelationshipTreeModel(EntityTreeModel):
 
     def remove_relationship_classes(self, db_map_data):
         db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
-        self.root_item.remove_children_by_data(db_map_ids)
+        self.root_item.remove_children_by_id(db_map_ids)
 
     def remove_relationships(self, db_map_data):
         for parent, db_map_ids in self._group_relationship_data(db_map_data).items():
-            parent.remove_children_by_data(db_map_ids)
+            parent.remove_children_by_id(db_map_ids)
 
     def remove_object_classes(self, db_map_data):
         pass

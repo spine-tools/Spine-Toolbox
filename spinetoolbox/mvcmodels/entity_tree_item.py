@@ -222,7 +222,7 @@ class MultiDBTreeItem(TreeItem):
         self._child_map.clear()
         for row, child in enumerate(self.children):
             for db_map in child.db_maps:
-                id_ = child.db_map_data_field(db_map, "id")
+                id_ = child.db_map_id(db_map)
                 self._child_map.setdefault(db_map, dict())[id_] = row
 
     def find_children_by_id(self, db_map, *ids, reverse=True):
@@ -475,7 +475,7 @@ class ObjectTreeRootItem(TreeRootItem):
 
     def _get_children_ids(self, db_map):
         """Returns a query that selects all object classes from given db_map."""
-        return self.db_mngr.get_object_class_ids(db_map)
+        return {x["id"] for x in self.db_mngr.get_object_classes(db_map)}
 
     def _create_child_item(self, db_map_id):
         """Returns an ObjectClassItem."""
@@ -489,7 +489,7 @@ class RelationshipTreeRootItem(TreeRootItem):
 
     def _get_children_ids(self, db_map):
         """Returns a query that selects all relationship classes from given db_map."""
-        return self.db_mngr.get_relationship_class_ids(db_map)
+        return {x["id"] for x in self.db_mngr.get_relationship_classes(db_map)}
 
     def _create_child_item(self, db_map_id):
         """Returns a RelationshipClassItem."""
@@ -528,7 +528,7 @@ class ObjectClassItem(EntityClassItem):
 
     def _get_children_ids(self, db_map):
         """Returns a query that selects all objects of this class from given db_map."""
-        return self.db_mngr.get_object_ids(db_map, class_id=self.db_map_id(db_map))
+        return {x["id"] for x in self.db_mngr.get_objects(db_map, class_id=self.db_map_id(db_map))}
 
     def _create_child_item(self, db_map_id):
         """Returns an ObjectItem."""
@@ -570,7 +570,7 @@ class RelationshipClassItem(EntityClassItem):
         kwargs = dict(class_id=self.db_map_id(db_map))
         if isinstance(self.parent, ObjectItem):
             kwargs = dict(**kwargs, object_id=self.parent.db_map_id(db_map))
-        return self.db_mngr.get_relationship_ids(db_map, **kwargs)
+        return {x["id"] for x in self.db_mngr.get_relationships(db_map, **kwargs)}
 
     def _create_child_item(self, db_map_id):
         """Returns a RelationshipItem."""
@@ -608,7 +608,7 @@ class ObjectItem(EntityItem):
         from the given db_map.
         """
         object_class_id = self.db_map_data_field(db_map, 'class_id')
-        return self.db_mngr.get_relationship_class_ids(db_map, object_class_id=object_class_id)
+        return {x["id"] for x in self.db_mngr.get_relationship_classes(db_map, object_class_id=object_class_id)}
 
     def _create_child_item(self, db_map_data):
         """Returns a RelationshipClassItem."""
