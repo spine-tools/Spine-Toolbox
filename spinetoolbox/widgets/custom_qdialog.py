@@ -677,7 +677,7 @@ class EditOrRemoveItemsDialog(ManageItemsDialog):
         Used by delegates.
         """
         item = self.items[row]
-        return [item.db_map_data_field(db_map, "database") for db_map in item.db_maps]
+        return [item.db_mngr.display_database(db_map) for db_map in item.db_maps]
 
 
 class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin):
@@ -718,7 +718,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update items."""
-        object_class_d = dict()
+        db_map_data = dict()
         for i in range(self.model.rowCount()):
             name, description, display_icon, db_names = self.model.row_data(i)
             item = self.items[i]
@@ -743,11 +743,11 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
                 db_item['id'] = item.db_map_data_field(db_map, 'id')
-                object_class_d.setdefault(db_map, []).append(db_item)
-        if not object_class_d:
+                db_map_data.setdefault(db_map, []).append(db_item)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to update")
             return
-        self._parent.update_object_classes(object_class_d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 
@@ -781,14 +781,14 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update items."""
-        object_d = dict()
+        db_map_data = dict()
         for i in range(self.model.rowCount()):
             name, description, db_names = self.model.row_data(i)
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
-                    if item.db_map_data_field(db_map, "database") == database:
+                    if item.db_mngr.display_database(db_map) == database:
                         db_maps.append(db_map)
                         break
                 else:
@@ -804,11 +804,11 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
                 db_item['id'] = item.db_map_data_field(db_map, 'id')
-                object_d.setdefault(db_map, []).append(db_item)
-        if not object_d:
+                db_map_data.setdefault(db_map, []).append(db_item)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to update")
             return
-        self._parent.update_objects(object_d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 
@@ -842,14 +842,14 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update items."""
-        rel_cls_d = dict()
+        db_map_data = dict()
         for i in range(self.model.rowCount()):
             name, db_names = self.model.row_data(i)
             item = self.items[i]
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
-                    if item.db_map_data_field(db_map, "database") == database:
+                    if item.db_mngr.display_database(db_map) == database:
                         db_maps.append(db_map)
                         break
                 else:
@@ -865,15 +865,16 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
                 db_item['id'] = item.db_map_data_field(db_map, 'id')
-                rel_cls_d.setdefault(db_map, []).append(db_item)
-        if not rel_cls_d:
+                db_map_data.setdefault(db_map, []).append(db_item)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to update")
             return
-        self._parent.update_relationship_classes(rel_cls_d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 
 class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
+    # FIXME: This one hasn't been touched in a while
     """A dialog to query user's preferences for updating relationships.
 
     Attributes:
@@ -924,7 +925,7 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
     @Slot(name="accept")
     def accept(self):
         """Collect info from dialog and try to update items."""
-        relationship_d = dict()
+        db_map_data = dict()
         name_column = self.model.horizontal_header_labels().index("relationship name")
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount()):
@@ -976,11 +977,11 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
                     object_id_list.append(object_id)
                 item = pre_item.copy()
                 item.update({'id': id_, 'object_id_list': object_id_list, 'name': name})
-                relationship_d.setdefault(db_map, []).append(item)
-        if not relationship_d:
+                db_map_data.setdefault(db_map, []).append(item)
+        if not db_map_data:
             self._parent.msg_error.emit("Nothing to update")
             return
-        self._parent.update_relationships(relationship_d)
+        self.data_committed.emit(db_map_data)
         super().accept()
 
 

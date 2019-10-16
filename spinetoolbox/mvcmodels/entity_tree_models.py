@@ -290,6 +290,10 @@ class ObjectTreeModel(EntityTreeModel):
         self.db_mngr.objects_removed.connect(self.remove_objects)
         self.db_mngr.relationship_classes_removed.connect(self.remove_relationship_classes)
         self.db_mngr.relationships_removed.connect(self.remove_relationships)
+        self.db_mngr.object_classes_updated.connect(self.update_object_classes)
+        self.db_mngr.objects_updated.connect(self.update_objects)
+        self.db_mngr.relationship_classes_updated.connect(self.update_relationship_classes)
+        self.db_mngr.relationships_updated.connect(self.update_relationships)
 
     def _create_root_item(self):
         return ObjectTreeRootItem(self.db_mngr, dict.fromkeys(self.db_mngr.db_maps))
@@ -391,7 +395,6 @@ class ObjectTreeModel(EntityTreeModel):
             parent.append_children_by_id(db_map_ids)
 
     def remove_object_classes(self, db_map_data):
-        # TODO: what happens with the selection here???
         db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
         self.root_item.remove_children_by_id(db_map_ids)
 
@@ -408,22 +411,20 @@ class ObjectTreeModel(EntityTreeModel):
             parent.remove_children_by_id(db_map_ids)
 
     def update_object_classes(self, db_map_data):
-        self.root_item.update_children_with_data(db_map_data)
-        for parent, db_map_data in self._group_mapped_relationship_class_data(db_map_data).items():
-            parent.update_children_with_data(db_map_data)
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.root_item.update_children_by_id(db_map_ids)
 
     def update_objects(self, db_map_data):
-        for parent, db_map_data in self._group_object_data(db_map_data).items():
-            parent.update_children_with_data(db_map_data)
-        # TODO: update object name in relationship items
+        for parent, db_map_ids in self._group_object_data(db_map_data).items():
+            parent.update_children_by_id(db_map_ids)
 
     def update_relationship_classes(self, db_map_data):
-        for parent, db_map_data in self._group_relationship_class_data(db_map_data).items():
-            parent.update_children_with_data(db_map_data)
+        for parent, db_map_ids in self._group_relationship_class_data(db_map_data).items():
+            parent.update_children_by_id(db_map_ids)
 
     def update_relationships(self, db_map_data):
-        for parent, db_map_data in self._group_relationship_data(db_map_data).items():
-            parent.update_children_with_data(db_map_data)
+        for parent, db_map_ids in self._group_relationship_data(db_map_data).items():
+            parent.update_children_by_id(db_map_ids)
 
     def find_next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
@@ -472,10 +473,10 @@ class RelationshipTreeModel(EntityTreeModel):
     def connect_signals(self):
         self.db_mngr.relationship_classes_added.connect(self.add_relationship_classes)
         self.db_mngr.relationships_added.connect(self.add_relationships)
-        self.db_mngr.object_classes_removed.connect(self.remove_object_classes)
-        self.db_mngr.objects_removed.connect(self.remove_objects)
         self.db_mngr.relationship_classes_removed.connect(self.remove_relationship_classes)
         self.db_mngr.relationships_removed.connect(self.remove_relationships)
+        self.db_mngr.relationship_classes_updated.connect(self.update_relationship_classes)
+        self.db_mngr.relationships_updated.connect(self.update_relationships)
 
     def _create_root_item(self):
         return RelationshipTreeRootItem(self.db_mngr, dict.fromkeys(self.db_mngr.db_maps))
@@ -523,11 +524,10 @@ class RelationshipTreeModel(EntityTreeModel):
         for parent, db_map_ids in self._group_relationship_data(db_map_data).items():
             parent.remove_children_by_id(db_map_ids)
 
-    def remove_object_classes(self, db_map_data):
-        pass
-
-    def remove_objects(self, db_map_data):
-        pass
-
     def update_relationship_classes(self, db_map_data):
-        self.root_item.update_children_with_data(db_map_data)
+        db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+        self.root_item.update_children_by_id(db_map_ids)
+
+    def update_relationships(self, db_map_data):
+        for parent, db_map_ids in self._group_relationship_data(db_map_data).items():
+            parent.update_children_by_id(db_map_ids)

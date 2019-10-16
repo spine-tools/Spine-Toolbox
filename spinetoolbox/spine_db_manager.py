@@ -64,6 +64,9 @@ class SpineDBManager(QObject):
         # On cascade remove
         self.object_classes_removed.connect(self.cascade_remove_relationship_classes)
         self.objects_removed.connect(self.cascade_remove_relationships)
+        # On cascade update
+        self.object_classes_updated.connect(self.cascade_update_relationship_classes)
+        self.objects_updated.connect(self.cascade_update_relationships)
         # Track added
         self.object_classes_added.connect(lambda db_map_data: self.track_items("object class", db_map_data))
         self.objects_added.connect(lambda db_map_data: self.track_items("object", db_map_data))
@@ -83,8 +86,9 @@ class SpineDBManager(QObject):
             lambda db_map_data: self.track_items("relationship class", db_map_data)
         )
         self.relationships_updated.connect(lambda db_map_data: self.track_items("relationship", db_map_data))
-        # Misc
+        # Icons
         self.object_classes_added.connect(self.update_icons)
+        self.object_classes_updated.connect(self.update_icons)
 
     def track_items(self, item_type, db_map_data):
         """Track items. Updates the internal dictionaries that hold the items data.
@@ -214,13 +218,31 @@ class SpineDBManager(QObject):
     def add_relationships(self, db_map_data):
         self.add_or_update_items(db_map_data, "relationship", "add_wide_relationships", "relationships_added")
 
-    def remove_items(self, db_map_data):
+    def update_object_classes(self, db_map_data):
+        self.add_or_update_items(db_map_data, "object class", "update_object_classes", "object_classes_updated")
+
+    def update_objects(self, db_map_data):
+        self.add_or_update_items(db_map_data, "object", "update_objects", "objects_updated")
+
+    def update_relationship_classes(self, db_map_data):
+        self.add_or_update_items(
+            db_map_data, "relationship class", "update_wide_relationship_classes", "relationship_classes_updated"
+        )
+
+    def update_relationships(self, db_map_data):
+        self.add_or_update_items(db_map_data, "relationship", "update_wide_relationships", "relationships_updated")
+
+    def remove_items(self, db_map_typed_data):
+        """Remove items.
+
+        db_map_typed_data (dict): maps DiffDatabaseMapping instances to str item type, to list of items to remove.
+        """
         db_map_object_classes = dict()
         db_map_objects = dict()
         db_map_relationship_classes = dict()
         db_map_relationships = dict()
         error_log = dict()
-        for db_map, items_per_type in db_map_data.items():
+        for db_map, items_per_type in db_map_typed_data.items():
             object_classes = items_per_type.get("object class", ())
             objects = items_per_type.get("object", ())
             relationship_classes = items_per_type.get("relationship class", ())
@@ -250,44 +272,58 @@ class SpineDBManager(QObject):
         if any(db_map_relationships.values()):
             self.relationships_removed.emit(db_map_relationships)
 
+    def cascade_update_relationship_classes(self, db_map_data):
+        """Runs when updating object classes. Updates relationship classes in cascade."""
+        db_map_data = self.find_cascading_relationship_classes(db_map_data)
+        self.relationship_classes_updated.emit(db_map_data)
+
+    def cascade_update_relationships(self, db_map_data):
+        """Runs when updating objects. Updates relationships in cascade."""
+        db_map_data = self.find_cascading_relationships(db_map_data)
+        self.relationships_updated.emit(db_map_data)
+
     def cascade_remove_relationship_classes(self, db_map_data):
-        db_map_data = self.find_relationship_classes(db_map_data)
+        """Runs when removing object classes. Removes relationship classes in cascade."""
+        db_map_data = self.find_cascading_relationship_classes(db_map_data)
         self.relationship_classes_removed.emit(db_map_data)
 
     def cascade_remove_relationships(self, db_map_data):
-        db_map_data = self.find_relationships(db_map_data)
+        """Runs when removing objects. Removes relationships in cascade."""
+        db_map_data = self.find_cascading_relationships(db_map_data)
         self.relationships_removed.emit(db_map_data)
 
-    def update_object_classes(self, db_map_data):
-        self.add_or_update_items(db_map_data, "object class", "update_object_classes", "objects_classes_updated")
-
-    def update_objects(self, db_map_data):
-        self.add_or_update_items(db_map_data, "object", "update_objects", "objects_updated")
-
-    def update_relationship_classes(self, db_map_data):
-        self.add_or_update_items(
-            db_map_data, "relationship class", "update_wide_relationship_classes", "relationship_classes_updated"
-        )
-
-    def update_relationships(self, db_map_data):
-        self.add_or_update_items(db_map_data, "relationship", "update_wide_relationships", "relationships_updated")
-
-    def find_relationship_classes(self, db_map_data):
-        """Takes data for object classes and returns data for the involving relationship classes."""
+    def find_cascading_relationship_classes(self, db_map_data, update_names=True):
+        """Gets data for object classes and returns data for cascading relationship classes."""
         db_map_data_out = dict()
         for db_map, data in db_map_data.items():
-            ids = {x["id"] for x in data}
+            d = {x["id"]: x["name"] for x in data}
             for item in self._data.get(db_map, {}).get("relationship class", {}).values():
-                if ids.intersection(int(id_) for id_ in item["object_class_id_list"].split(",")):
+                object_class_id_list = [int(id_) for id_ in item["object_class_id_list"].split(",")]
+                if set(d).intersection(object_class_id_list):
+                    update_names and self.update_object_class_name_in_relationship_class(item, object_class_id_list, d)
                     db_map_data_out.setdefault(db_map, []).append(item)
         return db_map_data_out
 
-    def find_relationships(self, db_map_data):
-        """Takes data for objects and returns data for the involving relationships."""
+    def find_cascading_relationships(self, db_map_data, update_names=True):
+        """Gets data for objects and returns data for cascading relationships."""
         db_map_data_out = dict()
         for db_map, data in db_map_data.items():
-            ids = {x["id"] for x in data}
+            d = {x["id"]: x["name"] for x in data}
             for item in self._data.get(db_map, {}).get("relationship", {}).values():
-                if ids.intersection(int(id_) for id_ in item["object_id_list"].split(",")):
+                object_id_list = [int(id_) for id_ in item["object_id_list"].split(",")]
+                if set(d).intersection(object_id_list):
+                    update_names and self.update_object_name_in_relationship(item, object_id_list, d)
                     db_map_data_out.setdefault(db_map, []).append(item)
         return db_map_data_out
+
+    @staticmethod
+    def update_object_class_name_in_relationship_class(item, object_class_id_list, d):
+        object_name_list = item["object_name_list"].split(",")
+        object_name_list = [d.get(id_, name) for id_, name in zip(object_id_list, object_name_list)]
+        item["object_name_list"] = ",".join(object_name_list)
+
+    @staticmethod
+    def update_object_name_in_relationship(item, object_id_list, d):
+        object_name_list = item["object_name_list"].split(",")
+        object_name_list = [d.get(id_, name) for id_, name in zip(object_id_list, object_name_list)]
+        item["object_name_list"] = ",".join(object_name_list)

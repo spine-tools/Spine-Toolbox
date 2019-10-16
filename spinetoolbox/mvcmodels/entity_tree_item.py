@@ -306,7 +306,7 @@ class MultiDBTreeItem(TreeItem):
         id_ = self.take_db_map(db_map)
         if not id_:
             return None
-        other = type(self)({db_map: id_})
+        other = type(self)(self.db_mngr, {db_map: id_})
         other_children = []
         for child in self.children:
             other_child = child.deep_take_db_map(db_map)
