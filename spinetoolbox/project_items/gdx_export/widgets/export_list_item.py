@@ -39,8 +39,13 @@ class ExportListItem(QWidget):
         self._ui.out_file_name_edit.setText(file_name)
 
     @property
+    def refresh_button(self):
+        """a QButton to trigger refresh due to changes in the database"""
+        return self._ui.refresh_button
+
+    @property
     def settings_button(self):
-        """a QButton which should open a setting window"""
+        """a QButton which should open a settings window"""
         return self._ui.settings_button
 
     @property

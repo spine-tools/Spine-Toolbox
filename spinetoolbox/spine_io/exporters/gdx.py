@@ -155,6 +155,7 @@ def find_gams_directory():
     if sys.platform == "win32":
         try:
             import winreg
+
             with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "gams.location") as gams_location_key:
                 gams_path, _ = winreg.QueryValueEx(gams_location_key, None)
                 return gams_path
@@ -402,7 +403,7 @@ def to_gdx_file(database_map, file_name, settings, gams_system_directory=None):
     sort_records_inplace(sets, settings)
     with GdxFile(file_name, mode='w', gams_dir=gams_system_directory) as output_file:
         domains_to_gams(output_file, domains)
-        sets_to_gams(output_file, sets, )
+        sets_to_gams(output_file, sets)
         if global_parameters_domain is not None:
             domain_parameters_to_gams(output_file, global_parameters_domain)
 
@@ -527,6 +528,72 @@ class Settings:
     def global_parameters_domain_name(self, name):
         """Sets the global parameters domain name to given name."""
         self._global_parameters_domain_name = name
+
+    def update(self, updating_settings):
+        """
+        Updates the settings by merging with another one.
+
+        All domains, sets and records (elements) that are in both settings (common)
+        or in `updating_settings` (new) are retained.
+        Common elements are ordered the same way they were ordered in the original settings.
+        New elements are appended to the common ones in the order they were in `updating_settings`
+
+        Args:
+            updating_settings (Settings): settings to merge with
+        """
+        self._domain_names, self._domain_exportable_flags = self._update_names(
+            self._domain_names,
+            self._domain_exportable_flags,
+            updating_settings._domain_names,
+            updating_settings._domain_exportable_flags,
+        )
+        self._set_names, self._set_exportable_flags = self._update_names(
+            self._set_names,
+            self._set_exportable_flags,
+            updating_settings._set_names,
+            updating_settings._set_exportable_flags,
+        )
+        if self._global_parameters_domain_name not in self._domain_names:
+            self._global_parameters_domain_name = ''
+        new_records = dict()
+        updating_records = dict(updating_settings._records)
+        for set_name, record_names in self._records.items():
+            updating_record_names = updating_records.get(set_name, None)
+            if updating_record_names is None:
+                continue
+            new_record_names = list()
+            for name in record_names:
+                try:
+                    updating_record_names.remove(name)
+                    new_record_names.append(name)
+                except ValueError:
+                    pass
+            new_record_names += updating_record_names
+            new_records[set_name] = new_record_names
+            del updating_records[set_name]
+        new_records.update(updating_records)
+        self._records = new_records
+
+    @staticmethod
+    def _update_names(names, exportable_flags, updating_names, updating_flags):
+        """Updates a list of domain/set names and exportable flags based on reference names and flags."""
+        new_names = list()
+        new_flags = list()
+        updating_names = list(updating_names)
+        updating_flags = list(updating_flags)
+        for name, exportable in zip(names, exportable_flags):
+            try:
+                index = updating_names.index(name)
+                del updating_names[index]
+                del updating_flags[index]
+                new_names.append(name)
+                new_flags.append(exportable)
+            except ValueError:
+                # name not found in updating_names -- skip it
+                continue
+        new_names += updating_names
+        new_flags += updating_flags
+        return new_names, new_flags
 
     def to_dict(self):
         """Serializes the Settings object to a dict."""

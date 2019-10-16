@@ -107,6 +107,7 @@ class GdxExport(ProjectItem):
             item = ExportListItem(url, file_name)
             database_list_storage.insertWidget(0, item)
             # pylint: disable=cell-var-from-loop
+            item.refresh_button.clicked.connect(lambda checked: self._refresh_settings_for_database(url))
             item.settings_button.clicked.connect(lambda checked: self._show_settings(url))
             item.out_file_name_edit.textChanged.connect(lambda text: self._update_out_file_name(text, url))
 
@@ -119,17 +120,19 @@ class GdxExport(ProjectItem):
         abort = -1
         gams_system_directory = self._resolve_gams_system_directory()
         for url in self._database_urls:
-            database_map = get_db_map(url)
             file_name = self._database_to_file_name_map.get(url, None)
             if file_name is None:
                 self._toolbox.msg_error.emit("No file name given to export database {}.".format(url))
                 self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
                 return
-            out_path = os.path.join(self.data_dir, file_name)
+            database_map = get_db_map(url)
             settings = self._settings.get(url, None)
             if settings is None:
                 settings = gdx.make_settings(database_map)
+                self._settings[url] = settings
+            out_path = os.path.join(self.data_dir, file_name)
             gdx.to_gdx_file(database_map, out_path, settings, gams_system_directory)
+            database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
         execution_instance = self._toolbox.project().execution_instance
         paths = [os.path.join(self.data_dir, file_name) for file_name in self._database_to_file_name_map.values()]
@@ -166,6 +169,7 @@ class GdxExport(ProjectItem):
             database_map = get_db_map(database_url)
             settings = gdx.make_settings(database_map)
             self._settings[database_url] = settings
+            database_map.connection.close()
         # Give window its own settings so Cancel doesn't change anything here.
         settings = deepcopy(settings)
         settings_window = self._settings_windows.get(database_url, None)
@@ -232,3 +236,13 @@ class GdxExport(ProjectItem):
             )
         else:
             super().notify_destination(source_item)
+
+    def _refresh_settings_for_database(self, url):
+        original_settings = self._settings.get(url, None)
+        database_map = get_db_map(url)
+        new_settings = gdx.make_settings(database_map)
+        database_map.connection.close()
+        if original_settings is None:
+            self._settings[url] = new_settings
+            return
+        original_settings.update(new_settings)
