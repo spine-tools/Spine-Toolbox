@@ -423,7 +423,7 @@ class TextExportersGdx(unittest.TestCase):
 
     def test_Settings_update_domains_and_domain_exportable_flags(self):
         base_settings = gdx.Settings(['a', 'b'], [], {}, [True, True], [], '')
-        update_settings = gdx.Settings(['b', 'c'], [] , {}, [False, False], [], '')
+        update_settings = gdx.Settings(['b', 'c'], [], {}, [False, False], [], '')
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, ['b', 'c'])
         self.assertEqual(base_settings.domain_exportable_flags, [True, False])
@@ -433,7 +433,7 @@ class TextExportersGdx(unittest.TestCase):
 
     def test_Settings_update_sets_and_set_exportable_flags(self):
         base_settings = gdx.Settings([], ['a', 'b'], {}, [], [True, True], '')
-        update_settings = gdx.Settings([], ['b', 'c'] , {}, [], [False, False], '')
+        update_settings = gdx.Settings([], ['b', 'c'], {}, [], [False, False], '')
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, [])
         self.assertEqual(base_settings.domain_exportable_flags, [])
@@ -443,7 +443,7 @@ class TextExportersGdx(unittest.TestCase):
 
     def test_Settings_update_global_parameters_domain_name(self):
         base_settings = gdx.Settings(['a', 'b'], [], {}, [True, False], [], 'b')
-        update_settings = gdx.Settings(['b', 'c'], [] , {}, [True, False], [], 'c')
+        update_settings = gdx.Settings(['b', 'c'], [], {}, [True, False], [], 'c')
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, ['b', 'c'])
         self.assertEqual(base_settings.domain_exportable_flags, [False, False])
@@ -452,8 +452,12 @@ class TextExportersGdx(unittest.TestCase):
         self.assertEqual(base_settings.global_parameters_domain_name, 'b')
 
     def test_Settings_update_records(self):
-        base_settings = gdx.Settings(['a', 'b'], ['c'], {'a': ['A'], 'b':['B', 'BB'], 'c': ['C', 'CC']}, [True, True], [True], '')
-        update_settings = gdx.Settings(['b', 'd'], ['c'] , {'b':['BB', 'BBB'], 'c': ['CC', 'CCC'], 'd': ['D']}, [False, False], [False], '')
+        base_settings = gdx.Settings(
+            ['a', 'b'], ['c'], {'a': ['A'], 'b': ['B', 'BB'], 'c': ['C', 'CC']}, [True, True], [True], ''
+        )
+        update_settings = gdx.Settings(
+            ['b', 'd'], ['c'], {'b': ['BB', 'BBB'], 'c': ['CC', 'CCC'], 'd': ['D']}, [False, False], [False], ''
+        )
         base_settings.update(update_settings)
         self.assertEqual(base_settings.sorted_domain_names, ['b', 'd'])
         self.assertEqual(base_settings.domain_exportable_flags, [True, False])
