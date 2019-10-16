@@ -847,6 +847,7 @@ class ToolboxUI(QMainWindow):
         icon = project_item.get_icon()
         self.ui.graphicsView.remove_icon(icon)
         self._project.dag_handler.remove_node_from_graph(name)
+        project_item.tear_down()
         if delete_item:
             if data_dir:
                 # Remove data directory and all its contents
