@@ -428,8 +428,7 @@ class ObjectTreeModel(EntityTreeModel):
 
     def update_relationships(self, db_map_data):
         for parent, db_map_ids in self._group_relationship_data(db_map_data).items():
-            parent.remove_children_by_id(db_map_ids)
-            parent.append_children_by_id(db_map_ids)
+            parent.update_children_by_id(db_map_ids)
 
     def find_next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""

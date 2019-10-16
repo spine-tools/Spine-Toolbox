@@ -272,7 +272,7 @@ class ParameterDelegate(QItemDelegate):
         """Return editor."""
         field = index.model().horizontal_header_labels()[index.column()]
         item = index.model().item_at_row(index.row())
-        db_map = item.db_map
+        db_map = index.model().map_to_sub(index).model().db_map
         create_editor_func = self._create_editor_func_map.get(field)
         if field == 'database':
             editor = self._create_database_editor(parent, option, index)

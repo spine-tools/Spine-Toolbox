@@ -21,12 +21,13 @@ from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, format_string_list
 from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
-from ..mvcmodels.empty_parameter_models import (
-    EmptyObjectParameterDefinitionModel,
-    EmptyObjectParameterValueModel,
-    EmptyRelationshipParameterDefinitionModel,
-    EmptyRelationshipParameterValueModel,
-)
+
+# from ..mvcmodels.empty_parameter_models import (
+#    EmptyObjectParameterDefinitionModel,
+#    EmptyObjectParameterValueModel,
+#    EmptyRelationshipParameterDefinitionModel,
+#    EmptyRelationshipParameterValueModel,
+# )
 from ..mvcmodels.single_parameter_models import (
     SingleObjectParameterDefinitionModel,
     SingleObjectParameterValueModel,
@@ -41,21 +42,19 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     and one empty parameter model.
     """
 
-    parameters_renamed = Signal("QVariant", name="parameters_renamed")
     remove_selection_requested = Signal(name="remove_selection_requested")
     remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
 
-    def __init__(self, parent, db_maps):
+    def __init__(self, parent, db_mngr):
         """Init class.
 
         Args:
             parent (DataStoreForm): an instance of TreeViewForm or GraphViewForm
-            db_maps (dicts): maps db names to DiffDatabaseMapping instances
+            db_mngr (SpineDBManager)
         """
         super().__init__(parent)
         self._parent = parent
-        self.db_maps = db_maps
-        self.icon_mngr = parent.icon_mngr
+        self.db_mngr = db_mngr
         self._auto_filter = dict()
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
@@ -66,10 +65,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return italic_font
         return super().headerData(section, orientation, role)
 
-    def batch_set_data(self, indexes, data):
+    def _batch_set_data(self, indexes, data):
         """Set data for indexes in batch.
         Move added rows to single models and emit messages.
         """
+        # TODO: notify differently, connect signals to signals?
         if not super().batch_set_data(indexes, data):
             return False
         added_rows = self.empty_model.added_rows
@@ -87,19 +87,20 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             self._parent.msg_error.emit(msg)
         return True
 
-    @staticmethod
-    def entity_class_query(db_map):
-        """Returns a query of entity classes to use for creating the different single models."""
+    def _get_entity_classes(self):
+        """Returns entity classes for creating the different single models."""
         raise NotImplementedError()
 
-    def single_model_keys(self):
-        """Generates keys for creating single models when initializing the model."""
+    def _create_single_models(self):
+        """Returns a list of single models."""
         d = dict()
-        for database, db_map in self.db_maps.items():
-            for entity_class in self.entity_class_query(db_map):
-                d.setdefault(entity_class.name, list()).append((database, entity_class))
-        for entity_class_list in d.values():
-            yield from entity_class_list
+        for db_map in self.db_mngr.db_maps:
+            for entity_class in self._get_entity_classes(db_map):
+                d.setdefault(entity_class["name"], {}).setdefault(db_map, set()).add(entity_class["id"])
+        for db_map_ids in d.values():
+            for db_map, ids in db_map_ids.items():
+                for id_ in ids:
+                    yield self._single_model_type(self, self.header, self.db_mngr, db_map, id_)
 
     def single_model_key_from_item(self, item):
         """Returns the single model key from the given item.
@@ -252,10 +253,9 @@ class CompoundObjectParameterMixin:
         )
         return a or b
 
-    @staticmethod
-    def entity_class_query(db_map):
+    def _get_entity_classes(self, db_map):
         """Returns a query of object classes to populate the model."""
-        return db_map.query(db_map.object_class_sq)
+        return self.db_mngr.get_object_classes(db_map)
 
 
 class CompoundRelationshipParameterMixin:
@@ -296,271 +296,19 @@ class CompoundRelationshipParameterMixin:
         )
         return a or b
 
-    @staticmethod
-    def entity_class_query(db_map):
+    def _get_entity_classes(self, db_map):
         """Returns a query of relationship classes to populate the model."""
-        return db_map.query(db_map.wide_relationship_class_sq)
+        return self.db_mngr.get_relationship_classes(db_map)
 
 
-class CompoundObjectParameterRenameRemoveMixin:
-    """Implements an interface to rename and remove items in a compound object parameter model."""
-
-    def rename_object_classes(self, db_map_data):
-        """Rename object classes in model."""
-        for db_map, object_classes in db_map_data.items():
-            self._rename_db_map_object_classes(db_map, object_classes)
-        self._emit_data_changed_for_column("object_class_name")
-
-    def _rename_db_map_object_classes(self, db_map, object_classes):
-        object_classes = {x["id"]: x["name"] for x in object_classes}
-        for model in self._models_with_db_map(db_map):
-            model.rename_object_classes(object_classes)
-
-    def remove_object_classes(self, db_map_data):
-        """Remove object classes from model."""
-        for db_map, object_classes in db_map_data.items():
-            self._remove_db_map_object_classes(db_map, object_classes)
-        self.refresh()
-
-    def _remove_db_map_object_classes(self, db_map, object_classes):
-        object_class_ids = {x['id'] for x in object_classes}
-        for model in self._models_with_db_map(db_map):
-            if model.object_class_id in object_class_ids:
-                self.sub_models.remove(model)
-
-
-class CompoundRelationshipParameterRenameRemoveMixin:
-    """Implements an interface to rename and remove items in a compound relationship parameter model."""
-
-    def rename_relationship_classes(self, db_map_data):
-        """Rename relationship classes in model."""
-        for db_map, relationship_classes in db_map_data.items():
-            self._rename_db_map_relationship_classes(db_map, relationship_classes)
-        self._emit_data_changed_for_column("relationship_class_name")
-
-    def _rename_db_map_relationship_classes(self, db_map, relationship_classes):
-        relationship_classes = {x["id"]: x["name"] for x in relationship_classes}
-        for model in self._models_with_db_map(db_map):
-            model.rename_relationship_classes(relationship_classes)
-
-    def remove_relationship_classes(self, db_map_data):
-        """Remove relationship classes from model."""
-        for db_map, relationship_classes in db_map_data.items():
-            self._remove_db_map_relationship_classes(db_map, relationship_classes)
-        self.refresh()
-
-    def _remove_db_map_relationship_classes(self, db_map, relationship_classes):
-        relationship_class_ids = {x['id'] for x in relationship_classes}
-        for model in self._models_with_db_map(db_map):
-            if model.relationship_class_id in relationship_class_ids:
-                self.sub_models.remove(model)
-
-    def rename_object_classes(self, db_map_data):
-        """Rename object classes in model."""
-        for db_map, object_classes in db_map_data.items():
-            self._rename_db_map_object_classes(db_map, object_classes)
-        self._emit_data_changed_for_column("object_class_name_list")
-
-    def _rename_db_map_object_classes(self, db_map, object_classes):
-        object_classes = {x["id"]: x["name"] for x in object_classes}
-        for model in self._models_with_db_map(db_map):
-            model.rename_object_classes(object_classes)
-
-    def remove_object_classes(self, db_map_data):
-        """Remove object classes from model."""
-        for db_map, object_classes in db_map_data.items():
-            self._remove_db_map_object_classes(db_map, object_classes)
-        self.refresh()
-
-    def _remove_db_map_object_classes(self, db_map, object_classes):
-        object_class_ids = {x['id'] for x in object_classes}
-        for model in self._models_with_db_map(db_map):
-            if object_class_ids.intersection(model.object_class_id_list):
-                self.sub_models.remove(model)
-
-
-class CompoundParameterDefinitionRenameRemoveMixin:
-    """Implements an interface to rename and remove items in a compound parameter definition model."""
-
-    def rename_parameter_tags(self, db_map_data):
-        """Rename parameter tags in model."""
-        for db_map, parameter_tags in db_map_data.items():
-            self._rename_db_map_parameter_tags(db_map, parameter_tags)
-
-    def _rename_db_map_parameter_tags(self, db_map, parameter_tags):
-        parameter_tags = {x["id"]: x["tag"] for x in parameter_tags}
-        for model in self._models_with_db_map(db_map):
-            model.rename_parameter_tags(parameter_tags)
-        self._emit_data_changed_for_column("parameter_tag_list")
-
-    def remove_parameter_tags(self, db_map_data):
-        """Remove parameter tags from model."""
-        for db_map, parameter_tag_ids in db_map_data.items():
-            self._remove_db_map_parameter_tags(db_map, parameter_tag_ids)
-        self._emit_data_changed_for_column("parameter_tag_list")
-
-    def _remove_db_map_parameter_tags(self, db_map, parameter_tag_ids):
-        for model in self._models_with_db_map(db_map):
-            model.remove_parameter_tags(parameter_tag_ids)
-
-    def rename_parameter_value_lists(self, db_map_data):
-        """Rename parameter value_lists in model."""
-        for db_map, value_lists in db_map_data.items():
-            self._rename_db_map_parameter_value_lists(db_map, value_lists)
-        self._emit_data_changed_for_column("value_list_name")
-
-    def _rename_db_map_parameter_value_lists(self, db_map, value_lists):
-        value_lists = {x["id"]: x["name"] for x in value_lists}
-        for model in self._models_with_db_map(db_map):
-            model.rename_parameter_value_lists(value_lists)
-
-    def clear_parameter_value_lists(self, db_map_data):
-        """Clear parameter value_lists from model."""
-        for db_map, value_list_ids in db_map_data.items():
-            self._clear_db_map_parameter_value_lists(db_map, value_list_ids)
-        self._emit_data_changed_for_column("value_list_name")
-
-    def _clear_db_map_parameter_value_lists(self, db_map, value_list_ids):
-        for model in self._models_with_db_map(db_map):
-            model.clear_parameter_value_lists(value_list_ids)
-
-
-class CompoundParameterValueRenameRemoveMixin:
-    """Implements an interface to rename and remove items in a compound parameter value model."""
-
-    def rename_parameters(self, db_map_data):
-        """Rename parameters in model."""
-        for db_map, parameters in db_map_data.items():
-            self._rename_db_map_parameters(db_map, parameters)
-        self._emit_data_changed_for_column("parameter_name")
-
-    def _rename_db_map_parameters(self, db_map, parameters):
-        parameters = {x['id']: x['name'] for x in parameters}
-        for model in self._models_with_db_map(db_map):
-            model.rename_parameters(parameters)
-
-    def remove_parameters(self, db_map_data):
-        """Remove parameters from model."""
-        for db_map, parameters in db_map_data.items():
-            self._remove_db_map_parameters(db_map, parameters)
-        self.refresh()
-
-    def _remove_db_map_parameters(self, db_map, parameters):
-        parameter_ids = {}
-        for parameter in parameters:
-            parameter_ids.setdefault(parameter["entity_class_id"], set()).add(parameter['id'])
-        for model in self._models_with_db_map(db_map):
-            class_parameter_ids = parameter_ids.get(model.entity_class_id)
-            if not class_parameter_ids:
-                continue
-            for row in reversed(range(model.rowCount())):
-                parameter_id = model._main_data[row].parameter_id
-                if parameter_id in class_parameter_ids:
-                    model.removeRows(row, 1)
-
-
-class CompoundObjectParameterValueRenameRemoveMixin:
-    """Implements an interface to rename and remove items in a compound object parameter value model."""
-
-    def rename_objects(self, db_map_data):
-        """Rename objects in model."""
-        for db_map, objects in db_map_data.items():
-            self._rename_db_map_objects(db_map, objects)
-        self._emit_data_changed_for_column("object_name")
-
-    def _rename_db_map_objects(self, db_map, objects):
-        objects = {x["id"]: x["name"] for x in objects}
-        for model in self._models_with_db_map(db_map):
-            model.rename_objects(objects)
-
-    def remove_objects(self, db_map_data):
-        """Remove objects from model."""
-        for db_map, objects in db_map_data.items():
-            self._remove_db_map_objects(db_map, objects)
-        self.refresh()
-
-    def _remove_db_map_objects(self, db_map, objects):
-        object_ids = {}
-        for object_ in objects:
-            object_ids.setdefault(object_["class_id"], set()).add(object_['id'])
-        for model in self._models_with_db_map(db_map):
-            class_object_ids = object_ids.get(model.entity_class_id)
-            if not class_object_ids:
-                continue
-            for row in reversed(range(model.rowCount())):
-                object_id = model._main_data[row].object_id
-                if object_id in class_object_ids:
-                    model.removeRows(row, 1)
-
-
-class CompoundRelationshipParameterValueRenameRemoveMixin:
-    """Implements an interface to rename and remove items in a compound relationship parameter value model."""
-
-    def rename_objects(self, db_map_data):
-        """Rename objects in model."""
-        for db_map, objects in db_map_data.items():
-            self._rename_db_map_objects(db_map, objects)
-        self._emit_data_changed_for_column("object_name_list")
-
-    def _rename_db_map_objects(self, db_map, objects):
-        """Rename objects in model."""
-        objects = {x["id"]: x["name"] for x in objects}
-        for model in self._models_with_db_map(db_map):
-            model.rename_objects(objects)
-
-    def remove_objects(self, db_map_data):
-        """Remove objects from model."""
-        for db_map, objects in db_map_data.items():
-            self._remove_db_map_objects(db_map, objects)
-        self.refresh()
-
-    def _remove_db_map_objects(self, db_map, objects):
-        object_ids = {}
-        for object_ in objects:
-            object_ids.setdefault(object_['class_id'], set()).add(object_['id'])
-        for model in self._models_with_db_map(db_map):
-            class_object_ids = {id_ for class_id in model.object_class_id_list for id_ in object_ids.get(class_id, [])}
-            if not class_object_ids:
-                continue
-            for row in reversed(range(model.rowCount())):
-                object_id_list = model._main_data[row].object_id_list
-                object_id_list = [int(id_) for id_ in object_id_list.split(",")]
-                if class_object_ids.intersection(object_id_list):
-                    model.removeRows(row, 1)
-
-    def remove_relationships(self, db_map_data):
-        """Remove relationships from model."""
-        for db_map, relationships in db_map_data.items():
-            self._remove_db_map_relationships(db_map, relationships)
-        self.refresh()
-
-    def _remove_db_map_relationships(self, db_map, relationships):
-        relationship_ids = {}
-        for relationship in relationships:
-            relationship_ids.setdefault(relationship["class_id"], set()).add(relationship['id'])
-        for model in self._models_with_db_map(db_map):
-            class_relationship_ids = relationship_ids.get(model.entity_class_id)
-            if not class_relationship_ids:
-                continue
-            for row in reversed(range(model.rowCount())):
-                relationship_id = model._main_data[row].relationship_id
-                if relationship_id in class_relationship_ids:
-                    model.removeRows(row, 1)
-
-
-class CompoundObjectParameterDefinitionModel(
-    CompoundObjectParameterMixin,
-    CompoundObjectParameterRenameRemoveMixin,
-    CompoundParameterDefinitionRenameRemoveMixin,
-    CompoundParameterModel,
-):
+class CompoundObjectParameterDefinitionModel(CompoundObjectParameterMixin, CompoundParameterModel):
     """A model that concatenates several single object parameter definition models
     and one empty object parameter definition model.
     """
 
-    def __init__(self, parent, db_maps):
+    def __init__(self, parent, db_mngr):
         """Init class."""
-        super().__init__(parent, db_maps)
+        super().__init__(parent, db_mngr)
         self.header = [
             "object_class_name",
             "parameter_name",
@@ -569,38 +317,24 @@ class CompoundObjectParameterDefinitionModel(
             "default_value",
             "database",
         ]
-        self.fixed_fields = ["object_class_name", "database"]
-        self.json_fields = ["default_value"]
 
-    def create_single_model(self, database, db_item):
-        return SingleObjectParameterDefinitionModel(
-            self,
-            self.header,
-            self.db_maps,
-            self.icon_mngr,
-            database,
-            db_item.id,
-            fixed_fields=self.fixed_fields,
-            json_fields=self.json_fields,
-        )
+    @property
+    def _single_model_type(self):
+        return SingleObjectParameterDefinitionModel
 
-    def create_empty_model(self):
-        return EmptyObjectParameterDefinitionModel(self, self.header, self.db_maps, self.icon_mngr)
+    @property
+    def _empty_model_type(self):
+        return EmptyObjectParameterDefinitionModel
 
 
-class CompoundRelationshipParameterDefinitionModel(
-    CompoundRelationshipParameterMixin,
-    CompoundRelationshipParameterRenameRemoveMixin,
-    CompoundParameterDefinitionRenameRemoveMixin,
-    CompoundParameterModel,
-):
+class CompoundRelationshipParameterDefinitionModel(CompoundRelationshipParameterMixin, CompoundParameterModel):
     """A model that concatenates several single relationship parameter definition models
     and one empty relationship parameter definition model.
     """
 
-    def __init__(self, parent, db_maps):
+    def __init__(self, parent, db_mngr):
         """Init class."""
-        super().__init__(parent, db_maps)
+        super().__init__(parent, db_mngr)
         self.header = [
             "relationship_class_name",
             "object_class_name_list",
@@ -610,58 +344,33 @@ class CompoundRelationshipParameterDefinitionModel(
             "default_value",
             "database",
         ]
-        self.fixed_fields = ["relationship_class_name", "object_class_name_list", "database"]
-        self.json_fields = ["default_value"]
 
-    def create_single_model(self, database, db_item):
-        return SingleRelationshipParameterDefinitionModel(
-            self,
-            self.header,
-            self.db_maps,
-            self.icon_mngr,
-            database,
-            db_item.id,
-            db_item.object_class_id_list,
-            fixed_fields=self.fixed_fields,
-            json_fields=self.json_fields,
-        )
+    @property
+    def _single_model_type(self):
+        return SingleRelationshipParameterDefinitionModel
 
-    def create_empty_model(self):
-        return EmptyRelationshipParameterDefinitionModel(self, self.header, self.db_maps, self.icon_mngr)
+    @property
+    def _empty_model_type(self):
+        return EmptyRelationshipParameterDefinitionModel
 
 
-class CompoundObjectParameterValueModel(
-    CompoundObjectParameterMixin,
-    CompoundObjectParameterRenameRemoveMixin,
-    CompoundParameterValueRenameRemoveMixin,
-    CompoundObjectParameterValueRenameRemoveMixin,
-    CompoundParameterModel,
-):
+class CompoundObjectParameterValueModel(CompoundObjectParameterMixin, CompoundParameterModel):
     """A model that concatenates several single object parameter value models
     and one empty object parameter value model.
     """
 
-    def __init__(self, parent, db_maps):
+    def __init__(self, parent, db_mngr):
         """Init class."""
-        super().__init__(parent, db_maps)
+        super().__init__(parent, db_mngr)
         self.header = ["object_class_name", "object_name", "parameter_name", "value", "database"]
-        self.fixed_fields = ["object_class_name", "object_name", "parameter_name", "database"]
-        self.json_fields = ["value"]
 
-    def create_single_model(self, database, db_item):
-        return SingleObjectParameterValueModel(
-            self,
-            self.header,
-            self.db_maps,
-            self.icon_mngr,
-            database,
-            db_item.id,
-            fixed_fields=self.fixed_fields,
-            json_fields=self.json_fields,
-        )
+    @property
+    def _single_model_type(self):
+        return SingleObjectParameterValueModel
 
-    def create_empty_model(self):
-        return EmptyObjectParameterValueModel(self, self.header, self.db_maps, self.icon_mngr)
+    @property
+    def _empty_model_type(self):
+        return EmptyObjectParameterValueModel
 
     def update_single_model_filter(self, model):
         """Update the filter for the given model."""
@@ -674,39 +383,23 @@ class CompoundObjectParameterValueModel(
         return a or b
 
 
-class CompoundRelationshipParameterValueModel(
-    CompoundRelationshipParameterMixin,
-    CompoundRelationshipParameterRenameRemoveMixin,
-    CompoundParameterValueRenameRemoveMixin,
-    CompoundRelationshipParameterValueRenameRemoveMixin,
-    CompoundParameterModel,
-):
+class CompoundRelationshipParameterValueModel(CompoundRelationshipParameterMixin, CompoundParameterModel):
     """A model that concatenates several single relationship parameter value models
     and one empty relationship parameter value model.
     """
 
-    def __init__(self, parent, db_maps):
+    def __init__(self, parent, db_mngr):
         """Init class."""
-        super().__init__(parent, db_maps)
+        super().__init__(parent, db_mngr)
         self.header = ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
-        self.fixed_fields = ["relationship_class_name", "object_name_list", "parameter_name", "database"]
-        self.json_fields = ["value"]
 
-    def create_single_model(self, database, db_item):
-        return SingleRelationshipParameterValueModel(
-            self,
-            self.header,
-            self.db_maps,
-            self.icon_mngr,
-            database,
-            db_item.id,
-            db_item.object_class_id_list,
-            fixed_fields=self.fixed_fields,
-            json_fields=self.json_fields,
-        )
+    @property
+    def _single_model_type(self):
+        return SingleRelationshipParameterValueModel
 
-    def create_empty_model(self):
-        return EmptyRelationshipParameterValueModel(self, self.header, self.db_maps, self.icon_mngr)
+    @property
+    def _empty_model_type(self):
+        return EmptyRelationshipParameterValueModel
 
     def update_single_model_filter(self, model):
         """Update the filter for the given model."""

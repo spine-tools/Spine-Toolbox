@@ -31,7 +31,6 @@ class CompoundTableModel(MinimalTableModel):
             parent (QObject): the parent object
         """
         super().__init__(parent, header=header)
-        self._parent = parent
         self.sub_models = []
         self._row_map = []
         self._inv_row_map = {}
@@ -165,15 +164,6 @@ class CompoundTableModel(MinimalTableModel):
 class CompoundWithEmptyTableModel(CompoundTableModel):
     """A compound parameter table model where the last model is an empty row model."""
 
-    def __init__(self, parent, header=None):
-        """Init class.
-
-        Args:
-            parent (QObject): the parent object
-        """
-        super().__init__(parent, header=header)
-        self._parent = parent
-
     @property
     def single_models(self):
         return self.sub_models[0:-1]
@@ -251,19 +241,15 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
     def init_model(self):
         """Initialize model."""
         self.clear_model()
-        self.sub_models = [self.create_single_model(*key) for key in self.single_model_keys()]
-        self.sub_models.append(self.create_empty_model())
+        self.sub_models = list(self._create_single_models())
+        # self.sub_models.append(self._create_empty_model())
         self.connect_model_signals()
 
-    def single_model_keys(self):
-        """Generates keys for creating single models when initializing the model."""
+    def _create_single_models(self):
+        """Returns a list of single models."""
         raise NotImplementedError()
 
-    def create_single_model(self, database, db_item):
-        """Returns a single model for the given database and item."""
-        raise NotImplementedError()
-
-    def create_empty_model(self):
+    def _create_empty_model(self):
         """Returns an empty model."""
         raise NotImplementedError()
 
@@ -278,7 +264,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
             d.setdefault(self.single_model_key_from_item(item), list()).append(item)
         single_models = []
         for key, item_list in d.items():
-            single_model = self.create_single_model(*key)
+            single_model = self._single_model_type(*key)
             single_model.reset_model(item_list)
             self._handle_single_model_reset(single_model)
             single_models.append(single_model)

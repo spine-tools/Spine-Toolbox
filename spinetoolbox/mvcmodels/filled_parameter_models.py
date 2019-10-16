@@ -19,41 +19,33 @@ Filled models for parameter definitions and values (as in 'filled with data').
 from PySide2.QtCore import Qt, QModelIndex
 from PySide2.QtGui import QGuiApplication
 from ..mvcmodels.minimal_table_model import MinimalTableModel
-from ..mvcmodels.parameter_autocomplete_mixins import ParameterDefinitionAutocompleteMixin
-from ..mvcmodels.parameter_mixins import (
-    ObjectParameterDecorateMixin,
-    RelationshipParameterDecorateMixin,
-    ParameterDefinitionUpdateMixin,
-    ParameterValueUpdateMixin,
-    ObjectParameterRenameMixin,
-    RelationshipParameterRenameMixin,
-    ParameterDefinitionRenameRemoveMixin,
-    ParameterValueRenameMixin,
-    ObjectParameterValueRenameMixin,
-    RelationshipParameterValueRenameMixin,
-)
 from ..mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
 class FilledParameterModel(MinimalTableModel):
     """A parameter model filled with data."""
 
-    def __init__(self, parent, header, db_maps, lazy_loading=False, fixed_fields=None, json_fields=None):
+    json_fields = []
+    fixed_fields = []
+
+    def __init__(self, parent, header, db_mngr, db_map, lazy_loading=False):
         """Initialize class.
 
         Args:
             parent (Object): the parent object, typically a CompoundParameterModel
             header (list): list of field names for the header
-            db_maps (dict): maps database names to DiffDatabaseMapping instances
         """
         super().__init__(parent, header)
-        self.db_maps = db_maps
-        if fixed_fields is None:
-            fixed_fields = []
-        if json_fields is None:
-            json_fields = []
-        self.fixed_fields = fixed_fields
-        self.json_fields = json_fields
+        self.db_mngr = db_mngr
+        self.db_map = db_map
+
+    @property
+    def item_type(self):
+        raise NotImplementedError()
+
+    @property
+    def update_method_name(self):
+        raise NotImplementedError()
 
     def insertRows(self, row, count, parent=QModelIndex()):
         """This model doesn't support row insertion."""
@@ -67,57 +59,31 @@ class FilledParameterModel(MinimalTableModel):
         return flags
 
     def data(self, index, role=Qt.DisplayRole):
-        """Paint background of fixed indexes gray and apply custom format to JSON fields."""
-        column = index.column()
-        if self.header[column] in self.fixed_fields and role == Qt.BackgroundRole:
+        """Paint background of fixed indexes gray, apply custom format to JSON fields."""
+        field = self.header[index.column()]
+        if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
-        if self.header[column] in self.json_fields:
-            if role == Qt.ToolTipRole:
-                return format_for_ToolTipRole(super().data(index, Qt.EditRole))
-            if role == Qt.DisplayRole:
-                return format_for_DisplayRole(super().data(index, Qt.EditRole))
-        return super().data(index, role)
+        id_ = self._main_data[index.row()]
+        value = self.db_mngr.get_data(self.db_map, self.item_type, id_).get(field)
+        if role in (Qt.DisplayRole, Qt.EditRole):
+            if field == "database":
+                return self.db_map.codename
+            if field in self.json_fields:
+                return format_for_DisplayRole(value)
+            return value
+        if role == Qt.ToolTipRole and field in self.json_fields:
+            return format_for_ToolTipRole(value)
 
-
-class FilledObjectParameterDefinitionModel(
-    ObjectParameterDecorateMixin,
-    ParameterDefinitionUpdateMixin,
-    ParameterDefinitionAutocompleteMixin,
-    ObjectParameterRenameMixin,
-    ParameterDefinitionRenameRemoveMixin,
-    FilledParameterModel,
-):
-    """An object parameter definition model filled with data."""
-
-
-class FilledRelationshipParameterDefinitionModel(
-    RelationshipParameterDecorateMixin,
-    ParameterDefinitionUpdateMixin,
-    ParameterDefinitionAutocompleteMixin,
-    RelationshipParameterRenameMixin,
-    ParameterDefinitionRenameRemoveMixin,
-    FilledParameterModel,
-):
-    """A relationship parameter definition model filled with data."""
-
-
-class FilledObjectParameterValueModel(
-    ObjectParameterDecorateMixin,
-    ParameterValueUpdateMixin,
-    ObjectParameterRenameMixin,
-    ParameterValueRenameMixin,
-    ObjectParameterValueRenameMixin,
-    FilledParameterModel,
-):
-    """An object parameter value model filled with data."""
-
-
-class FilledRelationshipParameterValueModel(
-    RelationshipParameterDecorateMixin,
-    ParameterValueUpdateMixin,
-    RelationshipParameterRenameMixin,
-    ParameterValueRenameMixin,
-    RelationshipParameterValueRenameMixin,
-    FilledParameterModel,
-):
-    """A relationship parameter value model filled with data."""
+    def batch_set_data(self, indexes, data):
+        """Sets data for indexes in batch.
+        Set data directly in database. Let db mngr do the rest.
+        """
+        if not indexes or not data:
+            return False
+        row_data = dict()
+        for index, value in zip(indexes, data):
+            row_data.setdefault(index.row(), {})[self.header[index.column()]] = value
+        data = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
+        print(data)
+        getattr(self.db_mngr, self.update_method_name)({self.db_map: data})
+        return True

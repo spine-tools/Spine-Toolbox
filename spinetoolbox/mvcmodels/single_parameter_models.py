@@ -16,40 +16,29 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from ..mvcmodels.filled_parameter_models import (
-    FilledObjectParameterDefinitionModel,
-    FilledRelationshipParameterDefinitionModel,
-    FilledObjectParameterValueModel,
-    FilledRelationshipParameterValueModel,
-)
-from ..mvcmodels.parameter_item import (
-    ObjectParameterDefinitionItem,
-    ObjectParameterValueItem,
-    RelationshipParameterDefinitionItem,
-    RelationshipParameterValueItem,
-)
+from ..mvcmodels.filled_parameter_models import FilledParameterModel
+from ..mvcmodels.parameter_item import ParameterDefinitionItem, ParameterValueItem
 
 
-class SingleParameterMixin:
+class SingleParameterModel(FilledParameterModel):
     """Provides an interface to associate a parameter model with a single entity class
     and do some filtering on the rows.
     """
 
-    def __init__(self, parent, header, db_maps, icon_mngr, database, *args, **kwargs):
+    def __init__(self, *args, **kwargs):
         """Init class.
 
         Args:
             parent (CompoundParameterModel): the parent object
             header (list): list of field names for the header
-            db_maps (dict): maps database names to DiffDatabaseMapping instances
-            icon_mngr (IconManager): an icon manager for the decoration role
-            database (str): the database where the entity class associated with this model lives
         """
-        super().__init__(parent, header, db_maps, icon_mngr, *args, **kwargs)
-        self.database = database
-        self.db_map = db_maps[database]
+        super().__init__(*args, **kwargs)
         self._auto_filter = dict()
         self._selected_param_def_ids = set()
+
+    @property
+    def item_type(self):
+        raise NotImplementedError()
 
     @property
     def entity_class_id(self):
@@ -84,21 +73,16 @@ class SingleParameterMixin:
         return [row for row in range(self.rowCount()) if self.filter_accepts_row(row, ignored_columns=ignored_columns)]
 
 
-class SingleObjectParameterMixin(SingleParameterMixin):
+class SingleObjectParameterMixin:
     """Associates a parameter model with a single object class."""
 
-    def __init__(self, parent, header, db_maps, icon_mngr, database, object_class_id, *args, **kwargs):
+    def __init__(self, parent, header, db_mngr, db_map, object_class_id, *args, **kwargs):
         """Init class.
 
         Args:
-            parent (CompoundParameterModel): the parent object
-            header (list): list of field names for the header
-            db_maps (dict): maps database names to DiffDatabaseMapping instances
-            icon_mngr (IconManager): an icon manager for the decoration role
-            database (str): the database where the entity class associated with this model lives
             object_class_id (int): the id of the object class
         """
-        super().__init__(parent, header, db_maps, icon_mngr, database, *args, **kwargs)
+        super().__init__(parent, header, db_mngr, db_map, *args, **kwargs)
         self.object_class_id = object_class_id
 
     @property
@@ -106,33 +90,24 @@ class SingleObjectParameterMixin(SingleParameterMixin):
         return self.object_class_id
 
 
-class SingleRelationshipParameterMixin(SingleParameterMixin):
+class SingleRelationshipParameterMixin:
     """Associates a parameter model with a single relationship class."""
 
-    def __init__(
-        self, parent, header, db_maps, icon_mngr, database, relationship_class_id, object_class_id_list, *args, **kwargs
-    ):
+    def __init__(self, parent, header, db_mngr, db_map, relationship_class_id, *args, **kwargs):
         """Init class.
 
         Args:
-            parent (CompoundParameterModel): the parent object
-            header (list): list of field names for the header
-            db_maps (dict): maps database names to DiffDatabaseMapping instances
-            icon_mngr (IconManager): an icon manager for the decoration role
-            database (str): the database where the entity class associated with this model lives
             relationship_class_id (int): the id of the relationship class
-            object_class_id_list (str): comma separated string of member object class ids
         """
-        super().__init__(parent, header, db_maps, icon_mngr, database, *args, **kwargs)
+        super().__init__(parent, header, db_mngr, db_map, *args, **kwargs)
         self.relationship_class_id = relationship_class_id
-        self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
 
     @property
     def entity_class_id(self):
         return self.relationship_class_id
 
 
-class SingleObjectParameterValueMixin(SingleParameterMixin):
+class SingleObjectParameterValueMixin:
     """Filters objects in a parameter value model."""
 
     def __init__(self, *args, **kwargs):
@@ -149,7 +124,7 @@ class SingleObjectParameterValueMixin(SingleParameterMixin):
         return True
 
 
-class SingleRelationshipParameterValueMixin(SingleParameterMixin):
+class SingleRelationshipParameterValueMixin:
     """Filters relationships in a parameter value model."""
 
     def __init__(self, *args, **kwargs):
@@ -169,57 +144,92 @@ class SingleRelationshipParameterValueMixin(SingleParameterMixin):
         return True
 
 
-class SingleObjectParameterDefinitionModel(SingleObjectParameterMixin, FilledObjectParameterDefinitionModel):
+class SingleObjectParameterDefinitionModel(SingleObjectParameterMixin, SingleParameterModel):
     """An object parameter definition model for a single object class."""
 
+    json_fields = ["default_value"]
+    fixed_fields = ["object_class_name", "database"]
+
+    @property
+    def item_type(self):
+        return "parameter definition"
+
+    @property
+    def update_method_name(self):
+        return "update_parameter_definitions"
+
     def fetch_data(self):
-        sq = self.db_map.object_parameter_definition_sq
         return [
-            ObjectParameterDefinitionItem(
-                self.header, database=self.database, db_map=self.db_map, **param_def._asdict()
-            )
-            for param_def in self.db_map.query(sq).filter_by(object_class_id=self.object_class_id)
+            x["id"]
+            for x in self.db_mngr.get_object_parameter_definitions(self.db_map, object_class_id=self.object_class_id)
         ]
 
 
-class SingleRelationshipParameterDefinitionModel(
-    SingleRelationshipParameterMixin, FilledRelationshipParameterDefinitionModel
-):
+class SingleRelationshipParameterDefinitionModel(SingleRelationshipParameterMixin, SingleParameterModel):
     """A relationship parameter definition model for a single relationship class."""
 
+    json_fields = ["default_value"]
+    fixed_fields = ["relationship_class_name", "object_class_name_list", "database"]
+
+    @property
+    def item_type(self):
+        return "parameter definition"
+
+    @property
+    def update_method_name(self):
+        return "update_parameter_definitions"
+
     def fetch_data(self):
-        sq = self.db_map.relationship_parameter_definition_sq
         return [
-            RelationshipParameterDefinitionItem(
-                self.header, database=self.database, db_map=self.db_map, **param_def._asdict()
+            x["id"]
+            for x in self.db_mngr.get_relationship_parameter_definitions(
+                self.db_map, relationship_class_id=self.relationship_class_id
             )
-            for param_def in self.db_map.query(sq).filter_by(relationship_class_id=self.relationship_class_id)
         ]
 
 
 class SingleObjectParameterValueModel(
-    SingleObjectParameterMixin, SingleObjectParameterValueMixin, FilledObjectParameterValueModel
+    SingleObjectParameterMixin, SingleObjectParameterValueMixin, SingleParameterModel
 ):
     """An object parameter value model for a single object class."""
 
+    json_fields = ["value"]
+    fixed_fields = ["object_class_name", "object_name", "parameter_name", "database"]
+
+    @property
+    def item_type(self):
+        return "parameter value"
+
+    @property
+    def update_method_name(self):
+        return "update_parameter_values"
+
     def fetch_data(self):
-        sq = self.db_map.object_parameter_value_sq
         return [
-            ObjectParameterValueItem(self.header, database=self.database, db_map=self.db_map, **param_val._asdict())
-            for param_val in self.db_map.query(sq).filter_by(object_class_id=self.object_class_id)
+            x["id"] for x in self.db_mngr.get_object_parameter_values(self.db_map, object_class_id=self.object_class_id)
         ]
 
 
 class SingleRelationshipParameterValueModel(
-    SingleRelationshipParameterMixin, SingleRelationshipParameterValueMixin, FilledRelationshipParameterValueModel
+    SingleRelationshipParameterMixin, SingleRelationshipParameterValueMixin, SingleParameterModel
 ):
     """A relationship parameter value model for a single relationship class."""
 
+    json_fields = ["value"]
+    fixed_fields = ["relationship_class_name", "object_name_list", "parameter_name", "database"]
+
+    @property
+    def item_type(self):
+        return "parameter value"
+
+    @property
+    def update_method_name(self):
+        return "update_parameter_values"
+
     def fetch_data(self):
-        sq = self.db_map.relationship_parameter_value_sq
         return [
-            RelationshipParameterValueItem(
-                self.header, database=self.database, db_map=self.db_map, **param_val._asdict()
+            x["id"]
+            for x in self.db_mngr.get_relationship_parameter_values(
+                self.db_map, relationship_class_id=self.relationship_class_id
             )
-            for param_val in self.db_map.query(sq).filter_by(relationship_class_id=self.relationship_class_id)
         ]

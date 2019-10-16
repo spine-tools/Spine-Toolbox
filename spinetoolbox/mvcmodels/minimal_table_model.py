@@ -28,6 +28,7 @@ class MinimalTableModel(QAbstractTableModel):
             parent (QObject): the parent object
         """
         super().__init__(parent)
+        self._parent = parent
         if header is None:
             header = []
         self.header = header
@@ -74,10 +75,7 @@ class MinimalTableModel(QAbstractTableModel):
 
     def columnCount(self, parent=QModelIndex()):
         """Number of columns in the model."""
-        try:
-            return len(self._main_data[0])
-        except IndexError:
-            return len(self.header)
+        return len(self.header)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Returns headers."""

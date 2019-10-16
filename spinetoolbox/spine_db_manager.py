@@ -42,11 +42,13 @@ class SpineDBManager(QObject):
     relationship_classes_updated = Signal("QVariant", name="relationship_classes_updated")
     relationships_updated = Signal("QVariant", name="relationships_updated")
 
+    parameter_definitions_updated = Signal("QVariant", name="parameter_definitions_updated")
+
     def __init__(self, *db_maps):
         """Init class."""
         super().__init__()
         self._db_maps = db_maps
-        self._data = {}
+        self._cache = {}
         self.icon_mngr = IconManager()
         self.connect_signals()
 
@@ -63,30 +65,33 @@ class SpineDBManager(QObject):
         self.object_classes_updated.connect(self.cascade_update_relationship_classes)
         self.objects_updated.connect(self.cascade_update_relationships)
         # Track added
-        self.object_classes_added.connect(lambda db_map_data: self.track_items("object class", db_map_data))
-        self.objects_added.connect(lambda db_map_data: self.track_items("object", db_map_data))
-        self.relationship_classes_added.connect(lambda db_map_data: self.track_items("relationship class", db_map_data))
-        self.relationships_added.connect(lambda db_map_data: self.track_items("relationship", db_map_data))
+        self.object_classes_added.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
+        self.objects_added.connect(lambda db_map_data: self.cache_items("object", db_map_data))
+        self.relationship_classes_added.connect(lambda db_map_data: self.cache_items("relationship class", db_map_data))
+        self.relationships_added.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
         # Untrack removed
-        self.object_classes_removed.connect(lambda db_map_data: self.stop_tracking_items("object class", db_map_data))
-        self.objects_removed.connect(lambda db_map_data: self.stop_tracking_items("object", db_map_data))
+        self.object_classes_removed.connect(lambda db_map_data: self.discard_items("object class", db_map_data))
+        self.objects_removed.connect(lambda db_map_data: self.discard_items("object", db_map_data))
         self.relationship_classes_removed.connect(
-            lambda db_map_data: self.stop_tracking_items("relationship class", db_map_data)
+            lambda db_map_data: self.discard_items("relationship class", db_map_data)
         )
-        self.relationships_removed.connect(lambda db_map_data: self.stop_tracking_items("relationship", db_map_data))
+        self.relationships_removed.connect(lambda db_map_data: self.discard_items("relationship", db_map_data))
         # Update tracking information
-        self.object_classes_updated.connect(lambda db_map_data: self.track_items("object class", db_map_data))
-        self.objects_updated.connect(lambda db_map_data: self.track_items("object", db_map_data))
+        self.object_classes_updated.connect(lambda db_map_data: self.cache_items("object class", db_map_data))
+        self.objects_updated.connect(lambda db_map_data: self.cache_items("object", db_map_data))
         self.relationship_classes_updated.connect(
-            lambda db_map_data: self.track_items("relationship class", db_map_data)
+            lambda db_map_data: self.cache_items("relationship class", db_map_data)
         )
-        self.relationships_updated.connect(lambda db_map_data: self.track_items("relationship", db_map_data))
+        self.relationships_updated.connect(lambda db_map_data: self.cache_items("relationship", db_map_data))
+        self.parameter_definitions_updated.connect(
+            lambda db_map_data: self.cache_items("parameter definition", db_map_data)
+        )
         # Icons
         self.object_classes_added.connect(self.update_icons)
         self.object_classes_updated.connect(self.update_icons)
 
-    def track_items(self, item_type, db_map_data):
-        """Track items. Updates the internal dictionaries that hold the items data.
+    def cache_items(self, item_type, db_map_data):
+        """Put items into cache.
         It works for both insert and update operations.
 
         Args:
@@ -94,10 +99,10 @@ class SpineDBManager(QObject):
             db_map_data (dict): maps DiffDatabaseMapping instances to lists of items to track
         """
         for db_map, items in db_map_data.items():
-            self._data.setdefault(db_map, {}).setdefault(item_type, {}).update({x["id"]: x for x in items})
+            self._cache.setdefault(db_map, {}).setdefault(item_type, {}).update({x["id"]: x for x in items})
 
-    def stop_tracking_items(self, item_type, db_map_data):
-        """Untrack items. Pop entries from the internal dicts that hold the items data.
+    def discard_items(self, item_type, db_map_data):
+        """Remove items from cache.
 
         Args:
             item_type (str)
@@ -105,7 +110,7 @@ class SpineDBManager(QObject):
         """
         for db_map, items in db_map_data.items():
             for item in items:
-                self._data.setdefault(db_map, {}).setdefault(item_type, {}).pop(item["id"])
+                self._cache.setdefault(db_map, {}).setdefault(item_type, {}).pop(item["id"])
 
     def update_icons(self, db_map_data):
         object_classes = [item for db_map, data in db_map_data.items() for item in data]
@@ -119,7 +124,7 @@ class SpineDBManager(QObject):
             item_type (str)
             id_ (int)
         """
-        return self._data.get(db_map, {}).get(item_type, {}).get(id_, {})
+        return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
 
     def get_object_classes(self, db_map):
         """Get object classes from database.
@@ -129,7 +134,7 @@ class SpineDBManager(QObject):
         """
         qry = db_map.query(db_map.object_class_sq)
         items = [x._asdict() for x in qry]
-        self.track_items("object class", {db_map: items})
+        self.cache_items("object class", {db_map: items})
         self.update_icons({db_map: items})
         return items
 
@@ -144,7 +149,7 @@ class SpineDBManager(QObject):
         if class_id:
             qry = qry.filter_by(class_id=class_id)
         items = [x._asdict() for x in qry]
-        self.track_items("object", {db_map: items})
+        self.cache_items("object", {db_map: items})
         return items
 
     def get_relationship_classes(self, db_map, object_class_id=None):
@@ -159,7 +164,7 @@ class SpineDBManager(QObject):
             ids = {x.id for x in db_map.query(db_map.relationship_class_sq).filter_by(object_class_id=object_class_id)}
             qry = qry.filter(db_map.wide_relationship_class_sq.c.id.in_(ids))
         items = [x._asdict() for x in qry]
-        self.track_items("relationship class", {db_map: items})
+        self.cache_items("relationship class", {db_map: items})
         return items
 
     def get_relationships(self, db_map, class_id, object_id=None):
@@ -175,7 +180,7 @@ class SpineDBManager(QObject):
             ids = {x.id for x in db_map.query(db_map.relationship_sq).filter_by(object_id=object_id)}
             qry = qry.filter(db_map.wide_relationship_sq.c.id.in_(ids))
         items = [x._asdict() for x in qry]
-        self.track_items("relationship", {db_map: items})
+        self.cache_items("relationship", {db_map: items})
         return items
 
     def add_or_update_items(self, db_map_data, item_type, method_name, signal_name):
@@ -292,7 +297,7 @@ class SpineDBManager(QObject):
         db_map_data_out = dict()
         for db_map, data in db_map_data.items():
             d = {x["id"]: x["name"] for x in data}
-            for item in self._data.get(db_map, {}).get("relationship class", {}).values():
+            for item in self._cache.get(db_map, {}).get("relationship class", {}).values():
                 object_class_id_list = [int(id_) for id_ in item["object_class_id_list"].split(",")]
                 if set(d).intersection(object_class_id_list):
                     update_names and self._update_names(item, "object_class_name_list", object_class_id_list, d)
@@ -304,7 +309,7 @@ class SpineDBManager(QObject):
         db_map_data_out = dict()
         for db_map, data in db_map_data.items():
             d = {x["id"]: x["name"] for x in data}
-            for item in self._data.get(db_map, {}).get("relationship", {}).values():
+            for item in self._cache.get(db_map, {}).get("relationship", {}).values():
                 object_id_list = [int(id_) for id_ in item["object_id_list"].split(",")]
                 if set(d).intersection(object_id_list):
                     update_names and self._update_names(item, "object_name_list", object_id_list, d)
@@ -325,3 +330,64 @@ class SpineDBManager(QObject):
         name_list = item[key].split(",")
         name_list = [d.get(id_, name) for id_, name in zip(id_list, name_list)]
         item[key] = ",".join(name_list)
+
+    def get_object_parameter_definitions(self, db_map, object_class_id=None):
+        """Get object parameter definitions from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            object_class_id (int)
+        """
+        qry = db_map.query(db_map.object_parameter_definition_sq)
+        if object_class_id:
+            qry = qry.filter_by(object_class_id=object_class_id)
+        items = [x._asdict() for x in qry]
+        self.cache_items("parameter definition", {db_map: items})
+        return items
+
+    def get_object_parameter_values(self, db_map, object_class_id=None):
+        """Get object parameter values from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            object_class_id (int)
+        """
+        qry = db_map.query(db_map.object_parameter_value_sq)
+        if object_class_id:
+            qry = qry.filter_by(object_class_id=object_class_id)
+        items = [x._asdict() for x in qry]
+        self.cache_items("parameter value", {db_map: items})
+        return items
+
+    def get_relationship_parameter_definitions(self, db_map, relationship_class_id=None):
+        """Get relationship parameter definitions from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            relationship_class_id (int)
+        """
+        qry = db_map.query(db_map.relationship_parameter_definition_sq)
+        if relationship_class_id:
+            qry = qry.filter_by(relationship_class_id=relationship_class_id)
+        items = [x._asdict() for x in qry]
+        self.cache_items("parameter definition", {db_map: items})
+        return items
+
+    def get_relationship_parameter_values(self, db_map, relationship_class_id=None):
+        """Get relationship parameter values from database.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            relationship_class_id (int)
+        """
+        qry = db_map.query(db_map.relationship_parameter_value_sq)
+        if relationship_class_id:
+            qry = qry.filter_by(relationship_class_id=relationship_class_id)
+        items = [x._asdict() for x in qry]
+        self.cache_items("parameter value", {db_map: items})
+        return items
+
+    def update_parameter_definitions(self, db_map_data):
+        self.add_or_update_items(
+            db_map_data, "parameter definition", "update_parameter_definitions", "parameter_definitions_updated"
+        )

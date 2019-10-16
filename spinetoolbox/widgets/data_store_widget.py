@@ -49,7 +49,7 @@ from ..mvcmodels.compound_parameter_models import (
 )
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
 from ..spine_db_manager import SpineDBManager
-from ..helpers import busy_effect, format_string_list, IconManager
+from ..helpers import busy_effect, format_string_list
 from ..plotting import tree_graph_view_parameter_value_name
 
 
@@ -86,7 +86,6 @@ class DataStoreForm(QMainWindow):
         self.db_maps = db_maps
         self.keyed_db_maps = keyed_db_maps
         self.db_mngr = SpineDBManager(*db_maps)
-        self.icon_mngr = IconManager()
         # Selected ids
         self.selected_object_class_ids = dict()
         self.selected_object_ids = dict()
@@ -99,10 +98,10 @@ class DataStoreForm(QMainWindow):
         self.parameter_tag_toolbar = ParameterTagToolBar(self, db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
-        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, keyed_db_maps)
-        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, keyed_db_maps)
-        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, keyed_db_maps)
-        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self, keyed_db_maps)
+        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr)
+        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr)
+        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr)
+        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self, self.db_mngr)
         self.parameter_value_list_model = ParameterValueListModel(self, keyed_db_maps)
         # Setup views
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
@@ -152,14 +151,11 @@ class DataStoreForm(QMainWindow):
         for table_view in (
             self.ui.tableView_object_parameter_definition,
             self.ui.tableView_relationship_parameter_definition,
+            self.ui.tableView_object_parameter_value,
+            self.ui.tableView_relationship_parameter_value,
         ):
             # pylint: disable=cell-var-from-loop
-            table_view.itemDelegate().data_committed.connect(self.set_parameter_definition_data)
-            table_view.itemDelegate().parameter_value_editor_requested.connect(
-                lambda index, value: self.show_parameter_value_editor(index, table_view, value=value)
-            )
-        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
-            table_view.itemDelegate().data_committed.connect(self.set_parameter_value_data)
+            table_view.itemDelegate().data_committed.connect(self.set_parameter_data)
             table_view.itemDelegate().parameter_value_editor_requested.connect(
                 lambda index, value: self.show_parameter_value_editor(index, table_view, value=value)
             )
@@ -180,13 +176,7 @@ class DataStoreForm(QMainWindow):
             self._handle_relationship_parameter_definition_visibility_changed
         )
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-        # Parameters renamed
-        self.object_parameter_definition_model.parameters_renamed.connect(
-            self.object_parameter_value_model.rename_parameters
-        )
-        self.relationship_parameter_definition_model.parameters_renamed.connect(
-            self.relationship_parameter_value_model.rename_parameters
-        )
+
         # DB manager
         # Added
         self.db_mngr.object_classes_added.connect(self.receive_object_classes_added)
@@ -360,7 +350,7 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_definition_models()
         self.init_parameter_value_list_model()
         self.init_parameter_tag_toolbar()
-        self.set_default_parameter_data()
+        # self.set_default_parameter_data()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
@@ -743,29 +733,12 @@ class DataStoreForm(QMainWindow):
         editor = ParameterValueEditor(index, value_name=value_name, value=value, parent_widget=self)
         editor.show()
 
-    @Slot("QModelIndex", "QVariant", name="set_parameter_value_data")
-    def set_parameter_value_data(self, index, new_value):  # pylint: disable=no-self-use
+    @Slot("QModelIndex", "QVariant", name="set_parameter_data")
+    def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
         """Update (object or relationship) parameter value with newly edited data."""
         if new_value is None:
             return False
-        index.model().setData(index, new_value)
-        return True
-
-    @Slot("QModelIndex", "QVariant", name="set_parameter_definition_data")
-    def set_parameter_definition_data(self, index, new_value):
-        """Update (object or relationship) parameter definition with newly edited data.
-        If the parameter name changed, update it in (object or relationship) parameter value.
-        """
-        if new_value is None or not index.model().setData(index, new_value):
-            return False
-        header = index.model().horizontal_header_labels()
-        if header[index.column()] == 'parameter_name':
-            item = index.model().item_at_row(index.row())
-            db_map = item.db_map
-            if db_map:
-                parameter = {db_map: [dict(id=item.id, entity_class_id=item.entity_class.id, name=new_value)]}
-                index.model().parameters_renamed.emit(parameter)
-        return True
+        return index.model().setData(index, new_value)
 
     def _prompt_close_and_commit(self):
         """Prompts user for window closing and commits if requested returning True if window should close."""
