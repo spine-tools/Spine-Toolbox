@@ -250,3 +250,8 @@ class GdxExport(ProjectItem):
             self._settings[url] = new_settings
             return
         original_settings.update(new_settings)
+
+    @staticmethod
+    def default_name_prefix():
+        """see base class"""
+        return "gdx_export"
