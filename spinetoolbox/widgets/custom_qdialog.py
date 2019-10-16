@@ -117,6 +117,7 @@ class AddItemsDialog(ManageItemsDialog):
     def __init__(self, parent, db_maps):
         super().__init__(parent)
         self.db_maps = db_maps
+        self.keyed_db_maps = {x.codename: x for x in db_maps}
         self.remove_rows_button = QToolButton()
         self.remove_rows_button.setToolTip("<p>Remove selected rows.</p>")
         self.layout().insertWidget(1, self.remove_rows_button)
@@ -136,7 +137,7 @@ class AddItemsDialog(ManageItemsDialog):
         """Returns a list of db names available for a given row.
         Used by delegates.
         """
-        return list(self.db_maps.keys())
+        return [x.codename for x in self.db_maps]
 
 
 class GetObjectClassesMixin:
@@ -149,7 +150,7 @@ class GetObjectClassesMixin:
         """
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
-        db_maps = iter(self.db_maps[x] for x in db_names.split(",") if x in self.db_maps)
+        db_maps = iter(self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps)
         db_map = next(db_maps, None)
         if not db_map:
             return []
@@ -171,7 +172,7 @@ class GetObjectsMixin:
         """
         db_column = self.model.header.index('databases')
         db_names = self.model._main_data[row][db_column]
-        db_maps = [self.db_maps[x] for x in db_names.split(",") if x in self.db_maps]
+        db_maps = [self.keyed_db_maps[x] for x in db_names.split(",") if x in self.keyed_db_maps]
         rel_cls_key = (self.class_name, self.object_class_name_list)
         object_name_lists = []
         for db_map in db_maps:
@@ -218,18 +219,18 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
         self.combo_box = QComboBox(self)
         self.layout().insertWidget(0, self.combo_box)
         self.obj_cls_dict = {
-            db_map: {x.name: x.display_order for x in db_map.object_class_list()} for db_map in self.db_maps.values()
+            db_map: {x.name: x.display_order for x in db_map.object_class_list()} for db_map in self.db_maps
         }
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cube_minus.svg"))
         self.table_view.setItemDelegate(ManageObjectClassesDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])
-        databases = ",".join(self.db_maps.keys())
+        databases = ",".join(list(self.keyed_db_maps.keys()))
         self.default_display_icon = default_icon_id()
         self.model.set_default_row(**{'databases': databases, 'display icon': self.default_display_icon})
         self.model.clear()
         insert_at_position_list = ['Insert new classes at the top']
-        object_class_names = {x: None for db_map in self.db_maps.values() for x in self.obj_cls_dict[db_map]}
+        object_class_names = {x: None for db_map in self.db_maps for x in self.obj_cls_dict[db_map]}
         self.object_class_names = list(object_class_names)
         insert_at_position_list.extend(
             ["Insert new classes after '{}'".format(name) for name in self.object_class_names]
@@ -255,7 +256,7 @@ class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
             name, description, display_icon, db_names = row_data
             db_name_list = db_names.split(",")
             try:
-                db_maps = [self.db_maps[x] for x in db_name_list]
+                db_maps = [self.keyed_db_maps[x] for x in db_name_list]
             except KeyError as e:
                 self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
                 return
@@ -304,14 +305,14 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
         self.table_view.setItemDelegate(ManageObjectsDelegate(self))
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class name', 'object name', 'description', 'databases'])
-        self.obj_cls_dict = {
-            db_map: {x.name: x.id for x in db_map.object_class_list()} for db_map in self.db_maps.values()
-        }
+        self.obj_cls_dict = {db_map: {x.name: x.id for x in db_map.object_class_list()} for db_map in self.db_maps}
         if class_name:
             default_db_maps = [db_map for db_map, names in self.obj_cls_dict.items() if class_name in names]
-            db_names = ",".join([db_name for db_name, db_map in self.db_maps.items() if db_map in default_db_maps])
+            db_names = ",".join(
+                [db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
+            )
         else:
-            db_names = ",".join(self.db_maps.keys())
+            db_names = ",".join(list(self.keyed_db_maps.keys()))
         self.model.set_default_row(**{'object class name': class_name, 'databases': db_names})
         self.model.clear()
 
@@ -348,10 +349,10 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
                 return
             pre_item = {'name': name, 'description': description}
             for db_name in db_names.split(","):
-                if db_name not in self.db_maps:
+                if db_name not in self.keyed_db_maps:
                     self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
-                db_map = self.db_maps[db_name]
+                db_map = self.keyed_db_maps[db_name]
                 object_classes = self.obj_cls_dict[db_map]
                 if class_name not in object_classes:
                     self._parent.msg_error.emit(
@@ -397,14 +398,14 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
         self.number_of_dimensions = 1
         self.connect_signals()
         self.model.set_horizontal_header_labels(['object class 1 name', 'relationship class name', 'databases'])
-        self.obj_cls_dict = {
-            db_map: {x.name: x.id for x in db_map.object_class_list()} for db_map in self.db_maps.values()
-        }
+        self.obj_cls_dict = {db_map: {x.name: x.id for x in db_map.object_class_list()} for db_map in self.db_maps}
         if object_class_one_name:
             default_db_maps = [db_map for db_map, names in self.obj_cls_dict.items() if object_class_one_name in names]
-            db_names = ",".join([db_name for db_name, db_map in self.db_maps.items() if db_map in default_db_maps])
+            db_names = ",".join(
+                [db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps]
+            )
         else:
-            db_names = ",".join(self.db_maps.keys())
+            db_names = ",".join(list(self.keyed_db_maps.keys()))
         self.model.set_default_row(**{'object class 1 name': object_class_one_name, 'databases': db_names})
         self.model.clear()
 
@@ -480,10 +481,10 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
             pre_item = {'name': relationship_class_name}
             db_names = row_data[db_column]
             for db_name in db_names.split(","):
-                if db_name not in self.db_maps:
+                if db_name not in self.keyed_db_maps:
                     self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
-                db_map = self.db_maps[db_name]
+                db_map = self.keyed_db_maps[db_name]
                 object_classes = self.obj_cls_dict[db_map]
                 object_class_id_list = list()
                 for column in range(name_column):  # Leave 'name' column outside
@@ -541,15 +542,13 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
         layout.addStretch()
         self.layout().insertWidget(0, widget)
         self.remove_rows_button.setIcon(QIcon(":/icons/menu_icons/cubes_minus.svg"))
-        self.obj_dict = {
-            db_map: {(x.class_id, x.name): x.id for x in db_map.object_list()} for db_map in self.db_maps.values()
-        }
+        self.obj_dict = {db_map: {(x.class_id, x.name): x.id for x in db_map.object_list()} for db_map in self.db_maps}
         self.rel_cls_dict = {
             db_map: {
                 (x.name, x.object_class_name_list): (x.id, x.object_class_id_list)
                 for x in db_map.wide_relationship_class_list()
             }
-            for db_map in self.db_maps.values()
+            for db_map in self.db_maps
         }
         relationship_class_keys = {x: None for rel_cls_list in self.rel_cls_dict.values() for x in rel_cls_list}
         self.relationship_class_keys = list(relationship_class_keys)
@@ -589,7 +588,7 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
             if (self.class_name, self.object_class_name_list) in rel_cls_list
         ]
         object_class_name_list = self.object_class_name_list.split(",")
-        db_names = ",".join([db_name for db_name, db_map in self.db_maps.items() if db_map in default_db_maps])
+        db_names = ",".join([db_name for db_name, db_map in self.keyed_db_maps.items() if db_map in default_db_maps])
         header = [*[x + " name" for x in object_class_name_list], 'relationship name', 'databases']
         self.model.set_horizontal_header_labels(header)
         defaults = {'databases': db_names}
@@ -635,10 +634,10 @@ class AddRelationshipsDialog(AddItemsDialog, GetObjectsMixin):
             pre_item = {'name': relationship_name}
             db_names = row_data[db_column]
             for db_name in db_names.split(","):
-                if db_name not in self.db_maps:
+                if db_name not in self.keyed_db_maps:
                     self._parent.msg_error.emit("Invalid database {0} at row {1}".format(db_name, i + 1))
                     return
-                db_map = self.db_maps[db_name]
+                db_map = self.keyed_db_maps[db_name]
                 relationship_classes = self.rel_cls_dict[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
                     self._parent.msg_error.emit(
@@ -677,7 +676,7 @@ class EditOrRemoveItemsDialog(ManageItemsDialog):
         Used by delegates.
         """
         item = self.items[row]
-        return [item.db_mngr.display_database(db_map) for db_map in item.db_maps]
+        return [db_map.codename for db_map in item.db_maps]
 
 
 class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin):
@@ -725,7 +724,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
-                    if item.db_mngr.display_database(db_map) == database:
+                    if db_map.codename == database:
                         db_maps.append(db_map)
                         break
                 else:
@@ -742,7 +741,7 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
             pre_db_item = {'name': name, 'description': description, 'display_icon': display_icon}
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
-                db_item['id'] = item.db_map_data_field(db_map, 'id')
+                db_item['id'] = item.db_map_id(db_map)
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
             self._parent.msg_error.emit("Nothing to update")
@@ -788,7 +787,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
-                    if item.db_mngr.display_database(db_map) == database:
+                    if db_map.codename == database:
                         db_maps.append(db_map)
                         break
                 else:
@@ -803,7 +802,7 @@ class EditObjectsDialog(EditOrRemoveItemsDialog):
             pre_db_item = {'name': name, 'description': description}
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
-                db_item['id'] = item.db_map_data_field(db_map, 'id')
+                db_item['id'] = item.db_map_id(db_map)
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
             self._parent.msg_error.emit("Nothing to update")
@@ -831,7 +830,6 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
         self.orig_data = list()
         model_data = list()
         for item in selected:
-            data = item.db_map_data(item.first_db_map)
             row_data = [item.display_name]
             self.orig_data.append(row_data.copy())
             row_data.append(item.display_database)
@@ -849,7 +847,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
-                    if item.db_mngr.display_database(db_map) == database:
+                    if db_map.codename == database:
                         db_maps.append(db_map)
                         break
                 else:
@@ -864,7 +862,7 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
             pre_db_item = {'name': name}
             for db_map in db_maps:
                 db_item = pre_db_item.copy()
-                db_item['id'] = item.db_map_data_field(db_map, 'id')
+                db_item['id'] = item.db_map_id(db_map)
                 db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
             self._parent.msg_error.emit("Nothing to update")
@@ -874,7 +872,6 @@ class EditRelationshipClassesDialog(EditOrRemoveItemsDialog):
 
 
 class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
-    # FIXME: This one hasn't been touched in a while
     """A dialog to query user's preferences for updating relationships.
 
     Attributes:
@@ -883,43 +880,39 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
         ref_class_key (tuple): (class_name, object_class_name_list) for identifying the relationship class
     """
 
-    def __init__(self, parent, db_map_dicts, ref_class_key):
+    def __init__(self, parent, selected, class_key):
         super().__init__(parent)
         self.setWindowTitle("Edit relationships")
         self.model = MinimalTableModel(self)
         self.table_view.setModel(self.model)
         self.table_view.setItemDelegate(ManageRelationshipsDelegate(self))
         self.connect_signals()
-        self.class_name, self.object_class_name_list = ref_class_key
+        self.class_name, self.object_class_name_list = class_key
         object_class_name_list = self.object_class_name_list.split(",")
         self.model.set_horizontal_header_labels(
             [x + ' name' for x in object_class_name_list] + ['relationship name', 'databases']
         )
         self.orig_data = list()
         model_data = list()
-        db_maps = set()
-        for db_map_dict in db_map_dicts:
-            db_names = ",".join([self._parent.db_map_to_name[db_map] for db_map in db_map_dict])
-            db_maps.update(db_map_dict.keys())
-            item = list(db_map_dict.values())[0]
-            name = item.get('name')
-            object_name_list = item.get("object_name_list")
-            if not name or not object_name_list:
-                continue
-            object_name_list = object_name_list.split(",")
-            row_data = [*object_name_list, name]
+        self.db_maps = set()
+        for item in selected:
+            self.db_maps.update(item.db_maps)
+            object_name_list = item.display_name.split(",")
+            data = item.db_map_data(item.first_db_map)
+            row_data = [*object_name_list, data["name"]]
             self.orig_data.append(row_data.copy())
-            row_data.append(db_names)
+            row_data.append(item.display_database)
             model_data.append(row_data)
-            self.items.append(db_map_dict)
+            self.items.append(item)
         self.model.reset_model(model_data)
-        self.obj_dict = {db_map: {(x.class_id, x.name): x.id for x in db_map.object_list()} for db_map in db_maps}
+        self.keyed_db_maps = {x.codename: x for x in self.db_maps}
+        self.obj_dict = {db_map: {(x.class_id, x.name): x.id for x in db_map.object_list()} for db_map in self.db_maps}
         self.rel_cls_dict = {
             db_map: {
                 (x.name, x.object_class_name_list): (x.id, x.object_class_id_list)
                 for x in db_map.wide_relationship_class_list()
             }
-            for db_map in db_maps
+            for db_map in self.db_maps
         }
 
     @Slot(name="accept")
@@ -930,33 +923,34 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
         db_column = self.model.horizontal_header_labels().index("databases")
         for i in range(self.model.rowCount()):
             row_data = self.model.row_data(i)
+            item = self.items[i]
             object_name_list = [row_data[column] for column in range(name_column)]
             name = row_data[name_column]
-            if not name:
-                self._parent.msg_error.emit("Relationship name missing at row {}".format(i + 1))
-                return
             db_names = row_data[db_column]
-            db_name_list = db_names.split(",")
-            try:
-                db_maps = [self.db_maps[x] for x in db_name_list]
-            except KeyError as e:
-                self._parent.msg_error.emit("Invalid database {0} at row {1}".format(e, i + 1))
-                return
+            db_maps = []
+            for database in db_names.split(","):
+                for db_map in item.db_maps:
+                    if db_map.codename == database:
+                        db_maps.append(db_map)
+                        break
+                else:
+                    self._parent.msg_error.emit("Invalid database {0} at row {1}".format(database, i + 1))
+                    return
             if not name:
                 self._parent.msg_error.emit("Relationship class name missing at row {}".format(i + 1))
                 return
             orig_row = self.orig_data[i]
             if [*object_name_list, name] == orig_row:
                 continue
-            pre_item = {'name': name}
-            for db_index, db_map in enumerate(db_maps):
-                id_ = self.items[i][db_map]['id']
+            pre_db_item = {'name': name}
+            for db_map in db_maps:
+                id_ = item.db_map_id(db_map)
                 # Find object_class_id_list
                 relationship_classes = self.rel_cls_dict[db_map]
                 if (self.class_name, self.object_class_name_list) not in relationship_classes:
                     self._parent.msg_error.emit(
                         "Invalid relationship class '{}' for db '{}' at row {}".format(
-                            self.class_name, db_name_list[db_index], i + 1
+                            self.class_name, db_map.codename, i + 1
                         )
                     )
                     return
@@ -968,16 +962,14 @@ class EditRelationshipsDialog(EditOrRemoveItemsDialog, GetObjectsMixin):
                 for object_class_id, object_name in zip(object_class_id_list, object_name_list):
                     if (object_class_id, object_name) not in objects:
                         self._parent.msg_error.emit(
-                            "Invalid object '{}' for db '{}' at row {}".format(
-                                object_name, db_name_list[db_index], i + 1
-                            )
+                            "Invalid object '{}' for db '{}' at row {}".format(object_name, db_map.codename, i + 1)
                         )
                         return
                     object_id = objects[object_class_id, object_name]
                     object_id_list.append(object_id)
-                item = pre_item.copy()
-                item.update({'id': id_, 'object_id_list': object_id_list, 'name': name})
-                db_map_data.setdefault(db_map, []).append(item)
+                db_item = pre_db_item.copy()
+                db_item.update({'id': id_, 'object_id_list': object_id_list, 'name': name})
+                db_map_data.setdefault(db_map, []).append(db_item)
         if not db_map_data:
             self._parent.msg_error.emit("Nothing to update")
             return
@@ -1019,7 +1011,7 @@ class RemoveTreeItemsDialog(EditOrRemoveItemsDialog):
             db_maps = []
             for database in db_names.split(","):
                 for db_map in item.db_maps:
-                    if item.db_mngr.display_database(db_map) == database:
+                    if db_map.codename == database:
                         db_maps.append(db_map)
                         break
                 else:

@@ -59,14 +59,14 @@ class DataStoreForm(QMainWindow):
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
         ui: UI definition of the form that is initialized
-        db_maps (dict): maps database names to DiffDatabaseMapping instances
+        db_maps (iter): DiffDatabaseMapping instances
     """
 
     msg = Signal(str, name="msg")
     msg_error = Signal(str, name="msg_error")
     commit_available = Signal("bool", name="commit_available")
 
-    def __init__(self, project, ui, db_maps):
+    def __init__(self, project, ui, *db_maps):
         """Initialize class."""
         super().__init__(flags=Qt.Window)
         self._project = project
@@ -82,11 +82,12 @@ class DataStoreForm(QMainWindow):
         # Class attributes
         self.err_msg = QErrorMessage(self)
         # DB
+        keyed_db_maps = {db_map.codename: db_map for db_map in db_maps}
         self.db_maps = db_maps
-        self.db_mngr = SpineDBManager(db_maps)
+        self.keyed_db_maps = keyed_db_maps
+        self.db_mngr = SpineDBManager(*db_maps)
         self.icon_mngr = IconManager()
-        # Object tree selected indexes
-        self.selected_obj_tree_indexes = {}
+        # Selected ids
         self.selected_object_class_ids = dict()
         self.selected_object_ids = dict()
         self.selected_relationship_class_ids = dict()
@@ -95,14 +96,14 @@ class DataStoreForm(QMainWindow):
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
         # Parameter tag toolbar
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, list(db_maps.values()))
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
-        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, db_maps)
-        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, db_maps)
-        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, db_maps)
-        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self, db_maps)
-        self.parameter_value_list_model = ParameterValueListModel(self, db_maps)
+        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, keyed_db_maps)
+        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, keyed_db_maps)
+        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, keyed_db_maps)
+        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self, keyed_db_maps)
+        self.parameter_value_list_model = ParameterValueListModel(self, keyed_db_maps)
         # Setup views
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
@@ -192,21 +193,27 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.objects_added.connect(self.receive_objects_added)
         self.db_mngr.relationship_classes_added.connect(self.receive_relationship_classes_added)
         self.db_mngr.relationships_added.connect(self.receive_relationships_added)
-        self.db_mngr.msg_error.connect(self.add_error_msg_from_db_map)
         # Updated
         self.db_mngr.object_classes_updated.connect(self.receive_object_classes_updated)
         self.db_mngr.objects_updated.connect(self.receive_objects_updated)
         self.db_mngr.relationship_classes_updated.connect(self.receive_relationship_classes_updated)
         self.db_mngr.relationships_updated.connect(self.receive_relationships_updated)
-        self.db_mngr.msg_error.connect(self.add_error_msg_from_db_map)
+        # Removed
+        self.db_mngr.object_classes_removed.connect(self.receive_object_classes_removed)
+        self.db_mngr.objects_removed.connect(self.receive_objects_removed)
+        self.db_mngr.relationship_classes_removed.connect(self.receive_relationship_classes_removed)
+        self.db_mngr.relationships_removed.connect(self.receive_relationships_removed)
+        # Error
+        self.db_mngr.msg_error.connect(self.add_db_mngr_error_msg)
 
     @Slot("QVariant", name="add_message")
-    def add_error_msg_from_db_map(self, db_map_error_log):
-        # TODO: prepend the database name or something
-        full_error_log = []
-        for error_log in db_map_error_log.values():
-            full_error_log += error_log
-        self.msg_error.emit(format_string_list(full_error_log))
+    def add_db_mngr_error_msg(self, db_map_error_log):
+        msg = ""
+        for db_map, error_log in db_map_error_log.items():
+            database = "From " + db_map.codename + ":"
+            formatted_log = format_string_list(error_log)
+            msg += format_string_list([database, formatted_log])
+        self.msg_error.emit(msg)
 
     def qsettings(self):
         """Returns the QSettings instance from ToolboxUI."""
@@ -304,10 +311,10 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="_prompt_and_commit_session")
     def _prompt_and_commit_session(self, checked=False):
         """Query user for a commit message and commit changes to source database returning False if cancelled."""
-        if not any(db_map.has_pending_changes() for db_map in self.db_maps.values()):
+        if not any(db_map.has_pending_changes() for db_map in self.db_maps):
             self.msg.emit("Nothing to commit yet.")
             return
-        db_names = list(self.db_maps.keys())
+        db_names = [x.codename for x in self.db_maps]
         dialog = CommitDialog(self, *db_names)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
@@ -318,7 +325,7 @@ class DataStoreForm(QMainWindow):
     @busy_effect
     def commit_session(self, commit_msg):
         try:
-            for db_map in self.db_maps.values():
+            for db_map in self.db_maps:
                 db_map.commit_session(commit_msg)
             self.commit_available.emit(False)
         except SpineDBAPIError as e:
@@ -330,7 +337,7 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="rollback_session")
     def rollback_session(self, checked=False):
         try:
-            for db_map in self.db_maps.values():
+            for db_map in self.db_maps:
                 db_map.rollback_session()
             self.commit_available.emit(False)
         except SpineDBAPIError as e:
@@ -351,9 +358,9 @@ class DataStoreForm(QMainWindow):
         self.init_object_tree_model()
         self.init_parameter_value_models()
         self.init_parameter_definition_models()
-        self.set_default_parameter_data()
         self.init_parameter_value_list_model()
         self.init_parameter_tag_toolbar()
+        self.set_default_parameter_data()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
@@ -362,21 +369,21 @@ class DataStoreForm(QMainWindow):
         self.ui.treeView_object.resizeColumnToContents(0)
 
     def init_parameter_value_models(self):
-        """Initialize parameter value models from source database."""
+        """Initialize parameter value models."""
         self.object_parameter_value_model.init_model()
         self.ui.tableView_object_parameter_value.resizeColumnsToContents()
         self.relationship_parameter_value_model.init_model()
         self.ui.tableView_relationship_parameter_value.resizeColumnsToContents()
 
     def init_parameter_definition_models(self):
-        """Initialize parameter (definition) models from source database."""
+        """Initialize parameter (definition) models."""
         self.object_parameter_definition_model.init_model()
         self.ui.tableView_object_parameter_definition.resizeColumnsToContents()
         self.relationship_parameter_definition_model.init_model()
         self.ui.tableView_relationship_parameter_definition.resizeColumnsToContents()
 
     def init_parameter_value_list_model(self):
-        """Initialize parameter value_list models from source database."""
+        """Initialize parameter value_list models."""
         self.parameter_value_list_model.build_tree()
         for i in range(self.parameter_value_list_model.rowCount()):
             db_index = self.parameter_value_list_model.index(i, 0)
@@ -444,7 +451,7 @@ class DataStoreForm(QMainWindow):
     def set_default_parameter_data(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
         if index is None:
-            default_data = dict(database=next(iter(self.db_maps)))
+            default_data = dict(database=next(iter(self.db_maps)).codename)
         else:
             default_data = index.internalPointer().default_parameter_data()
         for model in (
@@ -471,22 +478,22 @@ class DataStoreForm(QMainWindow):
     def show_add_object_classes_form(self, checked=False):
         """Show dialog to let user select preferences for new object classes."""
         dialog = AddObjectClassesDialog(self, self.db_maps)
-        dialog.show()
         dialog.data_committed.connect(self.db_mngr.add_object_classes)
+        dialog.show()
 
     @Slot("bool", "str", name="show_add_objects_form")
     def show_add_objects_form(self, checked=False, class_name=""):
         """Show dialog to let user select preferences for new objects."""
         dialog = AddObjectsDialog(self, self.db_maps, class_name=class_name)
-        dialog.show()
         dialog.data_committed.connect(self.db_mngr.add_objects)
+        dialog.show()
 
     @Slot("bool", "str", name="show_add_relationship_classes_form")
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
         """Show dialog to let user select preferences for new relationship class."""
         dialog = AddRelationshipClassesDialog(self, self.db_maps, object_class_one_name=object_class_one_name)
-        dialog.show()
         dialog.data_committed.connect(self.db_mngr.add_relationship_classes)
+        dialog.show()
 
     @Slot("bool", "tuple", "str", "str", name="show_add_relationships_form")
     def show_add_relationships_form(
@@ -500,8 +507,8 @@ class DataStoreForm(QMainWindow):
             object_class_name=object_class_name,
             object_name=object_name,
         )
-        dialog.show()
         dialog.data_committed.connect(self.db_mngr.add_relationships)
+        dialog.show()
 
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
@@ -528,85 +535,83 @@ class DataStoreForm(QMainWindow):
         dialog.data_committed.connect(self.db_mngr.update_relationship_classes)
         dialog.show()
 
-    @Slot("bool", name="show_edit_relationship_classes_form_from_object_tree")
-    def show_edit_relationship_classes_form_from_object_tree(self, checked=False):
-        if self.widget_with_selection == self.ui.treeView_object:
-            indexes = self.selected_obj_tree_indexes.get('relationship_class')
-        elif self.widget_with_selection == self.ui.treeView_relationship:
-            indexes = self.selected_rel_tree_indexes.get('relationship_class')
-        else:
-            return
-        if not indexes:
-            return
-        db_map_dicts = [ind.data(Qt.UserRole + 1) for ind in indexes]
-        dialog = EditRelationshipClassesDialog(self, db_map_dicts)
+    @Slot("bool", name="show_edit_relationships_form")
+    def show_edit_relationships_form(self, checked=False):
+        # TODO: this...
+        # NOTE: Only edits relationships that are in the same class
+        selected = {
+            ind.internalPointer()
+            for ind in self.object_tree_model.selected_relationship_indexes.keys()
+            | self.relationship_tree_model.selected_relationship_indexes.keys()
+        }
+        first_item = next(iter(selected))
+        relationship_class_key = first_item.parent.display_id
+        selected = {item for item in selected if item.parent.display_id == relationship_class_key}
+        dialog = EditRelationshipsDialog(self, selected, relationship_class_key)
         dialog.data_committed.connect(self.db_mngr.update_relationships)
         dialog.show()
 
-    @Slot("bool", name="show_edit_relationships_form")
-    def show_edit_relationships_form(self, checked=False):
-        # NOTE: Only edit relationships of the same class as the one in current index, for now...
-        if self.widget_with_selection == self.ui.treeView_object:
-            current = self.ui.treeView_object.currentIndex()
-            if current.data(Qt.UserRole) != "relationship":
-                return
-            indexes = self.selected_obj_tree_indexes.get('relationship')
-        elif self.widget_with_selection == self.ui.treeView_relationship:
-            current = self.ui.treeView_relationship.currentIndex()
-            if current.data(Qt.UserRole) != "relationship":
-                return
-            indexes = self.selected_rel_tree_indexes.get('relationship')
-        ref_class_key = (current.parent().data(Qt.DisplayRole), current.parent().data(Qt.ToolTipRole))
-        db_map_dicts = []
-        for index in indexes:
-            class_key = (index.parent().data(Qt.DisplayRole), index.parent().data(Qt.ToolTipRole))
-            if class_key == ref_class_key:
-                db_map_dicts.append(index.data(Qt.UserRole + 1))
-        dialog = EditRelationshipsDialog(self, db_map_dicts, ref_class_key)
-        dialog.show()
-
-    def receive_items_added_or_updated(self, action, item_type, db_map_data):
-        """Enables actions and informs the user about insert and update operations."""
-        self.ui.actionExport.setEnabled(True)
+    def receive_items_changed(self, action, item_type, db_map_data):
+        """Enables or disables actions and informs the user about what just happened."""
+        # NOTE: Make sure this slot is called *after* removing items from object tree model
+        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
         names = {item["name"] for db_map, data in db_map_data.items() for item in data}
         self.commit_available.emit(True)
         names = "', '".join(names)
-        msg = f"New item(s) '{names}' of type {item_type} successfully {action}."
+        msg = f"Item(s) '{names}' of type {item_type} successfully {action}."
         self.msg.emit(msg)
 
     @Slot("QVariant", name="receive_object_classes_added")
     def receive_object_classes_added(self, db_map_data):
-        self.receive_items_added_or_updated("added", "object class", db_map_data)
+        self.receive_items_changed("added", "object class", db_map_data)
 
     @Slot("QVariant", name="receive_objects_added")
     def receive_objects_added(self, db_map_data):
-        self.receive_items_added_or_updated("added", "object", db_map_data)
+        self.receive_items_changed("added", "object", db_map_data)
 
     @Slot("QVariant", name="receive_relationship_classes_added")
     def receive_relationship_classes_added(self, db_map_data):
-        self.receive_items_added_or_updated("added", "relationship class", db_map_data)
+        self.receive_items_changed("added", "relationship class", db_map_data)
 
     @Slot("QVariant", name="receive_relationships_added")
     def receive_relationships_added(self, db_map_data):
-        self.receive_items_added_or_updated("added", "relationship", db_map_data)
+        self.receive_items_changed("added", "relationship", db_map_data)
 
     @Slot("QVariant", name="receive_object_classes_updated")
     def receive_object_classes_updated(self, db_map_data):
-        self.receive_items_added_or_updated("updated", "object class", db_map_data)
+        self.receive_items_changed("updated", "object class", db_map_data)
 
     @Slot("QVariant", name="receive_objects_updated")
     def receive_objects_updated(self, db_map_data):
-        self.receive_items_added_or_updated("updated", "object", db_map_data)
+        self.receive_items_changed("updated", "object", db_map_data)
 
     @Slot("QVariant", name="receive_relationship_classes_updated")
     def receive_relationship_classes_updated(self, db_map_data):
-        self.receive_items_added_or_updated("updated", "relationship class", db_map_data)
+        self.receive_items_changed("updated", "relationship class", db_map_data)
 
     @Slot("QVariant", name="receive_relationships_updated")
     def receive_relationships_updated(self, db_map_data):
-        self.receive_items_added_or_updated("updated", "relationship", db_map_data)
+        self.receive_items_changed("updated", "relationship", db_map_data)
 
-    # TODO: Connect these to signals in spine_db_manager
+    @Slot("QVariant", name="receive_object_classes_removed")
+    def receive_object_classes_removed(self, db_map_data):
+        self.receive_items_changed("removed", "object class", db_map_data)
+
+    @Slot("QVariant", name="receive_objects_removed")
+    def receive_objects_removed(self, db_map_data):
+        self.receive_items_changed("removed", "object", db_map_data)
+
+    @Slot("QVariant", name="receive_relationship_classes_removed")
+    def receive_relationship_classes_removed(self, db_map_data):
+        self.receive_items_changed("removed", "relationship class", db_map_data)
+
+    @Slot("QVariant", name="receive_relationships_removed")
+    def receive_relationships_removed(self, db_map_data):
+        self.receive_items_changed("removed", "relationship", db_map_data)
+
+    # TODO: Connect these to signals in spine_db_manager,
+    # Probably not needed if we manage to read names from the manager,
+    # but even though maybe needed to emit dataChanged or st
     def update_object_classes_in_models(self, db_map_data):
         self.object_parameter_value_model.rename_object_classes(db_map_data)
         self.object_parameter_definition_model.rename_object_classes(db_map_data)
@@ -847,7 +852,7 @@ class DataStoreForm(QMainWindow):
         Args:
             event (QCloseEvent): Closing event
         """
-        if any(db_map.has_pending_changes() for db_map in self.db_maps.values()):
+        if any(db_map.has_pending_changes() for db_map in self.db_maps):
             want_to_close = self._prompt_close_and_commit()
             if not want_to_close:
                 event.ignore()

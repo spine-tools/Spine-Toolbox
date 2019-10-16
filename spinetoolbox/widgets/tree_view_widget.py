@@ -45,7 +45,7 @@ class TreeViewForm(DataStoreForm):
 
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
-        db_maps (dict): named DiffDatabaseMapping instances
+        db_maps (iter): DiffDatabaseMapping instances
     """
 
     object_class_selection_available = Signal("bool", name="object_class_selection_available")
@@ -60,17 +60,16 @@ class TreeViewForm(DataStoreForm):
     rel_parameter_value_selection_available = Signal("bool", name="rel_parameter_value_selection_available")
     parameter_value_list_selection_available = Signal("bool", name="parameter_value_list_selection_available")
 
-    def __init__(self, project, db_maps):
+    def __init__(self, project, *db_maps):
         """Initialize class."""
         from ..ui.tree_view_form import Ui_MainWindow
 
         tic = time.process_time()
-        super().__init__(project, Ui_MainWindow(), db_maps)
+        super().__init__(project, Ui_MainWindow(), *db_maps)
         self.takeCentralWidget()
         # Object tree model
         self.object_tree_model = ObjectTreeModel(self, self.db_mngr)
         self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr)
-        self.selected_rel_tree_indexes = {}
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         # Others
@@ -85,7 +84,7 @@ class TreeViewForm(DataStoreForm):
         self.setup_delegates()
         self.add_toggle_view_actions()
         self.connect_signals()
-        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join(list(db_maps.keys()))))
+        self.setWindowTitle("Data store tree view    -- {} --".format(", ".join([x.codename for x in db_maps])))
         toc = time.process_time()
         self.msg.emit("Tree view form created in {} seconds".format(toc - tic))
 
@@ -377,7 +376,7 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="show_import_file_dialog")
     def show_import_file_dialog(self, checked=False):
         """Show dialog to allow user to select a file to import."""
-        db_map = next(iter(self.db_maps.values()))
+        db_map = next(iter(self.db_maps))
         if db_map.has_pending_changes():
             commit_warning = QMessageBox(parent=self)
             commit_warning.setText("Please commit or rollback before importing data")
@@ -449,14 +448,14 @@ class TreeViewForm(DataStoreForm):
              the database map of the database or None if no database was selected
         """
         if len(self.db_maps) == 1:
-            return next(iter(self.db_maps.values()))
-        db_names = list(self.db_maps.keys())
+            return next(iter(self.db_maps))
+        db_names = [x.codename for x in self.db_maps]
         selected_database, ok = QInputDialog.getItem(
             self, "Select database", "Select database to export", db_names, editable=False
         )
         if not ok:
             return None
-        return self.db_maps[selected_database]
+        return self.db_maps[db_names.index(selected_database)]
 
     @busy_effect
     def export_to_excel(self, db_map, file_path):
@@ -725,12 +724,12 @@ class TreeViewForm(DataStoreForm):
         Call the appropriate method to show the edit form,
         depending on the current index."""
         current = self.ui.treeView_object.currentIndex()
-        current_type = current.data(Qt.UserRole)
-        if current_type == 'object_class':
+        current_type = self.object_tree_model.item_from_index(current).item_type
+        if current_type == 'object class':
             self.show_edit_object_classes_form()
         elif current_type == 'object':
             self.show_edit_objects_form()
-        elif current_type == 'relationship_class':
+        elif current_type == 'relationship class':
             self.show_edit_relationship_classes_form()
         elif current_type == 'relationship':
             self.show_edit_relationships_form()
@@ -739,28 +738,12 @@ class TreeViewForm(DataStoreForm):
         """Called when F2 is pressed while the relationship tree has focus.
         Call the appropriate method to show the edit form,
         depending on the current index."""
-        current = self.ui.treeView_object.currentIndex()
-        current_type = current.data(Qt.UserRole)
-        if current_type == 'relationship_class':
+        current = self.ui.treeView_relationship.currentIndex()
+        current_type = self.relationship_tree_model.item_from_index(current).item_type
+        if current_type == 'relationship class':
             self.show_edit_relationship_classes_form()
         elif current_type == 'relationship':
             self.show_edit_relationships_form()
-
-    def update_object_classes_in_models(self, db_map_data):
-        super().update_object_classes_in_models(db_map_data)
-        # self.relationship_tree_model.update_object_classes(db_map_data)
-
-    def update_objects_in_models(self, db_map_data):
-        super().update_objects_in_models(db_map_data)
-        # self.relationship_tree_model.update_objects(db_map_data)
-
-    def update_relationship_classes_in_models(self, db_map_data):
-        super().update_relationship_classes_in_models(db_map_data)
-        self.relationship_tree_model.update_relationship_classes(db_map_data)
-
-    def update_relationships_in_models(self, db_map, updated):
-        super().update_relationships_in_models(db_map, updated)
-        self.relationship_tree_model.update_relationships(db_map, updated)
 
     @Slot(name="show_remove_object_tree_items_form")
     def show_remove_object_tree_items_form(self):
@@ -784,14 +767,21 @@ class TreeViewForm(DataStoreForm):
         dialog.data_committed.connect(self.db_mngr.remove_items)
         dialog.show()
 
-    @Slot("QVariant", name="receive_object_classes_removed")
-    def receive_object_classes_removed(self, db_map_data):
-        """Receive object classes removed signal from db manager."""
-        # TODO: this...
-        self.commit_available.emit(True)
-        # self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
-        self.msg.emit("Successfully removed {} item(s).".format(removed))
+    def receive_items_changed(self, action, item_type, db_map_data):
+        """Enables or disables actions and informs the user about what just happened."""
+        super().receive_items_changed(action, item_type, db_map_data)
+        if action == "removed":
+            self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
+            self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))
+            self.object_selection_available.emit(bool(self.object_tree_model.selected_object_indexes))
+            self.relationship_class_selection_available.emit(
+                bool(self.object_tree_model.selected_relationship_class_indexes)
+            )
+            self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
 
+    def _receive_items_removed(self, db_map_data):
+        """Receive object classes removed signal from db manager."""
+        # TODO: Do this by connecting db mngr signals to slots in those models
         if db_map_object_classes:
             self.object_parameter_definition_model.remove_object_classes(db_map_object_classes)
             self.object_parameter_value_model.remove_object_classes(db_map_object_classes)
@@ -805,37 +795,6 @@ class TreeViewForm(DataStoreForm):
             self.relationship_parameter_value_model.remove_relationship_classes(db_map_relationship_classes)
         if db_map_relationships:
             self.relationship_parameter_value_model.remove_relationships(db_map_relationships)
-        if not removed:
-            return
-        self.commit_available.emit(True)
-        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
-        self.msg.emit("Successfully removed {} item(s).".format(removed))
-        return
-        # TODO: do the below in the models
-        # Update selected (object and relationship) tree indexes
-        self.selected_obj_tree_indexes = {}
-        for index in self.ui.treeView_object.selectedIndexes():
-            item_type = index.data(Qt.UserRole)
-            self.selected_obj_tree_indexes.setdefault(item_type, {})[index] = None
-        self.selected_rel_tree_indexes = {}
-        for index in self.ui.treeView_relationship.selectedIndexes():
-            item_type = index.data(Qt.UserRole)
-            self.selected_rel_tree_indexes.setdefault(item_type, {})[index] = None
-        # Emit selection_available signals
-        self.object_tree_selection_available.emit(any(v for v in self.selected_obj_tree_indexes.values()))
-        self.object_class_selection_available.emit(len(self.selected_obj_tree_indexes.get('object_class', {})) > 0)
-        self.object_selection_available.emit(len(self.selected_obj_tree_indexes.get('object', {})) > 0)
-        self.relationship_tree_selection_available.emit(any(v for v in self.selected_rel_tree_indexes.values()))
-        self.relationship_class_selection_available.emit(
-            len(self.selected_obj_tree_indexes.get('relationship_class', {}))
-            + len(self.selected_rel_tree_indexes.get('relationship_class', {}))
-            > 0
-        )
-        self.relationship_selection_available.emit(
-            len(self.selected_obj_tree_indexes.get('relationship', {}))
-            + len(self.selected_rel_tree_indexes.get('relationship', {}))
-            > 0
-        )
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):

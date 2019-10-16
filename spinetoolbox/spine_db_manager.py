@@ -42,12 +42,10 @@ class SpineDBManager(QObject):
     relationship_classes_updated = Signal("QVariant", name="relationship_classes_updated")
     relationships_updated = Signal("QVariant", name="relationships_updated")
 
-    def __init__(self, keyed_db_maps: Dict[str, DiffDatabaseMapping]):
+    def __init__(self, *db_maps):
         """Init class."""
         super().__init__()
-        self._keyed_db_maps = keyed_db_maps
-        self._db_maps = list(keyed_db_maps.values())
-        self._db_names = {db_map: db_name for db_name, db_map in keyed_db_maps.items()}
+        self._db_maps = db_maps
         self._data = {}
         self.icon_mngr = IconManager()
         self.connect_signals()
@@ -55,9 +53,6 @@ class SpineDBManager(QObject):
     @property
     def db_maps(self):
         return self._db_maps
-
-    def display_database(self, db_map):
-        return self._db_names.get(db_map)
 
     def connect_signals(self):
         """Connect signals."""
@@ -300,7 +295,7 @@ class SpineDBManager(QObject):
             for item in self._data.get(db_map, {}).get("relationship class", {}).values():
                 object_class_id_list = [int(id_) for id_ in item["object_class_id_list"].split(",")]
                 if set(d).intersection(object_class_id_list):
-                    update_names and self.update_object_class_name_in_relationship_class(item, object_class_id_list, d)
+                    update_names and self._update_names(item, "object_class_name_list", object_class_id_list, d)
                     db_map_data_out.setdefault(db_map, []).append(item)
         return db_map_data_out
 
@@ -312,18 +307,21 @@ class SpineDBManager(QObject):
             for item in self._data.get(db_map, {}).get("relationship", {}).values():
                 object_id_list = [int(id_) for id_ in item["object_id_list"].split(",")]
                 if set(d).intersection(object_id_list):
-                    update_names and self.update_object_name_in_relationship(item, object_id_list, d)
+                    update_names and self._update_names(item, "object_name_list", object_id_list, d)
                     db_map_data_out.setdefault(db_map, []).append(item)
         return db_map_data_out
 
     @staticmethod
-    def update_object_class_name_in_relationship_class(item, object_class_id_list, d):
-        object_name_list = item["object_name_list"].split(",")
-        object_name_list = [d.get(id_, name) for id_, name in zip(object_id_list, object_name_list)]
-        item["object_name_list"] = ",".join(object_name_list)
+    def _update_names(item, key, id_list, d):
+        """
+        Update names.
 
-    @staticmethod
-    def update_object_name_in_relationship(item, object_id_list, d):
-        object_name_list = item["object_name_list"].split(",")
-        object_name_list = [d.get(id_, name) for id_, name in zip(object_id_list, object_name_list)]
-        item["object_name_list"] = ",".join(object_name_list)
+        Args:
+            item (dict)
+            key (str): the name of the key to update
+            id_list (list): the 'id' of each member in the name
+            d (dict): a mapping from id to new names
+        """
+        name_list = item[key].split(",")
+        name_list = [d.get(id_, name) for id_, name in zip(id_list, name_list)]
+        item[key] = ",".join(name_list)

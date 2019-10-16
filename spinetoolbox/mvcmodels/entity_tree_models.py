@@ -46,6 +46,7 @@ class EntityTreeModel(QAbstractItemModel):
         self._invisible_root_item = TreeItem()
         self._root_item = None
         self.selected_indexes = dict()  # Maps item type to selected indexes
+        self._selection_buffer = list()  # To restablish selected indexes after adding/removing rows
         self.connect_signals()
 
     def connect_signals(self):
@@ -59,7 +60,7 @@ class EntityTreeModel(QAbstractItemModel):
         self.selected_indexes.clear()
         self.endResetModel()
         self.track_item(self._invisible_root_item)
-        self._root_item = self._create_root_item()
+        self._root_item = self.root_item_type(self.db_mngr, dict.fromkeys(self.db_mngr.db_maps))
         self._invisible_root_item.insert_children(0, [self._root_item])
 
     def track_item(self, item):
@@ -77,15 +78,33 @@ class EntityTreeModel(QAbstractItemModel):
         item.children_about_to_be_removed.disconnect(self._begin_remove_rows)
         item.children_removed.disconnect(self._end_remove_rows)
 
+    def _fill_selection_buffer(self, item, last):
+        """Pops indexes out of selection dictionary and add items into buffer."""
+        selected = self.selected_indexes.get(item.child_item_type)
+        if not selected:
+            return
+        self._selection_buffer.clear()
+        for child in item.children[last:]:
+            if selected.pop(self.index_from_item(child), None) is not None:
+                self._selection_buffer.append(child)
+
+    def _empty_selection_buffer(self):
+        """Selects all indexes corresponding to items in the selection buffer."""
+        for item in self._selection_buffer:
+            self.select_index(self.index_from_item(item))
+        self._selection_buffer.clear()
+
     @Slot("QVariant", "int", "int", name="_begin_insert_rows")
     def _begin_insert_rows(self, item, row, count):
         """Begin an operation to insert rows."""
+        self._fill_selection_buffer(item, row + count)
         index = self.index_from_item(item)
         self.beginInsertRows(index, row, row + count - 1)
 
     @Slot("QVariant", name="_end_insert_rows")
     def _end_insert_rows(self, items):
         """End an operation to insert rows. Start tracking all inserted items."""
+        self._empty_selection_buffer()
         for item in items:
             self.track_item(item)
         self.endInsertRows()
@@ -93,12 +112,14 @@ class EntityTreeModel(QAbstractItemModel):
     @Slot("QVariant", "int", "int", name="_begin_remove_rows")
     def _begin_remove_rows(self, item, row, count):
         """Begin an operation to remove rows."""
+        self._fill_selection_buffer(item, row + count)
         index = self.index_from_item(item)
         self.beginRemoveRows(index, row, row + count - 1)
 
     @Slot("QVariant", name="_end_remove_rows")
     def _end_remove_rows(self, items):
         """End an operation to remove rows. Stop tracking all removed items."""
+        self._empty_selection_buffer()
         for item in items:
             self.stop_tracking_item(item)
         self.endRemoveRows()
@@ -111,7 +132,8 @@ class EntityTreeModel(QAbstractItemModel):
     def root_index(self):
         return self.index_from_item(self._root_item)
 
-    def _create_root_item(self):
+    @property
+    def root_item_type(self):
         """Implement in subclasses to create a model specific to any entity type."""
         raise NotImplementedError()
 
@@ -238,31 +260,12 @@ class EntityTreeModel(QAbstractItemModel):
         item_type = type(self.item_from_index(index))
         self.selected_indexes.setdefault(item_type, {})[index] = None
 
-    def cascade_filter_nodes(self, *conds, parents=(), fetch=False, return_unfetched=False):
-        """Filter nodes in cascade by given conditions starting from the list of parents:
-        Root --> Children with first cond --> Children with second cond, etc.
-        Returns the nodes at the lowest level attained.
-        Optionally fetch the nodes where it passes.
-        """
-        if not parents:
-            parents = [self.root_item]
-        for cond in conds:
-            parents = [child for parent in parents for child in parent.find_children(cond)]
-            if fetch:
-                for parent in parents:
-                    index = self.index_from_item(parent)
-                    self.canFetchMore(index) and self.fetchMore(index)
-        if not return_unfetched:
-            return [parent for parent in parents if not self.canFetchMore(self.index_from_item(parent))]
-        return parents
-
     def cascade_filter_nodes_by_id(self, db_map, *ids_set, parents=(), fetch=False, return_unfetched=False):
         """Filter nodes by ids in cascade starting from the list of parents:
         Root --> Children with id in the first set --> Children with id in the second set...
         Returns the nodes at the lowest level attained.
         Optionally fetch the nodes where it passes.
         """
-        # TODO: maybe implement visit_all based on this?
         if not parents:
             parents = [self.root_item]
         for ids in ids_set:
@@ -295,8 +298,9 @@ class ObjectTreeModel(EntityTreeModel):
         self.db_mngr.relationship_classes_updated.connect(self.update_relationship_classes)
         self.db_mngr.relationships_updated.connect(self.update_relationships)
 
-    def _create_root_item(self):
-        return ObjectTreeRootItem(self.db_mngr, dict.fromkeys(self.db_mngr.db_maps))
+    @property
+    def root_item_type(self):
+        return ObjectTreeRootItem
 
     @property
     def selected_object_class_indexes(self):
@@ -424,7 +428,8 @@ class ObjectTreeModel(EntityTreeModel):
 
     def update_relationships(self, db_map_data):
         for parent, db_map_ids in self._group_relationship_data(db_map_data).items():
-            parent.update_children_by_id(db_map_ids)
+            parent.remove_children_by_id(db_map_ids)
+            parent.append_children_by_id(db_map_ids)
 
     def find_next_relationship_index(self, index):
         """Find and return next ocurrence of relationship item."""
@@ -478,8 +483,9 @@ class RelationshipTreeModel(EntityTreeModel):
         self.db_mngr.relationship_classes_updated.connect(self.update_relationship_classes)
         self.db_mngr.relationships_updated.connect(self.update_relationships)
 
-    def _create_root_item(self):
-        return RelationshipTreeRootItem(self.db_mngr, dict.fromkeys(self.db_mngr.db_maps))
+    @property
+    def root_item_type(self):
+        return RelationshipTreeRootItem
 
     @property
     def selected_relationship_class_indexes(self):

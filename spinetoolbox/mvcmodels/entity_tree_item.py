@@ -42,6 +42,11 @@ class TreeItem(QObject):
         self.children = []
 
     @property
+    def child_item_type(self):
+        """Returns the type of child items. Reimplement in subclasses to return something more meaningfull."""
+        return TreeItem
+
+    @property
     def children(self):
         return self._children
 
@@ -267,7 +272,7 @@ class MultiDBTreeItem(TreeItem):
     @property
     def display_database(self):
         """"Returns the database for display."""
-        return ",".join([self.db_mngr.display_database(db_map) for db_map in self.db_maps])
+        return ",".join([db_map.codename for db_map in self.db_maps])
 
     @property
     def first_db_map(self):
@@ -343,11 +348,6 @@ class MultiDBTreeItem(TreeItem):
         Must be reimplemented in subclasses."""
         raise NotImplementedError()
 
-    def _create_child_item(self, db_map_id):
-        """Returns a child item for given db_map data.
-        Must be reimplemented in subclasses."""
-        raise NotImplementedError()
-
     def _create_new_children(self, db_map, children_ids):
         """
         Creates new items from ids associated to a db map.
@@ -358,7 +358,7 @@ class MultiDBTreeItem(TreeItem):
         """
         new_children = []
         for id_ in children_ids:
-            new_children.append(self._create_child_item({db_map: id_}))
+            new_children.append(self.child_item_type(self.db_mngr, {db_map: id_}))
         return new_children
 
     def _merge_children(self, new_children):
@@ -422,14 +422,14 @@ class MultiDBTreeItem(TreeItem):
             db_map_ids (dict): maps DiffDatabaseMapping instances to list of ids
         """
         # Find updated rows
-        updated_rows = self._updated_rows(db_map_ids)
+        updated_rows = []
         for db_map, ids in db_map_ids.items():
             updated_rows += list(self.find_rows_by_id(db_map, *ids))
         updated_rows = set(updated_rows)
         # Check display ids
         display_ids = [child.display_id for child in self.children if child.display_id]
         new_children = []  # List of new children to be inserted for solving display id problems
-        for row in sorted(rows, reverse=True):
+        for row in sorted(updated_rows, reverse=True):
             child = self.child(row)
             if not child:
                 continue
@@ -457,7 +457,7 @@ class MultiDBTreeItem(TreeItem):
 
     def default_parameter_data(self):
         """Returns data to set as default in a parameter table when this item is selected."""
-        return {"database": self.db_mngr.display_database(self.first_db_map)}
+        return {"database": self.first_db_map.codename}
 
 
 class TreeRootItem(MultiDBTreeItem):
@@ -484,9 +484,10 @@ class ObjectTreeRootItem(TreeRootItem):
         """Returns a query that selects all object classes from given db_map."""
         return {x["id"] for x in self.db_mngr.get_object_classes(db_map)}
 
-    def _create_child_item(self, db_map_id):
+    @property
+    def child_item_type(self):
         """Returns an ObjectClassItem."""
-        return ObjectClassItem(self.db_mngr, db_map_id)
+        return ObjectClassItem
 
 
 class RelationshipTreeRootItem(TreeRootItem):
@@ -498,9 +499,10 @@ class RelationshipTreeRootItem(TreeRootItem):
         """Returns a query that selects all relationship classes from given db_map."""
         return {x["id"] for x in self.db_mngr.get_relationship_classes(db_map)}
 
-    def _create_child_item(self, db_map_id):
+    @property
+    def child_item_type(self):
         """Returns a RelationshipClassItem."""
-        return RelationshipClassItem(self.db_mngr, db_map_id)
+        return RelationshipClassItem
 
 
 class EntityClassItem(MultiDBTreeItem):
@@ -537,9 +539,10 @@ class ObjectClassItem(EntityClassItem):
         """Returns a query that selects all objects of this class from given db_map."""
         return {x["id"] for x in self.db_mngr.get_objects(db_map, class_id=self.db_map_id(db_map))}
 
-    def _create_child_item(self, db_map_id):
+    @property
+    def child_item_type(self):
         """Returns an ObjectItem."""
-        return ObjectItem(self.db_mngr, db_map_id)
+        return ObjectItem
 
     @property
     def display_icon(self):
@@ -548,7 +551,7 @@ class ObjectClassItem(EntityClassItem):
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
-        return dict(object_class_name=self.display_name, database=self.db_mngr.display_database(self.first_db_map))
+        return dict(object_class_name=self.display_name, database=self.first_db_map.codename)
 
 
 class RelationshipClassItem(EntityClassItem):
@@ -579,15 +582,14 @@ class RelationshipClassItem(EntityClassItem):
             kwargs = dict(**kwargs, object_id=self.parent.db_map_id(db_map))
         return {x["id"] for x in self.db_mngr.get_relationships(db_map, **kwargs)}
 
-    def _create_child_item(self, db_map_id):
+    @property
+    def child_item_type(self):
         """Returns a RelationshipItem."""
-        return RelationshipItem(self.db_mngr, db_map_id)
+        return RelationshipItem
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
-        return dict(
-            relationship_class_name=self.display_name, database=self.db_mngr.display_database(self.first_db_map)
-        )
+        return dict(relationship_class_name=self.display_name, database=self.first_db_map.codename)
 
 
 class EntityItem(MultiDBTreeItem):
@@ -617,9 +619,10 @@ class ObjectItem(EntityItem):
         object_class_id = self.db_map_data_field(db_map, 'class_id')
         return {x["id"] for x in self.db_mngr.get_relationship_classes(db_map, object_class_id=object_class_id)}
 
-    def _create_child_item(self, db_map_data):
+    @property
+    def child_item_type(self):
         """Returns a RelationshipClassItem."""
-        return RelationshipClassItem(self.db_mngr, db_map_data)
+        return RelationshipClassItem
 
     @property
     def display_icon(self):
@@ -631,7 +634,7 @@ class ObjectItem(EntityItem):
         return dict(
             object_class_name=self.parent.display_name,
             object_name=self.display_name,
-            database=self.db_mngr.display_database(self.first_db_map),
+            database=self.first_db_map.codename,
         )
 
 
@@ -678,5 +681,5 @@ class RelationshipItem(EntityItem):
         return dict(
             relationship_class_name=self.parent.display_name,
             object_name_list=self.display_name,
-            database=self.db_mngr.display_database(self.first_db_map),
+            database=self.first_db_map.codename,
         )
