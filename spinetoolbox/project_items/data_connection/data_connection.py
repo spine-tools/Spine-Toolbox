@@ -420,7 +420,9 @@ class DataConnection(ProjectItem):
         Closes the SpineDatapackageWidget instances opened."""
         if self.spine_datapackage_form:
             self.spine_datapackage_form.close()
-        self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
+        watched_paths = self.data_dir_watcher.directories()
+        if watched_paths:
+            self.data_dir_watcher.removePaths(watched_paths)
         self.data_dir_watcher.deleteLater()
 
     def notify_destination(self, source_item):
