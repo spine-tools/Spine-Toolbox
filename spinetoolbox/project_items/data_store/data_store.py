@@ -45,7 +45,7 @@ class DataStore(ProjectItem):
             reference (dict): reference, contains SQLAlchemy url (keeps compatibility with older project files)
         """
         super().__init__(toolbox, "Data Store", name, description, x, y)
-        if type(reference) == dict and "url" in reference:
+        if isinstance(reference, dict) and "url" in reference:
             url = reference["url"]
         self._url = self.parse_url(url)
         self.tree_view_form = None
@@ -60,7 +60,8 @@ class DataStore(ProjectItem):
                 "[OSError] Creating directory {0} failed. Check permissions.".format(self.logs_dir)
             )
 
-    def parse_url(self, url):
+    @staticmethod
+    def parse_url(url):
         """Return a complete url dictionary from the given dict or string"""
         base_url = dict(dialect=None, username=None, password=None, host=None, port=None, database=None)
         if isinstance(url, dict):
@@ -260,7 +261,7 @@ class DataStore(ProjectItem):
         if dialect == 'sqlite':
             self.enable_sqlite()
         elif dialect == 'mssql':
-            import pyodbc
+            import pyodbc  # pylint: disable=import-outside-toplevel
 
             dsns = pyodbc.dataSources()
             # Collect dsns which use the msodbcsql driver

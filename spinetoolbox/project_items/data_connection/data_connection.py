@@ -62,6 +62,7 @@ class DataConnection(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
+        # pylint: disable=unnecessary-lambda
         s[self._properties_ui.toolButton_dc_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.toolButton_plus.clicked] = self.add_references
         s[self._properties_ui.toolButton_minus.clicked] = self.remove_references
@@ -132,7 +133,6 @@ class DataConnection(ProjectItem):
             except OSError:
                 self._toolbox.msg_error.emit("[OSError] Copying failed")
                 return
-        data_files = self.data_files()
 
     @Slot(bool, name="add_references")
     def add_references(self, checked=False):

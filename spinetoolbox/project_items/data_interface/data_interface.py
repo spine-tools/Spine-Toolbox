@@ -144,7 +144,7 @@ class DataInterface(ProjectItem):
         # Try and get connector from settings
         source_type = settings.get("source_type", None)
         if source_type is not None:
-            connector = eval(source_type)
+            connector = eval(source_type)  # pylint: disable=eval-used
         else:
             # Ask user
             connector = self.get_connector(importee)
@@ -211,7 +211,7 @@ class DataInterface(ProjectItem):
         self.settings[importee].update(settings)
 
     def _preview_destroyed(self, importee):
-        preview_widget = self._preview_widget.pop(importee, None)
+        self._preview_widget.pop(importee, None)
 
     def update_file_model(self, items):
         """Add given list of items to the file model. If None or
@@ -250,7 +250,7 @@ class DataInterface(ProjectItem):
                 )
                 continue
             source_type = settings["source_type"]
-            connector = eval(source_type)()
+            connector = eval(source_type)()  # pylint: disable=eval-used
             connector.connect_to_source(source)
             table_mappings = {
                 name: mapping
