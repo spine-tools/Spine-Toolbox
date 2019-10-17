@@ -188,6 +188,7 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.objects_updated.connect(self.receive_objects_updated)
         self.db_mngr.relationship_classes_updated.connect(self.receive_relationship_classes_updated)
         self.db_mngr.relationships_updated.connect(self.receive_relationships_updated)
+        self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
         # Removed
         self.db_mngr.object_classes_removed.connect(self.receive_object_classes_removed)
         self.db_mngr.objects_removed.connect(self.receive_objects_removed)
@@ -350,7 +351,7 @@ class DataStoreForm(QMainWindow):
         self.init_parameter_definition_models()
         self.init_parameter_value_list_model()
         self.init_parameter_tag_toolbar()
-        # self.set_default_parameter_data()
+        self.set_default_parameter_data()
 
     def init_object_tree_model(self):
         """Initialize object tree model."""
@@ -440,6 +441,7 @@ class DataStoreForm(QMainWindow):
 
     def set_default_parameter_data(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
+        return
         if index is None:
             default_data = dict(database=next(iter(self.db_maps)).codename)
         else:
@@ -582,6 +584,10 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="receive_relationships_updated")
     def receive_relationships_updated(self, db_map_data):
         self.receive_items_changed("updated", "relationship", db_map_data)
+
+    @Slot("QVariant", name="receive_parameter_definitions_updated")
+    def receive_parameter_definitions_updated(self, db_map_data):
+        self.receive_items_changed("updated", "parameter definition", db_map_data)
 
     @Slot("QVariant", name="receive_object_classes_removed")
     def receive_object_classes_removed(self, db_map_data):

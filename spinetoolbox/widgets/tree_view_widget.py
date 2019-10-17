@@ -557,6 +557,7 @@ class TreeViewForm(DataStoreForm):
 
     def update_filter(self):
         """Update filters on parameter models according to selected and deselected object tree indexes."""
+        return
         # Prepare stuff
         # Collect object tree indexes
         rel_inds = {

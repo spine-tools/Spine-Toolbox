@@ -208,9 +208,9 @@ class ParameterDelegate(QItemDelegate):
         self.closeEditor.emit(editor)
         self.setModelData(editor, model, index)
 
-    def _create_database_editor(self, parent, option, index):
+    def _create_database_editor(self, parent, option, index, db_mngr):
         editor = SearchBarEditor(self._parent, parent)
-        editor.set_data(index.data(Qt.DisplayRole), self._parent.db_maps.keys())
+        editor.set_data(index.data(Qt.DisplayRole), [x.codename for x in db_mngr.db_maps])
         return editor
 
     def _create_line_editor(self, parent, option, index):
@@ -218,29 +218,22 @@ class ParameterDelegate(QItemDelegate):
         editor.set_data(index.data(Qt.EditRole))
         return editor
 
-    def _create_parameter_value_editor(self, parent, option, index, item, db_map):
+    def _create_parameter_value_editor(self, parent, option, index, db_mngr, db_map, id_):
         """Returns a SearchBarEditor if the parameter has associated a value list.
         Otherwise returns the normal parameter value editor.
         """
-        parameter_id = item.parameter_id
-        parameter = db_map.parameter_definition_list().filter_by(id=parameter_id).one_or_none()
-        if parameter:
-            parameter_value_list = (
-                db_map.query(db_map.wide_parameter_value_list_sq)
-                .filter_by(id=parameter.parameter_value_list_id)
-                .one_or_none()
-            )
-        else:
-            parameter_value_list = None
+        parameter = db_mngr.get_item(db_map, "parameter definition", id_)
+        value_list_id = parameter.get("value_list_id")
+        parameter_value_list = db_mngr.get_item(db_map, "parameter value list", value_list_id)
         if parameter_value_list:
             editor = SearchBarEditor(self._parent, parent, is_json=True)
             value_list = parameter_value_list.value_list.split(",")
             editor.set_data(index.data(Qt.DisplayRole), value_list)
         else:
-            editor = self._create_normal_parameter_value_editor(parent, option, index, item, db_map)
+            editor = self._create_normal_parameter_value_editor(parent, option, index, db_map, id_)
         return editor
 
-    def _create_normal_parameter_value_editor(self, parent, option, index, item, db_map):
+    def _create_normal_parameter_value_editor(self, parent, option, index, db_map, id_):
         """Returns a CustomLineEditor or NumberParameterInlineEditor if the data from index is not of special type.
         Otherwise, emit the signal to request a standalone `ParameterValueEditor`
         from parent widget.
@@ -259,7 +252,7 @@ class ParameterDelegate(QItemDelegate):
         editor.set_data(index.data(Qt.EditRole))
         return editor
 
-    def _create_entity_class_name_editor(self, parent, option, index, item, db_map):
+    def _create_entity_class_name_editor(self, parent, option, index, db_mngr, db_map, id_):
         editor = SearchBarEditor(self._parent, parent)
         name_list = [x.name for x in self._entity_class_query(db_map)]
         editor.set_data(index.data(Qt.EditRole), name_list)
@@ -270,14 +263,16 @@ class ParameterDelegate(QItemDelegate):
 
     def createEditor(self, parent, option, index):
         """Return editor."""
-        field = index.model().horizontal_header_labels()[index.column()]
-        item = index.model().item_at_row(index.row())
-        db_map = index.model().map_to_sub(index).model().db_map
+        model = index.model()
+        field = model.horizontal_header_labels()[index.column()]
+        db_mngr = model.db_mngr
+        db_map = model.map_to_sub(index).model().db_map
+        id_ = model.item_at_row(index.row())
         create_editor_func = self._create_editor_func_map.get(field)
         if field == 'database':
             editor = self._create_database_editor(parent, option, index)
         elif db_map and create_editor_func:
-            editor = create_editor_func(parent, option, index, item, db_map)
+            editor = create_editor_func(parent, option, index, db_mngr, db_map, id_)
         else:
             editor = self._create_line_editor(parent, option, index)
         self._connect_editor_signals(editor, index)
@@ -285,25 +280,26 @@ class ParameterDelegate(QItemDelegate):
 
 
 class ParameterDefinitionDelegateMixin:
-    def _create_parameter_tag_list_editor(self, parent, option, index, item, db_map):
+    def _create_parameter_tag_list_editor(self, parent, option, index, db_mngr, db_map, id_):
         editor = CheckListEditor(self._parent, parent)
-        all_parameter_tag_list = [x.tag for x in db_map.parameter_tag_list()]
+        all_parameter_tag_list = [x["tag"] for x in db_mngr.get_parameter_tags(db_map)]
         try:
             parameter_tag_list = index.data(Qt.EditRole).split(",")
         except AttributeError:
+            # Gibberish in the cell
             parameter_tag_list = []
         editor.set_data(all_parameter_tag_list, parameter_tag_list)
         return editor
 
-    def _create_value_list_name_editor(self, parent, option, index, item, db_map):
+    def _create_value_list_name_editor(self, parent, option, index, db_mngr, db_map, id_):
         editor = SearchBarEditor(self._parent, parent)
-        name_list = [x.name for x in db_map.wide_parameter_value_list_list()]
+        name_list = [x["name"] for x in db_mngr.get_parameter_value_lists(db_map)]
         editor.set_data(index.data(Qt.EditRole), name_list)
         return editor
 
 
 class ParameterValueDelegateMixin:
-    def _create_parameter_name_editor(self, parent, option, index, item, db_map):
+    def _create_parameter_name_editor(self, parent, option, index, db_mngr, db_map, id_):
         editor = SearchBarEditor(self._parent, parent)
         parameter_definition_list = self._parameter_definition_query(db_map, item.entity_class.id)
         name_list = [x.parameter_name for x in parameter_definition_list]
@@ -344,7 +340,7 @@ class ObjectParameterValueDelegate(ParameterValueDelegateMixin, ParameterDelegat
             "value": self._create_parameter_value_editor,
         }
 
-    def _create_object_name_editor(self, parent, option, index, item, db_map):
+    def _create_object_name_editor(self, parent, option, index, db_mngr, db_map, id_):
         editor = SearchBarEditor(self._parent, parent)
         object_class_id = item.object_class_id
         name_list = [x.name for x in db_map.object_list(class_id=object_class_id)]
@@ -388,7 +384,7 @@ class RelationshipParameterValueDelegate(ParameterValueDelegateMixin, ParameterD
             "value": self._create_parameter_value_editor,
         }
 
-    def _create_object_name_list_editor(self, parent, option, index, item, db_map):
+    def _create_object_name_list_editor(self, parent, option, index, db_mngr, db_map, id_):
         object_class_id_list = item.object_class_id_list
         if not object_class_id_list:
             editor = CustomLineEditor(parent)

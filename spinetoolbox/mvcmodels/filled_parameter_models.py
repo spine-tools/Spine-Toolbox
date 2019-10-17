@@ -64,11 +64,11 @@ class FilledParameterModel(MinimalTableModel):
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
         id_ = self._main_data[index.row()]
-        value = self.db_mngr.get_data(self.db_map, self.item_type, id_).get(field)
+        value = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
         if role in (Qt.DisplayRole, Qt.EditRole):
             if field == "database":
                 return self.db_map.codename
-            if field in self.json_fields:
+            if role == Qt.DisplayRole and field in self.json_fields:
                 return format_for_DisplayRole(value)
             return value
         if role == Qt.ToolTipRole and field in self.json_fields:
@@ -84,6 +84,5 @@ class FilledParameterModel(MinimalTableModel):
         for index, value in zip(indexes, data):
             row_data.setdefault(index.row(), {})[self.header[index.column()]] = value
         data = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
-        print(data)
         getattr(self.db_mngr, self.update_method_name)({self.db_map: data})
         return True
