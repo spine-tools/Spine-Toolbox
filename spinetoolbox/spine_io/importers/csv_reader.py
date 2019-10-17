@@ -69,7 +69,22 @@ class CSVConnector(SourceConnection):
         Returns:
             list(str): Table names in list
         """
-        tables = [self._filename]
+
+        tables = {}
+        options = {}
+        # try to find options for file
+        with open(self._filename) as csvfile:
+            try:
+                dialect = csv.Sniffer().sniff(csvfile.read(1024))
+                options = {"delimiter": dialect.delimiter, "quotechar": dialect.quotechar, "skip": 0}
+            except csv.Error:
+                pass
+            try:
+                options["has_header"] = csv.Sniffer().has_header(csvfile.read(1024))
+            except csv.Error:
+                pass
+
+        tables[self._filename] = {"options": options}
         return tables
 
     @staticmethod
