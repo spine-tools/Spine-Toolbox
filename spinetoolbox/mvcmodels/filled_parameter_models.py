@@ -38,6 +38,10 @@ class FilledParameterModel(MinimalTableModel):
         super().__init__(parent, header)
         self.db_mngr = db_mngr
         self.db_map = db_map
+        self.connect_db_mngr_signals()
+
+    def connect_db_mngr_signals(self):
+        """Connect db manager signals."""
 
     @property
     def item_type(self):

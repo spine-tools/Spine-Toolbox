@@ -56,6 +56,23 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._parent = parent
         self.db_mngr = db_mngr
         self._auto_filter = dict()
+        self.connect_db_mngr_signals()
+
+    def connect_db_mngr_signals(self):
+        """Connect signals from database manager."""
+
+    def _models_with_db_map(self, db_map):
+        """Returns a collection of models having the given db_map."""
+        return (m for m in self.single_models if m.db_map == db_map)
+
+    @Slot("QVariant", name="receive_entity_classes_removed")
+    def receive_entity_classes_removed(self, db_map_data):
+        for db_map, data in db_map_data.items():
+            ids = {x["id"] for x in data}
+            for model in self._models_with_db_map(db_map):
+                if model.entity_class_id in ids:
+                    self.sub_models.remove(model)
+        self.refresh()
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Use italic font for columns having an autofilter installed."""
@@ -64,28 +81,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         if role == Qt.FontRole and orientation == Qt.Horizontal and self._auto_filter.get(section):
             return italic_font
         return super().headerData(section, orientation, role)
-
-    def _batch_set_data(self, indexes, data):
-        """Set data for indexes in batch.
-        Move added rows to single models and emit messages.
-        """
-        # TODO: notify differently, connect signals to signals?
-        if not super().batch_set_data(indexes, data):
-            return False
-        added_rows = self.empty_model.added_rows
-        updated_count = sum(m.updated_count for m in self.single_models)
-        error_log = [entry for m in self.sub_models for entry in m.error_log]
-        if added_rows:
-            self.move_rows_to_single_models(added_rows)
-            self._parent.commit_available.emit(True)
-            self._parent.msg.emit(f"Successfully added {len(added_rows)} entries.")
-        if updated_count:
-            self._parent.commit_available.emit(True)
-            self._parent.msg.emit(f"Successfully updated {updated_count} entries.")
-        if error_log:
-            msg = format_string_list(error_log)
-            self._parent.msg_error.emit(msg)
-        return True
 
     def _get_entity_classes(self):
         """Returns entity classes for creating the different single models."""
@@ -130,6 +125,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     def update_filter(self):
         """Update filter."""
+        return
         updated = self.update_compound_filter()
         for model in self.single_models:
             updated |= self.update_single_model_filter(model)
@@ -153,6 +149,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _row_map_for_single_model(self, model):
         """Returns row map for given single model.
         Reimplemented to take filter status into account."""
+        return super()._row_map_for_single_model(model)
         if not self.filter_accepts_single_model(model):
             return []
         return [(model, i) for i in model.accepted_rows()]
@@ -218,10 +215,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         else:
             self.dataChanged.emit(self.index(0, column), self.index(self.rowCount() - 1, column), [Qt.DisplayRole])
 
-    def _models_with_db_map(self, db_map):
-        """Returns a collection of models having the given db_map."""
-        return (m for m in self.single_models if m.db_map == db_map)
-
 
 class CompoundObjectParameterMixin:
     """Implements the interface for populating and filtering a compound object parameter model."""
@@ -229,6 +222,11 @@ class CompoundObjectParameterMixin:
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._selected_object_class_ids = None
+
+    def connect_db_mngr_signals(self):
+        """Connect signals from database manager."""
+        super().connect_db_mngr_signals()
+        self.db_mngr.object_classes_removed.connect(self.receive_entity_classes_removed)
 
     def update_compound_filter(self):
         """Update the filter."""
@@ -265,6 +263,11 @@ class CompoundRelationshipParameterMixin:
         super().__init__(*args, **kwargs)
         self._selected_object_class_ids = None
         self._selected_relationship_class_ids = None
+
+    def connect_db_mngr_signals(self):
+        """Connect signals from database manager."""
+        super().connect_db_mngr_signals()
+        self.db_mngr.relationship_classes_removed.connect(self.receive_entity_classes_removed)
 
     def update_compound_filter(self):
         """Update the filter."""

@@ -295,10 +295,9 @@ class MultiDBTreeItem(TreeItem):
 
     def take_db_map(self, db_map):
         """Removes the mapping for given db_map and returns it."""
-        id_ = self._db_map_id.pop(db_map, None)
-        if not self._db_map_id:
+        if [*self._db_map_id.keys()] == [db_map]:
             self.parent.remove_children(self.child_number(), 1)
-        return id_
+        return self._db_map_id.pop(db_map, None)
 
     def deep_remove_db_map(self, db_map):
         """Removes given db_map from this item and all its descendants."""

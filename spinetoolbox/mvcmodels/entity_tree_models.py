@@ -47,9 +47,9 @@ class EntityTreeModel(QAbstractItemModel):
         self._root_item = None
         self.selected_indexes = dict()  # Maps item type to selected indexes
         self._selection_buffer = list()  # To restablish selected indexes after adding/removing rows
-        self.connect_signals()
+        self.connect_db_mngr_signals()
 
-    def connect_signals(self):
+    def connect_db_mngr_signals(self):
         """Connect signals to slots."""
 
     def build_tree(self):
@@ -284,7 +284,7 @@ class ObjectTreeModel(EntityTreeModel):
 
     remove_icon = QIcon(":/icons/menu_icons/cube_minus.svg")
 
-    def connect_signals(self):
+    def connect_db_mngr_signals(self):
         self.db_mngr.object_classes_added.connect(self.add_object_classes)
         self.db_mngr.objects_added.connect(self.add_objects)
         self.db_mngr.relationship_classes_added.connect(self.add_relationship_classes)
@@ -474,7 +474,7 @@ class RelationshipTreeModel(EntityTreeModel):
 
     remove_icon = QIcon(":/icons/menu_icons/cubes_minus.svg")
 
-    def connect_signals(self):
+    def connect_db_mngr_signals(self):
         self.db_mngr.relationship_classes_added.connect(self.add_relationship_classes)
         self.db_mngr.relationships_added.connect(self.add_relationships)
         self.db_mngr.relationship_classes_removed.connect(self.remove_relationship_classes)

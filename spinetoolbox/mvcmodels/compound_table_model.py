@@ -218,7 +218,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
     def _row_map_for_single_model(self, model):
         """Returns row map for given single model.
         Reimplement in subclasses to do e.g. filtering."""
-        return self._row_map_for_model()
+        return self._row_map_for_model(model)
 
     def do_refresh(self):
         """Recomputes the row map."""
