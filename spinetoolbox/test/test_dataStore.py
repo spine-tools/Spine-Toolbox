@@ -27,6 +27,7 @@ from PySide2.QtWidgets import QApplication, QWidget
 from .mock_helpers import MockQWidget, qsettings_value_side_effect
 from ..ui_main import ToolboxUI
 from ..widgets.tree_view_widget import TreeViewForm
+from ..project_items.data_store.data_store import DataStore
 
 
 # noinspection PyUnusedLocal
@@ -363,6 +364,9 @@ class TestDataStore(unittest.TestCase):
             "Link established. Interaction between a "
             "<b>View</b> and a <b>Data Store</b> has not been implemented yet.",
         )
+
+    def test_default_name_prefix(self):
+        self.assertEqual(DataStore.default_name_prefix(), "Data Store")
 
 
 if __name__ == '__main__':

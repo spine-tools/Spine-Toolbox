@@ -268,4 +268,4 @@ class GdxExport(ProjectItem):
     @staticmethod
     def default_name_prefix():
         """see base class"""
-        return "gdx_export"
+        return "Gdx Export"

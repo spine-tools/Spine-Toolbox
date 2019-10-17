@@ -238,4 +238,4 @@ class View(ProjectItem):
     @staticmethod
     def default_name_prefix():
         """see base class"""
-        return "view"
+        return "View"

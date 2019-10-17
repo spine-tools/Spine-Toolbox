@@ -665,4 +665,4 @@ class DataStore(ProjectItem):
     @staticmethod
     def default_name_prefix():
         """see base class"""
-        return "data_store"
+        return "Data Store"

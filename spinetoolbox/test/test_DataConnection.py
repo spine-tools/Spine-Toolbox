@@ -56,7 +56,7 @@ class _MockItem:
         self.name = name
 
 
-class TestDataInterface(unittest.TestCase):
+class TestDataConnection(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -106,6 +106,9 @@ class TestDataInterface(unittest.TestCase):
                 "<b>View</b> and a <b>Data Connection</b> has not been implemented yet.",
             )
             item.data_dir_watcher.removePath(item.data_dir)
+
+    def test_default_name_prefix(self):
+        self.assertEqual(DataConnection.default_name_prefix(), "Data Connection")
 
 
 if __name__ == '__main__':

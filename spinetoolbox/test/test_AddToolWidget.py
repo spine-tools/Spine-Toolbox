@@ -10,47 +10,32 @@
 ######################################################################################################################
 
 """
-Unit tests for View project item.
+Unit tests for AddToolWidget.
 
 :author: A. Soininen (VTT)
-:date:   4.10.2019
+:date:   17.10.2019
 """
 
-from tempfile import TemporaryDirectory
 import unittest
-
-from PySide2.QtWidgets import QApplication
-
-from ..project_items.view.view import View
-
-
-class _MockProject:
-    def __init__(self, temp_directory):
-        self.project_dir = temp_directory
+from unittest.mock import MagicMock
+from PySide2.QtGui import QStandardItemModel
+from PySide2.QtWidgets import QApplication, QWidget
+from ..project_items.tool.widgets.add_tool_widget import AddToolWidget
 
 
-class _MockToolbox:
-    def __init__(self, project):
-        self._project = project
-
-    def project(self):
-        return self._project
-
-
-class TestView(unittest.TestCase):
+class TestAddToolWidget(unittest.TestCase):
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
             QApplication()
 
-    def test_item_type(self):
-        with TemporaryDirectory() as project_dir:
-            project = _MockProject(project_dir)
-            item = View(_MockToolbox(project), "name", "description", 0.0, 0.0)
-            self.assertEqual(item.item_type, "View")
-
-    def test_default_name_prefix(self):
-        self.assertEqual(View.default_name_prefix(), "View")
+    def test_name_field_initially_selected(self):
+        toolbox = QWidget()
+        toolbox.project = MagicMock()
+        toolbox.tool_specification_model = QStandardItemModel()
+        toolbox.propose_item_name = MagicMock(return_value="Tool 1")
+        widget = AddToolWidget(toolbox, 0.0, 0.0)
+        self.assertEqual(widget.ui.lineEdit_name.selectedText(), "Tool 1")
 
 
 if __name__ == '__main__':

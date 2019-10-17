@@ -1553,7 +1553,7 @@ class ToolboxUI(QMainWindow):
             a name string
         """
         name_count = self._proposed_item_name_counts.setdefault(prefix, 0)
-        name = prefix + "_{:02}".format(name_count + 1)
+        name = prefix + " {}".format(name_count + 1)
         if self.project_item_model.find_item(name) is not None:
             if name_count == 98:
                 # Avoiding too deep recursions.

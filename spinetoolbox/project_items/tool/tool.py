@@ -872,4 +872,4 @@ class Tool(ProjectItem):
     @staticmethod
     def default_name_prefix():
         """see base class"""
-        return "tool"
+        return "Tool"

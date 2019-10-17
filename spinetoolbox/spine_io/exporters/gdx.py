@@ -28,6 +28,7 @@ import os
 import sys
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
 from spinedb_api import from_database, ParameterValueFormatError
+
 if sys.platform == 'win32':
     import winreg
 

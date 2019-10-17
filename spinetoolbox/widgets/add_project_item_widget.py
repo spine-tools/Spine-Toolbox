@@ -51,6 +51,7 @@ class AddProjectItemWidget(QWidget):
         # Class attributes
         self.name = initial_name
         self.ui.lineEdit_name.setText(self.name)
+        self.ui.lineEdit_name.selectAll()
         self.description = ''
         self.connect_signals()
         self.ui.lineEdit_name.setFocus()

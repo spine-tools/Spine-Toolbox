@@ -106,6 +106,9 @@ class TestGdxExport(unittest.TestCase):
                 "<b>View</b> and a <b>Gdx Export</b> has not been implemented yet.",
             )
 
+    def test_default_name_prefix(self):
+        self.assertEqual(GdxExport.default_name_prefix(), "Gdx Export")
+
 
 if __name__ == '__main__':
     unittest.main()

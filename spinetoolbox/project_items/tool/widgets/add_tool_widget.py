@@ -52,6 +52,7 @@ class AddToolWidget(QWidget):
         # Class attributes
         self.name = toolbox.propose_item_name(Tool.default_name_prefix())
         self.ui.lineEdit_name.setText(self.name)
+        self.ui.lineEdit_name.selectAll()
         self.description = ''
         # Init
         self.ui.comboBox_tool.setModel(self._toolbox.tool_specification_model)

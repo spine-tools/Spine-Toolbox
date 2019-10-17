@@ -101,6 +101,9 @@ class TestDataInterface(unittest.TestCase):
                 "<b>View</b> and a <b>Data Interface</b> has not been implemented yet.",
             )
 
+    def test_default_name_prefix(self):
+        self.assertEqual(DataInterface.default_name_prefix(), "Data Interface")
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -439,4 +439,4 @@ class DataConnection(ProjectItem):
     @staticmethod
     def default_name_prefix():
         """see base class"""
-        return "data_connection"
+        return "Data Connection"

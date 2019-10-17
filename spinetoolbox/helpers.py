@@ -307,7 +307,7 @@ def copy_dir(widget, src_dir, dst_dir):
             "<br/>to "
             "<br/><b>{1}</b> "
             "<br/>failed."
-            "<br/><br/>Possibly reasons:" 
+            "<br/><br/>Possibly reasons:"
             "<br/>1. Windows Explorer is open in the source or destination directory."
             "<br/>2. A file in these directories is open in another program. "
             "<br/><br/>Check these and try again.".format(src_dir, dst_dir)
@@ -354,7 +354,7 @@ def rename_dir(widget, old_dir, new_dir):
             "<br/>to "
             "<br/><b>{1}</b> "
             "<br/>failed."
-            "<br/><br/>Possibly reasons:" 
+            "<br/><br/>Possibly reasons:"
             "<br/>1. Windows Explorer is open in the directory."
             "<br/>2. A file in the directory is open in another program. "
             "<br/><br/>Check these and try again.".format(old_dir, new_dir)

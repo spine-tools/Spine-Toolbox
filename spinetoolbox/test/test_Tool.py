@@ -114,6 +114,9 @@ class TestTool(unittest.TestCase):
                 "<b>View</b> and a <b>Tool</b> has not been implemented yet.",
             )
 
+    def test_default_name_prefix(self):
+        self.assertEqual(Tool.default_name_prefix(), "Tool")
+
 
 if __name__ == '__main__':
     unittest.main()

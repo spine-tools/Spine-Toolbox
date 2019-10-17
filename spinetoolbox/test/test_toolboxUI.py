@@ -631,15 +631,15 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox.project_item_model = MockModel()
         self.toolbox.project_item_model.finds = [None]
         name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix_01")
+        self.assertEqual(name, "prefix 1")
         # Subsequent calls should not increase the counter
         self.toolbox.project_item_model.find_count = 0
         name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix_01")
+        self.assertEqual(name, "prefix 1")
         self.toolbox.project_item_model.finds = [object(), object(), None]
         self.toolbox.project_item_model.find_count = 0
         name = self.toolbox.propose_item_name("prefix")
-        self.assertEqual(name, "prefix_03")
+        self.assertEqual(name, "prefix 3")
 
     def test_copy_project_item_to_clipboard(self):
         self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
@@ -664,7 +664,7 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox.ui.actionCopy.triggered.emit()
         self.toolbox.ui.actionPaste.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
-        new_item_index = self.toolbox.project_item_model.find_item("data_connection_01")
+        new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
 
     def test_duplicate_project_item(self):
@@ -675,7 +675,7 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
         self.toolbox.ui.actionDuplicate.triggered.emit()
         self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
-        new_item_index = self.toolbox.project_item_model.find_item("data_connection_01")
+        new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
         self.assertIsNotNone(new_item_index)
 
     def add_ds(self, name, x=0, y=0):
