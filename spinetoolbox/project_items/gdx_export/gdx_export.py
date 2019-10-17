@@ -34,6 +34,11 @@ class GdxExport(ProjectItem):
     This project item handles all functionality regarding exporting a database to .gdx file.
     """
 
+    _item_type = "Gdx Export"
+    _missing_output_file_notification = (
+        "Output file name(s) missing." + " See the settings in the {} Properties panel.".format(_item_type)
+    )
+
     def __init__(
         self,
         toolbox,
@@ -56,7 +61,7 @@ class GdxExport(ProjectItem):
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
         """
-        super().__init__(toolbox, "Gdx Export", name, description, x, y)
+        super().__init__(toolbox, GdxExport._item_type, name, description, x, y)
         self._settings_windows = dict()
         self._settings = dict()
         self._database_urls = database_urls if database_urls is not None else list()
@@ -155,11 +160,16 @@ class GdxExport(ProjectItem):
         paths = [os.path.join(self.data_dir, file_name) for file_name in files]
         resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
         inst.advertise_resources(self.name, *resources)
-        if not paths:
-            self.add_notification(
-                "Currently this item does not export anything. "
-                "See the settings in the {} Properties panel.".format(self.item_type)
-            )
+        notify_about_missing_output_file = False
+        if "" in files:
+            notify_about_missing_output_file = True
+        else:
+            for url in self._database_urls:
+                if url not in self._database_to_file_name_map:
+                    notify_about_missing_output_file = True
+                    break
+        if notify_about_missing_output_file:
+            self.add_notification(GdxExport._missing_output_file_notification)
         if self._activated:
             self.restore_selections()
 
@@ -185,6 +195,10 @@ class GdxExport(ProjectItem):
     @Slot(str, str)
     def _update_out_file_name(self, file_name, database_path):
         """Updates the output file name for given database"""
+        if file_name:
+            self.clear_notifications()
+        else:
+            self.add_notification(GdxExport._missing_output_file_notification)
         self._database_to_file_name_map[database_path] = file_name
 
     def item_dict(self):
