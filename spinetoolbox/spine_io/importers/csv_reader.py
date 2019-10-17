@@ -92,7 +92,7 @@ class CSVConnector(SourceConnection):
         if not delimiter:
             delimiter = ','
         dialect = {"delimiter": delimiter}
-        quotechar = options.get("Quotechar", None)
+        quotechar = options.get("quotechar", None)
         if quotechar:
             dialect.update({"quotechar": quotechar})
         has_header = options.get("has_header", False)
