@@ -312,7 +312,6 @@ class TreeViewForm(DataStoreForm):
     @Slot("bool", name="remove_selection")
     def remove_selection(self, checked=False):
         """Remove selection of items."""
-        # TODO: Try and do this in the corresponding classes
         if not self.widget_with_selection:
             return
         self.widget_with_selection.model().remove_selection_requested.emit()
@@ -779,23 +778,6 @@ class TreeViewForm(DataStoreForm):
                 bool(self.object_tree_model.selected_relationship_class_indexes)
             )
             self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
-
-    def _receive_items_removed(self, db_map_data):
-        """Receive object classes removed signal from db manager."""
-        # TODO: Do this by connecting db mngr signals to slots in those models
-        if db_map_object_classes:
-            self.object_parameter_definition_model.remove_object_classes(db_map_object_classes)
-            self.object_parameter_value_model.remove_object_classes(db_map_object_classes)
-            self.relationship_parameter_definition_model.remove_object_classes(db_map_object_classes)
-            self.relationship_parameter_value_model.remove_object_classes(db_map_object_classes)
-        if db_map_objects:
-            self.object_parameter_value_model.remove_objects(db_map_objects)
-            self.relationship_parameter_value_model.remove_objects(db_map_objects)
-        if db_map_relationship_classes:
-            self.relationship_parameter_definition_model.remove_relationship_classes(db_map_relationship_classes)
-            self.relationship_parameter_value_model.remove_relationship_classes(db_map_relationship_classes)
-        if db_map_relationships:
-            self.relationship_parameter_value_model.remove_relationships(db_map_relationships)
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):

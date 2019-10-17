@@ -85,11 +85,6 @@ class SingleObjectParameterMixin:
         super().__init__(parent, header, db_mngr, db_map, *args, **kwargs)
         self.object_class_id = object_class_id
 
-    def connect_db_mngr_signals(self):
-        """Connect db manager signals."""
-        super().connect_db_mngr_signals()
-        # self.db_mngr.objects_removed.connect(self.receive_entities_removed)
-
     @property
     def entity_class_id(self):
         return self.object_class_id

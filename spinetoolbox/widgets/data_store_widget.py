@@ -610,23 +610,6 @@ class DataStoreForm(QMainWindow):
     def receive_relationships_removed(self, db_map_data):
         self.receive_items_changed("removed", "relationship", db_map_data)
 
-    # TODO: Connect these to signals in spine_db_manager,
-    # Probably not needed if we manage to read names from the manager,
-    # but even though maybe needed to emit dataChanged or st
-    def update_object_classes_in_models(self, db_map_data):
-        self.object_parameter_value_model.rename_object_classes(db_map_data)
-        self.object_parameter_definition_model.rename_object_classes(db_map_data)
-        self.relationship_parameter_value_model.rename_object_classes(db_map_data)
-        self.relationship_parameter_definition_model.rename_object_classes(db_map_data)
-
-    def update_objects_in_models(self, db_map_data):
-        self.object_parameter_value_model.rename_objects(db_map_data)
-        self.relationship_parameter_value_model.rename_objects(db_map_data)
-
-    def update_relationship_classes_in_models(self, db_map_data):
-        self.relationship_parameter_value_model.rename_relationship_classes(db_map_data)
-        self.relationship_parameter_definition_model.rename_relationship_classes(db_map_data)
-
     def add_parameter_value_lists(self, parameter_value_list_d):
         added_names = set()
         for db_map, items in parameter_value_list_d.items():
