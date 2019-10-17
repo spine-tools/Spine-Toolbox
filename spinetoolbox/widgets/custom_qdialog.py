@@ -193,8 +193,9 @@ class ShowIconColorEditorMixin:
     """Provides methods to show an `IconColorEditor` upon request.
     """
 
-    def create_object_pixmap(self, display_icon):
-        return self._parent.icon_mngr.create_object_pixmap(display_icon)
+    def __init__(self, parent, icon_mngr, *args, **kwargs):
+        super().__init__(parent, *args, **kwargs)
+        self.icon_mngr = icon_mngr
 
     @busy_effect
     def show_icon_color_editor(self, index):
@@ -204,15 +205,15 @@ class ShowIconColorEditorMixin:
         editor.show()
 
 
-class AddObjectClassesDialog(AddItemsDialog, ShowIconColorEditorMixin):
+class AddObjectClassesDialog(ShowIconColorEditorMixin, AddItemsDialog):
     """A dialog to query user's preferences for new object classes.
 
     Attributes:
         parent (DataStoreForm): data store widget
     """
 
-    def __init__(self, parent, db_maps):
-        super().__init__(parent, db_maps)
+    def __init__(self, parent, icon_mngr, db_maps):
+        super().__init__(parent, icon_mngr, db_maps)
         self.setWindowTitle("Add object classes")
         self.model = EmptyRowModel(self)
         self.table_view.setModel(self.model)
@@ -315,27 +316,6 @@ class AddObjectsDialog(AddItemsDialog, GetObjectClassesMixin):
             db_names = ",".join(list(self.keyed_db_maps.keys()))
         self.model.set_default_row(**{'object class name': class_name, 'databases': db_names})
         self.model.clear()
-
-    @Slot("QModelIndex", "QModelIndex", "QVector", name="_handle_model_data_changed")
-    def _handle_model_data_changed(self, top_left, bottom_right, roles):
-        """Set decoration role data."""
-        if Qt.EditRole not in roles:
-            return
-        header = self.model.horizontal_header_labels()
-        top = top_left.row()
-        left = top_left.column()
-        bottom = bottom_right.row()
-        right = bottom_right.column()
-        for row in range(top, bottom + 1):
-            for column in range(left, right + 1):
-                if header[column] != 'object class name':
-                    continue
-                index = self.model.index(row, column)
-                object_class_name = index.data(Qt.DisplayRole)
-                if not object_class_name:
-                    return
-                icon = self._parent.icon_mngr.object_icon(object_class_name)
-                self.model.setData(index, icon, Qt.DecorationRole)
 
     @Slot(name="accept")
     def accept(self):
@@ -451,12 +431,6 @@ class AddRelationshipClassesDialog(AddItemsDialog, GetObjectClassesMixin):
             for column in range(left, right + 1):
                 if header[column] == 'relationship class name':
                     break
-                index = self.model.index(row, column)
-                object_class_name = index.data(Qt.DisplayRole)
-                if not object_class_name:
-                    continue
-                icon = self._parent.icon_mngr.object_icon(object_class_name)
-                self.model.setData(index, icon, Qt.DecorationRole)
             else:
                 col_data = lambda j: self.model.index(row, j).data()  # pylint: disable=cell-var-from-loop
                 obj_cls_names = [col_data(j) for j in range(self.number_of_dimensions) if col_data(j)]
@@ -679,7 +653,7 @@ class EditOrRemoveItemsDialog(ManageItemsDialog):
         return [db_map.codename for db_map in item.db_maps]
 
 
-class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin):
+class EditObjectClassesDialog(ShowIconColorEditorMixin, EditOrRemoveItemsDialog):
     """A dialog to query user's preferences for updating object classes.
 
     Attributes:
@@ -687,8 +661,8 @@ class EditObjectClassesDialog(EditOrRemoveItemsDialog, ShowIconColorEditorMixin)
         selected (set): set of ObjectClassItem instances to edit
     """
 
-    def __init__(self, parent, selected):
-        super().__init__(parent)
+    def __init__(self, parent, icon_mngr, selected):
+        super().__init__(parent, icon_mngr)
         self.setWindowTitle("Edit object classes")
         self.model = MinimalTableModel(self)
         self.model.set_horizontal_header_labels(['object class name', 'description', 'display icon', 'databases'])

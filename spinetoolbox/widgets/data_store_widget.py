@@ -189,6 +189,7 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.relationship_classes_updated.connect(self.receive_relationship_classes_updated)
         self.db_mngr.relationships_updated.connect(self.receive_relationships_updated)
         self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
+        self.db_mngr.parameter_values_updated.connect(self.receive_parameter_values_updated)
         # Removed
         self.db_mngr.object_classes_removed.connect(self.receive_object_classes_removed)
         self.db_mngr.objects_removed.connect(self.receive_objects_removed)
@@ -469,7 +470,7 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_add_object_classes_form")
     def show_add_object_classes_form(self, checked=False):
         """Show dialog to let user select preferences for new object classes."""
-        dialog = AddObjectClassesDialog(self, self.db_maps)
+        dialog = AddObjectClassesDialog(self, self.db_mngr.icon_mngr, self.db_maps)
         dialog.data_committed.connect(self.db_mngr.add_object_classes)
         dialog.show()
 
@@ -505,7 +506,7 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_class_indexes}
-        dialog = EditObjectClassesDialog(self, selected)
+        dialog = EditObjectClassesDialog(self, self.db_mngr.icon_mngr, selected)
         dialog.data_committed.connect(self.db_mngr.update_object_classes)
         dialog.show()
 
@@ -545,12 +546,12 @@ class DataStoreForm(QMainWindow):
 
     def receive_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        # NOTE: Make sure this slot is called *after* removing items from object tree model
+        # NOTE: The following line assumes this slot is called *after* removing items from object tree model
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
-        names = {item["name"] for db_map, data in db_map_data.items() for item in data}
+        names = {item["name"] for db_map, data in db_map_data.items() for item in data if "name" in item}
         self.commit_available.emit(True)
-        names = "', '".join(names)
-        msg = f"Item(s) '{names}' of type {item_type} successfully {action}."
+        names = ", '".join(names) if names else ""
+        msg = f"Item(s) {names} of type {item_type} successfully {action}."
         self.msg.emit(msg)
 
     @Slot("QVariant", name="receive_object_classes_added")
@@ -588,6 +589,10 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="receive_parameter_definitions_updated")
     def receive_parameter_definitions_updated(self, db_map_data):
         self.receive_items_changed("updated", "parameter definition", db_map_data)
+
+    @Slot("QVariant", name="receive_parameter_values_updated")
+    def receive_parameter_values_updated(self, db_map_data):
+        self.receive_items_changed("updated", "parameter value", db_map_data)
 
     @Slot("QVariant", name="receive_object_classes_removed")
     def receive_object_classes_removed(self, db_map_data):

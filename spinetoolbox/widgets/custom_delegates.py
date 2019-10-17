@@ -222,18 +222,18 @@ class ParameterDelegate(QItemDelegate):
         """Returns a SearchBarEditor if the parameter has associated a value list.
         Otherwise returns the normal parameter value editor.
         """
-        parameter = db_mngr.get_item(db_map, "parameter definition", id_)
-        value_list_id = parameter.get("value_list_id")
-        parameter_value_list = db_mngr.get_item(db_map, "parameter value list", value_list_id)
-        if parameter_value_list:
+        parameter_id = db_mngr.get_item(db_map, "parameter value", id_).get("parameter_id")
+        value_list_id = db_mngr.get_item(db_map, "parameter definition", parameter_id).get("value_list_id")
+        value_list = db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")
+        if value_list:
             editor = SearchBarEditor(self._parent, parent, is_json=True)
-            value_list = parameter_value_list.value_list.split(",")
+            value_list = value_list.split(",")
             editor.set_data(index.data(Qt.DisplayRole), value_list)
         else:
-            editor = self._create_normal_parameter_value_editor(parent, option, index, db_map, id_)
+            editor = self._create_normal_parameter_value_editor(parent, option, index, db_mngr, db_map, id_)
         return editor
 
-    def _create_normal_parameter_value_editor(self, parent, option, index, db_map, id_):
+    def _create_normal_parameter_value_editor(self, parent, option, index, db_mngr, db_map, id_):
         """Returns a CustomLineEditor or NumberParameterInlineEditor if the data from index is not of special type.
         Otherwise, emit the signal to request a standalone `ParameterValueEditor`
         from parent widget.
@@ -463,10 +463,6 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
 
     icon_color_editor_requested = Signal("QModelIndex", name="icon_color_editor_requested")
 
-    def __init__(self, parent):
-        super().__init__(parent)
-        self.icon_mngr = parent.parent().icon_mngr
-
     def createEditor(self, parent, option, index):
         """Return editor."""
         header = index.model().horizontal_header_labels()
@@ -485,7 +481,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'display icon':
-            pixmap = self._parent.create_object_pixmap(index.data(Qt.DisplayRole))
+            pixmap = self._parent.icon_mngr.create_object_pixmap(index.data(Qt.DisplayRole))
             icon = QIcon(pixmap)
             icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
         else:
