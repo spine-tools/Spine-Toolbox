@@ -16,8 +16,7 @@ Module for view icon class.
 :date:   4.4.2018
 """
 
-from PySide2.QtGui import QColor, QPen, QBrush
-from PySide2.QtCore import Qt
+from PySide2.QtGui import QColor
 from spinetoolbox.graphics_items import ProjectItemIcon
 
 
@@ -33,11 +32,14 @@ class ViewIcon(ProjectItemIcon):
             h (float): Height of background rectangle
             name (str): Item name
         """
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor("#ebfaeb"))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/binoculars.svg", QColor("#33cc33"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/binoculars.svg",
+            icon_color=QColor("#33cc33"),
+            background_color=QColor("#ebfaeb"),
+        )

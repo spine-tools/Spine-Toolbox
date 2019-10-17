@@ -16,8 +16,8 @@ Module for tool icon class.
 :date:   4.4.2018
 """
 
-from PySide2.QtGui import QColor, QPen, QBrush
-from PySide2.QtCore import Qt, QTimeLine, QPointF
+from PySide2.QtGui import QColor
+from PySide2.QtCore import QTimeLine, QPointF
 from PySide2.QtWidgets import QGraphicsItemAnimation
 from spinetoolbox.graphics_items import ProjectItemIcon
 
@@ -34,14 +34,17 @@ class ToolIcon(ProjectItemIcon):
             h (float): Height of master icon
             name (str): Item name
         """
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Background rectangle pen
-        self.brush = QBrush(QColor("#ffe6e6"))  # Background rectangle brush
-        # Draw icon
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/hammer.svg", QColor("red"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)  # Adds also child items automatically
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/hammer.svg",
+            icon_color=QColor("red"),
+            background_color=QColor("#ffe6e6"),
+        )
         # animation stuff
         self.timer = QTimeLine()
         self.timer.setLoopCount(0)  # loop forever

@@ -233,7 +233,7 @@ class RankIcon(QGraphicsTextItem):
 
 
 class ProjectItemIcon(QGraphicsRectItem):
-    def __init__(self, toolbox, x, y, w, h, name):
+    def __init__(self, toolbox, x, y, w, h, name, icon_file, icon_color, background_color):
         """Base class for project item icons drawn in Design View.
 
         Args:
@@ -243,6 +243,9 @@ class ProjectItemIcon(QGraphicsRectItem):
             w (float): Icon width
             h (float): Icon height
             name (str): Item name
+            icon_file (str): Path to icon resource
+            icon_color (QColor): Icon's color
+            background_color (QColor): Background color
         """
         super().__init__()
         self._toolbox = toolbox
@@ -275,18 +278,20 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.svg_item.setParentItem(self)
         self.exclamation_icon.setParentItem(self)
         self.rank_icon.setParentItem(self)
+        brush = QBrush(background_color)
+        self._setup(brush, icon_file, icon_color)
+        # Add items to scene
+        self._toolbox.ui.graphicsView.scene().addItem(self)
 
-    def setup(self, pen, brush, svg, svg_color):
-        """Setup item's attributes according to project item type.
-        Intended to be called in the constructor's of classes that inherit from ItemImage class.
+    def _setup(self, brush, svg, svg_color):
+        """Setup item's attributes.
 
         Args:
-            pen (QPen): Used in drawing the background rectangle outline
             brush (QBrush): Used in filling the background rectangle
             svg (str): Path to SVG icon file
             svg_color (QColor): Color of SVG icon
         """
-        self.setPen(QPen(Qt.black, 1, Qt.SolidLine))  # Override Qt.NoPen to make an outline for all items
+        self.setPen(QPen(Qt.black, 1, Qt.SolidLine))
         self.setBrush(brush)
         self.colorizer.setColor(svg_color)
         # Load SVG
@@ -295,11 +300,9 @@ class ProjectItemIcon(QGraphicsRectItem):
             self._toolbox.msg_error.emit("Loading SVG icon from resource:{0} failed".format(svg))
             return
         size = self.renderer.defaultSize()
-        # logging.debug("Icon default size:{0}".format(size))
         self.svg_item.setSharedRenderer(self.renderer)
         self.svg_item.setElementId("")  # guess empty string loads the whole file
         dim_max = max(size.width(), size.height())
-        # logging.debug("p_max:{0}".format(p_max))
         rect_w = self.rect().width()  # Parent rect width
         margin = 32
         self.svg_item.setScale((rect_w - margin) / dim_max)
