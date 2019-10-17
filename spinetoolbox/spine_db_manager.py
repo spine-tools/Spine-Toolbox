@@ -455,23 +455,29 @@ class SpineDBManager(QObject):
         db_map_typed_data (dict): maps DiffDatabaseMapping instances to str item type, to list of items to remove.
         """
         # Removing works like this in spinedb_api, all at once, probably because of cascading
-        # TODO: Support removing parameter definitions, values, etc
+        # TODO: Support removing parameter tags, value-lists, etc
         db_map_object_classes = dict()
         db_map_objects = dict()
         db_map_relationship_classes = dict()
         db_map_relationships = dict()
+        db_map_parameter_definitions = dict()
+        db_map_parameter_values = dict()
         error_log = dict()
         for db_map, items_per_type in db_map_typed_data.items():
             object_classes = items_per_type.get("object class", ())
             objects = items_per_type.get("object", ())
             relationship_classes = items_per_type.get("relationship class", ())
             relationships = items_per_type.get("relationship", ())
+            parameter_definitions = items_per_type.get("parameter definition", ())
+            parameter_values = items_per_type.get("parameter value", ())
             try:
                 db_map.remove_items(
                     object_class_ids={x['id'] for x in object_classes},
                     object_ids={x['id'] for x in objects},
                     relationship_class_ids={x['id'] for x in relationship_classes},
                     relationship_ids={x['id'] for x in relationships},
+                    parameter_definition_ids={x['id'] for x in parameter_definitions},
+                    parameter_value_ids={x['id'] for x in parameter_values},
                 )
             except SpineDBAPIError as err:
                 error_log[db_map] = err
@@ -480,6 +486,8 @@ class SpineDBManager(QObject):
             db_map_objects[db_map] = objects
             db_map_relationship_classes[db_map] = relationship_classes
             db_map_relationships[db_map] = relationships
+            db_map_parameter_definitions[db_map] = parameter_definitions
+            db_map_parameter_values[db_map] = parameter_values
         if any(error_log.values()):
             self.msg_error.emit(error_log)
         if any(db_map_object_classes.values()):
@@ -490,6 +498,10 @@ class SpineDBManager(QObject):
             self.relationship_classes_removed.emit(db_map_relationship_classes)
         if any(db_map_relationships.values()):
             self.relationships_removed.emit(db_map_relationships)
+        if any(db_map_parameter_definitions.values()):
+            self.parameter_definitions_removed.emit(db_map_parameter_definitions)
+        if any(db_map_parameter_values.values()):
+            self.parameter_values_removed.emit(db_map_parameter_values)
 
     @Slot("QVariant", name="cascade_remove_objects")
     def cascade_remove_objects(self, db_map_data):

@@ -304,7 +304,37 @@ class CompoundRelationshipParameterMixin:
         return self.db_mngr.get_relationship_classes(db_map)
 
 
-class CompoundObjectParameterDefinitionModel(CompoundObjectParameterMixin, CompoundParameterModel):
+class CompoundParameterDefinitionMixin:
+    """Handles signals from db mngr for parameter definition models."""
+
+    def connect_db_mngr_signals(self):
+        """Connect db manager signals."""
+        super().connect_db_mngr_signals()
+        self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
+        self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
+
+    @Slot("QVariant", name="receive_parameter_definitions_updated")
+    def receive_parameter_definitions_updated(self, db_map_data):
+        """Runs after updating parameter definitions."""
+        # Needed?
+        self._emit_data_changed_for_column("parameter_name")
+
+    @Slot("QVariant", name="receive_parameter_definitions_removed")
+    def receive_parameter_definitions_removed(self, db_map_data):
+        """Runs after removing parameter definitions."""
+        for db_map, data in db_map_data.items():
+            removed_ids = {x["id"] for x in data}
+            for model in self._models_with_db_map(db_map):
+                for row in reversed(range(model.rowCount())):
+                    id_ = model._main_data[row]
+                    if id_ in removed_ids:
+                        model.removeRows(row, 1)
+        self.refresh()
+
+
+class CompoundObjectParameterDefinitionModel(
+    CompoundObjectParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
+):
     """A model that concatenates several single object parameter definition models
     and one empty object parameter definition model.
     """
@@ -330,7 +360,9 @@ class CompoundObjectParameterDefinitionModel(CompoundObjectParameterMixin, Compo
         return EmptyObjectParameterDefinitionModel
 
 
-class CompoundRelationshipParameterDefinitionModel(CompoundRelationshipParameterMixin, CompoundParameterModel):
+class CompoundRelationshipParameterDefinitionModel(
+    CompoundRelationshipParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
+):
     """A model that concatenates several single relationship parameter definition models
     and one empty relationship parameter definition model.
     """

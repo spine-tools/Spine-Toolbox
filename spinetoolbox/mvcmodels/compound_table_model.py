@@ -81,6 +81,11 @@ class CompoundTableModel(MinimalTableModel):
         sub_model, sub_row = self._row_map[row]
         return sub_model._main_data[sub_row]
 
+    def sub_model_at_row(self, row):
+        """Returns the item at given row."""
+        sub_model, _ = self._row_map[row]
+        return sub_model
+
     def canFetchMore(self, parent):
         """Returns True if any of the unfetched single models can fetch more."""
         for model in self.sub_models[self._fetched_count :]:

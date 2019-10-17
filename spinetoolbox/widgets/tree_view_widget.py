@@ -889,19 +889,30 @@ class TreeViewForm(DataStoreForm):
     @Slot(name="remove_object_parameter_values")
     def remove_object_parameter_values(self):
         """Remove selected rows from object parameter value table."""
-        self._remove_parameter_values(self.ui.tableView_object_parameter_value)
+        self._remove_parameter_data(self.ui.tableView_object_parameter_value, "parameter value")
 
     @Slot(name="remove_relationship_parameter_values")
     def remove_relationship_parameter_values(self):
         """Remove selected rows from relationship parameter value table."""
-        self._remove_parameter_values(self.ui.tableView_relationship_parameter_value)
+        self._remove_parameter_data(self.ui.tableView_relationship_parameter_value, "parameter value")
 
-    def _remove_parameter_values(self, table_view):
+    @Slot(name="remove_object_parameter_definitions")
+    def remove_object_parameter_definitions(self):
+        """Remove selected rows from object parameter definition table."""
+        self._remove_parameter_data(self.ui.tableView_object_parameter_definition, "parameter definition")
+
+    @Slot(name="remove_relationship_parameter_definitions")
+    def remove_relationship_parameter_definitions(self):
+        """Remove selected rows from relationship parameter definition table."""
+        self._remove_parameter_data(self.ui.tableView_relationship_parameter_definition, "parameter definition")
+
+    def _remove_parameter_data(self, table_view, item_type):
         """
-        Remove selected rows from parameter value table.
+        Remove selected rows from parameter table.
 
         Args:
             table_view (QTableView): remove selection from this view
+            item_type (str)
         """
         selection = table_view.selectionModel().selection()
         rows = list()
@@ -911,76 +922,15 @@ class TreeViewForm(DataStoreForm):
             bottom = current.bottom()
             rows += range(top, bottom + 1)
         # Get parameters values grouped by db_map
-        d = dict()
+        db_map_typed_data = dict()
         model = table_view.model()
         for row in rows:
-            db_map = model.item_at_row(row).db_map
-            d.setdefault(db_map, set()).add(model.item_at_row(row).id)
-        # Remove the parameter value rows
-        for row, count in sorted(rows_to_row_count_tuples(rows), reverse=True):
-            model.removeRows(row, count)
-        # Remove from the db
-        for db_map, parameter_value_ids in d.items():
-            try:
-                db_map.remove_items(parameter_value_ids=parameter_value_ids)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-        if rows:
-            self.commit_available.emit(True)
-            self.msg.emit("Successfully removed {} parameter value(s).".format(len(rows)))
-
-    @Slot(name="remove_object_parameter_definitions")
-    def remove_object_parameter_definitions(self):
-        """Remove selected rows from object parameter definition table."""
-        self._remove_parameter_definitions(
-            self.ui.tableView_object_parameter_definition, self.object_parameter_value_model
-        )
-
-    @Slot(name="remove_relationship_parameter_definitions")
-    def remove_relationship_parameter_definitions(self):
-        """Remove selected rows from relationship parameter definition table."""
-        self._remove_parameter_definitions(
-            self.ui.tableView_relationship_parameter_definition, self.relationship_parameter_value_model
-        )
-
-    def _remove_parameter_definitions(self, table_view, value_model):
-        """
-        Remove selected rows from parameter table.
-
-        Args:
-            table_view (QTableView): remove rows from this table
-            value_model (QAbstractTableModel): also remove parameters from this model
-        """
-        selection = table_view.selectionModel().selection()
-        rows = list()
-        while not selection.isEmpty():
-            current = selection.takeFirst()
-            top = current.top()
-            bottom = current.bottom()
-            rows += range(top, bottom + 1)
-        # Get parameters grouped by db_map
-        d = dict()
-        model = table_view.model()
-        for row in rows:
-            db_map = model.item_at_row(row).db_map
-            if not db_map:
-                continue
-            d.setdefault(db_map, []).append(
-                {"entity_class_id": model.item_at_row(row).entity_class.id, "id": model.item_at_row(row).id}
-            )
-        # Remove the parameter definition rows
-        for row, count in sorted(rows_to_row_count_tuples(rows), reverse=True):
-            model.removeRows(row, count)
-        # Remove from the db and from the parameter value model
-        for db_map, parameters in d.items():
-            try:
-                db_map.remove_items(parameter_definition_ids={x['id'] for x in parameters})
-                value_model.remove_parameters(db_map, parameters)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-        if rows:
-            self.commit_available.emit(True)
-            self.msg.emit("Successfully removed {} parameter definition(s).".format(len(rows)))
+            db_map = model.sub_model_at_row(row).db_map
+            id_ = model.item_at_row(row)
+            item = model.db_mngr.get_item(db_map, item_type, id_)
+            db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
+        self.db_mngr.remove_items(db_map_typed_data)
+        table_view.selectionModel().clearSelection()
 
     @Slot(name="remove_parameter_value_lists")
     def remove_parameter_value_lists(self):
