@@ -17,7 +17,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, degrees, sin, cos, pi
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, Signal
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -249,6 +249,7 @@ class ProjectItemIcon(QGraphicsRectItem):
         """
         super().__init__()
         self._toolbox = toolbox
+        self._moved_on_scene = False
         self.renderer = QSvgRenderer()
         self.svg_item = QGraphicsSvgItem()
         self.colorizer = QGraphicsColorizeEffect()
@@ -281,7 +282,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         brush = QBrush(background_color)
         self._setup(brush, icon_file, icon_color)
         # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
+        scene = self._toolbox.ui.graphicsView.scene()
+        scene.addItem(self)
 
     def _setup(self, brush, svg, svg_color):
         """Setup item's attributes.
@@ -313,8 +315,8 @@ class ProjectItemIcon(QGraphicsRectItem):
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
         self.setAcceptHoverEvents(True)
-        self.setAcceptDrops(True)
         self.setCursor(Qt.PointingHandCursor)
         # Set exclamation and rank icons position
         self.exclamation_icon.setPos(self.rect().topRight() - self.exclamation_icon.sceneBoundingRect().topRight())
@@ -376,10 +378,16 @@ class ProjectItemIcon(QGraphicsRectItem):
             event (QGraphicsSceneMouseEvent): Event
         """
         super().mouseMoveEvent(event)
-        selected_icons = set([x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon)] + [self])
+        selected_icons = set(x for x in self.scene().selectedItems() if isinstance(x, ProjectItemIcon))
         links = set(link for icon in selected_icons for conn in icon.connectors.values() for link in conn.links)
         for link in links:
             link.update_geometry()
+
+    def mouseReleaseEvent(self, event):
+        if self._moved_on_scene:
+            self._moved_on_scene = False
+            self.scene().shrink_if_needed()
+        super().mouseReleaseEvent(event)
 
     def contextMenuEvent(self, event):
         """Show item context menu.
@@ -425,7 +433,10 @@ class ProjectItemIcon(QGraphicsRectItem):
 
     def itemChange(self, change, value):
         """
-        Destroys the drop shadow effect when the items is removed from a scene.
+        Reacts to item removal and position changes.
+
+        In particular, destroys the drop shadow effect when the items is removed from a scene
+        and keeps track of item's movements on the scene.
 
         Args:
             change (GraphicsItemChange): a flag signalling the type of the change
@@ -434,7 +445,9 @@ class ProjectItemIcon(QGraphicsRectItem):
         Returns:
              Whatever super() does with the value parameter
         """
-        if change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
+        if change == QGraphicsItem.ItemScenePositionHasChanged:
+            self._moved_on_scene = True
+        elif change == QGraphicsItem.GraphicsItemChange.ItemSceneChange and value is None:
             self.prepareGeometryChange()
             self.setGraphicsEffect(None)
         return super().itemChange(change, value)
@@ -741,11 +754,11 @@ class ObjectItem(QGraphicsPixmapItem):
             y (float): y-coordinate of central point
             extent (int): preferred extent
             object_id (int): object id (for filtering parameters)
-            label_font (QFont): label font
             label_color (QColor): label bg color
         """
         super().__init__()
         self._graph_view_form = graph_view_form
+        self._moved_on_scene = False
         self.object_id = object_id
         self.object_name = object_name
         self.object_class_id = object_class_id
@@ -772,6 +785,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
         self.shade = QGraphicsRectItem(super().boundingRect(), self)
         self.shade.setBrush(self._selected_color)
         self.shade.setPen(Qt.NoPen)
@@ -917,7 +931,7 @@ class ObjectItem(QGraphicsPixmapItem):
                     pass
 
     def mouseReleaseEvent(self, event):
-        """Merge, bounce, or just do nothing."""
+        """Merge, bounce, notify scene or just do nothing."""
         super().mouseReleaseEvent(event)
         if self._merge_target:
             if not self.merge_item(self._merge_target):
@@ -927,6 +941,24 @@ class ObjectItem(QGraphicsPixmapItem):
             self.move_related_items_by(self._original_pos - self.pos())
             self.setPos(self._original_pos)
             self._original_pos = None
+        if self._moved_on_scene:
+            self._moved_on_scene = False
+            self.scene().shrink_if_needed()
+
+    def itemChange(self, change, value):
+        """
+        Keeps track on item's movements on the scene.
+
+        Args:
+            change (GraphicsItemChange): a flag signalling the type of the change
+            value: a value related to the change
+
+        Returns:
+             Whatever super() does with the value parameter
+        """
+        if change == QGraphicsItem.ItemScenePositionHasChanged:
+            self._moved_on_scene = True
+        return super().itemChange(change, value)
 
     def check_for_merge_target(self, scene_pos):
         """Checks if this item is touching another item so they can merge

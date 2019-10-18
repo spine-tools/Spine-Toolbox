@@ -29,6 +29,7 @@ from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from .custom_qwidgets import ZoomWidget
 from .report_plotting_failure import report_plotting_failure
+from .shrinking_scene import ShrinkingScene
 from ..mvcmodels.object_relationship_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from ..graphics_items import ObjectItem, ArcItem, CustomTextItem
 from ..helpers import busy_effect, fix_name_ambiguity
@@ -597,11 +598,11 @@ class GraphViewForm(DataStoreForm):
         return True
 
     def new_scene(self):
-        """A new scene with a background."""
+        """Replaces the current scene with a new one."""
         old_scene = self.ui.graphicsView.scene()
         if old_scene:
             old_scene.deleteLater()
-        scene = QGraphicsScene()
+        scene = ShrinkingScene(100.0, 100.0, None)
         self.ui.graphicsView.setScene(scene)
         scene.changed.connect(self._handle_scene_changed)
         scene.selectionChanged.connect(self._handle_scene_selection_changed)
@@ -1055,6 +1056,7 @@ class GraphViewForm(DataStoreForm):
             self.commit_available.emit(True)
             for item in self.object_item_selection:
                 item.wipe_out()
+            self.ui.graphicsView.scene().shrink_if_needed()
             self.msg.emit("Successfully removed items.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)
