@@ -239,7 +239,7 @@ class TestDataStore(unittest.TestCase):
         self.assertEqual(database, 'foo')
         self.assertEqual(username, 'bar')
 
-    @unittest.skipIf(sys.platform == "win32", "Does not work on Windows")
+    @unittest.skip("Does not work on Travis or on Windows")
     def test_copy_db_url_to_clipboard(self):
         """Test that the database url from current selections is copied to clipboard."""
         QApplication.clipboard().clear()
