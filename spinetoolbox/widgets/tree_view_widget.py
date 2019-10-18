@@ -915,6 +915,7 @@ class TreeViewForm(DataStoreForm):
             table_view (QTableView): remove selection from this view
             item_type (str)
         """
+        self.msg.emit("Removing parameter data in cascade...")
         selection = table_view.selectionModel().selection()
         rows = list()
         while not selection.isEmpty():
@@ -922,7 +923,7 @@ class TreeViewForm(DataStoreForm):
             top = current.top()
             bottom = current.bottom()
             rows += range(top, bottom + 1)
-        # Get parameters values grouped by db_map
+        # Get parameter data grouped by db_map
         db_map_typed_data = dict()
         model = table_view.model()
         for row in rows:
@@ -932,6 +933,7 @@ class TreeViewForm(DataStoreForm):
             db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
         self.db_mngr.remove_items(db_map_typed_data)
         table_view.selectionModel().clearSelection()
+        self.msg.emit("")
 
     @Slot(name="remove_parameter_value_lists")
     def remove_parameter_value_lists(self):

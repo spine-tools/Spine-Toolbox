@@ -210,19 +210,14 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         tip = self.rowCount() - self.empty_model.rowCount()
         self.rowsInserted.emit(QModelIndex(), tip + first, tip + last)
 
-    @Slot("QModelIndex", "int", "int", name="_handle_sub_model_rows_removed")
-    def _handle_sub_model_rows_removed(self, model, first, last):
-        """Runs when rows are removed from the given sub model.
-        Update row_map, then emit rowsRemoved so the removed rows are no longer visible.
-        """
+    def remove_sub_model_rows(self, model, first, last):
+        """Remove rows from given submodel."""
         compound_first = self._inv_row_map[model, first]
         compound_last = self._inv_row_map[model, last]
-        # self.do_refresh()
-        self.rowsRemoved.emit(QModelIndex(), compound_first, compound_last)
-        # removed_count = last - first + 1
-        # tip = self.rowCount() - (self.empty_model.rowCount() + removed_count)
-        # self._row_map = self._row_map[:tip] + [(self.empty_model, i) for i in range(self.empty_model.rowCount())]
-        # self.rowsRemoved.emit(QModelIndex(), tip + first, tip + last)
+        self.beginRemoveRows(QModelIndex(), compound_first, compound_last)
+        del model._main_data[first : last + 1]
+        self.do_refresh()
+        self.endRemoveRows()
 
     def _handle_single_model_reset(self, model):
         """Runs when one of the single models is reset.
@@ -247,9 +242,6 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
                 lambda top_left, bottom_right, roles, model=model: self.dataChanged.emit(
                     self.map_from_sub(model, top_left), self.map_from_sub(model, bottom_right), roles
                 )
-            )
-            model.rowsRemoved.connect(
-                lambda parent, first, last, model=model: self._handle_sub_model_rows_removed(model, first, last)
             )
 
     def clear_model(self):

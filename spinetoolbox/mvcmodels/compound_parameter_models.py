@@ -19,7 +19,7 @@ These models concatenate several 'single' models and one 'empty' model.
 
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from PySide2.QtGui import QFont, QIcon
-from ..helpers import busy_effect, format_string_list
+from ..helpers import busy_effect, format_string_list, rows_to_row_count_tuples
 from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 
 # from ..mvcmodels.empty_parameter_models import (
@@ -63,11 +63,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         return [m for m in self.sub_models if m.db_map == db_map]
 
     def connect_db_mngr_signals(self):
-        """Connect signals from database manager."""
-        # Connect signals to the slots below depending on which model
+        """Connect signals from database manager.
+        Reimplement in subclasses.
+        """
 
     @Slot("QVariant", name="receive_entity_classes_removed")
     def receive_entity_classes_removed(self, db_map_data):
+        """Runs entity classes are removed. Remove submodels for those entity classes."""
         self.layoutAboutToBeChanged.emit()
         for db_map, data in db_map_data.items():
             ids = {x["id"] for x in data}
@@ -79,8 +81,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @Slot("QVariant", name="receive_parameter_data_updated")
     def receive_parameter_data_updated(self, db_map_data):
-        """Runs after updating either parameter definitions or values."""
-        # We're lazy to do it right
+        """Runs when either parameter definitions or values are updated."""
         self._emit_data_changed_for_column("parameter_name")
         # TODO: entity and class names are refreshed without emitting dataChanged,
         # whereas for the parameter definition name we need it. Why?
@@ -88,8 +89,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @Slot("QVariant", name="receive_parameter_data_removed")
     def receive_parameter_data_removed(self, db_map_data):
-        """Runs after removing either parameter definitions or values."""
-        self.layoutAboutToBeChanged.emit()
+        """Runs either parameter definitions or values are removed."""
         for db_map, items in db_map_data.items():
             grouped_ids = dict()
             for item in items:
@@ -99,11 +99,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 removed_ids = grouped_ids.get(model.entity_class_id)
                 if not removed_ids:
                     continue
-                for row in reversed(range(model.rowCount())):
-                    if model._main_data[row] in removed_ids:
-                        model._main_data.pop(row)
-        self.do_refresh()
-        self.layoutChanged.emit()
+                removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
+                for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
+                    self.remove_sub_model_rows(model, row, row + count - 1)
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Use italic font for columns having an autofilter installed."""
