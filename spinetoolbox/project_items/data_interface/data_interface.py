@@ -332,3 +332,9 @@ class DataInterface(ProjectItem):
     def default_name_prefix():
         """see base class"""
         return "Data Interface"
+
+    def tear_down(self):
+        """Close all preview widgets
+        """
+        for widget in self._preview_widget.values():
+            widget.close()
