@@ -47,12 +47,6 @@ class SettingsWidget(QWidget):
         # Set up the ui from Qt Designer files
         self.ui = settings.Ui_SettingsForm()
         self.ui.setupUi(self)
-        # NOTE: Commented so we can try fontawesome icons (issue #286)
-        # self.ui.toolButton_browse_gams.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        # self.ui.toolButton_browse_julia.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        # self.ui.toolButton_browse_julia_project.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        # self.ui.toolButton_browse_python.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
-        # self.ui.toolButton_browse_work.setIcon(self.style().standardIcon(QStyle.SP_DialogOpenButton))
         self.setWindowFlags(Qt.Window | Qt.CustomizeWindowHint)
         # Ensure this window gets garbage-collected when closed
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -240,6 +234,7 @@ class SettingsWidget(QWidget):
         use_embedded_python = self._qsettings.value("appSettings/useEmbeddedPython", defaultValue="0")
         python_path = self._qsettings.value("appSettings/pythonPath", defaultValue="")
         commit_at_exit = int(self._qsettings.value("appSettings/commitAtExit", defaultValue="1"))  # tri-state
+        sticky_selection = self._qsettings.value("appSettings/stickySelection", defaultValue="false")
         if open_previous_project == 2:
             self.ui.checkBox_open_previous_project.setCheckState(Qt.Checked)
         if show_exit_prompt == 2:
@@ -271,6 +266,8 @@ class SettingsWidget(QWidget):
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.PartiallyChecked)
         else:  # commit_at_exit == "2":
             self.ui.checkBox_commit_at_exit.setCheckState(Qt.Checked)
+        if sticky_selection == "true":
+            self.ui.checkBox_graph_view_sticky_selection.setCheckState(Qt.Checked)
         proj_dir = ""  # Unused. Save/read this using QSettings, if we want to change the projects dir at some point
         if not proj_dir:
             proj_dir = DEFAULT_PROJECT_DIR
@@ -346,6 +343,8 @@ class SettingsWidget(QWidget):
         # Data Store Views
         commit_at_exit = str(int(self.ui.checkBox_commit_at_exit.checkState()))
         self._qsettings.setValue("appSettings/commitAtExit", commit_at_exit)
+        sticky_selection = "true" if int(self.ui.checkBox_graph_view_sticky_selection.checkState()) else "false"
+        self._qsettings.setValue("appSettings/stickySelection", sticky_selection)
         # Check if something in the app needs to be updated
         self._toolbox.show_datetime = self._toolbox.update_datetime()
         self.check_if_python_env_changed(python_path)

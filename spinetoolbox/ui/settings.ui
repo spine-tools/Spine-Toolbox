@@ -542,6 +542,12 @@
       <layout class="QVBoxLayout" name="verticalLayout_3" stretch="0,0,1">
        <item>
         <widget class="QGroupBox" name="groupBox_python">
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>95</height>
+          </size>
+         </property>
          <property name="title">
           <string>Python</string>
          </property>
@@ -609,6 +615,12 @@
            <verstretch>0</verstretch>
           </sizepolicy>
          </property>
+         <property name="minimumSize">
+          <size>
+           <width>0</width>
+           <height>75</height>
+          </size>
+         </property>
          <property name="maximumSize">
           <size>
            <width>16777215</width>
@@ -635,6 +647,16 @@
             </property>
            </widget>
           </item>
+          <item>
+           <widget class="QCheckBox" name="checkBox_graph_view_sticky_selection">
+            <property name="toolTip">
+             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Controls how selecting items in Graph View's Object tree &lt;span style=&quot; font-weight:600;&quot;&gt;using the left mouse button&lt;/span&gt; works. &lt;/p&gt;&lt;p&gt;When unchecked [default], Single selection is enabled. Pressing the Ctrl-button down enables multiple selection.&lt;/p&gt;&lt;p&gt;When checked, Multiple selection is enabled. Pressing the Ctrl-button down enables single selection.&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+            </property>
+            <property name="text">
+             <string>Sticky selection in Graph View</string>
+            </property>
+           </widget>
+          </item>
          </layout>
         </widget>
        </item>
@@ -649,7 +671,7 @@
          <property name="minimumSize">
           <size>
            <width>250</width>
-           <height>300</height>
+           <height>150</height>
           </size>
          </property>
          <property name="title">
@@ -739,7 +761,7 @@
 &lt;html&gt;&lt;head&gt;&lt;meta name=&quot;qrichtext&quot; content=&quot;1&quot; /&gt;&lt;style type=&quot;text/css&quot;&gt;
 p, li { white-space: pre-wrap; }
 &lt;/style&gt;&lt;/head&gt;&lt;body style=&quot; font-family:'MS Shell Dlg 2'; font-size:8.25pt; font-weight:400; font-style:normal;&quot;&gt;
-&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px; font-family:'MS Shell Dlg 2';&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
+&lt;p style=&quot;-qt-paragraph-type:empty; margin-top:0px; margin-bottom:0px; margin-left:0px; margin-right:0px; -qt-block-indent:0; text-indent:0px;&quot;&gt;&lt;br /&gt;&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
             </property>
             <property name="acceptRichText">
              <bool>false</bool>
@@ -940,6 +962,7 @@ p, li { white-space: pre-wrap; }
   <tabstop>toolButton_browse_python</tabstop>
   <tabstop>checkBox_use_embedded_python</tabstop>
   <tabstop>checkBox_commit_at_exit</tabstop>
+  <tabstop>checkBox_graph_view_sticky_selection</tabstop>
   <tabstop>textEdit_project_description</tabstop>
   <tabstop>lineEdit_work_dir</tabstop>
   <tabstop>toolButton_browse_work</tabstop>
