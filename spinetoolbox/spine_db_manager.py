@@ -558,6 +558,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_relationship_classes(db_map, ids=ids)
+        self.relationship_classes_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_relationships_by_object")
     def cascade_refresh_relationships_by_object(self, db_map_data):
@@ -566,6 +567,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_relationships(db_map, ids=ids)
+        self.relationships_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_definitions")
     def cascade_refresh_parameter_definitions(self, db_map_data):
@@ -574,6 +576,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
+        self.parameter_definitions_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
@@ -582,6 +585,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
+        self.parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity")
     def cascade_refresh_parameter_values_by_entity(self, db_map_data):
@@ -590,6 +594,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
+        self.parameter_values_updated.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_definition")
     def cascade_refresh_parameter_values_by_definition(self, db_map_data):
@@ -598,7 +603,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
-            # TODO: emit something so model knows and emits dataChanged
+        self.parameter_values_updated.emit(db_map_cascading_data)
 
     def find_cascading_relationship_classes(self, db_map_data):
         """Returns cascading relationship classes given data for object classes."""
@@ -638,17 +643,11 @@ class SpineDBManager(QObject):
         """Returns data for cascading parameter definitions or values given data for entity classes."""
         db_map_cascading_data = dict()
         for db_map, data in db_map_data.items():
-            entity_class_ids = {str(x["id"]) for x in data}
+            entity_class_ids = {x["id"] for x in data}
             db_map_cascading_data[db_map] = [
                 item
                 for item in self.get_items(db_map, item_type)
-                if entity_class_ids.intersection(
-                    [
-                        str(item.get("object_class_id")),
-                        str(item.get("relationship_class_id")),
-                        *item.get("object_class_id_list", "").split(","),
-                    ]
-                )
+                if entity_class_ids.intersection([item.get("object_class_id"), item.get("relationship_class_id")])
             ]
         return db_map_cascading_data
 
@@ -656,17 +655,11 @@ class SpineDBManager(QObject):
         """Returns data for cascading parameter values given data for entities."""
         db_map_cascading_data = dict()
         for db_map, data in db_map_data.items():
-            entity_ids = {str(x["id"]) for x in data}
+            entity_ids = {x["id"] for x in data}
             db_map_cascading_data[db_map] = [
                 item
                 for item in self.get_items(db_map, "parameter value")
-                if entity_ids.intersection(
-                    [
-                        str(item.get("object_id")),
-                        str(item.get("relationship_id")),
-                        *item.get("object_id_list", "").split(","),
-                    ]
-                )
+                if entity_ids.intersection([item.get("object_id"), item.get("relationship_id")])
             ]
         return db_map_cascading_data
 
@@ -674,7 +667,7 @@ class SpineDBManager(QObject):
         """Returns data for cascading parameter values given data for parameter definitions."""
         db_map_cascading_data = dict()
         for db_map, data in db_map_data.items():
-            definition_ids = {str(x["id"]) for x in data}
+            definition_ids = {x["id"] for x in data}
             db_map_cascading_data[db_map] = [
                 item for item in self.get_items(db_map, "parameter value") if item["parameter_id"] in definition_ids
             ]

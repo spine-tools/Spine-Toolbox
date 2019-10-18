@@ -58,21 +58,52 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter = dict()
         self.connect_db_mngr_signals()
 
-    def connect_db_mngr_signals(self):
-        """Connect signals from database manager."""
-
     def _models_with_db_map(self, db_map):
         """Returns a collection of models having the given db_map."""
-        return (m for m in self.single_models if m.db_map == db_map)
+        return [m for m in self.sub_models if m.db_map == db_map]
+
+    def connect_db_mngr_signals(self):
+        """Connect signals from database manager."""
+        # Connect signals to the slots below depending on which model
 
     @Slot("QVariant", name="receive_entity_classes_removed")
     def receive_entity_classes_removed(self, db_map_data):
+        self.layoutAboutToBeChanged.emit()
         for db_map, data in db_map_data.items():
             ids = {x["id"] for x in data}
             for model in self._models_with_db_map(db_map):
                 if model.entity_class_id in ids:
                     self.sub_models.remove(model)
-        self.refresh()
+        self.do_refresh()
+        self.layoutChanged.emit()
+
+    @Slot("QVariant", name="receive_parameter_data_updated")
+    def receive_parameter_data_updated(self, db_map_data):
+        """Runs after updating either parameter definitions or values."""
+        # We're lazy to do it right
+        self._emit_data_changed_for_column("parameter_name")
+        # TODO: entity and class names are refreshed without emitting dataChanged,
+        # whereas for the parameter definition name we need it. Why?
+        # Something to do with widget hierarchy in Qt?
+
+    @Slot("QVariant", name="receive_parameter_data_removed")
+    def receive_parameter_data_removed(self, db_map_data):
+        """Runs after removing either parameter definitions or values."""
+        self.layoutAboutToBeChanged.emit()
+        for db_map, items in db_map_data.items():
+            grouped_ids = dict()
+            for item in items:
+                entity_class_id = item.get("object_class_id") or item.get("relationship_class_id")
+                grouped_ids.setdefault(entity_class_id, set()).add(item["id"])
+            for model in self._models_with_db_map(db_map):
+                removed_ids = grouped_ids.get(model.entity_class_id)
+                if not removed_ids:
+                    continue
+                for row in reversed(range(model.rowCount())):
+                    if model._main_data[row] in removed_ids:
+                        model._main_data.pop(row)
+        self.do_refresh()
+        self.layoutChanged.emit()
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Use italic font for columns having an autofilter installed."""
@@ -149,7 +180,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _row_map_for_single_model(self, model):
         """Returns row map for given single model.
         Reimplemented to take filter status into account."""
-        return super()._row_map_for_single_model(model)
+        return self._row_map_for_model(model)
+        # FIXME: when filtering works again
         if not self.filter_accepts_single_model(model):
             return []
         return [(model, i) for i in model.accepted_rows()]
@@ -310,26 +342,18 @@ class CompoundParameterDefinitionMixin:
     def connect_db_mngr_signals(self):
         """Connect db manager signals."""
         super().connect_db_mngr_signals()
-        self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
-        self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
+        self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_data_updated)
+        self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_data_removed)
 
-    @Slot("QVariant", name="receive_parameter_definitions_updated")
-    def receive_parameter_definitions_updated(self, db_map_data):
-        """Runs after updating parameter definitions."""
-        # Needed?
-        self._emit_data_changed_for_column("parameter_name")
 
-    @Slot("QVariant", name="receive_parameter_definitions_removed")
-    def receive_parameter_definitions_removed(self, db_map_data):
-        """Runs after removing parameter definitions."""
-        for db_map, data in db_map_data.items():
-            removed_ids = {x["id"] for x in data}
-            for model in self._models_with_db_map(db_map):
-                for row in reversed(range(model.rowCount())):
-                    id_ = model._main_data[row]
-                    if id_ in removed_ids:
-                        model.removeRows(row, 1)
-        self.refresh()
+class CompoundParameterValueMixin:
+    """Handles signals from db mngr for parameter value models."""
+
+    def connect_db_mngr_signals(self):
+        """Connect db manager signals."""
+        super().connect_db_mngr_signals()
+        self.db_mngr.parameter_values_updated.connect(self.receive_parameter_data_updated)
+        self.db_mngr.parameter_values_removed.connect(self.receive_parameter_data_removed)
 
 
 class CompoundObjectParameterDefinitionModel(
@@ -387,51 +411,6 @@ class CompoundRelationshipParameterDefinitionModel(
     @property
     def _empty_model_type(self):
         return EmptyRelationshipParameterDefinitionModel
-
-
-class CompoundParameterValueMixin:
-    """Handles signals from db mngr for parameter value models."""
-
-    def connect_db_mngr_signals(self):
-        """Connect db manager signals."""
-        super().connect_db_mngr_signals()
-        self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
-        self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
-        self.db_mngr.parameter_values_removed.connect(self.receive_parameter_definitions_removed)
-        # TODO: entity and class names are refreshed without emitting dataChanged,
-        # whereas for the parameter definition name we need it. Why?
-        # Something to do with widget hierarchy in Qt?
-
-    @Slot("QVariant", name="receive_parameter_definitions_updated")
-    def receive_parameter_definitions_updated(self, db_map_data):
-        """Runs after updating parameter definitions."""
-        # We're lazy to do it right
-        self._emit_data_changed_for_column("parameter_name")
-
-    @Slot("QVariant", name="receive_parameter_definitions_removed")
-    def receive_parameter_definitions_removed(self, db_map_data):
-        """Runs after removing parameter definitions."""
-        for db_map, data in db_map_data.items():
-            removed_ids = {x["id"] for x in data}
-            for model in self._models_with_db_map(db_map):
-                for row in reversed(range(model.rowCount())):
-                    id_ = model._main_data[row]
-                    parameter_id = self.db_mngr.get_item(db_map, "parameter value", id_).get("parameter_id")
-                    if id_ in removed_ids:
-                        model.removeRows(row, 1)
-        self.refresh()
-
-    @Slot("QVariant", name="parameter_values_removed")
-    def parameter_values_removed(self, db_map_data):
-        """Runs after removing parameter values."""
-        for db_map, data in db_map_data.items():
-            removed_ids = {x["id"] for x in data}
-            for model in self._models_with_db_map(db_map):
-                for row in reversed(range(model.rowCount())):
-                    id_ = model._main_data[row]
-                    if id_ in removed_ids:
-                        model.removeRows(row, 1)
-        self.refresh()
 
 
 class CompoundObjectParameterValueModel(

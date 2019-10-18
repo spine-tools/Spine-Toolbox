@@ -195,6 +195,8 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.objects_removed.connect(self.receive_objects_removed)
         self.db_mngr.relationship_classes_removed.connect(self.receive_relationship_classes_removed)
         self.db_mngr.relationships_removed.connect(self.receive_relationships_removed)
+        self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
+        self.db_mngr.parameter_values_removed.connect(self.receive_parameter_values_removed)
         # Error
         self.db_mngr.msg_error.connect(self.add_db_mngr_error_msg)
 
@@ -544,13 +546,15 @@ class DataStoreForm(QMainWindow):
         dialog.data_committed.connect(self.db_mngr.update_relationships)
         dialog.show()
 
-    def receive_items_changed(self, action, item_type, db_map_data):
+    def receive_items_changed(self, action, item_type, db_map_data, name_key=None):
         """Enables or disables actions and informs the user about what just happened."""
+        if name_key is None:
+            name_key = "name"
         # NOTE: The following line assumes this slot is called *after* removing items from object tree model
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
-        names = {item["name"] for db_map, data in db_map_data.items() for item in data if "name" in item}
+        names = {item[name_key] for db_map, data in db_map_data.items() for item in data if name_key in item}
         self.commit_available.emit(True)
-        names = ", '".join(names) if names else ""
+        names = ", ".join(names) if names else ""
         msg = f"Item(s) {names} of type {item_type} successfully {action}."
         self.msg.emit(msg)
 
@@ -610,6 +614,15 @@ class DataStoreForm(QMainWindow):
     def receive_relationships_removed(self, db_map_data):
         self.receive_items_changed("removed", "relationship", db_map_data)
 
+    @Slot("QVariant", name="receive_parameter_definitions_removed")
+    def receive_parameter_definitions_removed(self, db_map_data):
+        self.receive_items_changed("removed", "parameter definition", db_map_data, name_key="parameter_name")
+
+    @Slot("QVariant", name="receive_parameter_values_removed")
+    def receive_parameter_values_removed(self, db_map_data):
+        self.receive_items_changed("removed", "parameter value", db_map_data)
+
+    # TODO: all this with the manager
     def add_parameter_value_lists(self, parameter_value_list_d):
         added_names = set()
         for db_map, items in parameter_value_list_d.items():

@@ -767,9 +767,9 @@ class TreeViewForm(DataStoreForm):
         dialog.data_committed.connect(self.db_mngr.remove_items)
         dialog.show()
 
-    def receive_items_changed(self, action, item_type, db_map_data):
+    def receive_items_changed(self, action, item_type, db_map_data, name_key=None):
         """Enables or disables actions and informs the user about what just happened."""
-        super().receive_items_changed(action, item_type, db_map_data)
+        super().receive_items_changed(action, item_type, db_map_data, name_key=name_key)
         if action == "removed":
             self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
             self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))
@@ -906,6 +906,7 @@ class TreeViewForm(DataStoreForm):
         """Remove selected rows from relationship parameter definition table."""
         self._remove_parameter_data(self.ui.tableView_relationship_parameter_definition, "parameter definition")
 
+    @busy_effect
     def _remove_parameter_data(self, table_view, item_type):
         """
         Remove selected rows from parameter table.
