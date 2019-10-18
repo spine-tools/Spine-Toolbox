@@ -83,6 +83,10 @@ class FilledParameterModel(MinimalTableModel):
         row_data = dict()
         for index, value in zip(indexes, data):
             row_data.setdefault(index.row(), {})[self.header[index.column()]] = value
-        data = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
-        getattr(self.db_mngr, self.update_method_name)({self.db_map: data})
+        items = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
+        self.update_items_in_db(items)
         return True
+
+    def update_items_in_db(self, items):
+        """Update items in db."""
+        raise NotImplementedError()

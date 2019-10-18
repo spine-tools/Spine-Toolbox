@@ -18,6 +18,7 @@ Single models for parameter definitions and values (as 'for a single entity').
 
 from ..mvcmodels.filled_parameter_models import FilledParameterModel
 from ..mvcmodels.parameter_item import ParameterDefinitionItem, ParameterValueItem
+from ..mvcmodels.parameter_mixins import ParameterDefinitionFillInMixin
 
 
 class SingleParameterModel(FilledParameterModel):
@@ -144,19 +145,55 @@ class SingleRelationshipParameterValueMixin:
         return True
 
 
-class SingleObjectParameterDefinitionModel(SingleObjectParameterMixin, SingleParameterModel):
-    """An object parameter definition model for a single object class."""
+class SingleParameterDefinitionMixin(ParameterDefinitionFillInMixin):
 
     json_fields = ["default_value"]
-    fixed_fields = ["object_class_name", "database"]
 
     @property
     def item_type(self):
         return "parameter definition"
 
+    def update_items_in_db(self, items):
+        """Update items in db."""
+        param_def_data = list()
+        param_tag_data = list()
+        for item in items:
+            def_item = self._make_param_def_item(item, self.db_map)
+            tag_item = self._make_param_tag_item(item, self.db_map)
+            if def_item:
+                param_def_data.append(def_item)
+            if tag_item:
+                param_tag_data.append(tag_item)
+        self.db_mngr.set_parameter_definition_tags({self.db_map: param_tag_data})
+        self.db_mngr.update_parameter_definitions({self.db_map: param_def_data})
+
+    def _make_param_def_item(self, item, db_map):
+        """Returns a parameter definition item for adding to the database."""
+        item = item.copy()
+        self._fill_in_parameter_name(item)
+        self._fill_in_parameter_tag_id_list(item, db_map)
+        return item
+
+
+class SingleParameterValueModel:
+
+    json_fields = ["value"]
+
     @property
-    def update_method_name(self):
-        return "update_parameter_definitions"
+    def item_type(self):
+        return "parameter value"
+
+    def update_items_in_db(self, items):
+        """Update items in db."""
+        self.db_mngr.update_parameter_values(db_map, items)
+
+
+class SingleObjectParameterDefinitionModel(
+    SingleParameterDefinitionMixin, SingleObjectParameterMixin, SingleParameterModel
+):
+    """An object parameter definition model for a single object class."""
+
+    fixed_fields = ["object_class_name", "database"]
 
     def fetch_data(self):
         return [
@@ -165,19 +202,12 @@ class SingleObjectParameterDefinitionModel(SingleObjectParameterMixin, SinglePar
         ]
 
 
-class SingleRelationshipParameterDefinitionModel(SingleRelationshipParameterMixin, SingleParameterModel):
+class SingleRelationshipParameterDefinitionModel(
+    SingleParameterDefinitionMixin, SingleRelationshipParameterMixin, SingleParameterModel
+):
     """A relationship parameter definition model for a single relationship class."""
 
-    json_fields = ["default_value"]
     fixed_fields = ["relationship_class_name", "object_class_name_list", "database"]
-
-    @property
-    def item_type(self):
-        return "parameter definition"
-
-    @property
-    def update_method_name(self):
-        return "update_parameter_definitions"
 
     def fetch_data(self):
         return [
@@ -189,20 +219,11 @@ class SingleRelationshipParameterDefinitionModel(SingleRelationshipParameterMixi
 
 
 class SingleObjectParameterValueModel(
-    SingleObjectParameterMixin, SingleObjectParameterValueMixin, SingleParameterModel
+    SingleParameterValueModel, SingleObjectParameterMixin, SingleObjectParameterValueMixin, SingleParameterModel
 ):
     """An object parameter value model for a single object class."""
 
-    json_fields = ["value"]
     fixed_fields = ["object_class_name", "object_name", "parameter_name", "database"]
-
-    @property
-    def item_type(self):
-        return "parameter value"
-
-    @property
-    def update_method_name(self):
-        return "update_parameter_values"
 
     def fetch_data(self):
         return [
@@ -211,20 +232,14 @@ class SingleObjectParameterValueModel(
 
 
 class SingleRelationshipParameterValueModel(
-    SingleRelationshipParameterMixin, SingleRelationshipParameterValueMixin, SingleParameterModel
+    SingleParameterValueModel,
+    SingleRelationshipParameterMixin,
+    SingleRelationshipParameterValueMixin,
+    SingleParameterModel,
 ):
     """A relationship parameter value model for a single relationship class."""
 
-    json_fields = ["value"]
     fixed_fields = ["relationship_class_name", "object_name_list", "parameter_name", "database"]
-
-    @property
-    def item_type(self):
-        return "parameter value"
-
-    @property
-    def update_method_name(self):
-        return "update_parameter_values"
 
     def fetch_data(self):
         return [

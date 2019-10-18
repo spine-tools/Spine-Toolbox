@@ -22,12 +22,12 @@ from PySide2.QtGui import QFont, QIcon
 from ..helpers import busy_effect, format_string_list, rows_to_row_count_tuples
 from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 
-# from ..mvcmodels.empty_parameter_models import (
-#    EmptyObjectParameterDefinitionModel,
-#    EmptyObjectParameterValueModel,
-#    EmptyRelationshipParameterDefinitionModel,
-#    EmptyRelationshipParameterValueModel,
-# )
+from ..mvcmodels.empty_parameter_models import (
+    EmptyObjectParameterDefinitionModel,
+    EmptyObjectParameterValueModel,
+    EmptyRelationshipParameterDefinitionModel,
+    EmptyRelationshipParameterValueModel,
+)
 from ..mvcmodels.single_parameter_models import (
     SingleObjectParameterDefinitionModel,
     SingleObjectParameterValueModel,
@@ -57,6 +57,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.db_mngr = db_mngr
         self._auto_filter = dict()
         self.connect_db_mngr_signals()
+
+    @property
+    def _single_model_type(self):
+        raise NotImplementedError()
+
+    @property
+    def _empty_model_type(self):
+        raise NotImplementedError()
 
     def _models_with_db_map(self, db_map):
         """Returns a collection of models having the given db_map."""
@@ -89,7 +97,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @Slot("QVariant", name="receive_parameter_data_removed")
     def receive_parameter_data_removed(self, db_map_data):
-        """Runs either parameter definitions or values are removed."""
+        """Runs when either parameter definitions or values are removed."""
         for db_map, items in db_map_data.items():
             grouped_ids = dict()
             for item in items:
@@ -102,6 +110,23 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                 removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
                 for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
                     self.remove_sub_model_rows(model, row, row + count - 1)
+
+    @Slot("QVariant", name="receive_parameter_data_added")
+    def receive_parameter_data_added(self, db_map_data):
+        """Runs when either parameter definitions or values are added."""
+        new_models = []
+        for db_map, items in db_map_data.items():
+            grouped_ids = dict()
+            for item in items:
+                entity_class_id = item.get("object_class_id") or item.get("relationship_class_id")
+                grouped_ids.setdefault(entity_class_id, []).append(item["id"])
+            for entity_class_id, ids in grouped_ids.items():
+                model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id)
+                model.reset_model(ids)
+                self._handle_single_model_reset(model)
+                new_models.append(model)
+        pos = len(self.single_models)
+        self.sub_models[pos:pos] = new_models
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Use italic font for columns having an autofilter installed."""
@@ -121,10 +146,16 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for db_map in self.db_mngr.db_maps:
             for entity_class in self._get_entity_classes(db_map):
                 d.setdefault(entity_class["name"], {}).setdefault(db_map, set()).add(entity_class["id"])
+        models = []
         for db_map_ids in d.values():
-            for db_map, ids in db_map_ids.items():
-                for id_ in ids:
-                    yield self._single_model_type(self, self.header, self.db_mngr, db_map, id_)
+            for db_map, entity_class_ids in db_map_ids.items():
+                for entity_class_id in entity_class_ids:
+                    models.append(self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id))
+        return models
+
+    def _create_empty_model(self):
+        """Returns an empty model."""
+        return self._empty_model_type(self, self.header, self.db_mngr)
 
     def single_model_key_from_item(self, item):
         """Returns the single model key from the given item.
@@ -342,6 +373,7 @@ class CompoundParameterDefinitionMixin:
         super().connect_db_mngr_signals()
         self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_data_updated)
         self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_data_removed)
+        self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_data_added)
 
 
 class CompoundParameterValueMixin:
@@ -352,6 +384,7 @@ class CompoundParameterValueMixin:
         super().connect_db_mngr_signals()
         self.db_mngr.parameter_values_updated.connect(self.receive_parameter_data_updated)
         self.db_mngr.parameter_values_removed.connect(self.receive_parameter_data_removed)
+        # TODO: self.db_mngr.parameter_values_added.connect(self.receive_parameter_data_added)
 
 
 class CompoundObjectParameterDefinitionModel(

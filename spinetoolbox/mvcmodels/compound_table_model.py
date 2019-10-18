@@ -32,8 +32,8 @@ class CompoundTableModel(MinimalTableModel):
         """
         super().__init__(parent, header=header)
         self.sub_models = []
-        self._row_map = []
-        self._inv_row_map = {}
+        self._row_map = []  # Maps compound row to tuple (sub_model, sub_row)
+        self._inv_row_map = {}  # Maps tuple (sub_model, sub_row) to compound row
         self._fetched_count = 0
 
     def map_to_sub(self, index):
@@ -48,7 +48,7 @@ class CompoundTableModel(MinimalTableModel):
     def map_from_sub(self, sub_model, sub_index):
         """Translate the index from the given submodel into this."""
         try:
-            row = self._inv_row_map[(sub_model, sub_index.row())]
+            row = self._inv_row_map[sub_model, sub_index.row()]
         except KeyError:
             return QModelIndex()
         return self.index(row, sub_index.column())
@@ -119,23 +119,14 @@ class CompoundTableModel(MinimalTableModel):
         """Return the sum of rows in all models."""
         return len(self._row_map)
 
-    def removeRows(self, row, count, parent=QModelIndex()):
-        """Distribute the rows among the different submodels
-        and call removeRows on each of them.
-        """
-        if row < 0 or row + count - 1 >= self.rowCount():
-            return False
-        self.beginRemoveRows(parent, row, row + count - 1)
-        d = dict()
-        for i in range(row, row + count):
-            sub_model, sub_row = self._row_map[i]
-            d.setdefault(sub_model, list()).append(sub_row)
-        for sub_model, sub_rows in d.items():
-            for sub_row, sub_count in sorted(rows_to_row_count_tuples(sub_rows), reverse=True):
-                sub_model.removeRows(sub_row, sub_count)
-        self.refresh()
+    def remove_sub_model_rows(self, model, first, last):
+        """Remove rows from given submodel."""
+        compound_first = self._inv_row_map[model, first]
+        compound_last = self._inv_row_map[model, last]
+        self.beginRemoveRows(QModelIndex(), compound_first, compound_last)
+        del model._main_data[first : last + 1]
+        self.do_refresh()
         self.endRemoveRows()
-        return True
 
     def batch_set_data(self, indexes, data):
         """Set data for indexes in batch.
@@ -201,23 +192,32 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         self._row_map += row_map
         self._inv_row_map.update({(model, row): row_count + row for model, row in row_map})
 
+    @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_removed")
+    def _handle_empty_rows_removed(self, parent, first, last):
+        """Runs when rows are removed from the empty model.
+        Update row_map, then emit rowsRemoved so the removed rows are no longer visible.
+        """
+        empty_model_range = range(self.empty_model.rowCount())
+        tip = self._inv_row_map[self.empty_model, 0] + 1
+        self._row_map = self._row_map[:tip] + [(self.empty_model, row) for row in empty_model_range]
+        for row in empty_model_range:
+            self._inv_row_map[self.empty_model, row] = self.rowCount() + row
+        compound_first = self._inv_row_map[self.empty_model, first]
+        compound_last = self._inv_row_map[self.empty_model, last]
+        self.rowsRemoved.emit(QModelIndex(), compound_first, compound_last)
+
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
         """Runs when rows are inserted to the empty model.
         Update row_map, then emit rowsInserted so the new rows become visible.
         """
-        self._row_map += [(self.empty_model, i) for i in range(first, last + 1)]
-        tip = self.rowCount() - self.empty_model.rowCount()
-        self.rowsInserted.emit(QModelIndex(), tip + first, tip + last)
-
-    def remove_sub_model_rows(self, model, first, last):
-        """Remove rows from given submodel."""
-        compound_first = self._inv_row_map[model, first]
-        compound_last = self._inv_row_map[model, last]
-        self.beginRemoveRows(QModelIndex(), compound_first, compound_last)
-        del model._main_data[first : last + 1]
-        self.do_refresh()
-        self.endRemoveRows()
+        empty_model_range = range(first, last + 1)
+        for row in empty_model_range:
+            self._inv_row_map[self.empty_model, row] = self.rowCount() + row
+        self._row_map += [(self.empty_model, row) for row in empty_model_range]
+        compound_first = self._inv_row_map[self.empty_model, first]
+        compound_last = self._inv_row_map[self.empty_model, last]
+        self.rowsInserted.emit(QModelIndex(), compound_first, compound_last)
 
     def _handle_single_model_reset(self, model):
         """Runs when one of the single models is reset.
@@ -234,6 +234,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     def connect_model_signals(self):
         """Connect model signals."""
+        self.empty_model.rowsRemoved.connect(self._handle_empty_rows_removed)
         self.empty_model.rowsInserted.connect(self._handle_empty_rows_inserted)
         for model in self.single_models:
             model.modelReset.connect(lambda model=model: self._handle_single_model_reset(model))
@@ -254,12 +255,13 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         for m in self.sub_models:
             m.deleteLater()
         self.sub_models.clear()
+        self._inv_row_map.clear()
 
     def init_model(self):
         """Initialize model."""
         self.clear_model()
-        self.sub_models = list(self._create_single_models())
-        # self.sub_models.append(self._create_empty_model())
+        self.sub_models = self._create_single_models()
+        self.sub_models.append(self._create_empty_model())
         self.connect_model_signals()
 
     def _create_single_models(self):
@@ -268,30 +270,4 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
 
     def _create_empty_model(self):
         """Returns an empty model."""
-        raise NotImplementedError()
-
-    def move_rows_to_single_models(self, rows):
-        """Move rows with newly added items from the empty model to a new single model.
-        Runs when the empty row model succesfully inserts new data into the db.
-        """
-        # Group items by single model key
-        d = {}
-        for row in rows:
-            item = self.empty_model._main_data[row]
-            d.setdefault(self.single_model_key_from_item(item), list()).append(item)
-        single_models = []
-        for key, item_list in d.items():
-            single_model = self._single_model_type(*key)
-            single_model.reset_model(item_list)
-            self._handle_single_model_reset(single_model)
-            single_models.append(single_model)
-        pos = len(self.single_models)
-        self.sub_models[pos:pos] = single_models
-        for row in reversed(rows):
-            self.empty_model.removeRows(row, 1)
-
-    def single_model_key_from_item(self, item):
-        """Returns the single model key from the given item.
-        Used by move rows to single models.
-        """
         raise NotImplementedError()

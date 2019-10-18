@@ -183,6 +183,8 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.objects_added.connect(self.receive_objects_added)
         self.db_mngr.relationship_classes_added.connect(self.receive_relationship_classes_added)
         self.db_mngr.relationships_added.connect(self.receive_relationships_added)
+        self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_definitions_added)
+        self.db_mngr.parameter_values_added.connect(self.receive_parameter_values_added)
         # Updated
         self.db_mngr.object_classes_updated.connect(self.receive_object_classes_updated)
         self.db_mngr.objects_updated.connect(self.receive_objects_updated)
@@ -573,6 +575,14 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="receive_relationships_added")
     def receive_relationships_added(self, db_map_data):
         self.receive_items_changed("added", "relationship", db_map_data)
+
+    @Slot("QVariant", name="receive_parameter_definitions_added")
+    def receive_parameter_definitions_added(self, db_map_data):
+        self.receive_items_changed("added", "parameter definition", db_map_data)
+
+    @Slot("QVariant", name="receive_parameter_values_added")
+    def receive_parameter_values_added(self, db_map_data):
+        self.receive_items_changed("added", "parameter value", db_map_data)
 
     @Slot("QVariant", name="receive_object_classes_updated")
     def receive_object_classes_updated(self, db_map_data):

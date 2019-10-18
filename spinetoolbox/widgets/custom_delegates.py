@@ -218,10 +218,12 @@ class ParameterDelegate(QItemDelegate):
         editor.set_data(index.data(Qt.EditRole))
         return editor
 
-    def _create_parameter_value_editor(self, parent, option, index, db_mngr, db_map, id_):
+    def _create_parameter_value_editor(self, parent, option, index, db_mngr, db_map):
         """Returns a SearchBarEditor if the parameter has associated a value list.
         Otherwise returns the normal parameter value editor.
         """
+        # TODO: get the parameter definition id in empty models
+        id_ = model.item_at_row(index.row())
         parameter_id = db_mngr.get_item(db_map, "parameter value", id_).get("parameter_id")
         value_list_id = db_mngr.get_item(db_map, "parameter definition", parameter_id).get("value_list_id")
         value_list = db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")
@@ -230,10 +232,10 @@ class ParameterDelegate(QItemDelegate):
             value_list = value_list.split(",")
             editor.set_data(index.data(Qt.DisplayRole), value_list)
         else:
-            editor = self._create_normal_parameter_value_editor(parent, option, index, db_mngr, db_map, id_)
+            editor = self._create_normal_parameter_value_editor(parent, option, index, db_mngr, db_map)
         return editor
 
-    def _create_normal_parameter_value_editor(self, parent, option, index, db_mngr, db_map, id_):
+    def _create_normal_parameter_value_editor(self, parent, option, index, db_mngr, db_map):
         """Returns a CustomLineEditor or NumberParameterInlineEditor if the data from index is not of special type.
         Otherwise, emit the signal to request a standalone `ParameterValueEditor`
         from parent widget.
@@ -252,10 +254,10 @@ class ParameterDelegate(QItemDelegate):
         editor.set_data(index.data(Qt.EditRole))
         return editor
 
-    def _create_entity_class_name_editor(self, parent, option, index, db_mngr, db_map, id_):
+    def _create_entity_class_name_editor(self, parent, option, index, db_mngr, db_map):
         editor = SearchBarEditor(self._parent, parent)
-        name_list = [x.name for x in self._entity_class_query(db_map)]
-        editor.set_data(index.data(Qt.EditRole), name_list)
+        entity_classes = self._get_entity_classes(db_mngr, db_map)
+        editor.set_data(index.data(Qt.EditRole), [x["name"] for x in entity_classes])
         return editor
 
     def _entity_class_query(self, db_map):
@@ -264,23 +266,28 @@ class ParameterDelegate(QItemDelegate):
     def createEditor(self, parent, option, index):
         """Return editor."""
         model = index.model()
-        field = model.horizontal_header_labels()[index.column()]
+        header = model.horizontal_header_labels()
         db_mngr = model.db_mngr
-        db_map = model.map_to_sub(index).model().db_map
-        id_ = model.item_at_row(index.row())
-        create_editor_func = self._create_editor_func_map.get(field)
+        field = header[index.column()]
         if field == 'database':
-            editor = self._create_database_editor(parent, option, index)
-        elif db_map and create_editor_func:
-            editor = create_editor_func(parent, option, index, db_mngr, db_map, id_)
+            editor = self._create_database_editor(parent, option, index, db_mngr)
         else:
-            editor = self._create_line_editor(parent, option, index)
+            database = index.sibling(index.row(), header.index("database")).data()
+            db_map = next(iter(x for x in db_mngr.db_maps if x.codename == database), None)
+            if not db_map:
+                self._parent.msg.emit("Please select database first.")
+                return None
+            create_editor_func = self._create_editor_func_map.get(field)
+            if create_editor_func:
+                editor = create_editor_func(parent, option, index, db_mngr, db_map)
+            else:
+                editor = self._create_line_editor(parent, option, index)
         self._connect_editor_signals(editor, index)
         return editor
 
 
 class ParameterDefinitionDelegateMixin:
-    def _create_parameter_tag_list_editor(self, parent, option, index, db_mngr, db_map, id_):
+    def _create_parameter_tag_list_editor(self, parent, option, index, db_mngr, db_map):
         editor = CheckListEditor(self._parent, parent)
         all_parameter_tag_list = [x["tag"] for x in db_mngr.get_parameter_tags(db_map)]
         try:
@@ -291,7 +298,7 @@ class ParameterDefinitionDelegateMixin:
         editor.set_data(all_parameter_tag_list, parameter_tag_list)
         return editor
 
-    def _create_value_list_name_editor(self, parent, option, index, db_mngr, db_map, id_):
+    def _create_value_list_name_editor(self, parent, option, index, db_mngr, db_map):
         editor = SearchBarEditor(self._parent, parent)
         name_list = [x["name"] for x in db_mngr.get_parameter_value_lists(db_map)]
         editor.set_data(index.data(Qt.EditRole), name_list)
@@ -299,7 +306,7 @@ class ParameterDefinitionDelegateMixin:
 
 
 class ParameterValueDelegateMixin:
-    def _create_parameter_name_editor(self, parent, option, index, db_mngr, db_map, id_):
+    def _create_parameter_name_editor(self, parent, option, index, db_mngr, db_map):
         editor = SearchBarEditor(self._parent, parent)
         parameter_definition_list = self._parameter_definition_query(db_map, item.entity_class.id)
         name_list = [x.parameter_name for x in parameter_definition_list]
@@ -323,8 +330,9 @@ class ObjectParameterDefinitionDelegate(ParameterDefinitionDelegateMixin, Parame
             "default_value": self._create_normal_parameter_value_editor,
         }
 
-    def _entity_class_query(self, db_map):
-        return db_map.object_class_list()
+    @staticmethod
+    def _get_entity_classes(db_mngr, db_map):
+        return db_mngr.get_object_classes(db_map)
 
 
 class ObjectParameterValueDelegate(ParameterValueDelegateMixin, ParameterDelegate):
@@ -340,15 +348,16 @@ class ObjectParameterValueDelegate(ParameterValueDelegateMixin, ParameterDelegat
             "value": self._create_parameter_value_editor,
         }
 
-    def _create_object_name_editor(self, parent, option, index, db_mngr, db_map, id_):
+    def _create_object_name_editor(self, parent, option, index, db_mngr, db_map):
         editor = SearchBarEditor(self._parent, parent)
         object_class_id = item.object_class_id
         name_list = [x.name for x in db_map.object_list(class_id=object_class_id)]
         editor.set_data(index.data(Qt.EditRole), name_list)
         return editor
 
-    def _entity_class_query(self, db_map):
-        return db_map.object_class_list()
+    @staticmethod
+    def _get_entity_classes(db_mngr, db_map):
+        return db_mngr.get_object_classes(db_map)
 
     def _parameter_definition_query(self, db_map, entity_class_id):
         return db_map.object_parameter_definition_list(object_class_id=entity_class_id)
@@ -362,13 +371,15 @@ class RelationshipParameterDefinitionDelegate(ParameterDefinitionDelegateMixin, 
         self._create_editor_func_map = {
             "database": self._create_database_editor,
             "relationship_class_name": self._create_entity_class_name_editor,
+            "object_class_name_list": lambda *args: None,
             "parameter_tag_list": self._create_parameter_tag_list_editor,
             "value_list_name": self._create_value_list_name_editor,
             "default_value": self._create_normal_parameter_value_editor,
         }
 
-    def _entity_class_query(self, db_map):
-        return db_map.wide_relationship_class_list()
+    @staticmethod
+    def _get_entity_classes(db_mngr, db_map):
+        return db_mngr.get_relationship_classes(db_map)
 
 
 class RelationshipParameterValueDelegate(ParameterValueDelegateMixin, ParameterDelegate):
@@ -402,8 +413,9 @@ class RelationshipParameterValueDelegate(ParameterValueDelegateMixin, ParameterD
             editor.set_data(object_class_names, current_object_names, all_object_names_list)
         return editor
 
-    def _entity_class_query(self, db_map):
-        return db_map.wide_relationship_class_list()
+    @staticmethod
+    def _get_entity_classes(db_mngr, db_map):
+        return db_mngr.get_relationship_classes(db_map)
 
     def _parameter_definition_query(self, db_map, entity_class_id):
         return db_map.relationship_parameter_definition_list(relationship_class_id=entity_class_id)

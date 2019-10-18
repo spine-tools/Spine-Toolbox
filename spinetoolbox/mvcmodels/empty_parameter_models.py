@@ -15,134 +15,186 @@ Empty models for parameter definitions and values.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-
-from sqlalchemy.sql import and_, or_
-from PySide2.QtCore import Qt, QModelIndex
+from PySide2.QtCore import Slot
 from ..mvcmodels.empty_row_model import EmptyRowModel
-from ..mvcmodels.parameter_autocomplete_mixins import (
-    ParameterDefinitionAutocompleteMixin,
-    ParameterValueAutocompleteMixin,
-    ObjectParameterAutocompleteMixin,
-    RelationshipParameterAutocompleteMixin,
-    ObjectParameterValueAutocompleteMixin,
-    RelationshipParameterValueAutocompleteMixin,
-)
-from ..mvcmodels.parameter_mixins import (
-    ParameterDefinitionInsertMixin,
-    ParameterValueInsertMixing,
-    ObjectParameterDecorateMixin,
-    RelationshipParameterDecorateMixin,
-)
-from ..mvcmodels.parameter_item import (
-    ObjectParameterDefinitionItem,
-    ObjectParameterValueItem,
-    RelationshipParameterDefinitionItem,
-    RelationshipParameterValueItem,
-)
+from ..mvcmodels.parameter_mixins import ParameterDefinitionFillInMixin
+from ..helpers import rows_to_row_count_tuples
 
 
 class EmptyParameterModel(EmptyRowModel):
     """An empty parameter model."""
 
-    def __init__(self, parent, header, db_maps):
+    def __init__(self, parent, header, db_mngr):
         """Initialize class.
 
         Args:
             parent (Object): the parent object, typically a CompoundParameterModel
             header (list): list of field names for the header
-            db_maps (dict): maps database names to DiffDatabaseMapping instances
+            db_mngr (SpineDBManager)
         """
         super().__init__(parent, header)
-        self.db_maps = db_maps
+        self.db_mngr = db_mngr
+        self.connect_db_mngr_signals()
 
-    def create_item(self):
-        """Returns an item to put in the model rows.
-        Reimplement in subclasses to return something meaningful.
+    def connect_db_mngr_signals(self):
+        """Connect db mngr signals."""
+
+    @property
+    def insert_method_name(self):
+        raise NotImplementedError()
+
+    @property
+    def item_type(self):
+        raise NotImplementedError()
+
+    def batch_set_data(self, indexes, data):
+        """Sets data for indexes in batch.
+        If successful, add items to db.
+        """
+        if not super().batch_set_data(indexes, data):
+            return False
+        unique_rows = {ind.row() for ind in indexes}
+        items = [dict(zip(self.header, self._main_data[row])) for row in unique_rows]
+        self.add_items_to_db(items)
+        return True
+
+    def add_items_to_db(self, items):
+        """Adds items to database.
+
+        Args:
+            items (list): list of dict items
+        """
+        db_map_data = dict()
+        for item in items:
+            db_map = self._take_db_map(item)
+            if not db_map:
+                continue
+            db_map_data.setdefault(db_map, []).append(item)
+        self._do_add_items_to_db(db_map_data)
+
+    def _do_add_items_to_db(self, db_map_data):
+        """Add items to the database.
+
+        Args:
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of items to add
         """
         raise NotImplementedError()
 
-    def insertRows(self, row, count, parent=QModelIndex()):
-        """Inserts count rows into the model before the given row.
-        Items in the new row will be children of the item represented
-        by the parent model index.
+    def _take_db_map(self, item):
+        database = item.pop("database")
+        return next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
+
+
+class EmptyParameterDefinitionMixin:
+    """Handles parameter definitions added."""
+
+    def connect_db_mngr_signals(self):
+        """Connect db mngr signals."""
+        self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_definitions_added)
+
+    @Slot("QVariant", name="receive_parameter_definitions_added")
+    def receive_parameter_definitions_added(self, db_map_data):
+        """Runs when parameter definitions are added. Find matches and removes them,
+        they have nothing to do in this model anymore."""
+        signatures = []
+        for db_map, items in db_map_data.items():
+            ids = {x["id"] for x in items}
+            for item in self.db_mngr.get_object_parameter_definitions(db_map, ids=ids):
+                database = db_map.codename
+                parameter_name = item.get("parameter_name")
+                entity_class_name = item.get("object_class_name") or item.get("relationship_class_name")
+                signatures.append((database, parameter_name, entity_class_name))
+        removed_rows = []
+        for row, data in enumerate(self._main_data):
+            item = dict(zip(self.header, data))
+            database = item.get("database")
+            parameter_name = item.get("parameter_name")
+            entity_class_name = item.get("object_class_name") or item.get("relationship_class_name")
+            if (database, parameter_name, entity_class_name) in signatures:
+                removed_rows.append(row)
+        for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
+            self.removeRows(row, count)
+
+    def _do_add_items_to_db(self, db_map_data):
+        """Add items to the database.
 
         Args:
-            row (int): Row number where new rows are inserted
-            count (int): Number of inserted rows
-            parent (QModelIndex): Parent index
-
-        Returns:
-            True if rows were inserted successfully, False otherwise
+            db_map_data (dict): maps DiffDatabaseMapping instances to list of model items
         """
-        if row < 0 or row > self.rowCount():
-            return False
-        if count < 1:
-            return False
-        self.beginInsertRows(parent, row, row + count - 1)
-        for i in range(count):
-            # Create the new row using the `create_item` attribute
-            new_main_row = self.create_item()
-            # Notice if insert index > rowCount(), new object is inserted to end
-            self._main_data.insert(row + i, new_main_row)
-        self.endInsertRows()
-        return True
+        db_map_param_def = dict()
+        db_map_param_tag = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                def_item = self._make_param_def_item(item, db_map)
+                tag_item = self._make_param_tag_item(item, db_map)
+                if def_item:
+                    db_map_param_def.setdefault(db_map, []).append(def_item)
+                if tag_item:
+                    db_map_param_tag.setdefault(db_map, []).append(tag_item)
+        if any(db_map_param_def.values()):
+            self.db_mngr.add_parameter_definitions(db_map_param_def)
+        if any(db_map_param_tag.values()):
+            self.db_mngr.set_parameter_definition_tags(db_map_param_tag)
+
+    def _make_param_def_item(self, item, db_map):
+        """Returns a parameter definition item for adding to the database."""
+        item = item.copy()
+        self._fill_in_parameter_name(item)
+        self._fill_in_entity_class_id(item, db_map)
+        self._fill_in_parameter_tag_id_list(item, db_map)
+        if not self._entity_class_id_key in item or not "name" in item:
+            return None
+        return item
+
+    @property
+    def _entity_class_id_key(self):
+        raise NotImplementedError()
 
 
 class EmptyObjectParameterDefinitionModel(
-    ObjectParameterDecorateMixin,
-    ParameterDefinitionInsertMixin,
-    ObjectParameterAutocompleteMixin,
-    ParameterDefinitionAutocompleteMixin,
-    EmptyParameterModel,
+    ParameterDefinitionFillInMixin, EmptyParameterDefinitionMixin, EmptyParameterModel
 ):
     """An empty object parameter definition model."""
 
-    def create_item(self):
-        """Returns an item to put in the model rows."""
-        return ObjectParameterDefinitionItem(self.header)
+    @property
+    def _entity_class_id_key(self):
+        return "object_class_id"
+
+    def _fill_in_entity_class_id(self, item, db_map):
+        entity_class_name = item.pop("object_class_name", None)
+        if not entity_class_name:
+            return
+        entity_class = self.db_mngr.get_item_by_field(db_map, "object class", "name", entity_class_name)
+        if not entity_class:
+            return
+        item["object_class_id"] = entity_class.get("id")
 
 
 class EmptyRelationshipParameterDefinitionModel(
-    RelationshipParameterDecorateMixin,
-    ParameterDefinitionInsertMixin,
-    RelationshipParameterAutocompleteMixin,
-    ParameterDefinitionAutocompleteMixin,
-    EmptyParameterModel,
+    ParameterDefinitionFillInMixin, EmptyParameterDefinitionMixin, EmptyParameterModel
 ):
     """An empty relationship parameter definition model."""
 
-    def create_item(self):
-        return RelationshipParameterDefinitionItem(self.header)
+    @property
+    def _entity_class_id_key(self):
+        return "relationship_class_id"
+
+    def _fill_in_entity_class_id(self, item, db_map):
+        entity_class_name = item.pop("relationship_class_name", None)
+        if not entity_class_name:
+            return
+        entity_class = self.db_mngr.get_item_by_field(db_map, "relationship class", "name", entity_class_name)
+        if not entity_class:
+            return
+        item["relationship_class_id"] = entity_class.get("id")
 
 
-class EmptyObjectParameterValueModel(
-    ObjectParameterDecorateMixin,
-    ParameterValueInsertMixing,
-    ObjectParameterValueAutocompleteMixin,
-    ObjectParameterAutocompleteMixin,
-    ParameterValueAutocompleteMixin,
-    EmptyParameterModel,
-):
+class EmptyObjectParameterValueModel(EmptyParameterModel):
     """An empty object parameter value model."""
 
-    def create_item(self):
-        """Returns an item to put in the model rows."""
-        return ObjectParameterValueItem(self.header)
 
-
-class EmptyRelationshipParameterValueModel(
-    RelationshipParameterDecorateMixin,
-    ParameterValueInsertMixing,
-    RelationshipParameterValueAutocompleteMixin,
-    RelationshipParameterAutocompleteMixin,
-    ParameterValueAutocompleteMixin,
-    EmptyParameterModel,
-):
+class EmptyRelationshipParameterValueModel(EmptyParameterModel):
     """An empty relationship parameter value model."""
-
-    def create_item(self):
-        """Returns an item to put in the model rows."""
-        return RelationshipParameterValueItem(self.header)
 
     def add_items_to_db(self, rows):
         """Adds items to database. Add relationships on the fly first,
@@ -151,6 +203,7 @@ class EmptyRelationshipParameterValueModel(
         Args:
             rows (dict): A dict mapping row numbers to items that should be added to the db
         """
+        db_map_data = dict()
         for row, item in rows.items():
             db_map = item.db_map
             if not db_map:
@@ -158,13 +211,6 @@ class EmptyRelationshipParameterValueModel(
             relationship_for_insert = item.relationship_for_insert()
             if not relationship_for_insert:
                 continue
-            new_relationships, error_log = db_map.add_wide_relationships(relationship_for_insert)
-            if error_log:
-                self._error_log.extend(error_log)
-                continue
-            new_relationship = new_relationships.first()
-            item.relationship_id = new_relationship.id
-        # TODO: try and do this with signals and slots
-        # self._parent._parent.object_tree_model.add_relationships(db_map, new_relationships)
-        # self._parent._parent.relationship_tree_model.add_relationships(db_map, new_relationships)
+            db_map_data.setdefault(db_map, []).append(relationship_for_insert)
+        self.db_mng.add_relationships(db_map_data)
         super().add_items_to_db(rows)

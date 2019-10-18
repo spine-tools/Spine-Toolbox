@@ -18,219 +18,6 @@ Miscelaneous mixins for parameter models
 from PySide2.QtCore import Qt
 
 
-class ParameterDefinitionTagSetMixin:
-    """Provides a method to set parameter definition tags."""
-
-    def set_parameter_definition_tags_in_db(self, rows):
-        """Set parameter definition tags in the db.
-
-        Args:
-            rows (dict): A dict mapping row numbers to items whose tags should be set
-        """
-        tag_specs_dict = dict()
-        for item in rows.values():
-            db_map = item.db_map
-            if not db_map:
-                continue
-            tag_spec = item.tag_spec()
-            if tag_spec:
-                tag_specs_dict.setdefault(db_map, dict()).update(tag_spec)
-        for db_map, tag_specs in tag_specs_dict.items():
-            _, error_log = db_map.set_parameter_definition_tags(tag_specs)
-            self._error_log.extend(error_log)
-
-
-class ParameterInsertMixin:
-    """Handles adding parameters to the db."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialize class.
-
-        Args:
-            parent (Object): the parent object
-        """
-        super().__init__(*args, **kwargs)
-        self._error_log = []
-        self._added_rows = []
-
-    @property
-    def added_rows(self):
-        added_rows = self._added_rows.copy()
-        self._added_rows.clear()
-        return added_rows
-
-    @property
-    def error_log(self):
-        error_log = self._error_log.copy()
-        self._error_log.clear()
-        return error_log
-
-    def batch_set_data(self, indexes, data):
-        """Sets data for indexes in batch.
-        If successful, add items to db.
-        """
-        self._error_log.clear()
-        self._added_rows.clear()
-        if super().batch_set_data(indexes, data):
-            rows = {ind.row(): self._main_data[ind.row()] for ind in indexes}
-            self.add_items_to_db(rows)
-            return True
-        return False
-
-    def add_items_to_db(self, rows):
-        """Adds items to database.
-
-        Args:
-            rows (dict): A dict mapping row numbers to items that should be added to the db
-        """
-        for row, item in rows.items():
-            item = self._main_data[row]
-            db_map = item.db_map
-            if not db_map:
-                continue
-            item_for_insert = item.for_insert()
-            if not item_for_insert:
-                continue
-            new_items, error_log = self.do_add_items_to_db(db_map, item_for_insert)
-            self._error_log.extend(error_log)
-            if not error_log:
-                new_item = new_items.first()
-                item.id = new_item.id
-                item.clear_cache()
-                self._added_rows.append(row)
-
-    @staticmethod
-    def do_add_items_to_db(db_map, *items):
-        """Add items to the given database.
-        Reimplement in subclasses.
-        """
-        raise NotImplementedError()
-
-
-class ParameterDefinitionInsertMixin(ParameterDefinitionTagSetMixin, ParameterInsertMixin):
-    """Handles adding parameter definitions to the db."""
-
-    @staticmethod
-    def do_add_items_to_db(db_map, *items):
-        """Add items to the given database."""
-        return db_map.add_parameter_definitions(*items)
-
-    def add_items_to_db(self, rows):
-        """Adds items to database.
-        Call the super method to add parameter definitions, then the method to set tags.
-
-        Args:
-            rows (dict): A dict mapping row numbers to items that should be added to the db
-        """
-        super().add_items_to_db(rows)
-        self.set_parameter_definition_tags_in_db(rows)
-
-
-class ParameterValueInsertMixing(ParameterInsertMixin):
-    """Handles adding parameter values to the db."""
-
-    @staticmethod
-    def do_add_items_to_db(db_map, *items):
-        """Add items to the given database."""
-        return db_map.add_parameter_values(*items)
-
-
-class ParameterUpdateMixin:
-    """Handles updating parameters in the db."""
-
-    def __init__(self, *args, **kwargs):
-        """Initialize class.
-
-        Args:
-            parent (ParameterModel): the parent object
-        """
-        super().__init__(*args, **kwargs)
-        self._error_log = []
-        self._updated_count = 0
-
-    @property
-    def updated_count(self):
-        updated_count = self._updated_count
-        self._updated_count = 0
-        return updated_count
-
-    @property
-    def error_log(self):
-        error_log = self._error_log.copy()
-        self._error_log.clear()
-        return error_log
-
-    def batch_set_data(self, indexes, data):
-        """Sets data for indexes in batch.
-        Set data in model first, then set internal data for modified items.
-        Finally update successfully modified items in the db.
-        """
-        self._error_log.clear()
-        self._updated_count = 0
-        if super().batch_set_data(indexes, data):
-            rows = {ind.row(): self._main_data[ind.row()] for ind in indexes}
-            self.update_items_in_db(rows)
-            return True
-        return False
-
-    def update_items_in_db(self, rows):
-        """Updates items in database.
-
-        Args:
-            rows (dict): A dict mapping row numbers to items that should be updated in the db
-        """
-        for row, item in rows.items():
-            db_map = item.db_map
-            if not db_map:
-                continue
-            item_for_update = item.for_update()
-            if not item_for_update:
-                continue
-            upd_items, error_log = self.do_update_items_in_db(db_map, item_for_update)
-            if error_log:
-                self._error_log.extend(error_log)
-                item.revert()
-                # TODO: emit dataChanged
-            else:
-                self._updated_count += 1
-            item.clear_cache()
-
-    @staticmethod
-    def do_update_items_in_db(db_map, *items):
-        """Update items in the given database.
-        Must be reimplemented in subclasses.
-        """
-        raise NotImplementedError()
-
-
-class ParameterDefinitionUpdateMixin(ParameterDefinitionTagSetMixin, ParameterUpdateMixin):
-    """Handles updating parameter definitions in the db."""
-
-    @staticmethod
-    def do_update_items_in_db(db_map, *items):
-        """Update items in the given database."""
-        return db_map.update_parameter_definitions(*items)
-
-    def update_items_in_db(self, rows):
-        """Updates items in database.
-        Call the super method to update parameter definitions, then the method to set tags.
-
-        Args:
-            rows (dict): A dict mapping row numbers to items that should be updated in the db
-        """
-        super().update_items_in_db(rows)
-        self.set_parameter_definition_tags_in_db(rows)
-
-
-class ParameterValueUpdateMixin(ParameterUpdateMixin):
-    """Handles updating parameter values in the db."""
-
-    @staticmethod
-    def do_update_items_in_db(db_map, *items):
-        """Update items in the given database."""
-        return db_map.update_parameter_values(*items)
-
-
 class ObjectParameterDecorateMixin:
     """Provides decoration features to all object parameter models."""
 
@@ -265,118 +52,39 @@ class RelationshipParameterDecorateMixin:
         return super().data(index, role)
 
 
-class ObjectParameterRenameMixin:
-    """Handles object parameter renaming."""
+class ParameterDefinitionFillInMixin:
+    @staticmethod
+    def _fill_in_parameter_name(item):
+        name = item.pop("parameter_name", None)
+        if name:
+            item["name"] = name
 
-    def rename_object_classes(self, object_classes):
-        """Rename object classes in model.
+    def _fill_in_parameter_tag_id_list(self, item, db_map):
+        value_list_name = item.pop("value_list_name", None)
+        if not value_list_name:
+            return
+        value_list = self.db_mngr.get_item_by_field(db_map, "parameter value list", "name", value_list_name)
+        if not value_list:
+            return
+        item["parameter_value_list_id"] = value_list["id"]
 
-        Args:
-            object_classes (dict): maps id to new name
-        """
-        for item in self._main_data:
-            item.object_class_name = object_classes.get(item.object_class_id, item.object_class_name)
-
-
-class RelationshipParameterRenameMixin:
-    """Handles relationship parameter renaming."""
-
-    def rename_relationship_classes(self, relationship_classes):
-        """Rename relationship classes in model.
-
-        Args:
-            relationship_classes (dict): maps id to new name
-        """
-        for item in self._main_data:
-            item.relationship_class_name = relationship_classes.get(
-                item.relationship_class_id, item.relationship_class_name
-            )
-
-    def rename_object_classes(self, object_classes):
-        """Rename object classes in model.
-
-        Args:
-            object_classes (dict): maps id to new name
-        """
-        for item in self._main_data:
-            item.rename_object_classes(object_classes)
-
-
-class ParameterDefinitionRenameRemoveMixin:
-    """Handles parameter definitions renaming and removal."""
-
-    def rename_parameter_tags(self, parameter_tags):
-        """Rename parameter tags.
-
-        Args:
-            parameter_tags (dict): maps id to new tag
-        """
-        for item in self._main_data:
-            item.rename_parameter_tags(parameter_tags)
-
-    def remove_parameter_tags(self, parameter_tag_ids):
-        """Remove parameter tags from model.
-
-        Args:
-            parameter_tag_ids (set): set of ids to remove
-        """
-        for item in self._main_data:
-            item.remove_parameter_tags(parameter_tag_ids)
-
-    def rename_parameter_value_lists(self, value_lists):
-        """Rename parameter value lists in model.
-
-        Args:
-            value_lists (dict): maps id to new name
-        """
-        for item in self._main_data:
-            item.value_list_name = value_lists.get(item.value_list_id, item.value_list_name)
-
-    def clear_parameter_value_lists(self, value_list_ids):
-        """Clear parameter value lists from model.
-
-        Args:
-            value_list_ids (set): set of ids to remove
-        """
-        for item in self._main_data:
-            if self.value_list_id in value_list_ids:
-                self.value_list_id = None
-                self.value_list_name = None
-
-
-class ParameterValueRenameMixin:
-    """Handles parameter renaming for parameter values."""
-
-    def rename_parameters(self, parameters):
-        """Rename parameters in model.
-        Args:
-            parameters (dict): maps id to new name
-        """
-        for item in self._main_data:
-            item.parameter_name = parameters.get(item.parameter_id, item.parameter_name)
-
-
-class ObjectParameterValueRenameMixin:
-    """Handles object renaming for object parameter values."""
-
-    def rename_objects(self, objects):
-        """Rename objects in model.
-
-        Args:
-            objects (dict): maps id to new name
-        """
-        for item in self._main_data:
-            item.object_name = objects.get(item.object_id, item.object_name)
-
-
-class RelationshipParameterValueRenameMixin:
-    """Handles object renaming for relationship parameter values."""
-
-    def rename_objects(self, objects):
-        """Rename objects in model.
-
-        Args:
-            objects (dict): maps id to new name
-        """
-        for item in self._main_data:
-            item.rename_objects(objects)
+    def _make_param_tag_item(self, item, db_map):
+        """Returns a parameter definition tag item that for setting in the database."""
+        parameter_tag_list = item.pop("parameter_tag_list", None)
+        if not parameter_tag_list:
+            return None
+        try:
+            parameter_tag_list = parameter_tag_list.split(",")
+        except AttributeError:
+            # Can't split
+            return None
+        parameter_tag_id_list = []
+        for tag in parameter_tag_list:
+            tag_id = self.db_mngr.get_item_by_field(db_map, "parameter tag", "tag", tag)
+            if not tag_id:
+                return None
+            parameter_tag_id_list.append(tag_id)
+        return {
+            "parameter_definition_id": item["id"],
+            "parameter_tag_id_list": ",".join([str(x["id"]) for x in parameter_tag_id_list]),
+        }
