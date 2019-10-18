@@ -386,9 +386,18 @@ class ProjectItem(BaseProjectItem):
         raise NotImplementedError()
 
     def rename(self, new_name):
-        """Rename this item."""
+        """Renames this item. This is a common rename method for all Project items.
+        If the project item needs any additional steps in renaming, override this
+        method in subclass. See e.g. rename() method in DataStore class.
+
+        Args:
+            new_name(str): New name
+
+        Returns:
+            bool: True if renaming was successful, False if renaming fails
+        """
         ind = self._toolbox.project_item_model.find_item(self.name)
-        self._toolbox.project_item_model.setData(ind, new_name)
+        return self._toolbox.project_item_model.setData(ind, new_name)
 
     def open_directory(self):
         """Open this item's data directory in file explorer."""

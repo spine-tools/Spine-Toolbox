@@ -16,14 +16,20 @@ Unit tests for Tool project item.
 :date:   4.10.2019
 """
 
+import os
+import shutil
 from tempfile import TemporaryDirectory
 import unittest
-
+from unittest import mock
 from PySide2.QtCore import QSettings
-
+from PySide2.QtWidgets import QApplication, QWidget
+from networkx import DiGraph
+from ..ui_main import ToolboxUI
 from ..project_items.tool.tool import Tool
 from ..project import SpineToolboxProject
 from ..mvcmodels.tool_specification_model import ToolSpecificationModel
+from .mock_helpers import MockQWidget, qsettings_value_side_effect
+from spinetoolbox.config import TOOL_OUTPUT_DIR
 
 
 class _MockToolbox:
@@ -60,6 +66,41 @@ class _MockItem:
 
 
 class TestTool(unittest.TestCase):
+
+    def _set_up(self):
+        """Set up before test_rename()."""
+        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+                "spinetoolbox.ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
+            mock_julia_repl.return_value = QWidget()
+            mock_python_repl.return_value = MockQWidget()
+            mock_qsettings_value.side_effect = qsettings_value_side_effect
+            self.toolbox = ToolboxUI()
+            self.toolbox.create_project("UnitTest Project", "")
+
+    def tearDown(self):
+        """Clean up."""
+        if not hasattr(self, "toolbox"):
+            return
+        try:
+            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
+        except OSError as e:
+            print("Failed to remove project directory. {0}".format(e))
+            pass
+        try:
+            os.remove(self.toolbox.project().path)  # Remove project file
+        except OSError:
+            print("Failed to remove project file")
+            pass
+        self.toolbox.deleteLater()
+        self.toolbox = None
+
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
+
     def test_item_type(self):
         with TemporaryDirectory() as project_dir:
             toolbox = _MockToolbox(project_dir)
@@ -116,6 +157,35 @@ class TestTool(unittest.TestCase):
 
     def test_default_name_prefix(self):
         self.assertEqual(Tool.default_name_prefix(), "Tool")
+
+    def test_rename(self):
+        """Tests renaming a Tool."""
+        self._set_up()
+        item_dict = dict(name="T", description="", x=0, y=0)
+        self.toolbox.project().add_project_items("Tools", item_dict)
+        index = self.toolbox.project_item_model.find_item("T")
+        tool = self.toolbox.project_item_model.project_item(index)
+        tool.activate()
+        expected_name = "ABC"
+        expected_short_name = "abc"
+        ret_val = tool.rename(expected_name)  # Do rename
+        self.assertTrue(ret_val)
+        # Check name
+        self.assertEqual(expected_name, tool.name)  # item name
+        self.assertEqual(expected_name, tool._properties_ui.label_tool_name.text())  # name label in props
+        self.assertEqual(expected_name, tool.get_icon().name_item.text())  # name item on Design View
+        # Check data_dir
+        expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
+        self.assertEqual(expected_data_dir, tool.data_dir)  # Check data dir
+        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
+        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
+        self.assertIsInstance(dag_with_new_node_name, DiGraph)
+        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("T")
+        self.assertIsNone(dag_with_old_node_name)
+        # Check that output_dir has been updated
+        expected_output_dir = os.path.join(tool.data_dir, TOOL_OUTPUT_DIR)
+        self.assertEqual(expected_output_dir, tool.output_dir)
+        self.toolbox.remove_item(index, delete_item=True)
 
 
 if __name__ == '__main__':

@@ -467,7 +467,7 @@ class DataStore(ProjectItem):
             return
         url.password = None
         QApplication.clipboard().setText(str(url))
-        self._toolbox.msg.emit("Database url '{}' successfully copied to clipboard.".format(url))
+        self._toolbox.msg.emit("Database url <b>{0}</b> copied to clipboard".format(url))
 
     @Slot(bool, name="create_new_spine_database")
     def create_new_spine_database(self, checked=False):
@@ -633,11 +633,29 @@ class DataStore(ProjectItem):
             self.open_tabular_view()
 
     def rename(self, new_name):
-        """Rename this item."""
-        super().rename(new_name)
-        # If SQLite path is set, give the user a notice that this must be updated manually
-        if self._properties_ui.lineEdit_database.text().strip() != "":
-            self._toolbox.msg_warning.emit("<b>Note: Please update database path</b>")
+        """Rename this item.
+
+        Args:
+            new_name (str): New name
+
+        Returns:
+            bool: Boolean value depending on success
+        """
+        old_data_dir = os.path.abspath(self.data_dir)  # Old data_dir before rename
+        ret_val = super().rename(new_name)
+        if not ret_val:
+            return False
+        # For a Data Store, logs_dir must be updated and the database line edit may need to be updated
+        db_dir, db_filename = os.path.split(os.path.abspath(self._properties_ui.lineEdit_database.text().strip()))
+        # If dialect is sqlite and db line edit refers to a file in the old data_dir, db line edit needs updating
+        if self._properties_ui.comboBox_dialect.currentText() == "sqlite" and db_dir == old_data_dir:
+            new_db_path = os.path.join(self.data_dir, db_filename)  # Note. data_dir has been updated at this point
+            # Check that the db was moved successfully to the new data_dir
+            if os.path.exists(new_db_path):
+                self.set_path_to_sqlite_file(new_db_path)
+        # Update logs dir
+        self.logs_dir = os.path.join(self.data_dir, "logs")
+        return True
 
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing.

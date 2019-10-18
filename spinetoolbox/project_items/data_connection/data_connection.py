@@ -415,6 +415,22 @@ class DataConnection(ProjectItem):
         d["references"] = self.file_references()
         return d
 
+    def rename(self, new_name):
+        """Rename this item.
+
+        Args:
+            new_name (str): New name
+
+        Returns:
+            bool: Boolean value depending on success
+        """
+        ret = super().rename(new_name)
+        if not ret:
+            return False
+        self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
+        self.data_dir_watcher.addPath(self.data_dir)
+        return True
+
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing.
         Closes the SpineDatapackageWidget instances opened."""

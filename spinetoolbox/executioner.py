@@ -187,7 +187,7 @@ class DirectedGraphHandler(QObject):
         for dag in self.dags():
             if dag.has_node(node_name):
                 return dag
-        logging.error("Graph containing node %s not found. Something is wrong.", node_name)
+        # logging.error("Graph containing node %s not found. Something is wrong.", node_name)
         return None
 
     def dag_with_edge(self, src_node, dst_node):
