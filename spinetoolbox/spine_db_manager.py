@@ -171,10 +171,13 @@ class SpineDBManager(QObject):
             field (str)
             value
         """
-        item = next(iter(x for x in self.get_items_from_cache(db_map, item_type) if x[field] == value), None)
-        if item:
-            return item
-        return next(iter(x for x in self._get_items_from_db(db_map, item_type) if x[field] == value), {})
+        return next(iter(self.get_items_by_field(db_map, item_type, field, value)), {})
+
+    def get_items_by_field(self, db_map, item_type, field, value):
+        items = [x for x in self.get_items_from_cache(db_map, item_type) if x[field] == value]
+        if items:
+            return items
+        return [x for x in self._get_items_from_db(db_map, item_type) if x[field] == value]
 
     def _get_items_from_db(self, db_map, item_type):
         """Get item from database. Called by the above methods when they don't find the requested item in the cache.

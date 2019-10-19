@@ -52,10 +52,22 @@ class RelationshipParameterDecorateMixin:
         return super().data(index, role)
 
 
-class ParameterDefinitionFillInMixin:
+class ParameterFillInBase:
+    def _make_parameter_item(self, item, db_map):
+        """Returns a parameter item for adding or updating in the database."""
+        return item.copy()
+
+    def begin_modify_db(self, db_map_data):
+        """Begins an operation to add or update database items."""
+
+    def end_modify_db(self):
+        """Ends an operation to add or update database items."""
+
+
+class ParameterDefinitionFillInMixin(ParameterFillInBase):
     """Provides methods to fill in ids for parameter definition items
     edited by the user, so they can be entered in the database.
-    ."""
+    """
 
     def __init__(self, *args, **kwargs):
         """Init class, create lookup dicts."""
@@ -67,6 +79,7 @@ class ParameterDefinitionFillInMixin:
         """Begins an operation to add or update database items.
         Populate the lookup dicts with necessary data needed by the _fill_in methods to work.
         """
+        super().begin_modify_db(db_map_data)
         # Group data by name
         db_map_value_list_names = dict()
         db_map_parameter_tags = dict()
@@ -112,6 +125,13 @@ class ParameterDefinitionFillInMixin:
             return
         item["parameter_value_list_id"] = value_list["id"]
 
+    def _make_parameter_item(self, item, db_map):
+        """Returns a parameter definition item for adding to the database."""
+        item = super()._make_parameter_item(item, db_map)
+        self._fill_in_parameter_name(item)
+        self._fill_in_parameter_tag_id_list(item, db_map)
+        return item
+
     def _make_param_tag_item(self, item, db_map):
         """Returns a parameter definition tag item that for setting in the database."""
         parameter_tag_list = item.pop("parameter_tag_list", None)
@@ -128,5 +148,6 @@ class ParameterDefinitionFillInMixin:
 
     def end_modify_db(self):
         """Ends an operation to add or update database items."""
+        super().end_modify_db()
         self._db_map_value_list_lookup.clear()
         self._db_map_tag_lookup.clear()

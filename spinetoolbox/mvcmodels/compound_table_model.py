@@ -197,24 +197,28 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         """Runs when rows are removed from the empty model.
         Update row_map, then emit rowsRemoved so the removed rows are no longer visible.
         """
-        empty_model_range = range(self.empty_model.rowCount())
-        tip = self._inv_row_map[self.empty_model, 0] + 1
-        self._row_map = self._row_map[:tip] + [(self.empty_model, row) for row in empty_model_range]
-        for row in empty_model_range:
-            self._inv_row_map[self.empty_model, row] = self.rowCount() + row
         compound_first = self._inv_row_map[self.empty_model, first]
         compound_last = self._inv_row_map[self.empty_model, last]
         self.rowsRemoved.emit(QModelIndex(), compound_first, compound_last)
+        # Redo the map for the last empty model entirely
+        tip = self._inv_row_map[self.empty_model, 0]
+        self._row_map = self._row_map[:tip]
+        row_count = self.rowCount()
+        row_map = self._row_map_for_empty_model()
+        self._row_map += row_map
+        self._inv_row_map.update({(model, row): row_count + row for model, row in row_map})
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
         """Runs when rows are inserted to the empty model.
         Update row_map, then emit rowsInserted so the new rows become visible.
         """
-        empty_model_range = range(first, last + 1)
-        for row in empty_model_range:
-            self._inv_row_map[self.empty_model, row] = self.rowCount() + row
-        self._row_map += [(self.empty_model, row) for row in empty_model_range]
+        # Refresh row map and inverse row map, this is easy since rows are always inserted at the end
+        tip = len(self._row_map)
+        for row in range(first, last + 1):
+            self._inv_row_map[self.empty_model, row] = tip
+            self._row_map.append((self.empty_model, row))
+            tip += 1
         compound_first = self._inv_row_map[self.empty_model, first]
         compound_last = self._inv_row_map[self.empty_model, last]
         self.rowsInserted.emit(QModelIndex(), compound_first, compound_last)
@@ -223,14 +227,17 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         """Runs when one of the single models is reset.
         Update row_map, then emit rowsInserted so the new rows become visible.
         """
-        tip = self.rowCount() - self.empty_model.rowCount()
-        self._row_map, empty_row_map = self._row_map[:tip], self._row_map[tip:]
-        row_map = self._row_map_for_model(model)
-        self._row_map += row_map + empty_row_map
-        self._inv_row_map.update({(model, row): tip + row for model, row in row_map})
-        first = self.rowCount() + 1
+        first = self.rowCount() - self.empty_model.rowCount()
         last = first + model.rowCount() - 1
         self.rowsInserted.emit(QModelIndex(), first, last)
+        # Take the row map for empty model out, since we need to push it forward...
+        self._row_map, empty_row_map = self._row_map[:first], self._row_map[first:]
+        row_map = self._row_map_for_model(model)
+        self._row_map += row_map + empty_row_map
+        for model, row in row_map:
+            self._inv_row_map[model, row] = first + row
+        for model, row in empty_row_map:
+            self._inv_row_map[model, row] = last + 1 + row
 
     def connect_model_signals(self):
         """Connect model signals."""

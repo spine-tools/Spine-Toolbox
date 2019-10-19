@@ -66,9 +66,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _empty_model_type(self):
         raise NotImplementedError()
 
+    @property
+    def _entity_class_id_key(self):
+        raise NotImplementedError()
+
     def _models_with_db_map(self, db_map):
         """Returns a collection of models having the given db_map."""
-        return [m for m in self.sub_models if m.db_map == db_map]
+        return [m for m in self.single_models if m.db_map == db_map]
 
     def connect_db_mngr_signals(self):
         """Connect signals from database manager.
@@ -91,9 +95,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def receive_parameter_data_updated(self, db_map_data):
         """Runs when either parameter definitions or values are updated."""
         self._emit_data_changed_for_column("parameter_name")
-        # TODO: entity and class names are refreshed without emitting dataChanged,
-        # whereas for the parameter definition name we need it. Why?
-        # Something to do with widget hierarchy in Qt?
+        # TODO: parameter definition names aren't refreshed unless we emit dataChanged,
+        # whereas entity and class names don't need it. Why?
 
     @Slot("QVariant", name="receive_parameter_data_removed")
     def receive_parameter_data_removed(self, db_map_data):
@@ -101,7 +104,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for db_map, items in db_map_data.items():
             grouped_ids = dict()
             for item in items:
-                entity_class_id = item.get("object_class_id") or item.get("relationship_class_id")
+                entity_class_id = item.get(self._entity_class_id_key)
+                if not entity_class_id:
+                    continue
                 grouped_ids.setdefault(entity_class_id, set()).add(item["id"])
             for model in self._models_with_db_map(db_map):
                 removed_ids = grouped_ids.get(model.entity_class_id)
@@ -118,7 +123,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         for db_map, items in db_map_data.items():
             grouped_ids = dict()
             for item in items:
-                entity_class_id = item.get("object_class_id") or item.get("relationship_class_id")
+                entity_class_id = item.get(self._entity_class_id_key)
+                if not entity_class_id:
+                    continue
                 grouped_ids.setdefault(entity_class_id, []).append(item["id"])
             for entity_class_id, ids in grouped_ids.items():
                 model = self._single_model_type(self, self.header, self.db_mngr, db_map, entity_class_id)
@@ -284,6 +291,10 @@ class CompoundObjectParameterMixin:
         super().__init__(*args, **kwargs)
         self._selected_object_class_ids = None
 
+    @property
+    def _entity_class_id_key(self):
+        return "object_class_id"
+
     def connect_db_mngr_signals(self):
         """Connect signals from database manager."""
         super().connect_db_mngr_signals()
@@ -324,6 +335,10 @@ class CompoundRelationshipParameterMixin:
         super().__init__(*args, **kwargs)
         self._selected_object_class_ids = None
         self._selected_relationship_class_ids = None
+
+    @property
+    def _entity_class_id_key(self):
+        return "relationship_class_id"
 
     def connect_db_mngr_signals(self):
         """Connect signals from database manager."""
@@ -384,7 +399,7 @@ class CompoundParameterValueMixin:
         super().connect_db_mngr_signals()
         self.db_mngr.parameter_values_updated.connect(self.receive_parameter_data_updated)
         self.db_mngr.parameter_values_removed.connect(self.receive_parameter_data_removed)
-        # TODO: self.db_mngr.parameter_values_added.connect(self.receive_parameter_data_added)
+        self.db_mngr.parameter_values_added.connect(self.receive_parameter_data_added)
 
 
 class CompoundObjectParameterDefinitionModel(

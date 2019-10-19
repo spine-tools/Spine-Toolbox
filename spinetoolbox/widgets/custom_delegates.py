@@ -276,7 +276,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         if not db_map:
             return None
         # TODO: get the parameter definition id in empty models
-        id_ = model.item_at_row(index.row())
+        id_ = index.model().item_at_row(index.row())
         parameter_id = self.db_mngr.get_item(db_map, "parameter value", id_).get("parameter_id")
         value_list_id = self.db_mngr.get_item(db_map, "parameter definition", parameter_id).get("value_list_id")
         value_list = self.db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")

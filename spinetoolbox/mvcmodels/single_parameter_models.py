@@ -159,7 +159,7 @@ class SingleParameterDefinitionMixin(ParameterDefinitionFillInMixin):
         param_def_data = list()
         param_tag_data = list()
         for item in items:
-            def_item = self._make_param_def_item(item, self.db_map)
+            def_item = self._make_parameter_item(item, self.db_map)
             tag_item = self._make_param_tag_item(item, self.db_map)
             if def_item:
                 param_def_data.append(def_item)
@@ -168,13 +168,6 @@ class SingleParameterDefinitionMixin(ParameterDefinitionFillInMixin):
         self.db_mngr.set_parameter_definition_tags({self.db_map: param_tag_data})
         self.db_mngr.update_parameter_definitions({self.db_map: param_def_data})
         self.end_modify_db()
-
-    def _make_param_def_item(self, item, db_map):
-        """Returns a parameter definition item for adding to the database."""
-        item = item.copy()
-        self._fill_in_parameter_name(item)
-        self._fill_in_parameter_tag_id_list(item, db_map)
-        return item
 
 
 class SingleParameterValueModel:
