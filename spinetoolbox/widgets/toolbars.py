@@ -33,15 +33,15 @@ from ..config import ICON_TOOLBAR_SS, PARAMETER_TAG_TOOLBAR_SS
 
 
 class ItemToolBar(QToolBar):
-    """A toolbar to add items using drag and drop actions.
-
-    Attributes:
-        parent (ToolboxUI): QMainWindow instance
-    """
+    """A toolbar to add items using drag and drop actions."""
 
     # noinspection PyUnresolvedReferences, PyUnusedLocal
     def __init__(self, parent):
-        """Init class."""
+        """
+
+        Args:
+            parent (ToolboxUI): QMainWindow instance
+        """
         super().__init__("Add Item Toolbar", parent=parent)  # Inherits stylesheet from ToolboxUI
         self._toolbox = parent
         label = QLabel("Drag & Drop Icon")
@@ -85,15 +85,15 @@ class ItemToolBar(QToolBar):
         self.setObjectName("ItemToolbar")
 
     def add_draggable_widgets(self, category_icon):
-        """Adds dragable widgets from the given list.
+        """Adds draggable widgets from the given list.
 
         Args:
-            category_icon (list): List of tuples (item category (str), icon path (str))
+            category_icon (list): List of tuples (item_type (str), item category (str), icon path (str))
         """
         widgets = list()
-        for category, icon in category_icon:
+        for item_type, category, icon in category_icon:
             pixmap = QIcon(icon).pixmap(24, 24)
-            widget = DraggableWidget(self, pixmap, category)
+            widget = DraggableWidget(self, pixmap, item_type, category)
             widgets.append(widget)
         for widget in widgets:
             self.insertWidget(self.tool_separator, widget)
@@ -132,21 +132,23 @@ class ItemToolBar(QToolBar):
 
 
 class DraggableWidget(QLabel):
-    """A draggable QLabel.
+    """A draggable QLabel."""
 
-    Attributes:
-        parent (QWidget): Parent widget
-        pixmap (QPixMap): Picture for the label
-        text (str): Item type
-    """
+    def __init__(self, parent, pixmap, item_type, category):
+        """
 
-    def __init__(self, parent, pixmap, text):
+        Args:
+            parent (QWidget): Parent widget
+            pixmap (QPixMap): Picture for the label
+            item_type (str): Item type (e.g. Data Store, Data Connection, etc...)
+            category (str): Item category (e.g. Data Stores, Data Connetions, etc...)
+        """
         super().__init__(parent=parent)  # Parent passed to QFrame constructor. Inherits stylesheet from ToolboxUI.
-        self.text = text
+        self.category = category
         self.setPixmap(pixmap)
         self.drag_start_pos = None
         self.setToolTip(
-            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(self.text)
+            "<p>Drag-and-drop this icon into the Design View to create a new <b>{}</b> item.</p>".format(item_type)
         )
         self.setAlignment(Qt.AlignHCenter)
         self.setAttribute(Qt.WA_DeleteOnClose)
@@ -167,7 +169,7 @@ class DraggableWidget(QLabel):
             return
         drag = QDrag(self)
         mime_data = QMimeData()
-        mime_data.setText(self.text)
+        mime_data.setText(self.category)
         drag.setMimeData(mime_data)
         drag.setPixmap(self.pixmap())
         drag.setHotSpot(self.pixmap().rect().center())
@@ -179,18 +181,18 @@ class DraggableWidget(QLabel):
 
 
 class ParameterTagToolBar(QToolBar):
-    """A toolbar to add items using drag and drop actions.
-
-    Attributes:
-        parent (DataStoreForm): tree or graph view form
-        db_maps (list): list of DiffDatabaseMapping to get tags from
-    """
+    """A toolbar to add items using drag and drop actions."""
 
     tag_button_toggled = Signal("QVariant", "bool", name="tag_button_toggled")
     manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
 
     def __init__(self, parent, db_maps):
-        """Init class"""
+        """
+
+        Args:
+            parent (DataStoreForm): tree or graph view form
+            db_maps (list): list of DiffDatabaseMapping to get tags from
+        """
         super().__init__("Parameter Tag Toolbar", parent=parent)
         self._parent = parent
         self.db_maps = db_maps

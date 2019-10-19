@@ -194,10 +194,11 @@ class SpineToolboxProject(MetaObject):
             j = item_names.index(dst_name)
             connections_old[i][j] = [src_anchor, dst_anchor]
         project_dict['connections'] = connections_old
-        project_dict["scene_x"] = self._toolbox.ui.graphicsView.scene().sceneRect().x()
-        project_dict["scene_y"] = self._toolbox.ui.graphicsView.scene().sceneRect().y()
-        project_dict["scene_w"] = self._toolbox.ui.graphicsView.scene().sceneRect().width()
-        project_dict["scene_h"] = self._toolbox.ui.graphicsView.scene().sceneRect().height()
+        scene_rect = self._toolbox.ui.graphicsView.scene().sceneRect()
+        project_dict["scene_y"] = scene_rect.y()
+        project_dict["scene_w"] = scene_rect.width()
+        project_dict["scene_h"] = scene_rect.height()
+        project_dict["scene_x"] = scene_rect.x()
         items_dict = dict()  # Dictionary for storing project items
         # Traverse all items in project model by category
         for category_item in self._toolbox.project_item_model.root().children():

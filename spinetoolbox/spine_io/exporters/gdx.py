@@ -12,39 +12,36 @@
 """
 For exporting a database to GAMS .gdx file.
 
-GAMS Python bindings need to be installed before most functionality in this module can be used.
-The function available() can be used to check if the bindings have been successfully found.
-
 Currently, this module supports databases that are "GAMS-like", that is, they follow the EAV model
 but the object classes, objects, relationship classes etc. directly reflect the GAMS data
-structures. Conversions e.g. from Spine model to TIMES are not supported.
+structures. Conversions e.g. from Spine model to TIMES are not supported at the moment.
 
 This module contains low level functions for reading a database into an intermediate format and
-for modifying and writing that intermediate format into a .gdx file. A higher lever function
-to_gams_workspace() does basically everything that is needed for exporting.
+for writing that intermediate format into a .gdx file. A higher lever function
+to_gdx_file() that does basically everything needed for exporting is provided for convenience.
 
 :author: A. Soininen (VTT)
 :date:   30.8.2019
 """
 
-import logging
-
-try:
-    import gams
-except ImportError:
-    logging.info('No GAMS Python bindings installed. GDX support is unavailable.')
-    gams = None
+import os
+import sys
+from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
 from spinedb_api import from_database, ParameterValueFormatError
+
+if sys.platform == 'win32':
+    import winreg
 
 
 class GdxExportException(Exception):
-    """An exception raised when something goes wrong within the gdx module."""
+    """
+    An exception raised when something goes wrong within the gdx module.
+
+    Attributes:
+        message (str): a message detailing the cause of the exception
+    """
 
     def __init__(self, message):
-        """
-        Args:
-            message (str): a message detailing the cause of the exception
-        """
         super().__init__()
         self._message = message
 
@@ -57,15 +54,19 @@ class GdxExportException(Exception):
 
 
 class DomainSet:
-    """Represents a one-dimensional universal GAMS set."""
+    """
+    Represents a one-dimensional universal GAMS set.
+
+    Attributes:
+        description (str): explanatory text describing the domain
+        name (str): domain's name
+        records (list): domain's elements as a list of DomainRecord objects
+    """
 
     def __init__(self, object_class):
-        """Constructs a DomainSet from an object class.
-
+        """
         Args:
-            description (str): explanatory text describing the domain
-            name (str): domain's name
-            records (list): domain's elements as a list of DomainRecord objects
+            object_class (namedtuple): an object class row from the database
         """
         self.description = object_class.description if object_class.description is not None else ""
         self.name = object_class.name
@@ -78,16 +79,20 @@ class DomainSet:
 
 
 class Set:
-    """Represents a (non-domain) GAMS set or a subset."""
+    """
+    Represents a (non-domain) GAMS set or a subset.
+
+    Attributes:
+        domain_names (list): a list of superset (DomainSet) names
+        dimensions (int): number of set's dimensions
+        name (str): set's name
+        records (list): set's elements as a list of SetRecord objects
+    """
 
     def __init__(self, relationship_class):
-        """Constructs a new Set from a relationship class.
-
+        """
         Args:
-            domain_names (list): a list of superset (DomainSet) names
-            dimensions (int): number of set's dimensions
-            name (str): set's name
-            records (list): set's elements as a list of SetRecord objects
+            relationship_class (namedtuple): a relationship class row from the database
         """
         self.domain_names = [name.strip() for name in relationship_class.object_class_name_list.split(',')]
         self.dimensions = len(self.domain_names)
@@ -96,14 +101,18 @@ class Set:
 
 
 class Record:
-    """Represents a GAMS set element in a DomainSet."""
+    """
+    Represents a GAMS set element in a DomainSet.
+
+    Parameters:
+        keys (list): a list  of record's keys
+        parameters: record's parameters as a list of Parameter objects
+    """
 
     def __init__(self, object_or_relationship):
-        """Constructs a DomainRecord from a database object.
-
+        """
         Args:
-            keys (list): a list  of record's keys
-            parameters: record's parameters as a list of Parameter objects
+            object_or_relationship (namedtuple): an object or relationship row from the database
         """
         if hasattr(object_or_relationship, "object_name_list"):
             self.keys = [name.strip() for name in object_or_relationship.object_name_list.split(',')]
@@ -117,104 +126,121 @@ class Parameter:
     Represents a GAMS parameter.
 
     Supports only plain values. Does not support time series, time patterns etc.
+
+    Attributes:
+        name (str): parameter's name
+        value (float or None): parameter's value
     """
 
     def __init__(self, object_parameter):
-        """Constructs a parameter from object or relationship parameter.
-
+        """
         Args:
-            name (str): parameter's name
-            value (float, int or None): parameter's value
+            object_parameter (namedtuple): a parameter row from the database
         """
         self.name = object_parameter.parameter_name
         try:
             value = from_database(object_parameter.value)
         except ParameterValueFormatError:
             value = None
-        self.value = value if isinstance(value, (int, float)) else None
+        self.value = float(value) if isinstance(value, (int, float)) else None
 
 
-def domains_to_gams(gams_database, domains):
+def find_gams_directory():
     """
-    Writes DomainSet objects to GAMS database as universal one-dimensional sets.
+    Returns GAMS installation directory or None if not found.
 
-    DomainRecords and Parameters contained within the DomainSets will be written as well.
-
-    Args:
-        gams_database (GamsDatabase): a target GAMS database
-        domains (list): a list of DomainSet objects
+    On Windows systems, this function looks for `gams.location` in registry;
+    on other systems the `PATH` environment variable is checked.
 
     Returns:
-        the list of the GamsSet objects that were written to the database
+        a path to GAMS installation directory or None if not found.
+    """
+    if sys.platform == "win32":
+        try:
+            with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "gams.location") as gams_location_key:
+                gams_path, _ = winreg.QueryValueEx(gams_location_key, None)
+                return gams_path
+        except FileNotFoundError:
+            return None
+    executable_paths = os.get_exec_path()
+    for path in executable_paths:
+        if "gams" in path.casefold():
+            return path
+    return None
+
+
+def domains_to_gams(gdx_file, domains):
+    """
+    Writes DomainSet objects to .gdx file as universal (index '*') one-dimensional sets.
+
+    Records and Parameters contained within the DomainSets will be written as well.
+
+    Args:
+        gdx_file (GdxFile): a target file
+        domains (list): a list of DomainSet objects
      """
-    try:
-        gams_domains = dict()
-        for domain in domains:
-            gams_domain = gams_database.add_set(domain.name, domain.dimensions, domain.description)
-            gams_domains[domain.name] = gams_domain
-            for record in domain.records:
-                record_key = record.keys[0]
-                gams_domain.add_record(record_key)
-                for parameter in record.parameters:
-                    try:
-                        gams_parameter = gams_database.get_parameter(parameter.name)
-                    except gams.workspace.GamsException:
-                        gams_parameter = gams_database.add_parameter_dc(parameter.name, [gams_domain])
-                    gams_parameter.add_record(record_key).value = parameter.value
-        return gams_domains
-    except gams.GamsException as gams_exception:
-        raise GdxExportException(str(gams_exception)) from gams_exception
+    for domain in domains:
+        domain_parameters = dict()
+        record_keys = list()
+        for record in domain.records:
+            record_key = record.keys[0]
+            record_keys.append((record_key,))
+            for parameter in record.parameters:
+                index_and_value = domain_parameters.setdefault(parameter.name, (list(), list()))
+                index_and_value[0].append((record_key,))
+                index_and_value[1].append(parameter.value)
+        gams_set = GAMSSet(record_keys, expl_text=domain.description)
+        gdx_file[domain.name] = gams_set
+        for parameter_name, parameter_data in domain_parameters.items():
+            parameter_dict = dict()
+            for parameter_key, parameter_value in zip(parameter_data[0], parameter_data[1]):
+                parameter_dict[parameter_key] = parameter_value
+            gams_parameter = GAMSParameter(parameter_dict, domain=[domain.name])
+            gdx_file[parameter_name] = gams_parameter
 
 
-def sets_to_gams(gams_database, sets, gams_domains):
+def sets_to_gams(gdx_file, sets):
     """
-    Writes Set objects to GAMS database as GAMS sets.
+    Writes Set objects to .gdx file as GAMS sets.
 
-    SetRecords and Parameters contained within the Sets are written as well.
-
-    The database should already contain all DomainSets since the Sets use the DomainRecords as their index.
+    Records and Parameters contained within the Sets are written as well.
 
     Args:
-        gams_database (GamsDatabase): a target GAMS database
+        gdx_file (GdxFile): a target file
         sets (list): a list of Set objects
-        gams_domains (dict): a list of GamsSet objects corresponding to DomainSets already written to the database
     """
-    try:
-        for current_set in sets:
-            required_domains = list()
-            for domain_name in current_set.domain_names:
-                required_domains.append(gams_domains[domain_name])
-            gams_set = gams_database.add_set_dc(current_set.name, required_domains)
-            for record in current_set.records:
-                gams_set.add_record(record.keys)
-                for parameter in record.parameters:
-                    try:
-                        gams_parameter = gams_database.get_parameter(parameter.name)
-                    except gams.workspace.GamsException:
-                        gams_parameter = gams_database.add_parameter_dc(parameter.name, required_domains)
-                    gams_parameter.add_record(record.keys).value = parameter.value
-    except gams.GamsException as gams_exception:
-        raise GdxExportException(str(gams_exception)) from gams_exception
+    for current_set in sets:
+        set_parameters = dict()
+        record_keys = list()
+        for record in current_set.records:
+            record_key = tuple(record.keys)
+            record_keys.append(record_key)
+            for parameter in record.parameters:
+                index_and_value = set_parameters.setdefault(parameter.name, (list(), list()))
+                index_and_value[0].append(record_key)
+                index_and_value[1].append(parameter.value)
+        gams_set = GAMSSet(record_keys, current_set.domain_names)
+        gdx_file[current_set.name] = gams_set
+        for parameter_name, parameter_data in set_parameters.items():
+            parameter_dict = dict()
+            for parameter_key, parameter_value in zip(parameter_data[0], parameter_data[1]):
+                parameter_dict[parameter_key] = parameter_value
+            gams_parameter = GAMSParameter(parameter_dict, domain=current_set.domain_names)
+            gdx_file[parameter_name] = gams_parameter
 
 
-def domain_parameters_to_gams(gams_database, domain):
+def domain_parameters_to_gams(gdx_file, domain):
     """
-    Adds the parameters from given domain as scalars to GAMS database.
+    Adds the parameters from given domain as scalars to .gdx file.
 
     Args:
-        gams_database (GamsDatabase): a GAMS database to which the scalars are added
+        gdx_file (GdxFile): a target file
         domain (DomainSet): a domain that holds the parameters
     """
-    try:
-        for record in domain.records:
-            for parameter in record.parameters:
-                try:
-                    gams_parameter = gams_database.get_parameter(parameter.name)
-                except gams.workspace.GamsException:
-                    gams_parameter = gams_database.add_parameter(parameter.name, dimension=0)
-                gams_parameter.add_record().value = parameter.value
-    except gams.GamsException as gams_exception:
-        raise GdxExportException(str(gams_exception)) from gams_exception
+    for record in domain.records:
+        for parameter in record.parameters:
+            gams_scalar = GAMSScalar(parameter.value)
+            gdx_file[parameter.name] = gams_scalar
 
 
 def object_classes_to_domains(db_map):
@@ -222,8 +248,8 @@ def object_classes_to_domains(db_map):
     Converts object classes, objects and object parameters from a database to the intermediate format.
 
     Object classes get converted to DomainSet objects
-    while objects are stored as DomainRecords in corresponding DomainSets.
-    Lastly, object parameters are read into DomainRecords as Parameter objects.
+    while objects are stored as Records in corresponding DomainSets.
+    Lastly, object parameters are read into Records as Parameter objects.
 
     Args:
         db_map (spinedb_api.DatabaseMapping): a database map
@@ -283,34 +309,6 @@ def relationship_classes_to_sets(db_map):
                 if parameter.value is not None:
                     record.parameters.append(parameter)
     return sets
-
-
-def export_to_gdx(gams_database, file_name):
-    """Writes a GamsDatabase object to given file."""
-    gams_database.export(file_name)
-
-
-def make_gams_workspace(gams_system_directory=None):
-    """
-    Returns a freshly created GamsWorkspace object.
-
-    Args:
-        gams_system_directory (str): path to GAMS system directory or None to let GAMS choose one for you
-
-    Returns:
-        a GAMS workspace
-    """
-    # This may emit a ResourceWarning (unclosed file).
-    # It is harmless but don't know how to suppress it.
-    try:
-        return gams.GamsWorkspace(system_directory=gams_system_directory)
-    except gams.workspace.GamsException as error:
-        raise GdxExportException("Failed to construct a GamsWorkspace.") from error
-
-
-def make_gams_database(gams_workspace):
-    """Adds a database to GAMS workspace and returns the database"""
-    return gams_workspace.add_database()
 
 
 def filter_and_sort_sets(sets, sorted_set_names, filter_flags):
@@ -388,20 +386,14 @@ def extract_domain(domains, name_to_extract):
     return domains, None
 
 
-def to_gams_workspace(database_map, settings, gams_system_directory=None):
+def to_gdx_file(database_map, file_name, settings, gams_system_directory=None):
     """
-    Exports given database map into GAMS database.
-
-    This high-level function reads the data from `database_map` and writes it to a GAMS database
-     returning the database and corresponding GAMS workspace.
+    Exports given database map into .gdx file.
 
     Args:
         database_map (spinedb_api.DatabaseMapping): a database to export
         settings (Settings): export settings
         gams_system_directory (str): path to GAMS system directory or None to let GAMS choose one for you
-
-    Returns:
-        a tuple of (GamsWorkspace, GamsDatabase)
     """
     domains = object_classes_to_domains(database_map)
     domains, global_parameters_domain = extract_domain(domains, settings.global_parameters_domain_name)
@@ -410,18 +402,11 @@ def to_gams_workspace(database_map, settings, gams_system_directory=None):
     sets = relationship_classes_to_sets(database_map)
     sets = filter_and_sort_sets(sets, settings.sorted_set_names, settings.set_exportable_flags)
     sort_records_inplace(sets, settings)
-    gams_workspace = make_gams_workspace(gams_system_directory)
-    gams_database = make_gams_database(gams_workspace)
-    gams_domains = domains_to_gams(gams_database, domains)
-    sets_to_gams(gams_database, sets, gams_domains)
-    if global_parameters_domain is not None:
-        domain_parameters_to_gams(gams_database, global_parameters_domain)
-    return gams_workspace, gams_database
-
-
-def names(sets):
-    """Returns the names of given sets as a list."""
-    return [element.name for element in sets]
+    with GdxFile(file_name, mode='w', gams_dir=gams_system_directory) as output_file:
+        domains_to_gams(output_file, domains)
+        sets_to_gams(output_file, sets)
+        if global_parameters_domain is not None:
+            domain_parameters_to_gams(output_file, global_parameters_domain)
 
 
 def set_records(sets):
@@ -444,8 +429,8 @@ def make_settings(database_map):
     """
     domains = object_classes_to_domains(database_map)
     sets = relationship_classes_to_sets(database_map)
-    domain_names = names(domains)
-    set_names = names(sets)
+    domain_names = [element.name for element in domains]
+    set_names = [element.name for element in sets]
     records = set_records(domains)
     records.update(set_records(sets))
     return Settings(domain_names, set_names, records)
@@ -540,6 +525,72 @@ class Settings:
         """Sets the global parameters domain name to given name."""
         self._global_parameters_domain_name = name
 
+    def update(self, updating_settings):
+        """
+        Updates the settings by merging with another one.
+
+        All domains, sets and records (elements) that are in both settings (common)
+        or in `updating_settings` (new) are retained.
+        Common elements are ordered the same way they were ordered in the original settings.
+        New elements are appended to the common ones in the order they were in `updating_settings`
+
+        Args:
+            updating_settings (Settings): settings to merge with
+        """
+        self._domain_names, self._domain_exportable_flags = self._update_names(
+            self._domain_names,
+            self._domain_exportable_flags,
+            updating_settings._domain_names,
+            updating_settings._domain_exportable_flags,
+        )
+        self._set_names, self._set_exportable_flags = self._update_names(
+            self._set_names,
+            self._set_exportable_flags,
+            updating_settings._set_names,
+            updating_settings._set_exportable_flags,
+        )
+        if self._global_parameters_domain_name not in self._domain_names:
+            self._global_parameters_domain_name = ''
+        new_records = dict()
+        updating_records = dict(updating_settings._records)
+        for set_name, record_names in self._records.items():
+            updating_record_names = updating_records.get(set_name, None)
+            if updating_record_names is None:
+                continue
+            new_record_names = list()
+            for name in record_names:
+                try:
+                    updating_record_names.remove(name)
+                    new_record_names.append(name)
+                except ValueError:
+                    pass
+            new_record_names += updating_record_names
+            new_records[set_name] = new_record_names
+            del updating_records[set_name]
+        new_records.update(updating_records)
+        self._records = new_records
+
+    @staticmethod
+    def _update_names(names, exportable_flags, updating_names, updating_flags):
+        """Updates a list of domain/set names and exportable flags based on reference names and flags."""
+        new_names = list()
+        new_flags = list()
+        updating_names = list(updating_names)
+        updating_flags = list(updating_flags)
+        for name, exportable in zip(names, exportable_flags):
+            try:
+                index = updating_names.index(name)
+                del updating_names[index]
+                del updating_flags[index]
+                new_names.append(name)
+                new_flags.append(exportable)
+            except ValueError:
+                # name not found in updating_names -- skip it
+                continue
+        new_names += updating_names
+        new_flags += updating_flags
+        return new_names, new_flags
+
     def to_dict(self):
         """Serializes the Settings object to a dict."""
         as_dictionary = {
@@ -570,19 +621,3 @@ class Settings:
             global_parameters_domain_name,
         )
         return settings
-
-
-def gams_import_error():
-    """
-    Checks if sufficiently recent GAMS Python binding have been installed.
-
-    Returns:
-         an empty string if usable bindings are found, otherwise the string contains an error message
-    """
-    if gams is None:
-        return "Could not load the `gams` package. No GAMS Python bindings found."
-    if not hasattr(gams, "GamsWorkspace"):
-        return "Could not find `GamsWorkspace` in `gams` package. GAMS Python bindings seem to be broken."
-    if gams.GamsWorkspace.api_major_rel_number < 24 and gams.GamsWorkspace.api_gold_rel_number < 1:
-        return "GAMS version {} is too old. Minimum version required 24.0.1.".format(gams.GamsWorkspace.api_version)
-    return ""

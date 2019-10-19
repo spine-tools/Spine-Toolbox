@@ -899,4 +899,6 @@ class DataStoreForm(QMainWindow):
         else:
             qsettings.setValue("windowMaximized", False)
         qsettings.endGroup()
+        for db_map in self.db_maps:
+            db_map.connection.close()
         event.accept()

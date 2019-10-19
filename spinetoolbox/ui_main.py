@@ -20,7 +20,7 @@ import os
 import locale
 import logging
 import json
-from PySide2.QtCore import Qt, Signal, Slot, QSettings, QUrl, SIGNAL
+from PySide2.QtCore import QByteArray, QMimeData, Qt, Signal, Slot, QSettings, QUrl, SIGNAL
 from PySide2.QtWidgets import (
     QMainWindow,
     QApplication,
@@ -33,6 +33,7 @@ from PySide2.QtWidgets import (
     QWidgetAction,
 )
 from PySide2.QtGui import QDesktopServices, QGuiApplication, QKeySequence, QStandardItemModel, QIcon
+from .graphics_items import ProjectItemIcon
 from .mvcmodels.project_item_model import ProjectItemModel
 from .mvcmodels.tool_specification_model import ToolSpecificationModel
 from .widgets.about_widget import AboutWidget
@@ -73,6 +74,7 @@ class ToolboxUI(QMainWindow):
     def __init__(self):
         """ Initialize application and main window."""
         from .ui.mainwindow import Ui_MainWindow
+
         super().__init__(flags=Qt.Window)
         self._qsettings = QSettings("SpineProject", "Spine Toolbox")
         # Set number formatting to use user's default settings
@@ -129,6 +131,7 @@ class ToolboxUI(QMainWindow):
         self.set_debug_qactions()
         self.ui.tabWidget_item_properties.tabBar().hide()  # Hide tab bar in properties dock widget
         # Finalize init
+        self._proposed_item_name_counts = dict()
         self.connect_signals()
         self.restore_ui()
         self.parse_project_item_modules()
@@ -160,6 +163,9 @@ class ToolboxUI(QMainWindow):
         self.ui.actionAbout.triggered.connect(self.show_about)
         self.ui.actionAbout_Qt.triggered.connect(lambda: QApplication.aboutQt())  # pylint: disable=unnecessary-lambda
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
+        self.ui.actionCopy.triggered.connect(self._project_item_to_clipboard)
+        self.ui.actionPaste.triggered.connect(self._project_item_from_clipboard)
+        self.ui.actionDuplicate.triggered.connect(self._duplicate_project_item)
         # Debug QActions
         self.show_properties_tabbar.triggered.connect(self.toggle_properties_tabbar_visibility)
         self.show_supported_img_formats.triggered.connect(supported_img_formats)  # in helpers.py
@@ -213,7 +219,7 @@ class ToolboxUI(QMainWindow):
             add_item_action = QAction(QIcon(item_icon), f"Add {item_type}")
             add_item_action.triggered.connect(lambda checked=False, c=item_category: self.show_add_project_item_form(c))
             add_item_actions.append(add_item_action)
-            category_icon.append((item_category, item_icon))
+            category_icon.append((item_type, item_category, item_icon))
         # Add actions to Edit menu
         remove_all_action = self.ui.menuEdit.actions()[0]
         self.ui.menuEdit.insertActions(remove_all_action, add_item_actions)
@@ -237,7 +243,7 @@ class ToolboxUI(QMainWindow):
         if open_previous_project != 2:  # 2: Qt.Checked, ie. open_previous_project==True
             p = os.path.join(DOCUMENTATION_PATH, "getting_started.html")
             getting_started_anchor = (
-                    "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
+                "<a style='color:#99CCFF;' title='" + p + "' href='file:///" + p + "'>Getting Started</a>"
             )
             self.msg.emit(
                 "Welcome to Spine Toolbox! If you need help, please read the {0} guide.".format(getting_started_anchor)
@@ -416,7 +422,6 @@ class ToolboxUI(QMainWindow):
             tool_specification_paths (list): List of tool definition file paths used in this project
         """
         self.init_project_item_model()
-        # self.ui.treeView_project.selectionModel().currentChanged.connect(self.current_item_changed)
         self.ui.treeView_project.selectionModel().selectionChanged.connect(self.item_selection_changed)
         self.init_tool_specification_model(tool_specification_paths)
 
@@ -466,7 +471,9 @@ class ToolboxUI(QMainWindow):
         self.tool_specification_model_changed.emit(self.tool_specification_model)
         # Note: If ToolSpecificationModel signals are in use, they should be reconnected here.
         # Reconnect ToolSpecificationModel and QListView signals. Make sure that signals are connected only once.
-        n_recv_sig1 = self.ui.listView_tool_specifications.receivers(SIGNAL("doubleClicked(QModelIndex)"))  # nr of receivers
+        n_recv_sig1 = self.ui.listView_tool_specifications.receivers(
+            SIGNAL("doubleClicked(QModelIndex)")
+        )  # nr of receivers
         if n_recv_sig1 == 0:
             # logging.debug("Connecting doubleClicked signal for QListView")
             self.ui.listView_tool_specifications.doubleClicked.connect(self.edit_tool_specification)
@@ -477,7 +484,9 @@ class ToolboxUI(QMainWindow):
         n_recv_sig2 = self.ui.listView_tool_specifications.receivers(SIGNAL("customContextMenuRequested(QPoint)"))
         if n_recv_sig2 == 0:
             # logging.debug("Connecting customContextMenuRequested signal for QListView")
-            self.ui.listView_tool_specifications.customContextMenuRequested.connect(self.show_tool_specification_context_menu)
+            self.ui.listView_tool_specifications.customContextMenuRequested.connect(
+                self.show_tool_specification_context_menu
+            )
         elif n_recv_sig2 > 1:  # Check that this never gets over 1
             logging.error("Number of receivers for QListView customContextMenuRequested signal is now: %d", n_recv_sig2)
         else:
@@ -677,14 +686,17 @@ class ToolboxUI(QMainWindow):
             return
         # Get all Tool project items
         tools = self.project_item_model.items("Tools")
-        for tool in tools:
-            if not tool.tool_specification():
+        for tool_item in tools:
+            if not tool_item.tool_specification():
                 continue
-            elif tool.tool_specification().name == tool_specification.name:
-                tool.set_tool_specification(specification)
-                tool.execute_in_work = specification.execute_in_work
-                self.msg.emit("Tool specification <b>{0}</b> reattached to Tool <b>{1}</b>"
-                              .format(specification.name, tool.name))
+            if tool_item.tool_specification().name == tool_specification.name:
+                tool_item.set_tool_specification(specification)
+                tool_item.execute_in_work = specification.execute_in_work
+                self.msg.emit(
+                    "Tool specification <b>{0}</b> reattached to Tool <b>{1}</b>".format(
+                        specification.name, tool_item.name
+                    )
+                )
 
     @Slot(name="remove_selected_tool_specification")
     def remove_selected_tool_specification(self):
@@ -835,6 +847,7 @@ class ToolboxUI(QMainWindow):
         icon = project_item.get_icon()
         self.ui.graphicsView.remove_icon(icon)
         self._project.dag_handler.remove_node_from_graph(name)
+        project_item.tear_down()
         if delete_item:
             if data_dir:
                 # Remove data directory and all its contents
@@ -915,8 +928,8 @@ class ToolboxUI(QMainWindow):
         """
         if not index.isValid():
             return
-        tool = self.tool_specification_model.tool_specification(index.row())
-        file_path = os.path.join(tool.path, tool.includes[0])
+        tool_item = self.tool_specification_model.tool_specification(index.row())
+        file_path = os.path.join(tool_item.path, tool_item.includes[0])
         # Check if file exists first. openUrl may return True even if file doesn't exist
         # TODO: this could still fail if the file is deleted or renamed right after the check
         if not os.path.isfile(file_path):
@@ -1387,7 +1400,7 @@ class ToolboxUI(QMainWindow):
         recents = str(recents)
         recents_list = recents.split("\n")
         for entry in recents_list:
-            name, path = entry.split("<>")
+            _, path = entry.split("<>")
             if path == p:
                 recents_list.pop(recents_list.index(entry))
                 break
@@ -1452,3 +1465,100 @@ class ToolboxUI(QMainWindow):
         self.python_repl.shutdown_kernel()
         self.tear_down_items()
         event.accept()
+
+    def _serialize_selected_items(self):
+        """
+        Serializes selected project items into a dictionary.
+
+        The serialization protocol tries to imitate the format in which projects are saved.
+        The format of the dictonary is following:
+        `{"item_category_1": [{"name": "item_1_name", ...}, ...], ...}`
+
+        Returns:
+             a dict containing serialized version of selected project items
+        """
+        selected_project_items = self.ui.graphicsView.scene().selectedItems()
+        serialized_items = dict()
+        for item_icon in selected_project_items:
+            if not isinstance(item_icon, ProjectItemIcon):
+                continue
+            name = item_icon.name()
+            index = self.project_item_model.find_item(name)
+            item = self.project_item_model.project_item(index)
+            category = self.project_item_model.category_of_item(item.name)
+            category_items = serialized_items.setdefault(category.name, list())
+            item_dict = item.item_dict()
+            item_dict["name"] = item.name
+            category_items.append(item_dict)
+        return serialized_items
+
+    def _deserialize_items(self, serialized_items):
+        """
+        Deserializes project items from a dictionary and adds them to the current project.
+
+        Args:
+            serialized_items (dict): serialized project items
+        """
+        if self._project is None:
+            return
+        for category_name, item_dicts in serialized_items.items():
+            for item in item_dicts:
+                name = item["name"]
+                if self.project_item_model.find_item(name) is not None:
+                    new_name = self.propose_item_name(name)
+                    item["name"] = new_name
+                item.pop("short name")
+            self._project.add_project_items(category_name, *item_dicts, verbosity=False)
+
+    @Slot()
+    def _project_item_to_clipboard(self):
+        """Copies the selected project items to system's clipboard."""
+        serialized_items = self._serialize_selected_items()
+        if not serialized_items:
+            return
+        item_dump = json.dumps(serialized_items)
+        clipboard = QApplication.clipboard()
+        data = QMimeData()
+        data.setData("application/vnd.spinetoolbox.ProjectItem", QByteArray(item_dump.encode('utf-8')))
+        clipboard.setMimeData(data)
+
+    @Slot()
+    def _project_item_from_clipboard(self):
+        """Adds project items in system's clipboard to the current project."""
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        byte_data = mime_data.data("application/vnd.spinetoolbox.ProjectItem")
+        if byte_data.isNull():
+            return
+        item_dump = str(byte_data.data(), "utf-8")
+        serialized_items = json.loads(item_dump)
+        self._deserialize_items(serialized_items)
+
+    @Slot()
+    def _duplicate_project_item(self):
+        """Duplicates the selected project items."""
+        serialized_items = self._serialize_selected_items()
+        self._deserialize_items(serialized_items)
+
+    def propose_item_name(self, prefix):
+        """
+        Proposes a name for a project item.
+
+        The format is `prefix_xx` where `xx` is a counter value [01..99].
+
+        Args:
+            prefix (str): a prefix for the name
+
+        Returns:
+            a name string
+        """
+        name_count = self._proposed_item_name_counts.setdefault(prefix, 0)
+        name = prefix + " {}".format(name_count + 1)
+        if self.project_item_model.find_item(name) is not None:
+            if name_count == 98:
+                # Avoiding too deep recursions.
+                raise RuntimeError("Ran out of numbers: cannot find suitable name for project item.")
+            # Increment index recursively if name is already in project.
+            self._proposed_item_name_counts[prefix] += 1
+            name = self.propose_item_name(prefix)
+        return name

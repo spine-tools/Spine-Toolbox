@@ -19,11 +19,17 @@
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
         MainWindow.resize(944, 768)
-        MainWindow.setDockOptions(QtWidgets.QMainWindow.AllowNestedDocks|QtWidgets.QMainWindow.AllowTabbedDocks|QtWidgets.QMainWindow.AnimatedDocks|QtWidgets.QMainWindow.GroupedDragging)
+        MainWindow.setDockOptions(
+            QtWidgets.QMainWindow.AllowNestedDocks
+            | QtWidgets.QMainWindow.AllowTabbedDocks
+            | QtWidgets.QMainWindow.AnimatedDocks
+            | QtWidgets.QMainWindow.GroupedDragging
+        )
         self.centralwidget = QtWidgets.QWidget(MainWindow)
         self.centralwidget.setObjectName("centralwidget")
         self.verticalLayout_10 = QtWidgets.QVBoxLayout(self.centralwidget)
@@ -184,7 +190,9 @@ class Ui_MainWindow(object):
         self.verticalLayout_13.setContentsMargins(0, 0, 0, 0)
         self.verticalLayout_13.setObjectName("verticalLayout_13")
         self.treeView_parameter_value_list = QtWidgets.QTreeView(self.dockWidgetContents_3)
-        self.treeView_parameter_value_list.setEditTriggers(QtWidgets.QAbstractItemView.AnyKeyPressed|QtWidgets.QAbstractItemView.EditKeyPressed)
+        self.treeView_parameter_value_list.setEditTriggers(
+            QtWidgets.QAbstractItemView.AnyKeyPressed | QtWidgets.QAbstractItemView.EditKeyPressed
+        )
         self.treeView_parameter_value_list.setObjectName("treeView_parameter_value_list")
         self.verticalLayout_13.addWidget(self.treeView_parameter_value_list)
         self.dockWidget_parameter_value_list.setWidget(self.dockWidgetContents_3)
@@ -368,20 +376,44 @@ class Ui_MainWindow(object):
         self.menuToolbars.setTitle(QtWidgets.QApplication.translate("MainWindow", "Toolbars", None, -1))
         self.menuSession.setTitle(QtWidgets.QApplication.translate("MainWindow", "Session", None, -1))
         self.menuFile.setTitle(QtWidgets.QApplication.translate("MainWindow", "File", None, -1))
-        self.dockWidget_item_palette.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Item palette", None, -1))
+        self.dockWidget_item_palette.setWindowTitle(
+            QtWidgets.QApplication.translate("MainWindow", "Item palette", None, -1)
+        )
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Object class", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("MainWindow", "Relationship class", None, -1))
-        self.dockWidget_object_tree.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Object tree", None, -1))
-        self.dockWidget_parameter_value_list.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Parameter value list", None, -1))
-        self.dockWidget_object_parameter_value.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Object parameter value", None, -1))
-        self.tableView_object_parameter_value.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "object parameter value", None, -1))
-        self.dockWidget_object_parameter_definition.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Object parameter definition", None, -1))
-        self.tableView_object_parameter_definition.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "object parameter definition", None, -1))
-        self.dockWidget_relationship_parameter_value.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter value", None, -1))
-        self.tableView_relationship_parameter_value.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "relationship parameter value", None, -1))
-        self.dockWidget_relationship_parameter_definition.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "Relationship parameter definition", None, -1))
-        self.tableView_relationship_parameter_definition.setAccessibleName(QtWidgets.QApplication.translate("MainWindow", "relationship parameter definition", None, -1))
-        self.actionGraph_reinstate_pruned.setText(QtWidgets.QApplication.translate("MainWindow", "Reinstate pruned items", None, -1))
+        self.dockWidget_object_tree.setWindowTitle(
+            QtWidgets.QApplication.translate("MainWindow", "Object tree", None, -1)
+        )
+        self.dockWidget_parameter_value_list.setWindowTitle(
+            QtWidgets.QApplication.translate("MainWindow", "Parameter value list", None, -1)
+        )
+        self.dockWidget_object_parameter_value.setWindowTitle(
+            QtWidgets.QApplication.translate("MainWindow", "Object parameter value", None, -1)
+        )
+        self.tableView_object_parameter_value.setAccessibleName(
+            QtWidgets.QApplication.translate("MainWindow", "object parameter value", None, -1)
+        )
+        self.dockWidget_object_parameter_definition.setWindowTitle(
+            QtWidgets.QApplication.translate("MainWindow", "Object parameter definition", None, -1)
+        )
+        self.tableView_object_parameter_definition.setAccessibleName(
+            QtWidgets.QApplication.translate("MainWindow", "object parameter definition", None, -1)
+        )
+        self.dockWidget_relationship_parameter_value.setWindowTitle(
+            QtWidgets.QApplication.translate("MainWindow", "Relationship parameter value", None, -1)
+        )
+        self.tableView_relationship_parameter_value.setAccessibleName(
+            QtWidgets.QApplication.translate("MainWindow", "relationship parameter value", None, -1)
+        )
+        self.dockWidget_relationship_parameter_definition.setWindowTitle(
+            QtWidgets.QApplication.translate("MainWindow", "Relationship parameter definition", None, -1)
+        )
+        self.tableView_relationship_parameter_definition.setAccessibleName(
+            QtWidgets.QApplication.translate("MainWindow", "relationship parameter definition", None, -1)
+        )
+        self.actionGraph_reinstate_pruned.setText(
+            QtWidgets.QApplication.translate("MainWindow", "Reinstate pruned items", None, -1)
+        )
         self.actionDock_widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Dock Widgets", None, -1))
         self.actiontodos.setText(QtWidgets.QApplication.translate("MainWindow", "todos", None, -1))
         self.actionRefresh.setText(QtWidgets.QApplication.translate("MainWindow", "Refresh", None, -1))
@@ -392,11 +424,22 @@ class Ui_MainWindow(object):
         self.actionRollback.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+Backspace", None, -1))
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
-        self.actionGraph_hide_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Hide selected items", None, -1))
-        self.actionGraph_show_hidden.setText(QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1))
-        self.actionGraph_prune_selected.setText(QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1))
-        self.actionRestore_Dock_Widgets.setText(QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1))
+        self.actionGraph_hide_selected.setText(
+            QtWidgets.QApplication.translate("MainWindow", "Hide selected items", None, -1)
+        )
+        self.actionGraph_show_hidden.setText(
+            QtWidgets.QApplication.translate("MainWindow", "Show hidden items", None, -1)
+        )
+        self.actionGraph_prune_selected.setText(
+            QtWidgets.QApplication.translate("MainWindow", "Prune selected items", None, -1)
+        )
+        self.actionRestore_Dock_Widgets.setText(
+            QtWidgets.QApplication.translate("MainWindow", "Restore Dock Widgets", None, -1)
+        )
 
+
+from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
+from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView
 from spinetoolbox.widgets.custom_qlistview import DragListView
 from spinetoolbox.widgets.custom_qtableview import AutoFilterCopyPasteTableView
 from spinetoolbox.widgets.custom_qgraphicsviews import GraphQGraphicsView

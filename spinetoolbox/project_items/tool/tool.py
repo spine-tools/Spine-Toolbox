@@ -847,6 +847,21 @@ class Tool(ProjectItem):
         elif action == "Edit main program file...":
             self.open_tool_main_program_file()
 
+    def rename(self, new_name):
+        """Rename this item.
+
+        Args:
+            new_name (str): New name
+
+        Returns:
+            bool: Boolean value depending on success
+        """
+        ret = super().rename(new_name)
+        if not ret:
+            return False
+        self.output_dir = os.path.join(self.data_dir, TOOL_OUTPUT_DIR)
+        return True
+
     def notify_destination(self, source_item):
         """See base class."""
         if source_item.item_type == "Data Store":
@@ -868,3 +883,8 @@ class Tool(ProjectItem):
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
+
+    @staticmethod
+    def default_name_prefix():
+        """see base class"""
+        return "Tool"

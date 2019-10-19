@@ -19,8 +19,8 @@ Data connection properties widget.
 import os
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Qt, Slot, QUrl
-from .custom_menus import DcRefContextMenu, DcDataContextMenu
 from spinetoolbox.config import TREEVIEW_HEADER_SS
+from .custom_menus import DcRefContextMenu, DcDataContextMenu
 
 
 class DataConnectionPropertiesWidget(QWidget):

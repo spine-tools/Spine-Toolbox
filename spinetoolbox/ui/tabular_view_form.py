@@ -19,6 +19,7 @@
 
 from PySide2 import QtCore, QtGui, QtWidgets
 
+
 class Ui_MainWindow(object):
     def setupUi(self, MainWindow):
         MainWindow.setObjectName("MainWindow")
@@ -169,9 +170,15 @@ class Ui_MainWindow(object):
     def retranslateUi(self, MainWindow):
         MainWindow.setWindowTitle(QtWidgets.QApplication.translate("MainWindow", "MainWindow", None, -1))
         self.label_6.setText(QtWidgets.QApplication.translate("MainWindow", "Select input type:", None, -1))
-        self.label_5.setText(QtWidgets.QApplication.translate("MainWindow", "Select object/relationship class:", None, -1))
-        self.pushButton_add_object_class.setText(QtWidgets.QApplication.translate("MainWindow", "Add object class", None, -1))
-        self.pushButton_add_relationship_class.setText(QtWidgets.QApplication.translate("MainWindow", "Add relationship class", None, -1))
+        self.label_5.setText(
+            QtWidgets.QApplication.translate("MainWindow", "Select object/relationship class:", None, -1)
+        )
+        self.pushButton_add_object_class.setText(
+            QtWidgets.QApplication.translate("MainWindow", "Add object class", None, -1)
+        )
+        self.pushButton_add_relationship_class.setText(
+            QtWidgets.QApplication.translate("MainWindow", "Add relationship class", None, -1)
+        )
         self.label.setText(QtWidgets.QApplication.translate("MainWindow", "Rows:", None, -1))
         self.label_2.setText(QtWidgets.QApplication.translate("MainWindow", "Columns:", None, -1))
         self.label_3.setText(QtWidgets.QApplication.translate("MainWindow", "Frozen:", None, -1))
@@ -187,6 +194,7 @@ class Ui_MainWindow(object):
         self.actionClose.setText(QtWidgets.QApplication.translate("MainWindow", "Close", None, -1))
         self.actionClose.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+W", None, -1))
 
-from spinetoolbox.widgets.custom_qtableview import FrozenTableView, SimpleCopyPasteTableView
+
+from spinetoolbox.widgets.custom_qtableview import SimpleCopyPasteTableView, FrozenTableView
 from spinetoolbox.widgets.custom_qlistview import TestListView
 from spinetoolbox import resources_icons_rc

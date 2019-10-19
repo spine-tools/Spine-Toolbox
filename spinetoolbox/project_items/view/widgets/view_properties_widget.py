@@ -18,8 +18,8 @@ View properties widget.
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
-from .custom_menus import ViewPropertiesContextMenu
 from spinetoolbox.config import TREEVIEW_HEADER_SS
+from .custom_menus import ViewPropertiesContextMenu
 
 
 class ViewPropertiesWidget(QWidget):

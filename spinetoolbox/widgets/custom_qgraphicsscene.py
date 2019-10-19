@@ -16,21 +16,21 @@ Custom QGraphicsScene used in the Design View.
 :date:   13.2.2019
 """
 
-from PySide2.QtWidgets import QGraphicsScene
 from PySide2.QtCore import Signal, Slot, QItemSelectionModel
 from PySide2.QtGui import QColor, QPen, QBrush
 from ..graphics_items import ProjectItemIcon
+from .shrinking_scene import ShrinkingScene
 from .toolbars import DraggableWidget
 
 
-class CustomQGraphicsScene(QGraphicsScene):
+class CustomQGraphicsScene(ShrinkingScene):
     """A scene that handles drag and drop events of DraggableWidget sources."""
 
     files_dropped_on_dc = Signal("QGraphicsItem", "QVariant", name="files_dropped_on_dc")
 
     def __init__(self, parent, toolbox):
         """Initialize class."""
-        super().__init__(parent)
+        super().__init__(400.0, 300.0, parent)
         self._toolbox = toolbox
         self.item_shadow = None
         self.sync_selection = True

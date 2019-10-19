@@ -131,7 +131,7 @@ class CustomQGraphicsView(QGraphicsView):
         if new_size != old_size:
             scene = self.scene()
             if scene is not None:
-                self._update_zoom_limits(self.scene().sceneRect())
+                self._update_zoom_limits(scene.sceneRect())
                 if new_size.width() > old_size.width() or new_size.height() > old_size.height():
                     transform = self.transform()
                     zoom = transform.m11()
@@ -312,7 +312,9 @@ class DesignQGraphicsView(CustomQGraphicsView):
             # Remove Link from connectors
             link.src_connector.links.remove(link)
             link.dst_connector.links.remove(link)
-        self.scene().removeItem(icon)
+        scene = self.scene()
+        scene.removeItem(icon)
+        scene.shrink_if_needed()
 
     def links(self):
         """Returns all Links in the scene.
