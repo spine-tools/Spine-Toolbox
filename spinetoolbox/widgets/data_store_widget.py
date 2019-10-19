@@ -22,10 +22,17 @@ from PySide2.QtGui import QFont, QFontMetrics, QGuiApplication, QIcon
 from spinedb_api import SpineDBAPIError
 from ..config import MAINWINDOW_SS, STATUSBAR_SS
 from .custom_delegates import (
-    ObjectParameterValueDelegate,
-    ObjectParameterDefinitionDelegate,
-    RelationshipParameterValueDelegate,
-    RelationshipParameterDefinitionDelegate,
+    DatabaseNameDelegate,
+    ParameterDefaultValueDelegate,
+    TagListDelegate,
+    ValueListDelegate,
+    ParameterValueDelegate,
+    ObjectParameterNameDelegate,
+    ObjectNameDelegate,
+    ObjectClassNameDelegate,
+    RelationshipParameterNameDelegate,
+    RelationshipClassNameDelegate,
+    ObjectNameListDelegate,
 )
 from .custom_qdialog import (
     AddObjectClassesDialog,
@@ -147,18 +154,6 @@ class DataStoreForm(QMainWindow):
         self.ui.actionClose.triggered.connect(self.close)
         # Object tree
         self.ui.treeView_object.selectionModel().selectionChanged.connect(self._handle_object_tree_selection_changed)
-        # Parameter tables delegates
-        for table_view in (
-            self.ui.tableView_object_parameter_definition,
-            self.ui.tableView_relationship_parameter_definition,
-            self.ui.tableView_object_parameter_value,
-            self.ui.tableView_relationship_parameter_value,
-        ):
-            # pylint: disable=cell-var-from-loop
-            table_view.itemDelegate().data_committed.connect(self.set_parameter_data)
-            table_view.itemDelegate().parameter_value_editor_requested.connect(
-                lambda index, value: self.show_parameter_value_editor(index, table_view, value=value)
-            )
         # Parameter tags
         self.parameter_tag_toolbar.manage_tags_action_triggered.connect(self.show_manage_parameter_tags_form)
         self.parameter_tag_toolbar.tag_button_toggled.connect(self._handle_tag_button_toggled)
@@ -381,6 +376,7 @@ class DataStoreForm(QMainWindow):
     def init_parameter_value_list_model(self):
         """Initialize parameter value_list models."""
         self.parameter_value_list_model.build_tree()
+        # TODO: this expansion in the model
         for i in range(self.parameter_value_list_model.rowCount()):
             db_index = self.parameter_value_list_model.index(i, 0)
             self.ui.treeView_parameter_value_list.expand(db_index)
@@ -394,24 +390,63 @@ class DataStoreForm(QMainWindow):
         """Initialize parameter tag toolbar."""
         self.parameter_tag_toolbar.init_toolbar()
 
+    def _setup_delegate(self, table_view, column, delegate_class):
+        """Convenience method to creates a delegate using the given class, set it
+        for the given column at the view, connect its signal to set_parameter_data,
+        and return it."""
+        delegate = delegate_class(self, self.db_mngr)
+        table_view.setItemDelegateForColumn(column, delegate)
+        delegate.data_committed.connect(self.set_parameter_data)
+        return delegate
+
     def setup_delegates(self):
         """Set delegates for tables."""
-        # Object parameter
-        table_view = self.ui.tableView_object_parameter_definition
-        delegate = ObjectParameterDefinitionDelegate(self)
-        table_view.setItemDelegate(delegate)
+        # Parameter definitions
+        for table_view in (
+            self.ui.tableView_object_parameter_definition,
+            self.ui.tableView_relationship_parameter_definition,
+        ):
+            h = table_view.model().header.index
+            self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
+            self._setup_delegate(table_view, h("parameter_tag_list"), TagListDelegate)
+            self._setup_delegate(table_view, h("value_list_name"), ValueListDelegate)
+            delegate = self._setup_delegate(table_view, h("default_value"), ParameterDefaultValueDelegate)
+            delegate.parameter_value_editor_requested.connect(
+                lambda index, value, table_view=table_view: self.show_parameter_value_editor(
+                    index, table_view, value=value
+                )
+            )
+        # Parameter values
+        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
+            h = table_view.model().header.index
+            self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
+            delegate = self._setup_delegate(table_view, h("value"), ParameterValueDelegate)
+            delegate.parameter_value_editor_requested.connect(
+                lambda index, value, table_view=table_view: self.show_parameter_value_editor(
+                    index, table_view, value=value
+                )
+            )
+        # Object parameters
+        for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_object_parameter_definition):
+            h = table_view.model().header.index
+            self._setup_delegate(table_view, h("object_class_name"), ObjectClassNameDelegate)
+        # Relationship parameters
+        for table_view in (
+            self.ui.tableView_relationship_parameter_value,
+            self.ui.tableView_relationship_parameter_definition,
+        ):
+            h = table_view.model().header.index
+            self._setup_delegate(table_view, h("relationship_class_name"), RelationshipClassNameDelegate)
         # Object parameter value
         table_view = self.ui.tableView_object_parameter_value
-        delegate = ObjectParameterValueDelegate(self)
-        table_view.setItemDelegate(delegate)
-        # Relationship parameter
-        table_view = self.ui.tableView_relationship_parameter_definition
-        delegate = RelationshipParameterDefinitionDelegate(self)
-        table_view.setItemDelegate(delegate)
+        h = table_view.model().header.index
+        self._setup_delegate(table_view, h("parameter_name"), ObjectParameterNameDelegate)
+        self._setup_delegate(table_view, h("object_name"), ObjectNameDelegate)
         # Relationship parameter value
         table_view = self.ui.tableView_relationship_parameter_value
-        delegate = RelationshipParameterValueDelegate(self)
-        table_view.setItemDelegate(delegate)
+        h = table_view.model().header.index
+        self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
+        self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
 
     @property
     def all_selected_object_class_ids(self):
@@ -446,7 +481,6 @@ class DataStoreForm(QMainWindow):
 
     def set_default_parameter_data(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
-        return
         if index is None:
             default_data = dict(database=next(iter(self.db_maps)).codename)
         else:
@@ -534,7 +568,6 @@ class DataStoreForm(QMainWindow):
 
     @Slot("bool", name="show_edit_relationships_form")
     def show_edit_relationships_form(self, checked=False):
-        # TODO: this...
         # NOTE: Only edits relationships that are in the same class
         selected = {
             ind.internalPointer()

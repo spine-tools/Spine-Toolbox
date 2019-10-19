@@ -175,14 +175,15 @@ class ParameterDelegate(QItemDelegate):
 
     Attributes:
         parent (DataStoreForm): tree or graph view form
+        db_mngr (SpineDBManager)
     """
 
     data_committed = Signal("QModelIndex", "QVariant", name="data_committed")
-    parameter_value_editor_requested = Signal("QModelIndex", "QVariant", name="parameter_value_editor_requested")
 
-    def __init__(self, parent):
+    def __init__(self, parent, db_mngr):
         super().__init__(parent)
         self._parent = parent
+        self.db_mngr = db_mngr
 
     def setModelData(self, editor, model, index):
         """Send signal."""
@@ -197,48 +198,46 @@ class ParameterDelegate(QItemDelegate):
             editor.set_base_size(size)
             editor.update_geometry()
 
-    def _connect_editor_signals(self, editor, index):
-        """Connect editor signals if necessary.
-        """
-        if isinstance(editor, SearchBarEditor):
-            model = index.model()
-            editor.data_committed.connect(lambda e=editor, i=index, m=model: self._close_editor(e, i, m))
-
-    def _close_editor(self, editor, index, model):
+    def _close_editor(self, editor, index):
+        """Closes editor. Needed by SearchBarEditor."""
         self.closeEditor.emit(editor)
-        self.setModelData(editor, model, index)
-
-    def _create_database_editor(self, parent, option, index, db_mngr):
-        editor = SearchBarEditor(self._parent, parent)
-        editor.set_data(index.data(Qt.DisplayRole), [x.codename for x in db_mngr.db_maps])
-        return editor
+        self.setModelData(editor, index.model(), index)
 
     def _create_line_editor(self, parent, option, index):
         editor = CustomLineEditor(parent)
         editor.set_data(index.data(Qt.EditRole))
         return editor
 
-    def _create_parameter_value_editor(self, parent, option, index, db_mngr, db_map):
-        """Returns a SearchBarEditor if the parameter has associated a value list.
-        Otherwise returns the normal parameter value editor.
-        """
-        # TODO: get the parameter definition id in empty models
-        id_ = model.item_at_row(index.row())
-        parameter_id = db_mngr.get_item(db_map, "parameter value", id_).get("parameter_id")
-        value_list_id = db_mngr.get_item(db_map, "parameter definition", parameter_id).get("value_list_id")
-        value_list = db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")
-        if value_list:
-            editor = SearchBarEditor(self._parent, parent, is_json=True)
-            value_list = value_list.split(",")
-            editor.set_data(index.data(Qt.DisplayRole), value_list)
-        else:
-            editor = self._create_normal_parameter_value_editor(parent, option, index, db_mngr, db_map)
+    def _get_db_map(self, index):
+        """Returns the db_map for the database at given index or None if not set yet."""
+        model = index.model()
+        header = model.horizontal_header_labels()
+        database = index.sibling(index.row(), header.index("database")).data()
+        db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
+        if not db_map:
+            self._parent.msg.emit("Please select database first.")
+        return db_map
+
+
+class DatabaseNameDelegate(ParameterDelegate):
+    """A delegate for the database name."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        editor = SearchBarEditor(self._parent, parent)
+        editor.set_data(index.data(Qt.DisplayRole), [x.codename for x in self.db_mngr.db_maps])
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
 
-    def _create_normal_parameter_value_editor(self, parent, option, index, db_mngr, db_map):
+
+class ParameterValueOrDefaultValueDelegate(ParameterDelegate):
+    """A delegate for the either the value or the default value."""
+
+    parameter_value_editor_requested = Signal("QModelIndex", "QVariant", name="parameter_value_editor_requested")
+
+    def _create_or_request_parameter_value_editor(self, parent, option, index, db_map):
         """Returns a CustomLineEditor or NumberParameterInlineEditor if the data from index is not of special type.
-        Otherwise, emit the signal to request a standalone `ParameterValueEditor`
-        from parent widget.
+        Otherwise, emit the signal to request a standalone `ParameterValueEditor` from parent widget.
         """
         try:
             value = from_database(index.data(role=Qt.EditRole))
@@ -254,42 +253,46 @@ class ParameterDelegate(QItemDelegate):
         editor.set_data(index.data(Qt.EditRole))
         return editor
 
-    def _create_entity_class_name_editor(self, parent, option, index, db_mngr, db_map):
-        editor = SearchBarEditor(self._parent, parent)
-        entity_classes = self._get_entity_classes(db_mngr, db_map)
-        editor.set_data(index.data(Qt.EditRole), [x["name"] for x in entity_classes])
-        return editor
 
-    def _entity_class_query(self, db_map):
-        raise NotImplementedError()
+class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
+    """A delegate for the either the default value."""
 
     def createEditor(self, parent, option, index):
-        """Return editor."""
-        model = index.model()
-        header = model.horizontal_header_labels()
-        db_mngr = model.db_mngr
-        field = header[index.column()]
-        if field == 'database':
-            editor = self._create_database_editor(parent, option, index, db_mngr)
-        else:
-            database = index.sibling(index.row(), header.index("database")).data()
-            db_map = next(iter(x for x in db_mngr.db_maps if x.codename == database), None)
-            if not db_map:
-                self._parent.msg.emit("Please select database first.")
-                return None
-            create_editor_func = self._create_editor_func_map.get(field)
-            if create_editor_func:
-                editor = create_editor_func(parent, option, index, db_mngr, db_map)
-            else:
-                editor = self._create_line_editor(parent, option, index)
-        self._connect_editor_signals(editor, index)
-        return editor
+        """Returns or requests a parameter value editor."""
+        db_map = self._get_db_map(index)
+        return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
 
 
-class ParameterDefinitionDelegateMixin:
-    def _create_parameter_tag_list_editor(self, parent, option, index, db_mngr, db_map):
+class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
+    """A delegate for the either the parameter value."""
+
+    def createEditor(self, parent, option, index):
+        """If the parameter has associated a value list, returns a SearchBarEditor .
+        Otherwise returns or requests a dedicated parameter value editor.
+        """
+        db_map = self._get_db_map(index)
+        # TODO: get the parameter definition id in empty models
+        id_ = model.item_at_row(index.row())
+        parameter_id = self.db_mngr.get_item(db_map, "parameter value", id_).get("parameter_id")
+        value_list_id = self.db_mngr.get_item(db_map, "parameter definition", parameter_id).get("value_list_id")
+        value_list = self.db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")
+        if value_list:
+            editor = SearchBarEditor(self._parent, parent, is_json=True)
+            value_list = value_list.split(",")
+            editor.set_data(index.data(Qt.DisplayRole), value_list)
+            editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+            return editor
+        return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
+
+
+class TagListDelegate(ParameterDelegate):
+    """A delegate for the parameter tag list."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
         editor = CheckListEditor(self._parent, parent)
-        all_parameter_tag_list = [x["tag"] for x in db_mngr.get_parameter_tags(db_map)]
+        all_parameter_tag_list = [x["tag"] for x in self.db_mngr.get_parameter_tags(db_map)]
         try:
             parameter_tag_list = index.data(Qt.EditRole).split(",")
         except AttributeError:
@@ -298,127 +301,140 @@ class ParameterDefinitionDelegateMixin:
         editor.set_data(all_parameter_tag_list, parameter_tag_list)
         return editor
 
-    def _create_value_list_name_editor(self, parent, option, index, db_mngr, db_map):
+
+class ValueListDelegate(ParameterDelegate):
+    """A delegate for the parameter value-list."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
         editor = SearchBarEditor(self._parent, parent)
-        name_list = [x["name"] for x in db_mngr.get_parameter_value_lists(db_map)]
+        name_list = [x["name"] for x in self.db_mngr.get_parameter_value_lists(db_map)]
         editor.set_data(index.data(Qt.EditRole), name_list)
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
 
 
-class ParameterValueDelegateMixin:
-    def _create_parameter_name_editor(self, parent, option, index, db_mngr, db_map):
+class ObjectClassNameDelegate(ParameterDelegate):
+    """A delegate for the object class name."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
         editor = SearchBarEditor(self._parent, parent)
-        parameter_definition_list = self._parameter_definition_query(db_map, item.entity_class.id)
-        name_list = [x.parameter_name for x in parameter_definition_list]
-        editor.set_data(index.data(Qt.EditRole), name_list)
+        object_classes = self.db_mngr.get_object_classes(db_map)
+        editor.set_data(index.data(Qt.EditRole), [x["name"] for x in object_classes])
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
 
-    def _parameter_definition_query(self, db_map, entity_class_id):
-        raise NotImplementedError()
 
+class RelationshipClassNameDelegate(ParameterDelegate):
+    """A delegate for the relationship class name."""
 
-class ObjectParameterDefinitionDelegate(ParameterDefinitionDelegateMixin, ParameterDelegate):
-    """An object parameter definition delegate."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._create_editor_func_map = {
-            "database": self._create_database_editor,
-            "object_class_name": self._create_entity_class_name_editor,
-            "parameter_tag_list": self._create_parameter_tag_list_editor,
-            "value_list_name": self._create_value_list_name_editor,
-            "default_value": self._create_normal_parameter_value_editor,
-        }
-
-    @staticmethod
-    def _get_entity_classes(db_mngr, db_map):
-        return db_mngr.get_object_classes(db_map)
-
-
-class ObjectParameterValueDelegate(ParameterValueDelegateMixin, ParameterDelegate):
-    """An object parameter value delegate."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._create_editor_func_map = {
-            "database": self._create_database_editor,
-            "object_class_name": self._create_entity_class_name_editor,
-            "object_name": self._create_object_name_editor,
-            "parameter_name": self._create_parameter_name_editor,
-            "value": self._create_parameter_value_editor,
-        }
-
-    def _create_object_name_editor(self, parent, option, index, db_mngr, db_map):
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
         editor = SearchBarEditor(self._parent, parent)
-        object_class_id = item.object_class_id
-        name_list = [x.name for x in db_map.object_list(class_id=object_class_id)]
-        editor.set_data(index.data(Qt.EditRole), name_list)
+        relationship_classes = self.db_mngr.get_relationship_classes(db_map)
+        editor.set_data(index.data(Qt.EditRole), [x["name"] for x in relationship_classes])
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
 
-    @staticmethod
-    def _get_entity_classes(db_mngr, db_map):
-        return db_mngr.get_object_classes(db_map)
 
-    def _parameter_definition_query(self, db_map, entity_class_id):
-        return db_map.object_parameter_definition_list(object_class_id=entity_class_id)
+class GetObjectClassIdMixin:
+    """Allows getting the object class id from the name."""
 
-
-class RelationshipParameterDefinitionDelegate(ParameterDefinitionDelegateMixin, ParameterDelegate):
-    """A relationship parameter definition delegate."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._create_editor_func_map = {
-            "database": self._create_database_editor,
-            "relationship_class_name": self._create_entity_class_name_editor,
-            "object_class_name_list": lambda *args: None,
-            "parameter_tag_list": self._create_parameter_tag_list_editor,
-            "value_list_name": self._create_value_list_name_editor,
-            "default_value": self._create_normal_parameter_value_editor,
-        }
-
-    @staticmethod
-    def _get_entity_classes(db_mngr, db_map):
-        return db_mngr.get_relationship_classes(db_map)
+    def _get_object_class_id(self, index, db_map):
+        h = index.model().header.index
+        object_class_name = index.sibling(index.row(), h("object_class_name")).data()
+        object_class = self.db_mngr.get_item_by_field(db_map, "object class", "name", object_class_name)
+        return object_class.get("id")
 
 
-class RelationshipParameterValueDelegate(ParameterValueDelegateMixin, ParameterDelegate):
-    """A relationship parameter definition delegate."""
+class GetRelationshipClassIdMixin:
+    """Allows getting the relationship class id from the name."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._create_editor_func_map = {
-            "database": self._create_database_editor,
-            "relationship_class_name": self._create_entity_class_name_editor,
-            "object_name_list": self._create_object_name_list_editor,
-            "parameter_name": self._create_parameter_name_editor,
-            "value": self._create_parameter_value_editor,
-        }
+    def _get_relationship_class_id(self, index, db_map):
+        h = index.model().header.index
+        relationship_class_name = index.sibling(index.row(), h("relationship_class_name")).data()
+        relationship_class = self.db_mngr.get_item_by_field(
+            db_map, "relationship class", "name", relationship_class_name
+        )
+        return relationship_class.get("id")
 
-    def _create_object_name_list_editor(self, parent, option, index, db_mngr, db_map, id_):
-        object_class_id_list = item.object_class_id_list
-        if not object_class_id_list:
+
+class ObjectParameterNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
+    """A delegate for the object parameter name."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
+        editor = SearchBarEditor(self._parent, parent)
+        object_class_id = self._get_object_class_id(index, db_map)
+        parameter_definitions = self.db_mngr.get_object_parameter_definitions(db_map, object_class_id=object_class_id)
+        name_list = [x["parameter_name"] for x in parameter_definitions]
+        editor.set_data(index.data(Qt.EditRole), name_list)
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        return editor
+
+
+class RelationshipParameterNameDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
+    """A delegate for the relationship parameter name."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
+        editor = SearchBarEditor(self._parent, parent)
+        relationship_class_id = self._get_relationship_class_id(index, db_map)
+        parameter_definitions = self.db_mngr.get_relationship_parameter_definitions(db_map, relationship_class_id)
+        name_list = [x["parameter_name"] for x in parameter_definitions]
+        editor.set_data(index.data(Qt.EditRole), name_list)
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        return editor
+
+
+class ObjectNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
+    """A delegate for the object name."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
+        editor = SearchBarEditor(self._parent, parent)
+        object_class_id = self._get_object_class_id(index, db_map)
+        name_list = [x["name"] for x in self.db_mngr.get_objects(db_map, class_id=object_class_id)]
+        editor.set_data(index.data(Qt.EditRole), name_list)
+        editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
+        return editor
+
+
+class ObjectNameListDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
+    """A delegate for the object name list."""
+
+    def createEditor(self, parent, option, index):
+        """Returns editor."""
+        db_map = self._get_db_map(index)
+        relationship_class_id = self._get_relationship_class_id(index, db_map)
+        if not relationship_class_id:
             editor = CustomLineEditor(parent)
             editor.set_data(index.data(Qt.EditRole))
-        else:
-            editor = MultiSearchBarEditor(self._parent, parent)
-            object_class_ids = [int(x) for x in object_class_id_list.split(',')]
-            object_class_dict = {x.id: x.name for x in db_map.object_class_list(id_list=object_class_ids)}
-            object_class_names = [object_class_dict[x] for x in object_class_ids]
-            object_name_list = index.data(Qt.EditRole)
-            current_object_names = object_name_list.split(",") if object_name_list else []
-            all_object_names_list = list()
-            for class_id in object_class_ids:
-                all_object_names_list.append([x.name for x in db_map.object_list(class_id=class_id)])
-            editor.set_data(object_class_names, current_object_names, all_object_names_list)
+            return editor
+        editor = MultiSearchBarEditor(self._parent, parent)
+        relationship_class = self.db_mngr.get_item(db_map, "relationship class", relationship_class_id)
+        object_class_id_list = relationship_class.get("object_class_id_list")
+        object_class_names = []
+        object_names_per_class = []
+        for id_ in object_class_id_list.split(","):
+            id_ = int(id_)
+            object_class_names.append(self.db_mngr.get_item(db_map, "object class", id_).get("name"))
+            object_names_per_class.append([x["name"] for x in self.db_mngr.get_objects(db_map, class_id=id_)])
+        object_name_list = index.data(Qt.EditRole)
+        try:
+            current_object_names = object_name_list.split(",")
+        except AttributeError:
+            # Gibberish
+            current_object_names = []
+        editor.set_data(object_class_names, current_object_names, object_names_per_class)
         return editor
-
-    @staticmethod
-    def _get_entity_classes(db_mngr, db_map):
-        return db_mngr.get_relationship_classes(db_map)
-
-    def _parameter_definition_query(self, db_map, entity_class_id):
-        return db_map.relationship_parameter_definition_list(relationship_class_id=entity_class_id)
 
 
 class ManageItemsDelegate(QItemDelegate):

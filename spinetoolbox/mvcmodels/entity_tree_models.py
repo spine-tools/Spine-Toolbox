@@ -261,10 +261,9 @@ class EntityTreeModel(QAbstractItemModel):
         self.selected_indexes.setdefault(item_type, {})[index] = None
 
     def cascade_filter_nodes_by_id(self, db_map, *ids_set, parents=(), fetch=False, return_unfetched=False):
-        """Filter nodes by ids in cascade starting from the list of parents:
-        Root --> Children with id in the first set --> Children with id in the second set...
+        """Filter nodes by ids in cascade starting from the list of parents.
         Returns the nodes at the lowest level attained.
-        Optionally fetch the nodes where it passes.
+        Optionally fetches the nodes as it goes.
         """
         if not parents:
             parents = [self.root_item]
@@ -381,10 +380,8 @@ class ObjectTreeModel(EntityTreeModel):
         return result
 
     def add_object_classes(self, db_map_data):
-        selected_items = [self.item_from_index(ind) for ind in self.selected_object_class_indexes]
         db_map_ids = {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
         self.root_item.append_children_by_id(db_map_ids)
-        self.selected_indexes[ObjectClassItem] = {self.index_from_item(item): None for item in selected_items}
 
     def add_objects(self, db_map_data):
         for parent, db_map_ids in self._group_object_data(db_map_data).items():

@@ -136,12 +136,14 @@ class GraphViewForm(DataStoreForm):
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
+        # FIXME:
         self.object_parameter_value_model.has_empty_row = not self.read_only
         self.relationship_parameter_value_model.has_empty_row = not self.read_only
         super().init_parameter_value_models()
 
     def init_parameter_definition_models(self):
         """Initialize parameter (definition) models from source database."""
+        # FIXME:
         self.object_parameter_definition_model.has_empty_row = not self.read_only
         self.relationship_parameter_definition_model.has_empty_row = not self.read_only
         super().init_parameter_definition_models()

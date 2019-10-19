@@ -409,7 +409,7 @@ class MultiDBTreeItem(TreeItem):
     def update_children_by_id(self, db_map_ids):
         """
         Updates children by id. Essentially makes sure all children have a valid display id
-        after an update in the underlying data. These may require 'splitting' a child
+        after updating the underlying data. These may require 'splitting' a child
         into several for different dbs or merging two or more children from different dbs.
 
         Examples of problems:

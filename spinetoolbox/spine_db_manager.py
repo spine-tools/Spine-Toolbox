@@ -177,7 +177,7 @@ class SpineDBManager(QObject):
         return next(iter(x for x in self._get_items_from_db(db_map, item_type) if x[field] == value), {})
 
     def _get_items_from_db(self, db_map, item_type):
-        """Get item from database. Called by get_item when it doesn't find the requested item in the cache.
+        """Get item from database. Called by the above methods when they don't find the requested item in the cache.
         """
         method_name_dict = {
             "object class": "get_object_classes",
@@ -602,7 +602,7 @@ class SpineDBManager(QObject):
         for db_map, data in db_map_data.items():
             class_ids = {x["id"] for x in data}
             db_map_cascading_data[db_map] = [
-                item for item in self.get_items_from_cache(db_map, item_type) if item["class_id"] in rel_cls_ids
+                item for item in self.get_items_from_cache(db_map, item_type) if item["class_id"] in class_ids
             ]
         return db_map_cascading_data
 
