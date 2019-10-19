@@ -53,6 +53,52 @@ class RelationshipParameterDecorateMixin:
 
 
 class ParameterDefinitionFillInMixin:
+    """Provides methods to fill in ids for parameter definition items
+    edited by the user, so they can be entered in the database.
+    ."""
+
+    def __init__(self, *args, **kwargs):
+        """Init class, create lookup dicts."""
+        super().__init__(*args, **kwargs)
+        self._db_map_value_list_lookup = dict()
+        self._db_map_tag_lookup = dict()
+
+    def begin_modify_db(self, db_map_data):
+        """Begins an operation to add or update database items.
+        Populate the lookup dicts with necessary data needed by the _fill_in methods to work.
+        """
+        # Group data by name
+        db_map_value_list_names = dict()
+        db_map_parameter_tags = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                value_list_name = item.get("value_list_name")
+                db_map_value_list_names.setdefault(db_map, set()).add(value_list_name)
+                parameter_tag_list = item.get("parameter_tag_list")
+                parameter_tag_list = self._parse_parameter_tag_list(parameter_tag_list)
+                if parameter_tag_list:
+                    db_map_parameter_tags.setdefault(db_map, set()).update(parameter_tag_list)
+        # Build lookup dicts
+        self._db_map_value_list_lookup.clear()
+        for db_map, names in db_map_value_list_names.items():
+            for name in names:
+                item = self.db_mngr.get_item_by_field(db_map, "parameter value list", "name", name)
+                if item:
+                    self._db_map_value_list_lookup.setdefault(db_map, {})[name] = item
+        self._db_map_tag_lookup.clear()
+        for db_map, tags in db_map_parameter_tags.items():
+            for tag in tags:
+                item = self.db_mngr.get_item_by_field(db_map, "parameter tag", "tag", tag)
+                if item:
+                    self._db_map_tag_lookup.setdefault(db_map, {})[name] = item
+
+    @staticmethod
+    def _parse_parameter_tag_list(parameter_tag_list):
+        try:
+            return parameter_tag_list.split(",")
+        except AttributeError:
+            return None
+
     @staticmethod
     def _fill_in_parameter_name(item):
         name = item.pop("parameter_name", None)
@@ -61,9 +107,7 @@ class ParameterDefinitionFillInMixin:
 
     def _fill_in_parameter_tag_id_list(self, item, db_map):
         value_list_name = item.pop("value_list_name", None)
-        if not value_list_name:
-            return
-        value_list = self.db_mngr.get_item_by_field(db_map, "parameter value list", "name", value_list_name)
+        value_list = self._db_map_value_list_lookup.get(db_map, {}).get(value_list_name)
         if not value_list:
             return
         item["parameter_value_list_id"] = value_list["id"]
@@ -71,20 +115,18 @@ class ParameterDefinitionFillInMixin:
     def _make_param_tag_item(self, item, db_map):
         """Returns a parameter definition tag item that for setting in the database."""
         parameter_tag_list = item.pop("parameter_tag_list", None)
+        parameter_tag_list = self._parse_parameter_tag_list(parameter_tag_list)
         if not parameter_tag_list:
-            return None
-        try:
-            parameter_tag_list = parameter_tag_list.split(",")
-        except AttributeError:
-            # Can't split
             return None
         parameter_tag_id_list = []
         for tag in parameter_tag_list:
-            tag_id = self.db_mngr.get_item_by_field(db_map, "parameter tag", "tag", tag)
-            if not tag_id:
+            tag_item = self._db_map_value_list_lookup.get(db_map, {}).get(tag)
+            if not tag_item:
                 return None
-            parameter_tag_id_list.append(tag_id)
-        return {
-            "parameter_definition_id": item["id"],
-            "parameter_tag_id_list": ",".join([str(x["id"]) for x in parameter_tag_id_list]),
-        }
+            parameter_tag_id_list.append(str(tag_item["id"]))
+        return {"parameter_definition_id": item["id"], "parameter_tag_id_list": ",".join(parameter_tag_id_list)}
+
+    def end_modify_db(self):
+        """Ends an operation to add or update database items."""
+        self._db_map_value_list_lookup.clear()
+        self._db_map_tag_lookup.clear()

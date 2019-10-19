@@ -155,6 +155,7 @@ class SingleParameterDefinitionMixin(ParameterDefinitionFillInMixin):
 
     def update_items_in_db(self, items):
         """Update items in db."""
+        self.begin_modify_db({self.db_map: items})
         param_def_data = list()
         param_tag_data = list()
         for item in items:
@@ -166,6 +167,7 @@ class SingleParameterDefinitionMixin(ParameterDefinitionFillInMixin):
                 param_tag_data.append(tag_item)
         self.db_mngr.set_parameter_definition_tags({self.db_map: param_tag_data})
         self.db_mngr.update_parameter_definitions({self.db_map: param_def_data})
+        self.end_modify_db()
 
     def _make_param_def_item(self, item, db_map):
         """Returns a parameter definition item for adding to the database."""

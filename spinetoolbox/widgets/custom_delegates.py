@@ -215,7 +215,7 @@ class ParameterDelegate(QItemDelegate):
         database = index.sibling(index.row(), header.index("database")).data()
         db_map = next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
         if not db_map:
-            self._parent.msg.emit("Please select database first.")
+            self._parent.msg_error.emit("Please select database first.")
         return db_map
 
 
@@ -260,6 +260,8 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
     def createEditor(self, parent, option, index):
         """Returns or requests a parameter value editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
 
 
@@ -271,6 +273,8 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         Otherwise returns or requests a dedicated parameter value editor.
         """
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         # TODO: get the parameter definition id in empty models
         id_ = model.item_at_row(index.row())
         parameter_id = self.db_mngr.get_item(db_map, "parameter value", id_).get("parameter_id")
@@ -291,6 +295,8 @@ class TagListDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         editor = CheckListEditor(self._parent, parent)
         all_parameter_tag_list = [x["tag"] for x in self.db_mngr.get_parameter_tags(db_map)]
         try:
@@ -308,6 +314,8 @@ class ValueListDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         editor = SearchBarEditor(self._parent, parent)
         name_list = [x["name"] for x in self.db_mngr.get_parameter_value_lists(db_map)]
         editor.set_data(index.data(Qt.EditRole), name_list)
@@ -321,6 +329,8 @@ class ObjectClassNameDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         editor = SearchBarEditor(self._parent, parent)
         object_classes = self.db_mngr.get_object_classes(db_map)
         editor.set_data(index.data(Qt.EditRole), [x["name"] for x in object_classes])
@@ -334,6 +344,8 @@ class RelationshipClassNameDelegate(ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         editor = SearchBarEditor(self._parent, parent)
         relationship_classes = self.db_mngr.get_relationship_classes(db_map)
         editor.set_data(index.data(Qt.EditRole), [x["name"] for x in relationship_classes])
@@ -369,6 +381,8 @@ class ObjectParameterNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         editor = SearchBarEditor(self._parent, parent)
         object_class_id = self._get_object_class_id(index, db_map)
         parameter_definitions = self.db_mngr.get_object_parameter_definitions(db_map, object_class_id=object_class_id)
@@ -384,6 +398,8 @@ class RelationshipParameterNameDelegate(GetRelationshipClassIdMixin, ParameterDe
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         editor = SearchBarEditor(self._parent, parent)
         relationship_class_id = self._get_relationship_class_id(index, db_map)
         parameter_definitions = self.db_mngr.get_relationship_parameter_definitions(db_map, relationship_class_id)
@@ -399,6 +415,8 @@ class ObjectNameDelegate(GetObjectClassIdMixin, ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         editor = SearchBarEditor(self._parent, parent)
         object_class_id = self._get_object_class_id(index, db_map)
         name_list = [x["name"] for x in self.db_mngr.get_objects(db_map, class_id=object_class_id)]
@@ -413,6 +431,8 @@ class ObjectNameListDelegate(GetRelationshipClassIdMixin, ParameterDelegate):
     def createEditor(self, parent, option, index):
         """Returns editor."""
         db_map = self._get_db_map(index)
+        if not db_map:
+            return None
         relationship_class_id = self._get_relationship_class_id(index, db_map)
         if not relationship_class_id:
             editor = CustomLineEditor(parent)

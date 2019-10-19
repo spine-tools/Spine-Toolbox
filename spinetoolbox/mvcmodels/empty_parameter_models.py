@@ -15,7 +15,7 @@ Empty models for parameter definitions and values.
 :authors: M. Marin (KTH)
 :date:   28.6.2019
 """
-from PySide2.QtCore import Slot
+from PySide2.QtCore import Qt, Slot
 from ..mvcmodels.empty_row_model import EmptyRowModel
 from ..mvcmodels.parameter_mixins import ParameterDefinitionFillInMixin
 from ..helpers import rows_to_row_count_tuples
@@ -85,12 +85,70 @@ class EmptyParameterModel(EmptyRowModel):
         return next(iter(x for x in self.db_mngr.db_maps if x.codename == database), None)
 
 
-class EmptyParameterDefinitionMixin:
+class EmptyParameterDefinitionMixin(ParameterDefinitionFillInMixin):
     """Handles parameter definitions added."""
+
+    def __init__(self, *args, **kwargs):
+        """Init class, create lookup dicts."""
+        super().__init__(*args, **kwargs)
+        self._db_map_entity_class_lookup = dict()
+
+    @property
+    def _entity_class_id_key(self):
+        raise NotImplementedError()
+
+    @property
+    def _entity_class_name_key(self):
+        raise NotImplementedError()
+
+    @property
+    def _entity_class_type(self):
+        raise NotImplementedError()
 
     def connect_db_mngr_signals(self):
         """Connect db mngr signals."""
         self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_definitions_added)
+
+    def begin_modify_db(self, db_map_data):
+        """Begins an operation to add or update database items.
+        Populate the lookup dicts with necessary data needed by the _fill_in methods to work.
+        """
+        super().begin_modify_db(db_map_data)
+        # Group data by name
+        db_map_entity_class_names = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                entity_class_name = item.get(self._entity_class_name_key)
+                db_map_entity_class_names.setdefault(db_map, set()).add(entity_class_name)
+        # Build lookup dicts
+        self._db_map_entity_class_lookup.clear()
+        for db_map, names in db_map_entity_class_names.items():
+            for name in names:
+                item = self.db_mngr.get_item_by_field(db_map, self._entity_class_type, "name", name)
+                if item:
+                    self._db_map_entity_class_lookup.setdefault(db_map, {})[name] = item
+
+    def _fill_in_entity_class_id(self, item, db_map):
+        entity_class_name = item.pop(self._entity_class_name_key, None)
+        entity_class = self._db_map_entity_class_lookup.get(db_map, {}).get(entity_class_name)
+        if not entity_class:
+            return
+        item[self._entity_class_id_key] = entity_class.get("id")
+
+    def _make_param_def_item(self, item, db_map):
+        """Returns a parameter definition item for adding to the database."""
+        item = item.copy()
+        self._fill_in_parameter_name(item)
+        self._fill_in_entity_class_id(item, db_map)
+        self._fill_in_parameter_tag_id_list(item, db_map)
+        if not self._entity_class_id_key in item or not "name" in item:
+            return None
+        return item
+
+    def end_modify_db(self):
+        """Ends an operation to add or update database items."""
+        super().end_modify_db()
+        self._db_map_entity_class_lookup.clear()
 
     @Slot("QVariant", name="receive_parameter_definitions_added")
     def receive_parameter_definitions_added(self, db_map_data):
@@ -121,6 +179,7 @@ class EmptyParameterDefinitionMixin:
         Args:
             db_map_data (dict): maps DiffDatabaseMapping instances to list of model items
         """
+        self.begin_modify_db(db_map_data)
         db_map_param_def = dict()
         db_map_param_tag = dict()
         for db_map, items in db_map_data.items():
@@ -135,58 +194,45 @@ class EmptyParameterDefinitionMixin:
             self.db_mngr.add_parameter_definitions(db_map_param_def)
         if any(db_map_param_tag.values()):
             self.db_mngr.set_parameter_definition_tags(db_map_param_tag)
-
-    def _make_param_def_item(self, item, db_map):
-        """Returns a parameter definition item for adding to the database."""
-        item = item.copy()
-        self._fill_in_parameter_name(item)
-        self._fill_in_entity_class_id(item, db_map)
-        self._fill_in_parameter_tag_id_list(item, db_map)
-        if not self._entity_class_id_key in item or not "name" in item:
-            return None
-        return item
-
-    @property
-    def _entity_class_id_key(self):
-        raise NotImplementedError()
+        self.end_modify_db()
 
 
-class EmptyObjectParameterDefinitionModel(
-    ParameterDefinitionFillInMixin, EmptyParameterDefinitionMixin, EmptyParameterModel
-):
+class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionMixin, EmptyParameterModel):
     """An empty object parameter definition model."""
 
     @property
     def _entity_class_id_key(self):
         return "object_class_id"
 
-    def _fill_in_entity_class_id(self, item, db_map):
-        entity_class_name = item.pop("object_class_name", None)
-        if not entity_class_name:
-            return
-        entity_class = self.db_mngr.get_item_by_field(db_map, "object class", "name", entity_class_name)
-        if not entity_class:
-            return
-        item["object_class_id"] = entity_class.get("id")
+    @property
+    def _entity_class_name_key(self):
+        return "object_class_name"
+
+    @property
+    def _entity_class_type(self):
+        return "object class"
 
 
-class EmptyRelationshipParameterDefinitionModel(
-    ParameterDefinitionFillInMixin, EmptyParameterDefinitionMixin, EmptyParameterModel
-):
+class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionMixin, EmptyParameterModel):
     """An empty relationship parameter definition model."""
 
     @property
     def _entity_class_id_key(self):
         return "relationship_class_id"
 
-    def _fill_in_entity_class_id(self, item, db_map):
-        entity_class_name = item.pop("relationship_class_name", None)
-        if not entity_class_name:
-            return
-        entity_class = self.db_mngr.get_item_by_field(db_map, "relationship class", "name", entity_class_name)
-        if not entity_class:
-            return
-        item["relationship_class_id"] = entity_class.get("id")
+    @property
+    def _entity_class_name_key(self):
+        return "relationship_class_name"
+
+    @property
+    def _entity_class_type(self):
+        return "relationship class"
+
+    def flags(self, index):
+        flags = super().flags(index)
+        if self.header[index.column()] == "object_class_name_list":
+            flags &= ~Qt.ItemIsEditable
+        return flags
 
 
 class EmptyObjectParameterValueModel(EmptyParameterModel):
