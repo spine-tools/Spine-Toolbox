@@ -58,6 +58,7 @@ class Tool(ProjectItem):
         self.specification_model = QStandardItemModel()
         self.populate_specification_model(False)
         self.source_files = list()
+        self.execute_in_work = execute_in_work
         self._tool_specification = self._toolbox.tool_specification_model.find_tool_specification(tool)
         if tool != "" and not self._tool_specification:
             # Clarifications for user
