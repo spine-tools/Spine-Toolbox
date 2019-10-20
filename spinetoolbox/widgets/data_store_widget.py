@@ -665,7 +665,7 @@ class DataStoreForm(QMainWindow):
     def receive_parameter_values_removed(self, db_map_data):
         self.receive_items_changed("removed", "parameter value", db_map_data)
 
-    # TODO: all this with the manager
+    # TODO: all the below with the manager
     def add_parameter_value_lists(self, parameter_value_list_d):
         added_names = set()
         for db_map, items in parameter_value_list_d.items():

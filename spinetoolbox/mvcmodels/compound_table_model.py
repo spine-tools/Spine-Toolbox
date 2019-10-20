@@ -188,11 +188,11 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         compound_first = self._inv_row_map[self.empty_model, first]
         compound_last = self._inv_row_map[self.empty_model, last]
         self.rowsRemoved.emit(QModelIndex(), compound_first, compound_last)
-        # Redo the map for the last empty model entirely
+        # Redo the map for the empty model entirely
         tip = self._inv_row_map[self.empty_model, 0]
         self._row_map = self._row_map[:tip]
         empty_row_map = self._row_map_for_model(self.empty_model)
-        self._append_row_map(row_map)
+        self._append_row_map(empty_row_map)
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):

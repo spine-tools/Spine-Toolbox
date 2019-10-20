@@ -88,6 +88,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             for model in self._models_with_db_map(db_map):
                 if model.entity_class_id in ids:
                     self.sub_models.remove(model)
+                    if not model.canFetchMore(QModelIndex()):
+                        self._fetched_count -= 1
         self.do_refresh()
         self.layoutChanged.emit()
 
