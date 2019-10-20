@@ -52,45 +52,55 @@ class RelationshipParameterDecorateMixin:
         return super().data(index, role)
 
 
-class ParameterFillInBase:
-    def _make_parameter_item(self, item, db_map):
-        """Returns a parameter item for adding or updating in the database."""
+class ConvertToDBMixin:
+    """Base class for all mixins that convert model items (name-based) into database items (id-based)."""
+
+    def begin_convert_to_db(self, db_map_data):
+        """Begins an operation to convert items."""
+
+    def _convert_to_db(self, item, db_map):
+        """Converts a model item (name-based) into a database item (id-based).
+
+        Args:
+            item (dict): model item
+            db_map (DiffDatabaseMapping): the database for the resulting item
+        """
         return item.copy()
 
-    def begin_modify_db(self, db_map_data):
-        """Begins an operation to add or update database items."""
-
-    def end_modify_db(self):
-        """Ends an operation to add or update database items."""
+    def end_convert_to_db(self):
+        """Ends an operation to convert items."""
 
 
-class ParameterDefinitionFillInMixin(ParameterFillInBase):
-    """Provides methods to fill in ids for parameter definition items
-    edited by the user, so they can be entered in the database.
-    """
+class FillInParameterNameMixin(ConvertToDBMixin):
+    """Fills in parameter names."""
+
+    def _convert_to_db(self, item, db_map):
+        """Converts a model item (name-based) into a database item (id-based)."""
+        item = super()._convert_to_db(item, db_map)
+        name = item.pop("parameter_name", None)
+        if name:
+            item["name"] = name
+        return item
+
+
+class FillInValueListIdMixin(ConvertToDBMixin):
+    """Fills in value list ids."""
 
     def __init__(self, *args, **kwargs):
         """Init class, create lookup dicts."""
         super().__init__(*args, **kwargs)
         self._db_map_value_list_lookup = dict()
-        self._db_map_tag_lookup = dict()
 
-    def begin_modify_db(self, db_map_data):
-        """Begins an operation to add or update database items.
-        Populate the lookup dicts with necessary data needed by the _fill_in methods to work.
+    def begin_convert_to_db(self, db_map_data):
+        """Begins an operation to convert items. Populate lookup dict.
         """
-        super().begin_modify_db(db_map_data)
+        super().begin_convert_to_db(db_map_data)
         # Group data by name
         db_map_value_list_names = dict()
-        db_map_parameter_tags = dict()
         for db_map, items in db_map_data.items():
             for item in items:
                 value_list_name = item.get("value_list_name")
                 db_map_value_list_names.setdefault(db_map, set()).add(value_list_name)
-                parameter_tag_list = item.get("parameter_tag_list")
-                parameter_tag_list = self._parse_parameter_tag_list(parameter_tag_list)
-                if parameter_tag_list:
-                    db_map_parameter_tags.setdefault(db_map, set()).update(parameter_tag_list)
         # Build lookup dicts
         self._db_map_value_list_lookup.clear()
         for db_map, names in db_map_value_list_names.items():
@@ -98,6 +108,47 @@ class ParameterDefinitionFillInMixin(ParameterFillInBase):
                 item = self.db_mngr.get_item_by_field(db_map, "parameter value list", "name", name)
                 if item:
                     self._db_map_value_list_lookup.setdefault(db_map, {})[name] = item
+
+    def _convert_to_db(self, item, db_map):
+        """Converts a model item (name-based) into a database item (id-based)."""
+        item = super()._convert_to_db(item, db_map)
+        self._fill_in_value_list_id(item, db_map)
+        return item
+
+    def _fill_in_value_list_id(self, item, db_map):
+        value_list_name = item.pop("value_list_name", None)
+        value_list = self._db_map_value_list_lookup.get(db_map, {}).get(value_list_name)
+        if not value_list:
+            return
+        item["parameter_value_list_id"] = value_list["id"]
+
+    def end_convert_to_db(self):
+        """Ends an operation to convert items."""
+        super().end_convert_to_db()
+        self._db_map_value_list_lookup.clear()
+
+
+class MakeParameterTagMixin(ConvertToDBMixin):
+    """Makes parameter tag items."""
+
+    def __init__(self, *args, **kwargs):
+        """Init class, create lookup dicts."""
+        super().__init__(*args, **kwargs)
+        self._db_map_tag_lookup = dict()
+
+    def begin_convert_to_db(self, db_map_data):
+        """Begins an operation to convert items. Populate lookup dict.
+        """
+        super().begin_convert_to_db(db_map_data)
+        # Group data by name
+        db_map_parameter_tags = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                parameter_tag_list = item.get("parameter_tag_list")
+                parameter_tag_list = self._parse_parameter_tag_list(parameter_tag_list)
+                if parameter_tag_list:
+                    db_map_parameter_tags.setdefault(db_map, set()).update(parameter_tag_list)
+        # Build lookup dicts
         self._db_map_tag_lookup.clear()
         for db_map, tags in db_map_parameter_tags.items():
             for tag in tags:
@@ -105,35 +156,8 @@ class ParameterDefinitionFillInMixin(ParameterFillInBase):
                 if item:
                     self._db_map_tag_lookup.setdefault(db_map, {})[name] = item
 
-    @staticmethod
-    def _parse_parameter_tag_list(parameter_tag_list):
-        try:
-            return parameter_tag_list.split(",")
-        except AttributeError:
-            return None
-
-    @staticmethod
-    def _fill_in_parameter_name(item):
-        name = item.pop("parameter_name", None)
-        if name:
-            item["name"] = name
-
-    def _fill_in_parameter_tag_id_list(self, item, db_map):
-        value_list_name = item.pop("value_list_name", None)
-        value_list = self._db_map_value_list_lookup.get(db_map, {}).get(value_list_name)
-        if not value_list:
-            return
-        item["parameter_value_list_id"] = value_list["id"]
-
-    def _make_parameter_item(self, item, db_map):
-        """Returns a parameter definition item for adding to the database."""
-        item = super()._make_parameter_item(item, db_map)
-        self._fill_in_parameter_name(item)
-        self._fill_in_parameter_tag_id_list(item, db_map)
-        return item
-
-    def _make_param_tag_item(self, item, db_map):
-        """Returns a parameter definition tag item that for setting in the database."""
+    def _make_parameter_definition_tag(self, item, db_map):
+        """Takes tag info from model item (name-based) into a parameter definition tag database item (id-based)."""
         parameter_tag_list = item.pop("parameter_tag_list", None)
         parameter_tag_list = self._parse_parameter_tag_list(parameter_tag_list)
         if not parameter_tag_list:
@@ -146,8 +170,14 @@ class ParameterDefinitionFillInMixin(ParameterFillInBase):
             parameter_tag_id_list.append(str(tag_item["id"]))
         return {"parameter_definition_id": item["id"], "parameter_tag_id_list": ",".join(parameter_tag_id_list)}
 
-    def end_modify_db(self):
-        """Ends an operation to add or update database items."""
-        super().end_modify_db()
-        self._db_map_value_list_lookup.clear()
+    @staticmethod
+    def _parse_parameter_tag_list(parameter_tag_list):
+        try:
+            return parameter_tag_list.split(",")
+        except AttributeError:
+            return None
+
+    def end_convert_to_db(self):
+        """Ends an operation to convert items."""
+        super().end_convert_to_db()
         self._db_map_tag_lookup.clear()

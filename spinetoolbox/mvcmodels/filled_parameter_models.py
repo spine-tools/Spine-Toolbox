@@ -41,10 +41,7 @@ class FilledParameterModel(MinimalTableModel):
 
     @property
     def item_type(self):
-        raise NotImplementedError()
-
-    @property
-    def update_method_name(self):
+        """The item type, either 'parameter value' or 'parameter definition', required by the data method."""
         raise NotImplementedError()
 
     def insertRows(self, row, count, parent=QModelIndex()):
@@ -59,7 +56,10 @@ class FilledParameterModel(MinimalTableModel):
         return flags
 
     def data(self, index, role=Qt.DisplayRole):
-        """Paint background of fixed indexes gray, apply custom format to JSON fields."""
+        """Gets the id and database for the row and reads data from the db manager,
+        using the item_type property.
+        Also paint background of fixed indexes gray and apply custom format to JSON fields."""
+        # TODO: Maybe Spine db manager can format the data here
         field = self.header[index.column()]
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()
@@ -76,7 +76,8 @@ class FilledParameterModel(MinimalTableModel):
 
     def batch_set_data(self, indexes, data):
         """Sets data for indexes in batch.
-        Set data directly in database. Let db mngr do the rest.
+        Sets data directly in database using db mngr. If successful, updated data will be
+        automatically seen by the data method.
         """
         if not indexes or not data:
             return False
@@ -88,5 +89,5 @@ class FilledParameterModel(MinimalTableModel):
         return True
 
     def update_items_in_db(self, items):
-        """Update items in db."""
+        """Update items in db. Required by batch_set_data"""
         raise NotImplementedError()
