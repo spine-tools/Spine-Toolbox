@@ -38,6 +38,7 @@ class OptionsWidget(QWidget):
             parent (QWidget, None): parent of widget
         """
         from ..ui.import_options import Ui_ImportOptions
+
         super().__init__(parent)
         self._options = options
 

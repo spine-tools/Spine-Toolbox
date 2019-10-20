@@ -16,12 +16,16 @@ Unit tests for Data Connection project item.
 :date:   4.10.2019
 """
 
+import os
+import shutil
 from tempfile import TemporaryDirectory
 import unittest
-
-from PySide2.QtWidgets import QApplication
-
+from unittest import mock
+from PySide2.QtWidgets import QApplication, QWidget
+from networkx import DiGraph
+from ..ui_main import ToolboxUI
 from ..project_items.data_connection.data_connection import DataConnection
+from .mock_helpers import MockQWidget, qsettings_value_side_effect
 
 
 class _MockProject:
@@ -56,7 +60,37 @@ class _MockItem:
         self.name = name
 
 
-class TestDataInterface(unittest.TestCase):
+class TestDataConnection(unittest.TestCase):
+
+    def _set_up(self):
+        """Set up before test_rename()."""
+        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+                "spinetoolbox.ui_main.PythonReplWidget"
+        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
+            mock_julia_repl.return_value = QWidget()
+            mock_python_repl.return_value = MockQWidget()
+            mock_qsettings_value.side_effect = qsettings_value_side_effect
+            self.toolbox = ToolboxUI()
+            self.toolbox.create_project("UnitTest Project", "")
+
+    def tearDown(self):
+        """Clean up."""
+        if not hasattr(self, "toolbox"):
+            return
+        try:
+            shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
+        except OSError as e:
+            print("Failed to remove project directory. {0}".format(e))
+            pass
+        try:
+            os.remove(self.toolbox.project().path)  # Remove project file
+        except OSError:
+            print("Failed to remove project file")
+            pass
+        self.toolbox.deleteLater()
+        self.toolbox = None
+
     @classmethod
     def setUpClass(cls):
         if not QApplication.instance():
@@ -106,6 +140,39 @@ class TestDataInterface(unittest.TestCase):
                 "<b>View</b> and a <b>Data Connection</b> has not been implemented yet.",
             )
             item.data_dir_watcher.removePath(item.data_dir)
+
+    def test_default_name_prefix(self):
+        self.assertEqual(DataConnection.default_name_prefix(), "Data Connection")
+
+    def test_rename(self):
+        """Tests renaming a Data Connection."""
+        self._set_up()
+        item_dict = dict(name="DC", description="", x=0, y=0)
+        self.toolbox.project().add_project_items("Data Connections", item_dict)
+        index = self.toolbox.project_item_model.find_item("DC")
+        dc = self.toolbox.project_item_model.project_item(index)
+        dc.activate()
+        expected_name = "ABC"
+        expected_short_name = "abc"
+        ret_val = dc.rename(expected_name)  # Do rename
+        self.assertTrue(ret_val)
+        # Check name
+        self.assertEqual(expected_name, dc.name)  # item name
+        self.assertEqual(expected_name, dc._properties_ui.label_dc_name.text())  # name label in props
+        self.assertEqual(expected_name, dc.get_icon().name_item.text())  # name item on Design View
+        # Check data_dir
+        expected_data_dir = os.path.join(self.toolbox.project().project_dir, expected_short_name)
+        self.assertEqual(expected_data_dir, dc.data_dir)  # Check data dir
+        # Check there's a dag containing a node with the new name and that no dag contains a node with the old name
+        dag_with_new_node_name = self.toolbox.project().dag_handler.dag_with_node(expected_name)
+        self.assertIsInstance(dag_with_new_node_name, DiGraph)
+        dag_with_old_node_name = self.toolbox.project().dag_handler.dag_with_node("DC")
+        self.assertIsNone(dag_with_old_node_name)
+        # Check that data_dir_watcher has one path (new data_dir)
+        watched_dirs = dc.data_dir_watcher.directories()
+        self.assertTrue(1, len(watched_dirs))
+        self.assertEqual(dc.data_dir, watched_dirs[0])
+        self.toolbox.remove_item(index, delete_item=True)
 
 
 if __name__ == '__main__':

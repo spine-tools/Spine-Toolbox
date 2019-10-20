@@ -187,7 +187,7 @@ class DirectedGraphHandler(QObject):
         for dag in self.dags():
             if dag.has_node(node_name):
                 return dag
-        logging.error("Graph containing node %s not found. Something is wrong.", node_name)
+        # logging.error("Graph containing node %s not found. Something is wrong.", node_name)
         return None
 
     def dag_with_edge(self, src_node, dst_node):
@@ -362,7 +362,6 @@ class ExecutionInstance(QObject):
             # User pressed Stop button
             self.graph_execution_finished_signal.emit(-2)
             return
-        self.propagate_data(self.running_item.name)
         try:
             item_name = self.execution_list.pop(0)
         except IndexError:
@@ -386,7 +385,6 @@ class ExecutionInstance(QObject):
             ind = self._toolbox.project_item_model.find_item(item)
             project_item = self._toolbox.project_item_model.project_item(ind)
             project_item.simulate_execution(self)
-            self.propagate_data(item)
 
     def advertise_resources(self, advertiser, *resources):
         """
@@ -409,9 +407,8 @@ class ExecutionInstance(QObject):
         return self.resources.get(item, list())
 
     def propagate_data(self, item):
-        """Propagate data seen by given item into output items.
-        This is called after successful execution of input_item.
-        Note that executing DAGs in BFS-order ensures data is correctly propagated.
+        """Advartise data seen by given item to its output items.
+        NOTE: Not in use at the moment.
 
         Args:
             item (str): Project item name whose data needs to be propagated

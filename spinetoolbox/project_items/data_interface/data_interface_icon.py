@@ -16,8 +16,7 @@ Module for data store icon class.
 :date:   4.4.2018
 """
 
-from PySide2.QtGui import QColor, QPen, QBrush
-from PySide2.QtCore import Qt
+from PySide2.QtGui import QColor
 from spinetoolbox.graphics_items import ProjectItemIcon
 
 
@@ -33,11 +32,14 @@ class DataInterfaceIcon(ProjectItemIcon):
             h (float): Height of master icon
             name (str): Item name
         """
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # Pen for the bg rect outline
-        self.brush = QBrush(QColor("#ffcccc"))  # Brush for filling the bg rect
-        # Setup icons and attributes
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/map-solid.svg", QColor("#990000"))
-        self.setAcceptDrops(False)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/map-solid.svg",
+            icon_color=QColor("#990000"),
+            background_color=QColor("#ffcccc"),
+        )

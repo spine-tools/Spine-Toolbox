@@ -36,6 +36,7 @@ class DurationEditor(QWidget):
 
     def __init__(self, parent=None):
         from ..ui.duration_editor import Ui_DurationEditor
+
         super().__init__(parent)
         self._value = Duration(duration_to_relativedelta("1 hour"))
         self._ui = Ui_DurationEditor()

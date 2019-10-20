@@ -16,13 +16,14 @@ Unit tests for ToolboxUI class.
 :date:   22.8.2018
 """
 
+from collections import namedtuple
 import unittest
 from unittest import mock
 import logging
 import os
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
-from PySide2.QtCore import SIGNAL, Qt, QPoint
+from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
 from PySide2.QtTest import QTest
 from ..ui_main import ToolboxUI
 from ..project import SpineToolboxProject
@@ -136,7 +137,9 @@ class TestToolboxUI(unittest.TestCase):
         self.toolbox.init_tool_specification_model(list())
         self.assertEqual(self.toolbox.tool_specification_model.rowCount(), 0)
         # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(SIGNAL("doubleClicked(QModelIndex)"))
+        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(
+            SIGNAL("doubleClicked(QModelIndex)")
+        )
         self.assertEqual(n_dbl_clicked_recv, 1)
         n_context_menu_recv = self.toolbox.ui.listView_tool_specifications.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
@@ -145,7 +148,9 @@ class TestToolboxUI(unittest.TestCase):
         # Initialize ToolSpecificationModel again and see that the signals are connected only once
         self.toolbox.init_tool_specification_model(list())
         # Test that QLisView signals are connected only once.
-        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(SIGNAL("doubleClicked(QModelIndex)"))
+        n_dbl_clicked_recv = self.toolbox.ui.listView_tool_specifications.receivers(
+            SIGNAL("doubleClicked(QModelIndex)")
+        )
         self.assertEqual(n_dbl_clicked_recv, 1)
         n_context_menu_recv = self.toolbox.ui.listView_tool_specifications.receivers(
             SIGNAL("customContextMenuRequested(QPoint)")
@@ -235,8 +240,9 @@ class TestToolboxUI(unittest.TestCase):
         """Test item selection in treeView_project. Simulates a mouse click on a Data Store item
         in the project Tree View widget (i.e. the project item list).
         """
-        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
-                mock.patch("spinetoolbox.project.create_dir") as mock_create_dir:
+        with mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, mock.patch(
+            "spinetoolbox.project.create_dir"
+        ) as mock_create_dir:
             self.toolbox.create_project("UnitTest Project", "")
         # self.toolbox.create_project("UnitTest Project", "")
         ds1 = "DS1"
@@ -553,6 +559,124 @@ class TestToolboxUI(unittest.TestCase):
     @unittest.skip("TODO")
     def test_remove_tool_specification(self):
         self.fail()
+
+    def test_tasks_before_exit_without_open_project(self):
+        self.assertIsNone(self.toolbox.project())
+        settings = self.toolbox.qsettings()
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "0")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, [])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "0")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit"])
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "1")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, [])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "1")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit"])
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "2")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, [])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "2")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit"])
+
+    def test_tasks_before_exit_with_open_project(self):
+        self.toolbox._project = 1  # Just make sure project is not None
+        settings = self.toolbox.qsettings()
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "0")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, [])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "0")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit"])
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "1")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt save"])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "1")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt save"])
+        settings.setValue("appSettings/showExitPrompt", "0")
+        settings.setValue("appSettings/saveAtExit", "2")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["save"])
+        settings.setValue("appSettings/showExitPrompt", "2")
+        settings.setValue("appSettings/saveAtExit", "2")
+        tasks = self.toolbox._tasks_before_exit()
+        self.assertEqual(tasks, ["prompt exit", "save"])
+
+    def test_propose_item_name(self):
+        class MockModel:
+            def __init__(self):
+                self.finds = list()
+                self.find_count = 0
+
+            def find_item(self, _):
+                found = self.finds[self.find_count]
+                self.find_count += 1
+                return found
+
+        self.toolbox.project_item_model = namedtuple("model", ["find_name"])
+        self.toolbox.project_item_model = MockModel()
+        self.toolbox.project_item_model.finds = [None]
+        name = self.toolbox.propose_item_name("prefix")
+        self.assertEqual(name, "prefix 1")
+        # Subsequent calls should not increase the counter
+        self.toolbox.project_item_model.find_count = 0
+        name = self.toolbox.propose_item_name("prefix")
+        self.assertEqual(name, "prefix 1")
+        self.toolbox.project_item_model.finds = [object(), object(), None]
+        self.toolbox.project_item_model.find_count = 0
+        name = self.toolbox.propose_item_name("prefix")
+        self.assertEqual(name, "prefix 3")
+
+    def test_copy_project_item_to_clipboard(self):
+        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
+        self.add_dc("data_connection")
+        item_index = self.toolbox.project_item_model.find_item("data_connection")
+        self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
+        self.toolbox.ui.actionCopy.triggered.emit()
+        clipboard = QApplication.clipboard()
+        mime_data = clipboard.mimeData()
+        mime_formats = mime_data.formats()
+        self.assertEqual(len(mime_formats), 1)
+        self.assertEqual(mime_formats[0], "application/vnd.spinetoolbox.ProjectItem")
+        item_dump = str(mime_data.data("application/vnd.spinetoolbox.ProjectItem").data(), "utf-8")
+        self.assertTrue(item_dump)
+
+    def test_paste_project_item_from_clipboard(self):
+        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
+        self.add_dc("data_connection")
+        self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
+        item_index = self.toolbox.project_item_model.find_item("data_connection")
+        self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
+        self.toolbox.ui.actionCopy.triggered.emit()
+        self.toolbox.ui.actionPaste.triggered.emit()
+        self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
+        new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
+        self.assertIsNotNone(new_item_index)
+
+    def test_duplicate_project_item(self):
+        self.toolbox.create_project("UnitTest Project", "Project for test_project_item_to_clipboard()")
+        self.add_dc("data_connection")
+        self.assertEqual(self.toolbox.project_item_model.n_items(), 1)
+        item_index = self.toolbox.project_item_model.find_item("data_connection")
+        self.toolbox.ui.treeView_project.selectionModel().select(item_index, QItemSelectionModel.Select)
+        self.toolbox.ui.actionDuplicate.triggered.emit()
+        self.assertEqual(self.toolbox.project_item_model.n_items(), 2)
+        new_item_index = self.toolbox.project_item_model.find_item("data_connection 1")
+        self.assertIsNotNone(new_item_index)
 
     def add_ds(self, name, x=0, y=0):
         """Helper method to create a Data Store with the given name and coordinates."""

@@ -10,36 +10,31 @@
 ######################################################################################################################
 
 """
-Module for view icon class.
+Unit tests for AddProjectItemWidget.
 
-:authors: M. Marin (KTH), P. Savolainen (VTT)
-:date:   4.4.2018
+:author: A. Soininen (VTT)
+:date:   17.10.2019
 """
 
-from PySide2.QtGui import QColor
-from spinetoolbox.graphics_items import ProjectItemIcon
+import unittest
+from unittest.mock import MagicMock
+from PySide2.QtWidgets import QApplication, QWidget
+from ..widgets.add_project_item_widget import AddProjectItemWidget
 
 
-class ViewIcon(ProjectItemIcon):
-    def __init__(self, toolbox, x, y, w, h, name):
-        """View icon for the Design View.
+class TestAddProjectItemWidget(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
 
-        Args:
-            toolbox (ToolBoxUI): QMainWindow instance
-            x (float): Icon x coordinate
-            y (float): Icon y coordinate
-            w (float): Width of background rectangle
-            h (float): Height of background rectangle
-            name (str): Item name
-        """
-        super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/binoculars.svg",
-            icon_color=QColor("#33cc33"),
-            background_color=QColor("#ebfaeb"),
-        )
+    def test_name_field_initially_selected(self):
+        initial_name = "project_item"
+        toolbox = QWidget()
+        toolbox.project = MagicMock()
+        widget = AddProjectItemWidget(toolbox, 0.0, 0.0, initial_name=initial_name)
+        self.assertEqual(widget.ui.lineEdit_name.selectedText(), initial_name)
+
+
+if __name__ == '__main__':
+    unittest.main()

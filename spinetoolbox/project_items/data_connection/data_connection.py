@@ -62,6 +62,7 @@ class DataConnection(ProjectItem):
         """Returns a dictionary of all shared signals and their handlers.
         This is to enable simpler connecting and disconnecting."""
         s = super().make_signal_handler_dict()
+        # pylint: disable=unnecessary-lambda
         s[self._properties_ui.toolButton_dc_open_dir.clicked] = lambda checked=False: self.open_directory()
         s[self._properties_ui.toolButton_plus.clicked] = self.add_references
         s[self._properties_ui.toolButton_minus.clicked] = self.remove_references
@@ -132,7 +133,6 @@ class DataConnection(ProjectItem):
             except OSError:
                 self._toolbox.msg_error.emit("[OSError] Copying failed")
                 return
-        data_files = self.data_files()
 
     @Slot(bool, name="add_references")
     def add_references(self, checked=False):
@@ -288,11 +288,13 @@ class DataConnection(ProjectItem):
             "{0}\n\n"
             "Are you sure?".format(files)
         )
-        # noinspection PyCallByClass, PyTypeChecker
-        answer = QMessageBox.question(
-            self._toolbox, "Remove {0} file(s)?".format(len(file_list)), msg, QMessageBox.Yes, QMessageBox.No
+        title = "Remove {0} File(s)".format(len(file_list))
+        message_box = QMessageBox(
+            QMessageBox.Question, title, msg, QMessageBox.Ok | QMessageBox.Cancel, parent=self._toolbox
         )
-        if not answer == QMessageBox.Yes:
+        message_box.button(QMessageBox.Ok).setText("Remove Files")
+        answer = message_box.exec_()
+        if answer == QMessageBox.Cancel:
             return
         for filename in file_list:
             path_to_remove = os.path.join(self.data_dir, filename)
@@ -413,11 +415,31 @@ class DataConnection(ProjectItem):
         d["references"] = self.file_references()
         return d
 
+    def rename(self, new_name):
+        """Rename this item.
+
+        Args:
+            new_name (str): New name
+
+        Returns:
+            bool: Boolean value depending on success
+        """
+        ret = super().rename(new_name)
+        if not ret:
+            return False
+        self.data_dir_watcher.removePaths(self.data_dir_watcher.directories())
+        self.data_dir_watcher.addPath(self.data_dir)
+        return True
+
     def tear_down(self):
         """Tears down this item. Called by toolbox just before closing.
         Closes the SpineDatapackageWidget instances opened."""
         if self.spine_datapackage_form:
             self.spine_datapackage_form.close()
+        watched_paths = self.data_dir_watcher.directories()
+        if watched_paths:
+            self.data_dir_watcher.removePaths(watched_paths)
+        self.data_dir_watcher.deleteLater()
 
     def notify_destination(self, source_item):
         """See base class."""
@@ -431,3 +453,8 @@ class DataConnection(ProjectItem):
             self._toolbox.msg.emit("Link established.")
         else:
             super().notify_destination(source_item)
+
+    @staticmethod
+    def default_name_prefix():
+        """see base class"""
+        return "Data Connection"

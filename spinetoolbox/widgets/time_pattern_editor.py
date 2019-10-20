@@ -34,6 +34,7 @@ class TimePatternEditor(QWidget):
 
     def __init__(self, parent=None):
         from ..ui.time_pattern_editor import Ui_TimePatternEditor
+
         super().__init__(parent)
         self._model = TimePatternModel(TimePattern(["1-7d"], [0.0]))
         self._ui = Ui_TimePatternEditor()

@@ -37,6 +37,12 @@
      <layout class="QVBoxLayout" name="verticalLayout">
       <item>
        <widget class="QLineEdit" name="url_field">
+        <property name="font">
+         <font>
+          <weight>75</weight>
+          <bold>true</bold>
+         </font>
+        </property>
         <property name="frame">
          <bool>false</bool>
         </property>
@@ -73,6 +79,13 @@
            </size>
           </property>
          </spacer>
+        </item>
+        <item>
+         <widget class="QPushButton" name="refresh_button">
+          <property name="text">
+           <string>Refresh</string>
+          </property>
+         </widget>
         </item>
         <item>
          <widget class="QPushButton" name="settings_button">

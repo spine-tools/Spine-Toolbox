@@ -17,7 +17,7 @@ Module for data connection icon class.
 """
 
 import os
-from PySide2.QtGui import QColor, QPen, QBrush
+from PySide2.QtGui import QColor
 from PySide2.QtCore import Qt, QTimer
 from spinetoolbox.graphics_items import ProjectItemIcon
 
@@ -34,14 +34,19 @@ class DataConnectionIcon(ProjectItemIcon):
             h (float): Height of master icon
             name (str): Item name
         """
-        super().__init__(toolbox, x, y, w, h, name)
-        self.pen = QPen(Qt.NoPen)  # QPen for the background rectangle
-        self.brush = QBrush(QColor("#e6e6ff"))  # QBrush for the background rectangle
-        self.setup(self.pen, self.brush, ":/icons/project_item_icons/file-alt.svg", QColor(0, 0, 255, 160))
+        super().__init__(
+            toolbox,
+            x,
+            y,
+            w,
+            h,
+            name,
+            ":/icons/project_item_icons/file-alt.svg",
+            icon_color=QColor(0, 0, 255, 160),
+            background_color=QColor("#e6e6ff"),
+        )
         self.setAcceptDrops(True)
-        # Add items to scene
-        self._toolbox.ui.graphicsView.scene().addItem(self)
-        self.drag_over = False
+        self._drag_over = False
 
     def dragEnterEvent(self, event):
         """Drag and drop action enters.
@@ -60,9 +65,9 @@ class DataConnectionIcon(ProjectItemIcon):
                 return
         event.accept()
         event.setDropAction(Qt.CopyAction)
-        if self.drag_over:
+        if self._drag_over:
             return
-        self.drag_over = True
+        self._drag_over = True
         QTimer.singleShot(100, self.select_on_drag_over)
 
     def dragLeaveEvent(self, event):
@@ -72,7 +77,7 @@ class DataConnectionIcon(ProjectItemIcon):
             event (QGraphicsSceneDragDropEvent): Event
         """
         event.accept()
-        self.drag_over = False
+        self._drag_over = False
 
     def dragMoveEvent(self, event):
         """Accept event."""
@@ -87,9 +92,9 @@ class DataConnectionIcon(ProjectItemIcon):
         """Called when the timer started in drag_enter_event is elapsed.
         Select this item if the drag action is still over it.
         """
-        if not self.drag_over:
+        if not self._drag_over:
             return
-        self.drag_over = False
+        self._drag_over = False
         self._toolbox.ui.graphicsView.scene().clearSelection()
         self.setSelected(True)
         self.show_item_info()

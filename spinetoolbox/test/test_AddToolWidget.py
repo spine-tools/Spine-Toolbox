@@ -10,36 +10,33 @@
 ######################################################################################################################
 
 """
-Module for view icon class.
+Unit tests for AddToolWidget.
 
-:authors: M. Marin (KTH), P. Savolainen (VTT)
-:date:   4.4.2018
+:author: A. Soininen (VTT)
+:date:   17.10.2019
 """
 
-from PySide2.QtGui import QColor
-from spinetoolbox.graphics_items import ProjectItemIcon
+import unittest
+from unittest.mock import MagicMock
+from PySide2.QtGui import QStandardItemModel
+from PySide2.QtWidgets import QApplication, QWidget
+from ..project_items.tool.widgets.add_tool_widget import AddToolWidget
 
 
-class ViewIcon(ProjectItemIcon):
-    def __init__(self, toolbox, x, y, w, h, name):
-        """View icon for the Design View.
+class TestAddToolWidget(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        if not QApplication.instance():
+            QApplication()
 
-        Args:
-            toolbox (ToolBoxUI): QMainWindow instance
-            x (float): Icon x coordinate
-            y (float): Icon y coordinate
-            w (float): Width of background rectangle
-            h (float): Height of background rectangle
-            name (str): Item name
-        """
-        super().__init__(
-            toolbox,
-            x,
-            y,
-            w,
-            h,
-            name,
-            ":/icons/project_item_icons/binoculars.svg",
-            icon_color=QColor("#33cc33"),
-            background_color=QColor("#ebfaeb"),
-        )
+    def test_name_field_initially_selected(self):
+        toolbox = QWidget()
+        toolbox.project = MagicMock()
+        toolbox.tool_specification_model = QStandardItemModel()
+        toolbox.propose_item_name = MagicMock(return_value="Tool 1")
+        widget = AddToolWidget(toolbox, 0.0, 0.0)
+        self.assertEqual(widget.ui.lineEdit_name.selectedText(), "Tool 1")
+
+
+if __name__ == '__main__':
+    unittest.main()

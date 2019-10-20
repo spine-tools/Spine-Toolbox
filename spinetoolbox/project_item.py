@@ -20,7 +20,7 @@ import os
 import logging
 from urllib.parse import urlparse
 from urllib.request import url2pathname
-from PySide2.QtCore import Qt, Signal, Slot, QUrl
+from PySide2.QtCore import Qt, Signal, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir
@@ -40,7 +40,7 @@ class BaseProjectItem(MetaObject):
         self._parent = None  # Parent BaseProjectItem. Set when add_child is called
         self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
 
-    def flags(self):
+    def flags(self):  # pylint: disable=no-self-use
         """Returns the item flags."""
         return Qt.NoItemFlags
 
@@ -80,7 +80,7 @@ class BaseProjectItem(MetaObject):
             return r
         return 0
 
-    def add_child(self, child_item):
+    def add_child(self, child_item):  # pylint: disable=no-self-use
         """Base method that shall be overridden in subclasses."""
         return False
 
@@ -380,10 +380,24 @@ class ProjectItem(BaseProjectItem):
             ind = self._toolbox.project_item_model.find_item(self.name)
             self._toolbox.remove_item(ind, delete_item=delete_bool, check_dialog=True)
 
+    @staticmethod
+    def default_name_prefix():
+        """prefix for default item name"""
+        raise NotImplementedError()
+
     def rename(self, new_name):
-        """Rename this item."""
+        """Renames this item. This is a common rename method for all Project items.
+        If the project item needs any additional steps in renaming, override this
+        method in subclass. See e.g. rename() method in DataStore class.
+
+        Args:
+            new_name(str): New name
+
+        Returns:
+            bool: True if renaming was successful, False if renaming fails
+        """
         ind = self._toolbox.project_item_model.find_item(self.name)
-        self._toolbox.project_item_model.setData(ind, new_name)
+        return self._toolbox.project_item_model.setData(ind, new_name)
 
     def open_directory(self):
         """Open this item's data directory in file explorer."""

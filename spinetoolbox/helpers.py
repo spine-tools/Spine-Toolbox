@@ -280,34 +280,40 @@ def copy_dir(widget, src_dir, dst_dir):
         src_dir (str): Absolute path to directory that will be copied
         dst_dir (str): Absolute path to new directory
     """
-    title_msg = "Copying directory failed"
     try:
         shutil.copytree(src_dir, dst_dir)
     except FileExistsError:
         msg = "Directory<br/><b>{0}</b><br/>already exists".format(dst_dir)
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, title_msg, msg)
+        QMessageBox.information(widget, "Copying directory failed", msg)
         return False
-    except PermissionError as e:
-        logging.exception(e)
+    except PermissionError as pe_e:
+        logging.error(pe_e)
         msg = (
             "Access to directory <br/><b>{0}</b><br/>denied."
             "<br/><br/>Possible reasons:"
-            "<br/>1. Windows Explorer is open in the directory"
-            "<br/>2. Permission error"
+            "<br/>1. Permission error"
+            "<br/>2. Windows Explorer is open in the directory"
             "<br/><br/>Check these and try again.".format(dst_dir)
         )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, title_msg, msg)
+        QMessageBox.information(widget, "Permission Error", msg)
         return False
-    except OSError:
+    except OSError as os_e:
+        logging.error(os_e)
         msg = (
-            "Copying directory failed. OSError in"
-            "<br/><b>{0}</b><br/>Possibly because Windows "
-            "Explorer is open in the directory".format(dst_dir)
+            "Copying directory "
+            "<br/><b>{0}</b> "
+            "<br/>to "
+            "<br/><b>{1}</b> "
+            "<br/>failed."
+            "<br/><br/>Possibly reasons:"
+            "<br/>1. Windows Explorer is open in the source or destination directory."
+            "<br/>2. A file in these directories is open in another program. "
+            "<br/><br/>Check these and try again.".format(src_dir, dst_dir)
         )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, title_msg, msg)
+        QMessageBox.information(widget, "OS Error", msg)
         return False
     return True
 
@@ -328,26 +334,33 @@ def rename_dir(widget, old_dir, new_dir):
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
         QMessageBox.information(widget, "Renaming directory failed", msg)
         return False
-    except PermissionError as e:
-        logging.exception(e)
+    except PermissionError as pe_e:
+        logging.error(pe_e)
         msg = (
             "Access to directory <br/><b>{0}</b><br/>denied."
             "<br/><br/>Possible reasons:"
-            "<br/>1. Windows Explorer is open in the directory"
-            "<br/>2. Permission error"
+            "<br/>1. You don't have a permission to edit the directory"
+            "<br/>2. Windows Explorer is open in the directory"
             "<br/><br/>Check these and try again.".format(old_dir)
         )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Renaming directory failed", msg)
+        QMessageBox.information(widget, "Renaming directory failed (Permission Error)", msg)
         return False
-    except OSError:
+    except OSError as os_e:
+        logging.error(os_e)
         msg = (
-            "Renaming input directory failed. OSError in"
-            "<br/><b>{0}</b><br/>Possibly because Windows "
-            "Explorer is open in the directory".format(old_dir)
+            "Renaming directory "
+            "<br/><b>{0}</b> "
+            "<br/>to "
+            "<br/><b>{1}</b> "
+            "<br/>failed."
+            "<br/><br/>Possibly reasons:"
+            "<br/>1. Windows Explorer is open in the directory."
+            "<br/>2. A file in the directory is open in another program. "
+            "<br/><br/>Check these and try again.".format(old_dir, new_dir)
         )
         # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
-        QMessageBox.information(widget, "Renaming directory failed", msg)
+        QMessageBox.information(widget, "Renaming directory failed (OS Error)", msg)
         return False
     return True
 

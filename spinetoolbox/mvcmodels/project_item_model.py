@@ -162,15 +162,29 @@ class ProjectItemModel(QAbstractItemModel):
             QModelIndex: Index of a project item with the given name or None if not found
         """
         for category in self.root().children():
-            # logging.debug("Looking for {0} in category {1}".format(name, category.name))
             category_index = self.find_category(category.name)
             start_index = self.index(0, 0, category_index)
             matching_index = self.match(start_index, Qt.DisplayRole, name, 1, Qt.MatchFixedString | Qt.MatchRecursive)
             if not matching_index:
                 pass  # no match in this category
             elif len(matching_index) == 1:
-                # logging.debug("Found item:{0}".format(matching_index[0].internalPointer().name))
                 return matching_index[0]
+        return None
+
+    def category_of_item(self, name):
+        """
+        Returns the category item of the category that contains given project item.
+
+        Args:
+            name (str): name of the project item
+
+        Returns:
+            category item or None if the category was not found
+        """
+        for category in self.root().children():
+            for item in category.children():
+                if name == item.name:
+                    return category
         return None
 
     def insert_item(self, item, parent=QModelIndex()):
@@ -187,7 +201,6 @@ class ProjectItemModel(QAbstractItemModel):
         """
         parent_item = self.project_item(parent)
         row = self.rowCount(parent)  # parent.child_count()
-        # logging.debug("Inserting item on row:{0} under parent:{1}".format(row, parent_item.name))
         self.beginInsertRows(parent, row, row)
         retval = parent_item.add_child(item)
         self.endInsertRows()
@@ -211,9 +224,7 @@ class ProjectItemModel(QAbstractItemModel):
         return retval
 
     def setData(self, index, value, role=Qt.EditRole):
-        # TODO: Test this. Should this emit dataChanged signal at some point?
         """Changes the name of the project item at given index to given value.
-        # TODO: If the item is a Data Store the reference sqlite path must be updated.
 
         Args:
             index (QModelIndex): Project item index
@@ -221,7 +232,7 @@ class ProjectItemModel(QAbstractItemModel):
             role (int): Item data role to set
 
         Returns:
-            bool: True or False depending on whether the new name is acceptable.
+            bool: True or False depending on whether the new name is acceptable and renaming succeeds
         """
         if not role == Qt.EditRole:
             return super().setData(index, value, role)
@@ -249,30 +260,16 @@ class ProjectItemModel(QAbstractItemModel):
             # noinspection PyTypeChecker, PyArgumentList, PyCallByClass
             QMessageBox.information(self._toolbox, "Invalid name", msg)
             return False
-        # Get old data dir which will be renamed
-        try:
-            old_data_dir = item.data_dir  # Full path
-        except AttributeError:
-            logging.error("Item does not have a data_dir. " "Make sure that class %s creates one.", item.item_type)
-            return False
-        # Get project path from the old data dir path
-        project_path = os.path.split(old_data_dir)[0]
-        # Make path for new data dir
-        new_data_dir = os.path.join(project_path, new_short_name)
-        # Rename item project directory
+        old_data_dir = item.data_dir  # Full path to data dir that shall be renamed
+        project_path = os.path.split(old_data_dir)[0]  # Get project path from the old data dir path
+        new_data_dir = os.path.join(project_path, new_short_name)  # Make path for new data dir
+        # Rename project item data directory
         if not rename_dir(self._toolbox, old_data_dir, new_data_dir):
             return False
         # Rename project item
         item.set_name(value)
         # Update project item directory variable
         item.data_dir = new_data_dir
-        # If item is a Data Connection the QFileSystemWatcher path must be updated
-        if item.item_type == "Data Connection":
-            item.data_dir_watcher.removePaths(item.data_dir_watcher.directories())
-            item.data_dir_watcher.addPath(item.data_dir)
-        # If item is a Tool, also output_dir must be updated
-        elif item.item_type == "Tool":
-            item.output_dir = os.path.join(item.data_dir, TOOL_OUTPUT_DIR)
         # Update name label in tab
         item.update_name_label()
         # Update name item of the QGraphicsItem

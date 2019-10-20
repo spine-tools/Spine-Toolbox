@@ -17,6 +17,7 @@ Widget shown to user when a new Gdx Export item is created.
 """
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from ..gdx_export import GdxExport
 
 
 class AddGdxExportWidget(AddProjectItemWidget):
@@ -29,7 +30,8 @@ class AddGdxExportWidget(AddProjectItemWidget):
             x (int): X coordinate of new item
             y (int): Y coordinate of new item
         """
-        super().__init__(toolbox, x, y)
+        initial_name = toolbox.propose_item_name(GdxExport.default_name_prefix())
+        super().__init__(toolbox, x, y, initial_name)
         self.setWindowTitle(f"Add Gdx Export")
 
     def call_add_item(self):

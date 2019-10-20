@@ -62,6 +62,7 @@ class ImportPreviewWidget(QWidget):
         self._ui.mappings_box.layout().addWidget(self._ui_mapper)
 
         # connect signals
+        self._ui.source_data_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.source_data_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
         self._ui.source_list.currentItemChanged.connect(self.select_table)
         self._ui.source_list.itemChanged.connect(self.check_list_item)
