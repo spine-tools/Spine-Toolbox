@@ -17,7 +17,6 @@ Single models for parameter definitions and values (as 'for a single entity').
 """
 
 from ..mvcmodels.filled_parameter_models import FilledParameterModel
-from ..mvcmodels.parameter_item import ParameterDefinitionItem, ParameterValueItem
 from ..mvcmodels.parameter_mixins import FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin
 
 
