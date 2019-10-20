@@ -69,12 +69,16 @@ class CompoundTableModel(MinimalTableModel):
         """Recomputes the row map."""
         self._row_map.clear()
         self._inv_row_map.clear()
-        row_count = 0
         for model in self.sub_models:
             row_map = self._row_map_for_model(model)
-            self._row_map += row_map
-            self._inv_row_map.update({(model, row): row_count + row for model, row in row_map})
-            row_count += len(row_map)
+            self._append_row_map(row_map)
+
+    def _append_row_map(self, row_map):
+        """Appends given row map."""
+        row_count = self.rowCount()
+        self._row_map += row_map
+        for model, row in row_map:
+            self._inv_row_map[model, row] = row_count + row
 
     def item_at_row(self, row):
         """Returns the item at given row."""
@@ -125,8 +129,16 @@ class CompoundTableModel(MinimalTableModel):
         compound_last = self._inv_row_map[model, last]
         self.beginRemoveRows(QModelIndex(), compound_first, compound_last)
         del model._main_data[first : last + 1]
-        self.do_refresh()
         self.endRemoveRows()
+        # Redo the map for the affected model entirely
+        removed_count = last - first + 1
+        previous_row_count = model.rowCount() + removed_count
+        compound_first = self._inv_row_map[model, 0]
+        compound_last = self._inv_row_map[model, previous_row_count - 1]
+        self._row_map, tail_row_map = self._row_map[:compound_first], self._row_map[compound_last:]
+        row_map = self._row_map_for_model(model)
+        self._append_row_map(row_map)
+        self._append_row_map(tail_row_map)
 
     def batch_set_data(self, indexes, data):
         """Set data for indexes in batch.
@@ -168,30 +180,6 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
     def empty_model(self):
         return self.sub_models[-1]
 
-    def _row_map_for_single_model(self, model):
-        """Returns row map for given single model.
-        """
-        return self._row_map_for_model(model)
-
-    def _row_map_for_empty_model(self):
-        """Returns row map for the empty model.
-        """
-        return self._row_map_for_model(self.empty_model)
-
-    def do_refresh(self):
-        """Recomputes the row map."""
-        self._row_map.clear()
-        self._inv_row_map.clear()
-        row_count = 0
-        for model in self.single_models:
-            row_map = self._row_map_for_single_model(model)
-            self._row_map += row_map
-            self._inv_row_map.update({(model, row): row_count + row for model, row in row_map})
-            row_count += len(row_map)
-        row_map = self._row_map_for_empty_model()
-        self._row_map += row_map
-        self._inv_row_map.update({(model, row): row_count + row for model, row in row_map})
-
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_removed")
     def _handle_empty_rows_removed(self, parent, first, last):
         """Runs when rows are removed from the empty model.
@@ -203,41 +191,33 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         # Redo the map for the last empty model entirely
         tip = self._inv_row_map[self.empty_model, 0]
         self._row_map = self._row_map[:tip]
-        row_count = self.rowCount()
-        row_map = self._row_map_for_empty_model()
-        self._row_map += row_map
-        self._inv_row_map.update({(model, row): row_count + row for model, row in row_map})
+        empty_row_map = self._row_map_for_model(self.empty_model)
+        self._append_row_map(row_map)
 
     @Slot("QModelIndex", "int", "int", name="_handle_empty_rows_inserted")
     def _handle_empty_rows_inserted(self, parent, first, last):
         """Runs when rows are inserted to the empty model.
         Update row_map, then emit rowsInserted so the new rows become visible.
         """
-        # Refresh row map and inverse row map, this is easy since rows are always inserted at the end
-        tip = len(self._row_map)
-        for row in range(first, last + 1):
-            self._inv_row_map[self.empty_model, row] = tip
-            self._row_map.append((self.empty_model, row))
-            tip += 1
+        # Append row map, knowing rows are always inserted at the end
+        tail_empty_row_map = [(self.empty_model, row) for row in range(first, last + 1)]
+        self._append_row_map(tail_empty_row_map)
         compound_first = self._inv_row_map[self.empty_model, first]
         compound_last = self._inv_row_map[self.empty_model, last]
         self.rowsInserted.emit(QModelIndex(), compound_first, compound_last)
 
-    def _handle_single_model_reset(self, model):
+    def _handle_single_model_reset(self, single_model):
         """Runs when one of the single models is reset.
         Update row_map, then emit rowsInserted so the new rows become visible.
         """
-        first = self.rowCount() - self.empty_model.rowCount()
-        last = first + model.rowCount() - 1
-        self.rowsInserted.emit(QModelIndex(), first, last)
-        # Take the row map for empty model out, since we need to push it forward...
-        self._row_map, empty_row_map = self._row_map[:first], self._row_map[first:]
-        row_map = self._row_map_for_single_model(model)
-        self._row_map += row_map + empty_row_map
-        for model, row in row_map:
-            self._inv_row_map[model, row] = first + row
-        for model, row in empty_row_map:
-            self._inv_row_map[model, row] = last + 1 + row
+        compound_first = self.rowCount() - self.empty_model.rowCount()
+        compound_last = compound_first + single_model.rowCount() - 1
+        self.rowsInserted.emit(QModelIndex(), compound_first, compound_last)
+        # Take the empty row map, append the new one, and then append the empty
+        self._row_map, empty_row_map = self._row_map[:compound_first], self._row_map[compound_first:]
+        single_row_map = self._row_map_for_model(single_model)
+        self._append_row_map(single_row_map)
+        self._append_row_map(empty_row_map)
 
     def connect_model_signals(self):
         """Connect model signals."""

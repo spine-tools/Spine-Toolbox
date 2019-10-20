@@ -164,19 +164,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         """Returns an empty model."""
         return self._empty_model_type(self, self.header, self.db_mngr)
 
-    def single_model_key_from_item(self, item):
-        """Returns the single model key from the given item.
-        Used by move rows to single models.
+    def filter_accepts_model(self, model):
+        """Returns True if the given model should be included in the compound model, otherwise returns False.
         """
-        return (item.database, item.entity_class)
-
-    def filter_accepts_single_model(self, model):
-        """Returns True if the given model should be included in the compound model, otherwise returns False."""
         raise NotImplementedError()
 
     def accepted_single_models(self):
         """Returns a list of accepted single models, for convenience."""
-        return [m for m in self.single_models if self.filter_accepts_single_model(m)]
+        return [m for m in self.single_models if self.filter_accepts_model(m)]
 
     @staticmethod
     def _settattr_if_different(obj, attr, val):
@@ -212,10 +207,10 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         model._auto_filter.clear()
         return True
 
-    def _row_map_for_single_model(self, model):
-        """Returns row map for given single model.
+    def _row_map_for_model(self, model):
+        """Returns row map for given model.
         Reimplemented to take filter status into account."""
-        if not self.filter_accepts_single_model(model):
+        if not self.filter_accepts_model(model):
             return []
         return [(model, i) for i in model.accepted_rows()]
 
@@ -303,9 +298,11 @@ class CompoundObjectParameterMixin:
         b = self._settattr_if_different(self, "_selected_object_class_ids", self._parent.all_selected_object_class_ids)
         return a or b
 
-    def filter_accepts_single_model(self, model):
+    def filter_accepts_model(self, model):
         """Returns True if the given model should be included in the compound model, otherwise returns False.
         """
+        if not model.can_be_filtered:
+            return True
         if not self._selected_object_class_ids:
             return True
         return model.object_class_id in self._selected_object_class_ids.get(model.db_map, set())
@@ -351,9 +348,11 @@ class CompoundRelationshipParameterMixin:
         )
         return a or b or c
 
-    def filter_accepts_single_model(self, model):
-        """Returns True if the given single model should be included in the compound model, otherwise returns False.
+    def filter_accepts_model(self, model):
+        """Returns True if the given model should be included in the compound model, otherwise returns False.
         """
+        if not model.can_be_filtered:
+            return True
         return (
             not self._selected_object_class_ids
             or self._selected_object_class_ids.get(model.db_map, set()).intersection(model.object_class_id_list)

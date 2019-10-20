@@ -46,7 +46,11 @@ class SingleParameterModel(FilledParameterModel):
         """Returns the associated entity class id."""
         raise NotImplementedError()
 
-    def filter_accepts_item(self, item, ignored_columns=None):
+    @property
+    def can_be_filtered(self):
+        return True
+
+    def _filter_accepts_item(self, item, ignored_columns=None):
         return self._main_filter_accepts_item(item) and self._auto_filter_accepts_item(
             item, ignored_columns=ignored_columns
         )
@@ -73,7 +77,7 @@ class SingleParameterModel(FilledParameterModel):
         return [
             row
             for row in range(self.rowCount())
-            if self.filter_accepts_item(self._db_item_at_row(row), ignored_columns=ignored_columns)
+            if self._filter_accepts_item(self._db_item_at_row(row), ignored_columns=ignored_columns)
         ]
 
     def _db_item_at_row(self, row):
@@ -108,9 +112,10 @@ class SingleRelationshipParameterMixin:
         """
         super().__init__(parent, header, db_mngr, db_map, *args, **kwargs)
         self.relationship_class_id = relationship_class_id
-        self.object_class_id_list = db_mngr.get_item(db_map, "relationship class", relationship_class_id).get(
+        object_class_id_list = db_mngr.get_item(db_map, "relationship class", relationship_class_id)[
             "object_class_id_list"
-        )
+        ]
+        self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
 
     @property
     def entity_class_id(self):
@@ -180,8 +185,10 @@ class SingleParameterDefinitionModel(
                 param_defs.append(param_def)
             if param_def_tag:
                 param_def_tags.append(param_def_tag)
-        self.db_mngr.set_parameter_definition_tags({self.db_map: param_def_tags})
-        self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
+        if param_def_tags:
+            self.db_mngr.set_parameter_definition_tags({self.db_map: param_def_tags})
+        if param_defs:
+            self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
 
 
 class SingleParameterValueModel(SingleParameterModel):

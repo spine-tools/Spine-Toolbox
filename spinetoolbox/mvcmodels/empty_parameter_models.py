@@ -58,6 +58,13 @@ class EmptyParameterModel(EmptyRowModel):
             self.entity_class_type
         ]
 
+    @property
+    def can_be_filtered(self):
+        return False
+
+    def accepted_rows(self):
+        return list(range(self.rowCount()))
+
     def _make_unique_id(self, item):
         """Returns a unique id for the given model item (name-based). Used by receive_parameter_data_added."""
         return (item.get(self.entity_class_name_key), item.get("parameter_name"))
