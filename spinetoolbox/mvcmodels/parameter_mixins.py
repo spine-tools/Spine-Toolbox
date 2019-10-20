@@ -55,7 +55,7 @@ class RelationshipParameterDecorateMixin:
 class ConvertToDBMixin:
     """Base class for all mixins that convert model items (name-based) into database items (id-based)."""
 
-    def begin_convert_to_db(self, db_map_data):
+    def build_lookup_dictionary(self, db_map_data):
         """Begins an operation to convert items."""
 
     def _convert_to_db(self, item, db_map):
@@ -66,9 +66,6 @@ class ConvertToDBMixin:
             db_map (DiffDatabaseMapping): the database for the resulting item
         """
         return item.copy()
-
-    def end_convert_to_db(self):
-        """Ends an operation to convert items."""
 
 
 class FillInParameterNameMixin(ConvertToDBMixin):
@@ -91,17 +88,16 @@ class FillInValueListIdMixin(ConvertToDBMixin):
         super().__init__(*args, **kwargs)
         self._db_map_value_list_lookup = dict()
 
-    def begin_convert_to_db(self, db_map_data):
-        """Begins an operation to convert items. Populate lookup dict.
-        """
-        super().begin_convert_to_db(db_map_data)
+    def build_lookup_dictionary(self, db_map_data):
+        """Build lookup dictionary."""
+        super().build_lookup_dictionary(db_map_data)
         # Group data by name
         db_map_value_list_names = dict()
         for db_map, items in db_map_data.items():
             for item in items:
                 value_list_name = item.get("value_list_name")
                 db_map_value_list_names.setdefault(db_map, set()).add(value_list_name)
-        # Build lookup dicts
+        # Build lookup dict
         self._db_map_value_list_lookup.clear()
         for db_map, names in db_map_value_list_names.items():
             for name in names:
@@ -122,11 +118,6 @@ class FillInValueListIdMixin(ConvertToDBMixin):
             return
         item["parameter_value_list_id"] = value_list["id"]
 
-    def end_convert_to_db(self):
-        """Ends an operation to convert items."""
-        super().end_convert_to_db()
-        self._db_map_value_list_lookup.clear()
-
 
 class MakeParameterTagMixin(ConvertToDBMixin):
     """Makes parameter tag items."""
@@ -136,10 +127,9 @@ class MakeParameterTagMixin(ConvertToDBMixin):
         super().__init__(*args, **kwargs)
         self._db_map_tag_lookup = dict()
 
-    def begin_convert_to_db(self, db_map_data):
-        """Begins an operation to convert items. Populate lookup dict.
-        """
-        super().begin_convert_to_db(db_map_data)
+    def build_lookup_dictionary(self, db_map_data):
+        """Build lookup dictionary."""
+        super().build_lookup_dictionary(db_map_data)
         # Group data by name
         db_map_parameter_tags = dict()
         for db_map, items in db_map_data.items():
@@ -148,7 +138,7 @@ class MakeParameterTagMixin(ConvertToDBMixin):
                 parameter_tag_list = self._parse_parameter_tag_list(parameter_tag_list)
                 if parameter_tag_list:
                     db_map_parameter_tags.setdefault(db_map, set()).update(parameter_tag_list)
-        # Build lookup dicts
+        # Build lookup dict
         self._db_map_tag_lookup.clear()
         for db_map, tags in db_map_parameter_tags.items():
             for tag in tags:
@@ -176,8 +166,3 @@ class MakeParameterTagMixin(ConvertToDBMixin):
             return parameter_tag_list.split(",")
         except AttributeError:
             return None
-
-    def end_convert_to_db(self):
-        """Ends an operation to convert items."""
-        super().end_convert_to_db()
-        self._db_map_tag_lookup.clear()

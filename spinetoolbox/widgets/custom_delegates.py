@@ -402,7 +402,9 @@ class RelationshipParameterNameDelegate(GetRelationshipClassIdMixin, ParameterDe
             return None
         editor = SearchBarEditor(self._parent, parent)
         relationship_class_id = self._get_relationship_class_id(index, db_map)
-        parameter_definitions = self.db_mngr.get_relationship_parameter_definitions(db_map, relationship_class_id)
+        parameter_definitions = self.db_mngr.get_relationship_parameter_definitions(
+            db_map, relationship_class_id=relationship_class_id
+        )
         name_list = [x["parameter_name"] for x in parameter_definitions]
         editor.set_data(index.data(Qt.EditRole), name_list)
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))

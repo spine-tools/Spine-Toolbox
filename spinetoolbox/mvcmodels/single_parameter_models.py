@@ -163,19 +163,18 @@ class SingleParameterDefinitionModel(
         Args:
             item (list): dictionary-items
         """
-        self.begin_convert_to_db({self.db_map: items})
-        param_def_data = list()
-        param_tag_data = list()
+        self.build_lookup_dictionary({self.db_map: items})
+        param_defs = list()
+        param_def_tags = list()
         for item in items:
-            def_item = self._convert_to_db(item, self.db_map)
-            tag_item = self._make_parameter_definition_tag(item, self.db_map)
-            if def_item:
-                param_def_data.append(def_item)
-            if tag_item:
-                param_tag_data.append(tag_item)
-        self.db_mngr.set_parameter_definition_tags({self.db_map: param_tag_data})
-        self.db_mngr.update_parameter_definitions({self.db_map: param_def_data})
-        self.end_convert_to_db()
+            param_def = self._convert_to_db(item, self.db_map)
+            param_def_tag = self._make_parameter_definition_tag(item, self.db_map)
+            if param_def:
+                param_defs.append(param_def)
+            if param_def_tag:
+                param_def_tags.append(param_def_tag)
+        self.db_mngr.set_parameter_definition_tags({self.db_map: param_def_tags})
+        self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
 
 
 class SingleParameterValueModel(SingleParameterModel):
