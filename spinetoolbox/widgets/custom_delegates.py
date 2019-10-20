@@ -275,9 +275,10 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        # TODO: get the parameter definition id in empty models
-        id_ = index.model().item_at_row(index.row())
-        parameter_id = self.db_mngr.get_item(db_map, "parameter value", id_).get("parameter_id")
+        # FIXME
+        h = index.model().header.index
+        parameter_name = index.sibling(index.row(), h("parameter_name")).data()
+        parameter_id = self.db_mngr.get_item_by_field(db_map, "parameter definition", "name", parameter_name).get("id")
         value_list_id = self.db_mngr.get_item(db_map, "parameter definition", parameter_id).get("value_list_id")
         value_list = self.db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")
         if value_list:

@@ -338,7 +338,7 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
             entity_class_id = entity_class_ids.pop()
             item[self.entity_class_id_key] = entity_class_id
             entity_class_name = self.db_mngr.get_item(db_map, self.entity_class_type, entity_class_id)["name"]
-            # TODO: Check if this is the right place to do it
+            # TODO: Try to find a better place for this, and emit dataChanged
             self._main_data[row][self.header.index(self.entity_class_name_key)] = entity_class_name
         # At this point we're sure the entity_class_id is there
         entity_class_id = item[self.entity_class_id_key]
@@ -475,7 +475,6 @@ class MakeRelationshipOnTheFlyMixin:
                 return None
             object_id_list.append(object_["id"])
         relationship_name = relationship_class_name + "__" + "_".join(object_name_list)
-        # TODO: Make sure the relationship doesn't exist
         return {"class_id": relationship_class["id"], "object_id_list": object_id_list, "name": relationship_name}
 
     @staticmethod

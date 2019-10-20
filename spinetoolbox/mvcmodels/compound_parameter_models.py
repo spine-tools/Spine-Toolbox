@@ -192,7 +192,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     def update_filter(self):
         """Update filter."""
-        return
         updated = self.update_compound_filter()
         for model in self.single_models:
             updated |= self.update_single_model_filter(model)
@@ -216,8 +215,6 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _row_map_for_single_model(self, model):
         """Returns row map for given single model.
         Reimplemented to take filter status into account."""
-        return self._row_map_for_model(model)
-        # FIXME: when filtering works again
         if not self.filter_accepts_single_model(model):
             return []
         return [(model, i) for i in model.accepted_rows()]
@@ -232,7 +229,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         auto_filter_vals = dict()
         for model in self.accepted_single_models():
             for row in model.accepted_rows(ignored_columns=[column]):
-                value = model._main_data[row][column]
+                value = model.index(row, column).data()
                 auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
         column_auto_filter = self._auto_filter.get(column, {})
         filtered = [val for values in column_auto_filter.values() for val in values]

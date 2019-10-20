@@ -232,7 +232,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         self.rowsInserted.emit(QModelIndex(), first, last)
         # Take the row map for empty model out, since we need to push it forward...
         self._row_map, empty_row_map = self._row_map[:first], self._row_map[first:]
-        row_map = self._row_map_for_model(model)
+        row_map = self._row_map_for_single_model(model)
         self._row_map += row_map + empty_row_map
         for model, row in row_map:
             self._inv_row_map[model, row] = first + row
