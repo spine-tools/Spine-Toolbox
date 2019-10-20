@@ -15,41 +15,6 @@ Miscelaneous mixins for parameter models
 :authors: M. Marin (KTH)
 :date:   4.10.2019
 """
-from PySide2.QtCore import Qt
-
-
-class ObjectParameterDecorateMixin:
-    """Provides decoration features to all object parameter models."""
-
-    def __init__(self, parent, header, db_maps, icon_mngr, *args, **kwargs):
-        super().__init__(parent, header, db_maps, *args, **kwargs)
-        self.icon_mngr = icon_mngr
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Return data for given index and role.
-        Paint the object class icon next to the name.
-        """
-        if role == Qt.DecorationRole and self.header[index.column()] == "object_class_name":
-            object_class_name = self._main_data[index.row()].object_class_name
-            return self.icon_mngr.object_icon(object_class_name)
-        return super().data(index, role)
-
-
-class RelationshipParameterDecorateMixin:
-    """Provides decoration features to all relationship parameter models."""
-
-    def __init__(self, parent, header, db_maps, icon_mngr, *args, **kwargs):
-        super().__init__(parent, header, db_maps, *args, **kwargs)
-        self.icon_mngr = icon_mngr
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Return data for given index and role.
-        Paint the relationship class icon next to the name.
-        """
-        if role == Qt.DecorationRole and self.header[index.column()] == "relationship_class_name":
-            object_class_name_list = self._main_data[index.row()].object_class_name_list
-            return self.icon_mngr.relationship_icon(object_class_name_list)
-        return super().data(index, role)
 
 
 class ConvertToDBMixin:

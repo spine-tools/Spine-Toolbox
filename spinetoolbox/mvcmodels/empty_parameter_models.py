@@ -171,7 +171,11 @@ class FillInEntityClassIdMixin(ConvertToDBMixin):
 
 
 class EmptyParameterDefinitionModel(
-    FillInValueListIdMixin, MakeParameterTagMixin, FillInParameterNameMixin, EmptyParameterModel
+    FillInEntityClassIdMixin,
+    FillInValueListIdMixin,
+    MakeParameterTagMixin,
+    FillInParameterNameMixin,
+    EmptyParameterModel,
 ):
     """An empty parameter definition model."""
 
@@ -207,7 +211,7 @@ class EmptyParameterDefinitionModel(
         return self.entity_class_id_key in item and "name" in item
 
 
-class EmptyObjectParameterDefinitionModel(FillInEntityClassIdMixin, EmptyParameterDefinitionModel):
+class EmptyObjectParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty object parameter definition model."""
 
     @property
@@ -219,7 +223,7 @@ class EmptyObjectParameterDefinitionModel(FillInEntityClassIdMixin, EmptyParamet
         return self.db_mngr.get_object_parameter_definitions(db_map, ids=ids)
 
 
-class EmptyRelationshipParameterDefinitionModel(FillInEntityClassIdMixin, EmptyParameterDefinitionModel):
+class EmptyRelationshipParameterDefinitionModel(EmptyParameterDefinitionModel):
     """An empty relationship parameter definition model."""
 
     @property
@@ -330,9 +334,9 @@ class InferEntityClassIdMixin(ConvertToDBMixin):
         return item
 
     def _infer_and_fill_in_entity_class_id(self, item, db_map):
-        """Try and infer the object class id by intersecting object ids and parameter ids previously computed.
-        Then pick the correct object id and parameter definition id based on that, and fill everything in.
-        Also set the inferred object class name in the model.
+        """Try and infer the entity class id by intersecting entity ids and parameter ids previously computed.
+        Then pick the correct entity id and parameter definition id based on that, and fill everything in.
+        Also set the inferred entity class name in the model.
         """
         row = item.pop("row")
         entity_ids = item.pop("entity_ids", {})
@@ -515,7 +519,7 @@ class EmptyRelationshipParameterValueModel(MakeRelationshipOnTheFlyMixin, EmptyP
     @Slot("QVariant", name="receive_relationships_added")
     def receive_relationships_added(self, db_map_data):
         """Runs when relationships are added.
-        Finds affected rows and call add_items_to_db."""
+        Finds affected rows and call add_items_to_db with them."""
         added_ids = set()
         for db_map, items in db_map_data.items():
             for item in items:

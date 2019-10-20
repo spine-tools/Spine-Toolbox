@@ -16,6 +16,7 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
+from PySide2.QtCore import Qt
 from ..mvcmodels.filled_parameter_models import FilledParameterModel
 from ..mvcmodels.parameter_mixins import FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin
 
@@ -100,6 +101,15 @@ class SingleObjectParameterMixin:
     def entity_class_id(self):
         return self.object_class_id
 
+    def data(self, index, role=Qt.DisplayRole):
+        """Return data for given index and role.
+        Paint the object class icon next to the name.
+        """
+        if role == Qt.DecorationRole and self.header[index.column()] == "object_class_name":
+            object_class_name = self.db_mngr.get_item(self.db_map, "object class", self.object_class_id)["name"]
+            return self.db_mngr.icon_mngr.object_icon(object_class_name)
+        return super().data(index, role)
+
 
 class SingleRelationshipParameterMixin:
     """Associates a parameter model with a single relationship class."""
@@ -112,14 +122,25 @@ class SingleRelationshipParameterMixin:
         """
         super().__init__(parent, header, db_mngr, db_map, *args, **kwargs)
         self.relationship_class_id = relationship_class_id
-        object_class_id_list = db_mngr.get_item(db_map, "relationship class", relationship_class_id)[
-            "object_class_id_list"
-        ]
+        relationship_class = db_mngr.get_item(db_map, "relationship class", relationship_class_id)
+        object_class_id_list = relationship_class["object_class_id_list"]
         self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
 
     @property
     def entity_class_id(self):
         return self.relationship_class_id
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Return data for given index and role.
+        Paint the object class icon next to the name.
+        """
+        if role == Qt.DecorationRole and self.header[index.column()] == "relationship_class_name":
+            object_class_name_list = [
+                self.db_mngr.get_item(self.db_map, "object class", id_)["name"] for id_ in self.object_class_id_list
+            ]
+            object_class_name_list = ",".join(object_class_name_list)
+            return self.db_mngr.icon_mngr.relationship_icon(object_class_name_list)
+        return super().data(index, role)
 
 
 class SingleObjectParameterValueMixin:
