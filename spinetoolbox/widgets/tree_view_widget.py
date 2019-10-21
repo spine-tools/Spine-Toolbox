@@ -769,6 +769,8 @@ class TreeViewForm(DataStoreForm):
     def receive_items_changed(self, action, item_type, db_map_data, name_key=None):
         """Enables or disables actions and informs the user about what just happened."""
         super().receive_items_changed(action, item_type, db_map_data, name_key=name_key)
+        # NOTE: The following line assumes this slot is called *after* removing items from object tree model
+        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
         if action == "removed":
             self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
             self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))

@@ -590,8 +590,6 @@ class DataStoreForm(QMainWindow):
         """Enables or disables actions and informs the user about what just happened."""
         if name_key is None:
             name_key = "name"
-        # NOTE: The following line assumes this slot is called *after* removing items from object tree model
-        self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
         names = {item[name_key] for db_map, data in db_map_data.items() for item in data if name_key in item}
         self.commit_available.emit(True)
         names = ", ".join(names) if names else ""
