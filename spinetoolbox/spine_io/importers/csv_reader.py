@@ -38,7 +38,8 @@ class CSVConnector(SourceConnection):
 
     # dict with option specification for source.
     OPTIONS = {
-        "delimiter": {'type': str, 'label': 'Delimiter', 'MaxLength': 1, 'default': ','},
+        "delimiter": {'type': list, 'label': "Delimiter", 'Items': [",", ";", "Tab"], 'default': ','},
+        "delimiter_custom": {'type': str, 'label': 'Custom Delimiter', 'MaxLength': 1, 'default': ''},
         "quotechar": {'type': str, 'label': 'Quotechar', 'MaxLength': 1, 'default': ''},
         "has_header": {'type': bool, 'label': 'Has header', 'default': False},
         "skip": {'type': int, 'label': 'Skip rows', 'Minimum': 0, 'default': 0},
@@ -103,9 +104,13 @@ class CSVConnector(SourceConnection):
                                           quotechar for csv.reader and
                                           number of rows to skip
         """
-        delimiter = options.get("delimiter", ",")
+        delimiter = options.get("delimiter_custom", "")
+        if not delimiter:
+            delimiter = options.get("delimiter", ",")
         if not delimiter:
             delimiter = ','
+        elif delimiter == "Tab":
+            delimiter = '\t'
         dialect = {"delimiter": delimiter}
         quotechar = options.get("quotechar", None)
         if quotechar:
