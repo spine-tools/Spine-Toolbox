@@ -25,6 +25,7 @@ to_gdx_file() that does basically everything needed for exporting is provided fo
 """
 
 import os
+import os.path
 import sys
 from gdx2py import GAMSSet, GAMSScalar, GAMSParameter, GdxFile
 from spinedb_api import from_database, ParameterValueFormatError
@@ -145,6 +146,23 @@ class Parameter:
         self.value = float(value) if isinstance(value, (int, float)) else None
 
 
+
+def _python_interpreter_bitness():
+    """Returns 64 for 64bit Python interpreter or 32 for 32bit interpreter."""
+    # As recommended in Python's docs:
+    # https://docs.python.org/3/library/platform.html#cross-platform
+    return 64 if sys.maxsize > 2**32 else 32
+
+
+def _windows_dlls_exist(gams_path):
+    """Returns True if requred DLL files exist in given GAMS installation path."""
+    bitness = _python_interpreter_bitness()
+    # This DLL must exist on Windows installation
+    dll_name = "gdxdclib{}.dll".format(bitness)
+    dll_path = os.path.join(gams_path, dll_name)
+    return os.path.isfile(dll_path)
+
+
 def find_gams_directory():
     """
     Returns GAMS installation directory or None if not found.
@@ -159,6 +177,8 @@ def find_gams_directory():
         try:
             with winreg.OpenKey(winreg.HKEY_CLASSES_ROOT, "gams.location") as gams_location_key:
                 gams_path, _ = winreg.QueryValueEx(gams_location_key, None)
+                if not _windows_dlls_exist(gams_path):
+                    return None
                 return gams_path
         except FileNotFoundError:
             return None

@@ -62,6 +62,9 @@ If a *Tool* is to use such a file, remember to add the file as one of the *Tool 
    You need to have GAMS installed to use this functionality.
    However, you do not need to own a GAMS license as the demo version works just as well.
 
+.. note::
+   The bitness (32 or 64bit) of GAMS has to match the bitness of the Python interpreter.
+
 The mapping between a database and GAMS is as follows:
 
 ====================== ========================
