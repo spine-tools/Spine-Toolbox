@@ -108,7 +108,7 @@ class ImportPreviewWidget(QWidget):
         Sets widgets enable state
         """
         self._ui.source_list.setDisabled(status)
-        self._ui.source_data_table.setDisabled(status)
+        self._ui.source_preview_widget_stack.setCurrentIndex(1 if status else 0)
         self._ui_mapper.setDisabled(status)
 
     def connection_ready(self):

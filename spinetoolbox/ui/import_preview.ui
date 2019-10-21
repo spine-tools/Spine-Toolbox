@@ -35,9 +35,9 @@
       <property name="title">
        <string>Sources</string>
       </property>
-      <layout class="QVBoxLayout" name="verticalLayout_2">
+      <layout class="QVBoxLayout" name="verticalLayout_4">
        <item>
-        <widget class="QSplitter" name="source_splitter">
+        <widget class="QSplitter" name="splitter">
          <property name="orientation">
           <enum>Qt::Vertical</enum>
          </property>
@@ -51,7 +51,59 @@
            </property>
           </widget>
          </widget>
-         <widget class="QTableView" name="source_data_table"/>
+         <widget class="QStackedWidget" name="source_preview_widget_stack">
+          <property name="currentIndex">
+           <number>0</number>
+          </property>
+          <widget class="QWidget" name="table_page">
+           <layout class="QVBoxLayout" name="verticalLayout_2">
+            <item>
+             <widget class="QTableView" name="source_data_table"/>
+            </item>
+           </layout>
+          </widget>
+          <widget class="QWidget" name="loading_page">
+           <layout class="QVBoxLayout" name="verticalLayout_3">
+            <item>
+             <layout class="QHBoxLayout" name="horizontalLayout">
+              <item>
+               <spacer name="horizontalSpacer">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+              <item>
+               <widget class="QLabel" name="waiting_label">
+                <property name="text">
+                 <string>Loading preview...</string>
+                </property>
+               </widget>
+              </item>
+              <item>
+               <spacer name="horizontalSpacer_2">
+                <property name="orientation">
+                 <enum>Qt::Horizontal</enum>
+                </property>
+                <property name="sizeHint" stdset="0">
+                 <size>
+                  <width>40</width>
+                  <height>20</height>
+                 </size>
+                </property>
+               </spacer>
+              </item>
+             </layout>
+            </item>
+           </layout>
+          </widget>
+         </widget>
         </widget>
        </item>
       </layout>
