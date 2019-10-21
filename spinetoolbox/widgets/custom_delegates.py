@@ -170,6 +170,28 @@ class CheckBoxDelegate(QItemDelegate):
         return QRect(checkbox_anchor, checkbox_rect.size())
 
 
+class GetObjectClassIdMixin:
+    """Allows getting the object class id from the name."""
+
+    def _get_object_class_id(self, index, db_map):
+        h = index.model().header.index
+        object_class_name = index.sibling(index.row(), h("object_class_name")).data()
+        object_class = self.db_mngr.get_item_by_field(db_map, "object class", "name", object_class_name)
+        return object_class.get("id")
+
+
+class GetRelationshipClassIdMixin:
+    """Allows getting the relationship class id from the name."""
+
+    def _get_relationship_class_id(self, index, db_map):
+        h = index.model().header.index
+        relationship_class_name = index.sibling(index.row(), h("relationship_class_name")).data()
+        relationship_class = self.db_mngr.get_item_by_field(
+            db_map, "relationship class", "name", relationship_class_name
+        )
+        return relationship_class.get("id")
+
+
 class ParameterDelegate(QItemDelegate):
     """Base class for all custom parameter delegates.
 
@@ -266,7 +288,24 @@ class ParameterDefaultValueDelegate(ParameterValueOrDefaultValueDelegate):
 
 
 class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
-    """A delegate for the either the parameter value."""
+    """A delegate for the parameter value."""
+
+    def _get_entity_class_id(self, index, db_map):
+        return NotImplementedError()
+
+    def _get_value_list(self, index, db_map):
+        """Returns a value list item for the given index and db_map."""
+        h = index.model().header.index
+        parameter_name = index.sibling(index.row(), h("parameter_name")).data()
+        parameters = self.db_mngr.get_items_by_field(db_map, "parameter definition", "parameter_name", parameter_name)
+        entity_class_id = self._get_entity_class_id(index, db_map)
+        parameter_ids = {p["id"] for p in parameters if p[self.entity_class_id_key] == entity_class_id}
+        value_list_ids = {
+            self.db_mngr.get_item(db_map, "parameter definition", id_).get("value_list_id") for id_ in parameter_ids
+        }
+        if len(value_list_ids) == 1:
+            value_list_id = next(iter(value_list_ids))
+            return self.db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")
 
     def createEditor(self, parent, option, index):
         """If the parameter has associated a value list, returns a SearchBarEditor .
@@ -275,12 +314,7 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
         db_map = self._get_db_map(index)
         if not db_map:
             return None
-        # FIXME
-        h = index.model().header.index
-        parameter_name = index.sibling(index.row(), h("parameter_name")).data()
-        parameter_id = self.db_mngr.get_item_by_field(db_map, "parameter definition", "name", parameter_name).get("id")
-        value_list_id = self.db_mngr.get_item(db_map, "parameter definition", parameter_id).get("value_list_id")
-        value_list = self.db_mngr.get_item(db_map, "parameter value list", value_list_id).get("value_list")
+        value_list = self._get_value_list(index, db_map)
         if value_list:
             editor = SearchBarEditor(self._parent, parent, is_json=True)
             value_list = value_list.split(",")
@@ -288,6 +322,28 @@ class ParameterValueDelegate(ParameterValueOrDefaultValueDelegate):
             editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
             return editor
         return self._create_or_request_parameter_value_editor(parent, option, index, db_map)
+
+
+class ObjectParameterValueDelegate(GetObjectClassIdMixin, ParameterValueDelegate):
+    """A delegate for the object parameter value."""
+
+    @property
+    def entity_class_id_key(self):
+        return "object_class_id"
+
+    def _get_entity_class_id(self, index, db_map):
+        return self._get_object_class_id(index, db_map)
+
+
+class RelationshipParameterValueDelegate(GetRelationshipClassIdMixin, ParameterValueDelegate):
+    """A delegate for the relationship parameter value."""
+
+    @property
+    def entity_class_id_key(self):
+        return "relationship_class_id"
+
+    def _get_entity_class_id(self, index, db_map):
+        return self._get_relationship_class_id(index, db_map)
 
 
 class TagListDelegate(ParameterDelegate):
@@ -352,28 +408,6 @@ class RelationshipClassNameDelegate(ParameterDelegate):
         editor.set_data(index.data(Qt.EditRole), [x["name"] for x in relationship_classes])
         editor.data_committed.connect(lambda editor=editor, index=index: self._close_editor(editor, index))
         return editor
-
-
-class GetObjectClassIdMixin:
-    """Allows getting the object class id from the name."""
-
-    def _get_object_class_id(self, index, db_map):
-        h = index.model().header.index
-        object_class_name = index.sibling(index.row(), h("object_class_name")).data()
-        object_class = self.db_mngr.get_item_by_field(db_map, "object class", "name", object_class_name)
-        return object_class.get("id")
-
-
-class GetRelationshipClassIdMixin:
-    """Allows getting the relationship class id from the name."""
-
-    def _get_relationship_class_id(self, index, db_map):
-        h = index.model().header.index
-        relationship_class_name = index.sibling(index.row(), h("relationship_class_name")).data()
-        relationship_class = self.db_mngr.get_item_by_field(
-            db_map, "relationship class", "name", relationship_class_name
-        )
-        return relationship_class.get("id")
 
 
 class ObjectParameterNameDelegate(GetObjectClassIdMixin, ParameterDelegate):

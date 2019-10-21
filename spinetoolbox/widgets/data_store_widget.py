@@ -26,10 +26,11 @@ from .custom_delegates import (
     ParameterDefaultValueDelegate,
     TagListDelegate,
     ValueListDelegate,
-    ParameterValueDelegate,
+    ObjectParameterValueDelegate,
     ObjectParameterNameDelegate,
-    ObjectNameDelegate,
     ObjectClassNameDelegate,
+    ObjectNameDelegate,
+    RelationshipParameterValueDelegate,
     RelationshipParameterNameDelegate,
     RelationshipClassNameDelegate,
     ObjectNameListDelegate,
@@ -420,12 +421,6 @@ class DataStoreForm(QMainWindow):
         for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_relationship_parameter_value):
             h = table_view.model().header.index
             self._setup_delegate(table_view, h("database"), DatabaseNameDelegate)
-            delegate = self._setup_delegate(table_view, h("value"), ParameterValueDelegate)
-            delegate.parameter_value_editor_requested.connect(
-                lambda index, value, table_view=table_view: self.show_parameter_value_editor(
-                    index, table_view, value=value
-                )
-            )
         # Object parameters
         for table_view in (self.ui.tableView_object_parameter_value, self.ui.tableView_object_parameter_definition):
             h = table_view.model().header.index
@@ -440,11 +435,19 @@ class DataStoreForm(QMainWindow):
         # Object parameter value
         table_view = self.ui.tableView_object_parameter_value
         h = table_view.model().header.index
+        delegate = self._setup_delegate(table_view, h("value"), ObjectParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(
+            lambda index, value, table_view=table_view: self.show_parameter_value_editor(index, table_view, value=value)
+        )
         self._setup_delegate(table_view, h("parameter_name"), ObjectParameterNameDelegate)
         self._setup_delegate(table_view, h("object_name"), ObjectNameDelegate)
         # Relationship parameter value
         table_view = self.ui.tableView_relationship_parameter_value
         h = table_view.model().header.index
+        delegate = self._setup_delegate(table_view, h("value"), RelationshipParameterValueDelegate)
+        delegate.parameter_value_editor_requested.connect(
+            lambda index, value, table_view=table_view: self.show_parameter_value_editor(index, table_view, value=value)
+        )
         self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
         self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
 
