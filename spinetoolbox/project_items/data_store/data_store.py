@@ -351,7 +351,7 @@ class DataStore(ProjectItem):
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
         try:
-            db_map = get_db_map(url)
+            db_map = get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None
@@ -362,7 +362,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tree_view(self, db_map):
         """Open url in tree view form."""
-        self.tree_view_form = TreeViewForm(self._project, {self.name: db_map})
+        self.tree_view_form = TreeViewForm(self._project, db_map)
         self.tree_view_form.show()
         self.tree_view_form.destroyed.connect(self.tree_view_form_destroyed)
 
@@ -392,7 +392,7 @@ class DataStore(ProjectItem):
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
         try:
-            db_map = get_db_map(url)
+            db_map = get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None
@@ -403,7 +403,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_graph_view(self, db_map):
         """Open url in graph view form."""
-        self.graph_view_form = GraphViewForm(self._project, {self.name: db_map}, read_only=False)
+        self.graph_view_form = GraphViewForm(self._project, db_map, read_only=False)
         self.graph_view_form.show()
         self.graph_view_form.destroyed.connect(self.graph_view_form_destroyed)
 
@@ -433,7 +433,7 @@ class DataStore(ProjectItem):
             self.tabular_view_form.destroyed.disconnect(self.tabular_view_form_destroyed)
             self.tabular_view_form.close()
         try:
-            db_map = get_db_map(url)
+            db_map = get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None

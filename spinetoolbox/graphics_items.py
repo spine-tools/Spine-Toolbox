@@ -777,7 +777,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._bounce = False
         self._views_cursor = {}
         self._selected_color = graph_view_form.palette().highlight()
-        pixmap = self._graph_view_form.icon_mngr.object_icon(object_class_name).pixmap(extent)
+        pixmap = self._graph_view_form.db_mngr.icon_mngr.object_icon(object_class_name).pixmap(extent)
         self.setPixmap(pixmap.scaled(extent, extent))
         self.setPos(x, y)
         self.setOffset(-0.5 * extent, -0.5 * extent)
@@ -1328,7 +1328,7 @@ class SimpleObjectItem(QGraphicsPixmapItem):
             object_name (str): object name
         """
         super().__init__(parent)
-        pixmap = parent.arc_item._graph_view_form.icon_mngr.object_pixmap(object_class_name).scaledToWidth(extent)
+        pixmap = parent.arc_item._graph_view_form.db_mngr.icon_mngr.object_pixmap(object_class_name).scaledToWidth(extent)
         self.setPixmap(pixmap)
         self.text_item = QGraphicsTextItem(object_name, self)
         font = QApplication.font()

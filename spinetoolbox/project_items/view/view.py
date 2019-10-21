@@ -117,7 +117,7 @@ class View(ProjectItem):
             return
         if self._restore_existing_view_window(view_id, view_store):
             return
-        view_window = self._make_view_window(view_store, db_maps, databases)
+        view_window = self._make_view_window(view_store, db_maps)
         view_window.show()
         view_window.destroyed.connect(lambda: view_store.pop(view_id))
         view_store[view_id] = view_window
@@ -160,13 +160,13 @@ class View(ProjectItem):
         self._references.clear()
         for resource in inst.available_resources(self.name):
             if resource.type_ == "database" and resource.scheme == "sqlite":
-                self._references.append(make_url(resource.url))
+                self._references.append((make_url(resource.url), resource.provider.name))
             elif resource.type_ == "file" and resource.metadata.get("is_output"):
                 filepath = resource.path
                 if os.path.splitext(filepath)[1] == '.sqlite':
                     url = URL("sqlite", database=filepath)
-                    self._references.append(url)
-        self.populate_reference_list(self._references)
+                    self._references.append((url, resource.provider.name))
+        self.populate_reference_list([url for url, _ in self._references])
 
     def _selected_indexes(self):
         """Returns selected indexes."""
@@ -177,17 +177,17 @@ class View(ProjectItem):
 
     def _database_maps(self, indexes):
         """Returns database maps and database paths for given indexes."""
-        db_maps = dict()
+        db_maps = list()
         databases = list()
         for index in indexes:
-            url = self._references[index.row()]
+            url, provider_name = self._references[index.row()]
             try:
-                db_map = DiffDatabaseMapping(url, url.username)
+                db_map = DiffDatabaseMapping(url, url.username, codename=provider_name)
             except (SpineDBAPIError, SpineDBVersionError) as e:
                 self._toolbox.msg_error.emit(e.msg)
                 return
-            database = url.database
-            db_maps[database] = db_map
+            database = db_map.codename
+            db_maps.append(db_map)
             databases.append(database)
         return db_maps, databases
 
@@ -202,13 +202,13 @@ class View(ProjectItem):
         view_window.activateWindow()
         return True
 
-    def _make_view_window(self, view_store, db_maps, databases):
+    def _make_view_window(self, view_store, db_maps):
         if view_store is self._graph_views:
-            return GraphViewForm(self, db_maps, read_only=True)
+            return GraphViewForm(self._project, db_maps[0], read_only=True)
         if view_store is self._tabular_views:
-            return TabularViewForm(self, db_maps[databases[0]], databases[0])
+            return TabularViewForm(self, db_maps[0])
         if view_store is self._tree_views:
-            return TreeViewForm(self._project, db_maps)
+            return TreeViewForm(self._project, *db_maps)
         raise RuntimeError("view_store must be self._graph_views, self._tabular_views or self._tree_views")
 
     def tear_down(self):

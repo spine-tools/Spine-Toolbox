@@ -506,9 +506,11 @@ class GraphQGraphicsView(CustomQGraphicsView):
         if not isinstance(source, DragListView):
             super().dropEvent(event)
             return
+        entity_type = source.model().entity_type
         event.acceptProposedAction()
-        text = event.mimeData().text()
+        entity_class_id = event.mimeData().text()
         pos = event.pos()
+        text = entity_type + ":" + entity_class_id
         self.item_dropped.emit(pos, text)
 
     def contextMenuEvent(self, e):

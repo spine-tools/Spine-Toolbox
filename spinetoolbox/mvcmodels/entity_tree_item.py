@@ -546,7 +546,7 @@ class ObjectClassItem(EntityClassItem):
     @property
     def display_icon(self):
         """Returns the object class icon."""
-        return self.db_mngr.icon_mngr.object_icon(self.display_name)
+        return self.db_mngr.entity_class_icon(self.first_db_map, "object class", self.db_map_id(self.first_db_map))
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -569,8 +569,7 @@ class RelationshipClassItem(EntityClassItem):
     @property
     def display_icon(self):
         """Returns relationship class icon."""
-        object_class_name_list = self.db_map_data_field(self.first_db_map, "object_class_name_list")
-        return self.db_mngr.icon_mngr.relationship_icon(object_class_name_list)
+        return self.db_mngr.entity_class_icon(self.first_db_map, "relationship class", self.db_map_id(self.first_db_map))
 
     def _get_children_ids(self, db_map):
         """Returns a query that selects all relationships of this class from the db.

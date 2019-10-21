@@ -21,9 +21,9 @@ import logging
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import QApplication, QGraphicsScene, QWidgetAction, QTreeView
+from PySide2.QtWidgets import QApplication, QGraphicsScene, QWidgetAction, QTreeView, QToolButton
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QEvent
-from PySide2.QtGui import QPalette, QMouseEvent
+from PySide2.QtGui import QPalette, QMouseEvent, QIcon
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
 from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
@@ -42,17 +42,18 @@ class GraphViewForm(DataStoreForm):
 
     Attributes:
         project (SpineToolboxProject): The project instance that owns this form
-        db_maps (dict): named DiffDatabaseMapping instances
+        db_map (DiffDatabaseMapping)
         read_only (bool): Whether or not the form should be editable
     """
 
-    def __init__(self, project, db_maps, read_only=False):
+    def __init__(self, project, *db_maps, read_only=False):
         """Initialize class."""
         from ..ui.graph_view_form import Ui_MainWindow
 
         tic = time.clock()
-        super().__init__(project, Ui_MainWindow(), db_maps)
-        self.db_name, self.db_map = next(iter(self.db_maps.items()))
+        super().__init__(project, Ui_MainWindow(), *db_maps)
+        self.db_map = next(iter(db_maps))
+        self.db_name = self.db_map.codename
         self.ui.graphicsView.set_graph_view_form(self)
         self.read_only = read_only
         self._has_graph = False
@@ -65,7 +66,7 @@ class GraphViewForm(DataStoreForm):
         self.arc_color = self.palette().color(QPalette.Normal, QPalette.WindowText)
         self.arc_color.setAlphaF(0.8)
         # Object tree model
-        self.object_tree_model = ObjectTreeModel(self, db_maps)
+        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, self.db_map)
         self.ui.treeView_object.setModel(self.object_tree_model)
         # Data for ObjectItems
         self.object_ids = list()
@@ -85,10 +86,10 @@ class GraphViewForm(DataStoreForm):
         self.arc_template_ids = {}
         # Data of relationship templates
         self.template_id = 1
-        self.relationship_class_dict = {}  # template_id => relationship_class_name, relationship_class_id
+        self.relationship_class_dict = {}  # template_id => relationship_class_id
         # Item palette models
-        self.object_class_list_model = ObjectClassListModel(self)
-        self.relationship_class_list_model = RelationshipClassListModel(self)
+        self.object_class_list_model = ObjectClassListModel(self, self.db_mngr, self.db_map)
+        self.relationship_class_list_model = RelationshipClassListModel(self, self.db_mngr, self.db_map)
         self.ui.listView_object_class.setModel(self.object_class_list_model)
         self.ui.listView_relationship_class.setModel(self.relationship_class_list_model)
         # Context menus
@@ -134,6 +135,7 @@ class GraphViewForm(DataStoreForm):
         super().init_models()
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
+
 
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
@@ -190,19 +192,17 @@ class GraphViewForm(DataStoreForm):
         self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
 
     @Slot("QModelIndex", name="_add_more_object_classes")
-    def _add_more_object_classes(self, ind):
-        """Opens the add more object classes form when clicking on Add more... item
+    def _add_more_object_classes(self, index):
+        """Opens the add more object classes form when clicking on New... item
         in Item palette Object class view."""
-        clicked_item = self.object_class_list_model.itemFromIndex(ind)
-        if clicked_item.data(Qt.UserRole + 2) == "Add More":
+        if index == index.model().new_index:
             self.show_add_object_classes_form()
 
     @Slot("QModelIndex", name="_add_more_relationship_classes")
-    def _add_more_relationship_classes(self, ind):
+    def _add_more_relationship_classes(self, index):
         """Opens the add more relationship classes form when clicking on Add more... item
         in Item palette Relationship class view."""
-        clicked_item = self.relationship_class_list_model.itemFromIndex(ind)
-        if clicked_item.data(Qt.UserRole + 2) == "Add More":
+        if index == index.model().new_index:
             self.show_add_relationship_classes_form()
 
     def _object_tree_view_mouse_press_event(self, event):
@@ -333,6 +333,7 @@ class GraphViewForm(DataStoreForm):
 
     def init_graph_data(self):
         """Initialize graph data."""
+        # TODO: This is insane....
         rejected_object_names = [x.object_name for x in self.rejected_items]
         self.object_ids = list()
         self.object_names = list()
@@ -720,16 +721,17 @@ class GraphViewForm(DataStoreForm):
         else:
             scene = self.new_scene()
         scene_pos = self.ui.graphicsView.mapToScene(pos)
-        data = eval(text)  # pylint: disable=eval-used
-        if data["type"] == "object_class":
-            class_id = data["id"]
-            class_name = data["name"]
-            name = class_name
+        entity_type, entity_class_id = text.split(":")
+        entity_class_id = int(entity_class_id)
+        entity_class = self.db_mngr.get_item(self.db_map, entity_type, entity_class_id)
+        if entity_type == "object class":
+            object_class_name = entity_class["name"]
+            object_name = object_class_name
             object_item = ObjectItem(
                 self,
-                name,
-                class_id,
-                class_name,
+                object_name,
+                entity_class_id,
+                object_class_name,
                 scene_pos.x(),
                 scene_pos.y(),
                 self.extent,
@@ -737,10 +739,9 @@ class GraphViewForm(DataStoreForm):
             )
             scene.addItem(object_item)
             object_item.make_template()
-        elif data["type"] == "relationship_class":
-            relationship_class_id = data["id"]
-            object_class_id_list = [int(x) for x in data["object_class_id_list"].split(',')]
-            object_class_name_list = data["object_class_name_list"].split(',')
+        elif entity_type == "relationship class":
+            object_class_id_list = [int(x) for x in entity_class["object_class_id_list"].split(',')]
+            object_class_name_list = entity_class["object_class_name_list"].split(',')
             object_name_list = object_class_name_list.copy()
             fix_name_ambiguity(object_name_list)
             relationship_items = self.relationship_items(
@@ -750,10 +751,10 @@ class GraphViewForm(DataStoreForm):
                 self._spread,
                 label_color=self.object_label_color,
                 object_class_id_list=object_class_id_list,
-                relationship_class_id=relationship_class_id,
+                relationship_class_id=entity_class_id,
             )
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_items)
-            self.relationship_class_dict[self.template_id] = {"id": data["id"], "name": data["name"]}
+            self.relationship_class_dict[self.template_id] = entity_class_id
             self.template_id += 1
         self._has_graph = True
         self.extend_scene()
@@ -864,8 +865,9 @@ class GraphViewForm(DataStoreForm):
         if len(object_id_list) < 2:
             logging.debug("too short %s", len(object_id_list))
             return False
-        name = self.relationship_class_dict[template_id]["name"] + "_" + "__".join(object_name_list)
-        class_id = self.relationship_class_dict[template_id]["id"]
+        class_id = self.relationship_class_dict[template_id]
+        class_name = self.db_mngr.get_item(self.db_map, "relationship class", class_id)["name"]
+        name = class_name + "_" + "__".join(object_name_list)
         item = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
         try:
             wide_relationships, _ = self.db_map.add_wide_relationships(item, strict=True)
@@ -958,7 +960,6 @@ class GraphViewForm(DataStoreForm):
         elif option in self.object_item_context_menu.relationship_class_dict:
             relationship_class = self.object_item_context_menu.relationship_class_dict[option]
             relationship_class_id = relationship_class["id"]
-            relationship_class_name = relationship_class["name"]
             object_class_id_list = relationship_class["object_class_id_list"]
             object_class_name_list = relationship_class['object_class_name_list']
             object_name_list = relationship_class['object_name_list']
@@ -979,10 +980,7 @@ class GraphViewForm(DataStoreForm):
             )
             object_items[dimension].merge_item(main_item)
             self._has_graph = True
-            self.relationship_class_dict[self.template_id] = {
-                "id": relationship_class_id,
-                "name": relationship_class_name,
-            }
+            self.relationship_class_dict[self.template_id] = relationship_class_id
             self.template_id += 1
         self.object_item_context_menu.deleteLater()
         self.object_item_context_menu = None

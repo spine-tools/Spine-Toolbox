@@ -73,10 +73,9 @@ class TabularViewForm(QMainWindow):
     Attributes:
         data_store (DataStore): The DataStore instance that owns this form
         db_map (DatabaseMapping): The object relational database mapping
-        database (str): The database name
     """
 
-    def __init__(self, data_store, db_map, database):
+    def __init__(self, data_store, db_map):
         from ..ui.tabular_view_form import Ui_MainWindow
 
         super().__init__(flags=Qt.Window)
@@ -92,7 +91,7 @@ class TabularViewForm(QMainWindow):
 
         # database
         self.db_map = db_map
-        self.database = database
+        self.database = db_map.codename
         self._data_store = data_store
 
         # current state of ui

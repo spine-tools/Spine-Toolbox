@@ -393,12 +393,12 @@ def format_string_list(str_list):
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def get_db_map(url, upgrade=False):
+def get_db_map(url, upgrade=False, codename=None):
     """Returns a DiffDatabaseMapping instance from url.
     If the db is not the latest version, asks the user if they want to upgrade it.
     """
     try:
-        db_map = do_get_db_map(url, upgrade)
+        db_map = do_get_db_map(url, upgrade, codename)
         return db_map
     except spinedb_api.SpineDBVersionError:
         msg = QMessageBox()
@@ -423,11 +423,11 @@ def get_db_map(url, upgrade=False):
 
 
 @busy_effect
-def do_get_db_map(url, upgrade):
+def do_get_db_map(url, upgrade, codename):
     """Returns a DiffDatabaseMapping instance from url.
     Called by `get_db_map`.
     """
-    return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade)
+    return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
 
 
 def rows_to_row_count_tuples(rows):

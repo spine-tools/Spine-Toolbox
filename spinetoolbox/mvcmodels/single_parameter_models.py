@@ -106,8 +106,7 @@ class SingleObjectParameterMixin:
         Paint the object class icon next to the name.
         """
         if role == Qt.DecorationRole and self.header[index.column()] == "object_class_name":
-            object_class_name = self.db_mngr.get_item(self.db_map, "object class", self.object_class_id)["name"]
-            return self.db_mngr.icon_mngr.object_icon(object_class_name)
+            return self.db_mngr.entity_class_icon(self.db_map, "object class", self.object_class_id)
         return super().data(index, role)
 
 
@@ -135,11 +134,7 @@ class SingleRelationshipParameterMixin:
         Paint the object class icon next to the name.
         """
         if role == Qt.DecorationRole and self.header[index.column()] == "relationship_class_name":
-            object_class_name_list = [
-                self.db_mngr.get_item(self.db_map, "object class", id_)["name"] for id_ in self.object_class_id_list
-            ]
-            object_class_name_list = ",".join(object_class_name_list)
-            return self.db_mngr.icon_mngr.relationship_icon(object_class_name_list)
+            return self.db_mngr.entity_class_icon(self.db_map, "relationship class", self.relationship_class_id)
         return super().data(index, role)
 
 

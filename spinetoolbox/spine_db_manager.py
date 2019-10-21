@@ -151,6 +151,14 @@ class SpineDBManager(QObject):
         object_classes = [item for db_map, data in db_map_data.items() for item in data]
         self.icon_mngr.setup_object_pixmaps(object_classes)
 
+    def entity_class_icon(self, db_map, entity_type, entity_class_id):
+        """Returns entity class icon."""
+        entity_class = self.get_item(db_map, entity_type, entity_class_id)
+        if entity_type == "object class":
+            return self.icon_mngr.object_icon(entity_class["name"])
+        elif entity_type == "relationship class":
+            return self.icon_mngr.relationship_icon(entity_class["object_class_name_list"])
+
     def get_item(self, db_map, item_type, id_):
         """Get item by id from cache. If not in cache then try and get it from db.
 
