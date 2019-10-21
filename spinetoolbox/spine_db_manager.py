@@ -55,7 +55,7 @@ class SpineDBManager(QObject):
     def __init__(self, *db_maps):
         """Init class."""
         super().__init__()
-        self._db_maps = db_maps
+        self._db_maps = set(db_maps)
         self._cache = {}
         self.icon_mngr = IconManager()
         self.connect_signals()
@@ -63,6 +63,10 @@ class SpineDBManager(QObject):
     @property
     def db_maps(self):
         return self._db_maps
+
+    def add_db_maps(self, *db_maps):
+        """Adds one or more db map to the manager."""
+        self._db_maps.update(db_maps)
 
     def connect_signals(self):
         """Connect signals."""

@@ -33,16 +33,18 @@ class EntityTreeModel(QAbstractItemModel):
 
     remove_selection_requested = Signal(name="remove_selection_requested")
 
-    def __init__(self, parent, db_mngr):
+    def __init__(self, parent, db_mngr, *db_maps):
         """Init class.
 
         Args:
             parent (DataStoreForm)
-            db_mngr (SpineDBManager)
+            db_mngr (SpineDBManager): A manager for the given db_maps
+            db_maps (iter): DiffDatabaseMapping instances
         """
         super().__init__(parent)
         self._parent = parent
         self.db_mngr = db_mngr
+        self.db_maps = db_maps
         self._invisible_root_item = TreeItem()
         self._root_item = None
         self.selected_indexes = dict()  # Maps item type to selected indexes
@@ -60,7 +62,7 @@ class EntityTreeModel(QAbstractItemModel):
         self.selected_indexes.clear()
         self.endResetModel()
         self.track_item(self._invisible_root_item)
-        self._root_item = self.root_item_type(self.db_mngr, dict.fromkeys(self.db_mngr.db_maps))
+        self._root_item = self.root_item_type(self.db_mngr, dict.fromkeys(self.db_maps))
         self._invisible_root_item.insert_children(0, [self._root_item])
 
     def track_item(self, item):

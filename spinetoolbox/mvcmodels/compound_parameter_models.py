@@ -45,16 +45,18 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     remove_selection_requested = Signal(name="remove_selection_requested")
     remove_icon = QIcon(":/icons/menu_icons/cog_minus.svg")
 
-    def __init__(self, parent, db_mngr):
+    def __init__(self, parent, db_mngr, *db_maps):
         """Init class.
 
         Args:
-            parent (DataStoreForm): an instance of TreeViewForm or GraphViewForm
-            db_mngr (SpineDBManager)
+            parent (DataStoreForm): the parent QObject, an instance of TreeViewForm or GraphViewForm
+            db_mngr (SpineDBManager): a manager for the given db_maps
+            db_maps (iter): DiffDatabaseMapping instances
         """
         super().__init__(parent)
         self._parent = parent
         self.db_mngr = db_mngr
+        self.db_maps = db_maps
         self._auto_filter = dict()
         self.connect_db_mngr_signals()
 
@@ -152,7 +154,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _create_single_models(self):
         """Returns a list of single models."""
         d = dict()
-        for db_map in self.db_mngr.db_maps:
+        for db_map in self.db_maps:
             for entity_class in self._get_entity_classes(db_map):
                 d.setdefault(entity_class["name"], {}).setdefault(db_map, set()).add(entity_class["id"])
         models = []
@@ -407,9 +409,9 @@ class CompoundObjectParameterDefinitionModel(
     and one empty object parameter definition model.
     """
 
-    def __init__(self, parent, db_mngr):
+    def __init__(self, parent, db_mngr, *db_maps):
         """Init class."""
-        super().__init__(parent, db_mngr)
+        super().__init__(parent, db_mngr, *db_maps)
         self.header = [
             "object_class_name",
             "parameter_name",
@@ -435,9 +437,9 @@ class CompoundRelationshipParameterDefinitionModel(
     and one empty relationship parameter definition model.
     """
 
-    def __init__(self, parent, db_mngr):
+    def __init__(self, parent, db_mngr, *db_maps):
         """Init class."""
-        super().__init__(parent, db_mngr)
+        super().__init__(parent, db_mngr, *db_maps)
         self.header = [
             "relationship_class_name",
             "object_class_name_list",
@@ -464,9 +466,9 @@ class CompoundObjectParameterValueModel(
     and one empty object parameter value model.
     """
 
-    def __init__(self, parent, db_mngr):
+    def __init__(self, parent, db_mngr, *db_maps):
         """Init class."""
-        super().__init__(parent, db_mngr)
+        super().__init__(parent, db_mngr, *db_maps)
         self.header = ["object_class_name", "object_name", "parameter_name", "value", "database"]
 
     @property
@@ -495,9 +497,9 @@ class CompoundRelationshipParameterValueModel(
     and one empty relationship parameter value model.
     """
 
-    def __init__(self, parent, db_mngr):
+    def __init__(self, parent, db_mngr, *db_maps):
         """Init class."""
-        super().__init__(parent, db_mngr)
+        super().__init__(parent, db_mngr, *db_maps)
         self.header = ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
 
     @property

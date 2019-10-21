@@ -56,7 +56,6 @@ from ..mvcmodels.compound_parameter_models import (
     CompoundRelationshipParameterValueModel,
 )
 from ..mvcmodels.parameter_value_list_model import ParameterValueListModel
-from ..spine_db_manager import SpineDBManager
 from ..helpers import busy_effect, format_string_list
 from ..plotting import tree_graph_view_parameter_value_name
 
@@ -88,12 +87,13 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class attributes
+        self.db_mngr = project.db_mngr
+        self.db_mngr.add_db_maps(*db_maps)
         self.err_msg = QErrorMessage(self)
         # DB
         keyed_db_maps = {db_map.codename: db_map for db_map in db_maps}
         self.db_maps = db_maps
         self.keyed_db_maps = keyed_db_maps
-        self.db_mngr = SpineDBManager(*db_maps)
         # Selected ids
         self.selected_object_class_ids = dict()
         self.selected_object_ids = dict()
@@ -106,10 +106,12 @@ class DataStoreForm(QMainWindow):
         self.parameter_tag_toolbar = ParameterTagToolBar(self, db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
-        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr)
-        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr)
-        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr)
-        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(self, self.db_mngr)
+        self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *db_maps)
+        self.relationship_parameter_value_model = CompoundRelationshipParameterValueModel(self, self.db_mngr, *db_maps)
+        self.object_parameter_definition_model = CompoundObjectParameterDefinitionModel(self, self.db_mngr, *db_maps)
+        self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
+            self, self.db_mngr, *db_maps
+        )
         self.parameter_value_list_model = ParameterValueListModel(self, keyed_db_maps)
         # Setup views
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)

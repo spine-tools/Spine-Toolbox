@@ -68,8 +68,8 @@ class TreeViewForm(DataStoreForm):
         super().__init__(project, Ui_MainWindow(), *db_maps)
         self.takeCentralWidget()
         # Object tree model
-        self.object_tree_model = ObjectTreeModel(self, self.db_mngr)
-        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr)
+        self.object_tree_model = ObjectTreeModel(self, self.db_mngr, *db_maps)
+        self.relationship_tree_model = RelationshipTreeModel(self, self.db_mngr, *db_maps)
         self.ui.treeView_object.setModel(self.object_tree_model)
         self.ui.treeView_relationship.setModel(self.relationship_tree_model)
         # Others

@@ -26,6 +26,7 @@ from .helpers import project_dir, create_dir, copy_dir
 from .tool_specifications import JuliaTool, PythonTool, GAMSTool, ExecutableTool
 from .config import DEFAULT_WORK_DIR, INVALID_CHARS
 from .executioner import DirectedGraphHandler, ExecutionInstance
+from .spine_db_manager import SpineDBManager
 
 
 class SpineToolboxProject(MetaObject):
@@ -45,6 +46,7 @@ class SpineToolboxProject(MetaObject):
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
         self.dag_handler = DirectedGraphHandler(self._toolbox)
+        self.db_mngr = SpineDBManager()
         self._ordered_dags = dict()  # Contains all ordered lists of items to execute in the project
         self.execution_instance = None
         self._graph_index = 0
