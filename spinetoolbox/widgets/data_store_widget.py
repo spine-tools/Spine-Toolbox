@@ -174,7 +174,6 @@ class DataStoreForm(QMainWindow):
             self._handle_relationship_parameter_definition_visibility_changed
         )
         self.ui.actionRestore_Dock_Widgets.triggered.connect(self.restore_dock_widgets)
-
         # DB manager
         # Added
         self.db_mngr.object_classes_added.connect(self.receive_object_classes_added)
@@ -199,6 +198,7 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.relationships_removed.connect(self.receive_relationships_removed)
         self.db_mngr.parameter_definitions_removed.connect(self.receive_parameter_definitions_removed)
         self.db_mngr.parameter_values_removed.connect(self.receive_parameter_values_removed)
+        self.db_mngr.parameter_value_lists_removed.connect(self.receive_parameter_value_lists_removed)
         # Error
         self.db_mngr.msg_error.connect(self.add_db_mngr_error_msg)
 
@@ -677,6 +677,10 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="receive_parameter_values_removed")
     def receive_parameter_values_removed(self, db_map_data):
         self.receive_items_changed("removed", "parameter value", db_map_data)
+
+    @Slot("QVariant", name="receive_parameter_value_lists_removed")
+    def receive_parameter_value_lists_removed(self, db_map_data):
+        self.receive_items_changed("removed", "parameter value list", db_map_data)
 
     # TODO: all the below with the manager
 

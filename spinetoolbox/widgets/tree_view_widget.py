@@ -938,23 +938,36 @@ class TreeViewForm(DataStoreForm):
     def remove_parameter_value_lists(self):
         """Remove selection of parameter value_lists.
         """
-        # TODO: what happens with data not yet been inserted
-        db_map_typed_data_to_remove = {}
-        db_map_data_to_update = {}
+        db_map_typed_data_to_rm = {}
+        db_map_data_to_upd = {}
+        selected = self.ui.treeView_parameter_value_list.selectionModel().selectedRows()
         for db_node in self.parameter_value_list_model._invisible_root_node.children:
-            db_map_typed_data_to_remove[db_node.db_map] = {"parameter value list": []}
-            db_map_data_to_update[db_node.db_map] = []
-            for list_node in db_node.children:
-                if self.ui.treeView_parameter_value_list.selectionModel().isSelected(list_node.index):
-                    db_map_typed_data_to_remove[db_node.db_map]["parameter value list"].append({"id": list_node.id})
-                    # TODO: If not id, remove it directly
-                    continue
-                value_list = [
-                    to_database(value_node.text)
-                    for value_node in list_node.children
-                    if not self.ui.treeView_parameter_value_list.selectionModel().isSelected(value_node.index)
-                ]
-                db_item = {"id": list_node.id, "value_list": value_list}
-                db_map_data_to_update[db_node.db_map].append(db_item)
-        self.db_mngr.update_parameter_value_list(db_map_data_to_update)
-        self.db_mngr.remove_items(db_map_typed_data_to_remove)
+            db_map_typed_data_to_rm[db_node.db_map] = {"parameter value list": []}
+            db_map_data_to_upd[db_node.db_map] = []
+            for list_node in reversed(db_node.children[:-1]):
+                if list_node.id:
+                    if list_node.index in selected:
+                        db_map_typed_data_to_rm[db_node.db_map]["parameter value list"].append({"id": list_node.id})
+                        continue
+                    curr_value_list = list_node.compile_value_list()
+                    value_list = [
+                        value
+                        for value_node, value in zip(list_node.children, curr_value_list)
+                        if value_node.index not in selected
+                    ]
+                    if value_list:
+                        db_item = {"id": list_node.id, "value_list": value_list}
+                        db_map_data_to_upd[db_node.db_map].append(db_item)
+                    elif value_list != curr_value_list:
+                        db_map_typed_data_to_rm[db_node.db_map]["parameter value list"].append({"id": list_node.id})
+                else:
+                    # WIP lists, just remove everything selected
+                    if list_node.index in selected:
+                        db_node.remove_children(list_node.row, list_node.row)
+                        continue
+                    for value_node in reversed(list_node.children[:-1]):
+                        if value_node.index in selected:
+                            list_node.remove_children(value_node.row, value_node.row)
+        self.db_mngr.update_parameter_value_lists(db_map_data_to_upd)
+        self.db_mngr.remove_items(db_map_typed_data_to_rm)
+        self.ui.treeView_parameter_value_list.selectionModel().clearSelection()
