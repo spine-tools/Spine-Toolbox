@@ -21,7 +21,6 @@ from unittest import mock
 import logging
 import os
 import sys
-from PySide2.QtCore import QSettings
 from PySide2.QtWidgets import QApplication, QToolButton
 from ..widgets.tree_view_widget import TreeViewForm
 from ..widgets.custom_qdialog import AddObjectClassesDialog
@@ -44,18 +43,21 @@ class TestAddItemsDialog(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("project.SpineToolboxProject") as mock_project, mock.patch(
-            "spinedb_api.DiffDatabaseMapping"
-        ) as mock_db_map:
-            mock_project._toolbox._qsettings = QSettings("SpineProject", "Spine Toolbox")
-            mock_project._toolbox._qsettings.setValue("appSettings/commitAtExit", "0")
+        with mock.patch("spinetoolbox.project.SpineToolboxProject") as mock_project, \
+                mock.patch("spinedb_api.DiffDatabaseMapping") as mock_db_map, \
+                mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui") as mock_restore_ui:
             self.tree_view_form = TreeViewForm(mock_project, {"mock_db": mock_db_map})
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        self.tree_view_form.close()
+        with mock.patch("spinetoolbox.widgets.data_store_widget.DataStoreForm._prompt_close_and_commit") as mock_p_c_and_c, \
+                mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state") as mock_save_w_s:
+            mock_p_c_and_c.return_value = True
+            self.tree_view_form.close()
+            mock_p_c_and_c.assert_called_once()
+            mock_save_w_s.assert_called_once()
         self.tree_view_form.deleteLater()
         self.tree_view_form = None
         try:

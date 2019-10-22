@@ -53,13 +53,12 @@ class _MockToolbox:
         def emit(self, text):
             self.text = text
 
-    def __init__(self, project_dir, base_dir=None):
-        if base_dir is None:
-            base_dir = ""
-        self._qsettings = QSettings()
-        self._qsettings.setValue("appSettings/projectsDir", project_dir)
-        self.tool_specification_model = _MockToolSpecModel(self, base_dir)
-        self._project = SpineToolboxProject(self, "name", "description", project_dir)
+    def __init__(self, temp_directory):
+        self._qsettings = mock.MagicMock()
+        self.tool_specification_model = ToolSpecificationModel(self)
+        with mock.patch("spinetoolbox.project.project_dir") as mock_project_dir:
+            mock_project_dir.return_value = temp_directory
+            self._project = SpineToolboxProject(self, "name", "description", temp_directory)
         self.msg = _MockToolbox.Message()
         self.msg_warning = _MockToolbox.Message()
 
