@@ -168,7 +168,7 @@ class EntityTreeModel(QAbstractItemModel):
             parent = current._parent
             if parent == ancient_one:
                 break
-            visit_children = False  # Make sure we don't visit children again
+            visit_children = False  # To make sure we don't visit children again
             current = parent
 
     def item_from_index(self, index):

@@ -23,9 +23,9 @@ from .helpers import IconManager
 
 
 class SpineDBManager(QObject):
-    """Class to manage spine DBs in a unified way.
-    The idea is to share an object of this class across many mvc models and related classes
-    so they can all see the same data.
+    """Class to manage DBs within a project.
+
+    TODO: Expand description, how it works, the cache, the signals, etc.
     """
 
     msg_error = Signal("QVariant", name="msg_error")
@@ -36,6 +36,7 @@ class SpineDBManager(QObject):
     relationships_added = Signal("QVariant", name="relationships_added")
     parameter_definitions_added = Signal("QVariant", name="parameter_definitions_added")
     parameter_values_added = Signal("QVariant", name="parameter_values_added")
+    parameter_value_lists_added = Signal("QVariant", name="parameter_value_lists_added")
     # Removed
     object_classes_removed = Signal("QVariant", name="object_classes_removed")
     objects_removed = Signal("QVariant", name="objects_removed")
@@ -43,6 +44,7 @@ class SpineDBManager(QObject):
     relationships_removed = Signal("QVariant", name="relationships_removed")
     parameter_definitions_removed = Signal("QVariant", name="parameter_definitions_removed")
     parameter_values_removed = Signal("QVariant", name="parameter_values_removed")
+    parameter_value_lists_removed = Signal("QVariant", name="parameter_value_lists_removed")
     # Updated
     object_classes_updated = Signal("QVariant", name="object_classes_updated")
     objects_updated = Signal("QVariant", name="objects_updated")
@@ -50,6 +52,7 @@ class SpineDBManager(QObject):
     relationships_updated = Signal("QVariant", name="relationships_updated")
     parameter_definitions_updated = Signal("QVariant", name="parameter_definitions_updated")
     parameter_values_updated = Signal("QVariant", name="parameter_values_updated")
+    parameter_value_lists_updated = Signal("QVariant", name="parameter_value_lists_updated")
     parameter_definition_tags_set = Signal("QVariant", name="parameter_definition_tags_set")
 
     def __init__(self, *db_maps):
@@ -422,6 +425,9 @@ class SpineDBManager(QObject):
     def add_parameter_values(self, db_map_data):
         self.add_or_update_items(db_map_data, "add_parameter_values", "parameter_values_added")
 
+    def add_parameter_value_lists(self, db_map_data):
+        self.add_or_update_items(db_map_data, "add_wide_parameter_value_lists", "parameter_value_lists_added")
+
     def update_object_classes(self, db_map_data):
         self.add_or_update_items(db_map_data, "update_object_classes", "object_classes_updated")
 
@@ -440,6 +446,9 @@ class SpineDBManager(QObject):
     def update_parameter_values(self, db_map_data):
         self.add_or_update_items(db_map_data, "update_parameter_values", "parameter_values_updated")
 
+    def update_parameter_value_lists(self, db_map_data):
+        self.add_or_update_items(db_map_data, "update_wide_parameter_value_lists", "parameter_value_lists_updated")
+
     def set_parameter_definition_tags(self, db_map_data):
         self.add_or_update_items(db_map_data, "set_parameter_definition_tags", "parameter_definition_tags_set")
 
@@ -448,14 +457,14 @@ class SpineDBManager(QObject):
 
         db_map_typed_data (dict): maps DiffDatabaseMapping instances to str item type, to list of items to remove.
         """
-        # Removing works like this in spinedb_api, all at once, probably because of cascading
-        # TODO: Support removing parameter tags, value-lists, etc
+        # Removing works like this in spinedb_api, all at once, probably because of cascading?
         db_map_object_classes = dict()
         db_map_objects = dict()
         db_map_relationship_classes = dict()
         db_map_relationships = dict()
         db_map_parameter_definitions = dict()
         db_map_parameter_values = dict()
+        db_map_parameter_value_lists = dict()
         error_log = dict()
         for db_map, items_per_type in db_map_typed_data.items():
             object_classes = items_per_type.get("object class", ())
@@ -464,6 +473,7 @@ class SpineDBManager(QObject):
             relationships = items_per_type.get("relationship", ())
             parameter_definitions = items_per_type.get("parameter definition", ())
             parameter_values = items_per_type.get("parameter value", ())
+            parameter_value_lists = items_per_type.get("parameter value list", ())
             try:
                 db_map.remove_items(
                     object_class_ids={x['id'] for x in object_classes},
@@ -472,6 +482,7 @@ class SpineDBManager(QObject):
                     relationship_ids={x['id'] for x in relationships},
                     parameter_definition_ids={x['id'] for x in parameter_definitions},
                     parameter_value_ids={x['id'] for x in parameter_values},
+                    parameter_value_list_ids={x['id'] for x in parameter_value_lists},
                 )
             except SpineDBAPIError as err:
                 error_log[db_map] = err
@@ -482,6 +493,7 @@ class SpineDBManager(QObject):
             db_map_relationships[db_map] = relationships
             db_map_parameter_definitions[db_map] = parameter_definitions
             db_map_parameter_values[db_map] = parameter_values
+            db_map_parameter_value_lists[db_map] = parameter_value_lists
         if any(error_log.values()):
             self.msg_error.emit(error_log)
         if any(db_map_object_classes.values()):
@@ -496,6 +508,8 @@ class SpineDBManager(QObject):
             self.parameter_definitions_removed.emit(db_map_parameter_definitions)
         if any(db_map_parameter_values.values()):
             self.parameter_values_removed.emit(db_map_parameter_values)
+        if any(db_map_parameter_value_lists.values()):
+            self.parameter_value_lists_removed.emit(db_map_parameter_value_lists)
 
     @Slot("QVariant", name="cascade_remove_objects")
     def cascade_remove_objects(self, db_map_data):

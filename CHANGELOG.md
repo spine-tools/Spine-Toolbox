@@ -13,6 +13,7 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - Main Window menu 'File -> Open recent'. Shortcut for opening a recent project.
 - A new project item *Gdx Export* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
 - It is now possible to copy, paste and duplicate project items on the Design View.
+- Changes made in the tree view are also seen in the graph view and viceversa.
 
 ### Changed
 - spinetoolbox is now a Python package.

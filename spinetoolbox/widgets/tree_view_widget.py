@@ -322,7 +322,7 @@ class TreeViewForm(DataStoreForm):
         model = self.ui.tableView_object_parameter_definition.selectionModel()
         self.obj_parameter_definition_selection_available.emit(model.hasSelection())
         if self.do_clear_other_selections:
-            self.clear_other_selections(self.ui.tableView_object_parameter_definition)
+            self._clear_other_selections(self.ui.tableView_object_parameter_definition)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_value_selection_changed")
     def _handle_object_parameter_value_selection_changed(self, selected, deselected):
@@ -330,7 +330,7 @@ class TreeViewForm(DataStoreForm):
         model = self.ui.tableView_object_parameter_value.selectionModel()
         self.obj_parameter_value_selection_available.emit(model.hasSelection())
         if self.do_clear_other_selections:
-            self.clear_other_selections(self.ui.tableView_object_parameter_value)
+            self._clear_other_selections(self.ui.tableView_object_parameter_value)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_definition_selection_changed")
     def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
@@ -338,7 +338,7 @@ class TreeViewForm(DataStoreForm):
         model = self.ui.tableView_relationship_parameter_definition.selectionModel()
         self.rel_parameter_definition_selection_available.emit(model.hasSelection())
         if self.do_clear_other_selections:
-            self.clear_other_selections(self.ui.tableView_relationship_parameter_definition)
+            self._clear_other_selections(self.ui.tableView_relationship_parameter_definition)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_value_selection_changed")
     def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
@@ -346,7 +346,7 @@ class TreeViewForm(DataStoreForm):
         model = self.ui.tableView_relationship_parameter_value.selectionModel()
         self.rel_parameter_value_selection_available.emit(model.hasSelection())
         if self.do_clear_other_selections:
-            self.clear_other_selections(self.ui.tableView_relationship_parameter_value)
+            self._clear_other_selections(self.ui.tableView_relationship_parameter_value)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_parameter_value_list_selection_changed")
     def _handle_parameter_value_list_selection_changed(self, selected, deselected):
@@ -354,7 +354,7 @@ class TreeViewForm(DataStoreForm):
         model = self.ui.treeView_parameter_value_list.selectionModel()
         self.parameter_value_list_selection_available.emit(model.hasSelection())
         if self.do_clear_other_selections:
-            self.clear_other_selections(self.ui.treeView_parameter_value_list)
+            self._clear_other_selections(self.ui.treeView_parameter_value_list)
 
     @Slot("int", name="_handle_object_parameter_tab_changed")
     def _handle_object_parameter_tab_changed(self, index):
@@ -503,7 +503,7 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.scrollTo(next_index)
         self.ui.treeView_object.expand(next_index)
 
-    def clear_other_selections(self, *skip_widgets):
+    def _clear_other_selections(self, *skip_widgets):
         """Clear selections in all widgets except `skip_widgets`."""
         self.do_clear_other_selections = False
         for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
@@ -529,7 +529,7 @@ class TreeViewForm(DataStoreForm):
                 bool(self.object_tree_model.selected_relationship_class_indexes)
             )
             self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
-            self.clear_other_selections(self.ui.treeView_object)
+            self._clear_other_selections(self.ui.treeView_object)
             self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
             self.update_filter()
 
@@ -550,7 +550,7 @@ class TreeViewForm(DataStoreForm):
                 bool(self.relationship_tree_model.selected_relationship_class_indexes)
             )
             self.relationship_selection_available.emit(bool(self.relationship_tree_model.selected_relationship_indexes))
-            self.clear_other_selections(self.ui.treeView_relationship)
+            self._clear_other_selections(self.ui.treeView_relationship)
             self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
             self.update_filter()
 
@@ -916,7 +916,6 @@ class TreeViewForm(DataStoreForm):
             table_view (QTableView): remove selection from this view
             item_type (str)
         """
-        self.msg.emit("Removing parameter data in cascade...")
         selection = table_view.selectionModel().selection()
         rows = list()
         while not selection.isEmpty():
@@ -934,66 +933,28 @@ class TreeViewForm(DataStoreForm):
             db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
         self.db_mngr.remove_items(db_map_typed_data)
         table_view.selectionModel().clearSelection()
-        self.msg.emit("")
 
     @Slot(name="remove_parameter_value_lists")
     def remove_parameter_value_lists(self):
         """Remove selection of parameter value_lists.
         """
-        indexes = self.ui.treeView_parameter_value_list.selectedIndexes()
-        value_indexes = {}
-        list_indexes = {}
-        for index in indexes:
-            parent = index.parent()
-            if not parent.isValid():
-                continue
-            if parent.internalPointer().level == 1:
-                value_indexes.setdefault(parent, list()).append(index)
-            elif parent.internalPointer().level == 0:
-                list_indexes.setdefault(parent, list()).append(index)
-        # Remove list indexes from value indexes, since they will be fully removed anyways
-        for indexes in list_indexes.values():
-            for index in indexes:
-                value_indexes.pop(index, None)
-        # Get items to update
-        model = self.parameter_value_list_model
-        db_map_data = dict()
-        for parent, indexes in value_indexes.items():
-            db_map = parent.parent().internalPointer().id
-            id_ = parent.internalPointer().id
-            removed_rows = [ind.row() for ind in indexes]
-            all_rows = range(model.rowCount(parent) - 1)
-            remaining_rows = [row for row in all_rows if row not in removed_rows]
-            value_list = [model.index(row, 0, parent).data(Qt.EditRole) for row in remaining_rows]
-            db_map_data.setdefault(db_map, {}).setdefault("to_upd", []).append(dict(id=id_, value_list=value_list))
-        # Get ids to remove
-        for parent, indexes in list_indexes.items():
-            db_map = parent.internalPointer().id
-            db_map_data.setdefault(db_map, {}).setdefault("to_rm", set()).update(
-                ind.internalPointer().id for ind in indexes
-            )
-        db_map_data_to_remove = dict()
-        for db_map, d in db_map_data.items():
-            to_update = d.get("to_upd", None)
-            to_remove = d.get("to_rm", None)
-            try:
-                if to_update:
-                    # NOTE: SpineIntegrityError can never happen here... right???
-                    db_map.update_wide_parameter_value_lists(*to_update)
-                if to_remove:
-                    db_map.remove_items(parameter_value_list_ids=to_remove)
-
-            except SpineDBAPIError as e:
-                self._tree_view_form.msg_error.emit(e.msg)
-                continue
-            db_map_data_to_remove[db_map] = to_remove
-        self.object_parameter_definition_model.clear_parameter_value_lists(db_map_data_to_remove)
-        self.relationship_parameter_definition_model.clear_parameter_value_lists(db_map_data_to_remove)
-        for parent, indexes in list_indexes.items():
-            for row in sorted([ind.row() for ind in indexes], reverse=True):
-                self.parameter_value_list_model.removeRow(row, parent)
-        for parent, indexes in value_indexes.items():
-            for row in sorted([ind.row() for ind in indexes], reverse=True):
-                self.parameter_value_list_model.removeRow(row, parent)
-        self.commit_available.emit(True)
-        self.msg.emit("Successfully removed parameter value list(s).")
+        # TODO: what happens with data not yet been inserted
+        db_map_typed_data_to_remove = {}
+        db_map_data_to_update = {}
+        for db_node in self.parameter_value_list_model._invisible_root_node.children:
+            db_map_typed_data_to_remove[db_node.db_map] = {"parameter value list": []}
+            db_map_data_to_update[db_node.db_map] = []
+            for list_node in db_node.children:
+                if self.ui.treeView_parameter_value_list.selectionModel().isSelected(list_node.index):
+                    db_map_typed_data_to_remove[db_node.db_map]["parameter value list"].append({"id": list_node.id})
+                    # TODO: If not id, remove it directly
+                    continue
+                value_list = [
+                    to_database(value_node.text)
+                    for value_node in list_node.children
+                    if not self.ui.treeView_parameter_value_list.selectionModel().isSelected(value_node.index)
+                ]
+                db_item = {"id": list_node.id, "value_list": value_list}
+                db_map_data_to_update[db_node.db_map].append(db_item)
+        self.db_mngr.update_parameter_value_list(db_map_data_to_update)
+        self.db_mngr.remove_items(db_map_typed_data_to_remove)

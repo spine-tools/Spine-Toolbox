@@ -112,7 +112,7 @@ class DataStoreForm(QMainWindow):
         self.relationship_parameter_definition_model = CompoundRelationshipParameterDefinitionModel(
             self, self.db_mngr, *db_maps
         )
-        self.parameter_value_list_model = ParameterValueListModel(self, keyed_db_maps)
+        self.parameter_value_list_model = ParameterValueListModel(self, self.db_mngr, *db_maps)
         # Setup views
         self.ui.tableView_object_parameter_value.setModel(self.object_parameter_value_model)
         self.ui.tableView_relationship_parameter_value.setModel(self.relationship_parameter_value_model)
@@ -183,6 +183,7 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.relationships_added.connect(self.receive_relationships_added)
         self.db_mngr.parameter_definitions_added.connect(self.receive_parameter_definitions_added)
         self.db_mngr.parameter_values_added.connect(self.receive_parameter_values_added)
+        self.db_mngr.parameter_value_lists_added.connect(self.receive_parameter_value_lists_added)
         # Updated
         self.db_mngr.object_classes_updated.connect(self.receive_object_classes_updated)
         self.db_mngr.objects_updated.connect(self.receive_objects_updated)
@@ -190,6 +191,7 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.relationships_updated.connect(self.receive_relationships_updated)
         self.db_mngr.parameter_definitions_updated.connect(self.receive_parameter_definitions_updated)
         self.db_mngr.parameter_values_updated.connect(self.receive_parameter_values_updated)
+        self.db_mngr.parameter_value_lists_updated.connect(self.receive_parameter_value_lists_updated)
         # Removed
         self.db_mngr.object_classes_removed.connect(self.receive_object_classes_removed)
         self.db_mngr.objects_removed.connect(self.receive_objects_removed)
@@ -620,6 +622,10 @@ class DataStoreForm(QMainWindow):
     def receive_parameter_values_added(self, db_map_data):
         self.receive_items_changed("added", "parameter value", db_map_data)
 
+    @Slot("QVariant", name="receive_parameter_value_lists_added")
+    def receive_parameter_value_lists_added(self, db_map_data):
+        self.receive_items_changed("added", "parameter value list", db_map_data)
+
     @Slot("QVariant", name="receive_object_classes_updated")
     def receive_object_classes_updated(self, db_map_data):
         self.receive_items_changed("updated", "object class", db_map_data)
@@ -643,6 +649,10 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="receive_parameter_values_updated")
     def receive_parameter_values_updated(self, db_map_data):
         self.receive_items_changed("updated", "parameter value", db_map_data)
+
+    @Slot("QVariant", name="receive_parameter_value_lists_updated")
+    def receive_parameter_value_lists_updated(self, db_map_data):
+        self.receive_items_changed("updated", "parameter value list", db_map_data)
 
     @Slot("QVariant", name="receive_object_classes_removed")
     def receive_object_classes_removed(self, db_map_data):
@@ -669,45 +679,6 @@ class DataStoreForm(QMainWindow):
         self.receive_items_changed("removed", "parameter value", db_map_data)
 
     # TODO: all the below with the manager
-    def add_parameter_value_lists(self, parameter_value_list_d):
-        added_names = set()
-        for db_map, items in parameter_value_list_d.items():
-            parents = []
-            for item in items:
-                parents.append(item.pop("parent"))
-            added, error_log = db_map.add_wide_parameter_value_lists(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not added.count():
-                continue
-            for k, item in enumerate(added):
-                parents[k].internalPointer().id = item.id
-            added_names.update(x.name for x in added)
-        if not added_names:
-            return False
-        self.commit_available.emit(True)
-        msg = "Successfully added new parameter value list(s) '{}'.".format("', '".join(added_names))
-        self.msg.emit(msg)
-        return True
-
-    def update_parameter_value_lists(self, parameter_value_list_d):
-        db_map_data = dict()
-        for db_map, items in parameter_value_list_d.items():
-            updated, error_log = db_map.update_wide_parameter_value_lists(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not updated.count():
-                continue
-            db_map_data[db_map] = [x._asdict() for x in updated]
-        updated_names = {x["name"] for updated in db_map_data.values() for x in updated}
-        if not updated_names:
-            return False
-        self.object_parameter_definition_model.rename_parameter_value_lists(db_map_data)
-        self.relationship_parameter_definition_model.rename_parameter_value_lists(db_map_data)
-        self.commit_available.emit(True)
-        msg = "Successfully updated parameter value list(s) '{}'.".format("', '".join(updated_names))
-        self.msg.emit(msg)
-        return True
 
     @Slot("bool", name="show_manage_parameter_tags_form")
     def show_manage_parameter_tags_form(self, checked=False):
