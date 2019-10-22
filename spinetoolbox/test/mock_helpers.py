@@ -34,9 +34,9 @@ class MockQWidget(QWidget):
 
 def create_toolboxui():
     """Returns ToolboxUI, where QSettings among others has been mocked."""
-    with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, \
-            mock.patch("spinetoolbox.ui_main.PythonReplWidget") as mock_python_repl, \
-            mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+    with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+        "spinetoolbox.ui_main.PythonReplWidget"
+    ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
         # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
         mock_julia_repl.return_value = QWidget()
         mock_python_repl.return_value = MockQWidget()

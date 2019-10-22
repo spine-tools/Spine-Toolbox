@@ -36,7 +36,7 @@ class MappingPreviewModel(MinimalTableModel):
     """
 
     def __init__(self, parent=None):
-        super(MappingPreviewModel, self).__init__(parent)
+        super().__init__(parent)
         self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self._mapping = None
         self._data_changed_signal = None
@@ -61,7 +61,7 @@ class MappingPreviewModel(MinimalTableModel):
     def data(self, index, role=Qt.DisplayRole):
         if role == Qt.BackgroundColorRole and self._mapping:
             return self.data_color(index)
-        return super(MappingPreviewModel, self).data(index, role)
+        return super().data(index, role)
 
     def data_color(self, index):
         """returns background color for index depending on mapping
@@ -177,7 +177,7 @@ class MappingSpecModel(QAbstractTableModel):
     """
 
     def __init__(self, model, parent=None):
-        super(MappingSpecModel, self).__init__(parent)
+        super().__init__(parent)
         self._display_names = []
         self._mappings = []
         self._model = None
@@ -598,7 +598,7 @@ class MappingListModel(QAbstractListModel):
     """
 
     def __init__(self, mapping_list, parent=None):
-        super(MappingListModel, self).__init__(parent)
+        super().__init__(parent)
         self._qmappings = []
         self._names = []
         self._counter = 1

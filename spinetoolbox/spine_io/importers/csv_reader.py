@@ -53,7 +53,6 @@ class CSVConnector(SourceConnection):
     # Modal widget that returns source object and action (OK, CANCEL)
     SELECT_SOURCE_UI = select_csv_file
 
-
     def __init__(self):
         super(CSVConnector, self).__init__()
         self._filename = None
@@ -76,8 +75,6 @@ class CSVConnector(SourceConnection):
         Returns:
             list(str): Table names in list
         """
-
-        tables = {}
         options = {}
         # try to find options for file
         with open(self._filename, 'rb') as input_file:
@@ -103,9 +100,7 @@ class CSVConnector(SourceConnection):
                 options["has_header"] = csv.Sniffer().has_header(csvfile.read(1024))
             except csv.Error:
                 pass
-
-        tables[self._filename] = {"options": options}
-        return tables
+        return {self._filename: {"options": options}}
 
     @staticmethod
     def parse_options(options):

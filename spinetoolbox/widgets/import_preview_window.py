@@ -39,7 +39,7 @@ class ImportPreviewWindow(QMainWindow):
         self._qsettings = data_interface._toolbox._qsettings
 
         self._connection_manager = ConnectionManager(connector)
-        self._connection_manager._source = filepath
+        self._connection_manager.source = filepath
         self._preview_widget = ImportPreviewWidget(self._connection_manager, parent=self)
         self._preview_widget.use_settings(settings)
         self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Apply | QDialogButtonBox.Cancel)
