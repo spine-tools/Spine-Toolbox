@@ -81,7 +81,6 @@ class _MockItem:
 
 
 class TestTool(unittest.TestCase):
-
     def _set_up(self):
         """Set up before test_rename()."""
         self.toolbox = create_toolboxui_with_project()
@@ -491,6 +490,7 @@ class TestToolExecution(unittest.TestCase):
         # Check that no resources are advertised
         mock_exec_inst.advertise_resources.assert_not_called()
 
+    @unittest.skipIf(sys.platform == "win32", "Needs an update for windows.")
     def test_execute_complex_tool_in_work_dir(self):
         """Tests execution of a Tool with the 'complex_exec' specification."""
         item = dict(name="Tool", description="", x=0, y=0, tool="complex_exec")
