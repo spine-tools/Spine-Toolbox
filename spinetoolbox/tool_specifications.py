@@ -127,7 +127,7 @@ class ToolSpecification(MetaObject):
         """Return tool template args as list."""
         # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
         if (self.cmdline_args is not None) and (self.cmdline_args != ''):
-            # Tool template cmdline args is a space delimited string. Return them as a list.
+            # Tool spec cmdline args is a space delimited string. Return them as a list.
             return self.cmdline_args.split(" ")
         return []
 

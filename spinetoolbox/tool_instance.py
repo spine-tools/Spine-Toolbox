@@ -25,21 +25,19 @@ from .config import GAMS_EXECUTABLE, JULIA_EXECUTABLE, PYTHON_EXECUTABLE
 
 
 class ToolInstance(QObject):
-    """Class for Tool instances.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        tool_specification (ToolSpecification): the tool specification for this instance
-        basedir (str): the path to the directory where this instance should run
-
-    Class Variables:
-        instance_finished_signal (Signal): Signal to emit when a Tool instance has finished processing
-    """
+    """Tool instance base class."""
 
     instance_finished_signal = Signal(int, name="instance_finished_signal")
+    """Signal to emit when a Tool instance has finished processing"""
 
     def __init__(self, toolbox, tool_specification, basedir):
-        """class constructor."""
+        """
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            tool_specification (ToolSpecification): the tool specification for this instance
+            basedir (str): the path to the directory where this instance should run
+        """
         super().__init__()  # TODO: Should this be QObject.__init__(self) like in MetaObject class?
         self._toolbox = toolbox
         self.tool_specification = tool_specification
@@ -69,15 +67,13 @@ class ToolInstance(QObject):
         shutil.rmtree(self.basedir, ignore_errors=True)
 
     def prepare(self):
-        """Prepare this instance for execution.
+        """Prepares this instance for execution.
         Implement in subclasses to perform specific initialization.
         """
         raise NotImplementedError
 
     def execute(self):
-        """Execute this instance that must have been prepared prealably.
-        Implement in subclasses.
-        """
+        """Executes a prepared instance. Implement in subclasses."""
         raise NotImplementedError
 
     @Slot(int, name="handle_execution_finished")
@@ -90,26 +86,15 @@ class ToolInstance(QObject):
         raise NotImplementedError
 
     def append_cmdline_args(self):
-        """Appends Tool template command line args into instance args list.
-
-        Args:
-            instance (ToolInstance)
-        """
+        """Appends Tool specification command line args into instance args list."""
         self.args += self.tool_specification.get_cmdline_args()
 
 
 class GAMSToolInstance(ToolInstance):
-    """Class for GAMS Tool instances.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        tool_specification (ToolSpecification): the tool specification for this instance
-        basedir (str): the path to the directory where this instance should run
-    """
+    """Class for GAMS Tool instances."""
 
     def prepare(self):
-        """Prepare this instance for execution.
-        """
+        """Prepares this instance for execution."""
         gams_path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue="")
         if gams_path != '':
             gams_exe = gams_path
@@ -123,8 +108,7 @@ class GAMSToolInstance(ToolInstance):
         self.append_cmdline_args()  # Append Tool specific cmd line args into args list
 
     def execute(self):
-        """Execute this instance that must have been prepared prealably.
-        """
+        """Executes a prepared instance."""
         self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
         self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
         # self.tool_process.start_process(workdir=os.path.split(self.program)[0])
@@ -153,28 +137,28 @@ class GAMSToolInstance(ToolInstance):
                 except KeyError:
                     self._toolbox.msg_error.emit("\tUnknown return code ({0})".format(ret))
         else:  # Return code 0: success
-            self._toolbox.msg.emit("\tTool template execution finished")
+            self._toolbox.msg.emit("\tTool specification execution finished")
         self.tool_process.deleteLater()
         self.tool_process = None
         self.instance_finished_signal.emit(ret)
 
 
 class JuliaToolInstance(ToolInstance):
-    """Class for Julia Tool instances.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        tool_specification (ToolSpecification): the tool specification for this instance
-        basedir (str): the path to the directory where this instance should run
-    """
+    """Class for Julia Tool instances."""
 
     def __init__(self, toolbox, tool_specification, basedir):
+        """
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            tool_specification (ToolSpecification): the tool specification for this instance
+            basedir (str): the path to the directory where this instance should run
+        """
         super().__init__(toolbox, tool_specification, basedir)
         self.julia_repl_command = None
 
     def prepare(self):
-        """Prepare this instance for execution.
-        """
+        """Prepares this instance for execution."""
         work_dir = self.basedir
         use_embedded_julia = self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2")
         if use_embedded_julia == "2":
@@ -205,8 +189,7 @@ class JuliaToolInstance(ToolInstance):
             self.append_cmdline_args()
 
     def execute(self):
-        """Execute this instance that must have been prepared prealably.
-        """
+        """Executes a prepared instance."""
         if self._toolbox.qsettings().value("appSettings/useEmbeddedJulia", defaultValue="2") == "2":
             self.tool_process = self._toolbox.julia_repl
             self.tool_process.execution_finished_signal.connect(self.handle_repl_execution_finished)
@@ -271,21 +254,21 @@ class JuliaToolInstance(ToolInstance):
 
 
 class PythonToolInstance(ToolInstance):
-    """Class for Python Tool instances.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        tool_specification (ToolSpecification): the tool specification for this instance
-        basedir (str): the path to the directory where this instance should run
-    """
+    """Class for Python Tool instances."""
 
     def __init__(self, toolbox, tool_specification, basedir):
+        """
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            tool_specification (ToolSpecification): the tool specification for this instance
+            basedir (str): the path to the directory where this instance should run
+        """
         super().__init__(toolbox, tool_specification, basedir)
         self.ipython_command_list = list()
 
     def prepare(self):
-        """Prepare this instance for execution.
-        """
+        """Prepares this instance for execution."""
         work_dir = self.basedir
         use_embedded_python = self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0")
         if use_embedded_python == "2":
@@ -312,8 +295,7 @@ class PythonToolInstance(ToolInstance):
             self.append_cmdline_args()
 
     def execute(self):
-        """Execute this instance that must have been prepared prealably.
-        """
+        """Executes a prepared instance."""
         if self._toolbox.qsettings().value("appSettings/useEmbeddedPython", defaultValue="0") == "2":
             self.tool_process = self._toolbox.python_repl
             self.tool_process.execution_finished_signal.connect(self.handle_console_execution_finished)
@@ -387,17 +369,10 @@ class PythonToolInstance(ToolInstance):
 
 
 class ExecutableToolInstance(ToolInstance):
-    """Class for Executable Tool instances.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        tool_specification (ToolSpecification): the tool specification for this instance
-        basedir (str): the path to the directory where this instance should run
-    """
+    """Class for Executable Tool instances."""
 
     def prepare(self):
-        """Prepare this instance for execution.
-        """
+        """Prepares this instance for execution."""
         batch_path = os.path.join(self.basedir, self.tool_specification.main_prgm)
         if sys.platform != "win32":
             self.program = "sh"
@@ -407,8 +382,7 @@ class ExecutableToolInstance(ToolInstance):
         self.append_cmdline_args()  # Append Tool specific cmd line args into args list
 
     def execute(self):
-        """Execute this instance that must have been prepared prealably.
-        """
+        """Executes a prepared instance."""
         self.tool_process = qsubprocess.QSubProcess(self._toolbox, self.program, self.args)
         self.tool_process.subprocess_finished_signal.connect(self.handle_execution_finished)
         self.tool_process.start_process(workdir=self.basedir)
