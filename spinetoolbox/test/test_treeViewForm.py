@@ -22,7 +22,7 @@ from unittest import mock
 import logging
 import sys
 from PySide2.QtWidgets import QApplication, QStyleOptionViewItem
-from PySide2.QtCore import QSettings, Qt, QItemSelectionModel, QItemSelection
+from PySide2.QtCore import Qt, QItemSelectionModel, QItemSelection
 from ..widgets.tree_view_widget import TreeViewForm
 from ..widgets.custom_editors import SearchBarEditor, MultiSearchBarEditor, CustomLineEditor
 
@@ -38,6 +38,7 @@ class qry(list):
 
 
 class TestTreeViewForm(unittest.TestCase):
+
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
@@ -121,9 +122,9 @@ class TestTreeViewForm(unittest.TestCase):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes."""
         with mock.patch("spinetoolbox.project.SpineToolboxProject") as mock_project, mock.patch(
             "spinedb_api.DiffDatabaseMapping"
-        ) as mock_db_map:
-            mock_project._toolbox._qsettings = QSettings("SpineProject", "Spine Toolbox")
-            mock_project._toolbox._qsettings.setValue("appSettings/commitAtExit", "0")
+        ) as mock_db_map, mock.patch(
+            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"
+        ) as mock_restore_ui:
             mock_db_map.object_parameter_definition_fields.return_value = [
                 'id',
                 'object_class_id',
@@ -200,6 +201,12 @@ class TestTreeViewForm(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
+        with mock.patch("spinetoolbox.widgets.data_store_widget.DataStoreForm._prompt_close_and_commit") as mock_p_c_and_c, \
+                mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state") as mock_save_w_s:
+            mock_p_c_and_c.return_value = True
+            self.tree_view_form.close()
+            mock_p_c_and_c.assert_called_once()
+            mock_save_w_s.assert_called_once()
         self.tree_view_form.deleteLater()
         self.tree_view_form = None
 
