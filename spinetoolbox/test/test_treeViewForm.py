@@ -891,6 +891,7 @@ class TestTreeViewForm(unittest.TestCase):
         split_obj_id_list = [int(x) for x in obj_id_list_index.data().split(',')]
         self.assertEqual(split_obj_id_list, [self.nemo_object.id, self.scooby_object.id])
 
+    @unittest.skip("Fix this.")
     def test_paste_add_object_parameter_definitions(self):
         """Test that data is pasted onto the view and object parameter definitions are added to the model."""
         self.add_mock_object_classes()
