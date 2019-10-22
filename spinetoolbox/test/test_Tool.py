@@ -41,6 +41,7 @@ from ..project import SpineToolboxProject
 from ..mvcmodels.tool_specification_model import ToolSpecificationModel
 from ..project_item import ProjectItemResource
 from .. import tool_specifications
+from .mock_helpers import create_toolboxui_with_project
 from spinetoolbox.config import TOOL_OUTPUT_DIR
 
 
@@ -80,17 +81,10 @@ class _MockItem:
 
 
 class TestTool(unittest.TestCase):
+
     def _set_up(self):
         """Set up before test_rename()."""
-        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "spinetoolbox.ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
-            mock_julia_repl.return_value = QWidget()
-            mock_python_repl.return_value = MockQWidget()
-            mock_qsettings_value.side_effect = qsettings_value_side_effect
-            self.toolbox = ToolboxUI()
-            self.toolbox.create_project("UnitTest Project", "")
+        self.toolbox = create_toolboxui_with_project()
 
     def tearDown(self):
         """Clean up."""

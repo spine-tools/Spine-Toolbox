@@ -54,7 +54,9 @@ class ImportPreviewWidget(QWidget):
         self._ui = Ui_ImportPreview()
         self._ui.setupUi(self)
         self._ui.source_data_table.setModel(self.table)
-        self._ui_error = QErrorMessage()
+        self._ui_error = QErrorMessage(self)
+        self._ui_error.setWindowTitle("Error")
+        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self._ui_preview_menu = MappingTableMenu(self._ui.source_data_table)
         self._ui.top_source_splitter.addWidget(self.connector.option_widget())
         self._ui.mappings_box.setLayout(QVBoxLayout())
@@ -108,7 +110,9 @@ class ImportPreviewWidget(QWidget):
         Sets widgets enable state
         """
         self._ui.source_list.setDisabled(status)
-        self._ui.source_preview_widget_stack.setCurrentIndex(1 if status else 0)
+        preview_table = 0
+        loading_message = 1
+        self._ui.source_preview_widget_stack.setCurrentIndex(loading_message if status else preview_table)
         self._ui_mapper.setDisabled(status)
 
     def connection_ready(self):

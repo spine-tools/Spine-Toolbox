@@ -25,9 +25,8 @@ import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from PySide2.QtCore import SIGNAL, Qt, QPoint, QItemSelectionModel
 from PySide2.QtTest import QTest
-from ..ui_main import ToolboxUI
 from ..project import SpineToolboxProject
-from .mock_helpers import MockQWidget, qsettings_value_side_effect
+from .mock_helpers import create_toolboxui
 from ..config import APPLICATION_PATH
 from ..graphics_items import ProjectItemIcon, Link
 from ..project_item import RootProjectItem
@@ -52,14 +51,7 @@ class TestToolboxUI(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test. Makes an instance of ToolboxUI class
         without opening previous project."""
-        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "spinetoolbox.ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            # Replace Julia and Python REPLs with a QWidget so that the DeprecationWarning from qtconsole is not printed
-            mock_julia_repl.return_value = QWidget()
-            mock_python_repl.return_value = MockQWidget()  # Hack, because QWidget does not have test_push_vars()
-            mock_qsettings_value.side_effect = qsettings_value_side_effect  # override 'open previous project' setting
-            self.toolbox = ToolboxUI()
+        self.toolbox = create_toolboxui()
 
     def tearDown(self):
         """Overridden method. Runs after each test.

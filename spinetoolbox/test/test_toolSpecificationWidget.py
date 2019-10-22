@@ -22,7 +22,7 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from ..widgets.tool_specification_widget import ToolSpecificationWidget
-from ..ui_main import ToolboxUI
+from .mock_helpers import create_toolboxui
 
 
 class MockQWidget(QWidget):
@@ -51,14 +51,8 @@ class TestToolSpecificationWidget(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "spinetoolbox.ui_main.PythonReplWidget"
-        ) as mock_python_repl:
-            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
-            mock_julia_repl.return_value = QWidget()
-            mock_python_repl.return_value = MockQWidget()
-            self.toolbox = ToolboxUI()
-            self.tool_specification_widget = ToolSpecificationWidget(self.toolbox)
+        self.toolbox = create_toolboxui()
+        self.tool_specification_widget = ToolSpecificationWidget(self.toolbox)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
