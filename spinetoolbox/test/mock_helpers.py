@@ -52,6 +52,7 @@ def create_toolboxui_with_project():
             mock.patch("spinetoolbox.ui_main.PythonReplWidget") as mock_python_repl, \
             mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, \
             mock.patch("spinetoolbox.ui_main.ToolboxUI.save_project") as mock_save_project, \
+            mock.patch("spinetoolbox.ui_main.ToolboxUI.update_recent_projects") as mock_update_recents, \
             mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
         # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
         mock_julia_repl.return_value = QWidget()
