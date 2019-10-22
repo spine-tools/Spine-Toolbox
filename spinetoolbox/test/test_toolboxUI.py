@@ -553,59 +553,82 @@ class TestToolboxUI(unittest.TestCase):
         self.fail()
 
     def test_tasks_before_exit_without_open_project(self):
+        """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
+        This test is done without a project so MUT only calls QSettings.value() once.
+        This can probably be simplified but at least it does not edit user's Settings, while doing the test."""
         self.assertIsNone(self.toolbox.project())
         settings = self.toolbox.qsettings()
-        settings.setValue("appSettings/showExitPrompt", "0")
-        settings.setValue("appSettings/saveAtExit", "0")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_1
+            tasks = self.toolbox._tasks_before_exit()
+            mock_qsettings_value.assert_called_once()
+            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, [])
-        settings.setValue("appSettings/showExitPrompt", "2")
-        settings.setValue("appSettings/saveAtExit", "0")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_2
+            tasks = self.toolbox._tasks_before_exit()
+            mock_qsettings_value.assert_called_once()
+            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, ["prompt exit"])
-        settings.setValue("appSettings/showExitPrompt", "0")
-        settings.setValue("appSettings/saveAtExit", "1")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_3
+            tasks = self.toolbox._tasks_before_exit()
+            mock_qsettings_value.assert_called_once()
+            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, [])
-        settings.setValue("appSettings/showExitPrompt", "2")
-        settings.setValue("appSettings/saveAtExit", "1")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_4
+            tasks = self.toolbox._tasks_before_exit()
+            mock_qsettings_value.assert_called_once()
+            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, ["prompt exit"])
-        settings.setValue("appSettings/showExitPrompt", "0")
-        settings.setValue("appSettings/saveAtExit", "2")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_5
+            tasks = self.toolbox._tasks_before_exit()
+            mock_qsettings_value.assert_called_once()
+            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, [])
-        settings.setValue("appSettings/showExitPrompt", "2")
-        settings.setValue("appSettings/saveAtExit", "2")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_6
+            tasks = self.toolbox._tasks_before_exit()
+            mock_qsettings_value.assert_called_once()
+            mock_qsettings_value.assert_called_with("appSettings/showExitPrompt", defaultValue="2")
         self.assertEqual(tasks, ["prompt exit"])
 
     def test_tasks_before_exit_with_open_project(self):
+        """_tasks_before_exit is called with every possible combination of the two QSettings values that it uses.
+        This test is done with a 'mock' project so MUT calls QSettings.value() twice."""
         self.toolbox._project = 1  # Just make sure project is not None
         settings = self.toolbox.qsettings()
-        settings.setValue("appSettings/showExitPrompt", "0")
-        settings.setValue("appSettings/saveAtExit", "0")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_1
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(2, mock_qsettings_value.call_count)
         self.assertEqual(tasks, [])
-        settings.setValue("appSettings/showExitPrompt", "2")
-        settings.setValue("appSettings/saveAtExit", "0")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_2
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(2, mock_qsettings_value.call_count)
         self.assertEqual(tasks, ["prompt exit"])
-        settings.setValue("appSettings/showExitPrompt", "0")
-        settings.setValue("appSettings/saveAtExit", "1")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_3
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(2, mock_qsettings_value.call_count)
         self.assertEqual(tasks, ["prompt save"])
-        settings.setValue("appSettings/showExitPrompt", "2")
-        settings.setValue("appSettings/saveAtExit", "1")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_4
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(2, mock_qsettings_value.call_count)
         self.assertEqual(tasks, ["prompt save"])
-        settings.setValue("appSettings/showExitPrompt", "0")
-        settings.setValue("appSettings/saveAtExit", "2")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_5
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(2, mock_qsettings_value.call_count)
         self.assertEqual(tasks, ["save"])
-        settings.setValue("appSettings/showExitPrompt", "2")
-        settings.setValue("appSettings/saveAtExit", "2")
-        tasks = self.toolbox._tasks_before_exit()
+        with mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+            mock_qsettings_value.side_effect = self._tasks_before_exit_scenario_6
+            tasks = self.toolbox._tasks_before_exit()
+            self.assertEqual(2, mock_qsettings_value.call_count)
         self.assertEqual(tasks, ["prompt exit", "save"])
 
     def test_propose_item_name(self):
@@ -724,6 +747,48 @@ class TestToolboxUI(unittest.TestCase):
         # Map scene coordinates to graphics view viewport coordinates
         qpoint = gv.mapFromScene(qpointf)  # Returns a point in Graphics view viewport coordinate system
         return qpoint
+
+    @staticmethod
+    def _tasks_before_exit_scenario_1(key, defaultValue="2"):
+        if key == "appSettings/showExitPrompt":
+            return "0"
+        elif key == "appSettings/saveAtExit":
+            return "0"
+
+    @staticmethod
+    def _tasks_before_exit_scenario_2(key, defaultValue="2"):
+        if key == "appSettings/showExitPrompt":
+            return "2"
+        elif key == "appSettings/saveAtExit":
+            return "0"
+
+    @staticmethod
+    def _tasks_before_exit_scenario_3(key, defaultValue="2"):
+        if key == "appSettings/showExitPrompt":
+            return "0"
+        elif key == "appSettings/saveAtExit":
+            return "1"
+
+    @staticmethod
+    def _tasks_before_exit_scenario_4(key, defaultValue="2"):
+        if key == "appSettings/showExitPrompt":
+            return "2"
+        elif key == "appSettings/saveAtExit":
+            return "1"
+
+    @staticmethod
+    def _tasks_before_exit_scenario_5(key, defaultValue="2"):
+        if key == "appSettings/showExitPrompt":
+            return "0"
+        elif key == "appSettings/saveAtExit":
+            return "2"
+
+    @staticmethod
+    def _tasks_before_exit_scenario_6(key, defaultValue="2"):
+        if key == "appSettings/showExitPrompt":
+            return "2"
+        elif key == "appSettings/saveAtExit":
+            return "2"
 
 
 if __name__ == '__main__':

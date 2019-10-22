@@ -21,7 +21,6 @@ import shutil
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtCore import QSettings
 from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
 from ..project_items.tool.tool import Tool
@@ -40,10 +39,11 @@ class _MockToolbox:
             self.text = text
 
     def __init__(self, temp_directory):
-        self._qsettings = QSettings()
-        self._qsettings.setValue("appSettings/projectsDir", temp_directory)
+        self._qsettings = mock.MagicMock()
         self.tool_specification_model = ToolSpecificationModel(self)
-        self._project = SpineToolboxProject(self, "name", "description", temp_directory)
+        with mock.patch("spinetoolbox.project.project_dir") as mock_project_dir:
+            mock_project_dir.return_value = temp_directory
+            self._project = SpineToolboxProject(self, "name", "description", temp_directory)
         self.msg = _MockToolbox.Message()
         self.msg_warning = _MockToolbox.Message()
 
