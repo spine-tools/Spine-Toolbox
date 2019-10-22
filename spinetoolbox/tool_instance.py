@@ -226,6 +226,7 @@ class JuliaToolInstance(ToolInstance):
         Args:
             ret (int): Tool specification process return value
         """
+        self.tool_process.execution_finished_signal.disconnect(self.handle_repl_execution_finished)
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
                 self._toolbox.msg_error.emit(
@@ -341,6 +342,7 @@ class PythonToolInstance(ToolInstance):
         Args:
             ret (int): Tool specification process return value
         """
+        self.tool_process.execution_finished_signal.disconnect(self.handle_console_execution_finished)
         if ret != 0:
             if self.tool_process.execution_failed_to_start:
                 self._toolbox.msg_error.emit(
