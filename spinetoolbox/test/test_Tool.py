@@ -257,17 +257,9 @@ class TestToolExecution(unittest.TestCase):
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of ToolboxUI class.
         """
-        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "spinetoolbox.ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
-            mock_julia_repl.return_value = QWidget()
-            mock_python_repl.return_value = MockQWidget()
-            mock_qsettings_value.side_effect = qsettings_value_side_effect
-            self.toolbox = ToolboxUI()
-            self.toolbox.create_project("UnitTest Project", "")
-            self.toolbox.tool_specification_model = _MockToolSpecModel(self.toolbox, self.basedir)
-            self.toolbox.tool_specification_model_changed.emit(self.toolbox.tool_specification_model)
+        self.toolbox = create_toolboxui_with_project()
+        self.toolbox.tool_specification_model = _MockToolSpecModel(self.toolbox, self.basedir)
+        self.toolbox.tool_specification_model_changed.emit(self.toolbox.tool_specification_model)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
