@@ -41,7 +41,6 @@ class _MockToolbox:
 
 
 class TestView(unittest.TestCase):
-
     def _set_up(self):
         """Set up before test_rename()."""
         self.toolbox = create_toolboxui_with_project()

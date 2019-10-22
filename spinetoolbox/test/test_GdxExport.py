@@ -60,7 +60,6 @@ class _MockItem:
 
 
 class TestGdxExport(unittest.TestCase):
-
     def _set_up(self):
         """Set up before test_rename()."""
         self.toolbox = create_toolboxui_with_project()

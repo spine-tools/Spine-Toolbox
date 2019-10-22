@@ -36,7 +36,7 @@ class ImportPreviewWidget(QWidget):
     mappedDataReady = Signal(dict, list)
     previewDataUpdated = Signal()
 
-    def __init__(self, connector, parent=None):
+    def __init__(self, connector, parent):
         from ..ui.import_preview import Ui_ImportPreview
 
         super().__init__(parent)
@@ -208,6 +208,14 @@ class ImportPreviewWidget(QWidget):
 
     def update_preview_data(self, data, header):
         if data:
+            try:
+                data = _sanitize_data(data, header)
+            except RuntimeError as error:
+                self._ui_error.showMessage("".format(error))
+                self.table.reset_model()
+                self.table.set_horizontal_header_labels([])
+                self.previewDataUpdated.emit()
+                return
             if not header:
                 header = list(range(len(data[0])))
             self.table.reset_model(main_data=data)
@@ -311,3 +319,17 @@ class MappingTableMenu(QMenu):
         mPos = pPos + QPos
         self.move(mPos)
         self.show()
+
+
+def _sanitize_data(data, header):
+    """Fills empty data cells with None."""
+    expected_columns = len(header) if header else len(data[0])
+    sanitized_data = list()
+    for row in data:
+        length_diff = expected_columns - len(row)
+        if length_diff > 0:
+            row = row + length_diff * [None]
+        elif length_diff < 0:
+            raise RuntimeError("A row contains too many columns of data.")
+        sanitized_data.append(row)
+    return sanitized_data
