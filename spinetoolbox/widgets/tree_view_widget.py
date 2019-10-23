@@ -25,7 +25,8 @@ from spinedb_api import copy_database, SpineDBAPIError
 from .data_store_widget import DataStoreForm
 from .custom_menus import (
     EditableParameterValueContextMenu,
-    EntityTreeContextMenu,
+    ObjectTreeContextMenu,
+    RelationshipTreeContextMenu,
     ParameterContextMenu,
     ParameterValueListContextMenu,
 )
@@ -623,7 +624,7 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.treeView_object.indexAt(pos)
         global_pos = self.ui.treeView_object.viewport().mapToGlobal(pos)
-        object_tree_context_menu = EntityTreeContextMenu(self, global_pos, index)
+        object_tree_context_menu = ObjectTreeContextMenu(self, global_pos, index)
         option = object_tree_context_menu.get_action()
         if option == "Copy text":
             self.ui.treeView_object.copy()
@@ -664,7 +665,7 @@ class TreeViewForm(DataStoreForm):
         """
         index = self.ui.treeView_relationship.indexAt(pos)
         global_pos = self.ui.treeView_relationship.viewport().mapToGlobal(pos)
-        relationship_tree_context_menu = EntityTreeContextMenu(self, global_pos, index)
+        relationship_tree_context_menu = RelationshipTreeContextMenu(self, global_pos, index)
         option = relationship_tree_context_menu.get_action()
         if option == "Copy text":
             self.ui.treeView_relationship.copy()
@@ -940,34 +941,38 @@ class TreeViewForm(DataStoreForm):
         """
         db_map_typed_data_to_rm = {}
         db_map_data_to_upd = {}
-        selected = self.ui.treeView_parameter_value_list.selectionModel().selectedRows()
+        selected = [
+            self.parameter_value_list_model.item_from_index(index)
+            for index in self.ui.treeView_parameter_value_list.selectionModel().selectedIndexes()
+        ]
         for db_item in self.parameter_value_list_model._invisible_root_item.children:
             db_map_typed_data_to_rm[db_item.db_map] = {"parameter value list": []}
             db_map_data_to_upd[db_item.db_map] = []
             for list_item in reversed(db_item.children[:-1]):
                 if list_item.id:
-                    if list_item.index in selected:
+                    if list_item in selected:
                         db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append({"id": list_item.id})
                         continue
                     curr_value_list = list_item.compile_value_list()
                     value_list = [
                         value
                         for value_item, value in zip(list_item.children, curr_value_list)
-                        if value_item.index not in selected
+                        if value_item not in selected
                     ]
-                    if value_list:
-                        db_item = {"id": list_item.id, "value_list": value_list}
-                        db_map_data_to_upd[db_item.db_map].append(db_item)
-                    elif value_list != curr_value_list:
+                    if not value_list:
                         db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append({"id": list_item.id})
+                        continue
+                    if value_list != curr_value_list:
+                        item = {"id": list_item.id, "value_list": value_list}
+                        db_map_data_to_upd[db_item.db_map].append(item)
                 else:
                     # WIP lists, just remove everything selected
-                    if list_item.index in selected:
-                        db_item.remove_children(list_item.row, list_item.row)
+                    if list_item in selected:
+                        db_item.remove_children(list_item.child_number(), list_item.child_number())
                         continue
                     for value_item in reversed(list_item.children[:-1]):
-                        if value_item.index in selected:
-                            list_item.remove_children(value_item.row, value_item.row)
+                        if value_item in selected:
+                            list_item.remove_children(value_item.child_number(), value_item.child_number())
         self.db_mngr.update_parameter_value_lists(db_map_data_to_upd)
         self.db_mngr.remove_items(db_map_typed_data_to_rm)
         self.ui.treeView_parameter_value_list.selectionModel().clearSelection()

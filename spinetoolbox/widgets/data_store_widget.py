@@ -381,13 +381,9 @@ class DataStoreForm(QMainWindow):
     def init_parameter_value_list_model(self):
         """Initialize parameter value_list models."""
         self.parameter_value_list_model.build_tree()
-        # TODO: this expansion in the model
-        for i in range(self.parameter_value_list_model.rowCount()):
-            db_index = self.parameter_value_list_model.index(i, 0)
-            self.ui.treeView_parameter_value_list.expand(db_index)
-            for j in range(self.parameter_value_list_model.rowCount(db_index)):
-                list_index = self.parameter_value_list_model.index(j, 0, db_index)
-                self.ui.treeView_parameter_value_list.expand(list_index)
+        for item in self.parameter_value_list_model.visit_all():
+            index = self.parameter_value_list_model.index_from_item(item)
+            self.ui.treeView_parameter_value_list.expand(index)
         self.ui.treeView_parameter_value_list.resizeColumnToContents(0)
         self.ui.treeView_parameter_value_list.header().hide()
 

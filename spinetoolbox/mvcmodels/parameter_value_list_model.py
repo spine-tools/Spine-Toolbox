@@ -32,7 +32,7 @@ class GrayFontMixin:
     """Paints the text gray."""
 
     def data(self, column, role=Qt.DisplayRole):
-        if role == Qt.ForegroundRole and self.row() == self.parent.child_count() - 1:
+        if role == Qt.ForegroundRole and self.child_number() == self.parent_item.child_count() - 1:
             gray_color = QGuiApplication.palette().text().color()
             gray_color.setAlpha(128)
             gray_brush = QBrush(gray_color)
@@ -51,13 +51,6 @@ class BoldFontMixin:
         return super().data(column, role)
 
 
-class InvisibleRootItem(TreeItem):
-    def __init__(self, db_mngr, *db_maps):
-        super().__init__()
-        children = [DBItem(db_mngr, db_map) for db_map in db_maps]
-        self.append_children(*children)
-
-
 class AppendEmptyChildMixin:
     """Provides a method to append an empty child if needed."""
 
@@ -66,6 +59,18 @@ class AppendEmptyChildMixin:
         if row == self.child_count() - 1:
             empty_child = self.empty_child()
             self.append_children(empty_child)
+
+
+class InvisibleRootItem(TreeItem):
+    def __init__(self, db_mngr, *db_maps):
+        super().__init__()
+        self.db_mngr = db_mngr
+        self.db_maps = db_maps
+
+    def fetch_more(self):
+        children = [DBItem(self.db_mngr, db_map) for db_map in self.db_maps]
+        self.append_children(*children)
+        self._fetched = True
 
 
 class DBItem(AppendEmptyChildMixin, TreeItem):
@@ -81,12 +86,17 @@ class DBItem(AppendEmptyChildMixin, TreeItem):
         super().__init__()
         self.db_map = db_map
         self.db_mngr = db_mngr
+
+    def fetch_more(self):
         children = [
-            ListItem(db_mngr, db_map, value_list["id"], value_list["name"], value_list["value_list"].split(","))
-            for value_list in db_mngr.get_parameter_value_lists(db_map)
+            ListItem(
+                self.db_mngr, self.db_map, value_list["id"], value_list["name"], value_list["value_list"].split(",")
+            )
+            for value_list in self.db_mngr.get_parameter_value_lists(self.db_map)
         ]
         empty_child = self.empty_child()
         self.append_children(*children, empty_child)
+        self._fetched = True
 
     def empty_child(self):
         return ListItem(self.db_mngr, self.db_map)
@@ -108,9 +118,13 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
         self.db_map = db_map
         self.id = identifier
         self.name = name or "Type new list name here..."
-        children = [ValueItem(from_database(value)) for value in value_list]
+        self.value_list = value_list
+
+    def fetch_more(self):
+        children = [ValueItem(from_database(value)) for value in self.value_list]
         empty_child = self.empty_child()
         self.append_children(*children, empty_child)
+        self._fetched = True
 
     def compile_value_list(self):
         return [to_database(child.value) for child in self.children[:-1]]
@@ -130,7 +144,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             self.update_name_in_db(name)
             return False
         self.name = name
-        self.parent.append_empty_child(self.row())
+        self.parent_item.append_empty_child(self.child_number())
         self.add_to_db()
         return True
 
@@ -141,7 +155,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             self.update_value_list_in_db(child, value)
             return False
         child.value = value
-        self.append_empty_child(child.row())
+        self.append_empty_child(child.child_number())
         self.add_to_db()
         return True
 
@@ -153,7 +167,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
         value_list = self.compile_value_list()
         value = to_database(value)
         try:
-            value_list[child.row()] = value
+            value_list[child.child_number()] = value
         except IndexError:
             value_list.append(value)
         db_item = dict(id=self.id, value_list=value_list)
@@ -187,7 +201,7 @@ class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             self.insert_children(curr_value_count, *children)
         elif curr_value_count > value_count:
             removed_count = curr_value_count - value_count
-            self.remove_children(value_count, curr_value_count - 1)
+            self.remove_children(value_count, removed_count)
         for child, value in zip(self.children, value_list):
             child.value = from_database(value)
 
@@ -198,6 +212,7 @@ class ValueItem(GrayFontMixin, EditableMixin, TreeItem):
     def __init__(self, value=None):
         super().__init__()
         self.value = value
+        self._fetched = True
 
     def data(self, column, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
@@ -205,7 +220,7 @@ class ValueItem(GrayFontMixin, EditableMixin, TreeItem):
         return super().data(column, role)
 
     def set_data(self, column, value):
-        return self.parent.set_child_data(self, value)
+        return self.parent_item.set_child_data(self, value)
 
 
 class ParameterValueListModel(MinimalTreeModel):
@@ -284,7 +299,7 @@ class ParameterValueListModel(MinimalTreeModel):
                 if list_item.id in ids:
                     removed_rows.append(row)
             for row in sorted(removed_rows, reverse=True):
-                db_item.remove_children(row, row)
+                db_item.remove_children(row, 1)
         self.layoutChanged.emit()
 
     def build_tree(self):
@@ -292,7 +307,10 @@ class ParameterValueListModel(MinimalTreeModel):
         self.beginResetModel()
         self._invisible_root_item.deleteLater()
         self._invisible_root_item = InvisibleRootItem(self.db_mngr, *self.db_maps)
+        self.track_item(self._invisible_root_item)
         self.endResetModel()
+        for item in self.visit_all():
+            item.fetch_more()
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 1.

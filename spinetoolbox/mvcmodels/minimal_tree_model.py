@@ -21,10 +21,10 @@ from PySide2.QtCore import QObject, Qt, Signal, Slot, QAbstractItemModel, QModel
 class TreeItem(QObject):
     """A tree item that can fetch its children."""
 
-    children_about_to_be_inserted = Signal("QModelIndex", "int", "int", name="children_about_to_be_inserted")
-    children_about_to_be_removed = Signal("QModelIndex", "int", "int", name="children_about_to_be_removed")
-    children_inserted = Signal(name="children_inserted")
-    children_removed = Signal(name="children_removed")
+    children_about_to_be_inserted = Signal("QVariant", "int", "int", name="children_about_to_be_inserted")
+    children_about_to_be_removed = Signal("QVariant", "int", "int", name="children_about_to_be_removed")
+    children_inserted = Signal("QVariant", name="children_inserted")
+    children_removed = Signal("QVariant", name="children_removed")
 
     def __init__(self, parent=None):
         """Init class.
@@ -33,12 +33,10 @@ class TreeItem(QObject):
             parent (TreeItem, NoneType): the parent item or None
         """
         super().__init__(parent)
-        self._children = []
-        self._parent = None
+        self._children = None
+        self._parent_item = None
         self._fetched = False
-        self.parent = parent
         self.children = []
-        self._index = QModelIndex()
 
     @property
     def child_item_type(self):
@@ -55,28 +53,18 @@ class TreeItem(QObject):
         if bad_types:
             raise TypeError(f"Cand't set children of type {bad_types} for an item of type {type(self)}")
         for child in children:
-            child.parent = self
+            child.parent_item = self
         self._children = children
 
     @property
-    def parent(self):
-        return self._parent
+    def parent_item(self):
+        return self._parent_item
 
-    @parent.setter
-    def parent(self, parent):
-        if not isinstance(parent, TreeItem) and parent is not None:
+    @parent_item.setter
+    def parent_item(self, parent_item):
+        if not isinstance(parent_item, TreeItem) and parent_item is not None:
             raise ValueError("Parent must be instance of TreeItem or None")
-        self._parent = parent
-
-    @property
-    def index(self):
-        return self._index
-
-    @index.setter
-    def index(self, index):
-        if not isinstance(index, QModelIndex):
-            raise ValueError("Index must be a QModelIndex")
-        self._index = index
+        self._parent_item = parent_item
 
     def child(self, row):
         """Returns the child at given row or None if out of bounds."""
@@ -93,9 +81,11 @@ class TreeItem(QObject):
         """Returns the number of children."""
         return len(self._children)
 
-    def row(self):
-        """Returns the row of this item in the model."""
-        return self.index.row()
+    def child_number(self):
+        """Returns the rank of this item within its parent or 0 if it's an orphan."""
+        if self.parent_item:
+            return self.parent_item.children.index(self)
+        return 0
 
     def find_children(self, cond=lambda child: True):
         """Returns children that meet condition expressed as a lambda function."""
@@ -108,20 +98,18 @@ class TreeItem(QObject):
         return next(self.find_children(cond), None)
 
     def next_sibling(self):
-        """Returns the next sibling or None if it's the last or if doesn't have a parent."""
-        if self.parent is None:
-            return None
-        return self.parent.child(self.row() + 1)
+        """Returns the next sibling or None if it's the last."""
+        return self.parent_item.child(self.child_number() + 1)
 
     def previous_sibling(self):
-        """Returns the previous sibling or None if it's first or if doesn't have a parent."""
-        if self.row() == 0:
+        """Returns the previous sibling or None if it's the first."""
+        if self.child_number() == 0:
             return None
-        return self.parent.child(self.row() - 1)
+        return self.parent_item.child(self.child_number() - 1)
 
     def column_count(self):
-        """Returns 0."""
-        return 0
+        """Returns 1."""
+        return 1
 
     def insert_children(self, position, *children):
         """Insert new children at given position. Returns a boolean depending on how it went.
@@ -135,11 +123,12 @@ class TreeItem(QObject):
             raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
         if position < 0 or position > self.child_count() + 1:
             return False
-        self.children_about_to_be_inserted.emit(self.index, position, len(children))
+        self.children_about_to_be_inserted.emit(self, position, len(children))
+        children = list(children)
         for child in children:
-            child.parent = self
+            child.parent_item = self
         self._children[position:position] = children
-        self.children_inserted.emit()
+        self.children_inserted.emit(children)
         return True
 
     def append_children(self, *children):
@@ -152,9 +141,10 @@ class TreeItem(QObject):
             return False
         if position + count > self.child_count():
             count = self.child_count() - position
-        self.children_about_to_be_removed.emit(self.index, position, count)
+        self.children_about_to_be_removed.emit(self, position, count)
+        children = self._children[position : position + count]
         del self._children[position : position + count]
-        self.children_removed.emit()
+        self.children_removed.emit(children)
         return True
 
     def clear_children(self):
@@ -204,15 +194,6 @@ class MinimalTreeModel(QAbstractItemModel):
         self._invisible_root_item = TreeItem()
         self.endResetModel()
 
-    def createIndex(self, row, column, item):
-        """Creates an index and stores it in the item for convenience."""
-        index = super().createIndex(row, column, item)
-        if not item.index.isValid():
-            # This is so we only track items once
-            self.track_item(item)
-        item.index = index
-        return index
-
     def track_item(self, item):
         """Tracks given TreeItem. This means we insert rows when children are inserted
         and remove rows when children are removed."""
@@ -228,28 +209,29 @@ class MinimalTreeModel(QAbstractItemModel):
         item.children_about_to_be_removed.disconnect(self.receive_children_about_to_be_removed)
         item.children_removed.disconnect(self.receive_children_removed)
 
-    @Slot("QModelIndex", "int", "int", name="receive_children_about_to_be_inserted")
-    def receive_children_about_to_be_inserted(self, index, row, count):
+    @Slot("QVariant", "int", "int", name="receive_children_about_to_be_inserted")
+    def receive_children_about_to_be_inserted(self, parent_item, row, count):
         """Begin an operation to insert rows."""
-        print(index)
-        self.beginInsertRows(index, row, row + count - 1)
+        self.beginInsertRows(self.index_from_item(parent_item), row, row + count - 1)
 
-    @Slot(name="receive_children_inserted")
-    def receive_children_inserted(self):
+    @Slot("QVariant", name="receive_children_inserted")
+    def receive_children_inserted(self, items):
         """End an operation to insert rows. Start tracking all inserted items."""
         self.endInsertRows()
+        for item in items:
+            self.track_item(item)
 
-    @Slot("QModelIndex", "int", "int", name="receive_children_about_to_be_removed")
-    def receive_children_about_to_be_removed(self, index, row, count):
+    @Slot("QVariant", "int", "int", name="receive_children_about_to_be_removed")
+    def receive_children_about_to_be_removed(self, parent_item, row, count):
         """Begin an operation to remove rows."""
-        self.beginRemoveRows(index, row, row + count - 1)
-        for child in self.item_from_index(parent).children[row, row + count]:
-            self.stop_tracking_item(child)
+        self.beginRemoveRows(self.index_from_item(parent_item), row, row + count - 1)
 
-    @Slot(name="receive_children_removed")
-    def receive_children_removed(self):
+    @Slot("QVariant", name="receive_children_removed")
+    def receive_children_removed(self, items):
         """End an operation to remove rows. Stop tracking all removed items."""
         self.endRemoveRows()
+        for item in items:
+            self.stop_tracking_item(item)
 
     def visit_all(self, index=QModelIndex()):
         """Iterates all items in the model including and below the given index.
@@ -266,8 +248,8 @@ class MinimalTreeModel(QAbstractItemModel):
         current = child
         visit_children = True
         while True:
-            yield current
             if visit_children:
+                yield current
                 child = current.last_child()
                 if child:
                     current = child
@@ -277,11 +259,11 @@ class MinimalTreeModel(QAbstractItemModel):
                 visit_children = True
                 current = sibling
                 continue
-            parent = current._parent
-            if parent == ancient_one:
+            parent_item = current.parent_item
+            if parent_item == ancient_one:
                 break
             visit_children = False  # To make sure we don't visit children again
-            current = parent
+            current = parent_item
 
     def item_from_index(self, index):
         """Return the item corresponding to the given index."""
@@ -291,7 +273,7 @@ class MinimalTreeModel(QAbstractItemModel):
 
     def index_from_item(self, item):
         """Return a model index corresponding to the given item."""
-        return item.index
+        return self.createIndex(item.child_number(), 0, item)
 
     def index(self, row, column, parent=QModelIndex()):
         """Returns the index of the item in the model specified by the given row, column and parent index."""
@@ -306,10 +288,10 @@ class MinimalTreeModel(QAbstractItemModel):
         if not index.isValid():
             return QModelIndex()
         item = self.item_from_index(index)
-        parent_item = item.parent
-        if parent_item == self._invisible_root_item:
+        parent_item = item.parent_item
+        if parent_item is None or parent_item == self._invisible_root_item:
             return QModelIndex()
-        return self.createIndex(parent_item.row(), 0, parent_item)
+        return self.createIndex(parent_item.child_number(), 0, parent_item)
 
     def columnCount(self, parent=QModelIndex()):
         return 1
@@ -343,3 +325,15 @@ class MinimalTreeModel(QAbstractItemModel):
         """
         item = self.item_from_index(index)
         return item.flags(index.column())
+
+    def hasChildren(self, parent):
+        parent_item = self.item_from_index(parent)
+        return parent_item.has_children()
+
+    def canFetchMore(self, parent):
+        parent_item = self.item_from_index(parent)
+        return parent_item.can_fetch_more()
+
+    def fetchMore(self, parent):
+        parent_item = self.item_from_index(parent)
+        parent_item.fetch_more()
