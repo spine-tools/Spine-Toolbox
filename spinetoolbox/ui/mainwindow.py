@@ -414,10 +414,6 @@ class Ui_MainWindow(object):
         self.menuHelp.addSeparator()
         self.menuHelp.addAction(self.actionAbout_Qt)
         self.menuHelp.addAction(self.actionAbout)
-        self.menuEdit.addAction(self.actionCopy)
-        self.menuEdit.addAction(self.actionPaste)
-        self.menuEdit.addAction(self.actionDuplicate)
-        self.menuEdit.addSeparator()
         self.menuEdit.addAction(self.actionRemove_all)
         self.menuDock_Widgets.addAction(self.actionRestore_Dock_Widgets)
         self.menuDock_Widgets.addSeparator()
@@ -516,6 +512,6 @@ class Ui_MainWindow(object):
         self.actionDuplicate.setToolTip(QtWidgets.QApplication.translate("MainWindow", "Duplicate selected project item", None, -1))
         self.actionDuplicate.setShortcut(QtWidgets.QApplication.translate("MainWindow", "Ctrl+D", None, -1))
 
-from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
 from spinetoolbox.widgets.custom_qtextbrowser import CustomQTextBrowser
+from spinetoolbox.widgets.custom_qgraphicsviews import DesignQGraphicsView
 from spinetoolbox import resources_icons_rc

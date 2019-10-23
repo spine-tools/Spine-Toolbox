@@ -238,7 +238,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.dst_connector = None  # Destination connector of a link drawing operation
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
-        self.show()
 
     def mousePressEvent(self, event):
         """Manage drawing of links. Handle the case where a link is being
