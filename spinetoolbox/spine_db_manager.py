@@ -125,6 +125,8 @@ class SpineDBManager(QObject):
         self.objects_updated.connect(self.cascade_refresh_relationships_by_object)
         self.objects_updated.connect(self.cascade_refresh_parameter_values_by_entity)
         self.parameter_definitions_updated.connect(self.cascade_refresh_parameter_values_by_definition)
+        self.parameter_value_lists_updated.connect(self.cascade_refresh_parameter_definitions_by_value_list)
+        self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
 
     def cache_items(self, item_type, db_map_data):
         """Put items in cache.
@@ -586,6 +588,15 @@ class SpineDBManager(QObject):
             self.get_parameter_definitions(db_map, ids=ids)
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
+    @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
+    def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
+        """Runs when updating parameter value lists. Cascade refresh cached parameter definitions."""
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(db_map_data)
+        for db_map, data in db_map_cascading_data.items():
+            ids = {x["id"] for x in data}
+            self.get_parameter_definitions(db_map, ids=ids)
+        self.parameter_definitions_updated.emit(db_map_cascading_data)
+
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
         """Runs when updating entity classes. Cascade refresh cached parameter values."""
@@ -656,6 +667,18 @@ class SpineDBManager(QObject):
                 item
                 for item in self.get_items_from_cache(db_map, item_type)
                 if entity_class_ids.intersection([item.get("object_class_id"), item.get("relationship_class_id")])
+            ]
+        return db_map_cascading_data
+
+    def find_cascading_parameter_definitions_by_value_list(self, db_map_data):
+        """Returns data for cascading parameter definitions given data for parameter value lists."""
+        db_map_cascading_data = dict()
+        for db_map, data in db_map_data.items():
+            value_list_ids = {x["id"] for x in data}
+            db_map_cascading_data[db_map] = [
+                item
+                for item in self.get_items_from_cache(db_map, "parameter definition")
+                if item["value_list_id"] in value_list_ids
             ]
         return db_map_cascading_data
 
