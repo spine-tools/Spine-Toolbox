@@ -481,9 +481,10 @@ class TestToolExecution(unittest.TestCase):
         # Check that no resources are advertised
         mock_exec_inst.advertise_resources.assert_not_called()
 
-    @unittest.skipIf(sys.platform == "win32", "Needs an update for windows.")
     def test_execute_complex_tool_in_work_dir(self):
         """Tests execution of a Tool with the 'complex_exec' specification."""
+        # TODO: This now passes on Windows, but there's some work left. Patterns with '?' char are not found.
+        # TODO: Needs to be checked if this is a bug in code or in this test.
         item = dict(name="Tool", description="", x=0, y=0, tool="complex_exec")
         self.toolbox.project().add_project_items("Tools", item)  # Add Tool to project
         ind = self.toolbox.project_item_model.find_item("Tool")
@@ -505,6 +506,8 @@ class TestToolExecution(unittest.TestCase):
         input_paths += [os.path.join(dc_opt_dir, fn + ".ini") for fn in ('a', 'b', 'c')]
         # Add some optional input files that match "?abc.txt"
         input_paths += [os.path.join(dc_dir, prefix + "abc.txt") for prefix in ('1', '2', '3')]
+        opt_input_files_ini = ["opt/a.ini", "opt/b.ini", "opt/c.ini"]
+        opt_input_files_abc = ["1abc.txt", "2abc.txt", "3abc.txt"]
         # Make all input files
         for filepath in input_paths:
             dirname, _ = os.path.split(filepath)
@@ -537,9 +540,12 @@ class TestToolExecution(unittest.TestCase):
                 """Provides a side effect for ToolInstance execute method."""
                 # Check that source and input files were copied to the base directory
                 expected_calls = [
-                    mock.call(os.path.join(src_dir, fn), os.path.join(basedir, fn)) for fn in source_files
+                    mock.call(os.path.abspath(os.path.join(src_dir, fn)), os.path.abspath(os.path.join(basedir, fn))) for fn in source_files
                 ]
-                expected_calls += [mock.call(os.path.join(dc_dir, fn), os.path.join(basedir, fn)) for fn in input_files]
+                expected_calls += [mock.call(os.path.abspath(os.path.join(dc_dir, fn)), os.path.abspath(os.path.join(basedir, fn))) for fn in input_files]
+                expected_calls += [mock.call(os.path.abspath(os.path.join(dc_dir, opt_ini_file)), os.path.abspath(os.path.join(basedir, opt_ini_file))) for opt_ini_file in opt_input_files_ini]
+                # TODO: 1abc.txt, 2abc.txt, and 3abc.txt are missing from the actual and expected calls for some reason?!?
+                # expected_calls += [mock.call(os.path.abspath(os.path.join(dc_dir, opt_abc_file)), os.path.join(basedir, opt_abc_file)) for opt_abc_file in opt_input_files_abc]
                 mock_shutil.copyfile.assert_has_calls(expected_calls)
                 # Create all output files in base dir
                 output_paths = [os.path.join(basedir, fn) for fn in output_files]
@@ -552,8 +558,8 @@ class TestToolExecution(unittest.TestCase):
             tool.execute()
         self.assertEqual(tool.basedir, basedir)
         # Check that output files were copied to the output dir
-        result_dir = os.path.abspath(os.path.join(tool.output_dir, "mock_timestamp"))
-        expected_calls = [mock.call(os.path.join(basedir, fn), os.path.join(result_dir, fn)) for fn in output_files]
+        result_dir = os.path.join(tool.output_dir, "mock_timestamp")
+        expected_calls = [mock.call(os.path.abspath(os.path.join(basedir, fn)), os.path.abspath(os.path.join(result_dir, fn))) for fn in output_files]
         mock_shutil.copyfile.assert_has_calls(expected_calls)
         # Check that output files were advertised
         expected_calls = [
