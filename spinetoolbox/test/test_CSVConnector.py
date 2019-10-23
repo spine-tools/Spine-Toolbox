@@ -55,7 +55,7 @@ class TestCSVConnector(unittest.TestCase):
             connector.connect_to_source(file_name)
             tables = connector.get_tables()
             options = tables[file_name]["options"]
-            iterator, header, num_cols = connector.get_data_iterator("", options)
+            _, header, num_cols = connector.get_data_iterator("", options)
             self.assertTrue(not header)
             self.assertEqual(num_cols, 3)
 
