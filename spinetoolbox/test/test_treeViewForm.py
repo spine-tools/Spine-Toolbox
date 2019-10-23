@@ -38,7 +38,6 @@ class qry(list):
 
 
 class TestTreeViewForm(unittest.TestCase):
-
     @classmethod
     def setUpClass(cls):
         """Overridden method. Runs once before all tests in this class."""
@@ -201,8 +200,11 @@ class TestTreeViewForm(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        with mock.patch("spinetoolbox.widgets.data_store_widget.DataStoreForm._prompt_close_and_commit") as mock_p_c_and_c, \
-                mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state") as mock_save_w_s:
+        with mock.patch(
+            "spinetoolbox.widgets.data_store_widget.DataStoreForm._prompt_close_and_commit"
+        ) as mock_p_c_and_c, mock.patch(
+            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state"
+        ) as mock_save_w_s:
             mock_p_c_and_c.return_value = True
             self.tree_view_form.close()
             mock_p_c_and_c.assert_called_once()
