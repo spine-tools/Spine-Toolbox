@@ -43,6 +43,14 @@ class SingleParameterModel(FilledParameterModel):
         raise NotImplementedError()
 
     @property
+    def parameter_definition_id_key(self):
+        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
+
+    @property
+    def json_fields(self):
+        return {"parameter definition": ["default_value"], "parameter value": ["value"]}[self.item_type]
+
+    @property
     def entity_class_id(self):
         """Returns the associated entity class id."""
         raise NotImplementedError()
@@ -59,7 +67,7 @@ class SingleParameterModel(FilledParameterModel):
     def _main_filter_accepts_item(self, item):
         """Applies the main filter, defined by the selections in the grand parent."""
         if self._selected_param_def_ids:
-            return item["parameter_definition_id"] in self._selected_param_def_ids
+            return item[self.parameter_definition_id_key] in self._selected_param_def_ids
         return True
 
     def _auto_filter_accepts_item(self, item, ignored_columns=None):
@@ -179,8 +187,6 @@ class SingleParameterDefinitionModel(
 ):
     """A parameter definition model for a single entity class."""
 
-    json_fields = ["default_value"]
-
     @property
     def item_type(self):
         return "parameter definition"
@@ -209,8 +215,6 @@ class SingleParameterDefinitionModel(
 
 class SingleParameterValueModel(SingleParameterModel):
     """A parameter value model for a single entity class."""
-
-    json_fields = ["value"]
 
     @property
     def item_type(self):

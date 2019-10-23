@@ -186,15 +186,17 @@ class ParameterTagToolBar(QToolBar):
     tag_button_toggled = Signal("QVariant", "bool", name="tag_button_toggled")
     manage_tags_action_triggered = Signal("bool", name="manage_tags_action_triggered")
 
-    def __init__(self, parent, db_maps):
+    def __init__(self, parent, db_mngr, *db_maps):
         """
 
         Args:
             parent (DataStoreForm): tree or graph view form
-            db_maps (list): list of DiffDatabaseMapping to get tags from
+            db_mngr (SpineDBManager): the DB manager for interacting with the db
+            db_maps (iter): DiffDatabaseMapping instances
         """
         super().__init__("Parameter Tag Toolbar", parent=parent)
         self._parent = parent
+        self.db_mngr = db_mngr
         self.db_maps = db_maps
         label = QLabel("Parameter tag")
         self.addWidget(label)
@@ -212,6 +214,12 @@ class ParameterTagToolBar(QToolBar):
         button.clicked.connect(lambda checked: self.manage_tags_action_triggered.emit(checked))
         self.setStyleSheet(PARAMETER_TAG_TOOLBAR_SS)
         self.setObjectName("ParameterTagToolbar")
+        self.connect_db_mngr_signals()
+
+    def connect_db_mngr_signals(self):
+        self.db_mngr.parameter_tags_added.connect(self.receive_parameter_tags_added)
+        self.db_mngr.parameter_tags_updated.connect(self.receive_parameter_tags_updated)
+        self.db_mngr.parameter_tags_removed.connect(self.receive_parameter_tags_removed)
 
     def init_toolbar(self):
         for button in self.tag_button_group.buttons():
@@ -225,45 +233,48 @@ class ParameterTagToolBar(QToolBar):
         self.tag_button_group.addButton(button, id=0)
         self.actions = [action]
         self.db_map_ids = [[(db_map, 0) for db_map in self.db_maps]]
-        tag_dict = {}
+        tag_data = {}
         for db_map in self.db_maps:
-            for parameter_tag in db_map.parameter_tag_list():
-                tag_dict.setdefault(parameter_tag.tag, {})[db_map] = parameter_tag.id
-        for tag, db_map_dict in tag_dict.items():
+            for parameter_tag in self.db_mngr.get_parameter_tags(db_map):
+                tag_data.setdefault(parameter_tag["tag"], {})[db_map] = parameter_tag["id"]
+        for tag, db_map_data in tag_data.items():
             action = QAction(tag)
             self.insertAction(self.empty_action, action)
             action.setCheckable(True)
             button = self.widgetForAction(action)
             self.tag_button_group.addButton(button, id=len(self.db_map_ids))
             self.actions.append(action)
-            self.db_map_ids.append([(db_map, id_) for db_map, id_ in db_map_dict.items()])
+            self.db_map_ids.append([(db_map, id_) for db_map, id_ in db_map_data.items()])
         self.tag_button_group.buttonToggled["int", "bool"].connect(
-            lambda id, checked: self.tag_button_toggled.emit(self.db_map_ids[id], checked)
+            lambda id_, checked: self.tag_button_toggled.emit(self.db_map_ids[id_], checked)
         )
 
-    def add_tag_actions(self, db_map_parameter_tags):
-        for db_map, parameter_tags in db_map_parameter_tags.items():
+    @Slot("QVariant", name="receive_parameter_tags_added")
+    def receive_parameter_tags_added(self, db_map_data):
+        for db_map, parameter_tags in db_map_data.items():
             self._add_db_map_tag_actions(db_map, parameter_tags)
 
     def _add_db_map_tag_actions(self, db_map, parameter_tags):
         action_texts = [a.text() for a in self.actions]
         for parameter_tag in parameter_tags:
-            if parameter_tag.tag in action_texts:
+            if parameter_tag["tag"] in action_texts:
                 # Already a tag named after that, add db_map id information
-                i = action_texts.index(parameter_tag.tag)
-                self.db_map_ids[i].append((db_map, parameter_tag.id))
+                i = action_texts.index(parameter_tag["tag"])
+                self.db_map_ids[i].append((db_map, parameter_tag["id"]))
             else:
-                action = QAction(parameter_tag.tag)
+                action = QAction(parameter_tag["tag"])
                 self.insertAction(self.empty_action, action)
                 action.setCheckable(True)
                 button = self.widgetForAction(action)
                 self.tag_button_group.addButton(button, id=len(self.db_map_ids))
                 self.actions.append(action)
-                self.db_map_ids.append([(db_map, parameter_tag.id)])
+                self.db_map_ids.append([(db_map, parameter_tag["id"])])
                 action_texts.append(action.text())
 
-    def remove_tag_actions(self, parameter_tag_d):
-        for db_map, parameter_tag_ids in parameter_tag_d.items():
+    @Slot("QVariant", name="receive_parameter_tags_removed")
+    def receive_parameter_tags_removed(self, db_map_data):
+        for db_map, parameter_tags in db_map_data.items():
+            parameter_tag_ids = {x["id"] for x in parameter_tags}
             self._remove_db_map_tag_actions(db_map, parameter_tag_ids)
 
     def _remove_db_map_tag_actions(self, db_map, parameter_tag_ids):
@@ -274,12 +285,13 @@ class ParameterTagToolBar(QToolBar):
                 self.db_map_ids.pop(i)
                 self.removeAction(self.actions.pop(i))
 
-    def update_tag_actions(self, db_map_parameter_tags):
-        for db_map, parameter_tags in db_map_parameter_tags.items():
+    @Slot("QVariant", name="receive_parameter_tags_updated")
+    def receive_parameter_tags_updated(self, db_map_data):
+        for db_map, parameter_tags in db_map_data.items():
             self._update_db_map_tag_actions(db_map, parameter_tags)
 
     def _update_db_map_tag_actions(self, db_map, parameter_tags):
         for parameter_tag in parameter_tags:
-            i = next(k for k, x in enumerate(self.db_map_ids) if (db_map, parameter_tag.id) in x)
+            i = next(k for k, x in enumerate(self.db_map_ids) if (db_map, parameter_tag["id"]) in x)
             action = self.actions[i]
-            action.setText(parameter_tag.tag)
+            action.setText(parameter_tag["tag"])

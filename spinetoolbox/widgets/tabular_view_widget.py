@@ -33,7 +33,7 @@ from spinedb_api import (
     TimeSeries,
 )
 from .custom_menus import FilterMenu, PivotTableModelMenu, PivotTableHorizontalHeaderMenu
-from .custom_qdialog import CommitDialog
+from .manage_db_items_dialog import CommitDialog
 from .parameter_value_editor import ParameterValueEditor
 from ..helpers import fix_name_ambiguity, tuple_itemgetter, busy_effect
 from ..mvcmodels.pivot_table_models import PivotTableSortFilterProxy, PivotTableModel

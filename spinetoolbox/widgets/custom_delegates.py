@@ -225,11 +225,6 @@ class ParameterDelegate(QItemDelegate):
         self.closeEditor.emit(editor)
         self.setModelData(editor, index.model(), index)
 
-    def _create_line_editor(self, parent, option, index):
-        editor = CustomLineEditor(parent)
-        editor.set_data(index.data(Qt.EditRole))
-        return editor
-
     def _get_db_map(self, index):
         """Returns the db_map for the database at given index or None if not set yet."""
         model = index.model()
@@ -566,7 +561,7 @@ class ManageObjectClassesDelegate(ManageItemsDelegate):
         """Get a pixmap from the index data and paint it in the middle of the cell."""
         header = index.model().horizontal_header_labels()
         if header[index.column()] == 'display icon':
-            pixmap = self._parent.icon_mngr.create_object_pixmap(index.data(Qt.DisplayRole))
+            pixmap = self._parent.create_object_pixmap(index.data(Qt.DisplayRole))
             icon = QIcon(pixmap)
             icon.paint(painter, option.rect, Qt.AlignVCenter | Qt.AlignHCenter)
         else:
@@ -643,8 +638,8 @@ class ManageRelationshipsDelegate(ManageItemsDelegate):
         return editor
 
 
-class RemoveTreeItemsDelegate(ManageItemsDelegate):
-    """A delegate for the model and view in RemoveTreeItemsDialog.
+class RemoveEntitiesDelegate(ManageItemsDelegate):
+    """A delegate for the model and view in RemoveEntitiesDialog.
 
     Attributes:
         parent (ManageItemsDialog): parent dialog

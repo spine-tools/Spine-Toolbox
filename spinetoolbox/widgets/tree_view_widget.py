@@ -20,7 +20,6 @@ import os
 import time  # just to measure loading time and sqlalchemy ORM performance
 from PySide2.QtWidgets import QFileDialog, QDockWidget, QInputDialog, QTreeView, QTableView, QMessageBox, QDialog
 from PySide2.QtCore import Qt, Signal, Slot
-from PySide2.QtGui import QIcon
 from spinedb_api import copy_database, SpineDBAPIError
 from .data_store_widget import DataStoreForm
 from .custom_menus import (
@@ -30,13 +29,13 @@ from .custom_menus import (
     ParameterContextMenu,
     ParameterValueListContextMenu,
 )
-from .custom_qdialog import RemoveTreeItemsDialog
 from .import_widget import ImportDialog
 from .report_plotting_failure import report_plotting_failure
+from .edit_db_items_dialogs import RemoveEntitiesDialog
 from ..mvcmodels.entity_tree_models import ObjectTreeModel, RelationshipTreeModel
 from ..excel_import_export import import_xlsx_to_db, export_spine_database_to_xlsx
 from ..datapackage_import_export import datapackage_to_spine
-from ..helpers import busy_effect, rows_to_row_count_tuples
+from ..helpers import busy_effect
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
@@ -224,7 +223,6 @@ class TreeViewForm(DataStoreForm):
             self.ui.actionCopy.setEnabled(False)
             self.ui.actionRemove_selection.setEnabled(False)
         else:
-            name = self.widget_with_selection.accessibleName()
             self.ui.actionCopy.setEnabled(True)
             self.ui.actionRemove_selection.setEnabled(True)
             self.ui.actionRemove_selection.setIcon(self.widget_with_selection.model().remove_icon)
@@ -752,8 +750,7 @@ class TreeViewForm(DataStoreForm):
             item_type: [ind.internalPointer() for ind in indexes]
             for item_type, indexes in self.object_tree_model.selected_indexes.items()
         }
-        dialog = RemoveTreeItemsDialog(self, selected)
-        dialog.data_committed.connect(self.db_mngr.remove_items)
+        dialog = RemoveEntitiesDialog(self, self.db_mngr, selected)
         dialog.show()
 
     @Slot(name="show_remove_relationship_tree_items_form")
@@ -763,8 +760,7 @@ class TreeViewForm(DataStoreForm):
             item_type: [ind.internalPointer() for ind in indexes]
             for item_type, indexes in self.relationship_tree_model.selected_indexes.items()
         }
-        dialog = RemoveTreeItemsDialog(self, selected)
-        dialog.data_committed.connect(self.db_mngr.remove_items)
+        dialog = RemoveEntitiesDialog(self, selected)
         dialog.show()
 
     def receive_items_changed(self, action, item_type, db_map_data, name_key=None):

@@ -35,18 +35,20 @@ from .custom_delegates import (
     RelationshipClassNameDelegate,
     ObjectNameListDelegate,
 )
-from .custom_qdialog import (
+from .add_db_items_dialogs import (
     AddObjectClassesDialog,
     AddObjectsDialog,
     AddRelationshipClassesDialog,
     AddRelationshipsDialog,
+)
+from .edit_db_items_dialogs import (
     EditObjectClassesDialog,
     EditObjectsDialog,
     EditRelationshipClassesDialog,
     EditRelationshipsDialog,
     ManageParameterTagsDialog,
-    CommitDialog,
 )
+from .manage_db_items_dialog import CommitDialog
 from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.toolbars import ParameterTagToolBar
 from ..mvcmodels.compound_parameter_models import (
@@ -87,13 +89,11 @@ class DataStoreForm(QMainWindow):
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)
         self.setStyleSheet(MAINWINDOW_SS)
         # Class attributes
-        self.db_mngr = project.db_mngr
-        self.db_mngr.add_db_maps(*db_maps)
         self.err_msg = QErrorMessage(self)
         # DB
-        keyed_db_maps = {db_map.codename: db_map for db_map in db_maps}
         self.db_maps = db_maps
-        self.keyed_db_maps = keyed_db_maps
+        self.db_mngr = project.db_mngr
+        self.db_mngr.add_db_maps(*db_maps)
         # Selected ids
         self.selected_object_class_ids = dict()
         self.selected_object_ids = dict()
@@ -103,7 +103,7 @@ class DataStoreForm(QMainWindow):
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
         # Parameter tag toolbar
-        self.parameter_tag_toolbar = ParameterTagToolBar(self, db_maps)
+        self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
         # Models
         self.object_parameter_value_model = CompoundObjectParameterValueModel(self, self.db_mngr, *db_maps)
@@ -456,7 +456,7 @@ class DataStoreForm(QMainWindow):
         """Return object class ids selected in object tree *and* parameter tag toolbar."""
         tree_object_class_ids = self.selected_object_class_ids
         tag_object_class_ids = dict()
-        for db_map, id_ in self.selected_obj_parameter_definition_ids.keys():
+        for db_map, id_ in self.selected_obj_parameter_definition_ids:
             tag_object_class_ids.setdefault(db_map, set()).add(id_)
         if not tag_object_class_ids:
             return tree_object_class_ids
@@ -471,7 +471,7 @@ class DataStoreForm(QMainWindow):
         """Return relationship class ids selected in relationship tree *and* parameter tag toolbar."""
         tree_relationship_class_ids = self.selected_relationship_class_ids
         tag_relationship_class_ids = dict()
-        for db_map, id_ in self.selected_rel_parameter_definition_ids.keys():
+        for db_map, id_ in self.selected_rel_parameter_definition_ids:
             tag_relationship_class_ids.setdefault(db_map, set()).add(id_)
         if not tag_relationship_class_ids:
             return tree_relationship_class_ids
@@ -511,22 +511,21 @@ class DataStoreForm(QMainWindow):
     @Slot("bool", name="show_add_object_classes_form")
     def show_add_object_classes_form(self, checked=False):
         """Show dialog to let user select preferences for new object classes."""
-        dialog = AddObjectClassesDialog(self, self.db_mngr.icon_mngr, self.db_maps)
-        dialog.data_committed.connect(self.db_mngr.add_object_classes)
+        dialog = AddObjectClassesDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
     @Slot("bool", "str", name="show_add_objects_form")
     def show_add_objects_form(self, checked=False, class_name=""):
         """Show dialog to let user select preferences for new objects."""
-        dialog = AddObjectsDialog(self, self.db_maps, class_name=class_name)
-        dialog.data_committed.connect(self.db_mngr.add_objects)
+        dialog = AddObjectsDialog(self, self.db_mngr, *self.db_maps, class_name=class_name)
         dialog.show()
 
     @Slot("bool", "str", name="show_add_relationship_classes_form")
     def show_add_relationship_classes_form(self, checked=False, object_class_one_name=None):
         """Show dialog to let user select preferences for new relationship class."""
-        dialog = AddRelationshipClassesDialog(self, self.db_maps, object_class_one_name=object_class_one_name)
-        dialog.data_committed.connect(self.db_mngr.add_relationship_classes)
+        dialog = AddRelationshipClassesDialog(
+            self, self.db_mngr, *self.db_maps, object_class_one_name=object_class_one_name
+        )
         dialog.show()
 
     @Slot("bool", "tuple", "str", "str", name="show_add_relationships_form")
@@ -536,26 +535,24 @@ class DataStoreForm(QMainWindow):
         """Show dialog to let user select preferences for new relationships."""
         dialog = AddRelationshipsDialog(
             self,
-            self.db_maps,
+            self.db_mngr,
+            *self.db_maps,
             relationship_class_key=relationship_class_key,
             object_class_name=object_class_name,
             object_name=object_name,
         )
-        dialog.data_committed.connect(self.db_mngr.add_relationships)
         dialog.show()
 
     @Slot("bool", name="show_edit_object_classes_form")
     def show_edit_object_classes_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_class_indexes}
-        dialog = EditObjectClassesDialog(self, self.db_mngr.icon_mngr, selected)
-        dialog.data_committed.connect(self.db_mngr.update_object_classes)
+        dialog = EditObjectClassesDialog(self, self.db_mngr, selected)
         dialog.show()
 
     @Slot("bool", name="show_edit_objects_form")
     def show_edit_objects_form(self, checked=False):
         selected = {ind.internalPointer() for ind in self.object_tree_model.selected_object_indexes}
-        dialog = EditObjectsDialog(self, selected)
-        dialog.data_committed.connect(self.db_mngr.update_objects)
+        dialog = EditObjectsDialog(self, self.db_mngr, selected)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationship_classes_form")
@@ -565,8 +562,7 @@ class DataStoreForm(QMainWindow):
             for ind in self.object_tree_model.selected_relationship_class_indexes.keys()
             | self.relationship_tree_model.selected_relationship_class_indexes.keys()
         }
-        dialog = EditRelationshipClassesDialog(self, selected)
-        dialog.data_committed.connect(self.db_mngr.update_relationship_classes)
+        dialog = EditRelationshipClassesDialog(self, self.db_mngr, selected)
         dialog.show()
 
     @Slot("bool", name="show_edit_relationships_form")
@@ -578,10 +574,14 @@ class DataStoreForm(QMainWindow):
             | self.relationship_tree_model.selected_relationship_indexes.keys()
         }
         first_item = next(iter(selected))
-        relationship_class_key = first_item.parent.display_id
-        selected = {item for item in selected if item.parent.display_id == relationship_class_key}
-        dialog = EditRelationshipsDialog(self, selected, relationship_class_key)
-        dialog.data_committed.connect(self.db_mngr.update_relationships)
+        relationship_class_key = first_item.parent_item.display_id
+        selected = {item for item in selected if item.parent_item.display_id == relationship_class_key}
+        dialog = EditRelationshipsDialog(self, self.db_mngr, selected, relationship_class_key)
+        dialog.show()
+
+    @Slot("bool", name="show_manage_parameter_tags_form")
+    def show_manage_parameter_tags_form(self, checked=False):
+        dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
     def receive_items_changed(self, action, item_type, db_map_data, name_key=None):
@@ -622,6 +622,10 @@ class DataStoreForm(QMainWindow):
     def receive_parameter_value_lists_added(self, db_map_data):
         self.receive_items_changed("added", "parameter value list", db_map_data)
 
+    @Slot("QVariant", name="receive_parameter_tags_added")
+    def receive_parameter_tags_added(self, db_map_data):
+        self.receive_items_changed("added", "parameter tag", db_map_data)
+
     @Slot("QVariant", name="receive_object_classes_updated")
     def receive_object_classes_updated(self, db_map_data):
         self.receive_items_changed("updated", "object class", db_map_data)
@@ -649,6 +653,10 @@ class DataStoreForm(QMainWindow):
     @Slot("QVariant", name="receive_parameter_value_lists_updated")
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.receive_items_changed("updated", "parameter value list", db_map_data)
+
+    @Slot("QVariant", name="receive_parameter_tags_updated")
+    def receive_parameter_tags_updated(self, db_map_data):
+        self.receive_items_changed("updated", "parameter tag", db_map_data)
 
     @Slot("QVariant", name="receive_object_classes_removed")
     def receive_object_classes_removed(self, db_map_data):
@@ -678,78 +686,11 @@ class DataStoreForm(QMainWindow):
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.receive_items_changed("removed", "parameter value list", db_map_data)
 
-    # TODO: all the below with the manager
-
-    @Slot("bool", name="show_manage_parameter_tags_form")
-    def show_manage_parameter_tags_form(self, checked=False):
-        dialog = ManageParameterTagsDialog(self, self.db_maps)
-        dialog.show()
+    @Slot("QVariant", name="receive_parameter_tags_removed")
+    def receive_parameter_tags_removed(self, db_map_data):
+        self.receive_items_changed("removed", "parameter tag", db_map_data)
 
     @busy_effect
-    def add_parameter_tags(self, parameter_tag_d):
-        """Add parameter tags."""
-        db_map_parameter_tags = dict()
-        for db_map, items in parameter_tag_d.items():
-            added, error_log = db_map.add_parameter_tags(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not added.count():
-                continue
-            db_map_parameter_tags[db_map] = added
-        added_tags = {x.tag for added in db_map_parameter_tags.values() for x in added}
-        if not added_tags:
-            return False
-        self.parameter_tag_toolbar.add_tag_actions(db_map_parameter_tags)
-        self.commit_available.emit(True)
-        msg = "Successfully added new parameter tag(s) '{}'.".format("', '".join(added_tags))
-        self.msg.emit(msg)
-        return True
-
-    @busy_effect
-    def update_parameter_tags(self, parameter_tag_d):
-        """Update parameter tags."""
-        # TODO: update parameter value tables??
-        db_map_parameter_tags = dict()
-        for db_map, items in parameter_tag_d.items():
-            updated, error_log = db_map.update_parameter_tags(*items)
-            if error_log:
-                self.msg_error.emit(format_string_list(error_log))
-            if not updated.count():
-                continue
-            db_map_parameter_tags[db_map] = [x._asdict() for x in updated]
-        updated_tags = {x["tag"] for updated in db_map_parameter_tags.values() for x in updated}
-        if not updated_tags:
-            return False
-        self.object_parameter_definition_model.rename_parameter_tags(db_map_parameter_tags)
-        self.relationship_parameter_definition_model.rename_parameter_tags(db_map_parameter_tags)
-        self.parameter_tag_toolbar.update_tag_actions(db_map_parameter_tags)
-        self.commit_available.emit(True)
-        msg = "Successfully updated parameter tag(s) '{}'.".format("', '".join(updated_tags))
-        self.msg.emit(msg)
-        return True
-
-    @busy_effect
-    def remove_parameter_tags(self, parameter_tag_d):
-        """Remove parameter tags."""
-        # TODO: remove from parameter value tables??
-        removed = 0
-        for db_map, ids in parameter_tag_d.items():
-            try:
-                db_map.remove_items(parameter_tag_ids=ids)
-            except SpineDBAPIError as e:
-                self.msg_error.emit(e.msg)
-                continue
-            removed += len(ids)
-        if not removed:
-            return False
-        self.parameter_tag_toolbar.remove_tag_actions(parameter_tag_d)
-        self.object_parameter_definition_model.remove_parameter_tags(parameter_tag_d)
-        self.relationship_parameter_definition_model.remove_parameter_tags(parameter_tag_d)
-        self.commit_available.emit(True)
-        msg = "Successfully removed {} parameter tag(s).".format(removed)
-        self.msg.emit(msg)
-        return True
-
     def show_parameter_value_editor(self, index, table_view, value=None):
         """Shows the parameter value editor for the given index of given table view.
         """
