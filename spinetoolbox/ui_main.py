@@ -85,6 +85,8 @@ class ToolboxUI(QMainWindow):
         self.setWindowIcon(QIcon(":/symbols/app.ico"))
         set_taskbar_icon()  # in helpers.py
         self.ui.graphicsView.set_ui(self)
+        self._project_item_actions = list()
+        self._item_edit_actions()
         # Set style sheets
         self.ui.statusbar.setStyleSheet(STATUSBAR_SS)  # Initialize QStatusBar
         self.ui.statusbar.setFixedHeight(20)
@@ -1560,3 +1562,36 @@ class ToolboxUI(QMainWindow):
             self._proposed_item_name_counts[prefix] += 1
             name = self.propose_item_name(prefix)
         return name
+
+    def _item_edit_actions(self):
+        """Creates project item edit actions (copy, paste, duplicate) and adds them to proper places."""
+
+        def prepend_to_edit_menu(text, shortcut, slot):
+            action = QAction(text, self.ui.graphicsView)
+            action.setShortcuts(shortcut)
+            action.setShortcutContext(Qt.WidgetShortcut)
+            action.triggered.connect(slot)
+            self._project_item_actions.append(action)
+            self.ui.graphicsView.addAction(action)
+            self.ui.menuEdit.insertAction(self.ui.menuEdit.actions()[0], action)
+            return action
+
+        duplicate_action = prepend_to_edit_menu(
+            "Duplicate", [QKeySequence(Qt.CTRL + Qt.Key_D)], lambda checked: self._duplicate_project_item()
+        )
+        paste_action = prepend_to_edit_menu(
+            "Paste", QKeySequence.Paste, lambda checked: self._project_item_from_clipboard()
+        )
+        copy_action = prepend_to_edit_menu("Copy", QKeySequence.Copy, lambda checked: self._project_item_to_clipboard())
+
+        def mirror_action_to_project_tree_view(action_to_duplicate):
+            action = QAction(action_to_duplicate.text(), self.ui.treeView_project)
+            action.setShortcuts([action_to_duplicate.shortcut()])
+            action.setShortcutContext(Qt.WidgetShortcut)
+            action.triggered.connect(action_to_duplicate.trigger)
+            self._project_item_actions.append(action)
+            self.ui.treeView_project.addAction(action)
+
+        mirror_action_to_project_tree_view(copy_action)
+        mirror_action_to_project_tree_view(paste_action)
+        mirror_action_to_project_tree_view(duplicate_action)
