@@ -16,97 +16,45 @@ A tree model for parameter value lists.
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt, QObject, Signal, Slot, QModelIndex, QAbstractItemModel
+from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from PySide2.QtGui import QBrush, QFont, QIcon, QGuiApplication
 from spinedb_api import to_database, from_database
+from .minimal_tree_model import MinimalTreeModel, TreeItem
 
 
 class EditableMixin:
-    def flags(self):
+    def flags(self, column):
         """Makes items editable."""
-        return Qt.ItemIsEditable | super().flags()
+        return Qt.ItemIsEditable | super().flags(column)
 
 
 class GrayFontMixin:
     """Paints the text gray."""
 
-    def data(self, role=Qt.DisplayRole):
-        if role == Qt.ForegroundRole and self.row == self.parent.child_count() - 1:
+    def data(self, column, role=Qt.DisplayRole):
+        if role == Qt.ForegroundRole and self.row() == self.parent.child_count() - 1:
             gray_color = QGuiApplication.palette().text().color()
             gray_color.setAlpha(128)
             gray_brush = QBrush(gray_color)
             return gray_brush
-        return super().data(role)
+        return super().data(column, role)
 
 
 class BoldFontMixin:
     """Bolds text."""
 
-    def data(self, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.DisplayRole):
         if role == Qt.FontRole:
             bold_font = QFont()
             bold_font.setBold(True)
             return bold_font
-        return super().data(role)
+        return super().data(column, role)
 
 
-class TreeNode(QObject):
-    """A tree node item for ParameterValueListModel."""
-
-    children_about_to_be_inserted = Signal("QModelIndex", "int", "int", name="children_about_to_be_inserted")
-    children_about_to_be_removed = Signal("QModelIndex", "int", "int", name="children_about_to_be_removed")
-    children_inserted = Signal(name="children_inserted")
-    children_removed = Signal(name="children_removed")
-
-    def __init__(self, parent):
-        """Init class.
-
-        Args
-            parent (TreeNode, NoneType): the parent node
-        """
-        super().__init__(parent)
-        self.parent = parent
-        self.children = list()
-        self.index = None
-
-    @property
-    def row(self):
-        return self.index.row()
-
-    def child_count(self):
-        return len(self.children)
-
-    def insert_children(self, first, *children):
-        """Inserts children."""
-        last = first + len(children) - 1
-        self.children_about_to_be_inserted.emit(self.index, first, last)
-        children = list(children)
-        self.children[first:first] = list(children)
-        self.children_inserted.emit()
-
-    def append_children(self, *children):
-        """Appends children."""
-        self.insert_children(self.child_count(), *children)
-
-    def remove_children(self, first, last):
-        """Removes children."""
-        if first < 0 or last >= self.child_count() or first > last:
-            return
-        self.children_about_to_be_removed.emit(self.index, first, last)
-        del self.children[first : last + 1]
-        self.children_removed.emit()
-
-    def flags(self):
-        return Qt.ItemIsEnabled | Qt.ItemIsSelectable
-
-    def data(self, role=Qt.DisplayRole):
-        """Return data for item."""
-
-
-class InvisibleRootNode(TreeNode):
+class InvisibleRootItem(TreeItem):
     def __init__(self, db_mngr, *db_maps):
-        super().__init__(None)
-        children = [DBNode(self, db_mngr, db_map) for db_map in db_maps]
+        super().__init__()
+        children = [DBItem(db_mngr, db_map) for db_map in db_maps]
         self.append_children(*children)
 
 
@@ -120,31 +68,30 @@ class AppendEmptyChildMixin:
             self.append_children(empty_child)
 
 
-class DBNode(AppendEmptyChildMixin, TreeNode):
-    """A node representing a db."""
+class DBItem(AppendEmptyChildMixin, TreeItem):
+    """An item representing a db."""
 
-    def __init__(self, parent, db_mngr, db_map):
+    def __init__(self, db_mngr, db_map):
         """Init class.
 
         Args
-            parent (TreeNode): the parent node
             db_mngr (SpineDBManager)
             db_map (DiffDatabaseMapping)
         """
-        super().__init__(parent)
+        super().__init__()
         self.db_map = db_map
         self.db_mngr = db_mngr
         children = [
-            ListNode(self, db_mngr, db_map, value_list["id"], value_list["name"], value_list["value_list"].split(","))
+            ListItem(db_mngr, db_map, value_list["id"], value_list["name"], value_list["value_list"].split(","))
             for value_list in db_mngr.get_parameter_value_lists(db_map)
         ]
         empty_child = self.empty_child()
         self.append_children(*children, empty_child)
 
     def empty_child(self):
-        return ListNode(self, self.db_mngr, self.db_map)
+        return ListItem(self.db_mngr, self.db_map)
 
-    def data(self, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.DisplayRole):
         """Shows Spine icon for fun."""
         if role == Qt.DecorationRole:
             return QIcon(":/symbols/Spine_symbol.png")
@@ -152,16 +99,16 @@ class DBNode(AppendEmptyChildMixin, TreeNode):
             return f"root ({self.db_map.codename})"
 
 
-class ListNode(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixin, TreeNode):
-    """A list node."""
+class ListItem(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixin, TreeItem):
+    """A list item."""
 
-    def __init__(self, parent, db_mngr, db_map, identifier=None, name=None, value_list=()):
-        super().__init__(parent)
+    def __init__(self, db_mngr, db_map, identifier=None, name=None, value_list=()):
+        super().__init__()
         self.db_mngr = db_mngr
         self.db_map = db_map
         self.id = identifier
         self.name = name or "Type new list name here..."
-        children = [ValueNode(self, from_database(value)) for value in value_list]
+        children = [ValueItem(from_database(value)) for value in value_list]
         empty_child = self.empty_child()
         self.append_children(*children, empty_child)
 
@@ -169,21 +116,21 @@ class ListNode(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
         return [to_database(child.value) for child in self.children[:-1]]
 
     def empty_child(self):
-        return ValueNode(self, "Type new list value here...")
+        return ValueItem("Type new list value here...")
 
-    def data(self, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             return self.name
-        return super().data(role)
+        return super().data(column, role)
 
-    def set_data(self, name):
+    def set_data(self, column, name):
         if name == self.name:
             return False
         if self.id:
             self.update_name_in_db(name)
             return False
         self.name = name
-        self.parent.append_empty_child(self.row)
+        self.parent.append_empty_child(self.row())
         self.add_to_db()
         return True
 
@@ -194,7 +141,7 @@ class ListNode(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             self.update_value_list_in_db(child, value)
             return False
         child.value = value
-        self.append_empty_child(child.row)
+        self.append_empty_child(child.row())
         self.add_to_db()
         return True
 
@@ -206,7 +153,7 @@ class ListNode(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
         value_list = self.compile_value_list()
         value = to_database(value)
         try:
-            value_list[child.row] = value
+            value_list[child.row()] = value
         except IndexError:
             value_list.append(value)
         db_item = dict(id=self.id, value_list=value_list)
@@ -236,7 +183,7 @@ class ListNode(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
         curr_value_count = len(curr_value_list)
         if value_count > curr_value_count:
             added_count = value_count - curr_value_count
-            children = [ValueNode(self) for _ in range(added_count)]
+            children = [ValueItem() for _ in range(added_count)]
             self.insert_children(curr_value_count, *children)
         elif curr_value_count > value_count:
             removed_count = curr_value_count - value_count
@@ -245,29 +192,30 @@ class ListNode(GrayFontMixin, BoldFontMixin, AppendEmptyChildMixin, EditableMixi
             child.value = from_database(value)
 
 
-class ValueNode(GrayFontMixin, EditableMixin, TreeNode):
-    """A value node."""
+class ValueItem(GrayFontMixin, EditableMixin, TreeItem):
+    """A value item."""
 
-    def __init__(self, parent, value=None):
-        super().__init__(parent)
+    def __init__(self, value=None):
+        super().__init__()
         self.value = value
 
-    def data(self, role=Qt.DisplayRole):
+    def data(self, column, role=Qt.DisplayRole):
         if role == Qt.DisplayRole:
             return self.value
-        return super().data(role)
+        return super().data(column, role)
 
-    def set_data(self, value):
+    def set_data(self, column, value):
         return self.parent.set_child_data(self, value)
 
 
-class ParameterValueListModel(QAbstractItemModel):
+class ParameterValueListModel(MinimalTreeModel):
     """A model to display parameter value list data in a tree view.
 
 
     Args:
         parent (DataStoreForm)
-        db_maps (dict): maps db names to DiffDatabaseMapping instances
+        db_mngr (SpineDBManager)
+        db_maps (iter): DiffDatabaseMapping instances
     """
 
     remove_selection_requested = Signal(name="remove_selection_requested")
@@ -279,7 +227,6 @@ class ParameterValueListModel(QAbstractItemModel):
         self._parent = parent
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self._invisible_root_node = None
         self.connect_db_mngr_signals()
 
     def connect_db_mngr_signals(self):
@@ -291,152 +238,63 @@ class ParameterValueListModel(QAbstractItemModel):
     @Slot("QVariant", name="receive_parameter_value_lists_added")
     def receive_parameter_value_lists_added(self, db_map_data):
         self.layoutAboutToBeChanged.emit()
-        for db_node in self._invisible_root_node.children:
-            items = db_map_data.get(db_node.db_map)
+        for db_item in self._invisible_root_item.children:
+            items = db_map_data.get(db_item.db_map)
             if not items:
                 continue
             items = {x["name"]: x for x in items}
-            for list_node in db_node.children[:-1]:
-                item = items.pop(list_node.name, None)
+            for list_item in db_item.children[:-1]:
+                item = items.pop(list_item.name, None)
                 if not item:
                     continue
-                list_node.handle_added_to_db(identifier=item["id"], value_list=item["value_list"].split(","))
+                list_item.handle_added_to_db(identifier=item["id"], value_list=item["value_list"].split(","))
             # Now append remaining items
             children = [
-                ListNode(db_node, self.db_mngr, db_map, item["id"], item["name"], item["value_list"].split(","))
+                ListItem(self.db_mngr, db_map, item["id"], item["name"], item["value_list"].split(","))
                 for item in items.values()
             ]
-            db_node.insert_children(db_node.child_count() - 1, *children)
+            db_item.insert_children(db_item.child_count() - 1, *children)
         self.layoutChanged.emit()
 
     @Slot("QVariant", name="receive_parameter_value_lists_updated")
     def receive_parameter_value_lists_updated(self, db_map_data):
         self.layoutAboutToBeChanged.emit()
-        for db_node in self._invisible_root_node.children:
-            items = db_map_data.get(db_node.db_map)
+        for db_item in self._invisible_root_item.children:
+            items = db_map_data.get(db_item.db_map)
             if not items:
                 continue
             items = {x["id"]: x for x in items}
-            for list_node in db_node.children[:-1]:
-                item = items.get(list_node.id)
+            for list_item in db_item.children[:-1]:
+                item = items.get(list_item.id)
                 if not item:
                     continue
-                list_node.handle_updated_in_db(name=item["name"], value_list=item["value_list"].split(","))
+                list_item.handle_updated_in_db(name=item["name"], value_list=item["value_list"].split(","))
         self.layoutChanged.emit()
 
     @Slot("QVariant", name="receive_parameter_value_lists_removed")
     def receive_parameter_value_lists_removed(self, db_map_data):
         self.layoutAboutToBeChanged.emit()
-        for db_node in self._invisible_root_node.children:
-            items = db_map_data.get(db_node.db_map)
+        for db_item in self._invisible_root_item.children:
+            items = db_map_data.get(db_item.db_map)
             if not items:
                 continue
             ids = {x["id"] for x in items}
             removed_rows = []
-            for row, list_node in enumerate(db_node.children[:-1]):
-                if list_node.id in ids:
+            for row, list_item in enumerate(db_item.children[:-1]):
+                if list_item.id in ids:
                     removed_rows.append(row)
             for row in sorted(removed_rows, reverse=True):
-                db_node.remove_children(row, row)
+                db_item.remove_children(row, row)
         self.layoutChanged.emit()
 
     def build_tree(self):
-        """Initialize the internal data structure of TreeNode instances."""
+        """Initialize the internal data structure of TreeItem instances."""
         self.beginResetModel()
-        self._invisible_root_node = InvisibleRootNode(self.db_mngr, *self.db_maps)
+        self._invisible_root_item.deleteLater()
+        self._invisible_root_item = InvisibleRootItem(self.db_mngr, *self.db_maps)
         self.endResetModel()
-
-    def createIndex(self, row, column, item):
-        index = super().createIndex(row, column, item)
-        if item.index is None:
-            # This is so we only track items once
-            self.track_item(item)
-        item.index = index
-        return index
-
-    def track_item(self, item):
-        item.children_about_to_be_inserted.connect(self.receive_children_about_to_be_inserted)
-        item.children_inserted.connect(self.receive_children_inserted)
-        item.children_about_to_be_removed.connect(self.receive_children_about_to_be_removed)
-        item.children_removed.connect(self.receive_children_removed)
-
-    def stop_tracking_item(self, item):
-        item.children_about_to_be_inserted.disconnect(self.receive_children_about_to_be_inserted)
-        item.children_inserted.disconnect(self.receive_children_inserted)
-        item.children_about_to_be_removed.disconnect(self.receive_children_about_to_be_removed)
-        item.children_removed.disconnect(self.receive_children_removed)
-
-    @Slot("QModelIndex", "int", "int", name="receive_children_about_to_be_inserted")
-    def receive_children_about_to_be_inserted(self, parent, first, last):
-        self.beginInsertRows(parent, first, last)
-
-    @Slot(name="receive_children_inserted")
-    def receive_children_inserted(self):
-        self.endInsertRows()
-
-    @Slot("QModelIndex", "int", "int", name="receive_children_about_to_be_removed")
-    def receive_children_about_to_be_removed(self, parent, first, last):
-        self.beginRemoveRows(parent, first, last)
-        for child in parent.internalPointer().children[first : last + 1]:
-            self.stop_tracking_item(child)
-
-    @Slot(name="receive_children_removed")
-    def receive_children_removed(self):
-        self.endRemoveRows()
-
-    def index(self, row, column, parent=QModelIndex()):
-        """Returns the index of the item in the model specified by the given row, column and parent index."""
-        if not parent.isValid():
-            parent_node = self._invisible_root_node
-        else:
-            parent_node = parent.internalPointer()
-        node = parent_node.children[row]
-        return self.createIndex(row, column, node)
-
-    def parent(self, index):
-        """Returns the parent of the model item with the given index."""
-        if not index.isValid():
-            return QModelIndex()
-        parent_node = index.internalPointer().parent
-        if parent_node is None:
-            return QModelIndex()
-        return self.createIndex(0, 0, parent_node)
-
-    def rowCount(self, parent=QModelIndex()):
-        """Returns the number of rows under the given parent.
-        Get it from the lenght of the appropriate list.
-        """
-        if not parent.isValid():
-            parent_node = self._invisible_root_node
-        else:
-            parent_node = parent.internalPointer()
-        return parent_node.child_count()
 
     def columnCount(self, parent=QModelIndex()):
         """Returns the number of columns under the given parent. Always 1.
         """
         return 1
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Returns the data stored under the given role for the index.
-        """
-        if not index.isValid():
-            return None
-        return index.internalPointer().data(role)
-
-    def flags(self, index):
-        """Returns the item flags for the given index.
-        """
-        return index.internalPointer().flags()
-
-    def setData(self, index, value, role=Qt.EditRole):
-        """Sets data for given index and role.
-        Returns True if successful; otherwise returns False.
-        """
-        if not index.isValid() or role != Qt.EditRole:
-            return False
-        node = index.internalPointer()
-        if node.set_data(value):
-            self.dataChanged.emit(index, index, [role])
-            return True
-        return False

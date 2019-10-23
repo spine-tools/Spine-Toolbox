@@ -18,164 +18,7 @@ Classes to represent entities in a tree.
 from PySide2.QtCore import Qt, QObject, Signal, QModelIndex
 from sqlalchemy import or_
 from PySide2.QtGui import QFont, QBrush, QIcon
-
-
-class TreeItem(QObject):
-    """A tree item that can fetch its children."""
-
-    children_about_to_be_inserted = Signal("QVariant", "int", "int", name="children_about_to_be_inserted")
-    children_about_to_be_removed = Signal("QVariant", "int", "int", name="children_about_to_be_removed")
-    children_inserted = Signal("QVariant", name="children_inserted")
-    children_removed = Signal("QVariant", name="children_removed")
-
-    def __init__(self, parent=None):
-        """Init class.
-
-        Args:
-            parent (TreeItem, NoneType): the parent item or None
-        """
-        super().__init__(parent)
-        self._children = []
-        self._parent = None
-        self._fetched = False
-        self.parent = parent
-        self.children = []
-
-    @property
-    def child_item_type(self):
-        """Returns the type of child items. Reimplement in subclasses to return something more meaningfull."""
-        return TreeItem
-
-    @property
-    def children(self):
-        return self._children
-
-    @children.setter
-    def children(self, children):
-        bad_types = [type(child) for child in children if not isinstance(child, TreeItem)]
-        if bad_types:
-            raise TypeError(f"Cand't set children of type {bad_types} for an item of type {type(self)}")
-        for child in children:
-            child.parent = self
-        self._children = children
-
-    @property
-    def parent(self):
-        return self._parent
-
-    @parent.setter
-    def parent(self, parent):
-        if not isinstance(parent, TreeItem) and parent is not None:
-            raise ValueError("Parent must be instance of TreeItem or None")
-        self._parent = parent
-
-    def child(self, row):
-        """Returns the child at given row or None if out of bounds."""
-        try:
-            return self._children[row]
-        except IndexError:
-            return None
-
-    def last_child(self):
-        """Returns the last child."""
-        return self.child(-1)
-
-    def child_count(self):
-        """Returns the number of children."""
-        return len(self._children)
-
-    def child_number(self):
-        """Returns the rank of this item as a children, or 0 if it doesn't have a parent."""
-        if self.parent is not None:
-            return self.parent.children.index(self)
-        return 0
-
-    def find_children(self, cond=lambda child: True):
-        """Returns children that meet condition expressed as a lambda function."""
-        for child in self.children:
-            if cond(child):
-                yield child
-
-    def find_child(self, cond=lambda child: True):
-        """Returns first child that meet condition expressed as a lambda function or None."""
-        return next(self.find_children(cond), None)
-
-    def next_sibling(self):
-        """Returns the next sibling or None if it's the last or if doesn't have a parent."""
-        if self.parent is None:
-            return None
-        return self.parent.child(self.child_number() + 1)
-
-    def previous_sibling(self):
-        """Returns the previous sibling or None if it's first or if doesn't have a parent."""
-        if self.child_number() == 0:
-            return None
-        return self.parent.child(self.child_number() - 1)
-
-    def column_count(self):
-        """Returns 0."""
-        return 0
-
-    def insert_children(self, position, new_children):
-        """Insert new children at given position. Returns a boolean depending on how it went.
-
-        Args:
-            position (int): insert new items here
-            new_children (list): insert items from this list
-        """
-        bad_types = [type(child) for child in new_children if not isinstance(child, TreeItem)]
-        if bad_types:
-            raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
-        if position < 0 or position > self.child_count() + 1:
-            return False
-        self.children_about_to_be_inserted.emit(self, position, len(new_children))
-        for child in new_children:
-            child.parent = self
-        self._children[position:position] = new_children
-        self.children_inserted.emit(new_children)
-        return True
-
-    def append_children(self, new_children):
-        """Append children at the end."""
-        return self.insert_children(self.child_count(), new_children)
-
-    def remove_children(self, position, count):
-        """Removes count children starting from the given position."""
-        if position > self.child_count() or position < 0:
-            return False
-        if position + count > self.child_count():
-            count = self.child_count() - position
-        self.children_about_to_be_removed.emit(self, position, count)
-        items = self._children[position : position + count]
-        del self._children[position : position + count]
-        self.children_removed.emit(items)
-        return True
-
-    def clear_children(self):
-        """Clear children list."""
-        self.children.clear()
-
-    def flags(self, column):
-        """Enables the item and makes it selectable."""
-        return Qt.ItemIsSelectable | Qt.ItemIsEnabled
-
-    def data(self, column, role=Qt.DisplayRole):
-        """Returns data for given column and role."""
-        return None
-
-    def has_children(self):
-        """Returns whether or not this item has or could have children."""
-        if self.child_count() or self.can_fetch_more():
-            return True
-        return False
-
-    def can_fetch_more(self):
-        """Returns whether or not this item can fetch more."""
-        return not self._fetched
-
-    def fetch_more(self):
-        """Fetches more children."""
-        self._fetched = True
+from .minimal_tree_model import TreeItem
 
 
 class MultiDBTreeItem(TreeItem):
@@ -195,17 +38,17 @@ class MultiDBTreeItem(TreeItem):
         self._db_map_id = db_map_id
         self._child_map = dict()  # Maps db_map to id to row number
 
-    def insert_children(self, position, new_children):
+    def insert_children(self, position, *children):
         """Insert new children at given position. Returns a boolean depending on how it went.
 
         Args:
             position (int): insert new items here
-            new_children (list): insert items from this list
+            children (iter): insert items from this iterable
         """
-        bad_types = [type(child) for child in new_children if not isinstance(child, MultiDBTreeItem)]
+        bad_types = [type(child) for child in children if not isinstance(child, MultiDBTreeItem)]
         if bad_types:
             raise TypeError(f"Cand't insert children of type {bad_types} to an item of type {type(self)}")
-        if super().insert_children(position, new_children):
+        if super().insert_children(position, *children):
             self._refresh_child_map()
             return True
         return False
@@ -296,7 +139,7 @@ class MultiDBTreeItem(TreeItem):
     def take_db_map(self, db_map):
         """Removes the mapping for given db_map and returns it."""
         if [*self._db_map_id.keys()] == [db_map]:
-            self.parent.remove_children(self.child_number(), 1)
+            self.parent.remove_children(self.row(), 1)
         return self._db_map_id.pop(db_map, None)
 
     def deep_remove_db_map(self, db_map):
@@ -375,7 +218,7 @@ class MultiDBTreeItem(TreeItem):
                 # No match
                 existing_children[new_child.display_id] = new_child
                 unmerged.append(new_child)
-        self.append_children(unmerged)
+        self.append_children(*unmerged)
 
     def fetch_more(self):
         """Fetches children from all associated databases."""
@@ -569,7 +412,9 @@ class RelationshipClassItem(EntityClassItem):
     @property
     def display_icon(self):
         """Returns relationship class icon."""
-        return self.db_mngr.entity_class_icon(self.first_db_map, "relationship class", self.db_map_id(self.first_db_map))
+        return self.db_mngr.entity_class_icon(
+            self.first_db_map, "relationship class", self.db_map_id(self.first_db_map)
+        )
 
     def _get_children_ids(self, db_map):
         """Returns a query that selects all relationships of this class from the db.

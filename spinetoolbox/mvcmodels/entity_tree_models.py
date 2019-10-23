@@ -26,9 +26,10 @@ from .entity_tree_item import (
     RelationshipClassItem,
     RelationshipItem,
 )
+from .minimal_tree_model import MinimalTreeModel
 
 
-class EntityTreeModel(QAbstractItemModel):
+class EntityTreeModel(MinimalTreeModel):
     """Base class for all entity tree models."""
 
     remove_selection_requested = Signal(name="remove_selection_requested")
@@ -42,10 +43,8 @@ class EntityTreeModel(QAbstractItemModel):
             db_maps (iter): DiffDatabaseMapping instances
         """
         super().__init__(parent)
-        self._parent = parent
         self.db_mngr = db_mngr
         self.db_maps = db_maps
-        self._invisible_root_item = TreeItem()
         self._root_item = None
         self.selected_indexes = dict()  # Maps item type to selected indexes
         self._selection_buffer = list()  # To restablish selected indexes after adding/removing rows
@@ -59,29 +58,16 @@ class EntityTreeModel(QAbstractItemModel):
         self.beginResetModel()
         self._invisible_root_item.deleteLater()
         self._invisible_root_item = TreeItem()
-        self.selected_indexes.clear()
         self.endResetModel()
+        self.selected_indexes.clear()
         self.track_item(self._invisible_root_item)
         self._root_item = self.root_item_type(self.db_mngr, dict.fromkeys(self.db_maps))
-        self._invisible_root_item.insert_children(0, [self._root_item])
+        self._root_item.index = self.createIndex(0, 0, self._root_item)
+        self._invisible_root_item.insert_children(0, self._root_item)
 
-    def track_item(self, item):
-        """Tracks given TreeItem. This means we insert rows when children are inserted
-        and remove rows when children are removed."""
-        item.children_about_to_be_inserted.connect(self._begin_insert_rows)
-        item.children_inserted.connect(self._end_insert_rows)
-        item.children_about_to_be_removed.connect(self._begin_remove_rows)
-        item.children_removed.connect(self._end_remove_rows)
-
-    def stop_tracking_item(self, item):
-        """Stops tracking given TreeItem."""
-        item.children_about_to_be_inserted.disconnect(self._begin_insert_rows)
-        item.children_inserted.disconnect(self._end_insert_rows)
-        item.children_about_to_be_removed.disconnect(self._begin_remove_rows)
-        item.children_removed.disconnect(self._end_remove_rows)
-
-    def _fill_selection_buffer(self, item, last):
+    def _fill_selection_buffer(self, index, last):
         """Pops indexes out of selection dictionary and add items into buffer."""
+        item = self.item_from_index(index)
         selected = self.selected_indexes.get(item.child_item_type)
         if not selected:
             return
@@ -96,35 +82,29 @@ class EntityTreeModel(QAbstractItemModel):
             self.select_index(self.index_from_item(item))
         self._selection_buffer.clear()
 
-    @Slot("QVariant", "int", "int", name="_begin_insert_rows")
-    def _begin_insert_rows(self, item, row, count):
+    @Slot("QModelIndex", "int", "int", name="receive_children_about_to_be_inserted")
+    def receive_children_about_to_be_inserted(self, index, row, count):
         """Begin an operation to insert rows."""
-        self._fill_selection_buffer(item, row + count)
-        index = self.index_from_item(item)
-        self.beginInsertRows(index, row, row + count - 1)
+        super().receive_children_about_to_be_inserted(index, row, count)
+        self._fill_selection_buffer(index, row + count)
 
-    @Slot("QVariant", name="_end_insert_rows")
-    def _end_insert_rows(self, items):
-        """End an operation to insert rows. Start tracking all inserted items."""
+    @Slot(name="receive_children_inserted")
+    def receive_children_inserted(self):
+        """End an operation to insert rows."""
+        super().receive_children_inserted()
         self._empty_selection_buffer()
-        for item in items:
-            self.track_item(item)
-        self.endInsertRows()
 
-    @Slot("QVariant", "int", "int", name="_begin_remove_rows")
-    def _begin_remove_rows(self, item, row, count):
+    @Slot("QModelIndex", "int", "int", name="receive_children_about_to_be_removed")
+    def receive_children_about_to_be_removed(self, index, row, count):
         """Begin an operation to remove rows."""
-        self._fill_selection_buffer(item, row + count)
-        index = self.index_from_item(item)
-        self.beginRemoveRows(index, row, row + count - 1)
+        super().receive_children_about_to_be_removed(index, row, count)
+        self._fill_selection_buffer(index, row + count)
 
-    @Slot("QVariant", name="_end_remove_rows")
-    def _end_remove_rows(self, items):
+    @Slot(name="receive_children_removed")
+    def receive_children_removed(self):
         """End an operation to remove rows. Stop tracking all removed items."""
+        super().receive_children_removed()
         self._empty_selection_buffer()
-        for item in items:
-            self.stop_tracking_item(item)
-        self.endRemoveRows()
 
     @property
     def root_item(self):
@@ -139,60 +119,10 @@ class EntityTreeModel(QAbstractItemModel):
         """Implement in subclasses to create a model specific to any entity type."""
         raise NotImplementedError()
 
-    def visit_all(self, index=QModelIndex()):
-        """Iterates all items in the model including and below the given index.
-        Iterative implementation so we don't need to worry about Python recursion limits.
-        """
-        if index.isValid():
-            ancient_one = self.item_from_index(index)
-        else:
-            ancient_one = self._invisible_root_item
-        yield ancient_one
-        child = ancient_one.last_child()
-        if not child:
-            return
-        current = child
-        visit_children = True
-        while True:
-            yield current
-            if visit_children:
-                child = current.last_child()
-                if child:
-                    current = child
-                    continue
-            sibling = current.previous_sibling()
-            if sibling:
-                visit_children = True
-                current = sibling
-                continue
-            parent = current._parent
-            if parent == ancient_one:
-                break
-            visit_children = False  # To make sure we don't visit children again
-            current = parent
+    def columnCount(self, parent=QModelIndex()):
+        return 2
 
-    def item_from_index(self, index):
-        """Return the item corresponding to the given index."""
-        if index.isValid():
-            item = index.internalPointer()
-            if item:
-                return item
-        return self._invisible_root_item
-
-    def index_from_item(self, item):
-        """Return a model index corresponding to the given item."""
-        return self.createIndex(item.child_number(), 0, item)
-
-    def parent(self, index):
-        if not index.isValid():
-            return QModelIndex()
-        item = self.item_from_index(index)
-        parent_item = item.parent
-        if parent_item == self._invisible_root_item:
-            return QModelIndex()
-        return self.createIndex(parent_item.child_number(), 0, parent_item)
-
-    def data(self, index, role):
+    def data(self, index, role=Qt.DisplayRole):
         item = self.item_from_index(index)
         if index.column() == 0:
             if role == Qt.DecorationRole:
@@ -201,40 +131,10 @@ class EntityTreeModel(QAbstractItemModel):
                 return item.display_name
         return item.data(index.column(), role)
 
-    def setData(self, index, value, role=Qt.EditRole):
-        if not index.isValid():
-            return False
-        item = self.item_from_index(index)
-        if role == Qt.EditRole:
-            return item.set_data(index.column(), value)
-        return False
-
-    def flags(self, index):
-        item = self.item_from_index(index)
-        return item.flags(index.column())
-
     def headerData(self, section, orientation, role):
         if orientation == Qt.Horizontal and role == Qt.DisplayRole:
             return ("name", "database")[section]
         return None
-
-    def index(self, row, column, parent):
-        if not self.hasIndex(row, column, parent):
-            return QModelIndex()
-        parent_item = self.item_from_index(parent)
-        item = parent_item.child(row)
-        if item:
-            return self.createIndex(row, column, item)
-        return QModelIndex()
-
-    def columnCount(self, parent=QModelIndex()):
-        return 2
-
-    def rowCount(self, parent=QModelIndex()):
-        if parent.column() > 0:
-            return 0
-        parent_item = self.item_from_index(parent)
-        return parent_item.child_count()
 
     def hasChildren(self, parent):
         parent_item = self.item_from_index(parent)
