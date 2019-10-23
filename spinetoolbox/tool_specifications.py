@@ -10,9 +10,9 @@
 ######################################################################################################################
 
 """
-Tool specification classes.
+Contains Tool specification classes.
 
-:authors: P. Savolainen (VTT), E. Rinne (VTT)
+:authors: P. Savolainen (VTT), E. Rinne (VTT), M. Marin (KTH)
 :date:   24.1.2018
 """
 
@@ -25,21 +25,7 @@ from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstan
 
 
 class ToolSpecification(MetaObject):
-    """Super class for various tool specifications.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Name of the tool
-        tooltype (str): Type of Tool (e.g. Python, Julia, ..)
-        path (str): Path to tool
-        includes (str): List of files belonging to the tool specification (relative to 'path')
-        description (str): Description of the Tool specification
-        inputfiles (list): List of required data files
-        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
-        outputfiles (list, optional): List of output files (wildcards may be used)
-        cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
-        execute_in_work (bool): Execute in work folder
-    """
+    """Super class for all tool specifications."""
 
     def __init__(
         self,
@@ -55,7 +41,21 @@ class ToolSpecification(MetaObject):
         cmdline_args=None,
         execute_in_work=True,
     ):
-        """Class constructor."""
+        """
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Name of the tool
+            tooltype (str): Type of Tool (e.g. Python, Julia, ..)
+            path (str): Path to tool
+            includes (str): List of files belonging to the tool specification (relative to 'path')
+            description (str): Description of the Tool specification
+            inputfiles (list): List of required data files
+            inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+            outputfiles (list, optional): List of output files (wildcards may be used)
+            cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
+            execute_in_work (bool): Execute in work folder
+        """
         super().__init__(name, description)
         self._toolbox = toolbox
         self.tooltype = tooltype
@@ -73,7 +73,7 @@ class ToolSpecification(MetaObject):
         self.execute_in_work = execute_in_work
 
     def set_return_code(self, code, description):
-        """Set a return code and associated text description for the tool.
+        """Sets a return code and an associated text description for the tool specification.
 
         Args:
             code (int): Return code
@@ -82,20 +82,20 @@ class ToolSpecification(MetaObject):
         self.return_codes[code] = description
 
     def set_def_path(self, path):
-        """Set definition file path for tool.
+        """Sets the file path for this tool specification.
 
         Args:
-            path (str): Absolute path to the definition file.
+            path (str): Absolute path to the specification file.
         """
         self.def_file_path = path
 
     def get_def_path(self):
-        """Returns tool definition file path."""
+        """Returns tool specification file path."""
         return self.def_file_path
 
     @staticmethod
     def check_definition(ui, data):
-        """Check that a tool specification contains
+        """Checks that a tool specification contains
         the required keys and that it is in correct format.
 
         Args:
@@ -124,7 +124,7 @@ class ToolSpecification(MetaObject):
         return kwargs
 
     def get_cmdline_args(self):
-        """Return tool template args as list."""
+        """Returns tool specification args as list."""
         # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
         if (self.cmdline_args is not None) and (self.cmdline_args != ''):
             # Tool spec cmdline args is a space delimited string. Return them as a list.
@@ -132,31 +132,17 @@ class ToolSpecification(MetaObject):
         return []
 
     def create_tool_instance(self, basedir):
-        """Returns an instance of this tool to run in the given directory.
-        Implement in subclasses to generate instances of this tool.
+        """Returns an instance of the tool specification configured to run in the given directory.
+        Needs to be implemented in subclasses.
 
         Args:
-            basedir (str): the path to the directory where the instance will run
+            basedir (str): Path to directory where the instance will run
         """
         raise NotImplementedError
 
 
 class GAMSTool(ToolSpecification):
-    """Class for GAMS tool specifications.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): GAMS Tool name
-        tooltype (str): Tool specification type
-        path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
-        First file in the list is the main GAMS program.
-        description (str): GAMS Tool description
-        inputfiles (list): List of required data files
-        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
-        outputfiles (list, optional): List of output files (wildcards may be used)
-        cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
-    """
+    """Class for GAMS tool specifications."""
 
     def __init__(
         self,
@@ -172,7 +158,21 @@ class GAMSTool(ToolSpecification):
         cmdline_args=None,
         execute_in_work=True,
     ):
-        """Class constructor."""
+        """
+
+        Args:
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): GAMS Tool name
+            tooltype (str): Tool specification type
+            path (str): Path to model main file
+            includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            First file in the list is the main GAMS program.
+            description (str): GAMS Tool description
+            inputfiles (list): List of required data files
+            inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+            outputfiles (list, optional): List of output files (wildcards may be used)
+            cmdline_args (str, optional): GAMS tool command line arguments (read from tool definition file)
+        """
         super().__init__(
             toolbox,
             name,
@@ -212,15 +212,15 @@ class GAMSTool(ToolSpecification):
         }
 
     def __repr__(self):
-        """Remove this if not necessary."""
+        """[OBSOLETE]. Returns instance of this class as a string."""
         return "GAMSTool('{}')".format(self.name)
 
     def update_gams_options(self, key, value):
-        """Update GAMS command line options. Only 'cerr and 'logoption' keywords supported.
+        """[OBSOLETE?] Updates GAMS command line options. Only 'cerr and 'logoption' keywords supported.
 
         Args:
-            key: Option name
-            value: Option value
+            key (str): Option name
+            value (int, float): Option value
         """
         # Supported GAMS logoption values
         # 3 writes LOG output to standard output
@@ -232,7 +232,7 @@ class GAMSTool(ToolSpecification):
 
     @staticmethod
     def load(toolbox, path, data):
-        """Create a GAMSTool according to a tool definition.
+        """Creates a GAMSTool according to a tool specification file.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
@@ -240,7 +240,7 @@ class GAMSTool(ToolSpecification):
             data (dict): Dictionary of tool definitions
 
         Returns:
-            GAMSTool instance or None if there was a problem in the tool definition file.
+            GAMSTool instance or None if there was a problem in the tool specification file.
         """
         kwargs = GAMSTool.check_definition(toolbox, data)
         if kwargs is not None:
@@ -249,7 +249,7 @@ class GAMSTool(ToolSpecification):
         return None
 
     def create_tool_instance(self, basedir):
-        """Returns an instance of this tool to run in the given directory.
+        """Returns an instance of this tool specification that is configured to run in the given directory.
 
         Args:
             basedir (str): the path to the directory where the instance will run
@@ -258,21 +258,7 @@ class GAMSTool(ToolSpecification):
 
 
 class JuliaTool(ToolSpecification):
-    """Class for Julia tool specifications.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Julia Tool name
-        tooltype (str): Tool specification type
-        path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
-        First file in the list is the main Julia program.
-        description (str): Julia Tool description
-        inputfiles (list): List of required data files
-        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
-        outputfiles (list, optional): List of output files (wildcards may be used)
-        cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
-    """
+    """Class for Julia tool specifications."""
 
     def __init__(
         self,
@@ -288,7 +274,21 @@ class JuliaTool(ToolSpecification):
         cmdline_args=None,
         execute_in_work=True,
     ):
-        """Class constructor."""
+        """
+        Args:
+
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Julia Tool name
+            tooltype (str): Tool specification type
+            path (str): Path to model main file
+            includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            First file in the list is the main Julia program.
+            description (str): Julia Tool description
+            inputfiles (list): List of required data files
+            inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+            outputfiles (list, optional): List of output files (wildcards may be used)
+            cmdline_args (str, optional): Julia tool command line arguments (read from tool definition file)
+        """
         super().__init__(
             toolbox,
             name,
@@ -308,20 +308,20 @@ class JuliaTool(ToolSpecification):
         self.return_codes = {0: "Normal return"}  # Not official
 
     def __repr__(self):
-        """Remove this if not necessary."""
+        """[OBSOLETE]. Returns instance of this class as a string."""
         return "JuliaTool('{}')".format(self.name)
 
     def update_julia_options(self, key, value):
-        """Update Julia command line options.
+        """[OBSOLETE?] Updates Julia command line options.
 
         Args:
-            key: Option name
-            value: Option value
+            key (str): Option name
+            value (int, float): Option value
         """
 
     @staticmethod
     def load(toolbox, path, data):
-        """Create a JuliaTool according to a tool definition.
+        """Creates a JuliaTool according to a tool specification file.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
@@ -338,7 +338,7 @@ class JuliaTool(ToolSpecification):
         return None
 
     def create_tool_instance(self, basedir):
-        """Returns an instance of this tool to run in the given directory.
+        """Returns an instance of this tool specification that is configured to run in the given directory.
 
         Args:
             basedir (str): the path to the directory where the instance will run
@@ -347,21 +347,7 @@ class JuliaTool(ToolSpecification):
 
 
 class PythonTool(ToolSpecification):
-    """Class for Python tool specifications.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Python Tool name
-        tooltype (str): Tool specification type
-        path (str): Path to model main file
-        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
-        First file in the list is the main Python program.
-        description (str): Python Tool description
-        inputfiles (list): List of required data files
-        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
-        outputfiles (list, optional): List of output files (wildcards may be used)
-        cmdline_args (str, optional): Python tool command line arguments (read from tool definition file)
-    """
+    """Class for Python tool specifications."""
 
     def __init__(
         self,
@@ -377,7 +363,21 @@ class PythonTool(ToolSpecification):
         cmdline_args=None,
         execute_in_work=True,
     ):
-        """Class constructor."""
+        """
+        Args:
+
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Python Tool name
+            tooltype (str): Tool specification type
+            path (str): Path to model main file
+            includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            First file in the list is the main Python program.
+            description (str): Python Tool description
+            inputfiles (list): List of required data files
+            inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+            outputfiles (list, optional): List of output files (wildcards may be used)
+            cmdline_args (str, optional): Python tool command line arguments (read from tool definition file)
+        """
         super().__init__(
             toolbox,
             name,
@@ -397,20 +397,20 @@ class PythonTool(ToolSpecification):
         self.return_codes = {0: "Normal return"}  # Not official
 
     def __repr__(self):
-        """Remove this if not necessary."""
+        """[OBSOLETE]. Returns instance of this class as a string."""
         return "PythonTool('{}')".format(self.name)
 
     def update_python_options(self, key, value):
-        """Update Python command line options.
+        """[OBSOLETE?] Updates Python command line options.
 
         Args:
-            key: Option name
-            value: Option value
+            key (str): Option name
+            value (int, float): Option value
         """
 
     @staticmethod
     def load(toolbox, path, data):
-        """Create a PythonTool according to a tool definition.
+        """Creates a PythonTool according to a tool specification file.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
@@ -427,7 +427,7 @@ class PythonTool(ToolSpecification):
         return None
 
     def create_tool_instance(self, basedir):
-        """Returns an instance of this tool to run in the given directory.
+        """Returns an instance of this tool specification that is configured to run in the given directory.
 
         Args:
             basedir (str): the path to the directory where the instance will run
@@ -436,21 +436,7 @@ class PythonTool(ToolSpecification):
 
 
 class ExecutableTool(ToolSpecification):
-    """Class for Executable tool specifications.
-
-    Args:
-        toolbox (ToolboxUI): QMainWindow instance
-        name (str): Tool name
-        tooltype (str): Tool specification type
-        path (str): Path to main script file
-        includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
-        First file in the list is the main script file.
-        description (str): Tool description
-        inputfiles (list): List of required data files
-        inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
-        outputfiles (list, optional): List of output files (wildcards may be used)
-        cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
-    """
+    """Class for Executable tool specifications."""
 
     def __init__(
         self,
@@ -466,7 +452,21 @@ class ExecutableTool(ToolSpecification):
         cmdline_args=None,
         execute_in_work=True,
     ):
-        """Class constructor."""
+        """
+        Args:
+
+            toolbox (ToolboxUI): QMainWindow instance
+            name (str): Tool name
+            tooltype (str): Tool specification type
+            path (str): Path to main script file
+            includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            First file in the list is the main script file.
+            description (str): Tool description
+            inputfiles (list): List of required data files
+            inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
+            outputfiles (list, optional): List of output files (wildcards may be used)
+            cmdline_args (str, optional): Tool command line arguments (read from tool definition file)
+        """
         super().__init__(
             toolbox,
             name,
@@ -487,12 +487,12 @@ class ExecutableTool(ToolSpecification):
         self.return_codes = {0: "Normal exit", 1: "Error happened"}
 
     def __repr__(self):
-        """Remove this if not necessary."""
+        """[OBSOLETE]. Returns instance of this class as a string."""
         return "ExecutableTool('{}')".format(self.name)
 
     @staticmethod
     def load(toolbox, path, data):
-        """Create an ExecutableTool according to a tool specification.
+        """Creates an ExecutableTool according to a tool specification file.
 
         Args:
             toolbox (ToolboxUI): QMainWindow instance
@@ -509,7 +509,7 @@ class ExecutableTool(ToolSpecification):
         return None
 
     def create_tool_instance(self, basedir):
-        """Returns an instance of this tool to run in the given directory.
+        """Returns an instance of this tool specification that is configured to run in the given directory.
 
         Args:
             basedir (str): the path to the directory where the instance will run
