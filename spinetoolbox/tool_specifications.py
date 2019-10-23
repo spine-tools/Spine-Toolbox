@@ -21,6 +21,7 @@ import logging
 from collections import OrderedDict
 from .metaobject import MetaObject
 from .config import REQUIRED_KEYS, OPTIONAL_KEYS, LIST_REQUIRED_KEYS
+from .tool_instance import GAMSToolInstance, JuliaToolInstance, PythonToolInstance, ExecutableToolInstance
 
 
 class ToolSpecification(MetaObject):
@@ -121,6 +122,23 @@ class ToolSpecification(MetaObject):
                 except KeyError:
                     pass
         return kwargs
+
+    def get_cmdline_args(self):
+        """Return tool template args as list."""
+        # TODO: Deal with cmdline arguments that have spaces. They should be stored in a list in the definition file
+        if (self.cmdline_args is not None) and (self.cmdline_args != ''):
+            # Tool spec cmdline args is a space delimited string. Return them as a list.
+            return self.cmdline_args.split(" ")
+        return []
+
+    def create_tool_instance(self, basedir):
+        """Returns an instance of this tool to run in the given directory.
+        Implement in subclasses to generate instances of this tool.
+
+        Args:
+            basedir (str): the path to the directory where the instance will run
+        """
+        raise NotImplementedError
 
 
 class GAMSTool(ToolSpecification):
@@ -230,6 +248,14 @@ class GAMSTool(ToolSpecification):
             return GAMSTool(toolbox=toolbox, path=path, **kwargs)
         return None
 
+    def create_tool_instance(self, basedir):
+        """Returns an instance of this tool to run in the given directory.
+
+        Args:
+            basedir (str): the path to the directory where the instance will run
+        """
+        return GAMSToolInstance(self._toolbox, self, basedir)
+
 
 class JuliaTool(ToolSpecification):
     """Class for Julia tool specifications.
@@ -310,6 +336,14 @@ class JuliaTool(ToolSpecification):
             # Return an executable model instance
             return JuliaTool(toolbox=toolbox, path=path, **kwargs)
         return None
+
+    def create_tool_instance(self, basedir):
+        """Returns an instance of this tool to run in the given directory.
+
+        Args:
+            basedir (str): the path to the directory where the instance will run
+        """
+        return JuliaToolInstance(self._toolbox, self, basedir)
 
 
 class PythonTool(ToolSpecification):
@@ -392,6 +426,14 @@ class PythonTool(ToolSpecification):
             return PythonTool(toolbox=toolbox, path=path, **kwargs)
         return None
 
+    def create_tool_instance(self, basedir):
+        """Returns an instance of this tool to run in the given directory.
+
+        Args:
+            basedir (str): the path to the directory where the instance will run
+        """
+        return PythonToolInstance(self._toolbox, self, basedir)
+
 
 class ExecutableTool(ToolSpecification):
     """Class for Executable tool specifications.
@@ -465,3 +507,11 @@ class ExecutableTool(ToolSpecification):
             # Return an executable model instance
             return ExecutableTool(toolbox=toolbox, path=path, **kwargs)
         return None
+
+    def create_tool_instance(self, basedir):
+        """Returns an instance of this tool to run in the given directory.
+
+        Args:
+            basedir (str): the path to the directory where the instance will run
+        """
+        return ExecutableToolInstance(self._toolbox, self, basedir)
