@@ -129,6 +129,8 @@ class SpineDBManager(QObject):
         self.parameter_definitions_updated.connect(self.cascade_refresh_parameter_values_by_definition)
         self.parameter_value_lists_updated.connect(self.cascade_refresh_parameter_definitions_by_value_list)
         self.parameter_value_lists_removed.connect(self.cascade_refresh_parameter_definitions_by_value_list)
+        self.parameter_tags_updated.connect(self.cascade_refresh_parameter_definitions_by_tag)
+        self.parameter_tags_removed.connect(self.cascade_refresh_parameter_definitions_by_tag)
 
     def cache_items(self, item_type, db_map_data):
         """Put items in cache.
@@ -609,6 +611,15 @@ class SpineDBManager(QObject):
             self.get_parameter_definitions(db_map, ids=ids)
         self.parameter_definitions_updated.emit(db_map_cascading_data)
 
+    @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
+    def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
+        """Runs when updating parameter tags. Cascade refresh cached parameter definitions."""
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(db_map_data)
+        for db_map, data in db_map_cascading_data.items():
+            ids = {x["id"] for x in data}
+            self.get_parameter_definitions(db_map, ids=ids)
+        self.parameter_definitions_updated.emit(db_map_cascading_data)
+
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
         """Runs when updating entity classes. Cascade refresh cached parameter values."""
@@ -691,6 +702,18 @@ class SpineDBManager(QObject):
                 item
                 for item in self.get_items_from_cache(db_map, "parameter definition")
                 if item["value_list_id"] in value_list_ids
+            ]
+        return db_map_cascading_data
+
+    def find_cascading_parameter_definitions_by_tag(self, db_map_data):
+        """Returns data for cascading parameter definitions given data for parameter tags."""
+        db_map_cascading_data = dict()
+        for db_map, data in db_map_data.items():
+            tag_ids = {str(x["id"]) for x in data}
+            db_map_cascading_data[db_map] = [
+                item
+                for item in self.get_items_from_cache(db_map, "parameter definition")
+                if tag_ids.intersection((item["parameter_tag_id_list"] or "").split(","))
             ]
         return db_map_cascading_data
 
