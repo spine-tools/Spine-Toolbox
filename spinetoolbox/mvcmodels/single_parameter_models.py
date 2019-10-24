@@ -226,7 +226,7 @@ class SingleParameterValueModel(SingleParameterModel):
         Args:
             item (list): dictionary-items
         """
-        self.db_mngr.update_parameter_values(db_map, items)
+        self.db_mngr.update_parameter_values({self.db_map: items})
 
 
 class SingleObjectParameterDefinitionModel(SingleObjectParameterMixin, SingleParameterDefinitionModel):

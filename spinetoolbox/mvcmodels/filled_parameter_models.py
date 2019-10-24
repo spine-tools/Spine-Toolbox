@@ -56,10 +56,10 @@ class FilledParameterModel(MinimalTableModel):
         return flags
 
     def data(self, index, role=Qt.DisplayRole):
-        """Gets the id and database for the row and reads data from the db manager,
+        """Gets the id and database for the row, and reads data from the db manager
         using the item_type property.
         Also paint background of fixed indexes gray and apply custom format to JSON fields."""
-        # TODO: Maybe Spine db manager can format the data here
+        # TODO: Maybe Spine db manager can format the data
         field = self.header[index.column()]
         if role == Qt.BackgroundRole and field in self.fixed_fields:
             return QGuiApplication.palette().button()

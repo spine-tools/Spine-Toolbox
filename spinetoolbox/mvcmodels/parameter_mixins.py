@@ -109,7 +109,7 @@ class MakeParameterTagMixin(ConvertToDBMixin):
             for tag in tags:
                 item = self.db_mngr.get_item_by_field(db_map, "parameter tag", "tag", tag)
                 if item:
-                    self._db_map_tag_lookup.setdefault(db_map, {})[name] = item
+                    self._db_map_tag_lookup.setdefault(db_map, {})[tag] = item
 
     def _make_parameter_definition_tag(self, item, db_map):
         """Takes tag info from model item (name-based) into a parameter definition tag database item (id-based)."""

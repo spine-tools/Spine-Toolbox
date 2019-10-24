@@ -18,7 +18,6 @@ Models that vertically concatenate two or more table models.
 
 from PySide2.QtCore import Qt, Slot, QModelIndex
 from ..mvcmodels.minimal_table_model import MinimalTableModel
-from ..helpers import rows_to_row_count_tuples
 
 
 class CompoundTableModel(MinimalTableModel):
@@ -53,6 +52,16 @@ class CompoundTableModel(MinimalTableModel):
             return QModelIndex()
         return self.index(row, sub_index.column())
 
+    def item_at_row(self, row):
+        """Returns the item at given row."""
+        sub_model, sub_row = self._row_map[row]
+        return sub_model._main_data[sub_row]
+
+    def sub_model_at_row(self, row):
+        """Returns the item at given row."""
+        sub_model, _ = self._row_map[row]
+        return sub_model
+
     def refresh(self):
         """Recomputes the row map."""
         self.layoutAboutToBeChanged.emit()
@@ -61,7 +70,7 @@ class CompoundTableModel(MinimalTableModel):
 
     def _row_map_for_model(self, model):
         """Returns row map for given model.
-        The base class implementation just returns all rows.
+        The base class implementation just returns all model rows.
         """
         return [(model, i) for i in range(model.rowCount())]
 
@@ -75,29 +84,18 @@ class CompoundTableModel(MinimalTableModel):
 
     def _append_row_map(self, row_map):
         """Appends given row map."""
-        row_count = self.rowCount()
-        self._row_map += row_map
-        for model, row in row_map:
-            self._inv_row_map[model, row] = row_count + row
+        for model_row in row_map:
+            self._inv_row_map[model_row] = self.rowCount()
+            self._row_map.append(model_row)
 
-    def item_at_row(self, row):
-        """Returns the item at given row."""
-        sub_model, sub_row = self._row_map[row]
-        return sub_model._main_data[sub_row]
-
-    def sub_model_at_row(self, row):
-        """Returns the item at given row."""
-        sub_model, _ = self._row_map[row]
-        return sub_model
-
-    def canFetchMore(self, parent):
+    def canFetchMore(self, parent=QModelIndex()):
         """Returns True if any of the unfetched single models can fetch more."""
         for model in self.sub_models[self._fetched_count :]:
             if model.canFetchMore(self.map_to_sub(parent)):
                 return True
         return False
 
-    def fetchMore(self, parent):
+    def fetchMore(self, parent=QModelIndex()):
         """Fetches the next single model and increments the fetched counter."""
         model = self.sub_models[self._fetched_count]
         row_count_before = model.rowCount()
@@ -122,23 +120,6 @@ class CompoundTableModel(MinimalTableModel):
     def rowCount(self, parent=QModelIndex()):
         """Return the sum of rows in all models."""
         return len(self._row_map)
-
-    def remove_sub_model_rows(self, model, first, last):
-        """Remove rows from given submodel."""
-        compound_first = self._inv_row_map[model, first]
-        compound_last = self._inv_row_map[model, last]
-        self.beginRemoveRows(QModelIndex(), compound_first, compound_last)
-        del model._main_data[first : last + 1]
-        self.endRemoveRows()
-        # Redo the map for the affected model entirely
-        removed_count = last - first + 1
-        previous_row_count = model.rowCount() + removed_count
-        compound_first = self._inv_row_map[model, 0]
-        compound_last = self._inv_row_map[model, previous_row_count - 1]
-        self._row_map, tail_row_map = self._row_map[:compound_first], self._row_map[compound_last:]
-        row_map = self._row_map_for_model(model)
-        self._append_row_map(row_map)
-        self._append_row_map(tail_row_map)
 
     def batch_set_data(self, indexes, data):
         """Set data for indexes in batch.
@@ -213,7 +194,7 @@ class CompoundWithEmptyTableModel(CompoundTableModel):
         compound_first = self.rowCount() - self.empty_model.rowCount()
         compound_last = compound_first + single_model.rowCount() - 1
         self.rowsInserted.emit(QModelIndex(), compound_first, compound_last)
-        # Take the empty row map, append the new one, and then append the empty
+        # Take the empty row map, append the new one, and then reappend the empty
         self._row_map, empty_row_map = self._row_map[:compound_first], self._row_map[compound_first:]
         single_row_map = self._row_map_for_model(single_model)
         self._append_row_map(single_row_map)

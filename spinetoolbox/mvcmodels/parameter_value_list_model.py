@@ -61,18 +61,6 @@ class AppendEmptyChildMixin:
             self.append_children(empty_child)
 
 
-class InvisibleRootItem(TreeItem):
-    def __init__(self, db_mngr, *db_maps):
-        super().__init__()
-        self.db_mngr = db_mngr
-        self.db_maps = db_maps
-
-    def fetch_more(self):
-        children = [DBItem(self.db_mngr, db_map) for db_map in self.db_maps]
-        self.append_children(*children)
-        self._fetched = True
-
-
 class DBItem(AppendEmptyChildMixin, TreeItem):
     """An item representing a db."""
 
@@ -105,7 +93,7 @@ class DBItem(AppendEmptyChildMixin, TreeItem):
         """Shows Spine icon for fun."""
         if role == Qt.DecorationRole:
             return QIcon(":/symbols/Spine_symbol.png")
-        elif role == Qt.DisplayRole:
+        if role == Qt.DisplayRole:
             return f"root ({self.db_map.codename})"
 
 
@@ -265,7 +253,7 @@ class ParameterValueListModel(MinimalTreeModel):
                 list_item.handle_added_to_db(identifier=item["id"], value_list=item["value_list"].split(","))
             # Now append remaining items
             children = [
-                ListItem(self.db_mngr, db_map, item["id"], item["name"], item["value_list"].split(","))
+                ListItem(self.db_mngr, db_item.db_map, item["id"], item["name"], item["value_list"].split(","))
                 for item in items.values()
             ]
             db_item.insert_children(db_item.child_count() - 1, *children)
@@ -303,12 +291,14 @@ class ParameterValueListModel(MinimalTreeModel):
         self.layoutChanged.emit()
 
     def build_tree(self):
-        """Initialize the internal data structure of TreeItem instances."""
+        """Initialize the internal data structure of the model."""
         self.beginResetModel()
         self._invisible_root_item.deleteLater()
-        self._invisible_root_item = InvisibleRootItem(self.db_mngr, *self.db_maps)
+        self._invisible_root_item = TreeItem()
         self.track_item(self._invisible_root_item)
         self.endResetModel()
+        db_items = [DBItem(self.db_mngr, db_map) for db_map in self.db_maps]
+        self._invisible_root_item.append_children(*db_items)
         for item in self.visit_all():
             item.fetch_more()
 

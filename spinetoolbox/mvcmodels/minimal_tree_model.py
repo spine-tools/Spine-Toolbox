@@ -187,13 +187,6 @@ class MinimalTreeModel(QAbstractItemModel):
         self._parent = parent
         self._invisible_root_item = TreeItem()
 
-    def build_tree(self):
-        """Builds tree."""
-        self.beginResetModel()
-        self._invisible_root_item.deleteLater()
-        self._invisible_root_item = TreeItem()
-        self.endResetModel()
-
     def track_item(self, item):
         """Tracks given TreeItem. This means we insert rows when children are inserted
         and remove rows when children are removed."""

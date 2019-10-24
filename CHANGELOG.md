@@ -19,6 +19,8 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - spinetoolbox is now a Python package.
 - spinetoolbox.py has been moved to repository root. To start the app, use command 'python -m spinetoolbox'.
 - Tool templates are now called Tool specifications
+- Status bar notification messages in tree and graph views are replaced by an icon. When hovered the icon shows 
+  the messaged, and it's removed when clicked.
 
 ### Deprecated
 

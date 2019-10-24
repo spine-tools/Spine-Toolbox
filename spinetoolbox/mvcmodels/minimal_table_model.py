@@ -34,7 +34,6 @@ class MinimalTableModel(QAbstractTableModel):
         self.header = header
         self._main_data = list()
         self._fetched = False
-        self.default_flags = Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def clear(self):
         """Clear all data in model."""
@@ -46,7 +45,7 @@ class MinimalTableModel(QAbstractTableModel):
         """Return index flags."""
         if not index.isValid():
             return Qt.NoItemFlags
-        return self.default_flags
+        return Qt.ItemIsEditable | Qt.ItemIsEnabled | Qt.ItemIsSelectable
 
     def canFetchMore(self, parent=None):
         """Return True if the model hasn't been fetched."""

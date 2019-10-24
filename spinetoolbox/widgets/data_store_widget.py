@@ -51,6 +51,7 @@ from .edit_db_items_dialogs import (
 from .manage_db_items_dialog import CommitDialog
 from ..widgets.parameter_value_editor import ParameterValueEditor
 from ..widgets.toolbars import ParameterTagToolBar
+from ..widgets.custom_qwidgets import NotificationIcon
 from ..mvcmodels.compound_parameter_models import (
     CompoundObjectParameterDefinitionModel,
     CompoundObjectParameterValueModel,
@@ -202,7 +203,7 @@ class DataStoreForm(QMainWindow):
         # Error
         self.db_mngr.msg_error.connect(self.add_db_mngr_error_msg)
 
-    @Slot("QVariant", name="add_message")
+    @Slot("QVariant", name="add_db_mngr_error_msg")
     def add_db_mngr_error_msg(self, db_map_error_log):
         msg = ""
         for db_map, error_log in db_map_error_log.items():
@@ -222,8 +223,9 @@ class DataStoreForm(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
-        current_msg = self.ui.statusbar.currentMessage()
-        self.ui.statusbar.showMessage("\t".join([msg, current_msg]), 5000)
+        icon = NotificationIcon("<html>" + msg + "</html>")
+        icon.pressed.connect(lambda icon=icon: self.ui.statusbar.removeWidget(icon))
+        self.ui.statusbar.insertWidget(0, icon)
 
     @Slot(str, name="add_error_message")
     def add_error_message(self, msg):
@@ -260,6 +262,7 @@ class DataStoreForm(QMainWindow):
         Compute selected parameter definition ids per object class ids.
         Then update set of selected object class ids. Finally, update filter.
         """
+        # TODO: try and simplify this
         for db_map, id_ in db_map_ids:
             if checked:
                 self.selected_parameter_tag_ids.setdefault(db_map, set()).add(id_)
@@ -392,9 +395,7 @@ class DataStoreForm(QMainWindow):
         self.parameter_tag_toolbar.init_toolbar()
 
     def _setup_delegate(self, table_view, column, delegate_class):
-        """Convenience method to creates a delegate using the given class, set it
-        for the given column at the view, connect its signal to set_parameter_data,
-        and return it."""
+        """Convenience method to setup a delegate for a view."""
         delegate = delegate_class(self, self.db_mngr)
         table_view.setItemDelegateForColumn(column, delegate)
         delegate.data_committed.connect(self.set_parameter_data)
@@ -584,15 +585,18 @@ class DataStoreForm(QMainWindow):
         dialog = ManageParameterTagsDialog(self, self.db_mngr, *self.db_maps)
         dialog.show()
 
-    def receive_items_changed(self, action, item_type, db_map_data, name_key=None):
+    def receive_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        if name_key is None:
-            name_key = "name"
-        names = {item[name_key] for db_map, data in db_map_data.items() for item in data if name_key in item}
-        self.commit_available.emit(True)
-        names = ", ".join(names) if names else ""
-        msg = f"Item(s) {names} of type {item_type} successfully {action}."
+        msg = f"Successfully {action} {item_type} item(s)"
+        name_keys = {"parameter definition": "parameter_name", "parameter tag": "tag", "parameter value": None}
+        name_key = name_keys.get(item_type, "name")
+        if name_key:
+            names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
+            names = ", ".join(names)
+            msg += f": {names}"
+        msg += "."
         self.msg.emit(msg)
+        self.commit_available.emit(True)
 
     @Slot("QVariant", name="receive_object_classes_added")
     def receive_object_classes_added(self, db_map_data):
@@ -676,7 +680,7 @@ class DataStoreForm(QMainWindow):
 
     @Slot("QVariant", name="receive_parameter_definitions_removed")
     def receive_parameter_definitions_removed(self, db_map_data):
-        self.receive_items_changed("removed", "parameter definition", db_map_data, name_key="parameter_name")
+        self.receive_items_changed("removed", "parameter definition", db_map_data)
 
     @Slot("QVariant", name="receive_parameter_values_removed")
     def receive_parameter_values_removed(self, db_map_data):
@@ -700,7 +704,7 @@ class DataStoreForm(QMainWindow):
 
     @Slot("QModelIndex", "QVariant", name="set_parameter_data")
     def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
-        """Update (object or relationship) parameter value with newly edited data."""
+        """Update (object or relationship) parameter definition or value with newly edited data."""
         if new_value is None:
             return False
         return index.model().setData(index, new_value)

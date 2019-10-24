@@ -70,7 +70,7 @@ class SpineDBManager(QObject):
         return self._db_maps
 
     def add_db_maps(self, *db_maps):
-        """Adds one or more db map to the manager."""
+        """Adds one or more db maps to the manager."""
         self._db_maps.update(db_maps)
 
     def connect_signals(self):
@@ -183,7 +183,7 @@ class SpineDBManager(QObject):
         return self._cache.get(db_map, {}).get(item_type, {}).get(id_, {})
 
     def get_item_by_field(self, db_map, item_type, field, value):
-        """Returns the first item in the cache for the given type that has the given value for the field.
+        """Returns the cached first item of the given type that has the given value for the field.
         If not in cache then try and get it from db.
 
         Args:
@@ -195,6 +195,15 @@ class SpineDBManager(QObject):
         return next(iter(self.get_items_by_field(db_map, item_type, field, value)), {})
 
     def get_items_by_field(self, db_map, item_type, field, value):
+        """Returns all cached items of the given type that have the given value for the field.
+        If not in cache then try and get them from db.
+
+        Args:
+            db_map (DiffDatabaseMapping)
+            item_type (str)
+            field (str)
+            value
+        """
         items = [x for x in self.get_items_from_cache(db_map, item_type) if x[field] == value]
         if items:
             return items
@@ -211,7 +220,7 @@ class SpineDBManager(QObject):
             "parameter definition": "get_parameter_definitions",
             "parameter value": "get_parameter_values",
             "parameter value list": "get_parameter_value_lists",
-            # TODO: The rest
+            "parameter tag": "get_parameter_tags",
         }
         method_name = method_name_dict.get(item_type)
         if not method_name:
@@ -279,7 +288,7 @@ class SpineDBManager(QObject):
         if ids:
             qry = qry.filter(db_map.wide_relationship_sq.c.id.in_(ids))
         if object_id:
-            ids |= {x.id for x in db_map.query(db_map.relationship_sq).filter_by(object_id=object_id)}
+            ids = {x.id for x in db_map.query(db_map.relationship_sq).filter_by(object_id=object_id)}
             qry = qry.filter(db_map.wide_relationship_sq.c.id.in_(ids))
         if class_id:
             qry = qry.filter_by(class_id=class_id)
@@ -360,11 +369,13 @@ class SpineDBManager(QObject):
         return items
 
     def get_parameter_definitions(self, db_map, ids=None, entity_class_id=None):
+        """Get both object and relationship parameter definitions."""
         return self.get_object_parameter_definitions(
             db_map, ids=ids, object_class_id=entity_class_id
         ) + self.get_relationship_parameter_definitions(db_map, ids=ids, relationship_class_id=entity_class_id)
 
     def get_parameter_values(self, db_map, ids=None, entity_class_id=None):
+        """Get both object and relationship parameter values."""
         return self.get_object_parameter_values(
             db_map, ids=ids, object_class_id=entity_class_id
         ) + self.get_relationship_parameter_values(db_map, ids=ids, relationship_class_id=entity_class_id)
@@ -392,7 +403,7 @@ class SpineDBManager(QObject):
         return items
 
     def add_or_update_items(self, db_map_data, method_name, signal_name):
-        """Adds or update items.
+        """Add or update items.
 
         Args:
             db_map_data (dict): maps DiffDatabaseMapping instances to list of items to add or update
@@ -465,9 +476,9 @@ class SpineDBManager(QObject):
     def remove_items(self, db_map_typed_data):
         """Remove items.
 
-        db_map_typed_data (dict): maps DiffDatabaseMapping instances to str item type, to list of items to remove.
+        db_map_typed_data (dict): maps DiffDatabaseMapping instances to str item type, to list of items to remove
         """
-        # Removing works like this in spinedb_api, all at once, probably because of cascading?
+        # Removing works this way in spinedb_api, all at once, probably because of cascading?
         db_map_object_classes = dict()
         db_map_objects = dict()
         db_map_relationship_classes = dict()
@@ -531,7 +542,8 @@ class SpineDBManager(QObject):
     def cascade_remove_objects(self, db_map_data):
         """Runs when removing object classes. Removes objects in cascade."""
         db_map_cascading_data = self.find_cascading_entities(db_map_data, "object")
-        self.objects_removed.emit(db_map_cascading_data)
+        if any(db_map_cascading_data.values()):
+            self.objects_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationship_classes")
     def cascade_remove_relationship_classes(self, db_map_data):
@@ -543,42 +555,50 @@ class SpineDBManager(QObject):
     def cascade_remove_relationships_by_class(self, db_map_data):
         """Runs when removing objects. Removes relationships in cascade."""
         db_map_cascading_data = self.find_cascading_entities(db_map_data, "relationship")
-        self.relationships_removed.emit(db_map_cascading_data)
+        if any(db_map_cascading_data.values()):
+            self.relationships_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationships_by_object")
     def cascade_remove_relationships_by_object(self, db_map_data):
         """Runs when removing relationship classes. Removes relationships in cascade."""
         db_map_cascading_data = self.find_cascading_relationships(db_map_data)
-        self.relationships_removed.emit(db_map_cascading_data)
+        if any(db_map_cascading_data.values()):
+            self.relationships_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_definitions")
     def cascade_remove_parameter_definitions(self, db_map_data):
         """Runs when updating entity classes. Cascade remove parameter definitions."""
         db_map_cascading_data = self.find_cascading_parameter_data(db_map_data, "parameter definition")
-        self.parameter_definitions_removed.emit(db_map_cascading_data)
+        if any(db_map_cascading_data.values()):
+            self.parameter_definitions_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_entity_class")
     def cascade_remove_parameter_values_by_entity_class(self, db_map_data):
         """Runs when updating entity classes. Cascade remove parameter values."""
         db_map_cascading_data = self.find_cascading_parameter_data(db_map_data, "parameter value")
-        self.parameter_values_removed.emit(db_map_cascading_data)
+        if any(db_map_cascading_data.values()):
+            self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_entity")
     def cascade_remove_parameter_values_by_entity(self, db_map_data):
         """Runs when updating entities. Cascade remove parameter values."""
         db_map_cascading_data = self.find_cascading_parameter_values_by_entity(db_map_data)
-        self.parameter_values_removed.emit(db_map_cascading_data)
+        if any(db_map_cascading_data.values()):
+            self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_definition")
     def cascade_remove_parameter_values_by_definition(self, db_map_data):
         """Runs when updating parameter definitions. Cascade remove parameter values."""
         db_map_cascading_data = self.find_cascading_parameter_values_by_definition(db_map_data)
-        self.parameter_values_removed.emit(db_map_cascading_data)
+        if any(db_map_cascading_data.values()):
+            self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_relationship_classes")
     def cascade_refresh_relationship_classes(self, db_map_data):
         """Runs when updating object classes. Cascade refresh cached relationship classes."""
         db_map_cascading_data = self.find_cascading_relationship_classes(db_map_data)
+        if not any(db_map_cascading_data.values()):
+            return
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_relationship_classes(db_map, ids=ids)
@@ -588,6 +608,8 @@ class SpineDBManager(QObject):
     def cascade_refresh_relationships_by_object(self, db_map_data):
         """Runs when updating objects. Cascade refresh cached relationships."""
         db_map_cascading_data = self.find_cascading_relationships(db_map_data)
+        if not any(db_map_cascading_data.values()):
+            return
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_relationships(db_map, ids=ids)
@@ -597,6 +619,8 @@ class SpineDBManager(QObject):
     def cascade_refresh_parameter_definitions(self, db_map_data):
         """Runs when updating entity classes. Cascade refresh cached parameter definitions."""
         db_map_cascading_data = self.find_cascading_parameter_data(db_map_data, "parameter definition")
+        if not any(db_map_cascading_data.values()):
+            return
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
@@ -606,6 +630,8 @@ class SpineDBManager(QObject):
     def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
         """Runs when updating parameter value lists. Cascade refresh cached parameter definitions."""
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(db_map_data)
+        if not any(db_map_cascading_data.values()):
+            return
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
@@ -615,6 +641,8 @@ class SpineDBManager(QObject):
     def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
         """Runs when updating parameter tags. Cascade refresh cached parameter definitions."""
         db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(db_map_data)
+        if not any(db_map_cascading_data.values()):
+            return
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_definitions(db_map, ids=ids)
@@ -624,6 +652,8 @@ class SpineDBManager(QObject):
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
         """Runs when updating entity classes. Cascade refresh cached parameter values."""
         db_map_cascading_data = self.find_cascading_parameter_data(db_map_data, "parameter value")
+        if not any(db_map_cascading_data.values()):
+            return
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
@@ -633,6 +663,8 @@ class SpineDBManager(QObject):
     def cascade_refresh_parameter_values_by_entity(self, db_map_data):
         """Runs when updating entities. Cascade refresh cached parameter values."""
         db_map_cascading_data = self.find_cascading_parameter_values_by_entity(db_map_data)
+        if not any(db_map_cascading_data.values()):
+            return
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)
@@ -642,6 +674,8 @@ class SpineDBManager(QObject):
     def cascade_refresh_parameter_values_by_definition(self, db_map_data):
         """Runs when updating parameter definitions. Cascade refresh cached parameter values."""
         db_map_cascading_data = self.find_cascading_parameter_values_by_definition(db_map_data)
+        if not any(db_map_cascading_data.values()):
+            return
         for db_map, data in db_map_cascading_data.items():
             ids = {x["id"] for x in data}
             self.get_parameter_values(db_map, ids=ids)

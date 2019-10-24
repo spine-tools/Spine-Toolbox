@@ -28,10 +28,30 @@ from PySide2.QtWidgets import (
     QListView,
     QLineEdit,
     QDialogButtonBox,
+    QToolButton,
+    QToolTip,
 )
 from PySide2.QtCore import QTimer, Signal
-from PySide2.QtGui import QPainter
+from PySide2.QtGui import QPainter, QIcon
 from ..mvcmodels.filter_checkbox_list_model import FilterCheckboxListModel
+
+
+class NotificationIcon(QToolButton):
+    def __init__(self, msg):
+        super().__init__()
+        self._msg = msg
+        self._notify_icon = QIcon(":/icons/menu_icons/info-circle.svg")
+        self._accept_icon = QIcon(":/icons/menu_icons/times.svg")
+        self.setIcon(self._notify_icon)
+        self.setStyleSheet("QToolButton {border: 0px;}")
+
+    def enterEvent(self, event):
+        QToolTip.showText(self.mapToGlobal(event.pos()), self._msg)
+        self.setIcon(self._accept_icon)
+
+    def leaveEvent(self, event):
+        QToolTip.hideText()
+        self.setIcon(self._notify_icon)
 
 
 class FilterWidget(QWidget):

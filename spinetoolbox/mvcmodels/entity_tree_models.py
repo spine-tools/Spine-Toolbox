@@ -15,7 +15,7 @@ Models to represent entities in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, Signal, Slot, QAbstractItemModel, QModelIndex
+from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from PySide2.QtGui import QIcon
 from .entity_tree_item import (
     TreeItem,
@@ -50,8 +50,21 @@ class EntityTreeModel(MinimalTreeModel):
         self._selection_buffer = list()  # To restablish selected indexes after adding/removing rows
         self.connect_db_mngr_signals()
 
+    @property
+    def root_item_type(self):
+        """Implement in subclasses to create a model specific to any entity type."""
+        raise NotImplementedError()
+
+    @property
+    def root_item(self):
+        return self._root_item
+
+    @property
+    def root_index(self):
+        return self.index_from_item(self._root_item)
+
     def connect_db_mngr_signals(self):
-        """Connect signals to slots."""
+        """Connect db mngr signals to slots."""
 
     def build_tree(self):
         """Builds tree."""
@@ -104,19 +117,6 @@ class EntityTreeModel(MinimalTreeModel):
         super().receive_children_removed(items)
         self._empty_selection_buffer()
 
-    @property
-    def root_item(self):
-        return self._root_item
-
-    @property
-    def root_index(self):
-        return self.index_from_item(self._root_item)
-
-    @property
-    def root_item_type(self):
-        """Implement in subclasses to create a model specific to any entity type."""
-        raise NotImplementedError()
-
     def columnCount(self, parent=QModelIndex()):
         return 2
 
@@ -162,7 +162,7 @@ class EntityTreeModel(MinimalTreeModel):
             if fetch:
                 for parent_item in parent_items:
                     parent = self.index_from_item(parent_item)
-                    self.canFetchMore(parent) and self.fetchMore(parent)
+                    self.canFetchMore(parent) and self.fetchMore(parent)  # pylint: disable=expression-not-assigned
         if not return_unfetched:
             return [
                 parent_item for parent_item in parent_items if not self.canFetchMore(self.index_from_item(parent_item))
@@ -330,18 +330,15 @@ class ObjectTreeModel(EntityTreeModel):
         # Get all ancestors
         rel_cls_item = rel_item.parent_item
         obj_item = rel_cls_item.parent_item
-        obj_cls_item = obj_item.parent_item
         # Get data from ancestors
         # TODO: Is it enough to just use the first db_map?
         db_map = rel_item.first_db_map
         rel_data = rel_item.db_map_data(db_map)
         rel_cls_data = rel_cls_item.db_map_data(db_map)
         obj_data = obj_item.db_map_data(db_map)
-        obj_cls_data = obj_cls_item.db_map_data(db_map)
         # Get specific data for our searches
         rel_cls_id = rel_cls_data['id']
         obj_id = obj_data['id']
-        obj_cls_id = obj_cls_data['id']
         object_ids = list(reversed([int(id_) for id_ in rel_data['object_id_list'].split(",")]))
         object_class_ids = list(reversed([int(id_) for id_ in rel_cls_data['object_class_id_list'].split(",")]))
         # Find position in the relationship of the (grand parent) object,

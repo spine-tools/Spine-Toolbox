@@ -41,16 +41,14 @@ class EmptyRowModel(MinimalTableModel):
 
     def flags(self, index):
         """Return default flags except if forcing defaults."""
-        if not index.isValid():
-            return Qt.NoItemFlags
         if self.force_default:
             try:
                 name = self.header[index.column()]
                 if name in self.default_row:
-                    return self.default_flags & ~Qt.ItemIsEditable
+                    return super().flags(index) & ~Qt.ItemIsEditable
             except IndexError:
                 pass
-        return self.default_flags
+        return super().flags(index)
 
     def set_default_row(self, **kwargs):
         """Set default row data."""

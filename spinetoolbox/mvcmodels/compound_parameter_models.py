@@ -19,7 +19,7 @@ These models concatenate several 'single' models and one 'empty' model.
 
 from PySide2.QtCore import Qt, Signal, Slot, QModelIndex
 from PySide2.QtGui import QFont, QIcon
-from ..helpers import busy_effect, format_string_list, rows_to_row_count_tuples
+from ..helpers import busy_effect, rows_to_row_count_tuples
 from ..mvcmodels.compound_table_model import CompoundWithEmptyTableModel
 
 from ..mvcmodels.empty_parameter_models import (
@@ -105,6 +105,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     @Slot("QVariant", name="receive_parameter_data_removed")
     def receive_parameter_data_removed(self, db_map_data):
         """Runs when either parameter definitions or values are removed."""
+        self.layoutAboutToBeChanged.emit()
         for db_map, items in db_map_data.items():
             grouped_ids = dict()
             for item in items:
@@ -118,7 +119,9 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
                     continue
                 removed_rows = [row for row in range(model.rowCount()) if model._main_data[row] in removed_ids]
                 for row, count in sorted(rows_to_row_count_tuples(removed_rows), reverse=True):
-                    self.remove_sub_model_rows(model, row, row + count - 1)
+                    del model._main_data[row : row + count]
+        self.do_refresh()
+        self.layoutChanged.emit()
 
     @Slot("QVariant", name="receive_parameter_data_added")
     def receive_parameter_data_added(self, db_map_data):
@@ -147,7 +150,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return italic_font
         return super().headerData(section, orientation, role)
 
-    def _get_entity_classes(self):
+    def _get_entity_classes(self, db_map):
         """Returns entity classes for creating the different single models."""
         raise NotImplementedError()
 
