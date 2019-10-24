@@ -173,7 +173,7 @@ class MultiDBTreeItem(TreeItem):
         self._merge_children(other.children)
 
     def db_map_id(self, db_map):
-        """Returns data for this item in given db_map or None if not present."""
+        """Returns the id for this item in given db_map or None if not present."""
         return self._db_map_id.get(db_map)
 
     def db_map_data(self, db_map):

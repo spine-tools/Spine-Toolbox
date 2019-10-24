@@ -560,36 +560,36 @@ class TreeViewForm(DataStoreForm):
         rel_inds = {
             (db_map, ind): None
             for ind in self.object_tree_model.selected_relationship_indexes
-            for db_map in ind.internalPointer().db_maps
+            for db_map in ind.model().item_from_index(ind).db_maps
         }
         rel_cls_inds = {
             (db_map, ind): None
             for ind in self.object_tree_model.selected_relationship_class_indexes
-            for db_map in ind.internalPointer().db_maps
+            for db_map in ind.model().item_from_index(ind).db_maps
         }
         rel_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in rel_inds})
         obj_inds = {
             (db_map, ind): None
             for ind in self.object_tree_model.selected_object_indexes
-            for db_map in ind.internalPointer().db_maps
+            for db_map in ind.model().item_from_index(ind).db_maps
         }
         obj_inds.update({(db_map, ind.parent()): None for db_map, ind in rel_cls_inds})
         obj_cls_inds = {
             (db_map, ind): None
             for ind in self.object_tree_model.selected_object_class_indexes
-            for db_map in ind.internalPointer().db_maps
+            for db_map in ind.model().item_from_index(ind).db_maps
         }
         obj_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in obj_inds})
         # Add relationship tree indexes
         more_rel_inds = {
             (db_map, ind): None
             for ind in self.relationship_tree_model.selected_relationship_indexes
-            for db_map in ind.internalPointer().db_maps
+            for db_map in ind.model().item_from_index(ind).db_maps
         }
         more_rel_cls_inds = {
             (db_map, ind): None
             for ind in self.relationship_tree_model.selected_relationship_class_indexes
-            for db_map in ind.internalPointer().db_maps
+            for db_map in ind.model().item_from_index(ind).db_maps
         }
         rel_inds.update(more_rel_inds)
         rel_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in more_rel_inds})
@@ -597,20 +597,24 @@ class TreeViewForm(DataStoreForm):
         # Update selected
         self.selected_object_class_ids = dict()
         for db_map, ind in obj_cls_inds:
-            d = ind.internalPointer().db_map_data(db_map)
-            self.selected_object_class_ids.setdefault(db_map, set()).add(d['id'])
+            id_ = ind.model().item_from_index(ind).db_map_id(db_map)
+            if id_:
+                self.selected_object_class_ids.setdefault(db_map, set()).add(id_)
         self.selected_object_ids = dict()
         for db_map, ind in obj_inds:
-            d = ind.internalPointer().db_map_data(db_map)
-            self.selected_object_ids.setdefault((db_map, d['class_id']), set()).add(d['id'])
+            data = ind.model().item_from_index(ind).db_map_data(db_map)
+            if data:
+                self.selected_object_ids.setdefault((db_map, data['class_id']), set()).add(data["id"])
         self.selected_relationship_class_ids = dict()
         for db_map, ind in rel_cls_inds:
-            d = ind.internalPointer().db_map_data(db_map)
-            self.selected_relationship_class_ids.setdefault(db_map, set()).add(d['id'])
+            id_ = ind.model().item_from_index(ind).db_map_id(db_map)
+            if id_:
+                self.selected_relationship_class_ids.setdefault(db_map, set()).add(id_)
         self.selected_object_id_lists = dict()
         for db_map, ind in rel_inds:
-            d = ind.internalPointer().db_map_data(db_map)
-            self.selected_object_id_lists.setdefault((db_map, d['class_id']), set()).add(d['object_id_list'])
+            data = ind.model().item_from_index(ind).db_map_data(db_map)
+            if data:
+                self.selected_object_id_lists.setdefault((db_map, data['class_id']), set()).add(data['object_id_list'])
         self.do_update_filter()
 
     @Slot("QPoint", name="show_object_tree_context_menu")
@@ -747,7 +751,7 @@ class TreeViewForm(DataStoreForm):
     def show_remove_object_tree_items_form(self):
         """Show form to remove items from object treeview."""
         selected = {
-            item_type: [ind.internalPointer() for ind in indexes]
+            item_type: [ind.model().item_from_index(ind) for ind in indexes]
             for item_type, indexes in self.object_tree_model.selected_indexes.items()
         }
         dialog = RemoveEntitiesDialog(self, self.db_mngr, selected)
@@ -757,7 +761,7 @@ class TreeViewForm(DataStoreForm):
     def show_remove_relationship_tree_items_form(self):
         """Show form to remove items from relationship treeview."""
         selected = {
-            item_type: [ind.internalPointer() for ind in indexes]
+            item_type: [ind.model().item_from_index(ind) for ind in indexes]
             for item_type, indexes in self.relationship_tree_model.selected_indexes.items()
         }
         dialog = RemoveEntitiesDialog(self, selected)

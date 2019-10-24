@@ -223,7 +223,7 @@ class DataStoreForm(QMainWindow):
         Args:
             msg (str): String to show in QStatusBar
         """
-        icon = NotificationIcon("<html>" + msg + "</html>")
+        icon = NotificationIcon(msg)
         icon.pressed.connect(lambda icon=icon: self.ui.statusbar.removeWidget(icon))
         self.ui.statusbar.insertWidget(0, icon)
 
@@ -587,14 +587,13 @@ class DataStoreForm(QMainWindow):
 
     def receive_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
-        msg = f"Successfully {action} {item_type} item(s)"
+        msg = f"<html> Successfully {action} {item_type} item(s)"
         name_keys = {"parameter definition": "parameter_name", "parameter tag": "tag", "parameter value": None}
         name_key = name_keys.get(item_type, "name")
         if name_key:
             names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
-            names = ", ".join(names)
-            msg += f": {names}"
-        msg += "."
+            msg += ":" + format_string_list(names)
+        msg += "</html>."
         self.msg.emit(msg)
         self.commit_available.emit(True)
 
