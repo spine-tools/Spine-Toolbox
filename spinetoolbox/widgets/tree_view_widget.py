@@ -764,7 +764,7 @@ class TreeViewForm(DataStoreForm):
             item_type: [ind.model().item_from_index(ind) for ind in indexes]
             for item_type, indexes in self.relationship_tree_model.selected_indexes.items()
         }
-        dialog = RemoveEntitiesDialog(self, selected)
+        dialog = RemoveEntitiesDialog(self, self.db_mngr, selected)
         dialog.show()
 
     def receive_items_changed(self, action, item_type, db_map_data):
@@ -957,7 +957,9 @@ class TreeViewForm(DataStoreForm):
             for list_item in reversed(db_item.children[:-1]):
                 if list_item.id:
                     if list_item in selected:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append({"id": list_item.id})
+                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
+                            {"id": list_item.id, "name": list_item.name}
+                        )
                         continue
                     curr_value_list = list_item.compile_value_list()
                     value_list = [
@@ -966,7 +968,9 @@ class TreeViewForm(DataStoreForm):
                         if value_item not in selected
                     ]
                     if not value_list:
-                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append({"id": list_item.id})
+                        db_map_typed_data_to_rm[db_item.db_map]["parameter value list"].append(
+                            {"id": list_item.id, "name": list_item.name}
+                        )
                         continue
                     if value_list != curr_value_list:
                         item = {"id": list_item.id, "value_list": value_list}

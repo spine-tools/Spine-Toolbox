@@ -163,6 +163,8 @@ class SpineDBManager(QObject):
     def entity_class_icon(self, db_map, entity_type, entity_class_id):
         """Returns entity class icon."""
         entity_class = self.get_item(db_map, entity_type, entity_class_id)
+        if not entity_class:
+            return None
         if entity_type == "object class":
             return self.icon_mngr.object_icon(entity_class["name"])
         if entity_type == "relationship class":

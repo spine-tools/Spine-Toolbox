@@ -257,12 +257,13 @@ class DataStoreForm(QMainWindow):
             self.relationship_parameter_definition_model.update_filter()
 
     @Slot("QVariant", "bool", name="_handle_tag_button_toggled")
-    def _handle_tag_button_toggled(self, db_map_tags, checked):
+    def _handle_tag_button_toggled(self, db_map_ids, checked):
         """Called when a parameter tag button is toggled.
         Compute selected parameter definition ids per object class ids.
         Then update set of selected object class ids. Finally, update filter.
         """
-        for db_map, tag in db_map_tags:
+        for db_map, id_ in db_map_ids:
+            tag = {"id": id_}
             if checked:
                 self.selected_parameter_tags.setdefault(db_map, []).append(tag)
             else:
@@ -581,7 +582,7 @@ class DataStoreForm(QMainWindow):
         if name_key:
             names = {item[name_key] for db_map, data in db_map_data.items() for item in data}
             msg += ":" + format_string_list(names)
-        msg += "</html>."
+        msg += "</html>"
         self.msg.emit(msg)
         self.commit_available.emit(True)
 

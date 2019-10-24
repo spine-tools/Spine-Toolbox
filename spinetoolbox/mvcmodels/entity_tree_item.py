@@ -85,7 +85,7 @@ class MultiDBTreeItem(TreeItem):
     def _find_unsorted_rows_by_id(self, db_map, *ids):
         """Generates rows corresponding to children with the given ids in the given db_map.
         If the first id is True, then generates rows corresponding to *all* children with the given db_map."""
-        if next(iter(ids)) is True:
+        if list(ids)[0] is True:
             # Yield all children with the db_map regardless of the id
             d = self._child_map.get(db_map)
             if d:
@@ -301,6 +301,9 @@ class MultiDBTreeItem(TreeItem):
         """Returns data to set as default in a parameter table when this item is selected."""
         return {"database": self.first_db_map.codename}
 
+    def column_count(self):
+        return 2
+
 
 class TreeRootItem(MultiDBTreeItem):
 
@@ -377,6 +380,11 @@ class ObjectClassItem(EntityClassItem):
         {"Remove selection": QIcon(":/icons/menu_icons/cube_minus.svg")},
     ]
 
+    @property
+    def display_icon(self):
+        """Returns the object class icon."""
+        return self.db_mngr.entity_class_icon(self.first_db_map, "object class", self.db_map_id(self.first_db_map))
+
     def _get_children_ids(self, db_map):
         """Returns a query that selects all objects of this class from given db_map."""
         return {x["id"] for x in self.db_mngr.get_objects(db_map, class_id=self.db_map_id(db_map))}
@@ -385,11 +393,6 @@ class ObjectClassItem(EntityClassItem):
     def child_item_type(self):
         """Returns an ObjectItem."""
         return ObjectItem
-
-    @property
-    def display_icon(self):
-        """Returns the object class icon."""
-        return self.db_mngr.entity_class_icon(self.first_db_map, "object class", self.db_map_id(self.first_db_map))
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
@@ -509,10 +512,6 @@ class RelationshipItem(EntityItem):
     def has_children(self):
         """Returns false, this item never has children."""
         return False
-
-    def new_children_from_data(self, db_map, children_data):
-        """Pass, this item never has children."""
-        pass
 
     def default_parameter_data(self):
         """Return data to put as default in a parameter table when this item is selected."""
