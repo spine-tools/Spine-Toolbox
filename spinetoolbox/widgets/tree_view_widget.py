@@ -927,11 +927,17 @@ class TreeViewForm(DataStoreForm):
         # Get parameter data grouped by db_map
         db_map_typed_data = dict()
         model = table_view.model()
-        for row in rows:
-            db_map = model.sub_model_at_row(row).db_map
-            id_ = model.item_at_row(row)
-            item = model.db_mngr.get_item(db_map, item_type, id_)
-            db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
+        for row in sorted(rows, reverse=True):
+            try:
+                db_map = model.sub_model_at_row(row).db_map
+            except AttributeError:
+                # It's an empty model, just remove the row
+                _, sub_row = model._row_map[row]
+                model.empty_model.removeRow(sub_row)
+            else:
+                id_ = model.item_at_row(row)
+                item = model.db_mngr.get_item(db_map, item_type, id_)
+                db_map_typed_data.setdefault(db_map, {}).setdefault(item_type, []).append(item)
         self.db_mngr.remove_items(db_map_typed_data)
         table_view.selectionModel().clearSelection()
 
