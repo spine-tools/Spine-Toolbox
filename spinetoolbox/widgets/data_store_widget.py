@@ -693,8 +693,6 @@ class DataStoreForm(QMainWindow):
     @Slot("QModelIndex", "QVariant", name="set_parameter_data")
     def set_parameter_data(self, index, new_value):  # pylint: disable=no-self-use
         """Update (object or relationship) parameter definition or value with newly edited data."""
-        if new_value is None:
-            return False
         return index.model().setData(index, new_value)
 
     def _prompt_close_and_commit(self):
@@ -750,19 +748,31 @@ class DataStoreForm(QMainWindow):
         window_state = qsettings.value("windowState")
         window_maximized = qsettings.value("windowMaximized", defaultValue='false')
         n_screens = qsettings.value("n_screens", defaultValue=1)
-        opd_h_state = qsettings.value("objParDefHeaderState")
-        opv_h_state = qsettings.value("objParValHeaderState")
-        rpd_h_state = qsettings.value("relParDefHeaderState")
-        rpv_h_state = qsettings.value("relParValHeaderState")
+        header_states = (
+            qsettings.value("objParDefHeaderState"),
+            qsettings.value("objParValHeaderState"),
+            qsettings.value("relParDefHeaderState"),
+            qsettings.value("relParValHeaderState"),
+        )
         qsettings.endGroup()
-        if opd_h_state:
-            self.ui.tableView_object_parameter_definition.horizontalHeader().restoreState(opd_h_state)
-        if opv_h_state:
-            self.ui.tableView_object_parameter_value.horizontalHeader().restoreState(opv_h_state)
-        if rpd_h_state:
-            self.ui.tableView_relationship_parameter_definition.horizontalHeader().restoreState(rpd_h_state)
-        if rpv_h_state:
-            self.ui.tableView_relationship_parameter_value.horizontalHeader().restoreState(rpv_h_state)
+        views = (
+            self.ui.tableView_object_parameter_definition.horizontalHeader(),
+            self.ui.tableView_object_parameter_value.horizontalHeader(),
+            self.ui.tableView_relationship_parameter_definition.horizontalHeader(),
+            self.ui.tableView_relationship_parameter_value.horizontalHeader(),
+        )
+        models = (
+            self.object_parameter_definition_model,
+            self.object_parameter_value_model,
+            self.relationship_parameter_definition_model,
+            self.relationship_parameter_value_model,
+        )
+        for view, model, state in zip(views, models, header_states):
+            if state:
+                curr_state = view.saveState()
+                view.restoreState(state)
+                if view.count() != model.columnCount():
+                    view.restoreState(curr_state)
         if window_size:
             self.resize(window_size)
         if window_pos:
