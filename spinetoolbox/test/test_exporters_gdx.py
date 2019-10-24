@@ -188,7 +188,7 @@ class TextExportersGdx(unittest.TestCase):
         self.assertEqual(parameter.name, 'parameter')
         self.assertEqual(parameter.value, 3.14)
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "Could not find system GAMS directory.")
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domains_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
@@ -211,7 +211,7 @@ class TextExportersGdx(unittest.TestCase):
                     self.assertEqual(key, "mock_object_name")
                     self.assertEqual(value, 2.3)
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "Could not find system GAMS directory.")
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
     def test_sets_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
@@ -241,7 +241,7 @@ class TextExportersGdx(unittest.TestCase):
                     self.assertEqual(key, "mock_object_name")
                     self.assertEqual(value, 2.3)
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "Could not find system GAMS directory.")
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domain_parameters_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
@@ -300,7 +300,7 @@ class TextExportersGdx(unittest.TestCase):
         self.assertFalse(domains)
         self.assertEqual(extracted.name, "domain1")
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "Could not find system GAMS directory.")
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
     def test_to_gdx_file_sorts_domains_and_sets_and_records_correctly(self):
         gams_directory = gdx.find_gams_directory()
         with TemporaryDirectory() as tmp_dir_name:
@@ -357,7 +357,7 @@ class TextExportersGdx(unittest.TestCase):
                 for gams_record, expected_name in zip(gams_set, expected_records):
                     self.assertEqual(gams_record, expected_name)
 
-    @unittest.skipIf(gdx.find_gams_directory() is None, "Could not find system GAMS directory.")
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
     def test_to_gdx_file_exports_global_parameters_only_not_the_corresponding_domain(self):
         gams_directory = gdx.find_gams_directory()
         with TemporaryDirectory() as tmp_dir_name:

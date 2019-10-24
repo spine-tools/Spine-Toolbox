@@ -79,6 +79,10 @@ class ConnectionManager(QObject):
     def source(self):
         return self._source
 
+    @source.setter
+    def source(self, source):
+        self._source = source
+
     @property
     def source_type(self):
         return self._connection.__name__

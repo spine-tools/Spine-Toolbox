@@ -255,7 +255,7 @@ class SpineToolboxProject(MetaObject):
                     logging.exception("Loading JSON data failed")
                     return None
         except FileNotFoundError:
-            self._toolbox.msg_error.emit("Tool specification file <b>{0}</b> not found".format(jsonfile))
+            self._toolbox.msg_error.emit("Tool specification file <b>{0}</b> does not exist".format(jsonfile))
             return None
         # Path to main program relative to definition file
         includes_main_path = definition.get("includes_main_path", ".")

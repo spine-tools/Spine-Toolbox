@@ -31,15 +31,15 @@ class ImportPreviewWindow(QMainWindow):
     settings_updated = Signal(dict)
     connection_failed = Signal(str)
 
-    def __init__(self, data_interface, filepath, connector, settings):
-        super().__init__(flags=Qt.Window)
+    def __init__(self, data_interface, filepath, connector, settings, parent):
+        super().__init__(parent=parent, flags=Qt.Window)
         self._data_interface = data_interface
         self.setAttribute(Qt.WA_DeleteOnClose)
-        self.setWindowTitle("Data interface import preview    -- {} --".format(data_interface.name))
+        self.setWindowTitle("Import Editor    -- {} --".format(data_interface.name))
         self._qsettings = data_interface._toolbox._qsettings
 
         self._connection_manager = ConnectionManager(connector)
-        self._connection_manager._source = filepath
+        self._connection_manager.source = filepath
         self._preview_widget = ImportPreviewWidget(self._connection_manager, parent=self)
         self._preview_widget.use_settings(settings)
         self._dialog_buttons = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Apply | QDialogButtonBox.Cancel)

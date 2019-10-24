@@ -25,8 +25,7 @@ import sys
 from spinedb_api import create_new_spine_database
 from PySide2.QtWidgets import QApplication, QWidget, QMessageBox
 from networkx import DiGraph
-from .mock_helpers import MockQWidget, qsettings_value_side_effect
-from ..ui_main import ToolboxUI
+from .mock_helpers import create_toolboxui_with_project
 from ..widgets.tree_view_widget import TreeViewForm
 from ..project_items.data_store.data_store import DataStore
 
@@ -57,21 +56,13 @@ class TestDataStore(unittest.TestCase):
         Note: unittest_settings.conf is not actually saved because ui_main.closeEvent()
         is not called in tearDown().
         """
-        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "spinetoolbox.ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
-            mock_julia_repl.return_value = QWidget()
-            mock_python_repl.return_value = MockQWidget()
-            mock_qsettings_value.side_effect = qsettings_value_side_effect
-            self.toolbox = ToolboxUI()
-            self.toolbox.create_project("UnitTest Project", "")
-            self.ds_properties_ui = self.toolbox.categories["Data Stores"]["properties_ui"]
-            # Let's add a Data Store to the project here since all tests in this class need it
-            item_dict = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
-            self.toolbox.project().add_project_items("Data Stores", item_dict)
-            self.ds_index = self.toolbox.project_item_model.find_item("DS")
-            self.ds = self.toolbox.project_item_model.project_item(self.ds_index)
+        self.toolbox = create_toolboxui_with_project()
+        self.ds_properties_ui = self.toolbox.categories["Data Stores"]["properties_ui"]
+        # Let's add a Data Store to the project here since all tests in this class need it
+        item_dict = dict(name="DS", description="", x=0, y=0, url=None, reference=None)
+        self.toolbox.project().add_project_items("Data Stores", item_dict)
+        self.ds_index = self.toolbox.project_item_model.find_item("DS")
+        self.ds = self.toolbox.project_item_model.project_item(self.ds_index)
 
     def tearDown(self):
         """Overridden method. Runs after each test.

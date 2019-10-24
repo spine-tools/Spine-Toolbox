@@ -28,7 +28,7 @@ requirements = [
     'jupyter-client < 5.3.2',
     'qtconsole >= 4.3.1',
     'sqlalchemy >= 1.2.6',
-    'spinedb_api >= 0.1.1',
+    'spinedb_api >= {}'.format(REQUIRED_SPINEDB_API_VERSION),
     'openpyxl >= 2.5.0',
     'numpy >= 1.15.1',
     'matplotlib >= 3.0',

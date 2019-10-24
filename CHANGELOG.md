@@ -14,13 +14,15 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/en/1.0.0/)
 - A new project item *Gdx Export* allows a database contained in a *Data Store* to be exported as GAMS `.gdx` file.
 - It is now possible to copy, paste and duplicate project items on the Design View.
 - Changes made in the tree view are also seen in the graph view and viceversa.
+- New Setting: *Sticky selection in Graph View*. Enables users to select if they want to use multi-selection or 
+  single selection in the Graph view Object tree when selecting items with the **left-mouse button**.
 
 ### Changed
 - spinetoolbox is now a Python package.
 - spinetoolbox.py has been moved to repository root. To start the app, use command 'python -m spinetoolbox'.
 - Tool templates are now called Tool specifications
 - Status bar notification messages in tree and graph views are replaced by an icon. When hovered the icon shows 
-  the messaged, and it's removed when clicked.
+  the message, and it's removed when clicked.
 
 ### Deprecated
 

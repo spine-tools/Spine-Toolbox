@@ -206,10 +206,16 @@ class GraphViewForm(DataStoreForm):
             self.show_add_relationship_classes_form()
 
     def _object_tree_view_mouse_press_event(self, event):
-        """Overrides mousePressEvent of ui.treeView_object so that Ctrl has the opposite effect.
-        That is, if Ctrl is not pressed, then the selection is extended.
-        If Ctrl *is* pressed, then the selection is reset.
+        """Overrides mousePressEvent of ui.treeView_object if the user has selected sticky
+        selection in Settings. If sticky selection is enabled, multi-selection is
+        enabled when selecting items in the Object tree. Pressing the Ctrl-button down,
+        enables single selection. If sticky selection is disabled, single selection is
+        enabled and pressing the Ctrl-button down enables multi-selection.
         """
+        sticky_selection = self.qsettings().value("appSettings/stickySelection", defaultValue="false")
+        if sticky_selection == "false":
+            QTreeView.mousePressEvent(self.ui.treeView_object, event)
+            return
         local_pos = event.localPos()
         window_pos = event.windowPos()
         screen_pos = event.screenPos()

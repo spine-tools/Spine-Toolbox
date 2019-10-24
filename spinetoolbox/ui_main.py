@@ -458,7 +458,6 @@ class ToolboxUI(QMainWindow):
             tool_cand = self._project.load_tool_specification_from_file(path)
             n_tools += 1
             if not tool_cand:
-                self.msg_error.emit("Failed to load Tool template from <b>{0}</b>".format(path))
                 continue
             # Add tool definition file path to tool instance variable
             tool_cand.set_def_path(path)
@@ -618,7 +617,6 @@ class ToolboxUI(QMainWindow):
         # Load tool definition
         tool_specification = self._project.load_tool_specification_from_file(def_file)
         if not tool_specification:
-            self.msg_error.emit("Adding Tool specification failed")
             return
         if self.tool_specification_model.find_tool_specification(tool_specification.name):
             # Tool specification already added to project

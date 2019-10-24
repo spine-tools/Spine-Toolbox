@@ -788,18 +788,8 @@ class DataStoreForm(QMainWindow):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
-    def closeEvent(self, event):
-        """Handle close window.
-
-        Args:
-            event (QCloseEvent): Closing event
-        """
-        if any(db_map.has_pending_changes() for db_map in self.db_maps):
-            want_to_close = self._prompt_close_and_commit()
-            if not want_to_close:
-                event.ignore()
-                return
-        # save qsettings
+    def save_window_state(self):
+        """Save window state parameters (size, position, state) via QSettings."""
         qsettings = self.qsettings()
         qsettings.beginGroup(self.settings_group)
         qsettings.setValue("windowSize", self.size())
@@ -818,6 +808,20 @@ class DataStoreForm(QMainWindow):
         else:
             qsettings.setValue("windowMaximized", False)
         qsettings.endGroup()
+
+    def closeEvent(self, event):
+        """Handle close window.
+
+        Args:
+            event (QCloseEvent): Closing event
+        """
+        if any(db_map.has_pending_changes() for db_map in self.db_maps):
+            want_to_close = self._prompt_close_and_commit()
+            if not want_to_close:
+                event.ignore()
+                return
+        # Save UI form state
+        self.save_window_state()
         for db_map in self.db_maps:
             db_map.connection.close()
         event.accept()

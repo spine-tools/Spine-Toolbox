@@ -20,6 +20,7 @@ Contains CSVConnector class and a help function.
 import csv
 from itertools import islice
 from PySide2.QtWidgets import QFileDialog
+import chardet
 from ..io_api import SourceConnection
 
 
@@ -36,9 +37,14 @@ class CSVConnector(SourceConnection):
     # name of data source, ex: "Text/CSV"
     DISPLAY_NAME = "Text/CSV"
 
+    # List of available text encodings
+    _ENCODINGS = ['utf-8', 'utf-16', 'utf-32', 'ascii', 'iso-8859-1', 'iso-8859-2']
+
     # dict with option specification for source.
     OPTIONS = {
-        "delimiter": {'type': str, 'label': 'Delimiter', 'MaxLength': 1, 'default': ','},
+        "encoding": {'type': list, 'label': "Encoding", 'Items': _ENCODINGS, 'default': _ENCODINGS[0]},
+        "delimiter": {'type': list, 'label': "Delimiter", 'Items': [",", ";", "Tab"], 'default': ','},
+        "delimiter_custom": {'type': str, 'label': 'Custom Delimiter', 'MaxLength': 1, 'default': ''},
         "quotechar": {'type': str, 'label': 'Quotechar', 'MaxLength': 1, 'default': ''},
         "has_header": {'type': bool, 'label': 'Has header', 'default': False},
         "skip": {'type': int, 'label': 'Skip rows', 'Minimum': 0, 'default': 0},
@@ -69,23 +75,32 @@ class CSVConnector(SourceConnection):
         Returns:
             list(str): Table names in list
         """
-
-        tables = {}
         options = {}
         # try to find options for file
-        with open(self._filename) as csvfile:
+        with open(self._filename, 'rb') as input_file:
+            sniff_result = chardet.detect(input_file.read(1024))
+        sniffed_encoding = sniff_result["encoding"].lower()
+        if sniffed_encoding in self._ENCODINGS:
+            options["encoding"] = sniffed_encoding
+        else:
+            options["encoding"] = self._ENCODINGS[0]
+        with open(self._filename, encoding=options["encoding"]) as csvfile:
             try:
                 dialect = csv.Sniffer().sniff(csvfile.read(1024))
-                options = {"delimiter": dialect.delimiter, "quotechar": dialect.quotechar, "skip": 0}
+                if dialect.delimiter in [',', ';']:
+                    options["delimiter"] = dialect.delimiter
+                elif dialect.delimiter == '\t':
+                    options["delimiter"] = 'Tab'
+                else:
+                    options["delimiter_custom"] = dialect.delimiter
+                options.update({"quotechar": dialect.quotechar, "skip": 0})
             except csv.Error:
                 pass
             try:
                 options["has_header"] = csv.Sniffer().has_header(csvfile.read(1024))
             except csv.Error:
                 pass
-
-        tables[self._filename] = {"options": options}
-        return tables
+        return {self._filename: {"options": options}}
 
     @staticmethod
     def parse_options(options):
@@ -93,6 +108,7 @@ class CSVConnector(SourceConnection):
 
         Arguments:
             options {dict} -- dict with options:
+                "encoding": file text encoding
                 "delimiter": file delimiter
                 "quotechar": file quotechar
                 "has_header": if first row should be treated as a header
@@ -103,16 +119,21 @@ class CSVConnector(SourceConnection):
                                           quotechar for csv.reader and
                                           number of rows to skip
         """
-        delimiter = options.get("delimiter", ",")
+        encoding = options.get("encoding", None)
+        delimiter = options.get("delimiter_custom", "")
+        if not delimiter:
+            delimiter = options.get("delimiter", ",")
         if not delimiter:
             delimiter = ','
+        elif delimiter == "Tab":
+            delimiter = '\t'
         dialect = {"delimiter": delimiter}
         quotechar = options.get("quotechar", None)
         if quotechar:
             dialect.update({"quotechar": quotechar})
         has_header = options.get("has_header", False)
         skip = options.get("skip", 0)
-        return dialect, has_header, skip
+        return encoding, dialect, has_header, skip
 
     def file_iterator(self, options, max_rows):
         """creates an iterator that reads max_rows number of rows from text file
@@ -126,12 +147,12 @@ class CSVConnector(SourceConnection):
         """
         if not self._filename:
             return []
-        dialect, _has_header, skip = self.parse_options(options)
+        encoding, dialect, _has_header, skip = self.parse_options(options)
         if max_rows == -1:
             max_rows = None
         else:
             max_rows += skip
-        with open(self._filename) as text_file:
+        with open(self._filename, encoding=encoding) as text_file:
             csv_reader = csv.reader(text_file, **dialect)
             csv_reader = islice(csv_reader, skip, max_rows)
             yield from csv_reader
@@ -157,7 +178,7 @@ class CSVConnector(SourceConnection):
             return iter([]), [], 0
         num_cols = len(first_row)
 
-        _dialect, has_header, _skip = self.parse_options(options)
+        _, _, has_header, _ = self.parse_options(options)
         if has_header:
             # Very good, we already have the first row
             header = first_row

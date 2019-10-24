@@ -21,11 +21,10 @@ import shutil
 from tempfile import TemporaryDirectory
 import unittest
 from unittest import mock
-from PySide2.QtWidgets import QApplication, QWidget
+from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
-from ..ui_main import ToolboxUI
 from ..project_items.gdx_export.gdx_export import GdxExport
-from .mock_helpers import MockQWidget, qsettings_value_side_effect
+from .mock_helpers import create_toolboxui_with_project
 
 
 class _MockProject:
@@ -61,18 +60,9 @@ class _MockItem:
 
 
 class TestGdxExport(unittest.TestCase):
-
     def _set_up(self):
         """Set up before test_rename()."""
-        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-                "spinetoolbox.ui_main.PythonReplWidget"
-        ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
-            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
-            mock_julia_repl.return_value = QWidget()
-            mock_python_repl.return_value = MockQWidget()
-            mock_qsettings_value.side_effect = qsettings_value_side_effect
-            self.toolbox = ToolboxUI()
-            self.toolbox.create_project("UnitTest Project", "")
+        self.toolbox = create_toolboxui_with_project()
 
     def tearDown(self):
         """Clean up."""

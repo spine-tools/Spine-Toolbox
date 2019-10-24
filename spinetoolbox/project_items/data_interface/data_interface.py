@@ -152,7 +152,9 @@ class DataInterface(ProjectItem):
                 # Aborted by the user
                 return
         self._toolbox.msg.emit("Opening Import editor for file: {0}".format(importee))
-        preview_widget = self._preview_widget[importee] = ImportPreviewWindow(self, importee, connector, settings)
+        preview_widget = self._preview_widget[importee] = ImportPreviewWindow(
+            self, importee, connector, settings, self._toolbox
+        )
         preview_widget.settings_updated.connect(lambda s, importee=importee: self.save_settings(s, importee))
         preview_widget.connection_failed.connect(lambda m, importee=importee: self._connection_failed(m, importee))
         preview_widget.destroyed.connect(lambda o=None, importee=importee: self._preview_destroyed(importee))
