@@ -444,7 +444,7 @@ class DataStore(ProjectItem):
     @busy_effect
     def do_open_tabular_view(self, db_map, database):
         """Open url in tabular view form."""
-        self.tabular_view_form = TabularViewForm(self, db_map, database)
+        self.tabular_view_form = TabularViewForm(self, db_map)
         self.tabular_view_form.destroyed.connect(self.tabular_view_form_destroyed)
         self.tabular_view_form.show()
         self.destroyed.connect(self.tabular_view_form.close)

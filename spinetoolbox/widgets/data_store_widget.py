@@ -772,6 +772,8 @@ class DataStoreForm(QMainWindow):
                 curr_state = view.saveState()
                 view.restoreState(state)
                 if view.count() != model.columnCount():
+                    # This can happen the first time the user switches to this version,
+                    # because of hidden columns in past versions
                     view.restoreState(curr_state)
         if window_size:
             self.resize(window_size)
