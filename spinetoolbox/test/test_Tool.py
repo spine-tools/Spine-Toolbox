@@ -255,8 +255,7 @@ class TestToolExecution(unittest.TestCase):
         shutil.rmtree(cls.basedir)
 
     def setUp(self):
-        """Overridden method. Runs before each test. Makes instance of ToolboxUI class.
-        """
+        """setUp for tests in TestToolExecution."""
         self.toolbox = create_toolboxui_with_project()
         self.toolbox.tool_specification_model = _MockToolSpecModel(self.toolbox, self.basedir)
         self.toolbox.tool_specification_model_changed.emit(self.toolbox.tool_specification_model)
@@ -265,6 +264,10 @@ class TestToolExecution(unittest.TestCase):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
+        try:
+            shutil.rmtree(self.toolbox.project().work_dir)  # Remove work directory
+        except OSError:
+            pass
         try:
             shutil.rmtree(self.toolbox.project().project_dir)  # Remove project directory
         except OSError:
@@ -490,7 +493,9 @@ class TestToolExecution(unittest.TestCase):
         ind = self.toolbox.project_item_model.find_item("Tool")
         tool = self.toolbox.project_item_model.project_item(ind)  # Find item from project item model
         # Collect some information
-        work_dir = tool._project.work_dir
+        work_dir = self.toolbox.project().work_dir
+        # Make work directory in case it does not exist. This may be needed by Travis CI.
+        os.makedirs(work_dir, exist_ok=True)
         with tempfile.TemporaryDirectory(suffix="__toolbox",
                                          prefix=tool.tool_specification().short_name + "__",
                                          dir=work_dir
