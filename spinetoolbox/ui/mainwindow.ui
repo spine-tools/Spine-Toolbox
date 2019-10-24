@@ -163,10 +163,6 @@
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="actionCopy"/>
-    <addaction name="actionPaste"/>
-    <addaction name="actionDuplicate"/>
-    <addaction name="separator"/>
     <addaction name="actionRemove_all"/>
    </widget>
    <widget class="QMenu" name="menuView">

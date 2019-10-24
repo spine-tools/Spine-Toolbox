@@ -320,10 +320,10 @@ class MappingSpecModel(QAbstractTableModel):
             display_name.append("Relationship class names")
             if self._model.object_classes:
                 display_name.extend([f"Object class {i+1} names" for i, oc in enumerate(self._model.object_classes)])
-                mappings.extend([oc for oc in self._model.object_classes])
+                mappings.extend(list(self._model.object_classes))
             if self._model.objects:
                 display_name.extend([f"Object {i+1} names" for i, oc in enumerate(self._model.objects)])
-                mappings.extend([o for o in self._model.objects])
+                mappings.extend(list(self._model.objects))
         else:
             display_name.append("Object class names")
             display_name.append("Object names")

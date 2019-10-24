@@ -98,7 +98,7 @@ class TestPivotModel(unittest.TestCase):
         with mock.patch("spinetoolbox.mvcmodels.filter_checkbox_list_model.FilterCheckboxListModel.dataChanged") as dc:
             index = model.index(2, 0)
             model.click_index(index)
-        self.assertEqual(model._selected, set(self.data).difference(set(['a'])))
+        self.assertEqual(model._selected, set(self.data).difference({'a'}))
         self.assertFalse(model._all_selected)
 
     def test_click_unselected_item(self):
@@ -158,7 +158,7 @@ class TestPivotModel(unittest.TestCase):
         model.set_list(self.data)
         model.set_filter('b')
         self.assertFalse(model._add_to_selection)
-        self.assertFalse(model.data(model.index(1, 0), Qt.CheckStateRole))
+        self.assertEqual(model.data(model.index(1, 0), Qt.CheckStateRole), Qt.Unchecked)
 
     def test_selected_when_filtered(self):
         model = FilterCheckboxListModel()
@@ -172,6 +172,17 @@ class TestPivotModel(unittest.TestCase):
         model.set_list(self.data)
         model.set_filter('b')
         self.assertEqual(model.data(model.index(2, 0)), 'b')
+
+    def test_data_works_when_show_empty_is_unset(self):
+        model = FilterCheckboxListModel(show_empty=False)
+        model.set_list(self.data)
+        self.assertEqual(model.rowCount(), len(self.data) + 1)
+        self.assertEqual(model.data(model.index(0, 0)), "(Select All)")
+        self.assertEqual(model.data(model.index(0, 0), Qt.CheckStateRole), Qt.Checked)
+        for index, expected in enumerate(self.data):
+            model_index = model.index(index + 1, 0)
+            self.assertEqual(model.data(model_index), expected)
+            self.assertEqual(model.data(model_index, Qt.CheckStateRole), Qt.Checked)
 
     def test_click_select_all_when_all_selected_and_filtered(self):
         model = FilterCheckboxListModel()
@@ -355,7 +366,7 @@ class TestPivotModel(unittest.TestCase):
         self.assertEqual(model._filter_index, [3, 4])
         self.assertEqual(model._selected_filtered, set(self.data[4:]))
 
-    def test_remove_items_filtered_data_midle(self):
+    def test_remove_items_filtered_data_middle(self):
         items = set('bb')
         model = FilterCheckboxListModel()
         model.set_list(self.data)

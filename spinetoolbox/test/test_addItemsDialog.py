@@ -43,17 +43,22 @@ class TestAddItemsDialog(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("spinetoolbox.project.SpineToolboxProject") as mock_project, \
-                mock.patch("spinedb_api.DiffDatabaseMapping") as mock_db_map, \
-                mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui") as mock_restore_ui:
+        with mock.patch("spinetoolbox.project.SpineToolboxProject") as mock_project, mock.patch(
+            "spinedb_api.DiffDatabaseMapping"
+        ) as mock_db_map, mock.patch(
+            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"
+        ) as mock_restore_ui:
             self.tree_view_form = TreeViewForm(mock_project, {"mock_db": mock_db_map})
 
     def tearDown(self):
         """Overridden method. Runs after each test.
         Use this to free resources after a test if needed.
         """
-        with mock.patch("spinetoolbox.widgets.data_store_widget.DataStoreForm._prompt_close_and_commit") as mock_p_c_and_c, \
-                mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state") as mock_save_w_s:
+        with mock.patch(
+            "spinetoolbox.widgets.data_store_widget.DataStoreForm._prompt_close_and_commit"
+        ) as mock_p_c_and_c, mock.patch(
+            "spinetoolbox.widgets.tree_view_widget.TreeViewForm.save_window_state"
+        ) as mock_save_w_s:
             mock_p_c_and_c.return_value = True
             self.tree_view_form.close()
             mock_p_c_and_c.assert_called_once()

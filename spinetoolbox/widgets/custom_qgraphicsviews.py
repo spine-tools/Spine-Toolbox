@@ -238,7 +238,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.dst_connector = None  # Destination connector of a link drawing operation
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
-        self.show()
 
     def mousePressEvent(self, event):
         """Manage drawing of links. Handle the case where a link is being
@@ -319,7 +318,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
     def links(self):
         """Returns all Links in the scene.
         Used for saving the project."""
-        return [item for item in self.items() if type(item) == Link]
+        return [item for item in self.items() if isinstance(item, Link)]
 
     def add_link(self, src_connector, dst_connector):
         """Draws link between source and destination connectors on scene.
@@ -386,7 +385,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if not connections:
             return
         # Convert old format to new format
-        if type(connections[0]) == list:
+        if isinstance(connections[0], list):
             connections_old = connections.copy()
             connections.clear()
             items = self._project_item_model.items()

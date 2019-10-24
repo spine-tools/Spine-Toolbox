@@ -629,8 +629,8 @@ class Tool(ProjectItem):
                 return False
             # Copy file if necessary
             if file_pattern:
-                for src_file in glob.glob(os.path.join(src_dir, file_pattern)):
-                    dst_file = os.path.join(dst_dir, os.path.basename(src_file))
+                for src_file in glob.glob(os.path.abspath(os.path.join(src_dir, file_pattern))):
+                    dst_file = os.path.abspath(os.path.join(dst_dir, os.path.basename(src_file)))
                     # logging.debug("Copying file {} to {}".format(src_file, dst_file))
                     try:
                         shutil.copyfile(src_file, dst_file)
@@ -891,9 +891,10 @@ class Tool(ProjectItem):
                 target = result_subdir_path
             # Check for wildcards in pattern
             if ('*' in pattern) or ('?' in pattern):
-                for fname_path in glob.glob(os.path.join(self.basedir, pattern)):  # fname_path is a full path
+                for fname_path in glob.glob(os.path.abspath(os.path.join(self.basedir, pattern))):
+                    # fname_path is a full path
                     fname = os.path.split(fname_path)[1]  # File name (no path)
-                    dst = os.path.join(target, fname)
+                    dst = os.path.abspath(os.path.join(target, fname))
                     full_fname = os.path.join(dst_subdir, fname)
                     try:
                         shutil.copyfile(fname_path, dst)
@@ -904,13 +905,13 @@ class Tool(ProjectItem):
                         )
                         failed_files.append(full_fname)
             else:
-                output_file = os.path.join(self.basedir, pattern)
+                output_file = os.path.abspath(os.path.join(self.basedir, pattern))
                 # logging.debug("Looking for {0}".format(output_file))
                 if not os.path.isfile(output_file):
                     failed_files.append(pattern)
                     continue
                 # logging.debug("Saving file {0}".format(fname_pattern))
-                dst = os.path.join(target, fname_pattern)
+                dst = os.path.abspath(os.path.join(target, fname_pattern))
                 # logging.debug("Copying to {0}".format(dst))
                 try:
                     shutil.copyfile(output_file, dst)
