@@ -747,8 +747,8 @@ class SpineDBManager(QObject):
             db_map_cascading_data[db_map] = [
                 item
                 for item in self.get_items_from_cache(db_map, "parameter definition")
-                if tag_ids.intersection((item["parameter_tag_id_list"] or "").split(","))
-            ]
+                if tag_ids.intersection((item["parameter_tag_id_list"] or "0").split(","))
+            ]  # NOTE: 0 is 'untagged'
         return db_map_cascading_data
 
     def find_cascading_parameter_values_by_entity(self, db_map_data):

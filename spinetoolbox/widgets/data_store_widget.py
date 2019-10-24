@@ -100,7 +100,7 @@ class DataStoreForm(QMainWindow):
         self.selected_object_ids = dict()
         self.selected_relationship_class_ids = dict()
         self.selected_object_id_lists = dict()
-        self.selected_parameter_tag_ids = dict()
+        self.selected_parameter_tags = dict()
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
         # Parameter tag toolbar
@@ -257,18 +257,17 @@ class DataStoreForm(QMainWindow):
             self.relationship_parameter_definition_model.update_filter()
 
     @Slot("QVariant", "bool", name="_handle_tag_button_toggled")
-    def _handle_tag_button_toggled(self, db_map_ids, checked):
+    def _handle_tag_button_toggled(self, db_map_tags, checked):
         """Called when a parameter tag button is toggled.
         Compute selected parameter definition ids per object class ids.
         Then update set of selected object class ids. Finally, update filter.
         """
-        # TODO: try and simplify this
-        for db_map, id_ in db_map_ids:
+        for db_map, tag in db_map_tags:
             if checked:
-                self.selected_parameter_tag_ids.setdefault(db_map, set()).add(id_)
+                self.selected_parameter_tags.setdefault(db_map, []).append(tag)
             else:
-                self.selected_parameter_tag_ids[db_map].remove(id_)
-        if not any(v for v in self.selected_parameter_tag_ids.values()):
+                self.selected_parameter_tags[db_map].remove(tag)
+        if not any(v for v in self.selected_parameter_tags.values()):
             # No tags selected
             self.selected_obj_parameter_definition_ids = {}
             self.selected_rel_parameter_definition_ids = {}
@@ -277,29 +276,18 @@ class DataStoreForm(QMainWindow):
             # all of them are filtered
             self.selected_obj_parameter_definition_ids = {(None, None): None}
             self.selected_rel_parameter_definition_ids = {(None, None): None}
-            for db_map, tag_ids in self.selected_parameter_tag_ids.items():
-                parameter_definition_id_list = set()
-                for item in db_map.wide_parameter_tag_definition_list():
-                    tag_id = item.parameter_tag_id if item.parameter_tag_id else 0
-                    if tag_id not in tag_ids:
-                        continue
-                    parameter_definition_id_list.update({int(x) for x in item.parameter_definition_id_list.split(",")})
-                self.selected_obj_parameter_definition_ids.update(
-                    {
-                        (db_map, x.object_class_id): {int(y) for y in x.parameter_definition_id_list.split(",")}
-                        for x in db_map.wide_object_parameter_definition_list(
-                            parameter_definition_id_list=parameter_definition_id_list
-                        )
-                    }
-                )
-                self.selected_rel_parameter_definition_ids.update(
-                    {
-                        (db_map, x.relationship_class_id): {int(y) for y in x.parameter_definition_id_list.split(",")}
-                        for x in db_map.wide_relationship_parameter_definition_list(
-                            parameter_definition_id_list=parameter_definition_id_list
-                        )
-                    }
-                )
+            # Find selected parameter definitions
+            selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.selected_parameter_tags)
+            for db_map, param_defs in selected_param_defs.items():
+                for param_def in param_defs:
+                    if "object_class_id" in param_def:
+                        self.selected_obj_parameter_definition_ids.setdefault(
+                            (db_map, param_def["object_class_id"]), set()
+                        ).add(param_def["id"])
+                    elif "relationship_class_id" in param_def:
+                        self.selected_rel_parameter_definition_ids.setdefault(
+                            (db_map, param_def["relationship_class_id"]), set()
+                        ).add(param_def["id"])
         self.do_update_filter()
 
     @Slot("bool", name="_handle_commit_available")
