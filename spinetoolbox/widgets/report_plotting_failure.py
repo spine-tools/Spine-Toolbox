@@ -19,9 +19,6 @@ Functions to report failures in plotting to the user.
 from PySide2.QtWidgets import QMessageBox
 
 
-def report_plotting_failure(error):
+def report_plotting_failure(error, parent_widget):
     """Reports a PlottingError exception to the user."""
-    errorBox = QMessageBox()
-    errorBox.setWindowTitle("Plotting failed")
-    errorBox.setText(error.message)
-    errorBox.exec()
+    QMessageBox.warning(parent_widget, "Plotting Failed", error.message)

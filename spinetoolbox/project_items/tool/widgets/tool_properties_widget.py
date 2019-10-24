@@ -18,8 +18,8 @@ Tool properties widget.
 
 from PySide2.QtWidgets import QWidget
 from PySide2.QtCore import Slot
-from .custom_menus import ToolPropertiesContextMenu
 from spinetoolbox.config import TREEVIEW_HEADER_SS
+from .custom_menus import ToolPropertiesContextMenu
 
 
 class ToolPropertiesWidget(QWidget):
@@ -56,7 +56,9 @@ class ToolPropertiesWidget(QWidget):
         Args:
             pos (QPoint): Mouse position
         """
-        ind = self.ui.treeView_specification.indexAt(pos)  # Index of selected QStandardItem in Tool properties tree view.
+        ind = self.ui.treeView_specification.indexAt(
+            pos
+        )  # Index of selected QStandardItem in Tool properties tree view.
         curr_index = self._toolbox.ui.treeView_project.currentIndex()  # Get selected Tool
         tool = self._toolbox.project_item_model.project_item(curr_index)
         if not tool.tool_specification():

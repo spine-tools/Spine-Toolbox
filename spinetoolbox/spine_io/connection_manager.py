@@ -79,6 +79,10 @@ class ConnectionManager(QObject):
     def source(self):
         return self._source
 
+    @source.setter
+    def source(self, source):
+        self._source = source
+
     @property
     def source_type(self):
         return self._connection.__name__
@@ -189,9 +193,11 @@ class ConnectionManager(QObject):
     def _handle_tables_ready(self, table_options):
         if isinstance(table_options, list):
             table_options = {name: {} for name in table_options}
-        self._table_options.update(
-            {k: t["options"] for k, t in table_options.items() if t.get("options", None) is not None}
-        )
+
+        # save table options if they don't already exists
+        for key, table_settings in table_options.items():
+            self._table_options.setdefault(key, table_settings.get("options", {}))
+
         tables = {k: t.get("mapping", None) for k, t in table_options.items()}
         self.tablesReady.emit(tables)
         # update options if a sheet is selected

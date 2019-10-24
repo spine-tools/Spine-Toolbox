@@ -59,6 +59,7 @@ class TimeSeriesFixedResolutionEditor(QWidget):
 
     def __init__(self, parent=None):
         from ..ui.time_series_fixed_resolution_editor import Ui_TimeSeriesFixedResolutionEditor
+
         super().__init__(parent)
         start = datetime(year=2000, month=1, day=1)
         resolution = [duration_to_relativedelta("1 hour")]

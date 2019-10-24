@@ -16,7 +16,9 @@ Classes and functions that can be shared among unit test modules.
 :date:   18.4.2019
 """
 
+from unittest import mock
 from PySide2.QtWidgets import QWidget
+from ..ui_main import ToolboxUI
 
 
 class MockQWidget(QWidget):
@@ -28,6 +30,40 @@ class MockQWidget(QWidget):
     # noinspection PyMethodMayBeStatic
     def test_push_vars(self):
         return True
+
+
+def create_toolboxui():
+    """Returns ToolboxUI, where QSettings among others has been mocked."""
+    with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+        "spinetoolbox.ui_main.PythonReplWidget"
+    ) as mock_python_repl, mock.patch("spinetoolbox.ui_main.QSettings.value") as mock_qsettings_value:
+        # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
+        mock_julia_repl.return_value = QWidget()
+        mock_python_repl.return_value = MockQWidget()
+        mock_qsettings_value.side_effect = qsettings_value_side_effect
+        toolbox = ToolboxUI()
+    return toolbox
+
+
+def create_toolboxui_with_project():
+    """Returns ToolboxUI with a project instance where
+    QSettings among others has been mocked."""
+    with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
+        "spinetoolbox.ui_main.PythonReplWidget"
+    ) as mock_python_repl, mock.patch("spinetoolbox.project.create_dir") as mock_create_dir, mock.patch(
+        "spinetoolbox.ui_main.ToolboxUI.save_project"
+    ) as mock_save_project, mock.patch(
+        "spinetoolbox.ui_main.ToolboxUI.update_recent_projects"
+    ) as mock_update_recents, mock.patch(
+        "spinetoolbox.ui_main.QSettings.value"
+    ) as mock_qsettings_value:
+        # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
+        mock_julia_repl.return_value = QWidget()
+        mock_python_repl.return_value = MockQWidget()
+        mock_qsettings_value.side_effect = qsettings_value_side_effect
+        toolbox = ToolboxUI()
+        toolbox.create_project("UnitTest Project", "")
+    return toolbox
 
 
 # noinspection PyMethodMayBeStatic, PyPep8Naming,SpellCheckingInspection

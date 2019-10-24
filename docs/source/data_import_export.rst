@@ -59,8 +59,11 @@ and forwards file paths to project items downstream.
 If a *Tool* is to use such a file, remember to add the file as one of the *Tool specification*'s input files!
 
 .. note::
-   You need to have GAMS Python bindings installed to use this functionality.
-   See :ref:`here <GAMS Python bindings>` for more information on how to install the bindings.
+   You need to have GAMS installed to use this functionality.
+   However, you do not need to own a GAMS license as the demo version works just as well.
+
+.. note::
+   The bitness (32 or 64bit) of GAMS has to match the bitness of the Python interpreter.
 
 The mapping between a database and GAMS is as follows:
 
@@ -91,8 +94,9 @@ The image below shows the settings tab of *Gdx Export* with two *Data Sources* c
    :align: center
 
 For each connected *Data Store* a box with the database's path and export file name field is shown on the tab.
-The *Settings* buttons open *Gdx Export settings* windows to further edit database specific export parameters
+The *Settings...* buttons open *Gdx Export settings* windows to further edit database specific export parameters
 such as the order in which entities are exported from the database.
+The *Refresh* button tells *Gdx Export* to update the settings in case the database has been modified.
 
 .. image:: img/gdx_export_settings_window.png
    :align: center

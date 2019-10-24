@@ -19,9 +19,11 @@ Gdx Export project item.
 from copy import deepcopy
 import json
 import logging
+import pathlib
 import os.path
+from PySide2.QtCore import Slot
 from spinetoolbox.helpers import get_db_map
-from spinetoolbox.project_item import ProjectItem
+from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.spine_io.exporters import gdx
 from .widgets.gdx_export_settings import GdxExportSettings
 from .widgets.export_list_item import ExportListItem
@@ -31,6 +33,11 @@ class GdxExport(ProjectItem):
     """
     This project item handles all functionality regarding exporting a database to .gdx file.
     """
+
+    _item_type = "Gdx Export"
+    _missing_output_file_notification = (
+        "Output file name(s) missing." + " See the settings in the {} Properties panel.".format(_item_type)
+    )
 
     def __init__(
         self,
@@ -54,7 +61,7 @@ class GdxExport(ProjectItem):
             x (float): initial X coordinate of item icon
             y (float): initial Y coordinate of item icon
         """
-        super().__init__(toolbox, "Gdx Export", name, description, x, y)
+        super().__init__(toolbox, GdxExport._item_type, name, description, x, y)
         self._settings_windows = dict()
         self._settings = dict()
         self._database_urls = database_urls if database_urls is not None else list()
@@ -102,62 +109,42 @@ class GdxExport(ProjectItem):
             widget_to_remove = database_list_storage.takeAt(0)
             widget_to_remove.widget().deleteLater()
         for url in self._database_urls:
-            database_path = url.database
-            file_name = self._database_to_file_name_map.get(database_path, '')
-            item = ExportListItem(database_path, file_name)
+            file_name = self._database_to_file_name_map.get(url, '')
+            item = ExportListItem(url, file_name)
             database_list_storage.insertWidget(0, item)
             # pylint: disable=cell-var-from-loop
-            item.settings_button.clicked.connect(lambda checked: self._show_settings(url))
-            item.out_file_name_edit.textChanged.connect(lambda text: self._update_out_file_name(text, database_path))
+            item.refresh_settings_clicked.connect(self._refresh_settings_for_database)
+            item.open_settings_clicked.connect(self._show_settings)
+            item.file_name_changed.connect(self._update_out_file_name)
 
     def execute(self):
         """Executes this item."""
         self._toolbox.msg.emit("")
         self._toolbox.msg.emit("Executing Gdx Export <b>{}</b>".format(self.name))
         self._toolbox.msg.emit("***")
-        availability_error = gdx.gams_import_error()
         success = 0
         abort = -1
-        if availability_error:
-            self._toolbox.msg_error.emit(availability_error)
-            self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
-            return
         gams_system_directory = self._resolve_gams_system_directory()
         for url in self._database_urls:
+            file_name = self._database_to_file_name_map.get(url, None)
+            if file_name is None:
+                self._toolbox.msg_error.emit("No file name given to export database {}.".format(url))
+                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
+                return
             database_map = get_db_map(url)
-            settings = self._settings.get(url.database, None)
+            settings = self._settings.get(url, None)
             if settings is None:
                 settings = gdx.make_settings(database_map)
-            try:
-                _, gams_database = gdx.to_gams_workspace(database_map, settings, gams_system_directory)
-            except gdx.GdxExportException as error:
-                self._toolbox.msg_error.emit(
-                    "Failed to write .gdx file: {}".format(error.message)
-                    + " Check that the correct <i>GAMS executable</i> is selected in <b>File->Settings (F1)</b>."
-                )
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
-                return
-            except RuntimeError as gams_error:
-                # Happens when there's a mismatch in bitness between selected (in app Settings)
-                # GAMS and installed GAMS Python bindings package.
-                self._toolbox.msg_error.emit("{0}".format(gams_error))
-                self._toolbox.msg_warning.emit(
-                    "Please select another <i>GAMS program</i> " "in <b>File->Settings (F1)</b>"
-                )
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
-                return
-            file_name = self._database_to_file_name_map.get(url.database, None)
-            if file_name is None:
-                self._toolbox.msg_error.emit("No file name given to export database {}.".format(url.database))
-                self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(abort)
-                return
+                self._settings[url] = settings
             out_path = os.path.join(self.data_dir, file_name)
-            gdx.export_to_gdx(gams_database, out_path)
+            gdx.to_gdx_file(database_map, out_path, settings, gams_system_directory)
+            database_map.connection.close()
             self._toolbox.msg_success.emit("File <b>{0}</b> written".format(out_path))
         execution_instance = self._toolbox.project().execution_instance
         paths = [os.path.join(self.data_dir, file_name) for file_name in self._database_to_file_name_map.values()]
-        execution_instance.append_dc_files(self.name, paths)
-        self._toolbox.project().execution_instance.project_item_execution_finished_signal.emit(success)
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
+        execution_instance.advertise_resources(self.name, *resources)
+        execution_instance.project_item_execution_finished_signal.emit(success)
 
     def stop_execution(self):
         """Stops executing this item."""
@@ -168,39 +155,50 @@ class GdxExport(ProjectItem):
         """Simulates executing this item."""
         super().simulate_execution(inst)
         self._database_urls.clear()
-        for url in inst.ds_urls_at_sight(self.name):
-            self._database_urls.append(url)
+        self._database_urls += [r.url for r in inst.available_resources(self.name) if r.type_ == "database"]
         files = self._database_to_file_name_map.values()
         paths = [os.path.join(self.data_dir, file_name) for file_name in files]
-        inst.append_dc_files(self.name, paths)
-        if not paths:
-            self.add_notification(
-                "Currently this item does not export anything. "
-                "See the settings in the {} Properties panel.".format(self.item_type)
-            )
+        resources = [ProjectItemResource(self, "file", url=pathlib.Path(path).as_uri()) for path in paths]
+        inst.advertise_resources(self.name, *resources)
+        notify_about_missing_output_file = False
+        if "" in files:
+            notify_about_missing_output_file = True
+        else:
+            for url in self._database_urls:
+                if url not in self._database_to_file_name_map:
+                    notify_about_missing_output_file = True
+                    break
+        if notify_about_missing_output_file:
+            self.add_notification(GdxExport._missing_output_file_notification)
         if self._activated:
             self.restore_selections()
 
+    @Slot(str)
     def _show_settings(self, database_url):
         """Opens the item's settings window."""
-        database_path = database_url.database
-        settings = self._settings.get(database_path, None)
+        settings = self._settings.get(database_url, None)
         if settings is None:
             database_map = get_db_map(database_url)
             settings = gdx.make_settings(database_map)
-            self._settings[database_path] = settings
+            self._settings[database_url] = settings
+            database_map.connection.close()
         # Give window its own settings so Cancel doesn't change anything here.
         settings = deepcopy(settings)
-        settings_window = self._settings_windows.get(database_path, None)
+        settings_window = self._settings_windows.get(database_url, None)
         if settings_window is None:
-            settings_window = GdxExportSettings(settings, database_path, self._toolbox)
-            self._settings_windows[database_path] = settings_window
-        settings_window.button_box.accepted.connect(lambda: self._update_settings_from_settings_window(database_path))
-        settings_window.window_closing.connect(lambda: self._discard_settings_window(database_path))
+            settings_window = GdxExportSettings(settings, database_url, self._toolbox)
+            self._settings_windows[database_url] = settings_window
+        settings_window.button_box.accepted.connect(lambda: self._update_settings_from_settings_window(database_url))
+        settings_window.window_closing.connect(lambda: self._discard_settings_window(database_url))
         settings_window.show()
 
+    @Slot(str, str)
     def _update_out_file_name(self, file_name, database_path):
         """Updates the output file name for given database"""
+        if file_name:
+            self.clear_notifications()
+        else:
+            self.add_notification(GdxExport._missing_output_file_notification)
         self._database_to_file_name_map[database_path] = file_name
 
     def item_dict(self):
@@ -241,15 +239,9 @@ class GdxExport(ProjectItem):
         """Returns GAMS system path from Toolbox settings or None if GAMS default is to be used."""
         path = self._toolbox.qsettings().value("appSettings/gamsPath", defaultValue=None)
         if not path:
-            path = None
-        if path is not None:
-            if not os.path.isfile(path):
-                self._toolbox.msg_warning.emit(
-                    "GAMS program '{}' in Toolbox settings does not exists. Using system default.".format(path)
-                )
-                path = None
-            else:
-                path = os.path.dirname(path)
+            path = gdx.find_gams_directory()
+        if path is not None and os.path.isfile(path):
+            path = os.path.dirname(path)
         return path
 
     def notify_destination(self, source_item):
@@ -261,3 +253,19 @@ class GdxExport(ProjectItem):
             )
         else:
             super().notify_destination(source_item)
+
+    @Slot(str)
+    def _refresh_settings_for_database(self, url):
+        original_settings = self._settings.get(url, None)
+        database_map = get_db_map(url)
+        new_settings = gdx.make_settings(database_map)
+        database_map.connection.close()
+        if original_settings is None:
+            self._settings[url] = new_settings
+            return
+        original_settings.update(new_settings)
+
+    @staticmethod
+    def default_name_prefix():
+        """see base class"""
+        return "Gdx Export"

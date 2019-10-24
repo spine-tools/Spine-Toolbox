@@ -33,6 +33,7 @@ class NewProjectForm(QWidget):
     def __init__(self, toolbox):
         """Initialize class."""
         from ..ui import project_form
+
         super().__init__(parent=toolbox, f=Qt.Window)  # Inherits stylesheet from parent
         self._toolbox = toolbox
         # Set up the user interface from Designer.

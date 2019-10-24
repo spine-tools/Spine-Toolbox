@@ -82,29 +82,30 @@ class FilterCheckboxListModel(QAbstractListModel):
     def data(self, index, role=Qt.DisplayRole):
         if not index.isValid():
             return
+        row = index.row()
+        action_state = [self._all_selected]
         if self._is_filtered:
             i = 0
-            if index.row() > 1:
-                i = self._filter_index[index.row() - self._index_offset]
+            if row > 1:
+                i = self._filter_index[row - self._index_offset]
             action_rows = [self._select_all_str, self._add_to_selection_str]
-            action_state = [self._all_selected, self._add_to_selection]
+            action_state.append(self._add_to_selection)
             selected = self._selected_filtered
         else:
-            i = index.row() - self._index_offset
+            i = row - self._index_offset
             action_rows = [self._select_all_str]
-            action_state = [self._all_selected]
             if self._show_empty:
                 action_rows.append(self._empty_str)
                 action_state.append(self._empty_selected)
             selected = self._selected
         if role == Qt.DisplayRole:
-            if index.row() >= len(action_rows):
+            if row >= len(action_rows):
                 return self._data[i]
-            return action_rows[index.row()]
+            return action_rows[row]
         if role == Qt.CheckStateRole:
-            if index.row() < 2:
-                return action_state[index.row()]
-            return self._data[i] in selected
+            if row < len(action_state):
+                return Qt.Checked if action_state[row] else Qt.Unchecked
+            return Qt.Checked if self._data[i] in selected else Qt.Unchecked
 
     def click_index(self, index):
         if index.row() == 0:

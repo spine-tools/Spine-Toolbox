@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="UTF-8"?>
+<?xml version="1.0" encoding="utf-8"?>
 <!--
 ######################################################################################################################
 # Copyright (C) 2017 - 2019 Spine project consortium
@@ -164,7 +164,7 @@
           <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open selected file in Import Editor&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
          </property>
          <property name="text">
-          <string>Import Editor</string>
+          <string>Import Editor...</string>
          </property>
         </widget>
        </item>
@@ -214,7 +214,7 @@
             <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Open this Data Connection's project directory in file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
            </property>
            <property name="icon">
-            <iconset resource="../../../spinetoolbox/ui/resources/resources_icons.qrc">
+            <iconset resource="../../../ui/resources/resources_icons.qrc">
              <normaloff>:/icons/menu_icons/folder-open-solid.svg</normaloff>:/icons/menu_icons/folder-open-solid.svg</iconset>
            </property>
           </widget>
@@ -228,7 +228,7 @@
   </layout>
  </widget>
  <resources>
-  <include location="../../../spinetoolbox/ui/resources/resources_icons.qrc"/>
+  <include location="../../../ui/resources/resources_icons.qrc"/>
  </resources>
  <connections/>
 </ui>

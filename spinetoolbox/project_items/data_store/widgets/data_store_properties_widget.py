@@ -32,6 +32,7 @@ class DataStorePropertiesWidget(QWidget):
         """Init class."""
         super().__init__()
         from ..ui.data_store_properties import Ui_Form
+
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)

@@ -19,6 +19,7 @@ Unit tests for spinetoolbox.spine_io.exporters.gdx module.
 from pathlib import Path
 from tempfile import TemporaryDirectory
 import unittest
+from gdx2py import GdxFile
 from PySide2.QtWidgets import QApplication
 from spinedb_api import import_functions as dbmanip
 from spinedb_api.helpers import create_new_spine_database
@@ -187,81 +188,75 @@ class TextExportersGdx(unittest.TestCase):
         self.assertEqual(parameter.name, 'parameter')
         self.assertEqual(parameter.value, 3.14)
 
-    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domains_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
         parameter = gdx.Parameter(self._MockParameter())
         record.parameters.append(parameter)
         domain.records.append(record)
-        domains = list()
-        domains.append(domain)
-        try:
-            workspace = gdx.make_gams_workspace()
-        except gdx.GdxExportException:
-            self.skipTest("Broken GAMS Python bindings installation.")
-        database = gdx.make_gams_database(workspace)
-        gdx.domains_to_gams(database, domains)
-        gams_domain = database.get_set(self._MockObjectClass.name)
-        self.assertEqual(gams_domain.name, self._MockObjectClass.name)
-        self.assertEqual(gams_domain.text, self._MockObjectClass.description)
-        self.assertEqual(gams_domain.dimension, 1)
-        self.assertEqual(gams_domain.number_records, 1)
-        gams_record = gams_domain.first_record()
-        self.assertEqual(len(gams_record.keys), 1)
-        self.assertEqual(gams_record.keys[0], self._MockObject.name)
-        gams_parameter = database.get_parameter(self._MockParameter.parameter_name)
-        self.assertEqual(gams_parameter.name, self._MockParameter.parameter_name)
-        self.assertEqual(gams_parameter.number_records, 1)
-        self.assertEqual(gams_parameter.first_record().value, float(self._MockParameter.value))
+        gams_directory = gdx.find_gams_directory()
+        with TemporaryDirectory() as temp_directory:
+            path_to_gdx = Path(temp_directory).joinpath("test_domains_to_gams.gdx")
+            with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
+                gdx.domains_to_gams(gdx_file, [domain])
+            with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 2)
+                gams_set = gdx_file["mock_object_class_name"]
+                self.assertEqual(len(gams_set.elements), 1)
+                self.assertEqual(gams_set.elements[0], "mock_object_name")
+                gams_parameter = gdx_file["mock_parameter_name"]
+                self.assertEqual(len(gams_parameter.keys()), 1)
+                for key, value in gams_parameter:  # pylint: disable=not-an-iterable
+                    self.assertEqual(key, "mock_object_name")
+                    self.assertEqual(value, 2.3)
 
-    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
     def test_sets_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
         domain.records.append(record)
-        try:
-            workspace = gdx.make_gams_workspace()
-        except gdx.GdxExportException:
-            self.skipTest("Broken GAMS Python bindings installation.")
-        database = gdx.make_gams_database(workspace)
-        gams_domains = gdx.domains_to_gams(database, [domain])
         set_item = gdx.Set(self._MockRelationshipClass())
         record = gdx.Record(self._MockRelationship())
         set_item.records.append(record)
         parameter = gdx.Parameter(self._MockParameter())
         record.parameters.append(parameter)
-        gdx.sets_to_gams(database, [set_item], gams_domains)
-        gams_set = database.get_set(self._MockRelationshipClass.name)
-        self.assertEqual(gams_set.name, self._MockRelationshipClass.name)
-        self.assertEqual(gams_set.text, '')
-        self.assertEqual(gams_set.dimension, 1)
-        self.assertEqual(gams_set.number_records, 1)
-        gams_record = gams_set.first_record()
-        self.assertEqual(len(gams_record.keys), 1)
-        self.assertEqual(gams_record.keys[0], self._MockRelationship.object_name_list)
-        gams_parameter = database.get_parameter(self._MockParameter.parameter_name)
-        self.assertEqual(gams_parameter.name, self._MockParameter.parameter_name)
-        self.assertEqual(gams_parameter.number_records, 1)
-        self.assertEqual(gams_parameter.first_record().value, float(self._MockParameter.value))
+        gams_directory = gdx.find_gams_directory()
+        with TemporaryDirectory() as temp_directory:
+            path_to_gdx = Path(temp_directory).joinpath("test_sets_to_gams.gdx")
+            with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
+                gdx.domains_to_gams(gdx_file, [domain])
+                gdx.sets_to_gams(gdx_file, [set_item])
+            with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 3)
+                gams_set = gdx_file["mock_object_class_name"]
+                self.assertEqual(len(gams_set.elements), 1)
+                self.assertEqual(gams_set.elements[0], "mock_object_name")
+                gams_set = gdx_file["mock_relationship_class_name"]
+                self.assertEqual(len(gams_set.elements), 1)
+                self.assertEqual(gams_set.elements[0], "mock_object_name")
+                gams_parameter = gdx_file["mock_parameter_name"]
+                self.assertEqual(len(gams_parameter.keys()), 1)
+                for key, value in gams_parameter:  # pylint: disable=not-an-iterable
+                    self.assertEqual(key, "mock_object_name")
+                    self.assertEqual(value, 2.3)
 
-    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
     def test_domain_parameters_to_gams(self):
         domain = gdx.DomainSet(self._MockObjectClass())
         record = gdx.Record(self._MockObject())
         domain.records.append(record)
         parameter = gdx.Parameter(self._MockParameter())
         record.parameters.append(parameter)
-        try:
-            workspace = gdx.make_gams_workspace()
-        except gdx.GdxExportException:
-            self.skipTest("Broken GAMS Python bindings installation.")
-        database = gdx.make_gams_database(workspace)
-        gdx.domain_parameters_to_gams(database, domain)
-        gams_parameter = database.get_parameter(self._MockParameter.parameter_name)
-        self.assertEqual(gams_parameter.name, self._MockParameter.parameter_name)
-        self.assertEqual(gams_parameter.number_records, 1)
-        self.assertEqual(gams_parameter.first_record().value, float(self._MockParameter.value))
+        gams_directory = gdx.find_gams_directory()
+        with TemporaryDirectory() as temp_directory:
+            path_to_gdx = Path(temp_directory).joinpath("test_domain_parameters_to_gams.gdx")
+            with GdxFile(path_to_gdx, 'w', gams_directory) as gdx_file:
+                gdx.domain_parameters_to_gams(gdx_file, domain)
+            with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 1)
+                gams_scalar = gdx_file["mock_parameter_name"]
+                self.assertEqual(float(gams_scalar), 2.3)
 
     def test_filter_and_sort_sets(self):
         set_object = self._NamedObject
@@ -305,8 +300,9 @@ class TextExportersGdx(unittest.TestCase):
         self.assertFalse(domains)
         self.assertEqual(extracted.name, "domain1")
 
-    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
-    def test_to_gams_workspace_sorts_domains_sets_records_correctly(self):
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_to_gdx_file_sorts_domains_and_sets_and_records_correctly(self):
+        gams_directory = gdx.find_gams_directory()
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(tmp_dir_name, "test_to_gams_workspace.sqlite")
             dbmanip.import_object_classes(database_map, ['domain1', 'domain2'])
@@ -332,38 +328,38 @@ class TextExportersGdx(unittest.TestCase):
                 'set2': [['record12', 'record21'], ['record11', 'record21']],
             }
             settings = gdx.Settings(sorted_domain_names, sorted_set_names, sorted_records)
-            try:
-                _, gams_database = gdx.to_gams_workspace(database_map, settings)
-            except gdx.GdxExportException:
-                database_map.connection.close()
-                self.skipTest("Broken GAMS Python bindings installation.")
+            path_to_gdx = Path(tmp_dir_name).joinpath(
+                "test_to_gdx_file_sorts_domains_and_sets_and_records_correctly.gdx"
+            )
+            gdx.to_gdx_file(database_map, path_to_gdx, settings, gams_directory)
             database_map.connection.close()
-        self.assertEqual(len(gams_database), 4)
-        expected_symbol_names = ['domain2', 'domain1', 'set2', 'set1']
-        for gams_symbol, expected_name in zip(gams_database, expected_symbol_names):
-            self.assertEqual(gams_symbol.name, expected_name)
-        gams_set = gams_database.get_set('domain1')
-        self.assertEqual(len(gams_set), 2)
-        expected_records = ['record12', 'record11']
-        for gams_record, expected_name in zip(gams_set, expected_records):
-            self.assertEqual(gams_record.key(0), expected_name)
-        gams_set = gams_database.get_set('domain2')
-        self.assertEqual(len(gams_set), 1)
-        self.assertEqual(gams_set.first_record().key(0), 'record21')
-        gams_set = gams_database.get_set('set1')
-        self.assertEqual(len(gams_set), 2)
-        expected_records = ['record12', 'record11']
-        for gams_record, expected_name in zip(gams_set, expected_records):
-            self.assertEqual(gams_record.key(0), expected_name)
-        gams_set = gams_database.get_set('set2')
-        self.assertEqual(len(gams_set), 2)
-        expected_records = [('record12', 'record21'), ('record11', 'record21')]
-        for gams_record, expected_name in zip(gams_set, expected_records):
-            self.assertEqual(gams_record.key(0), expected_name[0])
-            self.assertEqual(gams_record.key(1), expected_name[1])
+            with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 4)
+                expected_symbol_names = ['domain2', 'domain1', 'set2', 'set1']
+                for gams_symbol, expected_name in zip(gdx_file.keys(), expected_symbol_names):
+                    self.assertEqual(gams_symbol, expected_name)
+                gams_set = gdx_file['domain1']
+                self.assertEqual(len(gams_set), 2)
+                expected_records = ['record12', 'record11']
+                for gams_record, expected_name in zip(gams_set, expected_records):
+                    self.assertEqual(gams_record, expected_name)
+                gams_set = gdx_file['domain2']
+                self.assertEqual(len(gams_set), 1)
+                self.assertEqual(gams_set.elements[0], 'record21')
+                gams_set = gdx_file['set1']
+                self.assertEqual(len(gams_set), 2)
+                expected_records = ['record12', 'record11']
+                for gams_record, expected_name in zip(gams_set, expected_records):
+                    self.assertEqual(gams_record, expected_name)
+                gams_set = gdx_file['set2']
+                self.assertEqual(len(gams_set), 2)
+                expected_records = [('record12', 'record21'), ('record11', 'record21')]
+                for gams_record, expected_name in zip(gams_set, expected_records):
+                    self.assertEqual(gams_record, expected_name)
 
-    @unittest.skipIf(gdx.gams_import_error(), "No GAMS Python bindings found.")
-    def test_to_gams_workspace_exports_global_parameters_only_not_the_corresponding_domain(self):
+    @unittest.skipIf(gdx.find_gams_directory() is None, "No working GAMS installation found.")
+    def test_to_gdx_file_exports_global_parameters_only_not_the_corresponding_domain(self):
+        gams_directory = gdx.find_gams_directory()
         with TemporaryDirectory() as tmp_dir_name:
             database_map = self._make_database_map(
                 tmp_dir_name,
@@ -377,20 +373,15 @@ class TextExportersGdx(unittest.TestCase):
             )
             settings = gdx.make_settings(database_map)
             settings.global_parameters_domain_name = 'global_domain'
-            try:
-                _, gams_database = gdx.to_gams_workspace(database_map, settings)
-            except gdx.GdxExportException:
-                database_map.connection.close()
-                self.skipTest("Broken GAMS Python bindings installation.")
+            path_to_gdx = Path(tmp_dir_name).joinpath(
+                "test_to_gdx_file_sorts_domains_and_sets_and_records_correctly.gdx"
+            )
+            gdx.to_gdx_file(database_map, path_to_gdx, settings, gams_directory)
             database_map.connection.close()
-        self.assertEqual(len(gams_database), 1)
-        expected_symbol_names = ['global_parameter']
-        for gams_symbol, expected_name in zip(gams_database, expected_symbol_names):
-            self.assertEqual(gams_symbol.name, expected_name)
-        gams_parameter = gams_database.get_parameter('global_parameter')
-        self.assertEqual(gams_parameter.number_records, 1)
-        gams_parameter_record = gams_parameter.first_record()
-        self.assertEqual(gams_parameter_record.value, -4.2)
+            with GdxFile(path_to_gdx, 'r', gams_directory) as gdx_file:
+                self.assertEqual(len(gdx_file), 1)
+                gams_scalar = gdx_file['global_parameter']
+                self.assertEqual(float(gams_scalar), -4.2)
 
     def test_make_settings(self):
         with TemporaryDirectory() as tmp_dir_name:
@@ -429,6 +420,53 @@ class TextExportersGdx(unittest.TestCase):
         self.assertEqual(record_keys, [['record12'], ['record11']])
         record_keys = settings.sorted_record_key_lists('set2')
         self.assertEqual(record_keys, [['record12', 'record21'], ['record11', 'record21']])
+
+    def test_Settings_update_domains_and_domain_exportable_flags(self):
+        base_settings = gdx.Settings(['a', 'b'], [], {}, [True, True], [], '')
+        update_settings = gdx.Settings(['b', 'c'], [], {}, [False, False], [], '')
+        base_settings.update(update_settings)
+        self.assertEqual(base_settings.sorted_domain_names, ['b', 'c'])
+        self.assertEqual(base_settings.domain_exportable_flags, [True, False])
+        self.assertEqual(base_settings.sorted_set_names, [])
+        self.assertEqual(base_settings.set_exportable_flags, [])
+        self.assertEqual(base_settings.global_parameters_domain_name, '')
+
+    def test_Settings_update_sets_and_set_exportable_flags(self):
+        base_settings = gdx.Settings([], ['a', 'b'], {}, [], [True, True], '')
+        update_settings = gdx.Settings([], ['b', 'c'], {}, [], [False, False], '')
+        base_settings.update(update_settings)
+        self.assertEqual(base_settings.sorted_domain_names, [])
+        self.assertEqual(base_settings.domain_exportable_flags, [])
+        self.assertEqual(base_settings.sorted_set_names, ['b', 'c'])
+        self.assertEqual(base_settings.set_exportable_flags, [True, False])
+        self.assertEqual(base_settings.global_parameters_domain_name, '')
+
+    def test_Settings_update_global_parameters_domain_name(self):
+        base_settings = gdx.Settings(['a', 'b'], [], {}, [True, False], [], 'b')
+        update_settings = gdx.Settings(['b', 'c'], [], {}, [True, False], [], 'c')
+        base_settings.update(update_settings)
+        self.assertEqual(base_settings.sorted_domain_names, ['b', 'c'])
+        self.assertEqual(base_settings.domain_exportable_flags, [False, False])
+        self.assertEqual(base_settings.sorted_set_names, [])
+        self.assertEqual(base_settings.set_exportable_flags, [])
+        self.assertEqual(base_settings.global_parameters_domain_name, 'b')
+
+    def test_Settings_update_records(self):
+        base_settings = gdx.Settings(
+            ['a', 'b'], ['c'], {'a': ['A'], 'b': ['B', 'BB'], 'c': ['C', 'CC']}, [True, True], [True], ''
+        )
+        update_settings = gdx.Settings(
+            ['b', 'd'], ['c'], {'b': ['BB', 'BBB'], 'c': ['CC', 'CCC'], 'd': ['D']}, [False, False], [False], ''
+        )
+        base_settings.update(update_settings)
+        self.assertEqual(base_settings.sorted_domain_names, ['b', 'd'])
+        self.assertEqual(base_settings.domain_exportable_flags, [True, False])
+        self.assertEqual(base_settings.sorted_set_names, ['c'])
+        self.assertEqual(base_settings.set_exportable_flags, [True])
+        self.assertEqual(base_settings.global_parameters_domain_name, '')
+        self.assertEqual(base_settings.sorted_record_key_lists('b'), ['BB', 'BBB'])
+        self.assertEqual(base_settings.sorted_record_key_lists('c'), ['CC', 'CCC'])
+        self.assertEqual(base_settings.sorted_record_key_lists('d'), ['D'])
 
 
 if __name__ == '__main__':

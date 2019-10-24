@@ -143,7 +143,7 @@ class DataStoreForm(QMainWindow):
         self.msg_error.connect(self.add_error_message)
         self.commit_available.connect(self._handle_commit_available)
         # Menu actions
-        self.ui.actionCommit.triggered.connect(self.show_commit_session_dialog)
+        self.ui.actionCommit.triggered.connect(self._prompt_and_commit_session)
         self.ui.actionRollback.triggered.connect(self.rollback_session)
         self.ui.actionRefresh.triggered.connect(self.refresh_session)
         self.ui.actionClose.triggered.connect(self.close)
@@ -274,17 +274,18 @@ class DataStoreForm(QMainWindow):
         self.ui.actionCommit.setEnabled(on)
         self.ui.actionRollback.setEnabled(on)
 
-    @Slot("bool", name="show_commit_session_dialog")
-    def show_commit_session_dialog(self, checked=False):
-        """Query user for a commit message and commit changes to source database."""
+    @Slot("bool")
+    def _prompt_and_commit_session(self, checked=False):
+        """Query user for a commit message and commit changes to source database returning False if cancelled."""
         if not any(db_map.has_pending_changes() for db_map in self.db_maps):
             self.msg.emit("Nothing to commit yet.")
-            return
+            return True
         dialog = CommitDialog(self, *self.db_names)
         answer = dialog.exec_()
         if answer != QDialog.Accepted:
-            return
+            return False
         self.commit_session(dialog.commit_msg)
+        return True
 
     @busy_effect
     def commit_session(self, commit_msg):
@@ -944,28 +945,34 @@ class DataStoreForm(QMainWindow):
                 self.relationship_parameter_value_model.rename_parameter(db_map, parameter)
         return True
 
-    def show_commit_session_prompt(self):
-        """Shows the commit session message box."""
+    def _prompt_close_and_commit(self):
+        """Prompts user for window closing and commits if requested returning True if window should close."""
         qsettings = self.qsettings()
         commit_at_exit = int(qsettings.value("appSettings/commitAtExit", defaultValue="1"))
         if commit_at_exit == 0:
             # Don't commit session and don't show message box
-            return
+            return True
         if commit_at_exit == 1:  # Default
             # Show message box
             msg = QMessageBox(self)
             msg.setIcon(QMessageBox.Question)
-            msg.setWindowTitle("Commit pending changes")
+            msg.setWindowTitle("Commit Pending Changes")
             msg.setText("The current session has uncommitted changes. Do you want to commit them now?")
             msg.setInformativeText("WARNING: If you choose not to commit, all changes will be lost.")
-            msg.setStandardButtons(QMessageBox.Yes | QMessageBox.No)
+            msg.setStandardButtons(QMessageBox.Save | QMessageBox.Discard | QMessageBox.Cancel)
+            msg.button(QMessageBox.Save).setText("Commit And Close ")
+            msg.button(QMessageBox.Discard).setText("Discard Changes And Close")
             chkbox = QCheckBox()
             chkbox.setText("Do not ask me again")
             msg.setCheckBox(chkbox)
             answer = msg.exec_()
+            if answer == QMessageBox.Cancel:
+                return False
             chk = chkbox.checkState()
-            if answer == QMessageBox.Yes:
-                self.show_commit_session_dialog()
+            if answer == QMessageBox.Save:
+                committed = self._prompt_and_commit_session()
+                if not committed:
+                    return False
                 if chk == 2:
                     # Save preference
                     qsettings.setValue("appSettings/commitAtExit", "2")
@@ -975,9 +982,12 @@ class DataStoreForm(QMainWindow):
                     qsettings.setValue("appSettings/commitAtExit", "0")
         elif commit_at_exit == 2:
             # Commit session and don't show message box
-            self.show_commit_session_dialog()
+            committed = self._prompt_and_commit_session()
+            if not committed:
+                return False
         else:
             qsettings.setValue("appSettings/commitAtExit", "1")
+        return True
 
     def restore_ui(self):
         """Restore UI state from previous session."""
@@ -1014,13 +1024,8 @@ class DataStoreForm(QMainWindow):
             # There are less screens available now than on previous application startup
             self.move(0, 0)  # Move this widget to primary screen position (0,0)
 
-    def closeEvent(self, event=None):
-        """Handle close window.
-
-        Args:
-            event (QEvent): Closing event if 'X' is clicked.
-        """
-        # save qsettings
+    def save_window_state(self):
+        """Save window state parameters (size, position, state) via QSettings."""
         qsettings = self.qsettings()
         qsettings.beginGroup(self.settings_group)
         qsettings.setValue("windowSize", self.size())
@@ -1039,7 +1044,20 @@ class DataStoreForm(QMainWindow):
         else:
             qsettings.setValue("windowMaximized", False)
         qsettings.endGroup()
+
+    def closeEvent(self, event):
+        """Handle close window.
+
+        Args:
+            event (QCloseEvent): Closing event
+        """
         if any(db_map.has_pending_changes() for db_map in self.db_maps):
-            self.show_commit_session_prompt()
-        if event:
-            event.accept()
+            want_to_close = self._prompt_close_and_commit()
+            if not want_to_close:
+                event.ignore()
+                return
+        # Save UI form state
+        self.save_window_state()
+        for db_map in self.db_maps:
+            db_map.connection.close()
+        event.accept()

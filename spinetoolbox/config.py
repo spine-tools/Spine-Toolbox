@@ -20,7 +20,7 @@ import sys
 import os
 
 SPINE_TOOLBOX_VERSION = "0.3.2"
-REQUIRED_SPINEDB_API_VERSION = "0.0.36"
+REQUIRED_SPINEDB_API_VERSION = "0.1.1"
 # SPINE GREEN HTML: #99cc33 RGBa: 153, 204, 51, 255
 # SPINE BLUE HTML: #004ac2 RGBa: 0, 74, 194, 255
 # Invalid characters for directory names
@@ -54,6 +54,7 @@ def _executable(name):
     if _on_windows:
         return name + ".exe"
     return name
+
 
 # GAMS
 GAMS_EXECUTABLE = _executable("gams")

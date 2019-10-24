@@ -18,7 +18,9 @@ BaseProjectItem and ProjectItem classes.
 
 import os
 import logging
-from PySide2.QtCore import Qt, Signal, Slot, QUrl
+from urllib.parse import urlparse
+from urllib.request import url2pathname
+from PySide2.QtCore import Qt, Signal, QUrl
 from PySide2.QtWidgets import QInputDialog
 from PySide2.QtGui import QDesktopServices
 from .helpers import create_dir
@@ -38,7 +40,7 @@ class BaseProjectItem(MetaObject):
         self._parent = None  # Parent BaseProjectItem. Set when add_child is called
         self._children = list()  # Child BaseProjectItems. Appended when new items are inserted into model.
 
-    def flags(self):
+    def flags(self):  # pylint: disable=no-self-use
         """Returns the item flags."""
         return Qt.NoItemFlags
 
@@ -78,7 +80,7 @@ class BaseProjectItem(MetaObject):
             return r
         return 0
 
-    def add_child(self, child_item):
+    def add_child(self, child_item):  # pylint: disable=no-self-use
         """Base method that shall be overridden in subclasses."""
         return False
 
@@ -98,16 +100,22 @@ class BaseProjectItem(MetaObject):
         child._parent = None
         return True
 
-    def custom_context_menu(self):
-        """Returns the context menu for this item. Implement in subclasses as needed."""
-        return NotImplemented
+    def custom_context_menu(self, parent, pos):
+        """Returns the context menu for this item. Implement in subclasses as needed.
+        Args:
+            parent (QWidget): The widget that is controlling the menu
+            pos (QPoint): Position on screen
+        """
+        raise NotImplementedError()
 
-    def apply_context_menu_action(self, action):
+    def apply_context_menu_action(self, parent, action):
         """Applies given action from context menu. Implement in subclasses as needed.
 
         Args:
+            parent (QWidget): The widget that is controlling the menu
             action (str): The selected action
         """
+        raise NotImplementedError()
 
 
 class RootProjectItem(BaseProjectItem):
@@ -232,6 +240,7 @@ class ProjectItem(BaseProjectItem):
         self.y = y
         self._properties_ui = None
         self._icon = None
+        self._sigs = None
         # Make project directory for this Item
         self.data_dir = os.path.join(self._project.project_dir, self.short_name)
         try:
@@ -371,10 +380,24 @@ class ProjectItem(BaseProjectItem):
             ind = self._toolbox.project_item_model.find_item(self.name)
             self._toolbox.remove_item(ind, delete_item=delete_bool, check_dialog=True)
 
+    @staticmethod
+    def default_name_prefix():
+        """prefix for default item name"""
+        raise NotImplementedError()
+
     def rename(self, new_name):
-        """Rename this item."""
+        """Renames this item. This is a common rename method for all Project items.
+        If the project item needs any additional steps in renaming, override this
+        method in subclass. See e.g. rename() method in DataStore class.
+
+        Args:
+            new_name(str): New name
+
+        Returns:
+            bool: True if renaming was successful, False if renaming fails
+        """
         ind = self._toolbox.project_item_model.find_item(self.name)
-        self._toolbox.project_item_model.setData(ind, new_name)
+        return self._toolbox.project_item_model.setData(ind, new_name)
 
     def open_directory(self):
         """Open this item's data directory in file explorer."""
@@ -412,3 +435,60 @@ class ProjectItem(BaseProjectItem):
             "<b>{0}</b> and a <b>{1}</b> has not been "
             "implemented yet.".format(source_item.item_type, self.item_type)
         )
+
+
+class ProjectItemResource:
+    """Class to hold a resource made available by a project item
+    and that may be consumed by another project item."""
+
+    def __init__(self, provider, type_, url="", data=None, metadata=None):
+        """Init class.
+
+        Args:
+            provider (ProjectItem): The item that provides the resource
+            type_ (str): The resource type, either "file", "database", or "data" (for now)
+            url (str): The url of the resource
+            data (object): The data in the resource
+            metadata (dict): Some metadata providing extra information about the resource. For now it has two keys:
+                - is_output (bool): whether the resource is an output from a process, e.g., a Tool ouput file
+                - for_import (bool): whether the resource is data to be imported into a Spine db
+        """
+        self.provider = provider
+        self.type_ = type_
+        self.url = url
+        self.parsed_url = urlparse(url)
+        self.data = data
+        if not metadata:
+            metadata = dict()
+        self.metadata = metadata
+
+    def __eq__(self, other):
+        if not isinstance(other, ProjectItemResource):
+            # don't attempt to compare against unrelated types
+            return NotImplemented
+        return (
+            self.provider == other.provider
+            and self.type_ == other.type_
+            and self.url == other.url
+            and self.data == other.data
+            and self.metadata == other.metadata
+        )
+
+    def __repr__(self):
+        result = "ProjectItemResource("
+        result += f"provider={self.provider}, "
+        result += f"type_={self.type_}, "
+        result += f"url={self.url}, "
+        result += f"data={self.data}, "
+        result += f"metadata={self.metadata})"
+        return result
+
+    @property
+    def path(self):
+        """Returns the resource path in the local syntax, as obtained from parsing the url."""
+        return url2pathname(self.parsed_url.path)
+
+    @property
+    def scheme(self):
+        """Returns the resource scheme, as obtained from parsing the url."""
+        return self.parsed_url.scheme

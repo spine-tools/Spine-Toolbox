@@ -18,8 +18,8 @@ Data interface properties widget.
 
 from PySide2.QtCore import Slot
 from PySide2.QtWidgets import QWidget
-from .custom_menus import DiFilesContextMenu
 from spinetoolbox.config import TREEVIEW_HEADER_SS
+from .custom_menus import DiFilesContextMenu
 
 
 class DataInterfacePropertiesWidget(QWidget):
@@ -33,6 +33,7 @@ class DataInterfacePropertiesWidget(QWidget):
         """Init class."""
         super().__init__()
         from ..ui.data_interface_properties import Ui_Form
+
         self._toolbox = toolbox
         self.ui = Ui_Form()
         self.ui.setupUi(self)
@@ -65,4 +66,3 @@ class DataInterfacePropertiesWidget(QWidget):
             di.select_connector_type(ind)
         elif option == "Open directory...":
             di.open_directory()
-        return

@@ -28,7 +28,11 @@ from datapackage.exceptions import DataPackageException
 from ..datapackage_import_export import DatapackageToSpineConverter
 from .custom_delegates import ForeignKeysDelegate, LineEditDelegate, CheckBoxDelegate
 from ..mvcmodels.minimal_table_model import MinimalTableModel
-from ..mvcmodels.data_package_models import DatapackageResourcesModel, DatapackageFieldsModel, DatapackageForeignKeysModel
+from ..mvcmodels.data_package_models import (
+    DatapackageResourcesModel,
+    DatapackageFieldsModel,
+    DatapackageForeignKeysModel,
+)
 from ..helpers import busy_effect
 from ..config import STATUSBAR_SS
 
@@ -48,6 +52,7 @@ class SpineDatapackageWidget(QMainWindow):
     def __init__(self, data_connection):
         """Initialize class."""
         from ..ui.spine_datapackage_form import Ui_MainWindow
+
         super().__init__(flags=Qt.Window)  # TODO: Set parent as toolbox here if it makes sense
         # TODO: Maybe set the parent as ToolboxUI so that its stylesheet is inherited. This may need
         # TODO: reimplementing the window minimizing and maximizing actions as well as setting the window modality
@@ -293,9 +298,12 @@ class SpineDatapackageWidget(QMainWindow):
             msg = ('<b>Replacing file "datapackage.json" in "{}"</b>. ' 'Are you sure?').format(
                 os.path.basename(self._data_connection.data_dir)
             )
-            # noinspection PyCallByClass, PyTypeChecker
-            answer = QMessageBox.question(self, 'Replace "datapackage.json"', msg, QMessageBox.Yes, QMessageBox.No)
-            if not answer == QMessageBox.Yes:
+            message_box = QMessageBox(
+                QMessageBox.Question, "Replace 'datapackage.json", msg, QMessageBox.Ok | QMessageBox.Cancel, parent=self
+            )
+            message_box.button(QMessageBox.Ok).setText("Replace File")
+            answer = message_box.exec_()
+            if answer == QMessageBox.Cancel:
                 return False
         if self.datapackage.save(os.path.join(self._data_connection.data_dir, 'datapackage.json')):
             msg = '"datapackage.json" saved in {}'.format(self._data_connection.data_dir)

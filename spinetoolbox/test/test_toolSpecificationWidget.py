@@ -22,7 +22,7 @@ import logging
 import sys
 from PySide2.QtWidgets import QApplication, QWidget
 from ..widgets.tool_specification_widget import ToolSpecificationWidget
-from ..ui_main import ToolboxUI
+from .mock_helpers import create_toolboxui
 
 
 class MockQWidget(QWidget):
@@ -51,14 +51,8 @@ class TestToolSpecificationWidget(unittest.TestCase):
 
     def setUp(self):
         """Overridden method. Runs before each test. Makes instance of TreeViewForm class."""
-        with mock.patch("spinetoolbox.ui_main.JuliaREPLWidget") as mock_julia_repl, mock.patch(
-            "spinetoolbox.ui_main.PythonReplWidget"
-        ) as mock_python_repl:
-            # Replace Julia REPL Widget with a QWidget so that the DeprecationWarning from qtconsole is not printed
-            mock_julia_repl.return_value = QWidget()
-            mock_python_repl.return_value = MockQWidget()
-            self.toolbox = ToolboxUI()
-            self.tool_specification_widget = ToolSpecificationWidget(self.toolbox)
+        self.toolbox = create_toolboxui()
+        self.tool_specification_widget = ToolSpecificationWidget(self.toolbox)
 
     def tearDown(self):
         """Overridden method. Runs after each test.
@@ -73,7 +67,9 @@ class TestToolSpecificationWidget(unittest.TestCase):
         """Test that a minimal tool specification can be created by specifying name, type and main program file."""
         with mock.patch("spinetoolbox.widgets.tool_specification_widget.QFileDialog") as mock_file_dialog, mock.patch(
             "spinetoolbox.widgets.tool_specification_widget.ToolSpecificationWidget.call_add_tool_specification"
-        ) as mock_add, mock.patch("spinetoolbox.widgets.tool_specification_widget.ToolSpecificationWidget.close") as mock_close:
+        ) as mock_add, mock.patch(
+            "spinetoolbox.widgets.tool_specification_widget.ToolSpecificationWidget.close"
+        ) as mock_close:
             self.tool_specification_widget.ui.comboBox_tooltype.setCurrentIndex(1)
             self.tool_specification_widget.ui.lineEdit_name.setText("test_tool")
             self.tool_specification_widget.ui.lineEdit_main_program.setText(__file__)

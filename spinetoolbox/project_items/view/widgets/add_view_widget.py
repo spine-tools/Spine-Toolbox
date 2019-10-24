@@ -17,6 +17,7 @@ Widget shown to user when a new View is created.
 """
 
 from spinetoolbox.widgets.add_project_item_widget import AddProjectItemWidget
+from ..view import View
 
 
 class AddViewWidget(AddProjectItemWidget):
@@ -30,7 +31,8 @@ class AddViewWidget(AddProjectItemWidget):
 
     def __init__(self, toolbox, x, y):
         """Initialize class."""
-        super().__init__(toolbox, x, y)
+        initial_name = toolbox.propose_item_name(View.default_name_prefix())
+        super().__init__(toolbox, x, y, initial_name)
         self.setWindowTitle(f"Add View")
 
     def call_add_item(self):

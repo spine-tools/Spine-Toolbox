@@ -131,7 +131,7 @@ class CustomQGraphicsView(QGraphicsView):
         if new_size != old_size:
             scene = self.scene()
             if scene is not None:
-                self._update_zoom_limits(self.scene().sceneRect())
+                self._update_zoom_limits(scene.sceneRect())
                 if new_size.width() > old_size.width() or new_size.height() > old_size.height():
                     transform = self.transform()
                     zoom = transform.m11()
@@ -238,7 +238,6 @@ class DesignQGraphicsView(CustomQGraphicsView):
         self.dst_connector = None  # Destination connector of a link drawing operation
         self.src_item_name = None  # Name of source project item when drawing links
         self.dst_item_name = None  # Name of destination project item when drawing links
-        self.show()
 
     def mousePressEvent(self, event):
         """Manage drawing of links. Handle the case where a link is being
@@ -312,12 +311,14 @@ class DesignQGraphicsView(CustomQGraphicsView):
             # Remove Link from connectors
             link.src_connector.links.remove(link)
             link.dst_connector.links.remove(link)
-        self.scene().removeItem(icon)
+        scene = self.scene()
+        scene.removeItem(icon)
+        scene.shrink_if_needed()
 
     def links(self):
         """Returns all Links in the scene.
         Used for saving the project."""
-        return [item for item in self.items() if type(item) == Link]
+        return [item for item in self.items() if isinstance(item, Link)]
 
     def add_link(self, src_connector, dst_connector):
         """Draws link between source and destination connectors on scene.
@@ -384,7 +385,7 @@ class DesignQGraphicsView(CustomQGraphicsView):
         if not connections:
             return
         # Convert old format to new format
-        if type(connections[0]) == list:
+        if isinstance(connections[0], list):
             connections_old = connections.copy()
             connections.clear()
             items = self._project_item_model.items()

@@ -163,7 +163,6 @@
     <property name="title">
      <string>Edit</string>
     </property>
-    <addaction name="separator"/>
     <addaction name="actionRemove_all"/>
    </widget>
    <widget class="QMenu" name="menuView">
@@ -928,6 +927,33 @@
   <action name="actionOpen_recent">
    <property name="text">
     <string>Open recent</string>
+   </property>
+  </action>
+  <action name="actionCopy">
+   <property name="text">
+    <string>Copy</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+C</string>
+   </property>
+  </action>
+  <action name="actionPaste">
+   <property name="text">
+    <string>Paste</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+V</string>
+   </property>
+  </action>
+  <action name="actionDuplicate">
+   <property name="text">
+    <string>Duplicate</string>
+   </property>
+   <property name="toolTip">
+    <string>Duplicate selected project item</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+D</string>
    </property>
   </action>
  </widget>

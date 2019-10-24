@@ -32,6 +32,10 @@ class Ui_Form(object):
         self.verticalLayout = QtWidgets.QVBoxLayout(self.frame)
         self.verticalLayout.setObjectName("verticalLayout")
         self.url_field = QtWidgets.QLineEdit(self.frame)
+        font = QtGui.QFont()
+        font.setWeight(75)
+        font.setBold(True)
+        self.url_field.setFont(font)
         self.url_field.setFrame(False)
         self.url_field.setReadOnly(True)
         self.url_field.setObjectName("url_field")
@@ -49,6 +53,9 @@ class Ui_Form(object):
         self.horizontalLayout.setObjectName("horizontalLayout")
         spacerItem = QtWidgets.QSpacerItem(40, 20, QtWidgets.QSizePolicy.Expanding, QtWidgets.QSizePolicy.Minimum)
         self.horizontalLayout.addItem(spacerItem)
+        self.refresh_button = QtWidgets.QPushButton(self.frame)
+        self.refresh_button.setObjectName("refresh_button")
+        self.horizontalLayout.addWidget(self.refresh_button)
         self.settings_button = QtWidgets.QPushButton(self.frame)
         self.settings_button.setObjectName("settings_button")
         self.horizontalLayout.addWidget(self.settings_button)
@@ -61,5 +68,6 @@ class Ui_Form(object):
     def retranslateUi(self, Form):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
         self.file_name_label.setText(QtWidgets.QApplication.translate("Form", "Filename:", None, -1))
+        self.refresh_button.setText(QtWidgets.QApplication.translate("Form", "Refresh", None, -1))
         self.settings_button.setText(QtWidgets.QApplication.translate("Form", "Settings...", None, -1))
 

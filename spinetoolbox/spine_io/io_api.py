@@ -65,7 +65,7 @@ class SourceConnection:
         specified only that number of rows.
         """
         data_iter, header, _num_cols = self.get_data_iterator(table, options, max_rows)
-        data = [d for d in data_iter]
+        data = list(data_iter)
         return data, header
 
     def get_mapped_data(self, tables_mappings, options, max_rows=-1):

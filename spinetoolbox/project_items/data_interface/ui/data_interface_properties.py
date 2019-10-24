@@ -111,7 +111,7 @@ class Ui_Form(object):
         Form.setWindowTitle(QtWidgets.QApplication.translate("Form", "Form", None, -1))
         self.label_di_name.setText(QtWidgets.QApplication.translate("Form", "Name", None, -1))
         self.pushButton_import_editor.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open selected file in Import Editor</p></body></html>", None, -1))
-        self.pushButton_import_editor.setText(QtWidgets.QApplication.translate("Form", "Import Editor", None, -1))
+        self.pushButton_import_editor.setText(QtWidgets.QApplication.translate("Form", "Import Editor...", None, -1))
         self.toolButton_di_open_dir.setToolTip(QtWidgets.QApplication.translate("Form", "<html><head/><body><p>Open this Data Connection\'s project directory in file browser</p></body></html>", None, -1))
 
 from spinetoolbox import resources_icons_rc

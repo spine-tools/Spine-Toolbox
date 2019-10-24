@@ -29,6 +29,7 @@ from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from .custom_qwidgets import ZoomWidget
 from .report_plotting_failure import report_plotting_failure
+from .shrinking_scene import ShrinkingScene
 from ..mvcmodels.object_relationship_models import ObjectTreeModel, ObjectClassListModel, RelationshipClassListModel
 from ..graphics_items import ObjectItem, ArcItem, CustomTextItem
 from ..helpers import busy_effect, fix_name_ambiguity
@@ -203,10 +204,16 @@ class GraphViewForm(DataStoreForm):
             self.show_add_relationship_classes_form()
 
     def _object_tree_view_mouse_press_event(self, event):
-        """Overrides mousePressEvent of ui.treeView_object so that Ctrl has the opposite effect.
-        That is, if Ctrl is not pressed, then the selection is extended.
-        If Ctrl *is* pressed, then the selection is reset.
+        """Overrides mousePressEvent of ui.treeView_object if the user has selected sticky
+        selection in Settings. If sticky selection is enabled, multi-selection is
+        enabled when selecting items in the Object tree. Pressing the Ctrl-button down,
+        enables single selection. If sticky selection is disabled, single selection is
+        enabled and pressing the Ctrl-button down enables multi-selection.
         """
+        sticky_selection = self.qsettings().value("appSettings/stickySelection", defaultValue="false")
+        if sticky_selection == "false":
+            QTreeView.mousePressEvent(self.ui.treeView_object, event)
+            return
         local_pos = event.localPos()
         window_pos = event.windowPos()
         screen_pos = event.screenPos()
@@ -597,11 +604,11 @@ class GraphViewForm(DataStoreForm):
         return True
 
     def new_scene(self):
-        """A new scene with a background."""
+        """Replaces the current scene with a new one."""
         old_scene = self.ui.graphicsView.scene()
         if old_scene:
             old_scene.deleteLater()
-        scene = QGraphicsScene()
+        scene = ShrinkingScene(100.0, 100.0, None)
         self.ui.graphicsView.setScene(scene)
         scene.changed.connect(self._handle_scene_changed)
         scene.selectionChanged.connect(self._handle_scene_selection_changed)
@@ -1018,7 +1025,7 @@ class GraphViewForm(DataStoreForm):
                 hints = GraphAndTreeViewPlottingHints(table_view)
                 plot_widget = plot_selection(model, selection, hints)
             except PlottingError as error:
-                report_plotting_failure(error)
+                report_plotting_failure(error, self)
                 return
             if (
                 table_view is self.ui.tableView_object_parameter_value
@@ -1055,6 +1062,7 @@ class GraphViewForm(DataStoreForm):
             self.commit_available.emit(True)
             for item in self.object_item_selection:
                 item.wipe_out()
+            self.ui.graphicsView.scene().shrink_if_needed()
             self.msg.emit("Successfully removed items.")
         except SpineDBAPIError as e:
             self.msg_error.emit(e.msg)

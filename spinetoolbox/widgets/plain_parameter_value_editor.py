@@ -60,6 +60,7 @@ class PlainParameterValueEditor(QWidget):
 
     def __init__(self, parent_widget=None):
         from ..ui.plain_parameter_value_editor import Ui_PlainParameterValueEditor
+
         super().__init__(parent_widget)
         self._ui = Ui_PlainParameterValueEditor()
         self._ui.setupUi(self)

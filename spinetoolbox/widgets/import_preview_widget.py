@@ -36,7 +36,7 @@ class ImportPreviewWidget(QWidget):
     mappedDataReady = Signal(dict, list)
     previewDataUpdated = Signal()
 
-    def __init__(self, connector, parent=None):
+    def __init__(self, connector, parent):
         from ..ui.import_preview import Ui_ImportPreview
 
         super().__init__(parent)
@@ -54,7 +54,9 @@ class ImportPreviewWidget(QWidget):
         self._ui = Ui_ImportPreview()
         self._ui.setupUi(self)
         self._ui.source_data_table.setModel(self.table)
-        self._ui_error = QErrorMessage()
+        self._ui_error = QErrorMessage(self)
+        self._ui_error.setWindowTitle("Error")
+        self._ui_error.setWindowFlag(Qt.WindowContextHelpButtonHint, False)
         self._ui_preview_menu = MappingTableMenu(self._ui.source_data_table)
         self._ui.top_source_splitter.addWidget(self.connector.option_widget())
         self._ui.mappings_box.setLayout(QVBoxLayout())
@@ -62,6 +64,7 @@ class ImportPreviewWidget(QWidget):
         self._ui.mappings_box.layout().addWidget(self._ui_mapper)
 
         # connect signals
+        self._ui.source_data_table.setContextMenuPolicy(Qt.CustomContextMenu)
         self._ui.source_data_table.customContextMenuRequested.connect(self._ui_preview_menu.request_menu)
         self._ui.source_list.currentItemChanged.connect(self.select_table)
         self._ui.source_list.itemChanged.connect(self.check_list_item)
@@ -107,7 +110,9 @@ class ImportPreviewWidget(QWidget):
         Sets widgets enable state
         """
         self._ui.source_list.setDisabled(status)
-        self._ui.source_data_table.setDisabled(status)
+        preview_table = 0
+        loading_message = 1
+        self._ui.source_preview_widget_stack.setCurrentIndex(loading_message if status else preview_table)
         self._ui_mapper.setDisabled(status)
 
     def connection_ready(self):
@@ -203,6 +208,14 @@ class ImportPreviewWidget(QWidget):
 
     def update_preview_data(self, data, header):
         if data:
+            try:
+                data = _sanitize_data(data, header)
+            except RuntimeError as error:
+                self._ui_error.showMessage("".format(error))
+                self.table.reset_model()
+                self.table.set_horizontal_header_labels([])
+                self.previewDataUpdated.emit()
+                return
             if not header:
                 header = list(range(len(data[0])))
             self.table.reset_model(main_data=data)
@@ -306,3 +319,17 @@ class MappingTableMenu(QMenu):
         mPos = pPos + QPos
         self.move(mPos)
         self.show()
+
+
+def _sanitize_data(data, header):
+    """Fills empty data cells with None."""
+    expected_columns = len(header) if header else len(data[0])
+    sanitized_data = list()
+    for row in data:
+        length_diff = expected_columns - len(row)
+        if length_diff > 0:
+            row = row + length_diff * [None]
+        elif length_diff < 0:
+            raise RuntimeError("A row contains too many columns of data.")
+        sanitized_data.append(row)
+    return sanitized_data

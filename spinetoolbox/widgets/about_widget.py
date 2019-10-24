@@ -33,6 +33,7 @@ class AboutWidget(QWidget):
     def __init__(self, toolbox, version):
         """Initializes About widget."""
         from ..ui import about
+
         super().__init__(parent=toolbox, f=Qt.Popup)  # Setting the parent inherits the stylesheet
         self._toolbox = toolbox
         # Set up the user interface from Designer file.

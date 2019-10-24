@@ -21,10 +21,7 @@ from PySide2.QtGui import QFont
 from ..helpers import busy_effect, format_string_list
 from .minimal_table_model import MinimalTableModel
 from .empty_row_model import EmptyRowModel
-from .empty_parameter_models import (
-    EmptyRelationshipParameterValueModel,
-    EmptyRelationshipParameterDefinitionModel,
-)
+from .empty_parameter_models import EmptyRelationshipParameterValueModel, EmptyRelationshipParameterDefinitionModel
 from .sub_parameter_models import SubParameterValueModel, SubParameterDefinitionModel
 
 

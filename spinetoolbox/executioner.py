@@ -18,7 +18,6 @@ Contains classes for handling project item execution.
 
 import logging
 import os
-import fnmatch
 import random
 from PySide2.QtCore import Signal, Slot, QObject
 import networkx as nx
@@ -188,7 +187,7 @@ class DirectedGraphHandler(QObject):
         for dag in self.dags():
             if dag.has_node(node_name):
                 return dag
-        logging.error("Graph containing node %s not found. Something is wrong.", node_name)
+        # logging.error("Graph containing node %s not found. Something is wrong.", node_name)
         return None
 
     def dag_with_edge(self, src_node, dst_node):
@@ -330,12 +329,8 @@ class ExecutionInstance(QObject):
         self._ordered_nodes = ordered_nodes
         self.execution_list = list(ordered_nodes)  # Ordered list of nodes to execute. First node at index 0
         self.running_item = None
-        # Data seen by project items in the list
-        self.dc_refs = dict()  # Key is DC item name, value is reference list
-        self.dc_files = dict()  # Key is DC item name, value is file list
-        self.ds_urls = dict()  # Key is DS item name, value is url
-        self.di_data = dict()  # Key is DI item name, value is data for import
-        self.tool_output_files = dict()  # Key is Tool item name, value is list of paths to output files
+        # Resources available to project items
+        self.resources = dict()  # Key is item name, value is resource list
         self.rank = 0  # The number in the list of the item currently simulated
 
     def start_execution(self):
@@ -367,7 +362,6 @@ class ExecutionInstance(QObject):
             # User pressed Stop button
             self.graph_execution_finished_signal.emit(-2)
             return
-        self.propagate_data(self.running_item.name)
         try:
             item_name = self.execution_list.pop(0)
         except IndexError:
@@ -391,191 +385,33 @@ class ExecutionInstance(QObject):
             ind = self._toolbox.project_item_model.find_item(item)
             project_item = self._toolbox.project_item_model.project_item(ind)
             project_item.simulate_execution(self)
-            self.propagate_data(item)
 
-    def add_ds_url(self, ds_item, url):
-        """Adds given url to the list of urls seen by ds_item output items.
+    def advertise_resources(self, advertiser, *resources):
+        """
+        Advertises resources. The general rule is that the given resources become available to the advertiser's
+        direct children.
 
         Args:
-            ds_item (str): name of Data store item that provides the url
-            url (URL): Url
+            advertiser (str): the name of the item that does the advertising
+            resources (ProjectItemResource): the resources being advertised
         """
-        for item in self._ordered_nodes[ds_item]:
-            self.ds_urls.setdefault(item, set()).add(url)
+        for child in self._ordered_nodes[advertiser]:
+            self.resources.setdefault(child, list()).extend(list(resources))
 
-    def add_di_data(self, di_item, data):
-        """Adds given import data to the list seen by di_item output items.
+    def available_resources(self, item):
+        """Returns the list of resources available to the given item.
 
         Args:
-            di_item (str): name of Data interface item that provides the data
-            data (list): Data to import
+            item (str): the name of the item that asks
         """
-        for item in self._ordered_nodes[di_item]:
-            self.di_data.setdefault(item, list()).append((di_item, data))
+        return self.resources.get(item, list())
 
-    def append_dc_refs(self, dc_item, refs):
-        """Adds given file paths (Data Connection file references) to the list seen by dc_item output items.
+    def propagate_data(self, item):
+        """Advartise data seen by given item to its output items.
+        NOTE: Not in use at the moment.
 
         Args:
-            dc_item (str): name of Data connection item that provides the file references
-            refs (list): List of file paths (references)
+            item (str): Project item name whose data needs to be propagated
         """
-        for item in self._ordered_nodes[dc_item]:
-            self.dc_refs.setdefault(item, set()).update(refs)
-
-    def append_dc_files(self, dc_item, files):
-        """Adds given project data file paths to the list seen by dc_item output items.
-
-        Args:
-            dc_item (str): name of Data connection item that provides the files
-            refs (list): List of file paths (references)
-        """
-        for item in self._ordered_nodes[dc_item]:
-            self.dc_files.setdefault(item, set()).update(files)
-
-    def append_tool_output_file(self, tool_item, filepath):
-        """Adds given file path provided to the list seen by tool_item output items.
-
-        Args:
-            tool_item (str): name of Tool item that provides the file
-            filepath (str): Path to a tool output file (in tool result directory)
-        """
-        for item in self._ordered_nodes[tool_item]:
-            self.tool_output_files.setdefault(item, set()).add(filepath)
-
-    def ds_urls_at_sight(self, item):
-        """Returns ds urls currently seen by the given item.
-
-        Args:
-            item (str): item name
-        """
-        return self.ds_urls.get(item, set())
-
-    def di_data_at_sight(self, item):
-        """Returns di data currently seen by the given item.
-
-        Args:
-            item (str): item name
-        """
-        return self.di_data.get(item, list())
-
-    def dc_refs_at_sight(self, item):
-        """Returns dc refs currently seen by the given item.
-
-        Args:
-            item (str): item name
-        """
-        return self.dc_refs.get(item, set())
-
-    def dc_files_at_sight(self, item):
-        """Returns dc files currently seen by the given item.
-
-        Args:
-            item (str): item name
-        """
-        return self.dc_files.get(item, set())
-
-    def tool_output_files_at_sight(self, item):
-        """Returns tool output files currently seen by the given item.
-
-        Args:
-            item (str): item name
-        """
-        return self.tool_output_files.get(item, set())
-
-    def propagate_data(self, input_item):
-        """Propagate data seen by given item into output items.
-        This is called after successful execution of input_item.
-        Note that executing DAGs in BFS-order ensures data is correctly propagated.
-
-        Args:
-            input_item (str): Project item name whose data needs to be propagated
-        """
-        # Everything that the input item sees...
-        ds_urls_at_sight = self.ds_urls_at_sight(input_item)
-        di_data_at_sight = self.di_data_at_sight(input_item)
-        dc_refs_at_sight = self.dc_refs_at_sight(input_item)
-        dc_files_at_sight = self.dc_files_at_sight(input_item)
-        tool_output_files_at_sight = self.tool_output_files_at_sight(input_item)
-        # ...make it seeable also by output items
-        for item in self._ordered_nodes[input_item]:
-            self.ds_urls.setdefault(item, set()).update(ds_urls_at_sight)
-            self.di_data.setdefault(item, list()).extend(di_data_at_sight)
-            self.dc_refs.setdefault(item, set()).update(dc_refs_at_sight)
-            self.dc_files.setdefault(item, set()).update(dc_files_at_sight)
-            self.tool_output_files.setdefault(item, set()).update(tool_output_files_at_sight)
-
-    def find_file(self, filename, item):
-        """Returns the first occurrence of full path to given file name in files seen by the given item,
-        or None if file was not found.
-
-        Args:
-            filename (str): Searched file name (no path) TODO: Change to pattern
-            item (str): item name
-
-        Returns:
-            str: Full path to file if found, None if not found
-        """
-        # Look in Data Stores
-        for url in self.ds_urls_at_sight(item):
-            drivername = url.drivername.lower()
-            if drivername.startswith('sqlite'):
-                filepath = url.database
-                _, file_candidate = os.path.split(filepath)
-                if file_candidate == filename:
-                    # logging.debug("Found path for {0} from ds urls: {1}".format(filename, url))
-                    return filepath
-            else:
-                # TODO: Other dialects
-                pass
-        # Look in Data Connections
-        for dc_ref in self.dc_refs_at_sight(item):
-            _, file_candidate = os.path.split(dc_ref)
-            if file_candidate == filename:
-                # logging.debug("Found path for {0} from dc refs: {1}".format(filename, dc_ref))
-                return dc_ref
-        for dc_file in self.dc_files_at_sight(item):
-            _, file_candidate = os.path.split(dc_file)
-            if file_candidate == filename:
-                # logging.debug("Found path for {0} from dc files: {1}".format(filename, dc_file))
-                return dc_file
-        # Look in Tool output files
-        for tool_file in self.tool_output_files_at_sight(item):
-            _, file_candidate = os.path.split(tool_file)
-            if file_candidate == filename:
-                # logging.debug("Found path for {0} from Tool result files: {1}".format(filename, tool_file))
-                return tool_file
-        return None
-
-    def find_optional_files(self, pattern, item):
-        """Returns a list of found paths to files that match the given pattern in files seen by item.
-
-        Returns:
-            list: List of (full) paths
-            item (str): item name
-        """
-        # logging.debug("Searching optional input files. Pattern: '{0}'".format(pattern))
-        matches = list()
-        # Find matches when pattern includes wildcards
-        if ('*' in pattern) or ('?' in pattern):
-            # Find matches in Data Store urls. NOTE: Only sqlite urls are considered
-            ds_urls = self.ds_urls_at_sight(item)
-            ds_files = [url.database for url in ds_urls if url.drivername.lower().startswith('sqlite')]
-            ds_matches = fnmatch.filter(ds_files, pattern)
-            # Find matches in Data Connection references
-            dc_refs = self.dc_refs_at_sight(item)
-            dc_ref_matches = fnmatch.filter(dc_refs, pattern)
-            # Find matches in Data Connection data files
-            dc_files = self.dc_files_at_sight(item)
-            dc_file_matches = fnmatch.filter(dc_files, pattern)
-            # Find matches in Tool output files
-            tool_output_files = self.tool_output_files_at_sight(item)
-            tool_matches = fnmatch.filter(tool_output_files, pattern)
-            matches += ds_matches + dc_ref_matches + dc_file_matches + tool_matches
-        else:
-            # Pattern is an exact filename (no wildcards)
-            match = self.find_file(pattern, item)
-            if match is not None:
-                matches.append(match)
-        # logging.debug("Matches:{0}".format(matches))
-        return matches
+        resources = self.available_resources(item)
+        self.advertise_resources(item, *resources)

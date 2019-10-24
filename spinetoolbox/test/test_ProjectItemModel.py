@@ -10,18 +10,17 @@
 ######################################################################################################################
 
 """
-Unit tests for ProjectItem base class.
+Unit tests for ProjectItemModel class.
 
 :author: A. Soininen (VTT)
-:date:   4.10.2019
+:date:   14.10.2019
 """
 
-from collections import namedtuple
 from tempfile import TemporaryDirectory
 import unittest
 from unittest.mock import MagicMock
-
-from ..project_item import ProjectItem
+from ..mvcmodels.project_item_model import ProjectItemModel
+from ..project_item import CategoryProjectItem, ProjectItem, RootProjectItem
 
 
 class _MockProject:
@@ -30,33 +29,27 @@ class _MockProject:
 
 
 class _MockToolbox:
-    class Message:
-        def __init__(self):
-            self.text = None
-
-        def emit(self, text):
-            self.text = text
-
     def __init__(self, project):
         self._project = project
-        self.msg_warning = _MockToolbox.Message()
 
     def project(self):
         return self._project
 
 
-class TestProjectItem(unittest.TestCase):
-    def test_notify_destination(self):
+class TestProjectItemModel(unittest.TestCase):
+    def test_category_of_item(self):
         with TemporaryDirectory() as project_dir:
             project = _MockProject(project_dir)
             toolbox = _MockToolbox(project)
-            item = ProjectItem(toolbox, "item_type", "name", "description", 0.0, 0.0)
-            item.notify_destination(item)
-            self.assertEqual(
-                toolbox.msg_warning.text,
-                "Link established."
-                " Interaction between a <b>item_type</b> and a <b>item_type</b> has not been implemented yet.",
-            )
+            root = RootProjectItem()
+            category = CategoryProjectItem("category", "category description", None, MagicMock(), None, None)
+            root.add_child(category)
+            model = ProjectItemModel(toolbox, root)
+            self.assertEqual(model.category_of_item("nonexistent item"), None)
+            item = ProjectItem(toolbox, "item type", "item", "item description", 0.0, 0.0)
+            category.add_child(item)
+            found_category = model.category_of_item("item")
+            self.assertEqual(found_category.name, category.name)
 
 
 if __name__ == '__main__':
