@@ -17,7 +17,7 @@ Classes for drawing graphics items on QGraphicsScene.
 """
 
 from math import atan2, degrees, sin, cos, pi
-from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, Signal
+from PySide2.QtCore import Qt, QPointF, QLineF, QRectF, Slot
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsPathItem,
@@ -785,6 +785,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsMovable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
+        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
         self.shade = QGraphicsRectItem(super().boundingRect(), self)
         self.shade.setBrush(self._selected_color)
@@ -910,25 +911,32 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def mouseMoveEvent(self, event):
         """Calls move related items and checks for a merge target."""
-        super().mouseMoveEvent(event)
-        # Move selected items together
-        object_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
-        for item in object_items:
-            item.move_related_items_by(event.scenePos() - event.lastScenePos())
-        self.check_for_merge_target(event.scenePos())
-        # Depending on the value of merge target and bounce, set drop indicator cursor
-        for view in self.scene().views():
-            if view not in self._views_cursor:
-                self._views_cursor[view] = view.viewport().cursor()
-            if self._merge_target:
-                view.viewport().setCursor(Qt.DragCopyCursor)
-            elif self._bounce:
-                view.viewport().setCursor(Qt.ForbiddenCursor)
-            else:
-                try:
-                    view.viewport().setCursor(self._views_cursor[view])
-                except KeyError:
-                    pass
+        if event.buttons() & Qt.LeftButton != 0:
+            # We need to manually move ObjectItems because the ItemIgnoresTransformations flag
+            # prevents the default movement working properly when the scene rect changes
+            # during the movement.
+            move_by = event.scenePos() - event.lastScenePos()
+            # Move selected items together
+            selected_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
+            for item in selected_items:
+                item.moveBy(move_by.x(), move_by.y())
+                item.move_related_items_by(move_by)
+            self.check_for_merge_target(event.scenePos())
+            # Depending on the value of merge target and bounce, set drop indicator cursor
+            for view in self.scene().views():
+                if view not in self._views_cursor:
+                    self._views_cursor[view] = view.viewport().cursor()
+                if self._merge_target:
+                    view.viewport().setCursor(Qt.DragCopyCursor)
+                elif self._bounce:
+                    view.viewport().setCursor(Qt.ForbiddenCursor)
+                else:
+                    try:
+                        view.viewport().setCursor(self._views_cursor[view])
+                    except KeyError:
+                        pass
+        else:
+            super().mouseMoveEvent(event)
 
     def mouseReleaseEvent(self, event):
         """Merge, bounce, notify scene or just do nothing."""
@@ -958,7 +966,7 @@ class ObjectItem(QGraphicsPixmapItem):
         """
         if change == QGraphicsItem.ItemScenePositionHasChanged:
             self._moved_on_scene = True
-        return super().itemChange(change, value)
+        return value
 
     def check_for_merge_target(self, scene_pos):
         """Checks if this item is touching another item so they can merge
@@ -1053,17 +1061,6 @@ class ObjectItem(QGraphicsPixmapItem):
             scene.removeItem(item)
         scene.removeItem(self)
 
-    def adjust_to_zoom(self, factor):
-        """Update item geometry after performing a zoom.
-        This is so items stay the same size (that is, the zoom controls the *spread*)."""
-        new_scale = self.scale() / factor
-        self.setScale(new_scale)
-
-    def reset_zoom(self):
-        """Reset items geometry to original unzoomed state.
-        """
-        self.setScale(1.0)
-
 
 class ArcItem(QGraphicsLineItem):
     def __init__(
@@ -1087,7 +1084,7 @@ class ArcItem(QGraphicsLineItem):
             relationship_class_id (int): relationship class id
             src_item (ObjectItem): source item
             dst_item (ObjectItem): destination item
-            width (int): Preferred line width
+            width (float): Preferred line width
             arc_color (QColor): arc color
             object_id_list (str): object id comma separated list
             token_object_extent (int): token preferred extent
@@ -1100,8 +1097,7 @@ class ArcItem(QGraphicsLineItem):
         self.relationship_class_id = relationship_class_id
         self.src_item = src_item
         self.dst_item = dst_item
-        self.width = width
-        self._orig_width = width
+        self._width = float(width)
         self.is_template = False
         self.template_id = None
         src_x = src_item.x()
@@ -1113,7 +1109,7 @@ class ArcItem(QGraphicsLineItem):
             self, token_color, token_object_extent, token_object_label_color, *token_object_name_tuple_list
         )
         self.normal_pen = QPen()
-        self.normal_pen.setWidth(self.width)
+        self.normal_pen.setWidth(self._width)
         self.normal_pen.setColor(arc_color)
         self.normal_pen.setStyle(Qt.SolidLine)
         self.normal_pen.setCapStyle(Qt.RoundCap)
@@ -1127,20 +1123,6 @@ class ArcItem(QGraphicsLineItem):
         self.setAcceptHoverEvents(True)
         viewport = self._graph_view_form.ui.graphicsView.viewport()
         self.viewport_cursor = viewport.cursor()
-
-    def adjust_to_zoom(self, factor):
-        """Update item geometry after performing a zoom.
-        This is so items stay the same size (that is, the zoom controls the *spread*)."""
-        self.width /= factor
-        self.normal_pen.setWidth(self.width)
-        self.selected_pen.setWidth(self.width)
-
-    def reset_zoom(self):
-        """Reset items geometry to original unzoomed state.
-        """
-        self.width = self._orig_width
-        self.normal_pen.setWidth(self.width)
-        self.selected_pen.setWidth(self.width)
 
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
@@ -1177,16 +1159,12 @@ class ArcItem(QGraphicsLineItem):
         self.setLine(line)
         self.token_item.update_pos()
 
-    def hoverEnterEvent(self, event):
-        """Set viewport's cursor to arrow."""
-        # viewport = self._graph_view_form.ui.graphicsView.viewport()
-        # self.viewport_cursor = viewport.cursor()
-        # viewport.setCursor(Qt.ArrowCursor)
-
-    def hoverLeaveEvent(self, event):
-        """Restore viewport's cursor."""
-        # viewport = self._graph_view_form.ui.graphicsView.viewport()
-        # viewport.setCursor(self.viewport_cursor)
+    def adjust_to_zoom(self, factor):
+        """Update item geometry after performing a zoom.
+        This is so items stay the same size (that is, the zoom controls the *spread*)."""
+        scaled_width = self._width / factor
+        self.normal_pen.setWidthF(scaled_width)
+        self.selected_pen.setWidthF(scaled_width)
 
 
 class ObjectLabelItem(QGraphicsTextItem):
@@ -1254,13 +1232,13 @@ class ArcTokenItem(QGraphicsEllipseItem):
         """
         super().__init__(arc_item)
         self.arc_item = arc_item
-        x = 0
+        x = 0.0
         for j, name_tuple in enumerate(object_name_tuples):
             if not name_tuple:
                 continue
             object_item = SimpleObjectItem(self, 0.875 * object_extent, object_label_color, *name_tuple)
             if j % 2 == 0:
-                y = 0
+                y = 0.0
             else:
                 y = -0.875 * 0.75 * object_item.boundingRect().height()
                 object_item.setZValue(-1)
@@ -1282,8 +1260,9 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self.setRect(rectf)
         self.setPen(Qt.NoPen)
         self.setBrush(color)
-        self.update_pos()
+        self._zoomed_position_offset = QPointF(0.0, 0.0)
         self.setTransformOriginPoint(self.boundingRect().center())
+        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
 
     def boundingRect(self):
         """Include children's bounding rect so they are correctly painted."""
@@ -1296,24 +1275,19 @@ class ArcTokenItem(QGraphicsEllipseItem):
             rectf |= item.sceneBoundingRect()
         return rectf
 
-    def adjust_to_zoom(self, factor):
-        """Update item geometry after performing a zoom.
-        This is so items stay the same size (that is, the zoom controls the *spread*).
-        """
-        new_scale = self.scale() / factor
-        self.setScale(new_scale)
-
-    def reset_zoom(self):
-        """Reset items geometry to original unzoomed state.
-        """
-        self.setScale(1.0)
-
     def update_pos(self):
         """Put token item in position."""
         center = self.arc_item.line().center()
-        rectf = self.rect()
-        rectf.moveCenter(center)
-        self.setPos(rectf.topLeft())
+        self.setPos(center - self._zoomed_position_offset)
+
+    def adjust_to_zoom(self, factor):
+        """Update item geometry after performing a zoom.
+        This is so items stay the same size (that is, the zoom controls the *spread*)."""
+        rect = self.rect()
+        rect.setWidth(rect.width() / factor)
+        rect.setHeight(rect.height() / factor)
+        self._zoomed_position_offset = rect.center()
+        self.update_pos()
 
 
 class SimpleObjectItem(QGraphicsPixmapItem):
