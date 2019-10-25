@@ -62,10 +62,15 @@ class ConnectionManager(QObject):
         self._source = None
         self._current_table = None
         self._table_options = {}
+        self._table_types = {}
         self._connection = connection
         self._options_widget = OptionsWidget(self._connection.OPTIONS)
         self._options_widget.optionsChanged.connect(self._new_options)
         self._is_connected = False
+
+    @property
+    def current_table(self):
+        return self._current_table
 
     @property
     def is_connected(self):
@@ -74,6 +79,10 @@ class ConnectionManager(QObject):
     @property
     def table_options(self):
         return self._table_options
+
+    @property
+    def table_types(self):
+        return self._table_types
 
     @property
     def source(self):
@@ -124,6 +133,7 @@ class ConnectionManager(QObject):
         """
         if self.is_connected:
             options = self._options_widget.get_options()
+            types = self.table_types.get(table, {})
             self.fetchingData.emit()
             self.startDataGet.emit(table, options, max_rows)
 
@@ -198,6 +208,10 @@ class ConnectionManager(QObject):
         for key, table_settings in table_options.items():
             self._table_options.setdefault(key, table_settings.get("options", {}))
 
+        # save table types if they don't already exists
+        for key, table_settings in table_options.items():
+            self._table_types.setdefault(key, table_settings.get("types", {}))
+
         tables = {k: t.get("mapping", None) for k, t in table_options.items()}
         self.tablesReady.emit(tables)
         # update options if a sheet is selected
@@ -219,6 +233,14 @@ class ConnectionManager(QObject):
         self._table_options.update(options)
         if self._current_table:
             self._options_widget.set_options(options=self._table_options.get(self._current_table, {}))
+
+    def set_table_types(self, types):
+        """Sets connection manager types for current connector
+
+        Arguments:
+            types {dict} -- Dict with types settings
+        """
+        self._table_types.update(types)
 
     def option_widget(self):
         """

@@ -15,10 +15,24 @@ Classes for handling models in PySide2's model/view framework.
 :author: P. Vennström (VTT)
 :date:   1.6.2019
 """
-from spinedb_api import ObjectClassMapping, RelationshipClassMapping, ParameterMapping, Mapping
-from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel
-from PySide2.QtGui import QColor
+from collections import namedtuple
+from six import unichr
+
+from spinedb_api import ObjectClassMapping, RelationshipClassMapping, ParameterMapping, Mapping, DateTime, Duration
+from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QPushButton, QToolButton
+from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, QPoint, Signal
+from PySide2.QtGui import QColor, QBrush, QRegion, QPixmap, QFont
 from ..mvcmodels.minimal_table_model import MinimalTableModel
+
+Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
+
+_COLUMN_TYPE_ROLE = Qt.UserRole
+_COLUMN_NUMBER_ROLE = Qt.UserRole + 1
+_ALLOWED_TYPES = ("float", "string", "datetime", "duration")
+
+_TYPE_TO_FONT_AWESOME_ICON = {"string": unichr(int('f031', 16)), "datetime": unichr(int('f073', 16)), "duration": unichr(int('f017', 16)), "float": unichr(int('f534', 16))}
+
+_TYPE_TO_CLASS = {"string": str, "datetime": DateTime, "duration": Duration, "float": float}
 
 _DISPLAY_TYPE_TO_TYPE = {
     "Single value": "single value",
@@ -34,12 +48,22 @@ class MappingPreviewModel(MinimalTableModel):
     """A model for highlighting columns, rows, and so on, depending on Mapping specification.
     Used by ImportPreviewWidget.
     """
+    columnTypesUpdated = Signal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self._mapping = None
         self._data_changed_signal = None
+        self._type_errors = {}
+    
+    def clear(self):
+        self._type_errors = {}
+        super().clear()
+
+    def reset_model(self, main_data=None):
+        self._type_errors = {}
+        super().reset_model(main_data)
 
     def set_mapping(self, mapping):
         """Set mapping to display colors from
@@ -55,10 +79,52 @@ class MappingPreviewModel(MinimalTableModel):
             self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
         self.update_colors()
 
+    def validate_column(self, col):
+        type_class = self.get_column_type(col)
+        if type_class is None:
+            return
+        type_class = _TYPE_TO_CLASS[type_class]
+        for row in range(self.rowCount()):
+            index = self.index(row, col)
+            self._type_errors.pop((row, col), None)
+            data = self.data(index)
+            try:
+                if data is not None:
+                    type_class(data)
+            except ValueError as e:
+                self._type_errors[(row, col)] = e
+        self.dataChanged.emit(self.index(0, col), self.index(self.rowCount(), col))
+
+    def get_column_type(self, col):
+        return self.headerData(col, orientation=Qt.Horizontal, role=_COLUMN_TYPE_ROLE)
+
+    def get_column_types(self):
+        return {col: self.get_column_type(col) for col in range(self.columnCount())}
+
+    def set_column_type(self, col, col_type):
+        if col_type not in _ALLOWED_TYPES:
+            raise ValueError(f"col_type must be a value in {_ALLOWED_TYPES}, instead got {col_type}")
+        if col < 0 or col > self.columnCount():
+            raise ValueError(f"col must be a in column count")
+        success = self.setHeaderData(col, Qt.Horizontal, col_type, _COLUMN_TYPE_ROLE)
+        if success:
+            self.columnTypesUpdated.emit()
+            self.validate_column(col)        
+
     def update_colors(self):
         self.dataChanged.emit(QModelIndex, QModelIndex, [Qt.BackgroundColorRole])
 
+    def data_error(self, index, role=Qt.DisplayRole):
+        if role == Qt.DisplayRole:
+            return "Error"
+        if role == Qt.ToolTipRole:
+            return f"Could not parse value: {self._main_data[index.row()][index.column()]} as a {self.get_column_type(index.column())}"
+        if role == Qt.BackgroundColorRole:
+            return QColor(Qt.red)
+
     def data(self, index, role=Qt.DisplayRole):
+        if (index.row(), index.column()) in self._type_errors:
+            return self.data_error(index, role)
         if role == Qt.BackgroundColorRole and self._mapping:
             return self.data_color(index)
         return super().data(index, role)
@@ -646,3 +712,134 @@ class MappingListModel(QAbstractListModel):
             self._qmappings.pop(row)
             self._names.pop(row)
             self.endRemoveRows()
+
+
+class HeaderWithButton(QHeaderView):
+    def __init__(self, orientation, parent=None):
+        super(HeaderWithButton, self).__init__(orientation, parent)
+        self.setHighlightSections(True)
+        self.setSectionsClickable(True)
+        self.setDefaultAlignment(Qt.AlignLeft)
+        self.sectionResized.connect(self._section_resize)
+        self.sectionMoved.connect(self._section_move)
+        self._font = QFont('Font Awesome 5 Free Solid')
+
+        self._margin = Margin(left=0, right=0, top=0, bottom=0)
+
+        self._menu = self._create_menu()
+
+
+        self._button = QToolButton(parent=self)
+        self._button.setMenu(self._menu)
+        self._button.setPopupMode(QToolButton.InstantPopup)
+        self._button.setFont(self._font)
+        self._button.hide()
+
+        self._render_button = QToolButton(parent=self)
+        self._render_button.setFont(self._font)
+        self._render_button.hide()
+
+        self._menu.triggered.connect(self._menu_pressed)
+        self._button_logical_index = None
+        self.setMinimumSectionSize(self.minimumSectionSize() + self.widget_width())
+
+    def _create_menu(self):
+        menu = QMenu(self)
+        for at in _ALLOWED_TYPES:
+            action = QAction(parent=menu)
+            action.setText(at)
+            menu.addAction(action)
+        menu.triggered.connect(self._menu_pressed)
+        return menu
+
+    def _menu_pressed(self, action):
+        logical_index = self._button_logical_index
+        self.model().set_column_type(logical_index, action.text())
+
+    def widget_width(self):
+        return self.height()
+
+    def mouseMoveEvent(self, mouse_event):
+        log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
+        if self._button_logical_index != log_index:
+            self._button_logical_index = log_index
+            self._set_button_geometry(self._button, log_index)
+            self._button.show()
+        super().mouseMoveEvent(mouse_event)
+
+    def mousePressEvent(self, mouse_event):
+        log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
+        if self._button_logical_index != log_index:
+            self._button_logical_index = log_index
+            self._set_button_geometry(self._button, log_index)
+            self._button.show()
+        super().mousePressEvent(mouse_event)
+
+    def leaveEvent(self, event):
+        self._button_logical_index = None
+        self._button.hide()
+        super().leaveEvent(event)
+
+    def _set_button_geometry(self, button, index):
+        margin = self._margin
+        button.setGeometry(
+            self.sectionViewportPosition(index) + margin.left,
+            margin.top,
+            self.widget_width() - self._margin.left - self._margin.right,
+            self.height() - margin.top - margin.bottom,
+        )
+
+    def _section_resize(self, i):
+        self._button.hide()
+        if i == self._button_logical_index:
+            self._set_button_geometry(self._button, self._button_logical_index)
+
+    def paintSection(self, painter, rect, logical_index):
+        """move original rect a bit to the right to make room for the widget"""
+        type_str = self.model().headerData(logical_index, self.orientation(), _COLUMN_TYPE_ROLE)
+        if type_str is None:
+            type_str = "string"
+        font_str = _TYPE_TO_FONT_AWESOME_ICON[type_str]
+
+        self._button.setText(font_str)
+        self._render_button.setText(font_str)
+        self._set_button_geometry(self._render_button, logical_index)
+
+        rw = self._render_button.grab()
+        painter.drawPixmap(self.sectionViewportPosition(logical_index), 0, rw)
+
+        rect.adjust(self.widget_width(), 0, 0, 0)
+        super().paintSection(painter, rect, logical_index)
+
+    def sectionSizeFromContents(self, logical_index):
+        org_size = super().sectionSizeFromContents(logical_index)
+        org_size.setWidth(org_size.width() + self.widget_width())
+        return org_size
+
+    def _section_move(self, logical, old_visual_index, new_visual_index):
+        self._button.hide()
+        if self._button_logical_index is not None:
+            self._set_button_geometry(self._button, self._button_logical_index)
+
+    def fix_widget_positions(self):
+        if self._button_logical_index is not None:
+            self._set_button_geometry(self._button, self._button_logical_index)
+
+    def set_margins(self, margins):
+        self._margin = margins
+
+    def headerDataChanged(self, orientation, logical_first, logical_last):
+        super().headerDataChanged(orientation, logical_first, logical_last)
+
+
+class TableViewWithButtonHeader(QTableView):
+    def __init__(self, parent=None):
+        super(TableViewWithButtonHeader, self).__init__(parent)
+        self._horizontal_header = HeaderWithButton(Qt.Horizontal, self)
+        self.setHorizontalHeader(self._horizontal_header)
+
+    def scrollContentsBy(self, dx, dy):
+        super().scrollContentsBy(dx, dy)
+        if dx != 0:
+            pass
+            self._horizontal_header.fix_widget_positions()

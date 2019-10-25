@@ -58,7 +58,7 @@
           <widget class="QWidget" name="table_page">
            <layout class="QVBoxLayout" name="verticalLayout_2">
             <item>
-             <widget class="QTableView" name="source_data_table"/>
+             <widget class="TableViewWithButtonHeader" name="source_data_table"/>
             </item>
            </layout>
           </widget>
@@ -117,6 +117,13 @@
    </item>
   </layout>
  </widget>
+ <customwidgets>
+  <customwidget>
+   <class>TableViewWithButtonHeader</class>
+   <extends>QTableView</extends>
+   <header>spinetoolbox/spine_io/io_models.h</header>
+  </customwidget>
+ </customwidgets>
  <resources/>
  <connections/>
 </ui>
