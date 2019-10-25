@@ -502,7 +502,7 @@ class TestToolExecution(unittest.TestCase):
                 """Provides a side effect for ToolInstance execute method."""
                 # Check that input files were copied to the base directory
                 expected_calls = [mock.call(os.path.join(dc_dir, fn), os.path.join(basedir, fn)) for fn in input_files]
-                mock_shutil.copyfile.assert_has_calls(expected_calls)
+                mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
                 # Create all output files in base dir
                 output_paths = [os.path.join(basedir, fn) for fn in output_files]
                 for filepath in output_paths:
@@ -516,7 +516,7 @@ class TestToolExecution(unittest.TestCase):
         # Check that output files were copied to the output dir
         result_dir = os.path.abspath(os.path.join(tool.output_dir, "failed", "mock_timestamp"))
         expected_calls = [mock.call(os.path.join(basedir, fn), os.path.join(result_dir, fn)) for fn in output_files]
-        mock_shutil.copyfile.assert_has_calls(expected_calls)
+        mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
         # Check that no resources are advertised
         mock_exec_inst.advertise_resources.assert_not_called()
 
@@ -599,7 +599,7 @@ class TestToolExecution(unittest.TestCase):
                     expected_calls += [mock.call(os.path.abspath(os.path.join(dc_dir, opt_abc_file)),
                                                  os.path.join(basedir, opt_abc_file))
                                        for opt_abc_file in opt_input_txt_fnames]
-                    mock_shutil.copyfile.assert_has_calls(expected_calls)
+                    mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
                     # Create all output files in base dir
                     output_paths = [os.path.join(basedir, fn) for fn in output_files]
                     for output_filepath in output_paths:
@@ -617,7 +617,7 @@ class TestToolExecution(unittest.TestCase):
             expected_calls = [mock.call(os.path.abspath(os.path.join(basedir, fn)),
                                         os.path.abspath(os.path.join(result_dir, fn)))
                               for fn in output_files]
-            mock_shutil.copyfile.assert_has_calls(expected_calls)
+            mock_shutil.copyfile.assert_has_calls(expected_calls, any_order=True)
             # Check that output files were advertised
             expected_calls = [
                 mock.call(
@@ -628,7 +628,7 @@ class TestToolExecution(unittest.TestCase):
                 )
                 for fn in output_files
             ]
-            mock_exec_inst.advertise_resources.assert_has_calls(expected_calls)
+            mock_exec_inst.advertise_resources.assert_has_calls(expected_calls, any_order=True)
 
 
 if __name__ == '__main__':
