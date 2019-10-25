@@ -510,7 +510,7 @@
                <string>&lt;html&gt;&lt;head/&gt;&lt;body&gt;&lt;p&gt;Pick Julia project with file browser&lt;/p&gt;&lt;/body&gt;&lt;/html&gt;</string>
               </property>
               <property name="text">
-               <string>...</string>
+               <string/>
               </property>
               <property name="icon">
                <iconset resource="resources/resources_icons.qrc">

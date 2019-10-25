@@ -269,20 +269,21 @@ class ToolboxUI(QMainWindow):
         self.project_form = NewProjectForm(self)
         self.project_form.show()
 
-    def create_project(self, name, description):
+    def create_project(self, name, description, location=None):
         """Create new project and set it active.
 
         Args:
             name (str): Project name
             description (str): Project description
+            location (str): Path to project directory
         """
         self.clear_ui()
-        self._project = SpineToolboxProject(self, name, description)
+        self._project = SpineToolboxProject(self, name, description, location=location)
         self._project.connect_signals()
         self.init_models(tool_specification_paths=list())  # Start project with no tool specifications
         self.setWindowTitle("Spine Toolbox    -- {} --".format(self._project.name))
         self.ui.graphicsView.init_scene(empty=True)
-        self.update_recent_projects()
+        # self.update_recent_projects()
         self.msg.emit("New project created")
         self.save_project()
 
@@ -370,7 +371,7 @@ class ToolboxUI(QMainWindow):
         self._project.connect_signals()
         # Initialize Design View scene
         self.ui.graphicsView.init_scene()
-        self.update_recent_projects()
+        # self.update_recent_projects()
         self.msg.emit("Project <b>{0}</b> is now open".format(self._project.name))
         return True
 
@@ -392,7 +393,7 @@ class ToolboxUI(QMainWindow):
         for i in range(self.tool_specification_model.rowCount()):
             tool_specifications.append(self.tool_specification_model.tool_specification(i).get_def_path())
         self._project.save(tool_specifications)
-        self.msg.emit("Project saved to <b>{0}</b>".format(self._project.path))
+        self.msg.emit("Project saved to <b>{0}</b>".format(self._project.project_file))
 
     @Slot(name="save_project_as")
     def save_project_as(self):
@@ -414,7 +415,7 @@ class ToolboxUI(QMainWindow):
         # Save project into new file
         self.save_project()
         # Load project
-        self.open_project(self._project.path)
+        self.open_project(self._project.project_file)
         return
 
     def init_models(self, tool_specification_paths):
@@ -638,7 +639,7 @@ class ToolboxUI(QMainWindow):
         # Insert tool specification into model
         self.tool_specification_model.insertRow(tool_specification)
         # Save Tool def file path to project file
-        project_file = self._project.path  # Path to project file
+        project_file = self._project.project_file  # Path to project file
         if project_file.lower().endswith('.proj'):
             # Manipulate project file contents
             try:
@@ -735,7 +736,7 @@ class ToolboxUI(QMainWindow):
         if answer != QMessageBox.Ok:
             return
         # Remove tool def file path from the project file
-        project_file = self._project.path
+        project_file = self._project.project_file
         if not project_file.lower().endswith('.proj'):
             self.msg_error.emit("Project file extension not supported. Needs to be .proj.")
             return
@@ -1447,8 +1448,8 @@ class ToolboxUI(QMainWindow):
         if self._project is None:
             self._qsettings.setValue("appSettings/previousProject", "")
         else:
-            self._qsettings.setValue("appSettings/previousProject", self._project.path)
-            self.update_recent_projects()
+            self._qsettings.setValue("appSettings/previousProject", self._project.project_file)
+            # self.update_recent_projects()
             # Show save project prompt
         self._qsettings.setValue("mainWindow/windowSize", self.size())
         self._qsettings.setValue("mainWindow/windowPosition", self.pos())

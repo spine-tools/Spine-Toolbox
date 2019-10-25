@@ -29,18 +29,19 @@ from .executioner import DirectedGraphHandler, ExecutionInstance
 
 
 class SpineToolboxProject(MetaObject):
-    """Class for Spine Toolbox projects.
+    """Class for Spine Toolbox projects."""
 
-    Attributes:
-        toolbox (ToolboxUI): toolbox of this project
-        name (str): Project name
-        description (str): Project description
-        work_dir (str): Project work directory
-        ext (str): Project save file extension(.proj)
-    """
+    def __init__(self, toolbox, name, description, work_dir=None, ext='.proj', location=""):
+        """
 
-    def __init__(self, toolbox, name, description, work_dir=None, ext='.proj'):
-        """Class constructor."""
+        Args:
+            toolbox (ToolboxUI): toolbox of this project
+            name (str): Project name
+            description (str): Project description
+            work_dir (str): Project work directory
+            ext (str): Project save file extension(.proj)
+            location (str): If this is given, create a new style project
+        """
         super().__init__(name, description)
         self._toolbox = toolbox
         self._qsettings = self._toolbox.qsettings()
@@ -51,6 +52,42 @@ class SpineToolboxProject(MetaObject):
         self._n_graphs = 0
         self._executed_graph_index = 0
         self._invalid_graphs = list()
+        if location == "":
+            self.init_old_style_project(work_dir, ext)
+        else:
+            self.project_dir = location
+            self.project_conf_dir = os.path.abspath(os.path.join(self.project_dir, ".spinetoolbox"))
+            self.project_items_dir = os.path.abspath(os.path.join(self.project_conf_dir, "items"))
+            self.project_filename = "project.proj"  # Project file
+            self.project_file = os.path.abspath(os.path.join(self.project_conf_dir, self.project_filename))
+            self.dirty = False  # TODO: Indicates if project has changed since loading
+            # Make project, project conf, and items directories
+            try:
+                create_dir(self.project_dir)
+            except OSError:
+                self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            try:
+                create_dir(self.project_conf_dir)
+            except OSError:
+                self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            try:
+                create_dir(self.project_items_dir)
+            except OSError:
+                self._toolbox.msg_error.emit("Creating directory {0} failed".format(self.project_dir))
+            # Make work directory
+            if not work_dir:
+                self.work_dir = DEFAULT_WORK_DIR
+            else:
+                self.work_dir = work_dir
+            try:
+                create_dir(self.work_dir)
+            except OSError:
+                self._toolbox.msg_error.emit(
+                    "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
+                )
+
+    def init_old_style_project(self, work_dir, ext):
+        """Create project dir and project file the old fashioned way."""
         self.project_dir = os.path.join(project_dir(self._qsettings), self.short_name)
         if not work_dir:
             self.work_dir = DEFAULT_WORK_DIR
@@ -64,14 +101,14 @@ class SpineToolboxProject(MetaObject):
             create_dir(self.project_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating project directory {0} failed." " Check permissions.".format(self.project_dir)
+                "[OSError] Creating project directory {0} failed. Check permissions.".format(self.project_dir)
             )
         # Make work directory
         try:
             create_dir(self.work_dir)
         except OSError:
             self._toolbox.msg_error.emit(
-                "[OSError] Creating work directory {0} failed." " Check permissions.".format(self.work_dir)
+                "[OSError] Creating work directory {0} failed. Check permissions.".format(self.work_dir)
             )
 
     def connect_signals(self):
@@ -209,7 +246,7 @@ class SpineToolboxProject(MetaObject):
         # Save project to file
         saved_dict = dict(project=project_dict, objects=items_dict)
         # Write into JSON file
-        with open(self.path, 'w') as fp:
+        with open(self.project_file, 'w') as fp:
             json.dump(saved_dict, fp, indent=4)
 
     def load(self, objects_dict):

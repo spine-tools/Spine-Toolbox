@@ -236,7 +236,6 @@ class TestToolboxUI(unittest.TestCase):
             "spinetoolbox.project.create_dir"
         ) as mock_create_dir:
             self.toolbox.create_project("UnitTest Project", "")
-        # self.toolbox.create_project("UnitTest Project", "")
         ds1 = "DS1"
         self.add_ds(ds1)
         n_items = self.toolbox.project_item_model.n_items()
