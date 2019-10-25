@@ -76,7 +76,7 @@ class TreeViewForm(DataStoreForm):
         self.widget_with_selection = None
         self.paste_to_widget = None
         self.settings_group = 'treeViewWidget'
-        self.do_clear_other_selections = True
+        self._selection_being_accepted = False
         self.restore_dock_widgets()
         self.restore_ui()
         # init models
@@ -320,40 +320,35 @@ class TreeViewForm(DataStoreForm):
         """Enable/disable the option to remove rows."""
         model = self.ui.tableView_object_parameter_definition.selectionModel()
         self.obj_parameter_definition_selection_available.emit(model.hasSelection())
-        if self.do_clear_other_selections:
-            self._clear_other_selections(self.ui.tableView_object_parameter_definition)
+        self._accept_selection(self.ui.tableView_object_parameter_definition)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_parameter_value_selection_changed")
     def _handle_object_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         model = self.ui.tableView_object_parameter_value.selectionModel()
         self.obj_parameter_value_selection_available.emit(model.hasSelection())
-        if self.do_clear_other_selections:
-            self._clear_other_selections(self.ui.tableView_object_parameter_value)
+        self._accept_selection(self.ui.tableView_object_parameter_value)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_definition_selection_changed")
     def _handle_relationship_parameter_definition_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         model = self.ui.tableView_relationship_parameter_definition.selectionModel()
         self.rel_parameter_definition_selection_available.emit(model.hasSelection())
-        if self.do_clear_other_selections:
-            self._clear_other_selections(self.ui.tableView_relationship_parameter_definition)
+        self._accept_selection(self.ui.tableView_relationship_parameter_definition)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_parameter_value_selection_changed")
     def _handle_relationship_parameter_value_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         model = self.ui.tableView_relationship_parameter_value.selectionModel()
         self.rel_parameter_value_selection_available.emit(model.hasSelection())
-        if self.do_clear_other_selections:
-            self._clear_other_selections(self.ui.tableView_relationship_parameter_value)
+        self._accept_selection(self.ui.tableView_relationship_parameter_value)
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_parameter_value_list_selection_changed")
     def _handle_parameter_value_list_selection_changed(self, selected, deselected):
         """Enable/disable the option to remove rows."""
         model = self.ui.treeView_parameter_value_list.selectionModel()
         self.parameter_value_list_selection_available.emit(model.hasSelection())
-        if self.do_clear_other_selections:
-            self._clear_other_selections(self.ui.treeView_parameter_value_list)
+        self._accept_selection(self.ui.treeView_parameter_value_list)
 
     @Slot("int", name="_handle_object_parameter_tab_changed")
     def _handle_object_parameter_tab_changed(self, index):
@@ -502,14 +497,16 @@ class TreeViewForm(DataStoreForm):
         self.ui.treeView_object.scrollTo(next_index)
         self.ui.treeView_object.expand(next_index)
 
-    def _clear_other_selections(self, *skip_widgets):
-        """Clear selections in all widgets except `skip_widgets`."""
-        self.do_clear_other_selections = False
-        for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
-            if w in skip_widgets:
-                continue
-            w.selectionModel().clearSelection()
-        self.do_clear_other_selections = True
+    def _accept_selection(self, widget):
+        """Accept the selection from given widget, which means clearing all others."""
+        if not self._selection_being_accepted:
+            self._selection_being_accepted = True
+            for w in self.findChildren(QTreeView) + self.findChildren(QTableView):
+                if w != widget:
+                    w.selectionModel().clearSelection()
+            self._selection_being_accepted = False
+            return True
+        return False
 
     @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
@@ -520,17 +517,16 @@ class TreeViewForm(DataStoreForm):
             self.object_tree_model.deselect_index(index)
         for index in selected.indexes():
             self.object_tree_model.select_index(index)
-        self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
-        self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))
-        self.object_selection_available.emit(bool(self.object_tree_model.selected_object_indexes))
-        if self.do_clear_other_selections:
+        if self._accept_selection(self.ui.treeView_object):
+            self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
+            self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))
+            self.object_selection_available.emit(bool(self.object_tree_model.selected_object_indexes))
             self.relationship_class_selection_available.emit(
                 bool(self.object_tree_model.selected_relationship_class_indexes)
             )
             self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
-            self._clear_other_selections(self.ui.treeView_object)
             self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
-            self.update_filter()
+            self._update_object_filter()
 
     @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_tree_selection_changed")
@@ -541,81 +537,63 @@ class TreeViewForm(DataStoreForm):
             self.relationship_tree_model.deselect_index(index)
         for index in selected.indexes():
             self.relationship_tree_model.select_index(index)
-        self.relationship_tree_selection_available.emit(
-            any(v for v in self.relationship_tree_model.selected_indexes.values())
-        )
-        if self.do_clear_other_selections:
+        if self._accept_selection(self.ui.treeView_relationship):
+            self.object_class_selection_available.emit(False)
+            self.object_selection_available.emit(False)
+            self.relationship_tree_selection_available.emit(
+                any(v for v in self.relationship_tree_model.selected_indexes.values())
+            )
             self.relationship_class_selection_available.emit(
                 bool(self.relationship_tree_model.selected_relationship_class_indexes)
             )
             self.relationship_selection_available.emit(bool(self.relationship_tree_model.selected_relationship_indexes))
-            self._clear_other_selections(self.ui.treeView_relationship)
             self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
-            self.update_filter()
+            self._update_relationship_filter()
 
-    def update_filter(self):
-        """Update filters on parameter models according to selected and deselected object tree indexes."""
-        # Prepare stuff
-        # Collect object tree indexes
-        rel_inds = {
-            (db_map, ind): None
-            for ind in self.object_tree_model.selected_relationship_indexes
-            for db_map in ind.model().item_from_index(ind).db_maps
-        }
-        rel_cls_inds = {
-            (db_map, ind): None
-            for ind in self.object_tree_model.selected_relationship_class_indexes
-            for db_map in ind.model().item_from_index(ind).db_maps
-        }
-        rel_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in rel_inds})
-        obj_inds = {
-            (db_map, ind): None
-            for ind in self.object_tree_model.selected_object_indexes
-            for db_map in ind.model().item_from_index(ind).db_maps
-        }
-        obj_inds.update({(db_map, ind.parent()): None for db_map, ind in rel_cls_inds})
-        obj_cls_inds = {
-            (db_map, ind): None
-            for ind in self.object_tree_model.selected_object_class_indexes
-            for db_map in ind.model().item_from_index(ind).db_maps
-        }
-        obj_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in obj_inds})
-        # Add relationship tree indexes
-        more_rel_inds = {
-            (db_map, ind): None
-            for ind in self.relationship_tree_model.selected_relationship_indexes
-            for db_map in ind.model().item_from_index(ind).db_maps
-        }
-        more_rel_cls_inds = {
-            (db_map, ind): None
-            for ind in self.relationship_tree_model.selected_relationship_class_indexes
-            for db_map in ind.model().item_from_index(ind).db_maps
-        }
-        rel_inds.update(more_rel_inds)
-        rel_cls_inds.update({(db_map, ind.parent()): None for db_map, ind in more_rel_inds})
-        rel_cls_inds.update(more_rel_cls_inds)
-        # Update selected
-        self.selected_object_class_ids = dict()
-        for db_map, ind in obj_cls_inds:
-            id_ = ind.model().item_from_index(ind).db_map_id(db_map)
-            if id_:
-                self.selected_object_class_ids.setdefault(db_map, set()).add(id_)
-        self.selected_object_ids = dict()
-        for db_map, ind in obj_inds:
-            data = ind.model().item_from_index(ind).db_map_data(db_map)
-            if data:
-                self.selected_object_ids.setdefault((db_map, data['class_id']), set()).add(data["id"])
-        self.selected_relationship_class_ids = dict()
-        for db_map, ind in rel_cls_inds:
-            id_ = ind.model().item_from_index(ind).db_map_id(db_map)
-            if id_:
-                self.selected_relationship_class_ids.setdefault(db_map, set()).add(id_)
-        self.selected_object_id_lists = dict()
-        for db_map, ind in rel_inds:
-            data = ind.model().item_from_index(ind).db_map_data(db_map)
-            if data:
-                self.selected_object_id_lists.setdefault((db_map, data['class_id']), set()).add(data['object_id_list'])
-        self.do_update_filter()
+    @staticmethod
+    def _db_map_items(indexes):
+        d = dict()
+        for index in indexes:
+            item = index.model().item_from_index(index)
+            for db_map in item.db_maps:
+                d.setdefault(db_map, []).append(item.db_map_data(db_map))
+        return d
+
+    @staticmethod
+    def _db_map_class_ids(db_map_data):
+        d = dict()
+        for db_map, items in db_map_data.items():
+            for item in items:
+                d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
+        return d
+
+    def _update_object_filter(self):
+        """Update filters on parameter models according to object tree selection."""
+        selected_object_classes = self._db_map_items(self.object_tree_model.selected_object_class_indexes)
+        self.selected_object_class_ids = self.db_mngr._to_ids(selected_object_classes)
+        selected_relationship_classes = self.db_mngr.find_cascading_relationship_classes(self.selected_object_class_ids)
+        self.selected_relationship_class_ids = self.db_mngr._to_ids(selected_relationship_classes)
+        selected_objects = self._db_map_items(self.object_tree_model.selected_object_indexes)
+        selected_relationships = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objects))
+        for db_map, items in selected_objects.items():
+            self.selected_object_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
+        for db_map, items in selected_relationships.items():
+            self.selected_relationship_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
+        self.selected_object_ids = self._db_map_class_ids(selected_objects)
+        self.selected_relationship_ids = self._db_map_class_ids(selected_relationships)
+        self.update_filter()
+
+    def _update_relationship_filter(self):
+        """Update filters on parameter models according to relationship tree selection."""
+        selected_relationship_classes = self._db_map_items(
+            self.relationship_tree_model.selected_relationship_class_indexes
+        )
+        self.selected_relationship_class_ids = self.db_mngr._to_ids(selected_relationship_classes)
+        selected_relationships = self._db_map_items(self.relationship_tree_model.selected_relationship_indexes)
+        for db_map, items in selected_relationships.items():
+            self.selected_relationship_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
+        self.selected_relationship_ids = self._db_map_class_ids(selected_relationships)
+        self.update_filter()
 
     @Slot("QPoint", name="show_object_tree_context_menu")
     def show_object_tree_context_menu(self, pos):
@@ -770,7 +748,7 @@ class TreeViewForm(DataStoreForm):
     def receive_items_changed(self, action, item_type, db_map_data):
         """Enables or disables actions and informs the user about what just happened."""
         super().receive_items_changed(action, item_type, db_map_data)
-        # NOTE: The following line assumes this slot is called *after* removing items from object tree model
+        # NOTE: Make sure this slot is called after removing the items, so the next line works
         self.ui.actionExport.setEnabled(self.object_tree_model.root_item.has_children())
         if action == "removed":
             self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))

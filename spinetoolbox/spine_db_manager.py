@@ -206,10 +206,17 @@ class SpineDBManager(QObject):
             field (str)
             value
         """
-        items = [x for x in self.get_items_from_cache(db_map, item_type) if x[field] == value]
+        items = [x for x in self.get_items(db_map, item_type) if x[field] == value]
         if items:
             return items
         return [x for x in self._get_items_from_db(db_map, item_type) if x[field] == value]
+
+    def get_items(self, db_map, item_type):
+        """Get all the items of one type from the internal cache or from the db if none in cache."""
+        items = self._cache.get(db_map, {}).get(item_type, {})
+        if items:
+            return items.values()
+        return self._get_items_from_db(db_map, item_type)
 
     def _get_items_from_db(self, db_map, item_type):
         """Get item from database. Called by the above methods when they don't find the requested item in the cache.
@@ -218,7 +225,7 @@ class SpineDBManager(QObject):
             "object class": "get_object_classes",
             "object": "get_objects",
             "relationship class": "get_relationship_classes",
-            "relationship ": "get_relationship",
+            "relationship": "get_relationships",
             "parameter definition": "get_parameter_definitions",
             "parameter value": "get_parameter_values",
             "parameter value list": "get_parameter_value_lists",
@@ -228,10 +235,6 @@ class SpineDBManager(QObject):
         if not method_name:
             return []
         return getattr(self, method_name)(db_map)
-
-    def get_items_from_cache(self, db_map, item_type):
-        """Get all the items of one type from the internal cache."""
-        return self._cache.get(db_map, {}).get(item_type, {}).values()
 
     def get_object_classes(self, db_map):
         """Get object classes from database.
@@ -540,65 +543,69 @@ class SpineDBManager(QObject):
         if any(db_map_parameter_tags.values()):
             self.parameter_tags_removed.emit(db_map_parameter_tags)
 
+    @staticmethod
+    def _to_ids(db_map_data):
+        return {db_map: {x["id"] for x in data} for db_map, data in db_map_data.items()}
+
     @Slot("QVariant", name="cascade_remove_objects")
     def cascade_remove_objects(self, db_map_data):
         """Runs when removing object classes. Removes objects in cascade."""
-        db_map_cascading_data = self.find_cascading_entities(db_map_data, "object")
+        db_map_cascading_data = self.find_cascading_entities(self._to_ids(db_map_data), "object")
         if any(db_map_cascading_data.values()):
             self.objects_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationship_classes")
     def cascade_remove_relationship_classes(self, db_map_data):
         """Runs when removing object classes. Removes relationship classes in cascade."""
-        db_map_cascading_data = self.find_cascading_relationship_classes(db_map_data)
+        db_map_cascading_data = self.find_cascading_relationship_classes(self._to_ids(db_map_data))
         self.relationship_classes_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationships_by_class")
     def cascade_remove_relationships_by_class(self, db_map_data):
         """Runs when removing objects. Removes relationships in cascade."""
-        db_map_cascading_data = self.find_cascading_entities(db_map_data, "relationship")
+        db_map_cascading_data = self.find_cascading_entities(self._to_ids(db_map_data), "relationship")
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_relationships_by_object")
     def cascade_remove_relationships_by_object(self, db_map_data):
         """Runs when removing relationship classes. Removes relationships in cascade."""
-        db_map_cascading_data = self.find_cascading_relationships(db_map_data)
+        db_map_cascading_data = self.find_cascading_relationships(self._to_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.relationships_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_definitions")
     def cascade_remove_parameter_definitions(self, db_map_data):
         """Runs when updating entity classes. Cascade remove parameter definitions."""
-        db_map_cascading_data = self.find_cascading_parameter_data(db_map_data, "parameter definition")
+        db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter definition")
         if any(db_map_cascading_data.values()):
             self.parameter_definitions_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_entity_class")
     def cascade_remove_parameter_values_by_entity_class(self, db_map_data):
         """Runs when updating entity classes. Cascade remove parameter values."""
-        db_map_cascading_data = self.find_cascading_parameter_data(db_map_data, "parameter value")
+        db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter value")
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_entity")
     def cascade_remove_parameter_values_by_entity(self, db_map_data):
         """Runs when updating entities. Cascade remove parameter values."""
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(db_map_data)
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self._to_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_remove_parameter_values_by_definition")
     def cascade_remove_parameter_values_by_definition(self, db_map_data):
         """Runs when updating parameter definitions. Cascade remove parameter values."""
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(db_map_data)
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self._to_ids(db_map_data))
         if any(db_map_cascading_data.values()):
             self.parameter_values_removed.emit(db_map_cascading_data)
 
     @Slot("QVariant", name="cascade_refresh_relationship_classes")
     def cascade_refresh_relationship_classes(self, db_map_data):
         """Runs when updating object classes. Cascade refresh cached relationship classes."""
-        db_map_cascading_data = self.find_cascading_relationship_classes(db_map_data)
+        db_map_cascading_data = self.find_cascading_relationship_classes(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         for db_map, data in db_map_cascading_data.items():
@@ -609,7 +616,7 @@ class SpineDBManager(QObject):
     @Slot("QVariant", name="cascade_refresh_relationships_by_object")
     def cascade_refresh_relationships_by_object(self, db_map_data):
         """Runs when updating objects. Cascade refresh cached relationships."""
-        db_map_cascading_data = self.find_cascading_relationships(db_map_data)
+        db_map_cascading_data = self.find_cascading_relationships(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         for db_map, data in db_map_cascading_data.items():
@@ -620,7 +627,7 @@ class SpineDBManager(QObject):
     @Slot("QVariant", name="cascade_refresh_parameter_definitions")
     def cascade_refresh_parameter_definitions(self, db_map_data):
         """Runs when updating entity classes. Cascade refresh cached parameter definitions."""
-        db_map_cascading_data = self.find_cascading_parameter_data(db_map_data, "parameter definition")
+        db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter definition")
         if not any(db_map_cascading_data.values()):
             return
         for db_map, data in db_map_cascading_data.items():
@@ -631,7 +638,7 @@ class SpineDBManager(QObject):
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_value_list")
     def cascade_refresh_parameter_definitions_by_value_list(self, db_map_data):
         """Runs when updating parameter value lists. Cascade refresh cached parameter definitions."""
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(db_map_data)
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_value_list(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         for db_map, data in db_map_cascading_data.items():
@@ -642,7 +649,7 @@ class SpineDBManager(QObject):
     @Slot("QVariant", name="cascade_refresh_parameter_definitions_by_tag")
     def cascade_refresh_parameter_definitions_by_tag(self, db_map_data):
         """Runs when updating parameter tags. Cascade refresh cached parameter definitions."""
-        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(db_map_data)
+        db_map_cascading_data = self.find_cascading_parameter_definitions_by_tag(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         for db_map, data in db_map_cascading_data.items():
@@ -653,7 +660,7 @@ class SpineDBManager(QObject):
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity_class")
     def cascade_refresh_parameter_values_by_entity_class(self, db_map_data):
         """Runs when updating entity classes. Cascade refresh cached parameter values."""
-        db_map_cascading_data = self.find_cascading_parameter_data(db_map_data, "parameter value")
+        db_map_cascading_data = self.find_cascading_parameter_data(self._to_ids(db_map_data), "parameter value")
         if not any(db_map_cascading_data.values()):
             return
         for db_map, data in db_map_cascading_data.items():
@@ -664,7 +671,7 @@ class SpineDBManager(QObject):
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_entity")
     def cascade_refresh_parameter_values_by_entity(self, db_map_data):
         """Runs when updating entities. Cascade refresh cached parameter values."""
-        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(db_map_data)
+        db_map_cascading_data = self.find_cascading_parameter_values_by_entity(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         for db_map, data in db_map_cascading_data.items():
@@ -675,7 +682,7 @@ class SpineDBManager(QObject):
     @Slot("QVariant", name="cascade_refresh_parameter_values_by_definition")
     def cascade_refresh_parameter_values_by_definition(self, db_map_data):
         """Runs when updating parameter definitions. Cascade refresh cached parameter values."""
-        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(db_map_data)
+        db_map_cascading_data = self.find_cascading_parameter_values_by_definition(self._to_ids(db_map_data))
         if not any(db_map_cascading_data.values()):
             return
         for db_map, data in db_map_cascading_data.items():
@@ -683,97 +690,90 @@ class SpineDBManager(QObject):
             self.get_parameter_values(db_map, ids=ids)
         self.parameter_values_updated.emit(db_map_cascading_data)
 
-    def find_cascading_relationship_classes(self, db_map_data):
-        """Returns cascading relationship classes given data for object classes."""
+    def find_cascading_relationship_classes(self, db_map_ids):
+        """Returns cascading relationship classes given ids for object classes."""
         db_map_cascading_data = dict()
-        for db_map, data in db_map_data.items():
-            object_class_ids = {str(x["id"]) for x in data}
+        for db_map, object_class_ids in db_map_ids.items():
+            object_class_ids = {str(id_) for id_ in object_class_ids}
             db_map_cascading_data[db_map] = [
                 item
-                for item in self.get_items_from_cache(db_map, "relationship class")
+                for item in self.get_items(db_map, "relationship class")
                 if object_class_ids.intersection(item["object_class_id_list"].split(","))
             ]
         return db_map_cascading_data
 
-    def find_cascading_entities(self, db_map_data, item_type):
-        """Returns cascading entities given data for entity classes."""
+    def find_cascading_entities(self, db_map_ids, item_type):
+        """Returns cascading entities given ids for entity classes."""
         db_map_cascading_data = dict()
-        for db_map, data in db_map_data.items():
-            class_ids = {x["id"] for x in data}
+        for db_map, class_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
-                item for item in self.get_items_from_cache(db_map, item_type) if item["class_id"] in class_ids
+                item for item in self.get_items(db_map, item_type) if item["class_id"] in class_ids
             ]
         return db_map_cascading_data
 
-    def find_cascading_relationships(self, db_map_data):
-        """Returns cascading relationships given data for objects."""
+    def find_cascading_relationships(self, db_map_ids):
+        """Returns cascading relationships given ids for objects."""
         db_map_cascading_data = dict()
-        for db_map, data in db_map_data.items():
-            object_ids = {str(x["id"]) for x in data}
+        for db_map, object_ids in db_map_ids.items():
+            object_ids = {str(id_) for id_ in object_ids}
             db_map_cascading_data[db_map] = [
                 item
-                for item in self.get_items_from_cache(db_map, "relationship")
+                for item in self.get_items(db_map, "relationship")
                 if object_ids.intersection(item["object_id_list"].split(","))
             ]
         return db_map_cascading_data
 
-    def find_cascading_parameter_data(self, db_map_data, item_type):
-        """Returns data for cascading parameter definitions or values given data for entity classes."""
+    def find_cascading_parameter_data(self, db_map_ids, item_type):
+        """Returns data for cascading parameter definitions or values given ids for entity classes."""
         db_map_cascading_data = dict()
-        for db_map, data in db_map_data.items():
-            entity_class_ids = {x["id"] for x in data}
+        for db_map, entity_class_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
                 item
-                for item in self.get_items_from_cache(db_map, item_type)
+                for item in self.get_items(db_map, item_type)
                 if entity_class_ids.intersection([item.get("object_class_id"), item.get("relationship_class_id")])
             ]
         return db_map_cascading_data
 
-    def find_cascading_parameter_definitions_by_value_list(self, db_map_data):
-        """Returns data for cascading parameter definitions given data for parameter value lists."""
+    def find_cascading_parameter_definitions_by_value_list(self, db_map_ids):
+        """Returns data for cascading parameter definitions given ids for parameter value lists."""
         db_map_cascading_data = dict()
-        for db_map, data in db_map_data.items():
-            value_list_ids = {x["id"] for x in data}
+        for db_map, value_list_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
                 item
-                for item in self.get_items_from_cache(db_map, "parameter definition")
+                for item in self.get_items(db_map, "parameter definition")
                 if item["value_list_id"] in value_list_ids
             ]
         return db_map_cascading_data
 
-    def find_cascading_parameter_definitions_by_tag(self, db_map_data):
-        """Returns data for cascading parameter definitions given data for parameter tags."""
+    def find_cascading_parameter_definitions_by_tag(self, db_map_ids):
+        """Returns data for cascading parameter definitions given ids for parameter tags."""
         db_map_cascading_data = dict()
-        for db_map, data in db_map_data.items():
-            tag_ids = {str(x["id"]) for x in data}
+        for db_map, tag_ids in db_map_ids.items():
+            tag_ids = {str(id_) for id_ in tag_ids}
             db_map_cascading_data[db_map] = [
                 item
-                for item in self.get_items_from_cache(db_map, "parameter definition")
+                for item in self.get_items(db_map, "parameter definition")
                 if tag_ids.intersection((item["parameter_tag_id_list"] or "0").split(","))
             ]  # NOTE: 0 is 'untagged'
         return db_map_cascading_data
 
-    def find_cascading_parameter_values_by_entity(self, db_map_data):
-        """Returns data for cascading parameter values given data for entities."""
+    def find_cascading_parameter_values_by_entity(self, db_map_ids):
+        """Returns data for cascading parameter values given ids for entities."""
         db_map_cascading_data = dict()
-        for db_map, data in db_map_data.items():
-            entity_ids = {x["id"] for x in data}
+        for db_map, entity_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
                 item
-                for item in self.get_items_from_cache(db_map, "parameter value")
+                for item in self.get_items(db_map, "parameter value")
                 if entity_ids.intersection([item.get("object_id"), item.get("relationship_id")])
             ]
         return db_map_cascading_data
 
-    def find_cascading_parameter_values_by_definition(self, db_map_data):
-        """Returns data for cascading parameter values given data for parameter definitions."""
+    def find_cascading_parameter_values_by_definition(self, db_map_ids):
+        """Returns data for cascading parameter values given ids for parameter definitions."""
         db_map_cascading_data = dict()
-        for db_map, data in db_map_data.items():
-            definition_ids = {x["id"] for x in data}
+        for db_map, definition_ids in db_map_ids.items():
             db_map_cascading_data[db_map] = [
-                item
-                for item in self.get_items_from_cache(db_map, "parameter value")
-                if item["parameter_id"] in definition_ids
+                item for item in self.get_items(db_map, "parameter value") if item["parameter_id"] in definition_ids
             ]
         return db_map_cascading_data
 

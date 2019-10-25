@@ -72,14 +72,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def _entity_class_id_key(self):
         raise NotImplementedError()
 
-    def _models_with_db_map(self, db_map):
-        """Returns a collection of models having the given db_map."""
-        return [m for m in self.single_models if m.db_map == db_map]
-
     def connect_db_mngr_signals(self):
         """Connect signals from database manager.
         Reimplement in subclasses.
         """
+
+    def _models_with_db_map(self, db_map):
+        """Returns a collection of models having the given db_map."""
+        return [m for m in self.single_models if m.db_map == db_map]
 
     @Slot("QVariant", name="receive_entity_classes_removed")
     def receive_entity_classes_removed(self, db_map_data):
@@ -182,9 +182,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @staticmethod
     def _settattr_if_different(obj, attr, val):
-        """If the given value is different than the one currently stored
-        in the given object, set it and returns True. Otherwise returns False.
-        Handy for updating filters.
+        """If the given value is different than the current one, set it and returns True. 
+        Otherwise returns False. Handy for updating filters.
         """
         curr = getattr(obj, attr)
         if curr != val:
@@ -207,38 +206,13 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self._auto_filter.clear()
         return True
 
-    def update_single_model_filter(self, model):
+    @staticmethod
+    def update_single_model_filter(model):
         """Update the filter for the given model."""
         if not model._auto_filter:
             return False
         model._auto_filter.clear()
         return True
-
-    def _row_map_for_model(self, model):
-        """Returns row map for given model.
-        Reimplemented to take filter status into account."""
-        if not self.filter_accepts_model(model):
-            return []
-        return [(model, i) for i in model.accepted_rows()]
-
-    @busy_effect
-    def auto_filter_menu_data(self, column):
-        """Returns auto filter menu data for the given column.
-
-        Returns:
-            menu_data (list): a list of AutoFilterMenuItem
-        """
-        auto_filter_vals = dict()
-        for model in self.accepted_single_models():
-            for row in model.accepted_rows(ignored_columns=[column]):
-                value = model.index(row, column).data()
-                auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
-        column_auto_filter = self._auto_filter.get(column, {})
-        filtered = [val for values in column_auto_filter.values() for val in values]
-        return [
-            AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, in_classes)
-            for value, in_classes in auto_filter_vals.items()
-        ]
 
     def update_auto_filter(self, column, auto_filter):
         """Updates auto filter for given column.
@@ -266,6 +240,32 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
             return False
         model._auto_filter[column] = values
         return True
+
+    def _row_map_for_model(self, model):
+        """Returns row map for given model.
+        Reimplemented to take filter status into account."""
+        if not self.filter_accepts_model(model):
+            return []
+        return [(model, i) for i in model.accepted_rows()]
+
+    @busy_effect
+    def auto_filter_menu_data(self, column):
+        """Returns auto filter menu data for the given column.
+
+        Returns:
+            menu_data (list): a list of AutoFilterMenuItem
+        """
+        auto_filter_vals = dict()
+        for model in self.accepted_single_models():
+            for row in model.accepted_rows(ignored_columns=[column]):
+                value = model.index(row, column).data()
+                auto_filter_vals.setdefault(value, set()).add(model.entity_class_id)
+        column_auto_filter = self._auto_filter.get(column, {})
+        filtered = [val for values in column_auto_filter.values() for val in values]
+        return [
+            AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, in_classes)
+            for value, in_classes in auto_filter_vals.items()
+        ]
 
     def _emit_data_changed_for_column(self, field):
         """Emits data changed for an entire column.
@@ -334,7 +334,6 @@ class CompoundRelationshipParameterMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._selected_object_class_ids = None
         self._selected_relationship_class_ids = None
 
     @property
@@ -349,24 +348,19 @@ class CompoundRelationshipParameterMixin:
     def update_compound_filter(self):
         """Update the filter."""
         a = super().update_compound_filter()
-        b = self._settattr_if_different(self, "_selected_object_class_ids", self._parent.selected_object_class_ids)
-        c = self._settattr_if_different(
+        b = self._settattr_if_different(
             self, "_selected_relationship_class_ids", self._parent.all_selected_relationship_class_ids
         )
-        return a or b or c
+        return a or b
 
     def filter_accepts_model(self, model):
         """Returns True if the given model should be included in the compound model, otherwise returns False.
         """
         if not model.can_be_filtered:
             return True
-        return (
-            not self._selected_object_class_ids
-            or self._selected_object_class_ids.get(model.db_map, set()).intersection(model.object_class_id_list)
-        ) and (
-            not self._selected_relationship_class_ids
-            or model.relationship_class_id in self._selected_relationship_class_ids.get(model.db_map, set())
-        )
+        if not self._selected_relationship_class_ids:
+            return True
+        return model.relationship_class_id in self._selected_relationship_class_ids.get(model.db_map, set())
 
     def update_single_model_filter(self, model):
         """Update the filter for a single model."""
@@ -518,16 +512,7 @@ class CompoundRelationshipParameterValueModel(
         a = super().update_single_model_filter(model)
         b = self._settattr_if_different(
             model,
-            "_selected_object_id_lists",
-            self._parent.selected_object_id_lists.get((model.db_map, model.relationship_class_id), set()),
+            "_selected_relationship_ids",
+            self._parent.selected_relationship_ids.get((model.db_map, model.relationship_class_id), set()),
         )
-        c = self._settattr_if_different(
-            model,
-            "_selected_object_ids",
-            set(
-                obj_id
-                for obj_cls_id in model.object_class_id_list
-                for obj_id in self._parent.selected_object_ids.get((model.db_map, obj_cls_id), set())
-            ),
-        )
-        return a or b or c
+        return a or b

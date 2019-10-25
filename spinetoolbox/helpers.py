@@ -454,15 +454,6 @@ class Singleton(type):
         return cls._instances[cls]
 
 
-class ToBeDetermined(metaclass=Singleton):
-    """Class for marking values that need to be determined
-    by a second pass of the parameter autocomplete algorithm.
-    """
-
-
-to_be_determined = ToBeDetermined()
-
-
 class IconListManager:
     """A class to manage icons for icon list widgets."""
 

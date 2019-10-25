@@ -129,9 +129,6 @@ class SingleRelationshipParameterMixin:
         """
         super().__init__(parent, header, db_mngr, db_map, *args, **kwargs)
         self.relationship_class_id = relationship_class_id
-        relationship_class = db_mngr.get_item(db_map, "relationship class", relationship_class_id)
-        object_class_id_list = relationship_class["object_class_id_list"]
-        self.object_class_id_list = [int(id_) for id_ in object_class_id_list.split(",")]
 
     @property
     def entity_class_id(self):
@@ -167,18 +164,14 @@ class SingleRelationshipParameterValueMixin:
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self._selected_object_ids = {}
-        self._selected_object_id_lists = {}
+        self._selected_relationship_ids = {}
 
     def _main_filter_accepts_item(self, item):
         """Reimplemented to filter relationships and objects."""
         if not super()._main_filter_accepts_item(item):
             return False
-        object_id_list = item["object_id_list"]
-        if self._selected_object_id_lists:
-            return item.get("object_id_list") in self._selected_object_id_lists
-        if self._selected_object_ids:
-            return bool(self._selected_object_ids.intersection(int(x) for x in object_id_list.split(",")))
+        if self._selected_relationship_ids:
+            return item["relationship_id"] in self._selected_relationship_ids
         return True
 
 

@@ -136,7 +136,6 @@ class GraphViewForm(DataStoreForm):
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
 
-
     def init_parameter_value_models(self):
         """Initialize parameter value models from source database."""
         # FIXME:
@@ -339,7 +338,8 @@ class GraphViewForm(DataStoreForm):
 
     def init_graph_data(self):
         """Initialize graph data."""
-        # TODO: This is insane....
+        # TODO: This is insane... clearly something that was done late at night just to see it working
+        # And then patched multiple times as new functionality were added
         rejected_object_names = [x.object_name for x in self.rejected_items]
         self.object_ids = list()
         self.object_names = list()
@@ -633,6 +633,7 @@ class GraphViewForm(DataStoreForm):
         self.selected_object_class_ids = dict()
         self.selected_object_ids = dict()
         self.selected_relationship_class_ids = dict()
+        # FIXME: selected_object_id_lists replaced by selected_relationship_ids
         self.selected_object_id_lists = dict()
         for item in selected_items:
             if isinstance(item, ObjectItem):
@@ -643,7 +644,7 @@ class GraphViewForm(DataStoreForm):
                 self.selected_object_id_lists.setdefault((self.db_map, item.relationship_class_id), set()).add(
                     item.object_id_list
                 )
-        self.do_update_filter()
+        self.update_filter()
 
     @Slot(list, name="_handle_scene_changed")
     def _handle_scene_changed(self, region):

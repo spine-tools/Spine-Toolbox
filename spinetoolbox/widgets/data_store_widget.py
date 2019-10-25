@@ -99,8 +99,8 @@ class DataStoreForm(QMainWindow):
         self.selected_object_class_ids = dict()
         self.selected_object_ids = dict()
         self.selected_relationship_class_ids = dict()
-        self.selected_object_id_lists = dict()
-        self.selected_parameter_tags = dict()
+        self.selected_relationship_ids = dict()
+        self.selected_parameter_tag_ids = dict()
         self.selected_obj_parameter_definition_ids = dict()
         self.selected_rel_parameter_definition_ids = dict()
         # Parameter tag toolbar
@@ -263,22 +263,23 @@ class DataStoreForm(QMainWindow):
         Then update set of selected object class ids. Finally, update filter.
         """
         for db_map, id_ in db_map_ids:
-            tag = {"id": id_}
             if checked:
-                self.selected_parameter_tags.setdefault(db_map, []).append(tag)
+                self.selected_parameter_tag_ids.setdefault(db_map, []).append(id_)
             else:
-                self.selected_parameter_tags[db_map].remove(tag)
-        if not any(v for v in self.selected_parameter_tags.values()):
+                self.selected_parameter_tag_ids[db_map].remove(id_)
+        if not any(v for v in self.selected_parameter_tag_ids.values()):
             # No tags selected
             self.selected_obj_parameter_definition_ids = {}
             self.selected_rel_parameter_definition_ids = {}
         else:
             # At least one tag selected: init dict like below so in case no parameter has the tag,
             # all of them are filtered
-            self.selected_obj_parameter_definition_ids = {(None, None): None}
-            self.selected_rel_parameter_definition_ids = {(None, None): None}
+            self.selected_obj_parameter_definition_ids = {(None, 0): set()}
+            self.selected_rel_parameter_definition_ids = {(None, 0): set()}
             # Find selected parameter definitions
-            selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(self.selected_parameter_tags)
+            selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(
+                self.selected_parameter_tag_ids
+            )
             for db_map, param_defs in selected_param_defs.items():
                 for param_def in param_defs:
                     if "object_class_id" in param_def:
@@ -289,7 +290,7 @@ class DataStoreForm(QMainWindow):
                         self.selected_rel_parameter_definition_ids.setdefault(
                             (db_map, param_def["relationship_class_id"]), set()
                         ).add(param_def["id"])
-        self.do_update_filter()
+        self.update_filter()
 
     @Slot("bool", name="_handle_commit_available")
     def _handle_commit_available(self, on):
@@ -487,8 +488,8 @@ class DataStoreForm(QMainWindow):
             model.empty_model.set_default_row(**default_data)
             model.empty_model.set_rows_to_default(model.empty_model.rowCount() - 1)
 
-    def do_update_filter(self):
-        """Apply filter on visible views."""
+    def update_filter(self):
+        """Update filter on parameter models."""
         if self.ui.dockWidget_object_parameter_value.isVisible():
             self.object_parameter_value_model.update_filter()
         if self.ui.dockWidget_object_parameter_definition.isVisible():
