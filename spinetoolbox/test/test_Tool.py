@@ -12,12 +12,10 @@
 """
 Unit tests for Tool project item.
 
-:author: A. Soininen (VTT)
+:author: A. Soininen (VTT), P. Savolainen (VTT), M. Marin (KTH)
 :date:   4.10.2019
 """
 
-import os
-import shutil
 from tempfile import TemporaryDirectory, mkdtemp
 import unittest
 from unittest import mock
@@ -27,14 +25,10 @@ import os
 import sys
 import shutil
 import tempfile
-
-from PySide2.QtCore import Qt, QSettings
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QStandardItem, QStandardItemModel
-from PySide2.QtWidgets import QApplication, QWidget
+from PySide2.QtWidgets import QApplication
 from networkx import DiGraph
-
-from .mock_helpers import MockQWidget, qsettings_value_side_effect
-from ..ui_main import ToolboxUI
 from ..tool_specifications import ExecutableTool
 from ..project_items.tool.tool import Tool
 from ..project import SpineToolboxProject
