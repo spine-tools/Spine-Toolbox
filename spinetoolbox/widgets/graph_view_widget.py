@@ -17,14 +17,13 @@ Contains the GraphViewForm class.
 """
 
 import time  # just to measure loading time and sqlalchemy ORM performance
-import logging
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QApplication, QWidgetAction, QTreeView
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QEvent
 from PySide2.QtGui import QPalette, QMouseEvent
-from spinedb_api import SpineDBAPIError, SpineIntegrityError
+from spinedb_api import SpineDBAPIError
 from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from .custom_qwidgets import ZoomWidget
@@ -33,7 +32,7 @@ from .shrinking_scene import ShrinkingScene
 from ..mvcmodels.entity_tree_models import ObjectTreeModel
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
 from ..graph_view_graphics_items import ObjectItem, ArcItem, CustomTextItem
-from ..helpers import busy_effect, fix_name_ambiguity
+from ..helpers import busy_effect
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
 
@@ -73,14 +72,12 @@ class GraphViewForm(DataStoreForm):
         # Data for ArcItems
         self.arc_relationship_ids = list()
         self.arc_src_dest_inds = list()
-        # Data for template ObjectItems and ArcItems (these are persisted across graph builds)
-        self.heavy_positions = {}
-        self.is_template = {}
-        self.template_id_dims = {}
-        self.arc_template_ids = {}
         # Data for relationship templates
         self.template_id = 1
-        self.relationship_class_dict = {}  # template_id => relationship_class_id
+        self.relationship_templates = {}  # template_id =>
+        # Lookups
+        self._added_objects = {}
+        self._added_relationships = {}
         # Item palette models
         self.object_class_list_model = ObjectClassListModel(self, self.db_mngr, self.db_map)
         self.relationship_class_list_model = RelationshipClassListModel(self, self.db_mngr, self.db_map)
@@ -368,79 +365,50 @@ class GraphViewForm(DataStoreForm):
                     continue
                 self.arc_src_dest_inds.append((src_ind, dst_ind))
                 self.arc_relationship_ids.append(relationship["id"])
-        self.init_graph_template_data()
-
-    def init_graph_template_data(self):
-        scene = self.ui.graphicsView.scene()
-        if not scene:
-            return
-        self.heavy_positions = {}
-        template_object_items = [x for x in scene.items() if isinstance(x, ObjectItem) and x.template_id_dim]
-        object_ind = len(self.object_ids)
-        self.template_id_dims = {}
-        self.is_template = {}
-        object_ind_dict = {}  # Dict of object indexes added from this point
-        object_ids_copy = self.object_ids.copy()  # Object ids added until this point
-        for item in template_object_items:
-            object_id = item.object_id
-            try:
-                found_ind = object_ids_copy.index(object_id)
-            except ValueError:
-                # Object id is not in list; add it together with its template info, and make it heavy
-                self.object_ids.append(object_id)
-                self.template_id_dims[object_ind] = item.template_id_dim
-                self.is_template[object_ind] = item.is_template
-                self.heavy_positions[object_ind] = item.pos()
-                object_ind_dict[item] = object_ind
-                object_ind += 1
-            else:
-                # Object id is already in list; complete its template information and make it heavy
-                self.template_id_dims[found_ind] = item.template_id_dim
-                self.is_template[found_ind] = False
-                self.heavy_positions[found_ind] = item.pos()
-        template_arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
-        arc_ind = len(self.arc_relationship_ids)
-        self.arc_template_ids = {}
-        for item in template_arc_items:
-            src_item = item.src_item
-            dst_item = item.dst_item
-            try:
-                src_ind = object_ind_dict[src_item]
-            except KeyError:
-                src_object_id = src_item.object_id
-                src_ind = self.object_ids.index(src_object_id)
-            try:
-                dst_ind = object_ind_dict[dst_item]
-            except KeyError:
-                dst_object_id = dst_item.object_id
-                dst_ind = self.object_ids.index(dst_object_id)
-            self.arc_src_dest_inds.append((src_ind, dst_ind))
-            self.arc_relationship_ids.append(None)  # TODO: is this one filled when creating the relationship?
-            self.arc_template_ids[arc_ind] = item.template_id
-            arc_ind += 1
 
     def make_graph(self):
         """Make graph."""
+        template_items = self._get_template_graphics_items()
+        whole_items = self._get_whole_graphics_items()
+        scene = self.new_scene()
+        if not (template_items or whole_items):
+            return False
+        for item in whole_items:
+            scene.addItem(item)
+        # TODO: Merge template_items to the corresponding whole
+        for item in template_items:
+            scene.addItem(item)
+        return True
+
+    def _get_template_graphics_items(self):
+        """Get template items to be persisted across builds. """
+        # NOTE: Call this before deleting the scene or the items will be deleted as well.
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return []
+        template_items = list()
+        for relationship_template in self.relationship_templates.values():
+            object_items = relationship_template["object_items"]
+            arc_items = relationship_template["arc_items"]
+            for item in object_items + arc_items:
+                scene.removeItem(item)  # This 'saves' the item
+                template_items.append(item)
+        return template_items
+
+    def _get_whole_graphics_items(self):
+        """Get whole items to be put into the new build. """
         d = self.shortest_path_matrix(self.object_ids, self.arc_src_dest_inds, self._spread)
         if d is None:
-            return False
-        scene = self.new_scene()
-        x, y = self.vertex_coordinates(d, self.heavy_positions)
+            return []
+        x, y = self.vertex_coordinates(d)
         object_items = list()
         for i in range(len(self.object_ids)):
             object_id = self.object_ids[i]
             object_item = ObjectItem(
                 self, x[i], y[i], self.extent, object_id=object_id, label_color=self.object_label_color
             )
-            try:
-                template_id_dim = self.template_id_dims[i]
-                object_item.template_id_dim = template_id_dim
-                if self.is_template[i]:
-                    object_item.make_template()
-            except KeyError:
-                pass
-            scene.addItem(object_item)
             object_items.append(object_item)
+        arc_items = list()
         for k, relationship_id in enumerate(self.arc_relationship_ids):
             i, j = self.arc_src_dest_inds[k]
             arc_item = ArcItem(
@@ -454,14 +422,8 @@ class GraphViewForm(DataStoreForm):
                 token_object_extent=0.75 * self.extent,
                 token_object_label_color=self.object_label_color,
             )
-            try:
-                template_id = self.arc_template_ids[k]
-                arc_item.template_id = template_id
-                arc_item.make_template()
-            except KeyError:
-                pass
-            scene.addItem(arc_item)
-        return True
+            arc_items.append(arc_item)
+        return object_items + arc_items
 
     @staticmethod
     def shortest_path_matrix(object_ids, src_dst_inds, spread):
@@ -470,7 +432,10 @@ class GraphViewForm(DataStoreForm):
         if not N:
             return None
         dist = np.zeros((N, N))
-        src_inds, dst_inds = zip(*src_dst_inds)
+        if src_dst_inds:
+            src_inds, dst_inds = zip(*src_dst_inds)
+        else:
+            src_inds, dst_inds = [], []
         src_inds = arr(src_inds)
         dst_inds = arr(dst_inds)
         try:
@@ -662,73 +627,42 @@ class GraphViewForm(DataStoreForm):
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         entity_type, entity_class_id = text.split(":")
         entity_class_id = int(entity_class_id)
-        entity_class = self.db_mngr.get_item(self.db_map, entity_type, entity_class_id)
         if entity_type == "object class":
-            object_class_name = entity_class["name"]
-            object_name = object_class_name
             object_item = ObjectItem(
                 self,
-                object_name,
-                entity_class_id,
-                object_class_name,
                 scene_pos.x(),
                 scene_pos.y(),
                 self.extent,
                 label_color=self.object_label_color,
+                object_class_id=entity_class_id,
             )
             scene.addItem(object_item)
-            object_item.make_template()
+            object_item.become_template()
         elif entity_type == "relationship class":
-            object_class_id_list = [int(x) for x in entity_class["object_class_id_list"].split(',')]
-            object_class_name_list = entity_class["object_class_name_list"].split(',')
-            object_name_list = object_class_name_list.copy()
-            fix_name_ambiguity(object_name_list)
-            relationship_items = self.relationship_items(
-                object_name_list,
-                object_class_name_list,
-                self.extent,
-                self._spread,
-                label_color=self.object_label_color,
-                object_class_id_list=object_class_id_list,
-                relationship_class_id=entity_class_id,
-            )
-            self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), *relationship_items)
-            self.relationship_class_dict[self.template_id] = entity_class_id
-            self.template_id += 1
+            self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), entity_class_id)
         self._has_graph = True
         self.extend_scene()
 
-    def relationship_items(
-        self,
-        object_name_list,
-        object_class_name_list,
-        extent,
-        spread,
-        label_color,
-        object_class_id_list=None,
-        relationship_class_id=None,
-    ):
-        """Lists of object and arc items that form a relationship."""
-        if object_class_id_list is None:
-            object_class_id_list = list()
+    def _make_relationship_items(self, relationship_class_id, center=()):
+        """Returns lists of object and arc items that form a relationship."""
+        relationship_class = self.db_mngr.get_item(self.db_map, "relationship class", relationship_class_id)
+        if not relationship_class:
+            return [], []
+        object_class_id_list = [int(id_) for id_ in relationship_class["object_class_id_list"].split(",")]
         object_items = list()
         arc_items = list()
-        src_ind_list = list(range(len(object_name_list)))
-        dst_ind_list = src_ind_list[1:] + src_ind_list[:1]
-        d = self.shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread)
+        src_inds = list(range(len(object_class_id_list)))
+        dst_inds = src_inds[1:] + src_inds[:1]
+        src_dst_inds = zip(src_inds, dst_inds)
+        d = self.shortest_path_matrix(object_class_id_list, src_dst_inds, self._spread)
         if d is None:
             return [], []
         x, y = self.vertex_coordinates(d)
-        for i, object_name in enumerate(object_name_list):
+        for i, object_class_id in enumerate(object_class_id_list):
             x_ = x[i]
             y_ = y[i]
-            object_class_name = object_class_name_list[i]
-            try:
-                object_class_id = object_class_id_list[i]
-            except IndexError:
-                object_class_id = None
             object_item = ObjectItem(
-                self, object_name, object_class_id, object_class_name, x_, y_, extent, label_color=label_color
+                self, x_, y_, self.extent, object_class_id=object_class_id, label_color=self.object_label_color
             )
             object_items.append(object_item)
         for i, src_item in enumerate(object_items):
@@ -736,106 +670,104 @@ class GraphViewForm(DataStoreForm):
                 dst_item = object_items[i + 1]
             except IndexError:
                 dst_item = object_items[0]
-            arc_item = ArcItem(self, relationship_class_id, src_item, dst_item, extent / 4, self.arc_color)
+            arc_item = ArcItem(
+                self, src_item, dst_item, self.extent / 4, self.arc_color, relationship_class_id=relationship_class_id
+            )
             arc_items.append(arc_item)
         return object_items, arc_items
 
-    def add_relationship_template(self, scene, x, y, object_items, arc_items, dimension_at_origin=None):
+    def add_relationship_template(self, scene, x, y, relationship_class_id, center=()):
         """Add relationship parts into the scene to form a 'relationship template'."""
+        object_items, arc_items = self._make_relationship_items(relationship_class_id)
         for item in object_items + arc_items:
             scene.addItem(item)
-        # Make template
-        for dimension, object_item in enumerate(object_items):
-            object_item.template_id_dim[self.template_id] = dimension
-            object_item.make_template()
+        # Become template
+        for object_item in object_items:
+            object_item.template_id = self.template_id
+            object_item.become_template()
         for arc_item in arc_items:
             arc_item.template_id = self.template_id
-            arc_item.make_template()
-        # Move
-        try:
-            rectf = object_items[dimension_at_origin].sceneBoundingRect()
-        except (IndexError, TypeError):
+            arc_item.become_template()
+        self.relationship_templates[self.template_id] = {
+            "class_id": relationship_class_id,
+            "object_items": object_items,
+            "arc_items": arc_items,
+        }
+        self.template_id += 1
+        # Position
+        if center:
+            item, dimension = center
+            item._merge_target = object_items[dimension]
+            item.merge_into_target()
+            center = item.sceneBoundingRect().center()
+        else:
             rectf = QRectF()
             for object_item in object_items:
                 rectf |= object_item.sceneBoundingRect()
-        center = rectf.center()
+            center = rectf.center()
         for object_item in object_items:
             object_item.moveBy(x - center.x(), y - center.y())
             object_item.move_related_items_by(QPointF(x, y) - center)
 
     def add_object(self, object_item, name):
-        """Try and add object given an object item and a name."""
+        """Try and add object from given item and name."""
         item = dict(class_id=object_item.object_class_id, name=name)
-        object_d = {self.db_map: (item,)}
-        if self.add_objects(object_d):
-            object_item.object_name = name
-            object_ = self.db_map.query(self.db_map.object_sq).filter_by(name=name).one()
-            object_item.object_id = object_.id
-            if object_item.template_id_dim:
-                object_item.add_into_relationship()
-            object_item.remove_template()
+        db_map_data = {self.db_map: [item]}
+        self.db_mngr.add_objects(db_map_data)
+        object_id = self._added_objects.get((object_item.object_class_id, name))
+        self._added_objects.clear()
+        return object_id
+
+    @Slot("QVariant", name="receive_objects_added")
+    def receive_objects_added(self, db_map_data):
+        super().receive_objects_added(db_map_data)
+        self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in db_map_data.get(self.db_map, [])}
 
     def update_object(self, object_item, name):
         """Try and update object given an object item and a name."""
         item = dict(id=object_item.object_id, name=name)
-        object_d = {self.db_map: (item,)}
-        if self.update_objects(object_d):
-            object_item.object_name = name
+        db_map_data = {self.db_map: [item]}
+        self.db_mngr.update_objects(db_map_data)
 
     @busy_effect
-    def add_relationship(self, template_id, object_items):
-        """Try and add relationship given a template id and a list of object items."""
+    def add_relationship(self, template_id):
+        """Try and add relationship given a template id."""
+        relationship_template = self.relationship_templates.get(template_id)
+        if not relationship_template:
+            return None
+        class_id = relationship_template["class_id"]
+        object_items = relationship_template["object_items"]
         object_id_list = list()
         object_name_list = list()
-        object_dimensions = [x.template_id_dim[template_id] for x in object_items]
-        for dimension in sorted(object_dimensions):
-            ind = object_dimensions.index(dimension)
-            item = object_items[ind]
-            object_name = item.object_name
-            if not object_name:
-                logging.debug("can't find name %s", object_name)
-                return False
-            object_ = self.db_map.query(self.db_map.object_sq).filter_by(name=object_name).one_or_none()
-            if not object_:
-                logging.debug("can't find object %s", object_name)
-                return False
-            object_id_list.append(object_.id)
-            object_name_list.append(object_name)
-        if len(object_id_list) < 2:
-            logging.debug("too short %s", len(object_id_list))
-            return False
-        class_id = self.relationship_class_dict[template_id]
+        for item in object_items:
+            if not item.object_id:
+                return None
+            object_id_list.append(item.object_id)
+            object_name_list.append(item.object_name)
         class_name = self.db_mngr.get_item(self.db_map, "relationship class", class_id)["name"]
         name = class_name + "_" + "__".join(object_name_list)
-        item = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
-        try:
-            wide_relationships, _ = self.db_map.add_wide_relationships(item, strict=True)
-            for item in object_items:
-                del item.template_id_dim[template_id]
-            items = self.ui.graphicsView.scene().items()
-            arc_items = [x for x in items if isinstance(x, ArcItem) and x.template_id == template_id]
-            for item in arc_items:
-                item.remove_template()
-                item.template_id = None
-                item.object_id_list = ",".join([str(x) for x in object_id_list])
-            self.commit_available.emit(True)
-            msg = "Successfully added new relationship '{}'.".format(wide_relationships.one().name)
-            self.msg.emit(msg)
-            return True
-        except (SpineIntegrityError, SpineDBAPIError) as e:
-            self.msg_error.emit(e.msg)
-            return False
+        relationship = {'name': name, 'object_id_list': object_id_list, 'class_id': class_id}
+        self.db_mngr.add_relationships({self.db_map: [relationship]})
+        object_id_list = ",".join([str(id_) for id_ in object_id_list])
+        relationship_id = self._added_relationships.get((class_id, object_id_list))
+        self._added_relationships.clear()
+        return relationship_id
 
-    def add_object_classses_to_models(self, db_map, added):
-        super().add_object_classses_to_models(db_map, added)
-        for object_class in added:
-            self.object_class_list_model.add_object_class(object_class)
+    @Slot("QVariant", name="receive_relationships_added")
+    def receive_relationships_added(self, db_map_data):
+        super().receive_relationships_added(db_map_data)
+        self._added_relationships = {
+            (x["class_id"], x["object_id_list"]): x["id"] for x in db_map_data.get(self.db_map, [])
+        }
 
-    def add_relationship_classes_to_models(self, db_map, added):
-        """Insert new relationship classes."""
-        super().add_relationship_classes_to_models(db_map, added)
-        for relationship_class in added:
-            self.relationship_class_list_model.add_relationship_class(relationship_class)
+    def remove_relationship_template(self, template_id, relationship_id):
+        relationship_template = self.relationship_templates.pop(template_id, None)
+        if not relationship_template:
+            return
+        arc_items = relationship_template["arc_items"]
+        for item in arc_items:
+            item.relationship_id = relationship_id
+            item.become_whole()
 
     def show_graph_view_context_menu(self, global_pos):
         """Show context menu for graphics view."""
@@ -899,28 +831,13 @@ class GraphViewForm(DataStoreForm):
         elif option in self.object_item_context_menu.relationship_class_dict:
             relationship_class = self.object_item_context_menu.relationship_class_dict[option]
             relationship_class_id = relationship_class["id"]
-            object_class_id_list = relationship_class["object_class_id_list"]
-            object_class_name_list = relationship_class['object_class_name_list']
-            object_name_list = relationship_class['object_name_list']
             dimension = relationship_class['dimension']
-            object_items, arc_items = self.relationship_items(
-                object_name_list,
-                object_class_name_list,
-                self.extent,
-                self._spread,
-                label_color=self.object_label_color,
-                object_class_id_list=object_class_id_list,
-                relationship_class_id=relationship_class_id,
-            )
             scene = self.ui.graphicsView.scene()
             scene_pos = e.scenePos()
             self.add_relationship_template(
-                scene, scene_pos.x(), scene_pos.y(), object_items, arc_items, dimension_at_origin=dimension
+                scene, scene_pos.x(), scene_pos.y(), relationship_class_id, center=(main_item, dimension)
             )
-            object_items[dimension].merge_item(main_item)
             self._has_graph = True
-            self.relationship_class_dict[self.template_id] = relationship_class_id
-            self.template_id += 1
         self.object_item_context_menu.deleteLater()
         self.object_item_context_menu = None
 

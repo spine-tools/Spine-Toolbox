@@ -198,10 +198,10 @@ class DataStoreForm(QMainWindow):
         self.db_mngr.parameter_values_removed.connect(self.receive_parameter_values_removed)
         self.db_mngr.parameter_value_lists_removed.connect(self.receive_parameter_value_lists_removed)
         # Error
-        self.db_mngr.msg_error.connect(self.add_db_mngr_error_msg)
+        self.db_mngr.msg_error.connect(self.receive_db_mngr_error_msg)
 
-    @Slot("QVariant", name="add_db_mngr_error_msg")
-    def add_db_mngr_error_msg(self, db_map_error_log):
+    @Slot("QVariant", name="receive_db_mngr_error_msg")
+    def receive_db_mngr_error_msg(self, db_map_error_log):
         msg = ""
         for db_map, error_log in db_map_error_log.items():
             database = "From " + db_map.codename + ":"

@@ -346,12 +346,11 @@ class ObjectItemContextMenu(CustomContextMenu):
         if graphics_item.is_template or object_item_selection_length > 1:
             return
         for item in parent.relationship_class_list_model.findItems('*', Qt.MatchWildcard):
-            relationship_class = item.data(Qt.UserRole + 1)
-            if not relationship_class:
+            relationship_class_id = item.data(Qt.UserRole + 1)
+            if not relationship_class_id:
                 continue
-            relationship_class_id = relationship_class['id']
+            relationship_class = parent.db_mngr.get_item(parent.db_map, "relationship class", relationship_class_id)
             relationship_class_name = relationship_class['name']
-            object_class_id_list = [int(x) for x in relationship_class["object_class_id_list"].split(",")]
             object_class_name_list = relationship_class["object_class_name_list"].split(",")
             fixed_object_class_name_list = object_class_name_list.copy()
             fix_name_ambiguity(fixed_object_class_name_list)
@@ -361,16 +360,9 @@ class ObjectItemContextMenu(CustomContextMenu):
                 option = "Add '{}' relationship".format(relationship_class['name'])
                 fixed_object_class_name = fixed_object_class_name_list[i]
                 if object_class_name != fixed_object_class_name:
-                    option += " as '{}'".format(fixed_object_class_name)
+                    option += f" as dimension {i}"
                 self.add_action(option)
-                self.relationship_class_dict[option] = {
-                    'id': relationship_class_id,
-                    'name': relationship_class_name,
-                    'object_class_id_list': object_class_id_list,
-                    'object_class_name_list': object_class_name_list,
-                    'object_name_list': fixed_object_class_name_list,
-                    'dimension': i,
-                }
+                self.relationship_class_dict[option] = {'id': relationship_class_id, 'dimension': i}
 
 
 class CustomPopupMenu(QMenu):

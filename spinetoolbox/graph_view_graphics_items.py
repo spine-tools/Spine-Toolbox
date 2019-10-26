@@ -31,7 +31,7 @@ from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor
 
 
 class ObjectItem(QGraphicsPixmapItem):
-    def __init__(self, graph_view_form, x, y, extent, object_id=0, label_color=Qt.transparent):
+    def __init__(self, graph_view_form, x, y, extent, object_id=None, object_class_id=None, label_color=Qt.transparent):
         """Object item to use with GraphViewForm.
 
         Args:
@@ -40,26 +40,27 @@ class ObjectItem(QGraphicsPixmapItem):
             y (float): y-coordinate of central point
             extent (int): preferred extent
             object_id (int): object id
+            object_class_id (int): object class id
             label_color (QColor): label bg color
         """
         super().__init__()
         self._graph_view_form = graph_view_form
         self.db_mngr = graph_view_form.db_mngr
         self.db_map = graph_view_form.db_map
-        self._moved_on_scene = False
         self.object_id = object_id
+        self._object_class_id = object_class_id
         self._extent = extent
         self._label_color = label_color
+        self._object_name = f"<unnamed {self.object_class_name}>"
         self.label_item = ObjectLabelItem(self, label_color)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
-        self.template_id_dim = {}  # NOTE: for a template item this should have one and only one entry
+        self.template_id = None  # id of relationship templates
         self.question_item = None  # In case this becomes a template
-        self._original_pos = None
+        self._press_pos = None
         self._merge_target = None
-        self._merge = False
-        self._bounce = False
+        self._moved_on_scene = False
         self._views_cursor = {}
         self._selected_color = graph_view_form.palette().highlight()
         pixmap = self.db_mngr.entity_class_icon(self.db_map, "object class", self.object_class_id).pixmap(extent)
@@ -82,15 +83,15 @@ class ObjectItem(QGraphicsPixmapItem):
 
     @property
     def object_name(self):
-        return self.db_mngr.get_item(self.db_map, "object", self.object_id)["name"]
+        return self.db_mngr.get_item(self.db_map, "object", self.object_id).get("name", self._object_name)
 
     @property
     def object_class_id(self):
-        return self.db_mngr.get_item(self.db_map, "object", self.object_id)["class_id"]
+        return self.db_mngr.get_item(self.db_map, "object", self.object_id).get("class_id", self._object_class_id)
 
     @property
     def object_class_name(self):
-        return self.db_mngr.get_item(self.db_map, "object class", self.object_class_id)["name"]
+        return self.db_mngr.get_item(self.db_map, "object class", self.object_class_id).get("name")
 
     def shape(self):
         """Make the entire bounding rect to be the shape."""
@@ -114,8 +115,8 @@ class ObjectItem(QGraphicsPixmapItem):
             self.shade.hide()
         super().paint(painter, option, widget)
 
-    def make_template(self):
-        """Make this object par of a template for a relationship."""
+    def become_template(self):
+        """Become a template."""
         self.is_template = True
         font = QFont("", 0.75 * self._extent)
         brush = QBrush(Qt.white)
@@ -127,7 +128,7 @@ class ObjectItem(QGraphicsPixmapItem):
         x = rect.center().x() - question_rect.width() / 2
         y = rect.center().y() - question_rect.height() / 2
         self.question_item.setPos(x, y)
-        if self.template_id_dim:
+        if self.template_id:
             self.setToolTip(
                 """
                 <html>
@@ -153,7 +154,7 @@ class ObjectItem(QGraphicsPixmapItem):
                 )
             )
 
-    def remove_template(self):
+    def become_whole(self):
         """Make this arc no longer a template."""
         self.is_template = False
         self.scene().removeItem(self.question_item)
@@ -171,14 +172,21 @@ class ObjectItem(QGraphicsPixmapItem):
     def finish_name_editing(self):
         """Called by the label item when editing finishes."""
         self.label_item.setTextInteractionFlags(Qt.NoTextInteraction)
-        name = self.label_item.toPlainText()
+        self._object_name = self.label_item.toPlainText()
         if self.is_template:
             # Add
-            self._graph_view_form.add_object(self, name)
+            object_id = self._graph_view_form.add_object(self, self._object_name)
+            if not object_id:
+                return
+            self.object_id = object_id
+            self.label_item.refresh_name()  # For 'fun', mostly
+            self.become_whole()
+            if not self.template_id:
+                return
+            self._graph_view_form.add_relationship(self.template_id)
         else:
             # Update
-            self._graph_view_form.update_object(self, name)
-        self.label_item.setPlainText(self.object_name)
+            self._graph_view_form.update_object(self, self._object_name)
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
@@ -187,6 +195,21 @@ class ObjectItem(QGraphicsPixmapItem):
     def add_outgoing_arc_item(self, arc_item):
         """Add an ArcItem to the list of outgoing arcs."""
         self.outgoing_arc_items.append(arc_item)
+
+    def itemChange(self, change, value):
+        """
+        Keeps track on item's movements on the scene.
+
+        Args:
+            change (GraphicsItemChange): a flag signalling the type of the change
+            value: a value related to the change
+
+        Returns:
+             Whatever super() does with the value parameter
+        """
+        if change == QGraphicsItem.ItemScenePositionHasChanged:
+            self._moved_on_scene = True
+        return value
 
     def keyPressEvent(self, event):
         """Triggers name editing."""
@@ -204,124 +227,100 @@ class ObjectItem(QGraphicsPixmapItem):
     def mousePressEvent(self, event):
         """Saves original position."""
         super().mousePressEvent(event)
-        self._original_pos = self.pos()
+        self._press_pos = self.pos()
+        self._merge_target = None
+
+    def _find_merge_target(self, scene_pos):
+        """Checks if this item is touching another item so they can merge
+        (this happens when building a relationship)."""
+        candidates = [x for x in self.scene().items(scene_pos) if isinstance(x, ObjectItem) and x != self]
+        return next(iter(candidates), None)
+
+    def _is_target_valid(self):
+        return (
+            self._merge_target
+            and self._merge_target.is_template != self.is_template
+            and (self.template_id or self._merge_target.template_id)
+            and self._merge_target.object_class_id == self.object_class_id
+        )
 
     def mouseMoveEvent(self, event):
         """Calls move related items and checks for a merge target."""
-        if event.buttons() & Qt.LeftButton != 0:
-            # We need to manually move ObjectItems because the ItemIgnoresTransformations flag
-            # prevents the default movement working properly when the scene rect changes
-            # during the movement.
-            move_by = event.scenePos() - event.lastScenePos()
-            # Move selected items together
-            selected_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
-            for item in selected_items:
-                item.moveBy(move_by.x(), move_by.y())
-                item.move_related_items_by(move_by)
-            self.check_for_merge_target(event.scenePos())
-            # Depending on the value of merge target and bounce, set drop indicator cursor
-            for view in self.scene().views():
-                if view not in self._views_cursor:
-                    self._views_cursor[view] = view.viewport().cursor()
-                if self._merge_target:
-                    view.viewport().setCursor(Qt.DragCopyCursor)
-                elif self._bounce:
-                    view.viewport().setCursor(Qt.ForbiddenCursor)
-                else:
-                    try:
-                        view.viewport().setCursor(self._views_cursor[view])
-                    except KeyError:
-                        pass
-        else:
+        if event.buttons() & Qt.LeftButton == 0:
             super().mouseMoveEvent(event)
+            return
+        # We need to manually move ObjectItems because the ItemIgnoresTransformations flag
+        # prevents the default movement working properly when the scene rect changes
+        # during the movement.
+        move_by = event.scenePos() - event.lastScenePos()
+        # Move selected items together
+        selected_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
+        for item in selected_items:
+            item.moveBy(move_by.x(), move_by.y())
+            item.move_related_items_by(move_by)
+        self._merge_target = self._find_merge_target(event.scenePos())
+        # Depending on the value of merge target and bounce, set drop indicator cursor
+        for view in self.scene().views():
+            self._views_cursor.setdefault(view, view.viewport().cursor())
+            if not self._merge_target:
+                try:
+                    view.viewport().setCursor(self._views_cursor[view])
+                except KeyError:
+                    pass
+                continue
+            elif self._is_target_valid():
+                view.viewport().setCursor(Qt.DragCopyCursor)
+            else:
+                view.viewport().setCursor(Qt.ForbiddenCursor)
 
     def mouseReleaseEvent(self, event):
         """Merge, bounce, notify scene or just do nothing."""
         super().mouseReleaseEvent(event)
         if self._merge_target:
-            if not self.merge_item(self._merge_target):
-                self._bounce = True
-            self._merge_target = None
-        if self._bounce:
-            self.move_related_items_by(self._original_pos - self.pos())
-            self.setPos(self._original_pos)
-            self._original_pos = None
+            if self.merge_into_target():
+                return
+            self._bounce_back(self.pos())
         if self._moved_on_scene:
             self._moved_on_scene = False
             self.scene().shrink_if_needed()
 
-    def itemChange(self, change, value):
-        """
-        Keeps track on item's movements on the scene.
+    def _bounce_back(self, current_pos):
+        """Bounce item back from given position to press position."""
+        if self._press_pos is None:
+            return
+        self.move_related_items_by(self._press_pos - current_pos)
+        self.setPos(self._press_pos)
 
-        Args:
-            change (GraphicsItemChange): a flag signalling the type of the change
-            value: a value related to the change
-
-        Returns:
-             Whatever super() does with the value parameter
-        """
-        if change == QGraphicsItem.ItemScenePositionHasChanged:
-            self._moved_on_scene = True
-        return value
-
-    def check_for_merge_target(self, scene_pos):
-        """Checks if this item is touching another item so they can merge
-        (this happens when building a relationship)."""
-        self._merge_target = None
-        self._bounce = False
-        for item in self.scene().items(scene_pos):
-            if item == self:
-                continue
-            if not isinstance(item, ObjectItem):
-                continue
-            if item.is_template != self.is_template and item.object_class_name == self.object_class_name:
-                self._merge_target = item
-            else:
-                self._bounce = True
-            break
-
-    def merge_item(self, other):
-        """Merges this item with another.
-        Tries to create a relationship if needed."""
-        if not other:
-            return False
-        if self.is_template == other.is_template:
-            return False
-        if self.object_class_id != other.object_class_id:
+    def merge_into_target(self):
+        """Merges this item with the target."""
+        if not self._is_target_valid():
             return False
         if not self.is_template:
-            # Do the merging on the template, by convention
-            return other.merge_item(self)
-        # Set the object_name attribute assuming everything will go fine.
-        template_object_name = self.object_name
-        self.object_name = other.object_name
-        if not self.add_into_relationship():
-            # Re-establish object name, since something went wrong (not that it matters too much, though)
-            self.object_name = template_object_name
+            # Merge the template into the whole, by convention
+            template = self._merge_target
+            template._merge_target = self
+            return template.merge_into_target()
+        relationship_template = self._graph_view_form.relationship_templates.get(self.template_id)
+        if not relationship_template:
             return False
-        # Add template id-dimension to other
-        other.template_id_dim.update(self.template_id_dim)
-        self.move_related_items_by(other.pos() - self.pos())
+        object_items = relationship_template["object_items"]
+        if not any(x for x in object_items if x.is_template and x != self):
+            # It's time to try and add the relationship
+            self.object_id = self._merge_target.object_id
+            relationship_id = self._graph_view_form.add_relationship(self.template_id)
+            if not relationship_id:
+                return False
+            self._graph_view_form.remove_relationship_template(self.template_id, relationship_id)
+        object_items[object_items.index(self)] = self._merge_target
+        self.move_related_items_by(self._merge_target.pos() - self.pos())
         for arc_item in self.outgoing_arc_items:
-            arc_item.src_item = other
+            arc_item.src_item = self._merge_target
         for arc_item in self.incoming_arc_items:
-            arc_item.dst_item = other
-        other.incoming_arc_items.extend(self.incoming_arc_items)
-        other.outgoing_arc_items.extend(self.outgoing_arc_items)
+            arc_item.dst_item = self._merge_target
+        self._merge_target.incoming_arc_items.extend(self.incoming_arc_items)
+        self._merge_target.outgoing_arc_items.extend(self.outgoing_arc_items)
         self.scene().removeItem(self)
         return True
-
-    def add_into_relationship(self):
-        """Try and add this item into a relationship between the buddies."""
-        template_id = list(self.template_id_dim)[0]
-        items = self.scene().items()
-        template_buddies = [x for x in items if isinstance(x, ObjectItem) and template_id in x.template_id_dim]
-        if [x for x in template_buddies if x.is_template and x != self]:
-            # There are more templates left in the relationship, just chill
-            return True
-        # The only template left in the relationship is this one, try and add the relationship
-        return self._graph_view_form.add_relationship(template_id, template_buddies)
 
     def move_related_items_by(self, pos_diff):
         """Moves related items."""
@@ -372,13 +371,16 @@ class ObjectLabelItem(QGraphicsTextItem):
         self._font = QApplication.font()
         self._font.setPointSize(11)
         self.setFont(self._font)
-        self.setPlainText(self.object_item.object_name)
-        self.bg = QGraphicsRectItem(self.boundingRect(), self)
+        self.bg = QGraphicsRectItem(self)
         self.set_bg_color(bg_color)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
         self._cursor = self.textCursor()
+        self.refresh_name()
+
+    def refresh_name(self):
+        self.setPlainText(self.object_item.object_name)
         self.reset_position()
 
     def reset_position(self):
@@ -387,6 +389,7 @@ class ObjectLabelItem(QGraphicsTextItem):
         x = -rectf.width() / 2
         y = -rectf.height() / 2
         self.setPos(x, y)
+        self.bg.setRect(self.boundingRect())
 
     def set_bg_color(self, bg_color):
         """Set background color."""
@@ -401,7 +404,6 @@ class ObjectLabelItem(QGraphicsTextItem):
         else:
             super().keyPressEvent(event)
         self.reset_position()
-        self.bg.setRect(self.boundingRect())
 
     def focusOutEvent(self, event):
         """Call method to finish name editing in object item."""
@@ -418,7 +420,8 @@ class ArcItem(QGraphicsLineItem):
         dst_item,
         width,
         arc_color,
-        relationship_id=0,
+        relationship_id=None,
+        relationship_class_id=None,
         token_color=QColor(),
         token_object_extent=0,
         token_object_label_color=QColor(),
@@ -440,6 +443,7 @@ class ArcItem(QGraphicsLineItem):
         self.db_mngr = graph_view_form.db_mngr
         self.db_map = graph_view_form.db_map
         self.relationship_id = relationship_id
+        self._relationship_class_id = relationship_class_id
         self.src_item = src_item
         self.dst_item = dst_item
         self._width = float(width)
@@ -469,7 +473,9 @@ class ArcItem(QGraphicsLineItem):
 
     @property
     def relationship_class_id(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.relationship_id)["class_id"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.relationship_id).get(
+            "class_id", self._relationship_class_id
+        )
 
     @property
     def object_class_id_list(self):
@@ -479,7 +485,9 @@ class ArcItem(QGraphicsLineItem):
 
     @property
     def object_name_list(self):
-        return self.db_mngr.get_item(self.db_map, "relationship", self.relationship_id)["object_name_list"]
+        return self.db_mngr.get_item(self.db_map, "relationship", self.relationship_id).get(
+            "object_name_list", ",".join(["<unnamed>" for _ in range(len(self.object_class_id_list))])
+        )
 
     def paint(self, painter, option, widget=None):
         """Try and make it more clear when an item is selected."""
@@ -490,13 +498,13 @@ class ArcItem(QGraphicsLineItem):
             self.setPen(self.normal_pen)
         super().paint(painter, option, widget)
 
-    def make_template(self):
+    def become_template(self):
         """Make this arc part of a template for a relationship."""
         self.is_template = True
         self.normal_pen.setStyle(Qt.DotLine)
         self.selected_pen.setStyle(Qt.DotLine)
 
-    def remove_template(self):
+    def become_whole(self):
         """Make this arc no longer part of a template for a relationship."""
         self.is_template = False
         self.normal_pen.setStyle(Qt.SolidLine)
