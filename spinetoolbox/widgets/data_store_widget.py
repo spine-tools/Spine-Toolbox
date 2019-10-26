@@ -96,13 +96,10 @@ class DataStoreForm(QMainWindow):
         self.db_mngr = project.db_mngr
         self.db_mngr.add_db_maps(*db_maps)
         # Selected ids
-        self.selected_object_class_ids = dict()
-        self.selected_object_ids = dict()
-        self.selected_relationship_class_ids = dict()
-        self.selected_relationship_ids = dict()
+        self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
+        self.selected_ent_ids = {"object": {}, "relationship": {}}
+        self.selected_param_def_ids = {"object class": {}, "relationship class": {}}
         self.selected_parameter_tag_ids = dict()
-        self.selected_obj_parameter_definition_ids = dict()
-        self.selected_rel_parameter_definition_ids = dict()
         # Parameter tag toolbar
         self.parameter_tag_toolbar = ParameterTagToolBar(self, self.db_mngr, *db_maps)
         self.addToolBar(Qt.TopToolBarArea, self.parameter_tag_toolbar)
@@ -264,18 +261,18 @@ class DataStoreForm(QMainWindow):
         """
         for db_map, id_ in db_map_ids:
             if checked:
-                self.selected_parameter_tag_ids.setdefault(db_map, []).append(id_)
+                self.selected_parameter_tag_ids.setdefault(db_map, set()).add(id_)
             else:
                 self.selected_parameter_tag_ids[db_map].remove(id_)
         if not any(v for v in self.selected_parameter_tag_ids.values()):
             # No tags selected
-            self.selected_obj_parameter_definition_ids = {}
-            self.selected_rel_parameter_definition_ids = {}
+            self.selected_param_def_ids["object class"] = {}
+            self.selected_param_def_ids["relationship class"] = {}
         else:
             # At least one tag selected: init dict like below so in case no parameter has the tag,
             # all of them are filtered
-            self.selected_obj_parameter_definition_ids = {(None, 0): set()}
-            self.selected_rel_parameter_definition_ids = {(None, 0): set()}
+            self.selected_param_def_ids["object class"] = {(None, 0): set()}
+            self.selected_param_def_ids["relationship class"] = {(None, 0): set()}
             # Find selected parameter definitions
             selected_param_defs = self.db_mngr.find_cascading_parameter_definitions_by_tag(
                 self.selected_parameter_tag_ids
@@ -283,11 +280,11 @@ class DataStoreForm(QMainWindow):
             for db_map, param_defs in selected_param_defs.items():
                 for param_def in param_defs:
                     if "object_class_id" in param_def:
-                        self.selected_obj_parameter_definition_ids.setdefault(
+                        self.selected_param_def_ids["object class"].setdefault(
                             (db_map, param_def["object_class_id"]), set()
                         ).add(param_def["id"])
                     elif "relationship_class_id" in param_def:
-                        self.selected_rel_parameter_definition_ids.setdefault(
+                        self.selected_param_def_ids["relationship class"].setdefault(
                             (db_map, param_def["relationship_class_id"]), set()
                         ).add(param_def["id"])
         self.update_filter()
@@ -442,35 +439,19 @@ class DataStoreForm(QMainWindow):
         self._setup_delegate(table_view, h("parameter_name"), RelationshipParameterNameDelegate)
         self._setup_delegate(table_view, h("object_name_list"), ObjectNameListDelegate)
 
-    @property
-    def all_selected_object_class_ids(self):
+    def selected_entity_class_ids(self, entity_class_type):
         """Return object class ids selected in object tree *and* parameter tag toolbar."""
-        tree_object_class_ids = self.selected_object_class_ids
-        tag_object_class_ids = dict()
-        for db_map, id_ in self.selected_obj_parameter_definition_ids:
-            tag_object_class_ids.setdefault(db_map, set()).add(id_)
-        if not tag_object_class_ids:
-            return tree_object_class_ids
-        if not tree_object_class_ids:
-            return tag_object_class_ids
+        tree_class_ids = self.selected_ent_cls_ids[entity_class_type]
+        tag_class_ids = dict()
+        for db_map, class_id in self.selected_param_def_ids[entity_class_type]:
+            tag_class_ids.setdefault(db_map, set()).add(class_id)
+        if not tag_class_ids:
+            return tree_class_ids
+        if not tree_class_ids:
+            return tag_class_ids
         return {
-            key: value.intersection(tag_object_class_ids.get(key, {})) for key, value in tree_object_class_ids.items()
-        }
-
-    @property
-    def all_selected_relationship_class_ids(self):
-        """Return relationship class ids selected in relationship tree *and* parameter tag toolbar."""
-        tree_relationship_class_ids = self.selected_relationship_class_ids
-        tag_relationship_class_ids = dict()
-        for db_map, id_ in self.selected_rel_parameter_definition_ids:
-            tag_relationship_class_ids.setdefault(db_map, set()).add(id_)
-        if not tag_relationship_class_ids:
-            return tree_relationship_class_ids
-        if not tree_relationship_class_ids:
-            return tag_relationship_class_ids
-        return {
-            key: value.intersection(tag_relationship_class_ids.get(key, {}))
-            for key, value in tree_relationship_class_ids.items()
+            db_map: class_ids.intersection(tag_class_ids.get(db_map, {}))
+            for db_map, class_ids in tree_class_ids.items()
         }
 
     def set_default_parameter_data(self, index=None):
@@ -478,7 +459,7 @@ class DataStoreForm(QMainWindow):
         if index is None:
             default_data = dict(database=next(iter(self.db_maps)).codename)
         else:
-            default_data = index.internalPointer().default_parameter_data()
+            default_data = index.model().item_from_index(index).default_parameter_data()
         for model in (
             self.object_parameter_definition_model,
             self.object_parameter_value_model,

@@ -16,48 +16,126 @@ Single models for parameter definitions and values (as 'for a single entity').
 :date:   28.6.2019
 """
 
-from PySide2.QtCore import Qt
-from ..mvcmodels.filled_parameter_models import FilledParameterModel
+from PySide2.QtCore import Qt, QModelIndex
+from PySide2.QtGui import QGuiApplication
+from ..mvcmodels.minimal_table_model import MinimalTableModel
 from ..mvcmodels.parameter_mixins import FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin
+from ..mvcmodels.parameter_value_formatting import format_for_DisplayRole, format_for_ToolTipRole
 
 
-class SingleParameterModel(FilledParameterModel):
+class SingleParameterModel(MinimalTableModel):
     """A parameter model for a single entity class to go in a CompoundParameterModel.
     Provides methods to associate the model to an entity class as well as
     to filter entities within the class.
     """
 
-    def __init__(self, *args, **kwargs):
+    def __init__(self, parent, header, db_mngr, db_map, entity_class_id):
         """Init class.
 
         Args:
             parent (CompoundParameterModel): the parent object
             header (list): list of field names for the header
         """
-        super().__init__(*args, **kwargs)
+        super().__init__(parent, header)
+        self.db_mngr = db_mngr
+        self.db_map = db_map
+        self.entity_class_id = entity_class_id
         self._auto_filter = dict()
         self._selected_param_def_ids = set()
 
     @property
     def item_type(self):
+        """The item type, either 'parameter value' or 'parameter definition', required by the data method."""
         raise NotImplementedError()
 
     @property
-    def parameter_definition_id_key(self):
-        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
+    def entity_class_type(self):
+        """The entity class type, either 'object class' or 'relationship class'."""
+        raise NotImplementedError()
 
     @property
     def json_fields(self):
         return {"parameter definition": ["default_value"], "parameter value": ["value"]}[self.item_type]
 
     @property
-    def entity_class_id(self):
-        """Returns the associated entity class id."""
-        raise NotImplementedError()
+    def fixed_fields(self):
+        return {
+            "object class": {
+                "parameter definition": ["object_class_name", "database"],
+                "parameter value": ["object_class_name", "object_name", "parameter_name", "database"],
+            },
+            "relationship class": {
+                "parameter definition": ["relationship_class_name", "object_class_name_list", "database"],
+                "parameter value": ["relationship_class_name", "object_name_list", "parameter_name", "database"],
+            },
+        }[self.entity_class_type][self.item_type]
+
+    @property
+    def parameter_definition_id_key(self):
+        return {"parameter definition": "id", "parameter value": "parameter_id"}[self.item_type]
 
     @property
     def can_be_filtered(self):
         return True
+
+    def insertRows(self, row, count, parent=QModelIndex()):
+        """This model doesn't support row insertion."""
+        return False
+
+    def flags(self, index):
+        """Make fixed indexes non-editable."""
+        flags = super().flags(index)
+        if self.header[index.column()] in self.fixed_fields:
+            return flags & ~Qt.ItemIsEditable
+        return flags
+
+    def data(self, index, role=Qt.DisplayRole):
+        """Gets the id and database for the row, and reads data from the db manager
+        using the item_type property.
+        Paint the object class icon next to the name.
+        Also paint background of fixed indexes gray and apply custom format to JSON fields."""
+        field = self.header[index.column()]
+        # Background role
+        if role == Qt.BackgroundRole and field in self.fixed_fields:
+            return QGuiApplication.palette().button()
+        # Display, edit, tool tip role
+        if role in (Qt.DisplayRole, Qt.EditRole, Qt.ToolTipRole):
+            # TODO: Maybe Spine db manager can format the data
+            id_ = self._main_data[index.row()]
+            value = self.db_mngr.get_item(self.db_map, self.item_type, id_).get(field)
+            if field == "database":
+                return self.db_map.codename
+            if role == Qt.DisplayRole and field in self.json_fields:
+                return format_for_DisplayRole(value)
+            if role == Qt.ToolTipRole and field in self.json_fields:
+                return format_for_ToolTipRole(value)
+            return value
+        # Decoration role
+        entity_class_name_field = {
+            "object class": "object_class_name",
+            "relationship class": "relationship_class_name",
+        }[self.entity_class_type]
+        if role == Qt.DecorationRole and field == entity_class_name_field:
+            return self.db_mngr.entity_class_icon(self.db_map, self.entity_class_type, self.entity_class_id)
+        return super().data(index, role)
+
+    def batch_set_data(self, indexes, data):
+        """Sets data for indexes in batch.
+        Sets data directly in database using db mngr. If successful, updated data will be
+        automatically seen by the data method.
+        """
+        if not indexes or not data:
+            return False
+        row_data = dict()
+        for index, value in zip(indexes, data):
+            row_data.setdefault(index.row(), {})[self.header[index.column()]] = value
+        items = [dict(id=self._main_data[row], **data) for row, data in row_data.items()]
+        self.update_items_in_db(items)
+        return True
+
+    def update_items_in_db(self, items):
+        """Update items in db. Required by batch_set_data"""
+        raise NotImplementedError()
 
     def _filter_accepts_item(self, item, ignored_columns=None):
         return self._main_filter_accepts_item(item) and self._auto_filter_accepts_item(
@@ -96,88 +174,20 @@ class SingleParameterModel(FilledParameterModel):
 class SingleObjectParameterMixin:
     """Associates a parameter model with a single object class."""
 
-    def __init__(self, parent, header, db_mngr, db_map, object_class_id, *args, **kwargs):
-        """Init class.
-
-        Args:
-            object_class_id (int): the id of the object class
-        """
-        super().__init__(parent, header, db_mngr, db_map, *args, **kwargs)
-        self.object_class_id = object_class_id
-
     @property
-    def entity_class_id(self):
-        return self.object_class_id
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Return data for given index and role.
-        Paint the object class icon next to the name.
-        """
-        if role == Qt.DecorationRole and self.header[index.column()] == "object_class_name":
-            return self.db_mngr.entity_class_icon(self.db_map, "object class", self.object_class_id)
-        return super().data(index, role)
+    def entity_class_type(self):
+        return "object class"
 
 
 class SingleRelationshipParameterMixin:
     """Associates a parameter model with a single relationship class."""
 
-    def __init__(self, parent, header, db_mngr, db_map, relationship_class_id, *args, **kwargs):
-        """Init class.
-
-        Args:
-            relationship_class_id (int): the id of the relationship class
-        """
-        super().__init__(parent, header, db_mngr, db_map, *args, **kwargs)
-        self.relationship_class_id = relationship_class_id
-
     @property
-    def entity_class_id(self):
-        return self.relationship_class_id
-
-    def data(self, index, role=Qt.DisplayRole):
-        """Return data for given index and role.
-        Paint the object class icon next to the name.
-        """
-        if role == Qt.DecorationRole and self.header[index.column()] == "relationship_class_name":
-            return self.db_mngr.entity_class_icon(self.db_map, "relationship class", self.relationship_class_id)
-        return super().data(index, role)
+    def entity_class_type(self):
+        return "relationship class"
 
 
-class SingleObjectParameterValueMixin:
-    """Filters objects within a class."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._selected_object_ids = {}
-
-    def _main_filter_accepts_item(self, item):
-        """Reimplemented to filter objects."""
-        if not super()._main_filter_accepts_item(item):
-            return False
-        if self._selected_object_ids:
-            return item["object_id"] in self._selected_object_ids
-        return True
-
-
-class SingleRelationshipParameterValueMixin:
-    """Filters relationships within a class."""
-
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._selected_relationship_ids = {}
-
-    def _main_filter_accepts_item(self, item):
-        """Reimplemented to filter relationships and objects."""
-        if not super()._main_filter_accepts_item(item):
-            return False
-        if self._selected_relationship_ids:
-            return item["relationship_id"] in self._selected_relationship_ids
-        return True
-
-
-class SingleParameterDefinitionModel(
-    FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin, SingleParameterModel
-):
+class SingleParameterDefinitionMixin(FillInParameterNameMixin, FillInValueListIdMixin, MakeParameterTagMixin):
     """A parameter definition model for a single entity class."""
 
     @property
@@ -206,12 +216,25 @@ class SingleParameterDefinitionModel(
             self.db_mngr.update_parameter_definitions({self.db_map: param_defs})
 
 
-class SingleParameterValueModel(SingleParameterModel):
+class SingleParameterValueMixin:
     """A parameter value model for a single entity class."""
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self._selected_entity_ids = {}
 
     @property
     def item_type(self):
         return "parameter value"
+
+    def _main_filter_accepts_item(self, item):
+        """Reimplemented to filter objects."""
+        if not super()._main_filter_accepts_item(item):
+            return False
+        if self._selected_entity_ids:
+            entity_key = {"object class": "object_id", "relationship class": "relationship_id"}[self.entity_class_type]
+            return item[entity_key] in self._selected_entity_ids
+        return True
 
     def update_items_in_db(self, items):
         """Update items in db.
@@ -222,60 +245,54 @@ class SingleParameterValueModel(SingleParameterModel):
         self.db_mngr.update_parameter_values({self.db_map: items})
 
 
-class SingleObjectParameterDefinitionModel(SingleObjectParameterMixin, SingleParameterDefinitionModel):
+class SingleObjectParameterDefinitionModel(
+    SingleObjectParameterMixin, SingleParameterDefinitionMixin, SingleParameterModel
+):
     """An object parameter definition model for a single object class."""
-
-    fixed_fields = ["object_class_name", "database"]
 
     def fetch_data(self):
         """Returns object parameter definition ids."""
         return [
             x["id"]
-            for x in self.db_mngr.get_object_parameter_definitions(self.db_map, object_class_id=self.object_class_id)
+            for x in self.db_mngr.get_object_parameter_definitions(self.db_map, object_class_id=self.entity_class_id)
         ]
 
 
-class SingleRelationshipParameterDefinitionModel(SingleRelationshipParameterMixin, SingleParameterDefinitionModel):
+class SingleRelationshipParameterDefinitionModel(
+    SingleRelationshipParameterMixin, SingleParameterDefinitionMixin, SingleParameterModel
+):
     """A relationship parameter definition model for a single relationship class."""
-
-    fixed_fields = ["relationship_class_name", "object_class_name_list", "database"]
 
     def fetch_data(self):
         """Returns relationship parameter definition ids."""
         return [
             x["id"]
             for x in self.db_mngr.get_relationship_parameter_definitions(
-                self.db_map, relationship_class_id=self.relationship_class_id
+                self.db_map, relationship_class_id=self.entity_class_id
             )
         ]
 
 
-class SingleObjectParameterValueModel(
-    SingleObjectParameterMixin, SingleObjectParameterValueMixin, SingleParameterValueModel
-):
+class SingleObjectParameterValueModel(SingleObjectParameterMixin, SingleParameterValueMixin, SingleParameterModel):
     """An object parameter value model for a single object class."""
-
-    fixed_fields = ["object_class_name", "object_name", "parameter_name", "database"]
 
     def fetch_data(self):
         """Returns object parameter value ids."""
         return [
-            x["id"] for x in self.db_mngr.get_object_parameter_values(self.db_map, object_class_id=self.object_class_id)
+            x["id"] for x in self.db_mngr.get_object_parameter_values(self.db_map, object_class_id=self.entity_class_id)
         ]
 
 
 class SingleRelationshipParameterValueModel(
-    SingleRelationshipParameterMixin, SingleRelationshipParameterValueMixin, SingleParameterValueModel
+    SingleRelationshipParameterMixin, SingleParameterValueMixin, SingleParameterModel
 ):
     """A relationship parameter value model for a single relationship class."""
-
-    fixed_fields = ["relationship_class_name", "object_name_list", "parameter_name", "database"]
 
     def fetch_data(self):
         """Returns relationship parameter value ids."""
         return [
             x["id"]
             for x in self.db_mngr.get_relationship_parameter_values(
-                self.db_map, relationship_class_id=self.relationship_class_id
+                self.db_map, relationship_class_id=self.entity_class_id
             )
         ]

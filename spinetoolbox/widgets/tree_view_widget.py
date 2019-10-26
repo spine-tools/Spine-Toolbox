@@ -517,16 +517,17 @@ class TreeViewForm(DataStoreForm):
             self.object_tree_model.deselect_index(index)
         for index in selected.indexes():
             self.object_tree_model.select_index(index)
-        if self._accept_selection(self.ui.treeView_object):
-            self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
-            self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))
-            self.object_selection_available.emit(bool(self.object_tree_model.selected_object_indexes))
-            self.relationship_class_selection_available.emit(
-                bool(self.object_tree_model.selected_relationship_class_indexes)
-            )
-            self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
-            self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
-            self._update_object_filter()
+        if not self._accept_selection(self.ui.treeView_object):
+            return
+        self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))
+        self.object_class_selection_available.emit(bool(self.object_tree_model.selected_object_class_indexes))
+        self.object_selection_available.emit(bool(self.object_tree_model.selected_object_indexes))
+        self.relationship_class_selection_available.emit(
+            bool(self.object_tree_model.selected_relationship_class_indexes)
+        )
+        self.relationship_selection_available.emit(bool(self.object_tree_model.selected_relationship_indexes))
+        self.set_default_parameter_data(self.ui.treeView_object.currentIndex())
+        self._update_object_filter()
 
     @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="_handle_relationship_tree_selection_changed")
@@ -537,18 +538,19 @@ class TreeViewForm(DataStoreForm):
             self.relationship_tree_model.deselect_index(index)
         for index in selected.indexes():
             self.relationship_tree_model.select_index(index)
-        if self._accept_selection(self.ui.treeView_relationship):
-            self.object_class_selection_available.emit(False)
-            self.object_selection_available.emit(False)
-            self.relationship_tree_selection_available.emit(
-                any(v for v in self.relationship_tree_model.selected_indexes.values())
-            )
-            self.relationship_class_selection_available.emit(
-                bool(self.relationship_tree_model.selected_relationship_class_indexes)
-            )
-            self.relationship_selection_available.emit(bool(self.relationship_tree_model.selected_relationship_indexes))
-            self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
-            self._update_relationship_filter()
+        if not self._accept_selection(self.ui.treeView_relationship):
+            return
+        self.object_class_selection_available.emit(False)
+        self.object_selection_available.emit(False)
+        self.relationship_tree_selection_available.emit(
+            any(v for v in self.relationship_tree_model.selected_indexes.values())
+        )
+        self.relationship_class_selection_available.emit(
+            bool(self.relationship_tree_model.selected_relationship_class_indexes)
+        )
+        self.relationship_selection_available.emit(bool(self.relationship_tree_model.selected_relationship_indexes))
+        self.set_default_parameter_data(self.ui.treeView_relationship.currentIndex())
+        self._update_relationship_filter()
 
     @staticmethod
     def _db_map_items(indexes):
@@ -570,17 +572,21 @@ class TreeViewForm(DataStoreForm):
     def _update_object_filter(self):
         """Update filters on parameter models according to object tree selection."""
         selected_object_classes = self._db_map_items(self.object_tree_model.selected_object_class_indexes)
-        self.selected_object_class_ids = self.db_mngr._to_ids(selected_object_classes)
-        selected_relationship_classes = self.db_mngr.find_cascading_relationship_classes(self.selected_object_class_ids)
-        self.selected_relationship_class_ids = self.db_mngr._to_ids(selected_relationship_classes)
+        self.selected_ent_cls_ids["object class"] = self.db_mngr._to_ids(selected_object_classes)
+        selected_relationship_classes = self.db_mngr.find_cascading_relationship_classes(
+            self.selected_ent_cls_ids["object class"]
+        )
+        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_relationship_classes)
         selected_objects = self._db_map_items(self.object_tree_model.selected_object_indexes)
         selected_relationships = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objects))
         for db_map, items in selected_objects.items():
-            self.selected_object_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
+            self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
         for db_map, items in selected_relationships.items():
-            self.selected_relationship_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self.selected_object_ids = self._db_map_class_ids(selected_objects)
-        self.selected_relationship_ids = self._db_map_class_ids(selected_relationships)
+            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
+                {x["class_id"] for x in items}
+            )
+        self.selected_ent_ids["object"] = self._db_map_class_ids(selected_objects)
+        self.selected_ent_ids["relationship"] = self._db_map_class_ids(selected_relationships)
         self.update_filter()
 
     def _update_relationship_filter(self):
@@ -588,11 +594,13 @@ class TreeViewForm(DataStoreForm):
         selected_relationship_classes = self._db_map_items(
             self.relationship_tree_model.selected_relationship_class_indexes
         )
-        self.selected_relationship_class_ids = self.db_mngr._to_ids(selected_relationship_classes)
+        self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_relationship_classes)
         selected_relationships = self._db_map_items(self.relationship_tree_model.selected_relationship_indexes)
         for db_map, items in selected_relationships.items():
-            self.selected_relationship_class_ids.setdefault(db_map, set()).update({x["class_id"] for x in items})
-        self.selected_relationship_ids = self._db_map_class_ids(selected_relationships)
+            self.selected_ent_cls_ids["relationship class"].setdefault(db_map, set()).update(
+                {x["class_id"] for x in items}
+            )
+        self.selected_ent_ids["relationship"] = self._db_map_class_ids(selected_relationships)
         self.update_filter()
 
     @Slot("QPoint", name="show_object_tree_context_menu")

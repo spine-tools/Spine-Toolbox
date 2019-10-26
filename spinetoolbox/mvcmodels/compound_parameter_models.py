@@ -58,19 +58,50 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         self.db_mngr = db_mngr
         self.db_maps = db_maps
         self._auto_filter = dict()
+        self._selected_entity_class_ids = {}
         self.connect_db_mngr_signals()
 
     @property
-    def _single_model_type(self):
+    def entity_class_type(self):
+        """Either 'object class' or 'relationship class'"""
         raise NotImplementedError()
+
+    @property
+    def item_type(self):
+        """Either 'parameter definition' or 'parameter value'"""
+        raise NotImplementedError()
+
+    @property
+    def _single_model_type(self):
+        return {
+            "object class": {
+                "parameter definition": SingleObjectParameterDefinitionModel,
+                "parameter value": SingleObjectParameterValueModel,
+            },
+            "relationship class": {
+                "parameter definition": SingleRelationshipParameterDefinitionModel,
+                "parameter value": SingleRelationshipParameterValueModel,
+            },
+        }[self.entity_class_type][self.item_type]
 
     @property
     def _empty_model_type(self):
-        raise NotImplementedError()
+        return {
+            "object class": {
+                "parameter definition": EmptyObjectParameterDefinitionModel,
+                "parameter value": EmptyObjectParameterValueModel,
+            },
+            "relationship class": {
+                "parameter definition": EmptyRelationshipParameterDefinitionModel,
+                "parameter value": EmptyRelationshipParameterValueModel,
+            },
+        }[self.entity_class_type][self.item_type]
 
     @property
     def _entity_class_id_key(self):
-        raise NotImplementedError()
+        return {"object class": "object_class_id", "relationship class": "relationship_class_id"}[
+            self.entity_class_type
+        ]
 
     def connect_db_mngr_signals(self):
         """Connect signals from database manager.
@@ -174,7 +205,11 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
     def filter_accepts_model(self, model):
         """Returns True if the given model should be included in the compound model, otherwise returns False.
         """
-        raise NotImplementedError()
+        if not model.can_be_filtered:
+            return True
+        if not self._selected_entity_class_ids:
+            return True
+        return model.entity_class_id in self._selected_entity_class_ids.get(model.db_map, set())
 
     def accepted_single_models(self):
         """Returns a list of accepted single models, for convenience."""
@@ -182,7 +217,7 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     @staticmethod
     def _settattr_if_different(obj, attr, val):
-        """If the given value is different than the current one, set it and returns True. 
+        """If the given value is different than the current one, set it and returns True.
         Otherwise returns False. Handy for updating filters.
         """
         curr = getattr(obj, attr)
@@ -201,18 +236,29 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 
     def update_compound_filter(self):
         """Update the filter."""
-        if not self._auto_filter:
-            return False
-        self._auto_filter.clear()
-        return True
+        a = False
+        if self._auto_filter:
+            self._auto_filter.clear()
+            a = True
+        b = self._settattr_if_different(
+            self, "_selected_entity_class_ids", self._parent.selected_entity_class_ids(self.entity_class_type)
+        )
+        return a or b
 
-    @staticmethod
-    def update_single_model_filter(model):
+    def update_single_model_filter(self, model):
         """Update the filter for the given model."""
-        if not model._auto_filter:
-            return False
-        model._auto_filter.clear()
-        return True
+        a = False
+        if model._auto_filter:
+            model._auto_filter.clear()
+            a = True
+        b = self._settattr_if_different(
+            model,
+            "_selected_param_def_ids",
+            self._parent.selected_param_def_ids[self.entity_class_type].get(
+                (model.db_map, model.entity_class_id), set()
+            ),
+        )
+        return a or b
 
     def update_auto_filter(self, column, auto_filter):
         """Updates auto filter for given column.
@@ -263,8 +309,8 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
         column_auto_filter = self._auto_filter.get(column, {})
         filtered = [val for values in column_auto_filter.values() for val in values]
         return [
-            AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, in_classes)
-            for value, in_classes in auto_filter_vals.items()
+            AutoFilterMenuItem(Qt.Checked if value not in filtered else Qt.Unchecked, value, class_ids)
+            for value, class_ids in auto_filter_vals.items()
         ]
 
     def _emit_data_changed_for_column(self, field):
@@ -286,43 +332,14 @@ class CompoundParameterModel(CompoundWithEmptyTableModel):
 class CompoundObjectParameterMixin:
     """Implements the interface for populating and filtering a compound object parameter model."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._selected_object_class_ids = None
-
     @property
-    def _entity_class_id_key(self):
-        return "object_class_id"
+    def entity_class_type(self):
+        return "object class"
 
     def connect_db_mngr_signals(self):
         """Connect signals from database manager."""
         super().connect_db_mngr_signals()
         self.db_mngr.object_classes_removed.connect(self.receive_entity_classes_removed)
-
-    def update_compound_filter(self):
-        """Update the filter."""
-        a = super().update_compound_filter()
-        b = self._settattr_if_different(self, "_selected_object_class_ids", self._parent.all_selected_object_class_ids)
-        return a or b
-
-    def filter_accepts_model(self, model):
-        """Returns True if the given model should be included in the compound model, otherwise returns False.
-        """
-        if not model.can_be_filtered:
-            return True
-        if not self._selected_object_class_ids:
-            return True
-        return model.object_class_id in self._selected_object_class_ids.get(model.db_map, set())
-
-    def update_single_model_filter(self, model):
-        """Update the filter for a single model."""
-        a = super().update_single_model_filter(model)
-        b = self._settattr_if_different(
-            model,
-            "_selected_param_def_ids",
-            self._parent.selected_obj_parameter_definition_ids.get((model.db_map, model.object_class_id), set()),
-        )
-        return a or b
 
     def _get_entity_classes(self, db_map):
         """Returns a query of object classes to populate the model."""
@@ -332,45 +349,14 @@ class CompoundObjectParameterMixin:
 class CompoundRelationshipParameterMixin:
     """Implements the interface for populating and filtering a compound relationship parameter model."""
 
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self._selected_relationship_class_ids = None
-
     @property
-    def _entity_class_id_key(self):
-        return "relationship_class_id"
+    def entity_class_type(self):
+        return "relationship class"
 
     def connect_db_mngr_signals(self):
         """Connect signals from database manager."""
         super().connect_db_mngr_signals()
         self.db_mngr.relationship_classes_removed.connect(self.receive_entity_classes_removed)
-
-    def update_compound_filter(self):
-        """Update the filter."""
-        a = super().update_compound_filter()
-        b = self._settattr_if_different(
-            self, "_selected_relationship_class_ids", self._parent.all_selected_relationship_class_ids
-        )
-        return a or b
-
-    def filter_accepts_model(self, model):
-        """Returns True if the given model should be included in the compound model, otherwise returns False.
-        """
-        if not model.can_be_filtered:
-            return True
-        if not self._selected_relationship_class_ids:
-            return True
-        return model.relationship_class_id in self._selected_relationship_class_ids.get(model.db_map, set())
-
-    def update_single_model_filter(self, model):
-        """Update the filter for a single model."""
-        a = super().update_single_model_filter(model)
-        b = self._settattr_if_different(
-            model,
-            "_selected_param_def_ids",
-            self._parent.selected_rel_parameter_definition_ids.get((model.db_map, model.relationship_class_id), set()),
-        )
-        return a or b
 
     def _get_entity_classes(self, db_map):
         """Returns a query of relationship classes to populate the model."""
@@ -379,6 +365,10 @@ class CompoundRelationshipParameterMixin:
 
 class CompoundParameterDefinitionMixin:
     """Handles signals from db mngr for parameter definition models."""
+
+    @property
+    def item_type(self):
+        return "parameter definition"
 
     def connect_db_mngr_signals(self):
         """Connect db manager signals."""
@@ -390,6 +380,25 @@ class CompoundParameterDefinitionMixin:
 
 class CompoundParameterValueMixin:
     """Handles signals from db mngr for parameter value models."""
+
+    @property
+    def item_type(self):
+        return "parameter value"
+
+    @property
+    def entity_type(self):
+        """Either 'object' or 'relationship', used by update_single_model_filter."""
+        raise NotImplementedError()
+
+    def update_single_model_filter(self, model):
+        """Update the filter for the given model."""
+        a = super().update_single_model_filter(model)
+        b = self._settattr_if_different(
+            model,
+            "_selected_entity_ids",
+            self._parent.selected_ent_ids[self.entity_type].get((model.db_map, model.entity_class_id), set()),
+        )
+        return a or b
 
     def connect_db_mngr_signals(self):
         """Connect db manager signals."""
@@ -418,14 +427,6 @@ class CompoundObjectParameterDefinitionModel(
             "database",
         ]
 
-    @property
-    def _single_model_type(self):
-        return SingleObjectParameterDefinitionModel
-
-    @property
-    def _empty_model_type(self):
-        return EmptyObjectParameterDefinitionModel
-
 
 class CompoundRelationshipParameterDefinitionModel(
     CompoundRelationshipParameterMixin, CompoundParameterDefinitionMixin, CompoundParameterModel
@@ -447,14 +448,6 @@ class CompoundRelationshipParameterDefinitionModel(
             "database",
         ]
 
-    @property
-    def _single_model_type(self):
-        return SingleRelationshipParameterDefinitionModel
-
-    @property
-    def _empty_model_type(self):
-        return EmptyRelationshipParameterDefinitionModel
-
 
 class CompoundObjectParameterValueModel(
     CompoundObjectParameterMixin, CompoundParameterValueMixin, CompoundParameterModel
@@ -469,22 +462,8 @@ class CompoundObjectParameterValueModel(
         self.header = ["object_class_name", "object_name", "parameter_name", "value", "database"]
 
     @property
-    def _single_model_type(self):
-        return SingleObjectParameterValueModel
-
-    @property
-    def _empty_model_type(self):
-        return EmptyObjectParameterValueModel
-
-    def update_single_model_filter(self, model):
-        """Update the filter for the given model."""
-        a = super().update_single_model_filter(model)
-        b = self._settattr_if_different(
-            model,
-            "_selected_object_ids",
-            self._parent.selected_object_ids.get((model.db_map, model.object_class_id), set()),
-        )
-        return a or b
+    def entity_type(self):
+        return "object"
 
 
 class CompoundRelationshipParameterValueModel(
@@ -500,19 +479,5 @@ class CompoundRelationshipParameterValueModel(
         self.header = ["relationship_class_name", "object_name_list", "parameter_name", "value", "database"]
 
     @property
-    def _single_model_type(self):
-        return SingleRelationshipParameterValueModel
-
-    @property
-    def _empty_model_type(self):
-        return EmptyRelationshipParameterValueModel
-
-    def update_single_model_filter(self, model):
-        """Update the filter for the given model."""
-        a = super().update_single_model_filter(model)
-        b = self._settattr_if_different(
-            model,
-            "_selected_relationship_ids",
-            self._parent.selected_relationship_ids.get((model.db_map, model.relationship_class_id), set()),
-        )
-        return a or b
+    def entity_type(self):
+        return "relationship"
