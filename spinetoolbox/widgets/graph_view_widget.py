@@ -368,53 +368,52 @@ class GraphViewForm(DataStoreForm):
 
     def make_graph(self):
         """Make graph."""
-        template_items = self._get_template_graphics_items()
-        whole_items = self._get_whole_graphics_items()
+        self._free_template_items()
         scene = self.new_scene()
-        if not (template_items or whole_items):
+        object_items_lookup = self._add_new_items(scene)
+        if not object_items_lookup and not self.relationship_templates:
             return False
-        for item in whole_items:
-            scene.addItem(item)
-        # TODO: Merge template_items to the corresponding whole
-        for item in template_items:
-            scene.addItem(item)
+        self._readd_template_items(scene, object_items_lookup)
         return True
 
-    def _get_template_graphics_items(self):
-        """Get template items to be persisted across builds. """
-        # NOTE: Call this before deleting the scene or the items will be deleted as well.
-        scene = self.ui.graphicsView.scene()
-        if not scene:
-            return []
-        template_items = list()
-        for relationship_template in self.relationship_templates.values():
-            object_items = relationship_template["object_items"]
-            arc_items = relationship_template["arc_items"]
-            for item in object_items + arc_items:
-                scene.removeItem(item)  # This 'saves' the item
-                template_items.append(item)
-        return template_items
+    def _free_template_items(self):
+        for template in self.relationship_templates.values():
+            for item in template["object_items"] + template["arc_items"]:
+                item.scene().removeItem(item)
 
-    def _get_whole_graphics_items(self):
-        """Get whole items to be put into the new build. """
+    def _readd_template_items(self, scene, object_items_lookup):
+        for template in self.relationship_templates.values():
+            for item in template["object_items"] + template["arc_items"]:
+                scene.addItem(item)
+            replacement = {}
+            for k, item in enumerate(template["object_items"]):
+                item._merge_target = object_items_lookup.get(item.object_id)
+                if item._merge_target:
+                    item.do_merge_into_target()
+                    replacement[k] = item._merge_target
+            for k, item in replacement.items():
+                template["object_items"][k] = item
+
+    def _add_new_items(self, scene):
+        """Add whole items to given scene. Returns dictionary mapping object ids to object items."""
         d = self.shortest_path_matrix(self.object_ids, self.arc_src_dest_inds, self._spread)
         if d is None:
-            return []
+            return {}
         x, y = self.vertex_coordinates(d)
-        object_items = list()
+        object_items_lookup = dict()
         for i in range(len(self.object_ids)):
             object_id = self.object_ids[i]
             object_item = ObjectItem(
                 self, x[i], y[i], self.extent, object_id=object_id, label_color=self.object_label_color
             )
-            object_items.append(object_item)
-        arc_items = list()
-        for k, relationship_id in enumerate(self.arc_relationship_ids):
-            i, j = self.arc_src_dest_inds[k]
+            object_items_lookup[object_id] = object_item
+            scene.addItem(object_item)
+        object_items = list(object_items_lookup.values())
+        for (src_ind, dst_ind), relationship_id in zip(self.arc_src_dest_inds, self.arc_relationship_ids):
             arc_item = ArcItem(
                 self,
-                object_items[i],
-                object_items[j],
+                object_items[src_ind],
+                object_items[dst_ind],
                 0.25 * self.extent,
                 self.arc_color,
                 relationship_id=relationship_id,
@@ -422,8 +421,8 @@ class GraphViewForm(DataStoreForm):
                 token_object_extent=0.75 * self.extent,
                 token_object_label_color=self.object_label_color,
             )
-            arc_items.append(arc_item)
-        return object_items + arc_items
+            scene.addItem(arc_item)
+        return object_items_lookup
 
     @staticmethod
     def shortest_path_matrix(object_ids, src_dst_inds, spread):
@@ -519,8 +518,9 @@ class GraphViewForm(DataStoreForm):
 
     def extend_scene(self):
         """Make scene rect the size of the scene to show all items."""
-        bounding_rect = self.ui.graphicsView.scene().itemsBoundingRect()
-        self.ui.graphicsView.scene().setSceneRect(bounding_rect)
+        scene = self.ui.graphicsView.scene()
+        bounding_rect = scene.itemsBoundingRect()
+        scene.setSceneRect(bounding_rect)
         self.ui.graphicsView.init_zoom()
 
     @Slot(name="_handle_scene_selection_changed")

@@ -231,8 +231,8 @@ class ObjectItem(QGraphicsPixmapItem):
         self._merge_target = None
 
     def _find_merge_target(self, scene_pos):
-        """Checks if this item is touching another item so they can merge
-        (this happens when building a relationship)."""
+        """Returns a suitable merge target.
+        Used for building a relationship."""
         candidates = [x for x in self.scene().items(scene_pos) if isinstance(x, ObjectItem) and x != self]
         return next(iter(candidates), None)
 
@@ -292,7 +292,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setPos(self._press_pos)
 
     def merge_into_target(self):
-        """Merges this item with the target."""
+        """Merges this item into the target."""
         if not self._is_target_valid():
             return False
         if not self.is_template:
@@ -304,14 +304,19 @@ class ObjectItem(QGraphicsPixmapItem):
         if not relationship_template:
             return False
         object_items = relationship_template["object_items"]
-        if not any(x for x in object_items if x.is_template and x != self):
+        if [x for x in object_items if x.is_template] == [self]:
             # It's time to try and add the relationship
             self.object_id = self._merge_target.object_id
             relationship_id = self._graph_view_form.add_relationship(self.template_id)
             if not relationship_id:
                 return False
             self._graph_view_form.remove_relationship_template(self.template_id, relationship_id)
-        object_items[object_items.index(self)] = self._merge_target
+        else:
+            object_items[object_items.index(self)] = self._merge_target
+        self.do_merge_into_target()
+        return True
+
+    def do_merge_into_target(self):
         self.move_related_items_by(self._merge_target.pos() - self.pos())
         for arc_item in self.outgoing_arc_items:
             arc_item.src_item = self._merge_target
@@ -320,7 +325,6 @@ class ObjectItem(QGraphicsPixmapItem):
         self._merge_target.incoming_arc_items.extend(self.incoming_arc_items)
         self._merge_target.outgoing_arc_items.extend(self.outgoing_arc_items)
         self.scene().removeItem(self)
-        return True
 
     def move_related_items_by(self, pos_diff):
         """Moves related items."""
