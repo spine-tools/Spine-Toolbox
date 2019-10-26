@@ -233,6 +233,15 @@ class DataStoreForm(QMainWindow):
         """
         self.err_msg.showMessage(msg)
 
+    @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
+    def _handle_object_tree_selection_changed(self, selected, deselected):
+        """Called when the object tree selection changes.
+        Set default rows and apply filters on parameter models."""
+        for index in deselected.indexes():
+            self.object_tree_model.deselect_index(index)
+        for index in selected.indexes():
+            self.object_tree_model.select_index(index)
+
     @Slot("bool", name="_handle_object_parameter_value_visibility_changed")
     def _handle_object_parameter_value_visibility_changed(self, visible):
         if visible:

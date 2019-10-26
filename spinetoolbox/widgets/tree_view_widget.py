@@ -508,15 +508,11 @@ class TreeViewForm(DataStoreForm):
             return True
         return False
 
-    @busy_effect
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
     def _handle_object_tree_selection_changed(self, selected, deselected):
         """Called when the object tree selection changes.
         Set default rows and apply filters on parameter models."""
-        for index in deselected.indexes():
-            self.object_tree_model.deselect_index(index)
-        for index in selected.indexes():
-            self.object_tree_model.select_index(index)
+        super()._handle_object_tree_selection_changed(selected, deselected)
         if not self._accept_selection(self.ui.treeView_object):
             return
         self.object_tree_selection_available.emit(any(v for v in self.object_tree_model.selected_indexes.values()))

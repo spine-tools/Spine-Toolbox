@@ -21,9 +21,9 @@ import logging
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
-from PySide2.QtWidgets import QApplication, QGraphicsScene, QWidgetAction, QTreeView, QToolButton
+from PySide2.QtWidgets import QApplication, QWidgetAction, QTreeView
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QEvent
-from PySide2.QtGui import QPalette, QMouseEvent, QIcon
+from PySide2.QtGui import QPalette, QMouseEvent
 from spinedb_api import SpineDBAPIError, SpineIntegrityError
 from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
@@ -32,7 +32,7 @@ from .report_plotting_failure import report_plotting_failure
 from .shrinking_scene import ShrinkingScene
 from ..mvcmodels.entity_tree_models import ObjectTreeModel
 from ..mvcmodels.entity_list_models import ObjectClassListModel, RelationshipClassListModel
-from ..graphics_items import ObjectItem, ArcItem, CustomTextItem
+from ..graph_view_graphics_items import ObjectItem, ArcItem, CustomTextItem
 from ..helpers import busy_effect, fix_name_ambiguity
 from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHints
 
@@ -70,21 +70,15 @@ class GraphViewForm(DataStoreForm):
         self.ui.treeView_object.setModel(self.object_tree_model)
         # Data for ObjectItems
         self.object_ids = list()
-        self.object_names = list()
-        self.object_class_ids = list()
-        self.object_class_names = list()
         # Data for ArcItems
-        self.arc_object_id_lists = list()
-        self.arc_relationship_class_ids = list()
-        self.arc_token_object_name_tuple_lists = list()
-        self.src_ind_list = list()
-        self.dst_ind_list = list()
+        self.arc_relationship_ids = list()
+        self.arc_src_dest_inds = list()
         # Data for template ObjectItems and ArcItems (these are persisted across graph builds)
         self.heavy_positions = {}
         self.is_template = {}
         self.template_id_dims = {}
         self.arc_template_ids = {}
-        # Data of relationship templates
+        # Data for relationship templates
         self.template_id = 1
         self.relationship_class_dict = {}  # template_id => relationship_class_id
         # Item palette models
@@ -316,8 +310,13 @@ class GraphViewForm(DataStoreForm):
             self.ui.menuSession.removeAction(self.ui.actionCommit)
             self.ui.menuSession.removeAction(self.ui.actionRollback)
 
+    @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
+    def _handle_object_tree_selection_changed(self, selected, deselected):
+        """Build_graph."""
+        super()._handle_object_tree_selection_changed(selected, deselected)
+        self.build_graph()
+
     @busy_effect
-    # @Slot("bool", name="build_graph")
     def build_graph(self):
         """Initialize graph data and build graph."""
         tic = time.clock()
@@ -331,84 +330,47 @@ class GraphViewForm(DataStoreForm):
             self.show_usage_msg()
         self.hidden_items = list()
 
-    @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
-    def _handle_object_tree_selection_changed(self, selected, deselected):
-        """Build_graph."""
-        self.build_graph()
+    def _selected_object_ids(self):
+        """Return list of selected object ids."""
+        root_index = self.object_tree_model.root_index
+        if self.ui.treeView_object.selectionModel().isSelected(root_index):
+            return {x["id"] for x in self.db_mngr.get_objects(self.db_map)}
+        unique_object_ids = set()
+        for index in self.object_tree_model.selected_object_indexes:
+            item = index.model().item_from_index(index)
+            object_id = item.db_map_id(self.db_map)
+            unique_object_ids.add(object_id)
+        for index in self.object_tree_model.selected_object_class_indexes:
+            item = index.model().item_from_index(index)
+            object_class_id = item.db_map_id(self.db_map)
+            object_ids = {x["id"] for x in self.db_mngr.get_objects(self.db_map, class_id=object_class_id)}
+            unique_object_ids.update(object_ids)
+        return unique_object_ids
 
     def init_graph_data(self):
         """Initialize graph data."""
-        # TODO: This is insane... clearly something that was done late at night just to see it working
-        # And then patched multiple times as new functionality were added
-        rejected_object_names = [x.object_name for x in self.rejected_items]
-        self.object_ids = list()
-        self.object_names = list()
-        self.object_class_ids = list()
-        self.object_class_names = list()
-        root_item = self.object_tree_model.root_item
-        index = self.object_tree_model.root_index
-        is_root_selected = self.ui.treeView_object.selectionModel().isSelected(index)
-        for i in range(root_item.child_count()):
-            object_class_item = root_item.child(i)
-            object_class_id = object_class_item.db_map_data_field(self.db_map, 'id')
-            object_class_name = object_class_item.db_map_data_field(self.db_map, 'name')
-            index = self.object_tree_model.index_from_item(object_class_item)
-            is_object_class_selected = self.ui.treeView_object.selectionModel().isSelected(index)
-            # Fetch object class if needed
-            if is_root_selected or is_object_class_selected and self.object_tree_model.canFetchMore(index):
-                self.object_tree_model.fetchMore(index)
-            for j in range(object_class_item.child_count()):
-                object_item = object_class_item.child(j)
-                object_id = object_item.db_map_data_field(self.db_map, 'id')
-                object_name = object_item.db_map_data_field(self.db_map, 'name')
-                if object_name in rejected_object_names:
-                    continue
-                index = self.object_tree_model.index_from_item(object_item)
-                is_object_selected = self.ui.treeView_object.selectionModel().isSelected(index)
-                if is_root_selected or is_object_class_selected or is_object_selected:
-                    self.object_ids.append(object_id)
-                    self.object_names.append(object_name)
-                    self.object_class_ids.append(object_class_id)
-                    self.object_class_names.append(object_class_name)
-        self.arc_object_id_lists = list()
-        self.arc_relationship_class_ids = list()
-        self.arc_token_object_name_tuple_lists = list()
-        self.src_ind_list = list()
-        self.dst_ind_list = list()
-        relationship_class_dict = {
-            x.id: {"name": x.name, "object_class_name_list": x.object_class_name_list}
-            for x in self.db_map.wide_relationship_class_list()
-        }
-        for relationship in self.db_map.wide_relationship_list():
-            object_class_name_list = relationship_class_dict[relationship.class_id]["object_class_name_list"]
-            split_object_class_name_list = object_class_name_list.split(",")
-            object_id_list = relationship.object_id_list
-            split_object_id_list = [int(x) for x in object_id_list.split(",")]
-            split_object_name_list = relationship.object_name_list.split(",")
-            for i, src_object_id in enumerate(split_object_id_list):
+        rejected_object_ids = {x.object_id for x in self.rejected_items}
+        self.object_ids = list(self._selected_object_ids() - rejected_object_ids)
+        self.arc_relationship_ids = list()
+        self.arc_src_dest_inds = list()
+        for relationship in self.db_mngr.get_relationships(self.db_map):
+            object_id_list = relationship["object_id_list"]
+            object_id_list = [int(x) for x in object_id_list.split(",")]
+            for i, src_object_id in enumerate(object_id_list):
                 try:
-                    dst_object_id = split_object_id_list[i + 1]
+                    dst_object_id = object_id_list[i + 1]
                 except IndexError:
-                    dst_object_id = split_object_id_list[0]
+                    dst_object_id = object_id_list[0]
                 try:
                     src_ind = self.object_ids.index(src_object_id)
                     dst_ind = self.object_ids.index(dst_object_id)
                 except ValueError:
                     continue
-                self.src_ind_list.append(src_ind)
-                self.dst_ind_list.append(dst_ind)
-                src_object_name = self.object_names[src_ind]
-                dst_object_name = self.object_names[dst_ind]
-                self.arc_object_id_lists.append(object_id_list)
-                self.arc_relationship_class_ids.append(relationship.class_id)
-                # Add label items
-                arc_token_object_name_tuple_list = list()
-                for object_name, object_class_name in zip(split_object_name_list, split_object_class_name_list):
-                    if object_name in (src_object_name, dst_object_name):
-                        continue
-                    arc_token_object_name_tuple_list.append((object_class_name, object_name))
-                self.arc_token_object_name_tuple_lists.append(arc_token_object_name_tuple_list)
-        # Add template items hanging around
+                self.arc_src_dest_inds.append((src_ind, dst_ind))
+                self.arc_relationship_ids.append(relationship["id"])
+        self.init_graph_template_data()
+
+    def init_graph_template_data(self):
         scene = self.ui.graphicsView.scene()
         if not scene:
             return
@@ -421,28 +383,23 @@ class GraphViewForm(DataStoreForm):
         object_ids_copy = self.object_ids.copy()  # Object ids added until this point
         for item in template_object_items:
             object_id = item.object_id
-            object_name = item.object_name
             try:
                 found_ind = object_ids_copy.index(object_id)
-                # Object id is already in list; complete its template information and make it heavy
-                self.template_id_dims[found_ind] = item.template_id_dim
-                self.is_template[found_ind] = False
-                self.heavy_positions[found_ind] = item.pos()
             except ValueError:
                 # Object id is not in list; add it together with its template info, and make it heavy
-                object_class_id = item.object_class_id
-                object_class_name = item.object_class_name
                 self.object_ids.append(object_id)
-                self.object_names.append(object_name)
-                self.object_class_ids.append(object_class_id)
-                self.object_class_names.append(object_class_name)
                 self.template_id_dims[object_ind] = item.template_id_dim
                 self.is_template[object_ind] = item.is_template
                 self.heavy_positions[object_ind] = item.pos()
                 object_ind_dict[item] = object_ind
                 object_ind += 1
+            else:
+                # Object id is already in list; complete its template information and make it heavy
+                self.template_id_dims[found_ind] = item.template_id_dim
+                self.is_template[found_ind] = False
+                self.heavy_positions[found_ind] = item.pos()
         template_arc_items = [x for x in scene.items() if isinstance(x, ArcItem) and x.is_template]
-        arc_ind = len(self.arc_token_object_name_tuple_lists)
+        arc_ind = len(self.arc_relationship_ids)
         self.arc_template_ids = {}
         for item in template_arc_items:
             src_item = item.src_item
@@ -457,28 +414,67 @@ class GraphViewForm(DataStoreForm):
             except KeyError:
                 dst_object_id = dst_item.object_id
                 dst_ind = self.object_ids.index(dst_object_id)
-            self.src_ind_list.append(src_ind)
-            self.dst_ind_list.append(dst_ind)
-            # NOTE: These arcs correspond to template arcs.
-            relationship_class_id = item.relationship_class_id
-            self.arc_object_id_lists.append("")  # TODO: is this one filled when creating the relationship?
-            self.arc_relationship_class_ids.append(relationship_class_id)
-            # Label don't matter
-            self.arc_token_object_name_tuple_lists.append(("", ""))
+            self.arc_src_dest_inds.append((src_ind, dst_ind))
+            self.arc_relationship_ids.append(None)  # TODO: is this one filled when creating the relationship?
             self.arc_template_ids[arc_ind] = item.template_id
             arc_ind += 1
 
+    def make_graph(self):
+        """Make graph."""
+        d = self.shortest_path_matrix(self.object_ids, self.arc_src_dest_inds, self._spread)
+        if d is None:
+            return False
+        scene = self.new_scene()
+        x, y = self.vertex_coordinates(d, self.heavy_positions)
+        object_items = list()
+        for i in range(len(self.object_ids)):
+            object_id = self.object_ids[i]
+            object_item = ObjectItem(
+                self, x[i], y[i], self.extent, object_id=object_id, label_color=self.object_label_color
+            )
+            try:
+                template_id_dim = self.template_id_dims[i]
+                object_item.template_id_dim = template_id_dim
+                if self.is_template[i]:
+                    object_item.make_template()
+            except KeyError:
+                pass
+            scene.addItem(object_item)
+            object_items.append(object_item)
+        for k, relationship_id in enumerate(self.arc_relationship_ids):
+            i, j = self.arc_src_dest_inds[k]
+            arc_item = ArcItem(
+                self,
+                object_items[i],
+                object_items[j],
+                0.25 * self.extent,
+                self.arc_color,
+                relationship_id=relationship_id,
+                token_color=self.arc_token_color,
+                token_object_extent=0.75 * self.extent,
+                token_object_label_color=self.object_label_color,
+            )
+            try:
+                template_id = self.arc_template_ids[k]
+                arc_item.template_id = template_id
+                arc_item.make_template()
+            except KeyError:
+                pass
+            scene.addItem(arc_item)
+        return True
+
     @staticmethod
-    def shortest_path_matrix(object_name_list, src_ind_list, dst_ind_list, spread):
+    def shortest_path_matrix(object_ids, src_dst_inds, spread):
         """Return the shortest-path matrix."""
-        N = len(object_name_list)
+        N = len(object_ids)
         if not N:
             return None
         dist = np.zeros((N, N))
-        src_ind = arr(src_ind_list)
-        dst_ind = arr(dst_ind_list)
+        src_inds, dst_inds = zip(*src_dst_inds)
+        src_inds = arr(src_inds)
+        dst_inds = arr(dst_inds)
         try:
-            dist[src_ind, dst_ind] = dist[dst_ind, src_ind] = spread
+            dist[src_inds, dst_inds] = dist[dst_inds, src_inds] = spread
         except IndexError:
             pass
         d = dijkstra(dist, directed=False)
@@ -545,67 +541,6 @@ class GraphViewForm(DataStoreForm):
                     layout[heavy_ind, :] = heavy_pos
         return layout[:, 0], layout[:, 1]
 
-    def make_graph(self):
-        """Make graph."""
-        d = self.shortest_path_matrix(self.object_names, self.src_ind_list, self.dst_ind_list, self._spread)
-        if d is None:
-            return False
-        scene = self.new_scene()
-        x, y = self.vertex_coordinates(d, self.heavy_positions)
-        object_items = list()
-        for i in range(len(self.object_names)):
-            object_id = self.object_ids[i]
-            object_name = self.object_names[i]
-            object_class_id = self.object_class_ids[i]
-            object_class_name = self.object_class_names[i]
-            object_item = ObjectItem(
-                self,
-                object_name,
-                object_class_id,
-                object_class_name,
-                x[i],
-                y[i],
-                self.extent,
-                object_id=object_id,
-                label_color=self.object_label_color,
-            )
-            try:
-                template_id_dim = self.template_id_dims[i]
-                object_item.template_id_dim = template_id_dim
-                if self.is_template[i]:
-                    object_item.make_template()
-            except KeyError:
-                pass
-            scene.addItem(object_item)
-            object_items.append(object_item)
-        for k in range(len(self.src_ind_list)):
-            i = self.src_ind_list[k]
-            j = self.dst_ind_list[k]
-            object_id_list = self.arc_object_id_lists[k]
-            relationship_class_id = self.arc_relationship_class_ids[k]
-            token_object_name_tuple_list = self.arc_token_object_name_tuple_lists[k]
-            arc_item = ArcItem(
-                self,
-                relationship_class_id,
-                object_items[i],
-                object_items[j],
-                0.25 * self.extent,
-                self.arc_color,
-                object_id_list=object_id_list,
-                token_color=self.arc_token_color,
-                token_object_extent=0.75 * self.extent,
-                token_object_label_color=self.object_label_color,
-                token_object_name_tuple_list=token_object_name_tuple_list,
-            )
-            try:
-                template_id = self.arc_template_ids[k]
-                arc_item.template_id = template_id
-                arc_item.make_template()
-            except KeyError:
-                pass
-            scene.addItem(arc_item)
-        return True
-
     def new_scene(self):
         """Replaces the current scene with a new one."""
         old_scene = self.ui.graphicsView.scene()
@@ -630,20 +565,17 @@ class GraphViewForm(DataStoreForm):
         selected_items = scene.selectedItems()
         self.object_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
         self.arc_item_selection = [x for x in selected_items if isinstance(x, ArcItem)]
-        self.selected_object_class_ids = dict()
-        self.selected_object_ids = dict()
-        self.selected_relationship_class_ids = dict()
-        # FIXME: selected_object_id_lists replaced by selected_relationship_ids
-        self.selected_object_id_lists = dict()
+        self.selected_ent_cls_ids["object class"] = selected_obj_cls_ids = {}
+        self.selected_ent_cls_ids["relationship class"] = selected_rel_cls_ids = {}
+        self.selected_ent_ids["object"] = selected_obj_ids = {}
+        self.selected_ent_ids["relationship"] = selected_rel_ids = {}
         for item in selected_items:
             if isinstance(item, ObjectItem):
-                self.selected_object_class_ids.setdefault(self.db_map, set()).add(item.object_class_id)
-                self.selected_object_ids.setdefault((self.db_map, item.object_class_id), set()).add(item.object_id)
+                selected_obj_cls_ids.setdefault(self.db_map, set()).add(item.object_class_id)
+                selected_obj_ids.setdefault((self.db_map, item.object_class_id), set()).add(item.object_id)
             elif isinstance(item, ArcItem):
-                self.selected_relationship_class_ids.setdefault(self.db_map, set()).add(item.relationship_class_id)
-                self.selected_object_id_lists.setdefault((self.db_map, item.relationship_class_id), set()).add(
-                    item.object_id_list
-                )
+                selected_rel_cls_ids.setdefault(self.db_map, set()).add(item.relationship_class_id)
+                selected_rel_ids.setdefault((self.db_map, item.relationship_class_id), set()).add(item.relationship_id)
         self.update_filter()
 
     @Slot(list, name="_handle_scene_changed")
