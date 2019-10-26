@@ -48,7 +48,7 @@ class ToolSpecification(MetaObject):
             name (str): Name of the tool
             tooltype (str): Type of Tool (e.g. Python, Julia, ..)
             path (str): Path to tool
-            includes (str): List of files belonging to the tool specification (relative to 'path')
+            includes (list): List of files belonging to the tool specification (relative to 'path')
             description (str): Description of the Tool specification
             inputfiles (list): List of required data files
             inputfiles_opt (list, optional): List of optional data files (wildcards may be used)
@@ -165,7 +165,7 @@ class GAMSTool(ToolSpecification):
             name (str): GAMS Tool name
             tooltype (str): Tool specification type
             path (str): Path to model main file
-            includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
             First file in the list is the main GAMS program.
             description (str): GAMS Tool description
             inputfiles (list): List of required data files
@@ -281,7 +281,7 @@ class JuliaTool(ToolSpecification):
             name (str): Julia Tool name
             tooltype (str): Tool specification type
             path (str): Path to model main file
-            includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
             First file in the list is the main Julia program.
             description (str): Julia Tool description
             inputfiles (list): List of required data files
@@ -370,7 +370,7 @@ class PythonTool(ToolSpecification):
             name (str): Python Tool name
             tooltype (str): Tool specification type
             path (str): Path to model main file
-            includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
             First file in the list is the main Python program.
             description (str): Python Tool description
             inputfiles (list): List of required data files
@@ -459,7 +459,7 @@ class ExecutableTool(ToolSpecification):
             name (str): Tool name
             tooltype (str): Tool specification type
             path (str): Path to main script file
-            includes (str): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
+            includes (list): List of files belonging to the tool (relative to 'path').  # TODO: Change to src_files
             First file in the list is the main script file.
             description (str): Tool description
             inputfiles (list): List of required data files

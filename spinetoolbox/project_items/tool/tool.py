@@ -727,8 +727,17 @@ class Tool(ProjectItem):
         """
         filepaths = self.available_filepath_resources(exec_inst)
         # Find matches when pattern includes wildcards
-        if ('*' in pattern) or ('?' in pattern):
-            return fnmatch.filter(filepaths, pattern)
+        if "*" in pattern and not "?" in pattern:
+            return fnmatch.filter(filepaths, pattern)  # Returns matches in list
+        elif "?" in pattern:
+            # Separate file names from paths
+            matches = list()
+            for filepath in filepaths:
+                _, fname = os.path.split(filepath)
+                # Match just the filename to pattern
+                if fnmatch.fnmatch(fname, pattern):  # Returns True or False if pattern matches fname
+                    matches.append(filepath)
+            return matches
         # Pattern is an exact filename (no wildcards)
         match = self.find_file(pattern, exec_inst)
         if match is not None:
