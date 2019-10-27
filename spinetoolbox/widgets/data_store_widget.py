@@ -465,7 +465,7 @@ class DataStoreForm(QMainWindow):
 
     def set_default_parameter_data(self, index=None):
         """Set default rows for parameter models according to selection in object or relationship tree."""
-        if index is None:
+        if index is None or not index.isValid():
             default_data = dict(database=next(iter(self.db_maps)).codename)
         else:
             default_data = index.model().item_from_index(index).default_parameter_data()

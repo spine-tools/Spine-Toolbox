@@ -10,7 +10,7 @@
 ######################################################################################################################
 
 """
-Classes for drawing graphics items on graph view/s QGraphicsScene.
+Classes for drawing graphics items on graph view's QGraphicsScene.
 
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
@@ -57,7 +57,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.outgoing_arc_items = list()
         self.is_template = False
         self.template_id = None  # id of relationship templates
-        self.question_item = None  # In case this becomes a template
+        self._question_item = None  # In case this becomes a template
         self._press_pos = None
         self._merge_target = None
         self._moved_on_scene = False
@@ -99,7 +99,7 @@ class ObjectItem(QGraphicsPixmapItem):
         path.addRect(self.boundingRect())
         return path
 
-    def boundingRect(self):
+    def _boundingRect(self):
         """Include children's bounding rect so they are correctly painted."""
         return super().boundingRect() | self.childrenBoundingRect()
 
@@ -119,26 +119,19 @@ class ObjectItem(QGraphicsPixmapItem):
         """Become a template."""
         self.is_template = True
         font = QFont("", 0.75 * self._extent)
-        brush = QBrush(Qt.white)
-        outline_pen = QPen(Qt.black, 8, Qt.SolidLine)
-        self.question_item = OutlinedTextItem("?", font, brush=brush, outline_pen=outline_pen)
-        self.question_item.setParentItem(self)
+        self._question_item = OutlinedTextItem("?", font)
+        self._question_item.setParentItem(self)
         rect = self.boundingRect()
-        question_rect = self.question_item.boundingRect()
+        question_rect = self._question_item.boundingRect()
         x = rect.center().x() - question_rect.width() / 2
         y = rect.center().y() - question_rect.height() / 2
-        self.question_item.setPos(x, y)
+        self._question_item.setPos(x, y)
         if self.template_id:
             self.setToolTip(
                 """
                 <html>
-                This item is part of a <i>template</i> for a relationship
-                and needs to be associated with an object.
-                Please do one of the following:
-                <ul>
-                <li>Give this item a name to create a new <b>{0}</b> object (select it and press F2).</li>
-                <li>Drag-and-drop this item onto an existing <b>{0}</b> object (or viceversa)</li>
-                </ul>
+                Template for a <b>{0}</b>, also part of a relationship.
+                Please give it a name or merge it into an existing <b>{0}</b> entity.
                 </html>""".format(
                     self.object_class_name
                 )
@@ -147,17 +140,17 @@ class ObjectItem(QGraphicsPixmapItem):
             self.setToolTip(
                 """
                 <html>
-                This item is a <i>template</i> for a <b>{0}</b>.
-                Please give it a name to create a new <b>{0}</b> object (select it and press F2).
+                Template for a <b>{0}</b>.
+                Please give it a name.
                 </html>""".format(
                     self.object_class_name
                 )
             )
 
     def become_whole(self):
-        """Make this arc no longer a template."""
+        """Make this object no longer a template."""
         self.is_template = False
-        self.scene().removeItem(self.question_item)
+        self.scene().removeItem(self._question_item)
         self.setToolTip("")
 
     def edit_name(self):
@@ -179,7 +172,7 @@ class ObjectItem(QGraphicsPixmapItem):
             if not object_id:
                 return
             self.object_id = object_id
-            self.label_item.refresh_name()  # For 'fun', mostly
+            self.label_item.refresh_name()  # Is this doing something?
             self.become_whole()
             if not self.template_id:
                 return
@@ -203,9 +196,6 @@ class ObjectItem(QGraphicsPixmapItem):
         Args:
             change (GraphicsItemChange): a flag signalling the type of the change
             value: a value related to the change
-
-        Returns:
-             Whatever super() does with the value parameter
         """
         if change == QGraphicsItem.ItemScenePositionHasChanged:
             self._moved_on_scene = True
@@ -259,7 +249,6 @@ class ObjectItem(QGraphicsPixmapItem):
             item.moveBy(move_by.x(), move_by.y())
             item.move_related_items_by(move_by)
         self._merge_target = self._find_merge_target(event.scenePos())
-        # Depending on the value of merge target and bounce, set drop indicator cursor
         for view in self.scene().views():
             self._views_cursor.setdefault(view, view.viewport().cursor())
             if not self._merge_target:
@@ -296,10 +285,10 @@ class ObjectItem(QGraphicsPixmapItem):
         if not self._is_target_valid():
             return False
         if not self.is_template:
-            # Merge the template into the whole, by convention
-            template = self._merge_target
-            template._merge_target = self
-            return template.merge_into_target()
+            # Merge the other into this, so we always merge template into whole
+            other = self._merge_target
+            other._merge_target = self
+            return other.merge_into_target()
         relationship_template = self._graph_view_form.relationship_templates.get(self.template_id)
         if not relationship_template:
             return False
@@ -391,7 +380,7 @@ class ObjectLabelItem(QGraphicsTextItem):
         """Centers this item."""
         rectf = self.boundingRect()
         x = -rectf.width() / 2
-        y = -rectf.height() / 2
+        y = rectf.height() + 4
         self.setPos(x, y)
         self.bg.setRect(self.boundingRect())
 
@@ -641,7 +630,7 @@ class SimpleObjectItem(QGraphicsPixmapItem):
 
 
 class OutlinedTextItem(QGraphicsSimpleTextItem):
-    def __init__(self, text="", font=QFont(), brush=QBrush(Qt.black), outline_pen=QPen(Qt.white, 3, Qt.SolidLine)):
+    def __init__(self, text="", font=QFont(), brush=QBrush(Qt.white), outline_pen=QPen(Qt.black, 3, Qt.SolidLine)):
         """Outlined text item to use with GraphViewForm.
 
         Args:

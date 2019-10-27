@@ -55,9 +55,9 @@ class GraphViewForm(DataStoreForm):
         self.db_name = self.db_map.codename
         self.ui.graphicsView.set_graph_view_form(self)
         self.read_only = read_only
-        self._has_graph = False
         self.extent = 64
         self._spread = 3 * self.extent
+        self._usage_item = None
         self.object_label_color = self.palette().color(QPalette.Normal, QPalette.ToolTipBase)
         self.object_label_color.setAlphaF(0.8)
         self.arc_token_color = self.palette().color(QPalette.Normal, QPalette.Window)
@@ -116,39 +116,6 @@ class GraphViewForm(DataStoreForm):
         toc = time.clock()
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
-    def show(self):
-        """Show usage message together with the form."""
-        super().show()
-        self.show_usage_msg()
-
-    def init_models(self):
-        """Initialize models."""
-        super().init_models()
-        self.object_class_list_model.populate_list()
-        self.relationship_class_list_model.populate_list()
-
-    def init_parameter_value_models(self):
-        """Initialize parameter value models from source database."""
-        # FIXME:
-        self.object_parameter_value_model.has_empty_row = not self.read_only
-        self.relationship_parameter_value_model.has_empty_row = not self.read_only
-        super().init_parameter_value_models()
-
-    def init_parameter_definition_models(self):
-        """Initialize parameter (definition) models from source database."""
-        # FIXME:
-        self.object_parameter_definition_model.has_empty_row = not self.read_only
-        self.relationship_parameter_definition_model.has_empty_row = not self.read_only
-        super().init_parameter_definition_models()
-
-    def setup_zoom_action(self):
-        """Setup zoom action in view menu."""
-        self.zoom_widget = ZoomWidget(self)
-        self.zoom_widget_action = QWidgetAction(self)
-        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
-        self.ui.menuView.addSeparator()
-        self.ui.menuView.addAction(self.zoom_widget_action)
-
     def connect_signals(self):
         """Connect signals."""
         super().connect_signals()
@@ -180,6 +147,158 @@ class GraphViewForm(DataStoreForm):
         # Connect Add more items in Item palette
         self.ui.listView_object_class.clicked.connect(self._add_more_object_classes)
         self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
+
+    def setup_zoom_action(self):
+        """Setup zoom action in view menu."""
+        self.zoom_widget = ZoomWidget(self)
+        self.zoom_widget_action = QWidgetAction(self)
+        self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
+        self.ui.menuView.addSeparator()
+        self.ui.menuView.addAction(self.zoom_widget_action)
+
+    @Slot(name="restore_dock_widgets")
+    def restore_dock_widgets(self):
+        """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        # Place docks
+        self.ui.dockWidget_object_parameter_value.setVisible(True)
+        self.ui.dockWidget_object_parameter_value.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_value)
+        self.ui.dockWidget_object_parameter_definition.setVisible(True)
+        self.ui.dockWidget_object_parameter_definition.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_definition)
+        self.ui.dockWidget_relationship_parameter_value.setVisible(True)
+        self.ui.dockWidget_relationship_parameter_value.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_relationship_parameter_value)
+        self.ui.dockWidget_relationship_parameter_definition.setVisible(True)
+        self.ui.dockWidget_relationship_parameter_definition.setFloating(False)
+        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_relationship_parameter_definition)
+        self.ui.dockWidget_object_tree.setVisible(True)
+        self.ui.dockWidget_object_tree.setFloating(False)
+        self.addDockWidget(Qt.LeftDockWidgetArea, self.ui.dockWidget_object_tree)
+        self.ui.dockWidget_item_palette.setVisible(True)
+        self.ui.dockWidget_item_palette.setFloating(False)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_item_palette)
+        self.ui.dockWidget_parameter_value_list.setVisible(True)
+        self.ui.dockWidget_parameter_value_list.setFloating(False)
+        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_parameter_value_list)
+        # Tabify
+        self.tabifyDockWidget(self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
+        self.tabifyDockWidget(
+            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition
+        )
+        self.ui.dockWidget_object_parameter_value.raise_()
+        self.ui.dockWidget_relationship_parameter_value.raise_()
+
+    def _make_usage_item(self):
+        usage = """
+            <html>
+            <head>
+            <style type="text/css">
+            ol {
+                margin-left: 80px;
+                padding-left: 0px;
+            }
+            ul {
+                margin-left: 40px;
+                padding-left: 0px;
+            }
+            </style>
+            </head>
+            <h3>Usage:</h3>
+            <ol>
+            <li>Select items in <a href="Object tree">Object tree</a> to show objects here.
+                <ul>
+                <li>Ctrl + click starts a new selection.</li>
+                <li>Selected objects become vertices in the graph,
+                while relationships between those objects become edges.
+                </ul>
+            </li>
+            <li>Select items here to show their parameters in <a href="Parameters">Parameters</a>.
+                <ul>
+                <li>Hold down 'Ctrl' to add multiple items to the selection.</li>
+                <li> Hold down 'Ctrl' and drag your mouse to perform a rubber band selection.</li>
+                </ul>
+            </li>
+        """
+        if not self.read_only:
+            usage += """
+                <li>Drag icons from <a href="Item palette">Item palette</a>
+                and drop them here to create new items.</li>
+            """
+        usage += """
+            </ol>
+            </html>
+        """
+        font = QApplication.font()
+        font.setPointSize(64)
+        usage_item = CustomTextItem(usage, font)
+        usage_item.linkActivated.connect(self._handle_usage_link_activated)
+        return usage_item
+
+    @Slot("QString", name="_handle_usage_link_activated")
+    def _handle_usage_link_activated(self, link):
+        if link == "Object tree":
+            self.ui.dockWidget_object_tree.show()
+        elif link == "Parameters":
+            self.ui.dockWidget_object_parameter_value.show()
+            self.ui.dockWidget_object_parameter_definition.show()
+            self.ui.dockWidget_relationship_parameter_value.show()
+            self.ui.dockWidget_relationship_parameter_definition.show()
+        elif link == "Item palette":
+            self.ui.dockWidget_item_palette.show()
+
+    def show(self):
+        """Show usage message together with the form."""
+        super().show()
+        self.show_usage_msg()
+
+    def show_usage_msg(self):
+        """Show usage instructions in new scene.
+        """
+        scene = self.new_scene()
+        self._usage_item = self._make_usage_item()
+        scene.addItem(self._usage_item)
+        self.extend_scene()
+
+    def init_models(self):
+        """Initialize models."""
+        super().init_models()
+        self.object_class_list_model.populate_list()
+        self.relationship_class_list_model.populate_list()
+
+    def init_parameter_value_models(self):
+        """Initialize parameter value models from source database."""
+        # FIXME:
+        self.object_parameter_value_model.has_empty_row = not self.read_only
+        self.relationship_parameter_value_model.has_empty_row = not self.read_only
+        super().init_parameter_value_models()
+
+    def init_parameter_definition_models(self):
+        """Initialize parameter (definition) models from source database."""
+        # FIXME:
+        self.object_parameter_definition_model.has_empty_row = not self.read_only
+        self.relationship_parameter_definition_model.has_empty_row = not self.read_only
+        super().init_parameter_definition_models()
+
+    @Slot("QVariant", name="receive_objects_added")
+    def receive_objects_added(self, db_map_data):
+        super().receive_objects_added(db_map_data)
+        self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in db_map_data.get(self.db_map, [])}
+
+    @Slot("QVariant", name="receive_objects_removed")
+    def receive_objects_removed(self, db_map_data):
+        super().receive_objects_removed(db_map_data)
+        removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        object_ids = {x.object_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)}
+        if object_ids.intersection(removed_ids):
+            self.build_graph(timeit=True)
+
+    @Slot("QVariant", name="receive_relationships_added")
+    def receive_relationships_added(self, db_map_data):
+        super().receive_relationships_added(db_map_data)
+        self._added_relationships = {
+            (x["class_id"], x["object_id_list"]): x["id"] for x in db_map_data.get(self.db_map, [])
+        }
 
     @Slot("QModelIndex", name="_add_more_object_classes")
     def _add_more_object_classes(self, index):
@@ -221,39 +340,6 @@ class GraphViewForm(DataStoreForm):
             QEvent.MouseButtonPress, local_pos, window_pos, screen_pos, button, buttons, modifiers, source
         )
         QTreeView.mousePressEvent(self.ui.treeView_object, new_event)
-
-    @Slot(name="restore_dock_widgets")
-    def restore_dock_widgets(self):
-        """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
-        # Place docks
-        self.ui.dockWidget_object_parameter_value.setVisible(True)
-        self.ui.dockWidget_object_parameter_value.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_value)
-        self.ui.dockWidget_object_parameter_definition.setVisible(True)
-        self.ui.dockWidget_object_parameter_definition.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_object_parameter_definition)
-        self.ui.dockWidget_relationship_parameter_value.setVisible(True)
-        self.ui.dockWidget_relationship_parameter_value.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_relationship_parameter_value)
-        self.ui.dockWidget_relationship_parameter_definition.setVisible(True)
-        self.ui.dockWidget_relationship_parameter_definition.setFloating(False)
-        self.addDockWidget(Qt.BottomDockWidgetArea, self.ui.dockWidget_relationship_parameter_definition)
-        self.ui.dockWidget_object_tree.setVisible(True)
-        self.ui.dockWidget_object_tree.setFloating(False)
-        self.addDockWidget(Qt.LeftDockWidgetArea, self.ui.dockWidget_object_tree)
-        self.ui.dockWidget_item_palette.setVisible(True)
-        self.ui.dockWidget_item_palette.setFloating(False)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_item_palette)
-        self.ui.dockWidget_parameter_value_list.setVisible(True)
-        self.ui.dockWidget_parameter_value_list.setFloating(False)
-        self.addDockWidget(Qt.RightDockWidgetArea, self.ui.dockWidget_parameter_value_list)
-        # Tabify
-        self.tabifyDockWidget(self.ui.dockWidget_object_parameter_value, self.ui.dockWidget_object_parameter_definition)
-        self.tabifyDockWidget(
-            self.ui.dockWidget_relationship_parameter_value, self.ui.dockWidget_relationship_parameter_definition
-        )
-        self.ui.dockWidget_object_parameter_value.raise_()
-        self.ui.dockWidget_relationship_parameter_value.raise_()
 
     @Slot(name="_handle_zoom_widget_minus_pressed")
     def _handle_zoom_widget_minus_pressed(self):
@@ -314,15 +400,14 @@ class GraphViewForm(DataStoreForm):
         self.build_graph()
 
     @busy_effect
-    def build_graph(self):
+    def build_graph(self, timeit=True):
         """Initialize graph data and build graph."""
         tic = time.clock()
         self.init_graph_data()
-        self._has_graph = self.make_graph()
-        if self._has_graph:
+        if self.make_graph():
             self.extend_scene()
             toc = time.clock()
-            self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
+            timeit and self.msg.emit("Graph built in {} seconds\t".format(toc - tic))
         else:
             self.show_usage_msg()
         self.hidden_items = list()
@@ -545,8 +630,7 @@ class GraphViewForm(DataStoreForm):
 
     @Slot(list, name="_handle_scene_changed")
     def _handle_scene_changed(self, region):
-        """Handle scene changed. Show usage message if no items other than the bg.
-        """
+        """Handle scene changed."""
         scene_rect = self.ui.graphicsView.scene().sceneRect()
         if all(scene_rect.contains(rect) for rect in region):
             return
@@ -555,75 +639,13 @@ class GraphViewForm(DataStoreForm):
             extended_rect = extended_rect.united(rect)
         self.ui.graphicsView.scene().setSceneRect(extended_rect)
 
-    def show_usage_msg(self):
-        """Show usage instructions in new scene.
-        """
-        scene = self.new_scene()
-        usage = """
-            <html>
-            <head>
-            <style type="text/css">
-            ol {
-                margin-left: 80px;
-                padding-left: 0px;
-            }
-            ul {
-                margin-left: 40px;
-                padding-left: 0px;
-            }
-            </style>
-            </head>
-            <h3>Usage:</h3>
-            <ol>
-            <li>Select items in <a href="Object tree">Object tree</a> to show objects here.
-                <ul>
-                <li>Ctrl + click starts a new selection.</li>
-                <li>Selected objects become vertices in the graph,
-                while relationships between those objects become edges.
-                </ul>
-            </li>
-            <li>Select items here to show their parameters in <a href="Parameters">Parameters</a>.
-                <ul>
-                <li>Hold down 'Ctrl' to add multiple items to the selection.</li>
-                <li> Hold down 'Ctrl' and drag your mouse to perform a rubber band selection.</li>
-                </ul>
-            </li>
-        """
-        if not self.read_only:
-            usage += """
-                <li>Drag icons from <a href="Item palette">Item palette</a>
-                and drop them here to create new items.</li>
-            """
-        usage += """
-            </ol>
-            </html>
-        """
-        font = QApplication.font()
-        font.setPointSize(64)
-        usage_item = CustomTextItem(usage, font)
-        usage_item.linkActivated.connect(self._handle_usage_link_activated)
-        scene.addItem(usage_item)
-        self._has_graph = False
-        self.extend_scene()
-
-    @Slot("QString", name="_handle_usage_link_activated")
-    def _handle_usage_link_activated(self, link):
-        if link == "Object tree":
-            self.ui.dockWidget_object_tree.show()
-        elif link == "Parameters":
-            self.ui.dockWidget_object_parameter_value.show()
-            self.ui.dockWidget_object_parameter_definition.show()
-            self.ui.dockWidget_relationship_parameter_value.show()
-            self.ui.dockWidget_relationship_parameter_definition.show()
-        elif link == "Item palette":
-            self.ui.dockWidget_item_palette.show()
-
     @Slot("QPoint", "QString", name="_handle_item_dropped")
     def _handle_item_dropped(self, pos, text):
-        if self._has_graph:
-            scene = self.ui.graphicsView.scene()
-        else:
-            scene = self.new_scene()
+        scene = self.ui.graphicsView.scene()
+        if not scene:
+            return
+        if self._usage_item in scene.items():
+            scene.removeItem(self._usage_item)
         scene_pos = self.ui.graphicsView.mapToScene(pos)
         entity_type, entity_class_id = text.split(":")
         entity_class_id = int(entity_class_id)
@@ -638,9 +660,10 @@ class GraphViewForm(DataStoreForm):
             )
             scene.addItem(object_item)
             object_item.become_template()
+            self.ui.graphicsView.setFocus()
+            object_item.edit_name()
         elif entity_type == "relationship class":
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), entity_class_id)
-        self._has_graph = True
         self.extend_scene()
 
     def _make_relationship_items(self, relationship_class_id, center=()):
@@ -718,11 +741,6 @@ class GraphViewForm(DataStoreForm):
         self._added_objects.clear()
         return object_id
 
-    @Slot("QVariant", name="receive_objects_added")
-    def receive_objects_added(self, db_map_data):
-        super().receive_objects_added(db_map_data)
-        self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in db_map_data.get(self.db_map, [])}
-
     def update_object(self, object_item, name):
         """Try and update object given an object item and a name."""
         item = dict(id=object_item.object_id, name=name)
@@ -752,13 +770,6 @@ class GraphViewForm(DataStoreForm):
         relationship_id = self._added_relationships.get((class_id, object_id_list))
         self._added_relationships.clear()
         return relationship_id
-
-    @Slot("QVariant", name="receive_relationships_added")
-    def receive_relationships_added(self, db_map_data):
-        super().receive_relationships_added(db_map_data)
-        self._added_relationships = {
-            (x["class_id"], x["object_id_list"]): x["id"] for x in db_map_data.get(self.db_map, [])
-        }
 
     def remove_relationship_template(self, template_id, relationship_id):
         relationship_template = self.relationship_templates.pop(template_id, None)
@@ -837,7 +848,6 @@ class GraphViewForm(DataStoreForm):
             self.add_relationship_template(
                 scene, scene_pos.x(), scene_pos.y(), relationship_class_id, center=(main_item, dimension)
             )
-            self._has_graph = True
         self.object_item_context_menu.deleteLater()
         self.object_item_context_menu = None
 
@@ -895,29 +905,17 @@ class GraphViewForm(DataStoreForm):
             plot_widget.show()
         menu.deleteLater()
 
-    @busy_effect
     @Slot("bool", name="remove_graph_items")
     def remove_graph_items(self, checked=False):
         """Remove all selected items in the graph."""
         if not self.object_item_selection:
             return
         removed_objects = list(
-            dict(class_id=x.object_class_id, id=x.object_id) for x in self.object_item_selection if x.object_id
+            dict(class_id=x.object_class_id, id=x.object_id, name=x.object_name)
+            for x in self.object_item_selection
+            if x.object_id
         )
-        object_ids = set(x['id'] for x in removed_objects)
-        try:
-            self.db_map.remove_items(object_ids=object_ids)
-            self.object_tree_model.remove_objects(self.db_map, object_ids)
-            # Parameter models
-            self.object_parameter_value_model.remove_objects(self.db_map, removed_objects)
-            self.relationship_parameter_value_model.remove_objects(self.db_map, removed_objects)
-            self.commit_available.emit(True)
-            for item in self.object_item_selection:
-                item.wipe_out()
-            self.ui.graphicsView.scene().shrink_if_needed()
-            self.msg.emit("Successfully removed items.")
-        except SpineDBAPIError as e:
-            self.msg_error.emit(e.msg)
+        self.db_mngr.remove_items({self.db_map: {"object": removed_objects}})
 
     def closeEvent(self, event=None):
         """Handle close window.
