@@ -29,7 +29,7 @@ class TestTreeViewFormFilterMixin:
         )
 
     @property
-    def _relevant_fields(self):
+    def _filtered_fields(self):
         return {
             self.tree_view_form.object_parameter_definition_model: ("object_class_name",),
             self.tree_view_form.object_parameter_value_model: ("object_class_name", "object_name"),
@@ -52,13 +52,13 @@ class TestTreeViewFormFilterMixin:
 
     def _assert_filter(self, filtered_values):
         for model in self._parameter_models:
-            fields = self._relevant_fields[model]
+            fields = self._filtered_fields[model]
             data = self._parameter_data(model, *fields)
             values = filtered_values[model]
-            self.assertTrue(value in data for value in values)
+            self.assertTrue(all(value in data for value in values))
             model.update_filter()
             data = self._parameter_data(model, *fields)
-            self.assertTrue(value not in data for value in values)
+            self.assertTrue(all(value not in data for value in values))
 
     def test_filter_parameter_tables_per_object_class(self):
         """Test that parameter tables are filtered when selecting object classes in the object tree.
@@ -102,8 +102,8 @@ class TestTreeViewFormFilterMixin:
             QItemSelection(pluto_index, pluto_index), QItemSelection()
         )
         filtered_values = {
-            self.tree_view_form.object_parameter_definition_model: [('dog',)],
-            self.tree_view_form.object_parameter_value_model: [('dog', 'pluto'), ('dog', 'scooby')],
+            self.tree_view_form.object_parameter_definition_model: [('fish',)],
+            self.tree_view_form.object_parameter_value_model: [('fish', 'nemo'), ('dog', 'scooby')],
             self.tree_view_form.relationship_parameter_definition_model: [],
             self.tree_view_form.relationship_parameter_value_model: [('fish__dog', 'nemo,scooby')],
         }
