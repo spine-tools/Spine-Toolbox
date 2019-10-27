@@ -21,7 +21,7 @@ from PySide2.QtCore import Qt, QModelIndex, QAbstractTableModel
 
 
 class MinimalTableModel(QAbstractTableModel):
-    def __init__(self, parent, header=None):
+    def __init__(self, parent=None, header=None):
         """Table model for outlining simple tabular data.
 
         Args:
@@ -74,7 +74,7 @@ class MinimalTableModel(QAbstractTableModel):
 
     def columnCount(self, parent=QModelIndex()):
         """Number of columns in the model."""
-        return len(self.header)
+        return len(self.header) or len(next(iter(self._main_data), []))
 
     def headerData(self, section, orientation=Qt.Horizontal, role=Qt.DisplayRole):
         """Returns headers."""

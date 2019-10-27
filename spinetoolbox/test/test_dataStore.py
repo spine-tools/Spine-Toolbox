@@ -22,9 +22,9 @@ import shutil
 import os
 import logging
 import sys
-from spinedb_api import create_new_spine_database
-from PySide2.QtWidgets import QApplication, QWidget, QMessageBox
+from PySide2.QtWidgets import QApplication, QMessageBox
 from networkx import DiGraph
+from spinedb_api import create_new_spine_database
 from .mock_helpers import create_toolboxui_with_project
 from ..widgets.tree_view_widget import TreeViewForm
 from ..project_items.data_store.data_store import DataStore

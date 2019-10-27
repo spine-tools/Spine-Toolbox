@@ -106,8 +106,8 @@ class TestMinimalTableModel(unittest.TestCase):
         self.assertTrue(model.setHeaderData(0, Qt.Horizontal, 'b'))
         self.assertEqual(model.horizontal_header_labels(), ['b'])
         self.assertFalse(model.setHeaderData(0, Qt.Vertical, 'c'))
-        self.assertTrue(model.setHeaderData(0, Qt.Horizontal, 'd', role=Qt.ToolTipRole))
-        self.assertTrue(model.headerData(0, role=Qt.ToolTipRole), 'c')
+        self.assertFalse(model.setHeaderData(0, Qt.Horizontal, 'd', role=Qt.ToolTipRole))
+        self.assertIsNone(model.headerData(0, role=Qt.ToolTipRole))
 
     def test_data(self):
         """Test the data() method of MinimalTableModel."""
