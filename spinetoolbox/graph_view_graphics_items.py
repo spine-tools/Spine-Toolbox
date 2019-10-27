@@ -220,10 +220,10 @@ class ObjectItem(QGraphicsPixmapItem):
         self._press_pos = self.pos()
         self._merge_target = None
 
-    def _find_merge_target(self, scene_pos):
+    def _find_merge_target(self):
         """Returns a suitable merge target.
         Used for building a relationship."""
-        candidates = [x for x in self.scene().items(scene_pos) if isinstance(x, ObjectItem) and x != self]
+        candidates = [x for x in self.collidingItems() if isinstance(x, ObjectItem)]
         return next(iter(candidates), None)
 
     def _is_target_valid(self):
@@ -248,7 +248,7 @@ class ObjectItem(QGraphicsPixmapItem):
         for item in selected_items:
             item.moveBy(move_by.x(), move_by.y())
             item.move_related_items_by(move_by)
-        self._merge_target = self._find_merge_target(event.scenePos())
+        self._merge_target = self._find_merge_target()
         for view in self.scene().views():
             self._views_cursor.setdefault(view, view.viewport().cursor())
             if not self._merge_target:
@@ -299,9 +299,10 @@ class ObjectItem(QGraphicsPixmapItem):
             relationship_id = self._graph_view_form.add_relationship(self.template_id)
             if not relationship_id:
                 return False
-            self._graph_view_form.remove_relationship_template(self.template_id, relationship_id)
+            self._graph_view_form.accept_relationship_template(self.template_id, relationship_id)
         else:
             object_items[object_items.index(self)] = self._merge_target
+            self._merge_target.template_id = self.template_id
         self.do_merge_into_target()
         return True
 

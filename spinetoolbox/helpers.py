@@ -427,7 +427,7 @@ _db_maps = {}
 
 @busy_effect
 def do_get_db_map(url, upgrade, codename):
-    """Returns a DiffDatabaseMapping instance from url.
+    """Returns a memoized DiffDatabaseMapping instance from url.
     Called by `get_db_map`.
     """
     if (url, upgrade, codename) not in _db_maps:

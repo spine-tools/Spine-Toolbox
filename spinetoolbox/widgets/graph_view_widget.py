@@ -771,7 +771,7 @@ class GraphViewForm(DataStoreForm):
         self._added_relationships.clear()
         return relationship_id
 
-    def remove_relationship_template(self, template_id, relationship_id):
+    def accept_relationship_template(self, template_id, relationship_id):
         relationship_template = self.relationship_templates.pop(template_id, None)
         if not relationship_template:
             return
@@ -779,6 +779,15 @@ class GraphViewForm(DataStoreForm):
         for item in arc_items:
             item.relationship_id = relationship_id
             item.become_whole()
+
+    def remove_relationship_template(self, template_id):
+        relationship_template = self.relationship_templates.pop(template_id, None)
+        if not relationship_template:
+            return
+        arc_items = relationship_template["arc_items"]
+        object_items = [x for x in relationship_template["object_items"] if not x.object_id]
+        for item in arc_items + object_items:
+            item.scene().removeItem(item)
 
     def show_graph_view_context_menu(self, global_pos):
         """Show context menu for graphics view."""
@@ -910,11 +919,12 @@ class GraphViewForm(DataStoreForm):
         """Remove all selected items in the graph."""
         if not self.object_item_selection:
             return
-        removed_objects = list(
-            dict(class_id=x.object_class_id, id=x.object_id, name=x.object_name)
-            for x in self.object_item_selection
-            if x.object_id
-        )
+        removed_objects = list()
+        for item in self.object_item_selection:
+            if item.template_id:
+                self.remove_relationship_template(item.template_id)
+            if item.object_id:
+                removed_objects.append(dict(class_id=item.object_class_id, id=item.object_id, name=item.object_name))
         self.db_mngr.remove_items({self.db_map: {"object": removed_objects}})
 
     def closeEvent(self, event=None):
