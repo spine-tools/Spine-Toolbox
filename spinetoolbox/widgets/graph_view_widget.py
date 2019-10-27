@@ -23,7 +23,6 @@ from scipy.sparse.csgraph import dijkstra
 from PySide2.QtWidgets import QApplication, QWidgetAction, QTreeView
 from PySide2.QtCore import Qt, Slot, QPointF, QRectF, QEvent
 from PySide2.QtGui import QPalette, QMouseEvent
-from spinedb_api import SpineDBAPIError
 from .data_store_widget import DataStoreForm
 from .custom_menus import SimpleEditableParameterValueContextMenu, ObjectItemContextMenu, GraphViewContextMenu
 from .custom_qwidgets import ZoomWidget

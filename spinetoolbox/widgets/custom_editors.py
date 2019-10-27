@@ -40,6 +40,7 @@ from PySide2.QtWidgets import (
     QItemDelegate,
     QWidget,
     QVBoxLayout,
+    QHBoxLayout,
     QColorDialog,
     QDialog,
     QDialogButtonBox,
@@ -508,9 +509,12 @@ class IconColorEditor(QDialog):
         self.color_dialog.setOption(QColorDialog.DontUseNativeDialog, True)
         self.button_box = QDialogButtonBox(self)
         self.button_box.setStandardButtons(QDialogButtonBox.Cancel | QDialogButtonBox.Ok)
+        top_widget = QWidget(self)
+        top_layout = QHBoxLayout(top_widget)
+        top_layout.addWidget(self.icon_widget)
+        top_layout.addWidget(self.color_dialog)
         layout = QVBoxLayout(self)
-        layout.addWidget(self.icon_widget)
-        layout.addWidget(self.color_dialog)
+        layout.addWidget(top_widget)
         layout.addWidget(self.button_box)
         self.proxy_model = QSortFilterProxyModel(self)
         self.proxy_model.setSourceModel(self.icon_mngr.model)
