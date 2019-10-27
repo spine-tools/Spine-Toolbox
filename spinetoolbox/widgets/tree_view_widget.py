@@ -565,16 +565,29 @@ class TreeViewForm(DataStoreForm):
                 d.setdefault((db_map, item["class_id"]), set()).add(item["id"])
         return d
 
+    @staticmethod
+    def _merge_db_map_data(left, right):
+        result = left.copy()
+        for db_map, data in right.items():
+            result.setdefault(db_map, []).extend(data)
+        return result
+
     def _update_object_filter(self):
         """Update filters on parameter models according to object tree selection."""
         selected_object_classes = self._db_map_items(self.object_tree_model.selected_object_class_indexes)
         self.selected_ent_cls_ids["object class"] = self.db_mngr._to_ids(selected_object_classes)
-        selected_relationship_classes = self.db_mngr.find_cascading_relationship_classes(
+        selected_relationship_classes = self._db_map_items(self.object_tree_model.selected_relationship_class_indexes)
+        cascading_relationship_classes = self.db_mngr.find_cascading_relationship_classes(
             self.selected_ent_cls_ids["object class"]
+        )
+        selected_relationship_classes = self._merge_db_map_data(
+            selected_relationship_classes, cascading_relationship_classes
         )
         self.selected_ent_cls_ids["relationship class"] = self.db_mngr._to_ids(selected_relationship_classes)
         selected_objects = self._db_map_items(self.object_tree_model.selected_object_indexes)
-        selected_relationships = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objects))
+        selected_relationships = self._db_map_items(self.object_tree_model.selected_relationship_indexes)
+        cascading_relationships = self.db_mngr.find_cascading_relationships(self.db_mngr._to_ids(selected_objects))
+        selected_relationships = self._merge_db_map_data(selected_relationships, cascading_relationships)
         for db_map, items in selected_objects.items():
             self.selected_ent_cls_ids["object class"].setdefault(db_map, set()).update({x["class_id"] for x in items})
         for db_map, items in selected_relationships.items():

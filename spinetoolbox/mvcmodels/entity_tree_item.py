@@ -84,7 +84,7 @@ class MultiDBTreeItem(TreeItem):
     def _find_unsorted_rows_by_id(self, db_map, *ids):
         """Generates rows corresponding to children with the given ids in the given db_map.
         If the first id is True, then generates rows corresponding to *all* children with the given db_map."""
-        if list(ids)[0] is True:
+        if next(iter(ids), False) is True:
             # Yield all children with the db_map regardless of the id
             d = self._child_map.get(db_map)
             if d:
