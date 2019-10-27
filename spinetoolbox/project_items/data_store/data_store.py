@@ -27,7 +27,7 @@ from spinetoolbox.project_item import ProjectItem, ProjectItemResource
 from spinetoolbox.widgets.tree_view_widget import TreeViewForm
 from spinetoolbox.widgets.graph_view_widget import GraphViewForm
 from spinetoolbox.widgets.tabular_view_widget import TabularViewForm
-from spinetoolbox.helpers import create_dir, busy_effect, get_db_map, create_log_file_timestamp
+from spinetoolbox.helpers import create_dir, busy_effect, create_log_file_timestamp
 from .widgets.custom_menus import DataStoreContextMenu
 
 
@@ -351,7 +351,7 @@ class DataStore(ProjectItem):
             self.tree_view_form.destroyed.disconnect(self.tree_view_form_destroyed)
             self.tree_view_form.close()
         try:
-            db_map = get_db_map(url, codename=self.name)
+            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None
@@ -392,7 +392,7 @@ class DataStore(ProjectItem):
             self.graph_view_form.destroyed.disconnect(self.graph_view_form_destroyed)
             self.graph_view_form.close()
         try:
-            db_map = get_db_map(url, codename=self.name)
+            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None
@@ -433,7 +433,7 @@ class DataStore(ProjectItem):
             self.tabular_view_form.destroyed.disconnect(self.tabular_view_form_destroyed)
             self.tabular_view_form.close()
         try:
-            db_map = get_db_map(url, codename=self.name)
+            db_map = self._project.db_mngr.get_db_map(url, codename=self.name)
         except spinedb_api.SpineDBAPIError as e:
             self._toolbox.msg_error.emit(e.msg)
             db_map = None

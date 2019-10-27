@@ -393,48 +393,6 @@ def format_string_list(str_list):
     return "<ul>" + "".join(["<li>" + str(x) + "</li>" for x in str_list]) + "</ul>"
 
 
-def get_db_map(url, upgrade=False, codename=None):
-    """Returns a DiffDatabaseMapping instance from url.
-    If the db is not the latest version, asks the user if they want to upgrade it.
-    """
-    try:
-        db_map = do_get_db_map(url, upgrade, codename)
-        return db_map
-    except spinedb_api.SpineDBVersionError:
-        msg = QMessageBox()
-        msg.setIcon(QMessageBox.Question)
-        msg.setWindowTitle("Incompatible database version")
-        msg.setText(
-            "The database at <b>{}</b> is from an older version of Spine "
-            "and needs to be upgraded in order to be used with the current version.".format(url)
-        )
-        msg.setInformativeText(
-            "Do you want to upgrade it now?"
-            "<p><b>WARNING</b>: After the upgrade, "
-            "the database may no longer be used "
-            "with previous versions of Spine."
-        )
-        msg.addButton(QMessageBox.Cancel)
-        msg.addButton("Upgrade", QMessageBox.YesRole)
-        ret = msg.exec_()  # Show message box
-        if ret == QMessageBox.Cancel:
-            return None
-        return get_db_map(url, upgrade=True, codename=codename)
-
-
-_db_maps = {}
-
-
-@busy_effect
-def do_get_db_map(url, upgrade, codename):
-    """Returns a memoized DiffDatabaseMapping instance from url.
-    Called by `get_db_map`.
-    """
-    if (url, upgrade, codename) not in _db_maps:
-        _db_maps[url, upgrade, codename] = spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
-    return _db_maps[url, upgrade, codename]
-
-
 def rows_to_row_count_tuples(rows):
     """Breaks a list of rows into a list of (row, count) tuples corresponding
     to chunks of successive rows.

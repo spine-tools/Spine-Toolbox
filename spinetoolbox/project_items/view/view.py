@@ -182,7 +182,7 @@ class View(ProjectItem):
         for index in indexes:
             url, provider_name = self._references[index.row()]
             try:
-                db_map = DiffDatabaseMapping(url, url.username, codename=provider_name)
+                db_map = self._project.db_mngr.get_db_map(url, upgrade=False, codename=provider_name)
             except (SpineDBAPIError, SpineDBVersionError) as e:
                 self._toolbox.msg_error.emit(e.msg)
                 return

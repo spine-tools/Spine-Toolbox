@@ -94,7 +94,6 @@ class DataStoreForm(QMainWindow):
         # DB
         self.db_maps = db_maps
         self.db_mngr = project.db_mngr
-        self.db_mngr.add_db_maps(*db_maps)
         # Selected ids
         self.selected_ent_cls_ids = {"object class": {}, "relationship class": {}}
         self.selected_ent_ids = {"object": {}, "relationship": {}}

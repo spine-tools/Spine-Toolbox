@@ -17,8 +17,9 @@ The SpineDBManager class
 """
 
 from PySide2.QtCore import QObject, Signal, Slot
-from spinedb_api import SpineDBAPIError
-from .helpers import IconManager
+from PySide2.QtWidgets import QMessageBox
+from spinedb_api import SpineDBAPIError, SpineDBVersionError, DiffDatabaseMapping
+from .helpers import IconManager, busy_effect
 
 
 class SpineDBManager(QObject):
@@ -57,21 +58,54 @@ class SpineDBManager(QObject):
     parameter_tags_updated = Signal("QVariant", name="parameter_tags_updated")
     parameter_definition_tags_set = Signal("QVariant", name="parameter_definition_tags_set")
 
-    def __init__(self, *db_maps):
+    def __init__(self, parent=None):
         """Init class."""
-        super().__init__()
-        self._db_maps = set(db_maps)
+        super().__init__(parent)
+        self._db_maps = {}
         self._cache = {}
         self.icon_mngr = IconManager()
         self.connect_signals()
 
     @property
     def db_maps(self):
-        return self._db_maps
+        return set(self._db_maps.values())
 
-    def add_db_maps(self, *db_maps):
-        """Adds one or more db maps to the manager."""
-        self._db_maps.update(db_maps)
+    def get_db_map(self, url, upgrade=False, codename=None):
+        """Returns a DiffDatabaseMapping instance from url.
+        If the db is not the latest version, asks the user if they want to upgrade it.
+        """
+        try:
+            return self.do_get_db_map(url, upgrade, codename)
+        except SpineDBVersionError:
+            msg = QMessageBox()
+            msg.setIcon(QMessageBox.Question)
+            msg.setWindowTitle("Incompatible database version")
+            msg.setText(
+                "The database at <b>{}</b> is from an older version of Spine "
+                "and needs to be upgraded in order to be used with the current version.".format(url)
+            )
+            msg.setInformativeText(
+                "Do you want to upgrade it now?"
+                "<p><b>WARNING</b>: After the upgrade, "
+                "the database may no longer be used "
+                "with previous versions of Spine."
+            )
+            msg.addButton(QMessageBox.Cancel)
+            msg.addButton("Upgrade", QMessageBox.YesRole)
+            ret = msg.exec_()  # Show message box
+            if ret == QMessageBox.Cancel:
+                return None
+            return self.get_db_map(url, upgrade=True, codename=codename)
+
+    @busy_effect
+    def do_get_db_map(self, url, upgrade, codename):
+        """Returns a memoized DiffDatabaseMapping instance from url.
+        Called by `get_db_map`.
+        """
+        if url not in self._db_maps:
+            self._db_maps[url] = DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
+        self._db_maps[url].reconnect()
+        return self._db_maps[url]
 
     def connect_signals(self):
         """Connect signals."""
