@@ -261,10 +261,11 @@ class TestTreeViewForm(
     def setUp(self):
         """Overridden method. Runs before each test. Makes instances of TreeViewForm and GraphViewForm classes."""
         with mock.patch("spinetoolbox.project.SpineToolboxProject") as mock_project, mock.patch(
-            "spinedb_api.DiffDatabaseMapping"
+            "spinetoolbox.spine_db_manager.DiffDatabaseMapping"
         ) as mock_db_map, mock.patch("spinetoolbox.widgets.tree_view_widget.TreeViewForm.restore_ui"):
+            self.db_mngr = mock_project.db_mngr = SpineDBManager()
+            mock_db_map = self.db_mngr.get_db_map("")
             mock_db_map.codename = "mock_db"
-            self.db_mngr = mock_project.db_mngr = SpineDBManager(mock_db_map)
             self.tree_view_form = TreeViewForm(mock_project, mock_db_map)
             self.mock_db_map = mock_db_map
 
