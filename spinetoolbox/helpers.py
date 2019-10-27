@@ -419,7 +419,10 @@ def get_db_map(url, upgrade=False, codename=None):
         ret = msg.exec_()  # Show message box
         if ret == QMessageBox.Cancel:
             return None
-        return get_db_map(url, upgrade=True)
+        return get_db_map(url, upgrade=True, codename=codename)
+
+
+_db_maps = {}
 
 
 @busy_effect
@@ -427,7 +430,9 @@ def do_get_db_map(url, upgrade, codename):
     """Returns a DiffDatabaseMapping instance from url.
     Called by `get_db_map`.
     """
-    return spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
+    if (url, upgrade, codename) not in _db_maps:
+        _db_maps[url, upgrade, codename] = spinedb_api.DiffDatabaseMapping(url, upgrade=upgrade, codename=codename)
+    return _db_maps[url, upgrade, codename]
 
 
 def rows_to_row_count_tuples(rows):

@@ -15,8 +15,7 @@ Classes to represent entities in a tree.
 :authors: P. Vennström (VTT), M. Marin (KTH)
 :date:   11.3.2019
 """
-from PySide2.QtCore import Qt, QObject, Signal, QModelIndex
-from sqlalchemy import or_
+from PySide2.QtCore import Qt
 from PySide2.QtGui import QFont, QBrush, QIcon
 from .minimal_tree_model import TreeItem
 
