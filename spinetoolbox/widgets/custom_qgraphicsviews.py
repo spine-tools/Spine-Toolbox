@@ -555,9 +555,8 @@ class GraphQGraphicsView(CustomQGraphicsView):
         """
         Update items geometry after performing a zoom.
 
-        Some items (e.g. ArcItem) need this to stay the same size (that is, the zoom controls the *spread*).
+        Some items (e.g. ArcItem) need this to stay the same size after a zoom.
         """
-        scale = self.transform().m11()
         for item in self.items():
             if hasattr(item, "adjust_to_zoom"):
-                item.adjust_to_zoom(scale)
+                item.adjust_to_zoom(self.transform())

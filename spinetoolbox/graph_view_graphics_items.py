@@ -27,7 +27,7 @@ from PySide2.QtWidgets import (
     QStyle,
     QApplication,
 )
-from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor
+from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor, QTransform
 
 
 class ObjectItem(QGraphicsPixmapItem):
@@ -96,6 +96,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._selection_halo.hide()
         self.setZValue(0)
         self.label_item.setZValue(1)
+        self._view_transform = QTransform()
         if not self.object_id:
             self.become_template()
 
@@ -181,7 +182,11 @@ class ObjectItem(QGraphicsPixmapItem):
     @Slot(str)
     def finish_name_editing(self, text):
         """Runs when the user finishes editing the name.
-        Adds or updates the object in the database."""
+        Adds or updates the object in the database.
+
+        Args:
+            text (str): The new name.
+        """
         self._object_name = text
         if self.is_template:
             # Add
@@ -216,7 +221,7 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def itemChange(self, change, value):
         """
-        Keeps track on item's movements on the scene.
+        Keeps track of item's movements on the scene.
 
         Args:
             change (GraphicsItemChange): a flag signalling the type of the change
@@ -260,14 +265,33 @@ class ObjectItem(QGraphicsPixmapItem):
         self._press_pos = self.pos()
         self._merge_target = None
 
+    def adjust_to_zoom(self, transform):
+        """Saves the view's transform to determine collisions.
+
+        Args:
+            transform (QTransform): The view's transformation matrix after the zoom.
+        """
+        self._view_transform = transform
+
+    def device_rect(self):
+        """Returns the item's rect in devices's coordinates."""
+        return self.deviceTransform(self._view_transform).mapRect(self.boundingRect())
+
     def _find_merge_target(self):
         """Returns a suitable merge target if any.
 
         Returns:
             ObjectItem, NoneType
         """
-        candidates = [x for x in self.collidingItems() if isinstance(x, ObjectItem)]
-        return next(iter(candidates), None)
+        scene = self.scene()
+        if not scene:
+            return None
+        colliding = [
+            x
+            for x in scene.items()
+            if isinstance(x, ObjectItem) and x is not self and x.device_rect().intersects(self.device_rect())
+        ]
+        return next(iter(colliding), None)
 
     def _is_target_valid(self):
         """Whether or not the registered merge target is valid.
@@ -504,6 +528,14 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.object_name_changed.emit(self.toPlainText())
         self.setTextCursor(self._cursor)
 
+    def mouseDoubleClickEvent(self, event):
+        """Starts editing the name.
+
+        Args:
+            event (QGraphicsSceneMouseEvent)
+        """
+        self.start_editing()
+
 
 class ArcItem(QGraphicsLineItem):
     """Arc item to use with GraphViewForm."""
@@ -636,12 +668,13 @@ class ArcItem(QGraphicsLineItem):
         self.setLine(line)
         self.token_item.update_pos()
 
-    def adjust_to_zoom(self, factor):
+    def adjust_to_zoom(self, transform):
         """Adjusts the item's geometry so it stays the same size after performing a zoom.
 
         Args:
-            factor (float): Zoom factor.
+            transform (QTransform): The view's transformation matrix after the zoom.
         """
+        factor = transform.m11()
         scaled_width = self._width / factor
         self.normal_pen.setWidthF(scaled_width)
         self.selected_pen.setWidthF(scaled_width)
@@ -656,7 +689,7 @@ class ArcTokenItem(QGraphicsEllipseItem):
         Args:
             arc_item (ArcItem): The parent item.
             color (QColor): Color for the background.
-            object_extent (int): Preferred extent.
+            object_extent (int): Preferred extent of object items in the token.
             object_label_color (QColor): Color for the object label.
         """
         super().__init__(arc_item)
@@ -683,7 +716,6 @@ class ArcTokenItem(QGraphicsEllipseItem):
                 y = 0.0
             else:
                 y = -0.875 * 0.75 * object_item.boundingRect().height()
-                object_item.setZValue(-1)
             object_item.setPos(x, y)
             x += 0.875 * 0.5 * object_item.boundingRect().width()
         rectf = self._direct_children_bounding_rect()
@@ -720,12 +752,13 @@ class ArcTokenItem(QGraphicsEllipseItem):
         center = self.arc_item.line().center()
         self.setPos(center - self._zoomed_position_offset)
 
-    def adjust_to_zoom(self, factor):
+    def adjust_to_zoom(self, transform):
         """Adjusts the item's geometry so it stays the same size after performing a zoom.
 
         Args:
-            factor (float): Zoom factor.
+            transform (QTransform): The view's transformation matrix after the zoom.
         """
+        factor = transform.m11()
         rect = self.rect()
         rect.setWidth(rect.width() / factor)
         rect.setHeight(rect.height() / factor)
@@ -760,6 +793,7 @@ class SimpleObjectItem(QGraphicsPixmapItem):
         self.bg = QGraphicsRectItem(self.text_item.boundingRect(), self.text_item)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.bg.setBrush(QBrush(label_color))
+        self.setZValue(-1)
 
     def setOffset(self, offset):
         """Sets the offset for the item and its text item.

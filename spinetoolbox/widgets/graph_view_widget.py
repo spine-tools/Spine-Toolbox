@@ -510,6 +510,7 @@ class GraphViewForm(DataStoreForm):
         self.object_ids = list(self._selected_object_ids() - rejected_object_ids)
         self.arc_relationship_ids = list()
         self.arc_src_dest_inds = list()
+        self.arc_dimensions = list()
         for relationship in self.db_mngr.get_relationships(self.db_map):
             object_id_list = relationship["object_id_list"]
             object_id_list = [int(x) for x in object_id_list.split(",")]
