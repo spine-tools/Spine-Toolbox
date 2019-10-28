@@ -52,6 +52,14 @@ class DataInterface(ProjectItem):
         # Variables for saving selections when item is (de)activated
         if mappings is None:
             mappings = dict()
+        else:
+            # convert table_type keys to int since json always has strings as keys.
+            for table_settings in mappings.values():
+                table_types = table_settings.get("table_types", {})
+                table_settings["table_types"] = {
+                    table_name: {int(col): t for col, t in col_types.items()}
+                    for table_name, col_types in table_types.items()
+                }
         self.settings = mappings
         self.file_model = QStandardItemModel()
         self.all_files = []  # All source files
@@ -264,7 +272,10 @@ class DataInterface(ProjectItem):
                 for name, options in settings["table_options"].items()
                 if name in settings["selected_tables"]
             }
-            data, errors = connector.get_mapped_data(table_mappings, table_options, max_rows=-1)
+            table_types = {
+                name: types for name, types in settings["table_types"].items() if name in settings["selected_tables"]
+            }
+            data, errors = connector.get_mapped_data(table_mappings, table_options, table_types, max_rows=-1)
             self._toolbox.msg.emit(
                 "<b>{0}:</b> Read {1} data from {2} with {3} errors".format(
                     self.name, sum(len(d) for d in data.values()), source, len(errors)

@@ -16,7 +16,18 @@ Contains a class template for a data source connector used in import ui.
 :date:   1.6.2019
 """
 
-from spinedb_api import read_with_mapping
+from spinedb_api import read_with_mapping, DateTime, Duration, ParameterValueFormatError
+
+TYPE_STRING_TO_CLASS = {"string": str, "datetime": DateTime, "duration": Duration, "float": float}
+
+TYPE_CLASS_TO_STRING = {type_class: string for string, type_class in TYPE_STRING_TO_CLASS.items()}
+
+
+class TypeConversionException(Exception):
+    def __init__(self, row_number, message):
+        super(TypeConversionException, self).__init__()
+        self.row_number = row_number
+        self.message = message
 
 
 class SourceConnection:
@@ -68,7 +79,36 @@ class SourceConnection:
         data = list(data_iter)
         return data, header
 
-    def get_mapped_data(self, tables_mappings, options, max_rows=-1):
+    @staticmethod
+    def convert_data_to_types_generator(column_types, data_iterator, num_cols):
+        if not column_types:
+            return data_iterator
+        do_nothing = lambda x: x
+        type_conv_list = []
+        for c in range(num_cols):
+            type_str = column_types.get(c, None)
+            type_conv_list.append(TYPE_STRING_TO_CLASS.get(type_str, do_nothing))
+
+        def convert_list(data):
+            for row_number, row_data in enumerate(data):
+                row_list = []
+                for row_item, col_type in zip(row_data, type_conv_list):
+                    try:
+                        if isinstance(row_item, str) and not row_item:
+                            row_item = None
+                        if row_item is not None:
+                            row_item = col_type(row_item)
+                        row_list.append(row_item)
+                    except (ValueError, ParameterValueFormatError):
+                        raise TypeConversionException(
+                            row_number,
+                            f"Could not convert value: '{row_item}' to type: '{TYPE_CLASS_TO_STRING[col_type]}'",
+                        )
+                yield row_list
+
+        return convert_list(data_iterator)
+
+    def get_mapped_data(self, tables_mappings, options, table_types, max_rows=-1):
         """
         Reads all mappings in dict tables_mappings, where key is name of table
         and value is the mappings for that table.
@@ -86,10 +126,16 @@ class SourceConnection:
         }
         errors = []
         for table, mapping in tables_mappings.items():
+            types = table_types.get(table, {})
             opt = options.get(table, {})
             data, header, num_cols = self.get_data_iterator(table, opt, max_rows)
-            data, t_errors = read_with_mapping(data, mapping, num_cols, header)
-            for key, value in data.items():
-                mapped_data[key].extend(value)
-            errors.extend([(table, err) for err in t_errors])
+            data = self.convert_data_to_types_generator(types, data, num_cols)
+            try:
+                data, t_errors = read_with_mapping(data, mapping, num_cols, header)
+                for key, value in data.items():
+                    mapped_data[key].extend(value)
+                errors.extend([(table, err) for err in t_errors])
+            except TypeConversionException as type_error:
+                errors.append((table, f"Error on row: {type_error.row_number}: {type_error.message}"))
+
         return mapped_data, errors

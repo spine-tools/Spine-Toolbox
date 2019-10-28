@@ -18,21 +18,33 @@ Classes for handling models in PySide2's model/view framework.
 from collections import namedtuple
 from six import unichr
 
-from spinedb_api import ObjectClassMapping, RelationshipClassMapping, ParameterMapping, Mapping, DateTime, Duration
+from spinedb_api import (
+    ObjectClassMapping,
+    RelationshipClassMapping,
+    ParameterMapping,
+    Mapping,
+    DateTime,
+    Duration,
+    ParameterValueFormatError,
+)
 from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QPushButton, QToolButton
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, QPoint, Signal
 from PySide2.QtGui import QColor, QBrush, QRegion, QPixmap, QFont
 from ..mvcmodels.minimal_table_model import MinimalTableModel
+from .io_api import TYPE_CLASS_TO_STRING, TYPE_STRING_TO_CLASS
 
 Margin = namedtuple("Margin", ("left", "right", "top", "bottom"))
 
 _COLUMN_TYPE_ROLE = Qt.UserRole
 _COLUMN_NUMBER_ROLE = Qt.UserRole + 1
-_ALLOWED_TYPES = ("float", "string", "datetime", "duration")
+_ALLOWED_TYPES = list(sorted(TYPE_STRING_TO_CLASS.keys()))
 
-_TYPE_TO_FONT_AWESOME_ICON = {"string": unichr(int('f031', 16)), "datetime": unichr(int('f073', 16)), "duration": unichr(int('f017', 16)), "float": unichr(int('f534', 16))}
-
-_TYPE_TO_CLASS = {"string": str, "datetime": DateTime, "duration": Duration, "float": float}
+_TYPE_TO_FONT_AWESOME_ICON = {
+    "string": unichr(int('f031', 16)),
+    "datetime": unichr(int('f073', 16)),
+    "duration": unichr(int('f017', 16)),
+    "float": unichr(int('f534', 16)),
+}
 
 _DISPLAY_TYPE_TO_TYPE = {
     "Single value": "single value",
@@ -41,6 +53,7 @@ _DISPLAY_TYPE_TO_TYPE = {
     "Time pattern": "time pattern",
     "Definition": "definition",
 }
+
 _TYPE_TO_DISPLAY_TYPE = {value: key for key, value in _DISPLAY_TYPE_TO_TYPE.items()}
 
 
@@ -48,6 +61,7 @@ class MappingPreviewModel(MinimalTableModel):
     """A model for highlighting columns, rows, and so on, depending on Mapping specification.
     Used by ImportPreviewWidget.
     """
+
     columnTypesUpdated = Signal()
 
     def __init__(self, parent=None):
@@ -56,7 +70,7 @@ class MappingPreviewModel(MinimalTableModel):
         self._mapping = None
         self._data_changed_signal = None
         self._type_errors = {}
-    
+
     def clear(self):
         self._type_errors = {}
         super().clear()
@@ -79,19 +93,21 @@ class MappingPreviewModel(MinimalTableModel):
             self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
         self.update_colors()
 
-    def validate_column(self, col):
+    def validate_column_type(self, col):
         type_class = self.get_column_type(col)
         if type_class is None:
             return
-        type_class = _TYPE_TO_CLASS[type_class]
+        type_class = TYPE_STRING_TO_CLASS[type_class]
         for row in range(self.rowCount()):
             index = self.index(row, col)
             self._type_errors.pop((row, col), None)
             data = self.data(index)
             try:
+                if isinstance(data, str) and not data:
+                    data = None
                 if data is not None:
                     type_class(data)
-            except ValueError as e:
+            except (ValueError, ParameterValueFormatError) as e:
                 self._type_errors[(row, col)] = e
         self.dataChanged.emit(self.index(0, col), self.index(self.rowCount(), col))
 
@@ -109,7 +125,7 @@ class MappingPreviewModel(MinimalTableModel):
         success = self.setHeaderData(col, Qt.Horizontal, col_type, _COLUMN_TYPE_ROLE)
         if success:
             self.columnTypesUpdated.emit()
-            self.validate_column(col)        
+            self.validate_column_type(col)
 
     def update_colors(self):
         self.dataChanged.emit(QModelIndex, QModelIndex, [Qt.BackgroundColorRole])
@@ -118,7 +134,7 @@ class MappingPreviewModel(MinimalTableModel):
         if role == Qt.DisplayRole:
             return "Error"
         if role == Qt.ToolTipRole:
-            return f"Could not parse value: {self._main_data[index.row()][index.column()]} as a {self.get_column_type(index.column())}"
+            return f'Could not parse value: "{self._main_data[index.row()][index.column()]}" as a {self.get_column_type(index.column())}'
         if role == Qt.BackgroundColorRole:
             return QColor(Qt.red)
 
@@ -727,7 +743,6 @@ class HeaderWithButton(QHeaderView):
         self._margin = Margin(left=0, right=0, top=0, bottom=0)
 
         self._menu = self._create_menu()
-
 
         self._button = QToolButton(parent=self)
         self._button.setMenu(self._menu)

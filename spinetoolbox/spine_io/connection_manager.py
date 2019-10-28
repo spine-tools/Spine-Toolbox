@@ -29,7 +29,7 @@ class ConnectionManager(QObject):
 
     startTableGet = Signal()
     startDataGet = Signal(str, dict, int)
-    startMappedDataGet = Signal(dict, dict, int)
+    startMappedDataGet = Signal(dict, dict, dict, int)
 
     # Signal with error message if connection fails
     connectionFailed = Signal(str)
@@ -148,14 +148,16 @@ class ConnectionManager(QObject):
         """
         if self.is_connected:
             options = {}
+            types = {}
             self._table_options[self._current_table] = self._options_widget.get_options()
             for table_name in table_mappings:
                 if table_name in self._table_options:
                     options[table_name] = self._table_options[table_name]
                 else:
                     options[table_name] = {}
+                types.setdefault(table_name, self._table_types.get(table_name, {}))
             self.fetchingData.emit()
-            self.startMappedDataGet.emit(table_mappings, options, max_rows)
+            self.startMappedDataGet.emit(table_mappings, options, types, max_rows)
 
     def connection_ui(self):
         """
@@ -317,9 +319,9 @@ class ConnectionWorker(QObject):
             self.error.emit(f"Could not get data from source: {error}")
             raise error
 
-    def mapped_data(self, table_mappings, options, max_rows):
+    def mapped_data(self, table_mappings, options, types, max_rows):
         try:
-            data, errors = self._connection.get_mapped_data(table_mappings, options, max_rows)
+            data, errors = self._connection.get_mapped_data(table_mappings, options, types, max_rows)
             self.mappedDataReady.emit(data, errors)
         except Exception as error:
             self.error.emit(f"Could not get mapped data from source: {error}")
