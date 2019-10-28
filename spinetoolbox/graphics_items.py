@@ -857,7 +857,7 @@ class ObjectItem(QGraphicsPixmapItem):
             )
 
     def remove_template(self):
-        """Make this arc no longer a template."""
+        """Make this object item no longer a template."""
         self.is_template = False
         self.scene().removeItem(self.question_item)
         self.setToolTip("")
@@ -917,10 +917,10 @@ class ObjectItem(QGraphicsPixmapItem):
             # during the movement.
             move_by = event.scenePos() - event.lastScenePos()
             # Move selected items together
-            selected_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
-            for item in selected_items:
-                item.moveBy(move_by.x(), move_by.y())
-                item.move_related_items_by(move_by)
+            for item in self.scene().selectedItems():
+                if isinstance(item, ObjectItem):
+                    item.moveBy(move_by.x(), move_by.y())
+                    item.move_related_items_by(move_by)
             self.check_for_merge_target(event.scenePos())
             # Depending on the value of merge target and bounce, set drop indicator cursor
             for view in self.scene().views():
@@ -1075,7 +1075,7 @@ class ArcItem(QGraphicsLineItem):
         token_color=QColor(),
         token_object_extent=0,
         token_object_label_color=QColor(),
-        token_object_name_tuple_list=(),
+        token_object_name_tuple_list=None,
     ):
         """Arc item to use with GraphViewForm.
 
@@ -1092,6 +1092,8 @@ class ArcItem(QGraphicsLineItem):
             token_object_name_tuple_list (list): token (object class name, object name) tuple list
         """
         super().__init__()
+        if token_object_name_tuple_list is None:
+            token_object_name_tuple_list = list()
         self._graph_view_form = graph_view_form
         self.object_id_list = object_id_list
         self.relationship_class_id = relationship_class_id
@@ -1106,7 +1108,7 @@ class ArcItem(QGraphicsLineItem):
         dst_y = dst_item.y()
         self.setLine(src_x, src_y, dst_x, dst_y)
         self.token_item = ArcTokenItem(
-            self, token_color, token_object_extent, token_object_label_color, *token_object_name_tuple_list
+            self, token_color, token_object_extent, token_object_label_color, token_object_name_tuple_list
         )
         self.normal_pen = QPen()
         self.normal_pen.setWidth(self._width)
@@ -1220,7 +1222,7 @@ class ObjectLabelItem(QGraphicsTextItem):
 
 
 class ArcTokenItem(QGraphicsEllipseItem):
-    def __init__(self, arc_item, color, object_extent, object_label_color, *object_name_tuples):
+    def __init__(self, arc_item, color, object_extent, object_label_color, object_name_tuples):
         """Arc token item to use with GraphViewForm.
 
         Args:
