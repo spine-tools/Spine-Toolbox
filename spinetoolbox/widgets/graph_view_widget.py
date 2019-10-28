@@ -71,9 +71,9 @@ class GraphViewForm(DataStoreForm):
         # Data for ArcItems
         self.arc_relationship_ids = list()
         self.arc_src_dest_inds = list()
+        self.arc_dimensions = list()
         # Data for relationship templates
-        self.template_id = 1
-        self.relationship_templates = {}  # template_id =>
+        self.relationship_templates = []  # List of templates
         # Lookups
         self._added_objects = {}
         self._added_relationships = {}
@@ -287,7 +287,7 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QVariant", name="receive_objects_added")
     def receive_objects_added(self, db_map_data):
-        """Runs when objects are added to the db. 
+        """Runs when objects are added to the db.
         Builds a lookup dictionary consumed by ``add_object``.
 
         Args:
@@ -341,7 +341,7 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QVariant", name="receive_relationships_added")
     def receive_relationships_added(self, db_map_data):
-        """Runs when relationships are added to the db. 
+        """Runs when relationships are added to the db.
         Builds a lookup dictionary consumed by ``add_relationship``.
 
         Args:
@@ -514,16 +514,19 @@ class GraphViewForm(DataStoreForm):
             object_id_list = relationship["object_id_list"]
             object_id_list = [int(x) for x in object_id_list.split(",")]
             for i, src_object_id in enumerate(object_id_list):
-                try:
-                    dst_object_id = object_id_list[i + 1]
-                except IndexError:
-                    dst_object_id = object_id_list[0]
+                j = (i + 1) % len(object_id_list)
+                dst_object_id = object_id_list[j]
                 try:
                     src_ind = self.object_ids.index(src_object_id)
                     dst_ind = self.object_ids.index(dst_object_id)
                 except ValueError:
                     continue
+                if src_ind == dst_ind:
+                    # Skip arcs that have same endpoints, i.e. have zero length.
+                    # Someday we could consider drawing a 'loop' instead.
+                    continue
                 self.arc_src_dest_inds.append((src_ind, dst_ind))
+                self.arc_dimensions.append((i, j))
                 self.arc_relationship_ids.append(relationship["id"])
 
     def make_graph(self):
@@ -540,19 +543,19 @@ class GraphViewForm(DataStoreForm):
         """Removes template items from the scene, so they don't die with it.
         This is so we can persist template items across graph builds.
         """
-        for template in self.relationship_templates.values():
+        for template in self.relationship_templates:
             for item in template["object_items"] + template["arc_items"]:
                 item.scene().removeItem(item)
 
     def _readd_template_items(self, scene, object_items_lookup):
-        """Readds template items to the given scene, merging them with existing object items 
+        """Readds template items to the given scene, merging them with existing object items
         if they have the same id.
 
         Args:
             scene (QGraphicsScene)
             object_items_lookup (dict): Dictionary of ObjectItem instances keyed by integer object id
         """
-        for template in self.relationship_templates.values():
+        for template in self.relationship_templates:
             for item in template["object_items"] + template["arc_items"]:
                 scene.addItem(item)
             replacement = {}
@@ -583,13 +586,16 @@ class GraphViewForm(DataStoreForm):
             object_items_lookup[object_id] = object_item
             scene.addItem(object_item)
         object_items = list(object_items_lookup.values())
-        for (src_ind, dst_ind), relationship_id in zip(self.arc_src_dest_inds, self.arc_relationship_ids):
+        for (src_ind, dst_ind), relationship_id, dimensions in zip(
+            self.arc_src_dest_inds, self.arc_relationship_ids, self.arc_dimensions
+        ):
             arc_item = ArcItem(
                 self,
                 object_items[src_ind],
                 object_items[dst_ind],
                 0.25 * self.extent,
                 self.arc_color,
+                dimensions,
                 relationship_id=relationship_id,
                 token_color=self.arc_token_color,
                 token_object_extent=0.75 * self.extent,
@@ -770,11 +776,12 @@ class GraphViewForm(DataStoreForm):
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), entity_class_id)
         self.extend_scene()
 
-    def _make_relationship_template_items(self, relationship_class_id):
+    def _make_relationship_template_items(self, relationship_class_id, template_id):
         """Creates and returns graphics items that form a relationship template.
 
         Args:
             relationship_class_id (int)
+            template_id (int)
 
         Returns:
             list: ObjectItem instances in the template.
@@ -803,22 +810,22 @@ class GraphViewForm(DataStoreForm):
                 self.extent,
                 object_class_id=object_class_id,
                 label_color=self.object_label_color,
-                template_id=self.template_id,
+                template_id=template_id,
             )
             object_items.append(object_item)
         for i, src_item in enumerate(object_items):
-            try:
-                dst_item = object_items[i + 1]
-            except IndexError:
-                dst_item = object_items[0]
+            j = (i + 1) % len(object_items)
+            dst_item = object_items[j]
+            dimensions = (i, j)
             arc_item = ArcItem(
                 self,
                 src_item,
                 dst_item,
                 self.extent / 4,
                 self.arc_color,
+                dimensions,
                 relationship_class_id=relationship_class_id,
-                template_id=self.template_id,
+                template_id=template_id,
             )
             arc_items.append(arc_item)
         return object_items, arc_items
@@ -834,15 +841,13 @@ class GraphViewForm(DataStoreForm):
             center (tuple, optional): A tuple of (ObjectItem, dimension) to put at the center of the template.
 
         """
-        object_items, arc_items = self._make_relationship_template_items(relationship_class_id)
+        template_id = len(self.relationship_templates)
+        object_items, arc_items = self._make_relationship_template_items(relationship_class_id, template_id)
         for item in object_items + arc_items:
             scene.addItem(item)
-        self.relationship_templates[self.template_id] = {
-            "class_id": relationship_class_id,
-            "object_items": object_items,
-            "arc_items": arc_items,
-        }
-        self.template_id += 1
+        self.relationship_templates.append(
+            {"class_id": relationship_class_id, "object_items": object_items, "arc_items": arc_items}
+        )
         # Position
         if center:
             item, dimension = center
@@ -865,8 +870,9 @@ class GraphViewForm(DataStoreForm):
             template_id (int)
             relationship_id (int)
         """
-        relationship_template = self.relationship_templates.pop(template_id, None)
-        if not relationship_template:
+        try:
+            relationship_template = self.relationship_templates.pop(template_id)
+        except IndexError:
             return
         arc_items = relationship_template["arc_items"]
         for item in arc_items:
@@ -879,8 +885,9 @@ class GraphViewForm(DataStoreForm):
         Args:
             template_id (int)
         """
-        relationship_template = self.relationship_templates.pop(template_id, None)
-        if not relationship_template:
+        try:
+            relationship_template = self.relationship_templates.pop(template_id)
+        except IndexError:
             return
         arc_items = relationship_template["arc_items"]
         object_items = [x for x in relationship_template["object_items"] if not x.object_id]
@@ -922,8 +929,9 @@ class GraphViewForm(DataStoreForm):
         Args:
             template_id (int): The template id to lookup in the internal template dictionary
         """
-        relationship_template = self.relationship_templates.get(template_id)
-        if not relationship_template:
+        try:
+            relationship_template = self.relationship_templates[template_id]
+        except IndexError:
             return None
         class_id = relationship_template["class_id"]
         object_items = relationship_template["object_items"]
@@ -941,6 +949,8 @@ class GraphViewForm(DataStoreForm):
         object_id_list = ",".join([str(id_) for id_ in object_id_list])
         relationship_id = self._added_relationships.get((class_id, object_id_list))
         self._added_relationships.clear()
+        if relationship_id:
+            self.accept_relationship_template(template_id, relationship_id)
         return relationship_id
 
     def show_graph_view_context_menu(self, global_pos):

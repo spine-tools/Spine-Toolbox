@@ -69,7 +69,7 @@ class EntityListModel(QStandardItemModel):
         """Returns the data stored under the given role for the item referred to by the index."""
         if index != self.new_index:
             if role == Qt.DisplayRole:
-                return self.db_mngr.get_item(self.db_map, self.entity_type, index.data(Qt.UserRole + 1))["name"]
+                return self.db_mngr.get_item(self.db_map, self.entity_type, index.data(Qt.UserRole + 1)).get("name")
             if role == Qt.DecorationRole:
                 return self.db_mngr.entity_class_icon(self.db_map, self.entity_type, index.data(Qt.UserRole + 1))
         return super().data(index, role)

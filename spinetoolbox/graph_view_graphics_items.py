@@ -296,10 +296,10 @@ class ObjectItem(QGraphicsPixmapItem):
         # during the movement.
         move_by = event.scenePos() - event.lastScenePos()
         # Move selected items together
-        selected_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
-        for item in selected_items:
-            item.moveBy(move_by.x(), move_by.y())
-            item.move_related_items(move_by)
+        for item in self.scene().selectedItems():
+            if isinstance(item, ObjectItem):
+                item.moveBy(move_by.x(), move_by.y())
+                item.move_related_items(move_by)
         self._merge_target = self._find_merge_target()
         for view in self.scene().views():
             self._views_cursor.setdefault(view, view.viewport().cursor())
@@ -354,8 +354,9 @@ class ObjectItem(QGraphicsPixmapItem):
             other = self._merge_target
             other._merge_target = self
             return other.merge_into_target()
-        relationship_template = self._graph_view_form.relationship_templates.get(self.template_id)
-        if not relationship_template:
+        try:
+            relationship_template = self._graph_view_form.relationship_templates[self.template_id]
+        except IndexError:
             return False
         object_items = relationship_template["object_items"]
         if [x for x in object_items if x.is_template] == [self]:
@@ -364,7 +365,6 @@ class ObjectItem(QGraphicsPixmapItem):
             relationship_id = self._graph_view_form.add_relationship(self.template_id)
             if not relationship_id:
                 return False
-            self._graph_view_form.accept_relationship_template(self.template_id, relationship_id)
         else:
             object_items[object_items.index(self)] = self._merge_target
             self._merge_target.template_id = self.template_id
@@ -511,6 +511,7 @@ class ArcItem(QGraphicsLineItem):
         dst_item,
         width,
         arc_color,
+        dimensions,
         relationship_id=None,
         relationship_class_id=None,
         template_id=None,
@@ -526,16 +527,19 @@ class ArcItem(QGraphicsLineItem):
             dst_item (ObjectItem): destination item
             width (float): Preferred line width
             arc_color (QColor): arc color
+            dimensions (tuple): the two dimensions in the relationship this arc represents
             relationship_id (int, optional): relationship id, if not given the item becomes a template
             relationship_class_id (int, optional): relationship class id, for template items
             template_id (int, optional): the relationship template id, in case this item is part of one
-            token_object_extent (int): token preferred extent
             token_color (QColor): token bg color
+            token_object_extent (int): token preferred extent
+            token_object_label_color (QColor): token object label color
         """
         super().__init__()
         self._graph_view_form = graph_view_form
         self.db_mngr = graph_view_form.db_mngr
         self.db_map = graph_view_form.db_map
+        self.dimensions = dimensions
         self.relationship_id = relationship_id
         self._relationship_class_id = relationship_class_id
         self.src_item = src_item
@@ -650,14 +654,23 @@ class ArcTokenItem(QGraphicsEllipseItem):
             object_label_color (QColor): Color for the object label.
         """
         super().__init__(arc_item)
+        self._zoomed_position_offset = QPointF(0.0, 0.0)
+        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
         self.arc_item = arc_item
         x = 0.0
         object_class_id_list = [int(id_) for id_ in arc_item.object_class_id_list.split(",")]
         object_name_list = arc_item.object_name_list.split(",")
-        for j, args in enumerate(zip(object_class_id_list, object_name_list)):
-            if not args:
-                continue
-            object_item = SimpleObjectItem(self, 0.875 * object_extent, object_label_color, *args)
+        object_class_id_name_list = list(zip(object_class_id_list, object_name_list))
+        for dim in sorted(arc_item.dimensions, reverse=True):
+            object_class_id_name_list.pop(dim)
+        if not object_class_id_name_list:
+            # Set a minimum rect so scene shrinking works (See #452)
+            self.setRect(QRectF(0, 0, 1, 1))
+            return
+        for j, (object_class_id, object_name) in enumerate(object_class_id_name_list):
+            object_item = SimpleObjectItem(
+                self, 0.875 * object_extent, object_label_color, object_class_id, object_name
+            )
             if j % 2 == 0:
                 y = 0.0
             else:
@@ -681,9 +694,6 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self.setRect(rectf)
         self.setPen(Qt.NoPen)
         self.setBrush(color)
-        self._zoomed_position_offset = QPointF(0.0, 0.0)
-        self.setTransformOriginPoint(self.boundingRect().center())
-        self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
 
     def boundingRect(self):
         """Returns a rect that includes the children so they are correctly painted."""
