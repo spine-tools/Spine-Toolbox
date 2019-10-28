@@ -73,7 +73,7 @@ class DataConnection(ProjectItem):
         s[self.data_dir_watcher.directoryChanged] = self.refresh
         s[self._properties_ui.treeView_dc_references.files_dropped] = self.add_files_to_references
         s[self._properties_ui.treeView_dc_data.files_dropped] = self.add_files_to_data_dir
-        s[self.get_icon().scene().files_dropped_on_dc] = self.receive_files_dropped_on_dc
+        s[self.get_icon().files_dropped_on_icon] = self.receive_files_dropped_on_icon
         s[self._properties_ui.treeView_dc_references.del_key_pressed] = lambda: self.remove_references()
         s[self._properties_ui.treeView_dc_data.del_key_pressed] = lambda: self.remove_files()
         return s
@@ -115,11 +115,11 @@ class DataConnection(ProjectItem):
             self.references.append(os.path.abspath(path))
         self.populate_reference_list(self.references)
 
-    @Slot("QGraphicsItem", "QVariant", name="receive_files_dropped_on_dc")
-    def receive_files_dropped_on_dc(self, item, file_paths):
+    @Slot("QGraphicsItem", list)
+    def receive_files_dropped_on_icon(self, icon, file_paths):
         """Called when files are dropped onto a data connection graphics item.
         If the item is this Data Connection's graphics item, add the files to data."""
-        if item == self.get_icon():
+        if icon == self.get_icon():
             self.add_files_to_data_dir(file_paths)
 
     @Slot("QVariant", name="add_files_to_data_dir")
