@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, Signal, QRectF, QPointF
+from PySide2.QtCore import Qt, Signal, Slot, QRectF, QPointF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -178,6 +178,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setSelected(True)
         self.label_item.start_editing()
 
+    @Slot(str)
     def finish_name_editing(self, text):
         """Runs when the user finishes editing the name.
         Adds or updates the object in the database."""
@@ -263,7 +264,7 @@ class ObjectItem(QGraphicsPixmapItem):
         """Returns a suitable merge target if any.
 
         Returns:
-            ObjectItem, None
+            ObjectItem, NoneType
         """
         candidates = [x for x in self.collidingItems() if isinstance(x, ObjectItem)]
         return next(iter(candidates), None)
@@ -283,7 +284,7 @@ class ObjectItem(QGraphicsPixmapItem):
 
     def mouseMoveEvent(self, event):
         """Moves the item and all connected arcs. Also checks for a merge target
-        and sets the mouse cursor accordingly.
+        and sets an appropriate mouse cursor.
 
         Args:
             event (QGraphicsSceneMouseEvent)
@@ -372,7 +373,7 @@ class ObjectItem(QGraphicsPixmapItem):
         return True
 
     def do_merge_into_target(self):
-        """Merges this item into the registered target which is assumed to be valid."""
+        """Merges this item into the registered target without any verification."""
         self.move_related_items(self._merge_target.pos() - self.pos())
         for arc_item in self.outgoing_arc_items:
             arc_item.src_item = self._merge_target
@@ -427,11 +428,12 @@ class ObjectItem(QGraphicsPixmapItem):
 
 
 class ObjectLabelItem(QGraphicsTextItem):
+    """Object label item to use with GraphViewForm."""
 
     object_name_changed = Signal(str, name="object_name_changed")
 
     def __init__(self, object_item, bg_color):
-        """Object label item to use with GraphViewForm.
+        """Initializes item.
 
         Args:
             object_item (ObjectItem): The parent item.
@@ -504,6 +506,8 @@ class ObjectLabelItem(QGraphicsTextItem):
 
 
 class ArcItem(QGraphicsLineItem):
+    """Arc item to use with GraphViewForm."""
+
     def __init__(
         self,
         graph_view_form,
@@ -519,7 +523,7 @@ class ArcItem(QGraphicsLineItem):
         token_object_extent=0,
         token_object_label_color=QColor(),
     ):
-        """Arc item to use with GraphViewForm.
+        """Initializes item
 
         Args:
             graph_view_form (GraphViewForm): 'owner'
@@ -605,7 +609,7 @@ class ArcItem(QGraphicsLineItem):
         self.selected_pen.setStyle(Qt.DotLine)
 
     def become_whole(self):
-        """Remove the template status from this item."""
+        """Removes the template status from this item."""
         self.is_template = False
         self.normal_pen.setStyle(Qt.SolidLine)
         self.selected_pen.setStyle(Qt.SolidLine)
@@ -644,8 +648,10 @@ class ArcItem(QGraphicsLineItem):
 
 
 class ArcTokenItem(QGraphicsEllipseItem):
+    """Arc token item to use with GraphViewForm."""
+
     def __init__(self, arc_item, color, object_extent, object_label_color):
-        """Arc token item to use with GraphViewForm.
+        """Initializes item
 
         Args:
             arc_item (ArcItem): The parent item.
@@ -657,16 +663,18 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self._zoomed_position_offset = QPointF(0.0, 0.0)
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
         self.arc_item = arc_item
-        x = 0.0
+        # Get object class ids and corresponding names from the parent item
         object_class_id_list = [int(id_) for id_ in arc_item.object_class_id_list.split(",")]
         object_name_list = arc_item.object_name_list.split(",")
         object_class_id_name_list = list(zip(object_class_id_list, object_name_list))
+        # Remove the dimensions covered by the endpoint
         for dim in sorted(arc_item.dimensions, reverse=True):
             object_class_id_name_list.pop(dim)
         if not object_class_id_name_list:
             # Set a minimum rect so scene shrinking works (See #452)
             self.setRect(QRectF(0, 0, 1, 1))
             return
+        x = 0.0
         for j, (object_class_id, object_name) in enumerate(object_class_id_name_list):
             object_item = SimpleObjectItem(
                 self, 0.875 * object_extent, object_label_color, object_class_id, object_name
@@ -700,7 +708,7 @@ class ArcTokenItem(QGraphicsEllipseItem):
         return self.childrenBoundingRect() | super().boundingRect()
 
     def _direct_children_bounding_rect(self):
-        """Returns a rect that includes the direct children but none beyond that
+        """Returns a rect that includes the direct children but none beyond
         (i.e., excludes the ObjectItemLabel of children ObjectItem's.)"""
         rectf = QRectF()
         for item in self.childItems():
@@ -726,8 +734,10 @@ class ArcTokenItem(QGraphicsEllipseItem):
 
 
 class SimpleObjectItem(QGraphicsPixmapItem):
+    """Simple object item to use in ArcTokenItem."""
+
     def __init__(self, parent, extent, label_color, object_class_id, object_name):
-        """Simple object item to use in ArcTokenItem.
+        """Initializes item.
 
         Args:
             parent (ArcTokenItem): parent item
@@ -762,8 +772,10 @@ class SimpleObjectItem(QGraphicsPixmapItem):
 
 
 class OutlinedTextItem(QGraphicsSimpleTextItem):
+    """Outlined text item to use with GraphViewForm."""
+
     def __init__(self, text="", font=QFont(), brush=QBrush(Qt.white), outline_pen=QPen(Qt.black, 3, Qt.SolidLine)):
-        """Outlined text item to use with GraphViewForm.
+        """Initializes item.
 
         Args:
             text (str): text to show
@@ -780,8 +792,10 @@ class OutlinedTextItem(QGraphicsSimpleTextItem):
 
 
 class CustomTextItem(QGraphicsTextItem):
+    """Custom text item to use with GraphViewForm."""
+
     def __init__(self, html, font):
-        """Custom text item to use with GraphViewForm.
+        """Initializes item.
 
         Args:
             html (str): text to show
