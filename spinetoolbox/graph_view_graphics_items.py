@@ -706,19 +706,12 @@ class ArcTokenItem(QGraphicsEllipseItem):
         if not object_class_id_name_list:
             # Set a minimum rect so scene shrinking works (See #452)
             self.setRect(QRectF(0, 0, 1, 1))
+            self._width_estimate = 1
             return
-        x = 0.0
-        for j, (object_class_id, object_name) in enumerate(object_class_id_name_list):
-            object_item = SimpleObjectItem(
-                self, 0.875 * object_extent, object_label_color, object_class_id, object_name
-            )
-            if j % 2 == 0:
-                y = 0.0
-            else:
-                y = -0.875 * 0.75 * object_item.boundingRect().height()
-            object_item.setPos(x, y)
-            x += 0.875 * 0.5 * object_item.boundingRect().width()
+        for rank, (object_class_id, object_name) in enumerate(object_class_id_name_list):
+            _ = SimpleObjectItem(self, object_extent, object_label_color, object_class_id, object_name, rank)
         rectf = self._direct_children_bounding_rect()
+        self._width_estimate = rectf.width()
         offset = -rectf.topLeft()
         for item in self.childItems():
             item.setOffset(offset)
@@ -734,6 +727,7 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self.setRect(rectf)
         self.setPen(Qt.NoPen)
         self.setBrush(color)
+        self._view_transform = QTransform()
 
     def boundingRect(self):
         """Returns a rect that includes the children so they are correctly painted."""
@@ -748,9 +742,19 @@ class ArcTokenItem(QGraphicsEllipseItem):
         return rectf
 
     def update_pos(self):
-        """Puts the token at the center point of the arc."""
-        center = self.arc_item.line().center()
-        self.setPos(center - self._zoomed_position_offset)
+        """Puts the token at the center point of the arc.
+        Hides or shows children depending on line length.
+        """
+        line = self.arc_item.line()
+        self.setPos(line.center() - self._zoomed_position_offset)
+        line_view_length = line.length() * self._view_transform.m11()
+        magic_ratio = line_view_length / self._width_estimate
+        for child in self.childItems():
+            child.setVisible(magic_ratio > 2)
+            child.text_item.setVisible(magic_ratio > 3)
+
+    def device_rect(self):
+        """Returns the item's rect in devices's coordinates."""
 
     def adjust_to_zoom(self, transform):
         """Adjusts the item's geometry so it stays the same size after performing a zoom.
@@ -758,6 +762,7 @@ class ArcTokenItem(QGraphicsEllipseItem):
         Args:
             transform (QTransform): The view's transformation matrix after the zoom.
         """
+        self._view_transform = transform
         factor = transform.m11()
         rect = self.rect()
         rect.setWidth(rect.width() / factor)
@@ -769,7 +774,7 @@ class ArcTokenItem(QGraphicsEllipseItem):
 class SimpleObjectItem(QGraphicsPixmapItem):
     """Simple object item to use in ArcTokenItem."""
 
-    def __init__(self, parent, extent, label_color, object_class_id, object_name):
+    def __init__(self, parent, extent, label_color, object_class_id, object_name, rank):
         """Initializes item.
 
         Args:
@@ -778,22 +783,57 @@ class SimpleObjectItem(QGraphicsPixmapItem):
             label_color (QColor): label bg color
             object_class_id (int): object class id
             object_name (str): object name
+            rank (int)
         """
         super().__init__(parent)
         arc_item = parent.arc_item
-        pixmap = arc_item.db_mngr.entity_class_icon(arc_item.db_map, "object class", object_class_id).pixmap(extent)
+        pixmap = arc_item.db_mngr.entity_class_icon(arc_item.db_map, "object class", object_class_id).pixmap(
+            0.875 * extent
+        )
         self.setPixmap(pixmap)
+        self._place_item(rank)
         self.text_item = QGraphicsTextItem(object_name, self)
         font = QApplication.font()
         font.setPointSize(9)
         self.text_item.setFont(font)
-        x = (self.boundingRect().width() - self.text_item.boundingRect().width()) / 2
-        y = (self.boundingRect().height() - self.text_item.boundingRect().height()) / 2
-        self.text_item.setPos(x, y)
+        self._place_text_item(rank)
         self.bg = QGraphicsRectItem(self.text_item.boundingRect(), self.text_item)
         self.bg.setFlag(QGraphicsItem.ItemStacksBehindParent)
         self.bg.setBrush(QBrush(label_color))
         self.setZValue(-1)
+
+    def _place_item(self, rank):
+        """Places item in a comfortable position.
+
+        Args:
+            rank (int)
+        """
+        if rank % 2 == 0:
+            y = 0.0
+        else:
+            y = -0.875 * 0.75 * self.boundingRect().height()
+        x = (0.875 * 0.5 * self.boundingRect().width()) * rank
+        self.setPos(x, y)
+
+    def _place_text_item(self, rank):
+        """Places text item in a comfortable position depending on the rank.
+
+        Args:
+            rank (int)
+        """
+        vertical = ["bottom", "top", "center", "center"][rank % 4]
+        horizontal = ["center", "center", "right", "left"][rank % 4]
+        y = {
+            "bottom": self.boundingRect().height(),
+            "top": -self.text_item.boundingRect().height(),
+            "center": (self.boundingRect().height() - self.text_item.boundingRect().height()) / 2,
+        }[vertical]
+        x = {
+            "center": (self.boundingRect().width() - self.text_item.boundingRect().width()) / 2,
+            "right": self.boundingRect().width(),
+            "left": -self.text_item.boundingRect().width(),
+        }[horizontal]
+        self.text_item.setPos(x, y)
 
     def setOffset(self, offset):
         """Sets the offset for the item and its text item.
