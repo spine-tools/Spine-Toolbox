@@ -765,15 +765,14 @@ class GraphViewForm(DataStoreForm):
                 object_class_id=entity_class_id,
             )
             scene.addItem(object_item)
-            object_item.become_template()
             self.ui.graphicsView.setFocus()
             object_item.edit_name()
         elif entity_type == "relationship class":
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), entity_class_id)
         self.extend_scene()
 
-    def _make_relationship_items(self, relationship_class_id):
-        """Returns graphics items that form a relationship template.
+    def _make_relationship_template_items(self, relationship_class_id):
+        """Creates and returns graphics items that form a relationship template.
 
         Args:
             relationship_class_id (int)
@@ -799,7 +798,13 @@ class GraphViewForm(DataStoreForm):
             x_ = x[i]
             y_ = y[i]
             object_item = ObjectItem(
-                self, x_, y_, self.extent, object_class_id=object_class_id, label_color=self.object_label_color
+                self,
+                x_,
+                y_,
+                self.extent,
+                object_class_id=object_class_id,
+                label_color=self.object_label_color,
+                template_id=self.template_id,
             )
             object_items.append(object_item)
         for i, src_item in enumerate(object_items):
@@ -808,13 +813,19 @@ class GraphViewForm(DataStoreForm):
             except IndexError:
                 dst_item = object_items[0]
             arc_item = ArcItem(
-                self, src_item, dst_item, self.extent / 4, self.arc_color, relationship_class_id=relationship_class_id
+                self,
+                src_item,
+                dst_item,
+                self.extent / 4,
+                self.arc_color,
+                relationship_class_id=relationship_class_id,
+                template_id=self.template_id,
             )
             arc_items.append(arc_item)
         return object_items, arc_items
 
     def add_relationship_template(self, scene, x, y, relationship_class_id, center=()):
-        """Makes a relationship template and adds it to scene at the given coordinates.
+        """Makes a relationship template and adds it to the scene at the given coordinates.
 
         Args:
             scene (QGraphicsScene)
@@ -824,16 +835,9 @@ class GraphViewForm(DataStoreForm):
             center (tuple, optional): A tuple of (ObjectItem, dimension) to put at the center of the template.
 
         """
-        object_items, arc_items = self._make_relationship_items(relationship_class_id)
+        object_items, arc_items = self._make_relationship_template_items(relationship_class_id)
         for item in object_items + arc_items:
             scene.addItem(item)
-        # Become template
-        for object_item in object_items:
-            object_item.template_id = self.template_id
-            object_item.become_template()
-        for arc_item in arc_items:
-            arc_item.template_id = self.template_id
-            arc_item.become_template()
         self.relationship_templates[self.template_id] = {
             "class_id": relationship_class_id,
             "object_items": object_items,
@@ -853,7 +857,7 @@ class GraphViewForm(DataStoreForm):
             center = rectf.center()
         for object_item in object_items:
             object_item.moveBy(x - center.x(), y - center.y())
-            object_item.move_related_items_by(QPointF(x, y) - center)
+            object_item.move_related_items(QPointF(x, y) - center)
 
     def accept_relationship_template(self, template_id, relationship_id):
         """Accepts a relationship template as a new (whole) relationship.
@@ -1012,9 +1016,9 @@ class GraphViewForm(DataStoreForm):
             relationship_class_id = relationship_class["id"]
             dimension = relationship_class['dimension']
             scene = self.ui.graphicsView.scene()
-            scene_pos = e.scenePos()
+            scene_pos = global_pos
             self.add_relationship_template(
-                scene, scene_pos.x(), scene_pos.y(), relationship_class_id, center=(main_item, dimension)
+                scene, global_pos.x(), global_pos.y(), relationship_class_id, center=(main_item, dimension)
             )
         self.object_item_context_menu.deleteLater()
         self.object_item_context_menu = None

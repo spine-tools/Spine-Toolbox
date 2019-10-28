@@ -15,7 +15,7 @@ Classes for drawing graphics items on graph view's QGraphicsScene.
 :authors: M. Marin (KTH), P. Savolainen (VTT)
 :date:   4.4.2018
 """
-from PySide2.QtCore import Qt, QRectF, QPointF
+from PySide2.QtCore import Qt, Signal, QRectF, QPointF
 from PySide2.QtWidgets import (
     QGraphicsItem,
     QGraphicsTextItem,
@@ -31,19 +31,35 @@ from PySide2.QtGui import QColor, QPen, QBrush, QPainterPath, QFont, QTextCursor
 
 
 class ObjectItem(QGraphicsPixmapItem):
-    def __init__(self, graph_view_form, x, y, extent, object_id=None, object_class_id=None, label_color=Qt.transparent):
-        """Object item to use with GraphViewForm.
+    def __init__(
+        self,
+        graph_view_form,
+        x,
+        y,
+        extent,
+        object_id=None,
+        object_class_id=None,
+        template_id=None,
+        label_color=Qt.transparent,
+    ):
+        """Initializes the item.
 
         Args:
             graph_view_form (GraphViewForm): 'owner'
             x (float): x-coordinate of central point
             y (float): y-coordinate of central point
             extent (int): preferred extent
-            object_id (int): object id
-            object_class_id (int): object class id
+            object_id (int, optional): object id, if not given the item becomes a template
+            object_class_id (int, optional): object class id, for template items
+            template_id (int, optional): the relationship template id, in case this item is part of one
             label_color (QColor): label bg color
+
+        Raises:
+            ValueError: in case object_id and object_class_id are both not provided
         """
         super().__init__()
+        if not object_id and not object_class_id:
+            raise ValueError("Can't create an ObjectItem without object id nor object class id.")
         self._graph_view_form = graph_view_form
         self.db_mngr = graph_view_form.db_mngr
         self.db_map = graph_view_form.db_map
@@ -52,17 +68,17 @@ class ObjectItem(QGraphicsPixmapItem):
         self._object_name = f"<unnamed {self.object_class_name}>"
         self._extent = extent
         self._label_color = label_color
+        self.is_template = None
+        self.template_id = template_id  # id of relationship templates
         self.label_item = ObjectLabelItem(self, label_color)
+        self.label_item.object_name_changed.connect(self.finish_name_editing)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
-        self.is_template = False
-        self.template_id = None  # id of relationship templates
         self.question_item = None  # In case this becomes a template
         self._press_pos = None
         self._merge_target = None
         self._moved_on_scene = False
         self._views_cursor = {}
-        self._selected_color = graph_view_form.palette().highlight()
         self.refresh_icon()
         self.refresh_name()
         self.setPos(x, y)
@@ -73,13 +89,15 @@ class ObjectItem(QGraphicsPixmapItem):
         self.setFlag(QGraphicsItem.ItemIsFocusable, enabled=True)
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
         self.setFlag(QGraphicsItem.ItemSendsScenePositionChanges, enabled=True)
-        self.shade = QGraphicsRectItem(super().boundingRect(), self)
-        self.shade.setBrush(self._selected_color)
-        self.shade.setPen(Qt.NoPen)
-        self.shade.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
-        self.shade.hide()
+        self._selection_halo = QGraphicsRectItem(super().boundingRect(), self)
+        self._selection_halo.setBrush(graph_view_form.palette().highlight())
+        self._selection_halo.setPen(Qt.NoPen)
+        self._selection_halo.setFlag(QGraphicsItem.ItemStacksBehindParent, enabled=True)
+        self._selection_halo.hide()
         self.setZValue(0)
         self.label_item.setZValue(1)
+        if not self.object_id:
+            self.become_template()
 
     @property
     def object_name(self):
@@ -94,36 +112,31 @@ class ObjectItem(QGraphicsPixmapItem):
         return self.db_mngr.get_item(self.db_map, "object class", self.object_class_id).get("name")
 
     def refresh_icon(self):
+        """Refreshes the icon."""
         pixmap = self.db_mngr.entity_class_icon(self.db_map, "object class", self.object_class_id).pixmap(self._extent)
         self.setPixmap(pixmap)
 
     def refresh_name(self):
+        """Refreshes the name."""
         self.label_item.setPlainText(self.object_name)
 
     def shape(self):
-        """Make the entire bounding rect to be the shape."""
+        """Returns a shape containing the entire bounding rect, to work better with icon transparency."""
         path = QPainterPath()
         path.addRect(self.boundingRect())
         return path
 
-    def _boundingRect(self):
-        """Include children's bounding rect so they are correctly painted."""
-        return super().boundingRect() | self.childrenBoundingRect()
-
     def paint(self, painter, option, widget=None):
-        """Try and make it more clear when an item is selected."""
+        """Shows or hides the selection halo."""
         if option.state & (QStyle.State_Selected):
-            if self.label_item.hasFocus():
-                self.shade.hide()
-            else:
-                self.shade.show()
+            self._selection_halo.setVisible(not self.label_item.hasFocus())
             option.state &= ~QStyle.State_Selected
         else:
-            self.shade.hide()
+            self._selection_halo.hide()
         super().paint(painter, option, widget)
 
     def become_template(self):
-        """Become a template."""
+        """Turns this item into a template."""
         self.is_template = True
         font = QFont("", 0.75 * self._extent)
         self.question_item = OutlinedTextItem("?", font)
@@ -155,24 +168,20 @@ class ObjectItem(QGraphicsPixmapItem):
             )
 
     def become_whole(self):
-        """Make this object no longer a template."""
+        """Removes the template status from this item."""
         self.is_template = False
         self.scene().removeItem(self.question_item)
         self.setToolTip("")
 
     def edit_name(self):
-        """Start editing object name."""
+        """Starts editing the object name."""
         self.setSelected(True)
-        self.label_item.setTextInteractionFlags(Qt.TextEditorInteraction)
-        self.label_item.setFocus()
-        cursor = QTextCursor(self.label_item._cursor)
-        cursor.select(QTextCursor.Document)
-        self.label_item.setTextCursor(cursor)
+        self.label_item.start_editing()
 
-    def finish_name_editing(self):
-        """Called by the label item when editing finishes."""
-        self.label_item.setTextInteractionFlags(Qt.NoTextInteraction)
-        self._object_name = self.label_item.toPlainText()
+    def finish_name_editing(self, text):
+        """Runs when the user finishes editing the name.
+        Adds or updates the object in the database."""
+        self._object_name = text
         if self.is_template:
             # Add
             object_id = self._graph_view_form.add_object(self._object_class_id, self._object_name)
@@ -189,11 +198,19 @@ class ObjectItem(QGraphicsPixmapItem):
             self._graph_view_form.update_object(self.object_id, self._object_name)
 
     def add_incoming_arc_item(self, arc_item):
-        """Add an ArcItem to the list of incoming arcs."""
+        """Adds an item to the list of incoming arcs.
+
+        Args:
+            arc_item (ArcItem)
+        """
         self.incoming_arc_items.append(arc_item)
 
     def add_outgoing_arc_item(self, arc_item):
-        """Add an ArcItem to the list of outgoing arcs."""
+        """Adds an item to the list of outgoing arcs.
+
+        Args:
+            arc_item (ArcItem)
+        """
         self.outgoing_arc_items.append(arc_item)
 
     def itemChange(self, change, value):
@@ -203,13 +220,20 @@ class ObjectItem(QGraphicsPixmapItem):
         Args:
             change (GraphicsItemChange): a flag signalling the type of the change
             value: a value related to the change
+
+        Returns:
+            the same value given as input
         """
         if change == QGraphicsItem.ItemScenePositionHasChanged:
             self._moved_on_scene = True
         return value
 
     def keyPressEvent(self, event):
-        """Triggers name editing."""
+        """Starts editing the name if F2 is pressed.
+
+        Args:
+            event (QKeyEvent)
+        """
         if event.key() == Qt.Key_F2:
             self.edit_name()
             event.accept()
@@ -217,23 +241,39 @@ class ObjectItem(QGraphicsPixmapItem):
             super().keyPressEvent(event)
 
     def mouseDoubleClickEvent(self, event):
-        """Triggers name editing."""
+        """Starts editing the name.
+
+        Args:
+            event (QGraphicsSceneMouseEvent)
+        """
         self.edit_name()
         event.accept()
 
     def mousePressEvent(self, event):
-        """Saves original position."""
+        """Saves original position for bouncing purposes.
+
+        Args:
+            event (QGraphicsSceneMouseEvent)
+        """
         super().mousePressEvent(event)
         self._press_pos = self.pos()
         self._merge_target = None
 
     def _find_merge_target(self):
-        """Returns a suitable merge target.
-        Used for building a relationship."""
+        """Returns a suitable merge target if any.
+
+        Returns:
+            ObjectItem, None
+        """
         candidates = [x for x in self.collidingItems() if isinstance(x, ObjectItem)]
         return next(iter(candidates), None)
 
     def _is_target_valid(self):
+        """Whether or not the registered merge target is valid.
+
+        Returns:
+            bool
+        """
         return (
             self._merge_target
             and self._merge_target.is_template != self.is_template
@@ -242,7 +282,12 @@ class ObjectItem(QGraphicsPixmapItem):
         )
 
     def mouseMoveEvent(self, event):
-        """Calls move related items and checks for a merge target."""
+        """Moves the item and all connected arcs. Also checks for a merge target
+        and sets the mouse cursor accordingly.
+
+        Args:
+            event (QGraphicsSceneMouseEvent)
+        """
         if event.buttons() & Qt.LeftButton == 0:
             super().mouseMoveEvent(event)
             return
@@ -254,7 +299,7 @@ class ObjectItem(QGraphicsPixmapItem):
         selected_items = [x for x in self.scene().selectedItems() if isinstance(x, ObjectItem)]
         for item in selected_items:
             item.moveBy(move_by.x(), move_by.y())
-            item.move_related_items_by(move_by)
+            item.move_related_items(move_by)
         self._merge_target = self._find_merge_target()
         for view in self.scene().views():
             self._views_cursor.setdefault(view, view.viewport().cursor())
@@ -270,7 +315,12 @@ class ObjectItem(QGraphicsPixmapItem):
                 view.viewport().setCursor(Qt.ForbiddenCursor)
 
     def mouseReleaseEvent(self, event):
-        """Merge, bounce, notify scene or just do nothing."""
+        """Merges the item into the registered target if any. Bounces it if not possible.
+        Shrinks the scene if needed.
+
+        Args:
+            event (QGraphicsSceneMouseEvent)
+        """
         super().mouseReleaseEvent(event)
         if self._merge_target:
             if self.merge_into_target():
@@ -281,14 +331,22 @@ class ObjectItem(QGraphicsPixmapItem):
             self.scene().shrink_if_needed()
 
     def _bounce_back(self, current_pos):
-        """Bounce item back from given position to press position."""
+        """Bounces the item back from given position to its original position.
+
+        Args:
+            current_pos (QPoint)
+        """
         if self._press_pos is None:
             return
-        self.move_related_items_by(self._press_pos - current_pos)
+        self.move_related_items(self._press_pos - current_pos)
         self.setPos(self._press_pos)
 
     def merge_into_target(self):
-        """Merges this item into the target."""
+        """Merges this item into the registered target if valid.
+
+        Returns:
+            bool: True if merged, False if not.
+        """
         if not self._is_target_valid():
             return False
         if not self.is_template:
@@ -314,7 +372,8 @@ class ObjectItem(QGraphicsPixmapItem):
         return True
 
     def do_merge_into_target(self):
-        self.move_related_items_by(self._merge_target.pos() - self.pos())
+        """Merges this item into the registered target which is assumed to be valid."""
+        self.move_related_items(self._merge_target.pos() - self.pos())
         for arc_item in self.outgoing_arc_items:
             arc_item.src_item = self._merge_target
         for arc_item in self.incoming_arc_items:
@@ -323,8 +382,12 @@ class ObjectItem(QGraphicsPixmapItem):
         self._merge_target.outgoing_arc_items.extend(self.outgoing_arc_items)
         self.scene().removeItem(self)
 
-    def move_related_items_by(self, pos_diff):
-        """Moves related items."""
+    def move_related_items(self, pos_diff):
+        """Moves related items.
+
+        Args:
+            pos_diff (QPoint)
+        """
         for item in self.outgoing_arc_items:
             item.move_src_by(pos_diff)
         for item in self.incoming_arc_items:
@@ -343,7 +406,11 @@ class ObjectItem(QGraphicsPixmapItem):
         self._graph_view_form.show_object_item_context_menu(e.screenPos(), self)
 
     def set_all_visible(self, on):
-        """Sets visibility status for this item and all related items."""
+        """Sets visibility status for this item and all related items.
+
+        Args:
+            on (bool)
+        """
         for item in self.incoming_arc_items + self.outgoing_arc_items:
             item.setVisible(on)
         self.setVisible(on)
@@ -360,12 +427,15 @@ class ObjectItem(QGraphicsPixmapItem):
 
 
 class ObjectLabelItem(QGraphicsTextItem):
+
+    object_name_changed = Signal(str, name="object_name_changed")
+
     def __init__(self, object_item, bg_color):
         """Object label item to use with GraphViewForm.
 
         Args:
-            object_item (ObjectItem): the ObjectItem instance
-            bg_color (QColor): color to paint the label
+            object_item (ObjectItem): The parent item.
+            bg_color (QColor): Color for the label.
         """
         super().__init__(object_item)
         self.object_item = object_item
@@ -380,11 +450,16 @@ class ObjectLabelItem(QGraphicsTextItem):
         self._cursor = self.textCursor()
 
     def setPlainText(self, text):
+        """Set texts and resets position.
+
+        Args:
+            text (str)
+        """
         super().setPlainText(text)
         self.reset_position()
 
     def reset_position(self):
-        """Centers this item."""
+        """Adapts item geometry so text is always centered."""
         rectf = self.boundingRect()
         x = -rectf.width() / 2
         y = rectf.height() + 4
@@ -392,12 +467,27 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.bg.setRect(self.boundingRect())
 
     def set_bg_color(self, bg_color):
-        """Set background color."""
+        """Sets background color.
+
+        Args:
+            bg_color (QColor)
+        """
         self.bg.setBrush(QBrush(bg_color))
 
+    def start_editing(self):
+        """Starts editing."""
+        self.setTextInteractionFlags(Qt.TextEditorInteraction)
+        self.setFocus()
+        cursor = QTextCursor(self._cursor)
+        cursor.select(QTextCursor.Document)
+        self.setTextCursor(cursor)
+
     def keyPressEvent(self, event):
-        """Give up focus when the user presses Enter or Return.
-        In the meantime, adapt item geometry so text is always centered.
+        """Keeps text centered as the user types.
+        Gives up focus when the user presses Enter or Return.
+
+        Args:
+            event (QKeyEvent)
         """
         if event.key() in (Qt.Key_Return, Qt.Key_Enter):
             self.clearFocus()
@@ -406,9 +496,10 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.reset_position()
 
     def focusOutEvent(self, event):
-        """Call method to finish name editing in object item."""
+        """Ends editing and sends object_name_changed signal."""
         super().focusOutEvent(event)
-        self.object_item.finish_name_editing()
+        self.setTextInteractionFlags(Qt.NoTextInteraction)
+        self.object_name_changed.emit(self.toPlainText())
         self.setTextCursor(self._cursor)
 
 
@@ -422,6 +513,7 @@ class ArcItem(QGraphicsLineItem):
         arc_color,
         relationship_id=None,
         relationship_class_id=None,
+        template_id=None,
         token_color=QColor(),
         token_object_extent=0,
         token_object_label_color=QColor(),
@@ -434,7 +526,9 @@ class ArcItem(QGraphicsLineItem):
             dst_item (ObjectItem): destination item
             width (float): Preferred line width
             arc_color (QColor): arc color
-            relationship_id (int): relationship id
+            relationship_id (int, optional): relationship id, if not given the item becomes a template
+            relationship_class_id (int, optional): relationship class id, for template items
+            template_id (int, optional): the relationship template id, in case this item is part of one
             token_object_extent (int): token preferred extent
             token_color (QColor): token bg color
         """
@@ -447,8 +541,8 @@ class ArcItem(QGraphicsLineItem):
         self.src_item = src_item
         self.dst_item = dst_item
         self._width = float(width)
-        self.is_template = False
-        self.template_id = None
+        self.is_template = None
+        self.template_id = template_id
         src_x = src_item.x()
         src_y = src_item.y()
         dst_x = dst_item.x()
@@ -470,6 +564,8 @@ class ArcItem(QGraphicsLineItem):
         self.setAcceptHoverEvents(True)
         viewport = self._graph_view_form.ui.graphicsView.viewport()
         self.viewport_cursor = viewport.cursor()
+        if self.template_id:
+            self.become_template()
 
     @property
     def relationship_class_id(self):
@@ -490,7 +586,7 @@ class ArcItem(QGraphicsLineItem):
         )
 
     def paint(self, painter, option, widget=None):
-        """Try and make it more clear when an item is selected."""
+        """Highlights the item when it's selected."""
         if option.state & (QStyle.State_Selected):
             self.setPen(self.selected_pen)
             option.state &= ~QStyle.State_Selected
@@ -499,34 +595,45 @@ class ArcItem(QGraphicsLineItem):
         super().paint(painter, option, widget)
 
     def become_template(self):
-        """Make this arc part of a template for a relationship."""
+        """Turns this item into a template."""
         self.is_template = True
         self.normal_pen.setStyle(Qt.DotLine)
         self.selected_pen.setStyle(Qt.DotLine)
 
     def become_whole(self):
-        """Make this arc no longer part of a template for a relationship."""
+        """Remove the template status from this item."""
         self.is_template = False
         self.normal_pen.setStyle(Qt.SolidLine)
         self.selected_pen.setStyle(Qt.SolidLine)
 
     def move_src_by(self, pos_diff):
-        """Move source point by pos_diff. Used when moving ObjectItems around."""
+        """Moves source point.
+
+        Args:
+            pos_diff (QPoint)
+        """
         line = self.line()
         line.setP1(line.p1() + pos_diff)
         self.setLine(line)
         self.token_item.update_pos()
 
     def move_dst_by(self, pos_diff):
-        """Move destination point by pos_diff. Used when moving ObjectItems around."""
+        """Moves destination point.
+
+        Args:
+            pos_diff (QPoint)
+        """
         line = self.line()
         line.setP2(line.p2() + pos_diff)
         self.setLine(line)
         self.token_item.update_pos()
 
     def adjust_to_zoom(self, factor):
-        """Update item geometry after performing a zoom.
-        This is so items stay the same size (that is, the zoom controls the *spread*)."""
+        """Adjusts the item's geometry so it stays the same size after performing a zoom.
+
+        Args:
+            factor (float): Zoom factor.
+        """
         scaled_width = self._width / factor
         self.normal_pen.setWidthF(scaled_width)
         self.selected_pen.setWidthF(scaled_width)
@@ -537,11 +644,10 @@ class ArcTokenItem(QGraphicsEllipseItem):
         """Arc token item to use with GraphViewForm.
 
         Args:
-            arc_item (ArcItem): the ArcItem instance
-            color (QColor): color to paint the token
-            object_extent (int): Preferred extent
-            object_label_color (QColor): Preferred extent
-            object_name_tuples (Iterable): one or more (object class name, object name) tuples
+            arc_item (ArcItem): The parent item.
+            color (QColor): Color for the background.
+            object_extent (int): Preferred extent.
+            object_label_color (QColor): Color for the object label.
         """
         super().__init__(arc_item)
         self.arc_item = arc_item
@@ -559,11 +665,11 @@ class ArcTokenItem(QGraphicsEllipseItem):
                 object_item.setZValue(-1)
             object_item.setPos(x, y)
             x += 0.875 * 0.5 * object_item.boundingRect().width()
-        rectf = self.direct_children_bounding_rect()
+        rectf = self._direct_children_bounding_rect()
         offset = -rectf.topLeft()
         for item in self.childItems():
             item.setOffset(offset)
-        rectf = self.direct_children_bounding_rect()
+        rectf = self._direct_children_bounding_rect()
         width = rectf.width()
         height = rectf.height()
         if width > height:
@@ -580,24 +686,28 @@ class ArcTokenItem(QGraphicsEllipseItem):
         self.setFlag(QGraphicsItem.ItemIgnoresTransformations, enabled=True)
 
     def boundingRect(self):
-        """Include children's bounding rect so they are correctly painted."""
+        """Returns a rect that includes the children so they are correctly painted."""
         return self.childrenBoundingRect() | super().boundingRect()
 
-    def direct_children_bounding_rect(self):
-        """Alternative to childrenBoundingRect that only goes one generation forward."""
+    def _direct_children_bounding_rect(self):
+        """Returns a rect that includes the direct children but none beyond that
+        (i.e., excludes the ObjectItemLabel of children ObjectItem's.)"""
         rectf = QRectF()
         for item in self.childItems():
             rectf |= item.sceneBoundingRect()
         return rectf
 
     def update_pos(self):
-        """Put token item in position."""
+        """Puts the token at the center point of the arc."""
         center = self.arc_item.line().center()
         self.setPos(center - self._zoomed_position_offset)
 
     def adjust_to_zoom(self, factor):
-        """Update item geometry after performing a zoom.
-        This is so items stay the same size (that is, the zoom controls the *spread*)."""
+        """Adjusts the item's geometry so it stays the same size after performing a zoom.
+
+        Args:
+            factor (float): Zoom factor.
+        """
         rect = self.rect()
         rect.setWidth(rect.width() / factor)
         rect.setHeight(rect.height() / factor)
@@ -607,10 +717,10 @@ class ArcTokenItem(QGraphicsEllipseItem):
 
 class SimpleObjectItem(QGraphicsPixmapItem):
     def __init__(self, parent, extent, label_color, object_class_id, object_name):
-        """Object item to use with GraphViewForm.
+        """Simple object item to use in ArcTokenItem.
 
         Args:
-            parent (ArcTokenItem): arc token item
+            parent (ArcTokenItem): parent item
             extent (int): preferred extent
             label_color (QColor): label bg color
             object_class_id (int): object class id
@@ -632,6 +742,11 @@ class SimpleObjectItem(QGraphicsPixmapItem):
         self.bg.setBrush(QBrush(label_color))
 
     def setOffset(self, offset):
+        """Sets the offset for the item and its text item.
+
+        Args:
+            offset (QPoint)
+        """
         super().setOffset(offset)
         self.text_item.moveBy(offset.x(), offset.y())
 
@@ -642,9 +757,9 @@ class OutlinedTextItem(QGraphicsSimpleTextItem):
 
         Args:
             text (str): text to show
-            font (QFont): font to display the text
-            brush (QBrus)
-            outline_pen (QPen)
+            font (QFont, optional): font to display the text
+            brush (QBrush, optional)
+            outline_pen (QPen, optional)
         """
         super().__init__()
         self.setText(text)
@@ -664,9 +779,7 @@ class CustomTextItem(QGraphicsTextItem):
         """
         super().__init__()
         self.setHtml(html)
-        # font.setWeight(QFont.Black)
         self.setFont(font)
         self.adjustSize()
         self.setTextInteractionFlags(Qt.TextBrowserInteraction)
-        # self.setTextInteractionFlags(Qt.LinksAccessibleByMouse | Qt.LinksAccessibleByKeyboard)
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
