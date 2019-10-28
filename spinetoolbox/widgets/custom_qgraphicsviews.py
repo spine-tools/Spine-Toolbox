@@ -150,7 +150,7 @@ class CustomQGraphicsView(QGraphicsView):
         super().setScene(scene)
         scene.sceneRectChanged.connect(self._update_zoom_limits)
 
-    @Slot("QRectF", name="_update_zoom_limits")
+    @Slot("QRectF")
     def _update_zoom_limits(self, rect):
         """
         Updates the minimum zoom limit and the zoom level with which the entire scene fits the view.

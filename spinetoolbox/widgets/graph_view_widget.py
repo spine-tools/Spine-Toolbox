@@ -702,9 +702,8 @@ class GraphViewForm(DataStoreForm):
 
     def extend_scene(self):
         """Extends the scene to show all items."""
-        scene = self.ui.graphicsView.scene()
-        bounding_rect = scene.itemsBoundingRect()
-        scene.setSceneRect(bounding_rect)
+        bounding_rect = self.ui.graphicsView.scene().itemsBoundingRect()
+        self.ui.graphicsView.scene().setSceneRect(bounding_rect)
         self.ui.graphicsView.init_zoom()
 
     @Slot(name="_handle_scene_selection_changed")
@@ -727,9 +726,9 @@ class GraphViewForm(DataStoreForm):
                 selected_rel_ids.setdefault((self.db_map, item.relationship_class_id), set()).add(item.relationship_id)
         self.update_filter()
 
-    @Slot(list, name="_handle_scene_changed")
+    @Slot(list)
     def _handle_scene_changed(self, region):
-        """Handle scene changed."""
+        """Enlarges the scene rect if needed."""
         scene_rect = self.ui.graphicsView.scene().sceneRect()
         if all(scene_rect.contains(rect) for rect in region):
             return
