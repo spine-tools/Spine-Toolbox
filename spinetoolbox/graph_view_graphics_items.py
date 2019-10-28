@@ -302,7 +302,7 @@ class ObjectItem(QGraphicsPixmapItem):
         return (
             self._merge_target
             and self._merge_target.is_template != self.is_template
-            and (self.template_id or self._merge_target.template_id)
+            and (self.template_id is not None or self._merge_target.template_id is not None)
             and self._merge_target.object_class_id == self.object_class_id
         )
 
