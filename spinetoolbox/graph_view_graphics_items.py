@@ -49,22 +49,22 @@ class ObjectItem(QGraphicsPixmapItem):
         self.db_map = graph_view_form.db_map
         self.object_id = object_id
         self._object_class_id = object_class_id
+        self._object_name = f"<unnamed {self.object_class_name}>"
         self._extent = extent
         self._label_color = label_color
-        self._object_name = f"<unnamed {self.object_class_name}>"
         self.label_item = ObjectLabelItem(self, label_color)
         self.incoming_arc_items = list()
         self.outgoing_arc_items = list()
         self.is_template = False
         self.template_id = None  # id of relationship templates
-        self._question_item = None  # In case this becomes a template
+        self.question_item = None  # In case this becomes a template
         self._press_pos = None
         self._merge_target = None
         self._moved_on_scene = False
         self._views_cursor = {}
         self._selected_color = graph_view_form.palette().highlight()
-        pixmap = self.db_mngr.entity_class_icon(self.db_map, "object class", self.object_class_id).pixmap(extent)
-        self.setPixmap(pixmap.scaled(extent, extent))
+        self.refresh_icon()
+        self.refresh_name()
         self.setPos(x, y)
         self.setOffset(-0.5 * extent, -0.5 * extent)
         self.setAcceptHoverEvents(True)
@@ -93,6 +93,13 @@ class ObjectItem(QGraphicsPixmapItem):
     def object_class_name(self):
         return self.db_mngr.get_item(self.db_map, "object class", self.object_class_id).get("name")
 
+    def refresh_icon(self):
+        pixmap = self.db_mngr.entity_class_icon(self.db_map, "object class", self.object_class_id).pixmap(self._extent)
+        self.setPixmap(pixmap)
+
+    def refresh_name(self):
+        self.label_item.setPlainText(self.object_name)
+
     def shape(self):
         """Make the entire bounding rect to be the shape."""
         path = QPainterPath()
@@ -119,13 +126,13 @@ class ObjectItem(QGraphicsPixmapItem):
         """Become a template."""
         self.is_template = True
         font = QFont("", 0.75 * self._extent)
-        self._question_item = OutlinedTextItem("?", font)
-        self._question_item.setParentItem(self)
+        self.question_item = OutlinedTextItem("?", font)
+        self.question_item.setParentItem(self)
         rect = self.boundingRect()
-        question_rect = self._question_item.boundingRect()
+        question_rect = self.question_item.boundingRect()
         x = rect.center().x() - question_rect.width() / 2
         y = rect.center().y() - question_rect.height() / 2
-        self._question_item.setPos(x, y)
+        self.question_item.setPos(x, y)
         if self.template_id:
             self.setToolTip(
                 """
@@ -150,7 +157,7 @@ class ObjectItem(QGraphicsPixmapItem):
     def become_whole(self):
         """Make this object no longer a template."""
         self.is_template = False
-        self.scene().removeItem(self._question_item)
+        self.scene().removeItem(self.question_item)
         self.setToolTip("")
 
     def edit_name(self):
@@ -172,7 +179,7 @@ class ObjectItem(QGraphicsPixmapItem):
             if not object_id:
                 return
             self.object_id = object_id
-            self.label_item.refresh_name()  # Is this doing something?
+            self.refresh_name()  # Is this doing something?
             self.become_whole()
             if not self.template_id:
                 return
@@ -371,10 +378,9 @@ class ObjectLabelItem(QGraphicsTextItem):
         self.setFlag(QGraphicsItem.ItemIsSelectable, enabled=False)
         self.setAcceptHoverEvents(False)
         self._cursor = self.textCursor()
-        self.refresh_name()
 
-    def refresh_name(self):
-        self.setPlainText(self.object_item.object_name)
+    def setPlainText(self, text):
+        super().setPlainText(text)
         self.reset_position()
 
     def reset_position(self):

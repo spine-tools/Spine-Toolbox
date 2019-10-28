@@ -290,7 +290,27 @@ class GraphViewForm(DataStoreForm):
         removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
         object_ids = {x.object_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)}
         if object_ids.intersection(removed_ids):
-            self.build_graph(timeit=True)
+            self.build_graph()
+
+    @Slot("QVariant", name="receive_objects_updated")
+    def receive_objects_updated(self, db_map_data):
+        super().receive_objects_updated(db_map_data)
+        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        object_items = [
+            x for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem) and x.object_id in updated_ids
+        ]
+        for item in object_items:
+            item.refresh_name()
+
+    @Slot("QVariant", name="receive_object_classes_updated")
+    def receive_object_classes_updated(self, db_map_data):
+        super().receive_object_classes_updated(db_map_data)
+        updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
+        object_items = [
+            x for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem) and x.object_class_id in updated_ids
+        ]
+        for item in object_items:
+            item.refresh_icon()
 
     @Slot("QVariant", name="receive_relationships_added")
     def receive_relationships_added(self, db_map_data):
@@ -399,7 +419,7 @@ class GraphViewForm(DataStoreForm):
         self.build_graph()
 
     @busy_effect
-    def build_graph(self, timeit=True):
+    def build_graph(self, timeit=False):
         """Initialize graph data and build graph."""
         tic = time.clock()
         self.init_graph_data()
