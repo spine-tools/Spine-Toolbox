@@ -16,7 +16,7 @@ Contains the GraphViewForm class.
 :date:   26.11.2018
 """
 
-import time  # just to measure loading time and sqlalchemy ORM performance
+import time
 import numpy as np
 from numpy import atleast_1d as arr
 from scipy.sparse.csgraph import dijkstra
@@ -36,16 +36,16 @@ from ..plotting import plot_selection, PlottingError, GraphAndTreeViewPlottingHi
 
 
 class GraphViewForm(DataStoreForm):
-    """A widget to show the graph view.
-
-    Attributes:
-        project (SpineToolboxProject): The project instance that owns this form
-        db_map (DiffDatabaseMapping)
-        read_only (bool): Whether or not the form should be editable
-    """
+    """A widget to show Spine databases in a graph."""
 
     def __init__(self, project, *db_maps, read_only=False):
-        """Initialize class."""
+        """Initializes class.
+
+        Args:
+            project (SpineToolboxProject): The project instance that owns this form.
+            *db_maps (DiffDatabaseMapping): Databases to view.
+            read_only (bool): Whether or not the form should be editable.
+        """
         from ..ui.graph_view_form import Ui_MainWindow
 
         tic = time.clock()
@@ -116,7 +116,7 @@ class GraphViewForm(DataStoreForm):
         self.msg.emit("Graph view form created in {} seconds\t".format(toc - tic))
 
     def connect_signals(self):
-        """Connect signals."""
+        """Connects signals."""
         super().connect_signals()
         self.ui.graphicsView.item_dropped.connect(self._handle_item_dropped)
         self.ui.dockWidget_item_palette.dockLocationChanged.connect(self._handle_item_palette_dock_location_changed)
@@ -148,7 +148,7 @@ class GraphViewForm(DataStoreForm):
         self.ui.listView_relationship_class.clicked.connect(self._add_more_relationship_classes)
 
     def setup_zoom_action(self):
-        """Setup zoom action in view menu."""
+        """Setups zoom action in view menu."""
         self.zoom_widget = ZoomWidget(self)
         self.zoom_widget_action = QWidgetAction(self)
         self.zoom_widget_action.setDefaultWidget(self.zoom_widget)
@@ -157,7 +157,7 @@ class GraphViewForm(DataStoreForm):
 
     @Slot(name="restore_dock_widgets")
     def restore_dock_widgets(self):
-        """Dock all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
+        """Docks all floating and or hidden QDockWidgets back to the window at 'factory' positions."""
         # Place docks
         self.ui.dockWidget_object_parameter_value.setVisible(True)
         self.ui.dockWidget_object_parameter_value.setFloating(False)
@@ -189,6 +189,11 @@ class GraphViewForm(DataStoreForm):
         self.ui.dockWidget_relationship_parameter_value.raise_()
 
     def _make_usage_item(self):
+        """Makes item with usage instructions.
+
+        Returns:
+            CustomTextItem
+        """
         usage = """
             <html>
             <head>
@@ -236,6 +241,8 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QString", name="_handle_usage_link_activated")
     def _handle_usage_link_activated(self, link):
+        """Runs when one of the links in the usage message is activated.
+        Shows the corresponding widget."""
         if link == "Object tree":
             self.ui.dockWidget_object_tree.show()
         elif link == "Parameters":
@@ -247,33 +254,32 @@ class GraphViewForm(DataStoreForm):
             self.ui.dockWidget_item_palette.show()
 
     def show(self):
-        """Show usage message together with the form."""
+        """Shows usage message together with the form."""
         super().show()
         self.show_usage_msg()
 
     def show_usage_msg(self):
-        """Show usage instructions in new scene.
-        """
+        """Shows usage instructions in new scene."""
         scene = self.new_scene()
         self._usage_item = self._make_usage_item()
         scene.addItem(self._usage_item)
         self.extend_scene()
 
     def init_models(self):
-        """Initialize models."""
+        """Initializes models."""
         super().init_models()
         self.object_class_list_model.populate_list()
         self.relationship_class_list_model.populate_list()
 
     def init_parameter_value_models(self):
-        """Initialize parameter value models from source database."""
+        """Initializes parameter value models from source database."""
         # FIXME:
         self.object_parameter_value_model.has_empty_row = not self.read_only
         self.relationship_parameter_value_model.has_empty_row = not self.read_only
         super().init_parameter_value_models()
 
     def init_parameter_definition_models(self):
-        """Initialize parameter (definition) models from source database."""
+        """Initializes parameter (definition) models from source database."""
         # FIXME:
         self.object_parameter_definition_model.has_empty_row = not self.read_only
         self.relationship_parameter_definition_model.has_empty_row = not self.read_only
@@ -281,11 +287,22 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QVariant", name="receive_objects_added")
     def receive_objects_added(self, db_map_data):
+        """Runs when objects are added to the db. 
+        Builds a lookup dictionary consumed by ``add_object``.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
         super().receive_objects_added(db_map_data)
         self._added_objects = {(x["class_id"], x["name"]): x["id"] for x in db_map_data.get(self.db_map, [])}
 
     @Slot("QVariant", name="receive_objects_removed")
     def receive_objects_removed(self, db_map_data):
+        """Runs when objects are removed from the db. Rebuilds graph if needed.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
         super().receive_objects_removed(db_map_data)
         removed_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
         object_ids = {x.object_id for x in self.ui.graphicsView.items() if isinstance(x, ObjectItem)}
@@ -294,6 +311,11 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QVariant", name="receive_objects_updated")
     def receive_objects_updated(self, db_map_data):
+        """Runs when objects are updated in the db. Refreshes names of objects in graph.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
         super().receive_objects_updated(db_map_data)
         updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
         object_items = [
@@ -304,6 +326,11 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QVariant", name="receive_object_classes_updated")
     def receive_object_classes_updated(self, db_map_data):
+        """Runs when objects classes are updated in the db. Refreshes icons of objects in graph.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
         super().receive_object_classes_updated(db_map_data)
         updated_ids = {x["id"] for x in db_map_data.get(self.db_map, [])}
         object_items = [
@@ -314,6 +341,12 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QVariant", name="receive_relationships_added")
     def receive_relationships_added(self, db_map_data):
+        """Runs when relationships are added to the db. 
+        Builds a lookup dictionary consumed by ``add_relationship``.
+
+        Args:
+            db_map_data (dict): list of dictionary-items keyed by DiffDatabaseMapping instance.
+        """
         super().receive_relationships_added(db_map_data)
         self._added_relationships = {
             (x["class_id"], x["object_id_list"]): x["id"] for x in db_map_data.get(self.db_map, [])
@@ -321,15 +354,23 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QModelIndex", name="_add_more_object_classes")
     def _add_more_object_classes(self, index):
-        """Opens the add more object classes form when clicking on New... item
-        in Item palette Object class view."""
+        """Runs when the user clicks on the Item palette Object class view.
+        Opens the form  to add more object classes if the index is the one that sayes 'New...'.
+
+        Args:
+            index (QModelIndex): The clicked index.
+        """
         if index == index.model().new_index:
             self.show_add_object_classes_form()
 
     @Slot("QModelIndex", name="_add_more_relationship_classes")
     def _add_more_relationship_classes(self, index):
-        """Opens the add more relationship classes form when clicking on Add more... item
-        in Item palette Relationship class view."""
+        """Runs when the user clicks on the Item palette Relationship class view.
+        Opens the form to add more relationship classes if the index is the one that sayes 'New...'.
+
+        Args:
+            index (QModelIndex): The clicked index.
+        """
         if index == index.model().new_index:
             self.show_add_relationship_classes_form()
 
@@ -339,6 +380,9 @@ class GraphViewForm(DataStoreForm):
         enabled when selecting items in the Object tree. Pressing the Ctrl-button down,
         enables single selection. If sticky selection is disabled, single selection is
         enabled and pressing the Ctrl-button down enables multi-selection.
+
+        Args:
+            event (QMouseEvent)
         """
         sticky_selection = self.qsettings().value("appSettings/stickySelection", defaultValue="false")
         if sticky_selection == "false":
@@ -362,26 +406,31 @@ class GraphViewForm(DataStoreForm):
 
     @Slot(name="_handle_zoom_widget_minus_pressed")
     def _handle_zoom_widget_minus_pressed(self):
+        """Performs a zoom out on the view."""
         self.ui.graphicsView.zoom_out()
 
     @Slot(name="_handle_zoom_widget_plus_pressed")
     def _handle_zoom_widget_plus_pressed(self):
+        """Performs a zoom in on the view."""
         self.ui.graphicsView.zoom_in()
 
     @Slot(name="_handle_zoom_widget_reset_pressed")
     def _handle_zoom_widget_reset_pressed(self):
+        """Resets the zoom on the view."""
         self.ui.graphicsView.reset_zoom()
 
     @Slot(name="_handle_zoom_widget_action_hovered")
     def _handle_zoom_widget_action_hovered(self):
-        """Called when the zoom widget action is hovered. Hide the 'Dock widgets' submenu in case
+        """Runs when the zoom widget action is hovered. Hides the 'Dock widgets' submenu in case
         it's being shown. This is the default behavior for hovering 'normal' 'QAction's, but for some reason
         it's not the case for hovering 'QWidgetAction's."""
         self.ui.menuDock_Widgets.hide()
 
     @Slot(name="_handle_menu_about_to_show")
     def _handle_menu_about_to_show(self):
-        """Called when a menu from the menubar is about to show."""
+        """Runs when a menu from the main menubar is about to show.
+        Enables or disables the menu actions according to current status of the form.
+        """
         self.ui.actionGraph_hide_selected.setEnabled(bool(self.object_item_selection))
         self.ui.actionGraph_show_hidden.setEnabled(bool(self.hidden_items))
         self.ui.actionGraph_prune_selected.setEnabled(bool(self.object_item_selection))
@@ -389,15 +438,15 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("Qt.DockWidgetArea", name="_handle_item_palette_dock_location_changed")
     def _handle_item_palette_dock_location_changed(self, area):
-        """Called when the item palette dock widget location changes.
-        Adjust splitter orientation accordingly."""
+        """Runs when the item palette dock widget location changes.
+        Adjusts splitter orientation accordingly."""
         if area & (Qt.LeftDockWidgetArea | Qt.RightDockWidgetArea):
             self.ui.splitter_object_relationship_class.setOrientation(Qt.Vertical)
         else:
             self.ui.splitter_object_relationship_class.setOrientation(Qt.Horizontal)
 
     def add_toggle_view_actions(self):
-        """Add toggle view actions to View menu."""
+        """Adds toggle view actions to View menu."""
         super().add_toggle_view_actions()
         self.ui.menuDock_Widgets.addAction(self.ui.dockWidget_object_tree.toggleViewAction())
         if not self.read_only:
@@ -406,6 +455,7 @@ class GraphViewForm(DataStoreForm):
             self.ui.dockWidget_item_palette.hide()
 
     def init_commit_rollback_actions(self):
+        """Initializes commit and rollback actions."""
         if not self.read_only:
             self.commit_available.emit(False)
         else:
@@ -414,13 +464,13 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QItemSelection", "QItemSelection", name="_handle_object_tree_selection_changed")
     def _handle_object_tree_selection_changed(self, selected, deselected):
-        """Build_graph."""
+        """Builds graph."""
         super()._handle_object_tree_selection_changed(selected, deselected)
         self.build_graph()
 
     @busy_effect
     def build_graph(self, timeit=False):
-        """Initialize graph data and build graph."""
+        """Initializes graph data and builds the graph."""
         tic = time.clock()
         self.init_graph_data()
         if self.make_graph():
@@ -432,7 +482,11 @@ class GraphViewForm(DataStoreForm):
         self.hidden_items = list()
 
     def _selected_object_ids(self):
-        """Return list of selected object ids."""
+        """Returns a set of selected object ids.
+
+        Returns:
+            set
+        """
         root_index = self.object_tree_model.root_index
         if self.ui.treeView_object.selectionModel().isSelected(root_index):
             return {x["id"] for x in self.db_mngr.get_objects(self.db_map)}
@@ -449,7 +503,9 @@ class GraphViewForm(DataStoreForm):
         return unique_object_ids
 
     def init_graph_data(self):
-        """Initialize graph data."""
+        """Initializes graph data from selection in Object tree.
+        Populates lists of object ids and relationship ids to be included in the graph.
+        """
         rejected_object_ids = {x.object_id for x in self.rejected_items}
         self.object_ids = list(self._selected_object_ids() - rejected_object_ids)
         self.arc_relationship_ids = list()
@@ -471,7 +527,7 @@ class GraphViewForm(DataStoreForm):
                 self.arc_relationship_ids.append(relationship["id"])
 
     def make_graph(self):
-        """Make graph."""
+        """Makes graph."""
         self._free_template_items()
         scene = self.new_scene()
         object_items_lookup = self._add_new_items(scene)
@@ -481,11 +537,21 @@ class GraphViewForm(DataStoreForm):
         return True
 
     def _free_template_items(self):
+        """Removes template items from the scene, so they don't die with it.
+        This is so we can persist template items across graph builds.
+        """
         for template in self.relationship_templates.values():
             for item in template["object_items"] + template["arc_items"]:
                 item.scene().removeItem(item)
 
     def _readd_template_items(self, scene, object_items_lookup):
+        """Readds template items to the given scene, merging them with existing object items 
+        if they have the same id.
+
+        Args:
+            scene (QGraphicsScene)
+            object_items_lookup (dict): Dictionary of ObjectItem instances keyed by integer object id
+        """
         for template in self.relationship_templates.values():
             for item in template["object_items"] + template["arc_items"]:
                 scene.addItem(item)
@@ -499,8 +565,12 @@ class GraphViewForm(DataStoreForm):
                 template["object_items"][k] = item
 
     def _add_new_items(self, scene):
-        """Add whole items to given scene. Returns dictionary mapping object ids to object items."""
-        d = self.shortest_path_matrix(self.object_ids, self.arc_src_dest_inds, self._spread)
+        """Adds whole (non-template) items to given scene from the lists populated in ``init_graph_data``.
+
+        Returns:
+            dict: Dictionary of ObjectItem instances keyed by integer object id.
+        """
+        d = self.shortest_path_matrix(len(self.object_ids), self.arc_src_dest_inds, self._spread)
         if d is None:
             return {}
         x, y = self.vertex_coordinates(d)
@@ -529,9 +599,15 @@ class GraphViewForm(DataStoreForm):
         return object_items_lookup
 
     @staticmethod
-    def shortest_path_matrix(object_ids, src_dst_inds, spread):
-        """Return the shortest-path matrix."""
-        N = len(object_ids)
+    def shortest_path_matrix(N, src_dst_inds, spread):
+        """Returns the shortest-path matrix.
+
+        Args:
+            N (int): The number of nodes in the graph.
+            src_dst_inds (list): List of tuples indicating origin and destination nodes of edges in the graph
+            spread (int): The desired 'distance' between neighbouring nodes
+
+        """
         if not N:
             return None
         dist = np.zeros((N, N))
@@ -553,7 +629,11 @@ class GraphViewForm(DataStoreForm):
 
     @staticmethod
     def sets(N):
-        """Return sets of vertex pairs indices."""
+        """Returns sets of vertex pairs indices.
+
+        Args:
+            N (int)
+        """
         sets = []
         for n in range(1, N):
             pairs = np.zeros((N - n, 2), int)  # pairs on diagonal n
@@ -570,7 +650,7 @@ class GraphViewForm(DataStoreForm):
 
     @staticmethod
     def vertex_coordinates(matrix, heavy_positions=None, iterations=10, weight_exp=-2, initial_diameter=1000):
-        """Return x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
+        """Returns x and y coordinates for each vertex in the graph, computed using VSGD-MS."""
         if heavy_positions is None:
             heavy_positions = dict()
         N = len(matrix)
@@ -621,7 +701,7 @@ class GraphViewForm(DataStoreForm):
         return scene
 
     def extend_scene(self):
-        """Make scene rect the size of the scene to show all items."""
+        """Extends the scene to show all items."""
         scene = self.ui.graphicsView.scene()
         bounding_rect = scene.itemsBoundingRect()
         scene.setSceneRect(bounding_rect)
@@ -629,7 +709,7 @@ class GraphViewForm(DataStoreForm):
 
     @Slot(name="_handle_scene_selection_changed")
     def _handle_scene_selection_changed(self):
-        """Show parameters for selected items."""
+        """Filters parameters by selected objects in the graph."""
         scene = self.ui.graphicsView.scene()  # TODO: should we use sender() here?
         selected_items = scene.selectedItems()
         self.object_item_selection = [x for x in selected_items if isinstance(x, ObjectItem)]
@@ -660,6 +740,13 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QPoint", "QString", name="_handle_item_dropped")
     def _handle_item_dropped(self, pos, text):
+        """Runs when an item is dropped from Item palette onto the view.
+        Creates the object or relationship template.
+
+        Args:
+            pos (QPoint)
+            text (str)
+        """
         scene = self.ui.graphicsView.scene()
         if not scene:
             return
@@ -685,8 +772,16 @@ class GraphViewForm(DataStoreForm):
             self.add_relationship_template(scene, scene_pos.x(), scene_pos.y(), entity_class_id)
         self.extend_scene()
 
-    def _make_relationship_items(self, relationship_class_id, center=()):
-        """Returns lists of object and arc items that form a relationship."""
+    def _make_relationship_items(self, relationship_class_id):
+        """Returns graphics items that form a relationship template.
+
+        Args:
+            relationship_class_id (int)
+
+        Returns:
+            list: ObjectItem instances in the template.
+            list: ArcItem instances in the template.
+        """
         relationship_class = self.db_mngr.get_item(self.db_map, "relationship class", relationship_class_id)
         if not relationship_class:
             return [], []
@@ -696,7 +791,7 @@ class GraphViewForm(DataStoreForm):
         src_inds = list(range(len(object_class_id_list)))
         dst_inds = src_inds[1:] + src_inds[:1]
         src_dst_inds = zip(src_inds, dst_inds)
-        d = self.shortest_path_matrix(object_class_id_list, src_dst_inds, self._spread)
+        d = self.shortest_path_matrix(len(object_class_id_list), src_dst_inds, self._spread)
         if d is None:
             return [], []
         x, y = self.vertex_coordinates(d)
@@ -719,7 +814,16 @@ class GraphViewForm(DataStoreForm):
         return object_items, arc_items
 
     def add_relationship_template(self, scene, x, y, relationship_class_id, center=()):
-        """Add relationship parts into the scene to form a 'relationship template'."""
+        """Makes a relationship template and adds it to scene at the given coordinates.
+
+        Args:
+            scene (QGraphicsScene)
+            x (int)
+            y (int)
+            relationship_class_id (int)
+            center (tuple, optional): A tuple of (ObjectItem, dimension) to put at the center of the template.
+
+        """
         object_items, arc_items = self._make_relationship_items(relationship_class_id)
         for item in object_items + arc_items:
             scene.addItem(item)
@@ -751,24 +855,70 @@ class GraphViewForm(DataStoreForm):
             object_item.moveBy(x - center.x(), y - center.y())
             object_item.move_related_items_by(QPointF(x, y) - center)
 
-    def add_object(self, object_item, name):
-        """Try and add object from given item and name."""
-        item = dict(class_id=object_item.object_class_id, name=name)
+    def accept_relationship_template(self, template_id, relationship_id):
+        """Accepts a relationship template as a new (whole) relationship.
+
+        Args:
+            template_id (int)
+            relationship_id (int)
+        """
+        relationship_template = self.relationship_templates.pop(template_id, None)
+        if not relationship_template:
+            return
+        arc_items = relationship_template["arc_items"]
+        for item in arc_items:
+            item.relationship_id = relationship_id
+            item.become_whole()
+
+    def remove_relationship_template(self, template_id):
+        """Gets rid of a relationship template.
+
+        Args:
+            template_id (int)
+        """
+        relationship_template = self.relationship_templates.pop(template_id, None)
+        if not relationship_template:
+            return
+        arc_items = relationship_template["arc_items"]
+        object_items = [x for x in relationship_template["object_items"] if not x.object_id]
+        for item in arc_items + object_items:
+            item.scene().removeItem(item)
+
+    def add_object(self, object_class_id, name):
+        """Adds object to the database.
+
+        Args:
+            object_class_id (int)
+            name (str)
+
+        Returns:
+            int, NoneType: The id of the added object if successful, None otherwise.
+        """
+        item = dict(class_id=object_class_id, name=name)
         db_map_data = {self.db_map: [item]}
         self.db_mngr.add_objects(db_map_data)
-        object_id = self._added_objects.get((object_item.object_class_id, name))
+        object_id = self._added_objects.get((object_class_id, name))
         self._added_objects.clear()
         return object_id
 
-    def update_object(self, object_item, name):
-        """Try and update object given an object item and a name."""
-        item = dict(id=object_item.object_id, name=name)
+    def update_object(self, object_id, name):
+        """Updates object in the db.
+
+        Args:
+            object_id (int)
+            name (str)
+        """
+        item = dict(id=object_id, name=name)
         db_map_data = {self.db_map: [item]}
         self.db_mngr.update_objects(db_map_data)
 
     @busy_effect
     def add_relationship(self, template_id):
-        """Try and add relationship given a template id."""
+        """Adds relationship to the db.
+
+        Args:
+            template_id (int): The template id to lookup in the internal template dictionary
+        """
         relationship_template = self.relationship_templates.get(template_id)
         if not relationship_template:
             return None
@@ -790,26 +940,12 @@ class GraphViewForm(DataStoreForm):
         self._added_relationships.clear()
         return relationship_id
 
-    def accept_relationship_template(self, template_id, relationship_id):
-        relationship_template = self.relationship_templates.pop(template_id, None)
-        if not relationship_template:
-            return
-        arc_items = relationship_template["arc_items"]
-        for item in arc_items:
-            item.relationship_id = relationship_id
-            item.become_whole()
-
-    def remove_relationship_template(self, template_id):
-        relationship_template = self.relationship_templates.pop(template_id, None)
-        if not relationship_template:
-            return
-        arc_items = relationship_template["arc_items"]
-        object_items = [x for x in relationship_template["object_items"] if not x.object_id]
-        for item in arc_items + object_items:
-            item.scene().removeItem(item)
-
     def show_graph_view_context_menu(self, global_pos):
-        """Show context menu for graphics view."""
+        """Shows context menu for graphics view.
+
+        Args:
+            global_pos (QPoint)
+        """
         self.graph_view_context_menu = GraphViewContextMenu(self, global_pos)
         option = self.graph_view_context_menu.get_action()
         if option == "Hide selected items":
@@ -827,14 +963,14 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("bool", name="reinstate_pruned_items")
     def hide_selected_items(self, checked=False):
-        """Hide selected items."""
+        """Hides selected items."""
         self.hidden_items.extend(self.object_item_selection)
         for item in self.object_item_selection:
             item.set_all_visible(False)
 
     @Slot("bool", name="reinstate_pruned_items")
     def show_hidden_items(self, checked=False):
-        """Show hidden items."""
+        """Shows hidden items."""
         scene = self.ui.graphicsView.scene()
         if not scene:
             return
@@ -844,19 +980,23 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("bool", name="reinstate_pruned_items")
     def prune_selected_items(self, checked=False):
-        """Prune selected items."""
+        """Prunes selected items."""
         self.rejected_items.extend(self.object_item_selection)
         self.build_graph()
 
     @Slot("bool", name="reinstate_pruned_items")
     def reinstate_pruned_items(self, checked=False):
-        """Reinstate pruned items."""
+        """Reinstates pruned items."""
         self.rejected_items = list()
         self.build_graph()
 
-    def show_object_item_context_menu(self, e, main_item):
-        """Show context menu for object_item."""
-        global_pos = e.screenPos()
+    def show_object_item_context_menu(self, global_pos, main_item):
+        """Shows context menu for object item.
+
+        Args:
+            global_pos (QPoint)
+            main_item (ObjectItem)
+        """
         self.object_item_context_menu = ObjectItemContextMenu(self, global_pos, main_item)
         option = self.object_item_context_menu.get_action()
         if option == 'Hide':
@@ -881,18 +1021,38 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("QPoint", name="show_object_parameter_value_context_menu")
     def show_object_parameter_value_context_menu(self, pos):
+        """Shows context menu for object parameter value table.
+
+        Args:
+            pos (QPoint)
+        """
         self._show_table_context_menu(pos, self.ui.tableView_object_parameter_value, 'value')
 
     @Slot("QPoint", name="show_object_parameter_definition_context_menu")
     def show_object_parameter_definition_context_menu(self, pos):
+        """Shows context menu for object parameter definition table.
+
+        Args:
+            pos (QPoint)
+        """
         self._show_table_context_menu(pos, self.ui.tableView_object_parameter_definition, 'default_value')
 
     @Slot("QPoint", name="show_relationship_parameter_value_context_menu")
     def show_relationship_parameter_value_context_menu(self, pos):
+        """Shows context menu for relationship parameter value table.
+
+        Args:
+            pos (QPoint)
+        """
         self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_value, 'value')
 
     @Slot("QPoint", name="show_relationship_parameter_definition_context_menu")
     def show_relationship_parameter_definition_context_menu(self, pos):
+        """Shows context menu for relationship parameter definition table.
+
+        Args:
+            pos (QPoint)
+        """
         self._show_table_context_menu(pos, self.ui.tableView_relationship_parameter_definition, 'default_value')
 
     def _show_table_context_menu(self, position, table_view, column_name):
@@ -935,7 +1095,7 @@ class GraphViewForm(DataStoreForm):
 
     @Slot("bool", name="remove_graph_items")
     def remove_graph_items(self, checked=False):
-        """Remove all selected items in the graph."""
+        """Removes all selected items in the graph."""
         if not self.object_item_selection:
             return
         removed_objects = list()
@@ -947,7 +1107,7 @@ class GraphViewForm(DataStoreForm):
         self.db_mngr.remove_items({self.db_map: {"object": removed_objects}})
 
     def closeEvent(self, event=None):
-        """Handle close window.
+        """Handles close window event.
 
         Args:
             event (QEvent): Closing event if 'X' is clicked.

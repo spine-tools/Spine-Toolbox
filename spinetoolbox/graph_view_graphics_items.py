@@ -175,7 +175,7 @@ class ObjectItem(QGraphicsPixmapItem):
         self._object_name = self.label_item.toPlainText()
         if self.is_template:
             # Add
-            object_id = self._graph_view_form.add_object(self, self._object_name)
+            object_id = self._graph_view_form.add_object(self._object_class_id, self._object_name)
             if not object_id:
                 return
             self.object_id = object_id
@@ -186,7 +186,7 @@ class ObjectItem(QGraphicsPixmapItem):
             self._graph_view_form.add_relationship(self.template_id)
         else:
             # Update
-            self._graph_view_form.update_object(self, self._object_name)
+            self._graph_view_form.update_object(self.object_id, self._object_name)
 
     def add_incoming_arc_item(self, arc_item):
         """Add an ArcItem to the list of incoming arcs."""
