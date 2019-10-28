@@ -578,9 +578,14 @@ class GraphViewForm(DataStoreForm):
         for k in range(len(self.src_ind_list)):
             i = self.src_ind_list[k]
             j = self.dst_ind_list[k]
+            token_object_name_tuple_list = self.arc_token_object_name_tuple_lists[k]
+            if i == j or not token_object_name_tuple_list:
+                # Skip arcs that have same endpoints, i.e. have zero length.
+                # Someday we could consider drawing a 'loop' instead.
+                # Skip also arcs with no token objects
+                continue
             object_id_list = self.arc_object_id_lists[k]
             relationship_class_id = self.arc_relationship_class_ids[k]
-            token_object_name_tuple_list = self.arc_token_object_name_tuple_lists[k]
             arc_item = ArcItem(
                 self,
                 relationship_class_id,
@@ -640,10 +645,9 @@ class GraphViewForm(DataStoreForm):
                 self.selected_object_id_lists.setdefault(item.relationship_class_id, set()).add(item.object_id_list)
         self.do_update_filter()
 
-    @Slot(list, name="_handle_scene_changed")
+    @Slot(list)
     def _handle_scene_changed(self, region):
-        """Handle scene changed. Show usage message if no items other than the bg.
-        """
+        """Enlarges the scene rect if needed."""
         scene_rect = self.ui.graphicsView.scene().sceneRect()
         if all(scene_rect.contains(rect) for rect in region):
             return
