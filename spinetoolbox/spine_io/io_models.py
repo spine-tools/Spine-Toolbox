@@ -26,6 +26,7 @@ from spinedb_api import (
     DateTime,
     Duration,
     ParameterValueFormatError,
+    mapping_non_pivoted_columns
 )
 from PySide2.QtWidgets import QHeaderView, QMenu, QAction, QTableView, QPushButton, QToolButton
 from PySide2.QtCore import QModelIndex, Qt, QAbstractTableModel, QAbstractListModel, QPoint, Signal
@@ -63,20 +64,35 @@ class MappingPreviewModel(MinimalTableModel):
     """
 
     columnTypesUpdated = Signal()
+    rowTypesUpdated = Signal()
+    mappingChanged = Signal()
+
 
     def __init__(self, parent=None):
         super().__init__(parent)
         self.default_flags = Qt.ItemIsEnabled | Qt.ItemIsSelectable
         self._mapping = None
         self._data_changed_signal = None
-        self._type_errors = {}
+        self._column_types = {}
+        self._row_types = {}
+        self._column_type_errors = {}
+        self._row_type_errors = {}
+
+    def mapping(self):
+        return self._mapping
 
     def clear(self):
-        self._type_errors = {}
+        self._column_type_errors = {}
+        self._row_type_errors = {}
+        self._column_types = {}
+        self._row_types = {}
         super().clear()
 
     def reset_model(self, main_data=None):
-        self._type_errors = {}
+        self._column_type_errors = {}
+        self._row_type_errors = {}
+        self._column_types = {}
+        self._row_types = {}
         super().reset_model(main_data)
 
     def set_mapping(self, mapping):
@@ -86,21 +102,30 @@ class MappingPreviewModel(MinimalTableModel):
             mapping {MappingSpecModel} -- mapping model
         """
         if self._data_changed_signal is not None and self._mapping:
-            self._mapping.dataChanged.disconnect(self.update_colors)
+            self._mapping.dataChanged.disconnect(self._mapping_data_changed)
             self._data_changed_signal = None
         self._mapping = mapping
         if self._mapping:
-            self._data_changed_signal = self._mapping.dataChanged.connect(self.update_colors)
-        self.update_colors()
+            self._data_changed_signal = self._mapping.dataChanged.connect(self._mapping_data_changed)
+        self._mapping_data_changed()
 
-    def validate_column_type(self, col):
-        type_class = self.get_column_type(col)
+    def validate(self, section, orientation=Qt.Horizontal):
+        type_class = self.get_type(section, orientation)
         if type_class is None:
             return
+        if orientation == Qt.Horizontal:
+            other_orientation_count = self.rowCount()
+            correct_index_order = lambda x: (x[1], x[0])
+            error_dict = self._column_type_errors
+        else:
+            other_orientation_count = self.columnCount()
+            correct_index_order = lambda x: (x[0], x[1])
+            error_dict = self._row_type_errors
         type_class = TYPE_STRING_TO_CLASS[type_class]
-        for row in range(self.rowCount()):
-            index = self.index(row, col)
-            self._type_errors.pop((row, col), None)
+        for other_index in range(other_orientation_count):
+            index_tuple = correct_index_order((section, other_index))
+            index = self.index(*index_tuple)
+            error_dict.pop(index_tuple, None)
             data = self.data(index)
             try:
                 if isinstance(data, str) and not data:
@@ -108,39 +133,63 @@ class MappingPreviewModel(MinimalTableModel):
                 if data is not None:
                     type_class(data)
             except (ValueError, ParameterValueFormatError) as e:
-                self._type_errors[(row, col)] = e
-        self.dataChanged.emit(self.index(0, col), self.index(self.rowCount(), col))
+                error_dict[index_tuple] = e
+        data_changed_start = correct_index_order((section, 0))
+        data_changed_end = correct_index_order((section, other_orientation_count))
+        self.dataChanged.emit(self.index(*data_changed_start), self.index(*data_changed_end))
 
-    def get_column_type(self, col):
-        return self.headerData(col, orientation=Qt.Horizontal, role=_COLUMN_TYPE_ROLE)
+    def get_type(self, section, orientation=Qt.Horizontal):
+        if orientation == Qt.Horizontal:
+            return self._column_types.get(section, None)
+        return self._row_types.get(section, None) 
 
-    def get_column_types(self):
-        return {col: self.get_column_type(col) for col in range(self.columnCount())}
+    def get_types(self, orientation=Qt.Horizontal):
+        if orientation == Qt.Horizontal:
+            return self._column_types
+        return self._row_types
 
-    def set_column_type(self, col, col_type):
-        if col_type not in _ALLOWED_TYPES:
-            raise ValueError(f"col_type must be a value in {_ALLOWED_TYPES}, instead got {col_type}")
-        if col < 0 or col > self.columnCount():
-            raise ValueError(f"col must be a in column count")
-        success = self.setHeaderData(col, Qt.Horizontal, col_type, _COLUMN_TYPE_ROLE)
-        if success:
-            self.columnTypesUpdated.emit()
-            self.validate_column_type(col)
+    def set_type(self, section, section_type, orientation=Qt.Horizontal):
+        if orientation == Qt.Horizontal:
+            count = self.columnCount()
+            emit_signal = self.columnTypesUpdated
+            type_dict = self._column_types
+        else:
+            count = self.rowCount()
+            emit_signal = self.rowTypesUpdated
+            type_dict = self._row_types
+
+        if section_type not in _ALLOWED_TYPES:
+            raise ValueError(f"section_type must be a value in {_ALLOWED_TYPES}, instead got {section_type}")
+        if section < 0 or section > count:
+            raise ValueError(f"section must be within model data")
+        type_dict[section] = section_type
+        emit_signal.emit()
+        self.validate(section, orientation)
+
+    def _mapping_data_changed(self):
+        self.update_colors()
+        self.mappingChanged.emit()
 
     def update_colors(self):
         self.dataChanged.emit(QModelIndex, QModelIndex, [Qt.BackgroundColorRole])
 
-    def data_error(self, index, role=Qt.DisplayRole):
+    def data_error(self, index, role=Qt.DisplayRole, orientation=Qt.Horizontal):
         if role == Qt.DisplayRole:
             return "Error"
         if role == Qt.ToolTipRole:
-            return f'Could not parse value: "{self._main_data[index.row()][index.column()]}" as a {self.get_column_type(index.column())}'
+            type_name = self.get_type(index.column(), orientation)
+            return f'Could not parse value: "{self._main_data[index.row()][index.column()]}" as a {type_name}'
         if role == Qt.BackgroundColorRole:
             return QColor(Qt.red)
 
     def data(self, index, role=Qt.DisplayRole):
-        if (index.row(), index.column()) in self._type_errors:
-            return self.data_error(index, role)
+        if index.row() > self._mapping.last_pivot_row:
+            if (index.row(), index.column()) in self._column_type_errors:
+                return self.data_error(index, role)
+        elif index.column() not in mapping_non_pivoted_columns(self._mapping._model, self.columnCount(), self.header) and index.column() not in self._mapping.skip_columns:
+            if (index.row(), index.column()) in self._row_type_errors:
+                return self.data_error(index, role, orientation=Qt.Vertical)
+
         if role == Qt.BackgroundColorRole and self._mapping:
             return self.data_color(index)
         return super().data(index, role)
@@ -266,11 +315,25 @@ class MappingSpecModel(QAbstractTableModel):
         if model is not None:
             self.set_mapping(model)
 
+
+    @property
+    def skip_columns(self):
+        if self._model.skip_columns is None:
+            return []
+        return list(self._model.skip_columns)
+
     @property
     def map_type(self):
         if self._model is None:
             return None
         return type(self._model)
+
+    @property
+    def last_pivot_row(self):
+        last_row = self._model.last_pivot_row()
+        if last_row is None:
+            last_row = 0
+        return last_row
 
     @property
     def dimension(self):
@@ -740,6 +803,9 @@ class HeaderWithButton(QHeaderView):
         self.sectionMoved.connect(self._section_move)
         self._font = QFont('Font Awesome 5 Free Solid')
 
+        self._display_all = True
+        self._display_sections = []
+
         self._margin = Margin(left=0, right=0, top=0, bottom=0)
 
         self._menu = self._create_menu()
@@ -758,6 +824,25 @@ class HeaderWithButton(QHeaderView):
         self._button_logical_index = None
         self.setMinimumSectionSize(self.minimumSectionSize() + self.widget_width())
 
+
+    @property
+    def display_all(self):
+        return self._display_all
+    
+    @display_all.setter
+    def display_all(self, display_all):
+        self._display_all = display_all
+        self.viewport().update()
+    
+    @property
+    def sections_with_buttons(self):
+        return self._display_sections
+
+    @sections_with_buttons.setter
+    def sections_with_buttons(self, sections):
+        self._display_sections = set(sections)
+        self.viewport().update()
+
     def _create_menu(self):
         menu = QMenu(self)
         for at in _ALLOWED_TYPES:
@@ -769,13 +854,28 @@ class HeaderWithButton(QHeaderView):
 
     def _menu_pressed(self, action):
         logical_index = self._button_logical_index
-        self.model().set_column_type(logical_index, action.text())
+        self.model().set_type(logical_index, action.text(), self.orientation())
 
     def widget_width(self):
-        return self.height()
+        if self.orientation() == Qt.Horizontal:
+            return self.height()
+        else:
+            return self.sectionSize(0)
+    
+    def widget_height(self):
+        if self.orientation() == Qt.Horizontal:
+            return self.height()
+        else:
+            return self.sectionSize(0)
 
     def mouseMoveEvent(self, mouse_event):
         log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
+        if not self._display_all and log_index not in self._display_sections:
+            self._button_logical_index = None
+            self._button.hide()
+            super().mouseMoveEvent(mouse_event)
+            return
+
         if self._button_logical_index != log_index:
             self._button_logical_index = log_index
             self._set_button_geometry(self._button, log_index)
@@ -784,6 +884,12 @@ class HeaderWithButton(QHeaderView):
 
     def mousePressEvent(self, mouse_event):
         log_index = self.logicalIndexAt(mouse_event.x(), mouse_event.y())
+        if not self._display_all and log_index not in self._display_sections:
+            self._button_logical_index = None
+            self._button.hide()
+            super().mousePressEvent(mouse_event)
+            return
+
         if self._button_logical_index != log_index:
             self._button_logical_index = log_index
             self._set_button_geometry(self._button, log_index)
@@ -797,12 +903,20 @@ class HeaderWithButton(QHeaderView):
 
     def _set_button_geometry(self, button, index):
         margin = self._margin
-        button.setGeometry(
-            self.sectionViewportPosition(index) + margin.left,
-            margin.top,
-            self.widget_width() - self._margin.left - self._margin.right,
-            self.height() - margin.top - margin.bottom,
-        )
+        if self.orientation() == Qt.Horizontal:
+            button.setGeometry(
+                self.sectionViewportPosition(index) + margin.left,
+                margin.top,
+                self.widget_width() - self._margin.left - self._margin.right,
+                self.widget_height() - margin.top - margin.bottom,
+            )
+        else:
+            button.setGeometry(
+                margin.left,
+                self.sectionViewportPosition(index) + margin.top,
+                self.widget_width() - self._margin.left - self._margin.right,
+                self.widget_height() - margin.top - margin.bottom,
+            )
 
     def _section_resize(self, i):
         self._button.hide()
@@ -811,7 +925,11 @@ class HeaderWithButton(QHeaderView):
 
     def paintSection(self, painter, rect, logical_index):
         """move original rect a bit to the right to make room for the widget"""
-        type_str = self.model().headerData(logical_index, self.orientation(), _COLUMN_TYPE_ROLE)
+        if not self._display_all and logical_index not in self._display_sections:
+            super().paintSection(painter, rect, logical_index)
+            return
+
+        type_str = self.model().get_type(logical_index, self.orientation())
         if type_str is None:
             type_str = "string"
         font_str = _TYPE_TO_FONT_AWESOME_ICON[type_str]
@@ -821,7 +939,10 @@ class HeaderWithButton(QHeaderView):
         self._set_button_geometry(self._render_button, logical_index)
 
         rw = self._render_button.grab()
-        painter.drawPixmap(self.sectionViewportPosition(logical_index), 0, rw)
+        if self.orientation() == Qt.Horizontal:
+            painter.drawPixmap(self.sectionViewportPosition(logical_index), 0, rw)
+        else:
+            painter.drawPixmap(0, self.sectionViewportPosition(logical_index), rw)
 
         rect.adjust(self.widget_width(), 0, 0, 0)
         super().paintSection(painter, rect, logical_index)
@@ -843,18 +964,18 @@ class HeaderWithButton(QHeaderView):
     def set_margins(self, margins):
         self._margin = margins
 
-    def headerDataChanged(self, orientation, logical_first, logical_last):
-        super().headerDataChanged(orientation, logical_first, logical_last)
-
 
 class TableViewWithButtonHeader(QTableView):
     def __init__(self, parent=None):
         super(TableViewWithButtonHeader, self).__init__(parent)
         self._horizontal_header = HeaderWithButton(Qt.Horizontal, self)
+        self._vertical_header = HeaderWithButton(Qt.Vertical, self)
         self.setHorizontalHeader(self._horizontal_header)
+        self.setVerticalHeader(self._vertical_header)
 
     def scrollContentsBy(self, dx, dy):
         super().scrollContentsBy(dx, dy)
         if dx != 0:
-            pass
             self._horizontal_header.fix_widget_positions()
+        if dy != 0:
+            self._vertical_header.fix_widget_positions()

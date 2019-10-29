@@ -53,12 +53,17 @@ class DataInterface(ProjectItem):
         if mappings is None:
             mappings = dict()
         else:
-            # convert table_type keys to int since json always has strings as keys.
+            # convert table_types and table_row_types keys to int since json always has strings as keys.
             for table_settings in mappings.values():
                 table_types = table_settings.get("table_types", {})
                 table_settings["table_types"] = {
                     table_name: {int(col): t for col, t in col_types.items()}
                     for table_name, col_types in table_types.items()
+                }
+                table_row_types = table_settings.get("table_row_types", {})
+                table_settings["table_row_types"] = {
+                    table_name: {int(row): t for row, t in row_types.items()}
+                    for table_name, row_types in table_row_types.items()
                 }
         self.settings = mappings
         self.file_model = QStandardItemModel()
@@ -275,7 +280,14 @@ class DataInterface(ProjectItem):
             table_types = {
                 name: types for name, types in settings["table_types"].items() if name in settings["selected_tables"]
             }
-            data, errors = connector.get_mapped_data(table_mappings, table_options, table_types, max_rows=-1)
+            table_row_types = {
+                name: types
+                for name, types in settings["table_row_types"].items()
+                if name in settings["selected_tables"]
+            }
+            data, errors = connector.get_mapped_data(
+                table_mappings, table_options, table_types, table_row_types, max_rows=-1
+            )
             self._toolbox.msg.emit(
                 "<b>{0}:</b> Read {1} data from {2} with {3} errors".format(
                     self.name, sum(len(d) for d in data.values()), source, len(errors)
